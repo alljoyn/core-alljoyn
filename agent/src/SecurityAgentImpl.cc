@@ -241,6 +241,11 @@ QStatus SecurityAgentImpl::Init()
             break;
         }
 
+        status = caStorage->GetCaPublicKeyInfo(publicKeyInfo);
+        if (ER_OK != status || publicKeyInfo.empty()) {
+            QCC_LogError(status, ("CA is inaccessible or its  Public Key is empty"));
+        }
+
         status = Util::Init(busAttachment);
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to initialize Util"));
@@ -259,11 +264,6 @@ QStatus SecurityAgentImpl::Init()
             QCC_LogError(status,
                          ("Failed to enable security on the security agent bus attachment."));
             break;
-        }
-
-        status = caStorage->GetCaPublicKeyInfo(publicKeyInfo);
-        if (ER_OK != status || publicKeyInfo.empty()) {
-            QCC_LogError(status, ("publicKeyInfo.GetPublicKey()->empty() = %i", publicKeyInfo.empty()));
         }
 
         proxyObjectManager = make_shared<ProxyObjectManager>(busAttachment);
@@ -310,6 +310,9 @@ QStatus SecurityAgentImpl::Init()
         appMonitor->RegisterSecurityInfoListener(this);
     } while (0);
 
+    if (ER_OK != status) {
+        Util::Fini();
+    }
     return status;
 }
 
@@ -342,7 +345,8 @@ void SecurityAgentImpl::SetManifestListener(ManifestListener* mfl)
     mfListener = mfl;
 }
 
-QStatus SecurityAgentImpl::SetUpdatesPending(const OnlineApplication& app, bool updatesPending)
+QStatus SecurityAgentImpl::SetSyncState(const OnlineApplication& app,
+                                        const ApplicationSyncState syncState)
 {
     appsMutex.Lock(__FILE__, __LINE__);
 
@@ -355,8 +359,8 @@ QStatus SecurityAgentImpl::SetUpdatesPending(const OnlineApplication& app, bool 
     }
 
     OnlineApplication oldApp = it->second;
-    if (oldApp.updatesPending != updatesPending) {
-        it->second.updatesPending = updatesPending;
+    if (oldApp.syncState != syncState) {
+        it->second.syncState = syncState;
         NotifyApplicationListeners(&oldApp, &(it->second));
     }
 
@@ -403,25 +407,12 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
      * Step 2: Claim
      */
 
-    KeyInfoNISTP256 CAKeyInfo;
-    status = caStorage->GetCaPublicKeyInfo(CAKeyInfo);
-
-    IdentityCertificate idCertificate;
-
-    GroupInfo adminGroup;
-    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifest, adminGroup, idCertificate);
+    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifest);
     if (status != ER_OK) {
         return status;
     }
-    status = proxyObjectManager->Claim(_app, CAKeyInfo, adminGroup, &idCertificate, 1, manifest);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not claim application"));
-    }
-    status = caStorage->FinishApplicationClaiming(_app, (status == ER_OK));
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to notify Application got claimed"));
-        //TODO: should we unclaim?
-    }
+
+    status = applicationUpdater->UpdateApplication(_app);
 
     return status;
 }
@@ -584,7 +575,7 @@ void SecurityAgentImpl::OnPendingChangesCompleted(vector<Application>& apps)
         old.keyInfo = apps[i].keyInfo;
         if (ER_OK == GetApplication(old)) {
             OnlineApplication app = old;
-            app.updatesPending = apps[i].updatesPending;
+            app.syncState = apps[i].syncState;
             appsMutex.Lock();
             applications[app.keyInfo] = app;
             appsMutex.Unlock();

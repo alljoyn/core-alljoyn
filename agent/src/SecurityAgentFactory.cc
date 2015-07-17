@@ -71,8 +71,10 @@ QStatus SecurityAgentFactory::GetSecurityAgent(const shared_ptr<AgentCAStorage>&
     }
 
     sa = make_shared<SecurityAgentImpl>(caStorage, ba);
-    if (ER_OK == sa->Init()) {
+    if (ER_OK == (status = sa->Init())) {
         agentRef = sa;
+    } else {
+        agentRef = nullptr;
     }
     return status;
 }

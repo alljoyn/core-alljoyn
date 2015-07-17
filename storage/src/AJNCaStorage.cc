@@ -52,55 +52,50 @@ QStatus AJNCaStorage::GetAdminGroup(GroupInfo& adminGroup) const
     return status;
 }
 
-QStatus AJNCaStorage::StartApplicationClaiming(const Application& app,
+QStatus AJNCaStorage::StartApplicationClaiming(Application& app,
                                                const IdentityInfo& idInfo,
-                                               const Manifest& mf,
-                                               GroupInfo& adminGroup,
-                                               IdentityCertificate& idCert)
+                                               const Manifest& mf)
 {
-    QStatus status = GetAdminGroup(adminGroup);
-    if (status != ER_OK) {
+    QStatus status;
+
+    status = sql->GetIdentity(const_cast<IdentityInfo&>(idInfo));
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Identity does not exist"));
         return status;
     }
 
+    IdentityCertificate idCert;
     status = GenerateIdentityCertificate(app, idInfo, mf, idCert);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to create IdentityCertificate"));
         return status;
     }
 
+    app.syncState = SYNC_WILL_CLAIM;
     status =  sql->StoreApplication(app);
     if (ER_OK != status) {
         QCC_LogError(status, ("StoreApplication failed"));
         return status;
     }
+
     status = sql->StoreCertificate(app, idCert);
     if (ER_OK !=  status) {
         QCC_LogError(status, ("StoreCertificate failed"));
     } else {
         status = sql->StoreManifest(app, mf);
     }
+
     if (ER_OK != status) {
         sql->RemoveApplication(app);
+        app.syncState = SYNC_OK;
     }
+
     return status;
 }
 
 QStatus AJNCaStorage::GetManagedApplication(Application& app) const
 {
     return sql->GetManagedApplication(app);
-}
-
-QStatus AJNCaStorage::FinishApplicationClaiming(const Application& app,
-                                                bool status)
-{
-    QStatus _status = ER_OK;
-    if (!status) {
-        _status = sql->RemoveApplication(app);
-    } else {
-        //TODO mark app as claimed
-    }
-    return _status;
 }
 
 QStatus AJNCaStorage::StartUpdates(Application& app, uint64_t& updateID)

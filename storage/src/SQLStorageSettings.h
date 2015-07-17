@@ -52,7 +52,7 @@
         USER_DEF_NAME   TEXT,\
         MANIFEST BLOB,\
         POLICY BLOB,\
-        UPDATES_PENDING BOOLEAN\
+        SYNC_STATE INTEGER\
 ); "
 
 #define IDENTITY_CERTS_TABLE_SCHEMA \

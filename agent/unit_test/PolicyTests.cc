@@ -65,6 +65,12 @@ class PolicyTests :
  *       -# Check whether the remote policy is equal to the installed policy.
  *       -# Check whether the remote policy is equal to the policy that can be
  *          retrieved from storage.
+ *       -# Try to install a newer policy (version 100) and verify it was
+ *          successful
+ *       -# Try to install an older policy (version 1) and verify this fails
+ *       -# Try to install a default policy of (version 0) and verify this
+ *          was successful.
+ *       -# Get the persisted policy and make sure its version is (version 100 +1)
  **/
 TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     vector<GroupInfo> policyGroups;
@@ -93,11 +99,7 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     ASSERT_NE(ER_OK, storage->UpdatePolicy(app, policy));
     ASSERT_NE(ER_OK, storage->UpdatePolicy(app, policy2));
     ASSERT_NE(ER_OK, storage->GetPolicy(app, policyLocal));
-
-    OnlineApplication checkUpdatesPendingInfo;
-    checkUpdatesPendingInfo.keyInfo = app.keyInfo;
-    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
-    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
+    ASSERT_TRUE(CheckSyncState(SYNC_OK));
 
     /* Create identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
@@ -121,6 +123,30 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     ASSERT_TRUE(CheckPolicy(policy2));
+
+    /* Install a newer policy and check retrieved policy */
+    policy2.SetVersion(100);
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(CheckPolicy(policy2));
+
+    /* Install an older policy and ensure failure */
+    policy2.SetVersion(1);
+    ASSERT_EQ(ER_POLICY_NOT_NEWER, storage->UpdatePolicy(app, policy2));
+    ASSERT_FALSE(WaitForUpdatesCompleted());
+    ASSERT_FALSE(CheckPolicy(policy2));
+
+    /* Install an default v=0 policy and ensure successful update */
+    policy2.SetVersion(0);
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(CheckPolicy(policy2));
+
+    /* Get the persisted policy and compare latest version */
+    PermissionPolicy finalPolicy;
+    ASSERT_EQ(ER_OK, storage->GetPolicy(app, finalPolicy));
+    // Latest successful update was with policy v=100
+    ASSERT_EQ((size_t)(100 + 1), finalPolicy.GetVersion());
 }
 
 /**

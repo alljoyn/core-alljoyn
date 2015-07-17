@@ -82,7 +82,7 @@ class SecurityAgent {
      *
      * @return ER_OK                 On success.
      * @return ER_MANIFEST_REJECTED  When the ManifestListener rejects the manifest.
-     * @return ER_FAIL               When no ManifestListener is registered or
+     * @return Others                When no ManifestListener is registered or
      *                               in case of other failures.
      */
     virtual QStatus Claim(const OnlineApplication& app,

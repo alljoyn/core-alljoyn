@@ -94,7 +94,7 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, false));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));

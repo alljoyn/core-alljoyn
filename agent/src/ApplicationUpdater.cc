@@ -27,6 +27,54 @@ using namespace qcc;
 using namespace ajn;
 using namespace ajn::securitymgr;
 
+QStatus ApplicationUpdater::ClaimApplication(const OnlineApplication& app)
+{
+    QStatus status = ER_FAIL;
+
+    QCC_DbgPrintf(("Claiming application"));
+
+    KeyInfoNISTP256 CAKeyInfo;
+    status = storage->GetCaPublicKeyInfo(CAKeyInfo);
+    if (ER_OK != status) {
+        SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
+        securityAgentImpl->NotifyApplicationListeners(error);
+        QCC_LogError(status, ("Could not get CA public key"));
+        return status;
+    }
+
+    GroupInfo adminGroup;
+    status = storage->GetAdminGroup(adminGroup);
+    if (ER_OK != status) {
+        SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
+        securityAgentImpl->NotifyApplicationListeners(error);
+        QCC_LogError(status, ("Could not get admin group"));
+        return status;
+    }
+
+    IdentityCertificateChain idCerts;
+    Manifest manifest;
+    status = storage->GetIdentityCertificatesAndManifest(app, idCerts, manifest);
+    if (ER_OK != status) {
+        SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
+        securityAgentImpl->NotifyApplicationListeners(error);
+        QCC_LogError(status, ("Could not get identity certificate"));
+        return status;
+    }
+
+    status = proxyObjectManager->Claim(app, CAKeyInfo, adminGroup,
+                                       &(idCerts[0]), 1, manifest);
+
+    if (ER_OK != status) {
+        SyncError* error = new SyncError(app, status, SYNC_ER_CLAIM);
+        securityAgentImpl->NotifyApplicationListeners(error);
+    }
+
+    QCC_DbgPrintf(("Claiming application returned %s",
+                   QCC_StatusText(status)));
+
+    return status;
+}
+
 QStatus ApplicationUpdater::ResetApplication(const OnlineApplication& app)
 {
     QStatus status = ER_FAIL;
@@ -34,11 +82,10 @@ QStatus ApplicationUpdater::ResetApplication(const OnlineApplication& app)
     QCC_DbgPrintf(("Resetting application"));
     status = proxyObjectManager->Reset(app);
 
-    // TODO: Re-enable after completing AS-1535
-    // if (ER_OK != status) {
-    //    SyncError* error = new SyncError(app, status, SYNC_ER_RESET);
-    //    securityAgentImpl->NotifyApplicationListeners(error);
-    // }
+    if (ER_OK != status) {
+        SyncError* error = new SyncError(app, status, SYNC_ER_RESET);
+        securityAgentImpl->NotifyApplicationListeners(error);
+    }
 
     QCC_DbgPrintf(("Resetting application returned %s", QCC_StatusText(status)));
 
@@ -273,20 +320,37 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                                               const SecurityInfo& secInfo)
 {
     QStatus status = ER_FAIL;
-
     QCC_DbgPrintf(("Updating %s", secInfo.busName.c_str()));
-    Application application;
-    application.keyInfo = secInfo.keyInfo;
+
+    Application managedApp;
+    managedApp.keyInfo = secInfo.keyInfo;
     uint64_t transactionID = 0;
-    status = storage->StartUpdates(application, transactionID);
-    if (status != ER_OK && status != ER_END_OF_DATA) {
+    status = storage->StartUpdates(managedApp, transactionID);
+    if (status != ER_OK) {
+        QCC_DbgPrintf(("Failed to start transaction for %s (%s)",
+                       secInfo.busName.c_str(),  QCC_StatusText(status)));
         return status;
     }
-    QCC_DbgPrintf(("StartUpdates returned %s -  transaction = %llu", QCC_StatusText(status), transactionID));
+    QCC_DbgPrintf(("Started transaction %llu for %s", transactionID,
+                   secInfo.busName.c_str()));
+
     do {
-        if (ER_END_OF_DATA == status) {
+        switch (managedApp.syncState) {
+        case SYNC_WILL_RESET:
             status = ResetApplication(app);
-        } else {
+            if (ER_OK == status) {
+                managedApp.syncState = SYNC_RESET;
+            }
+            break;
+
+        case SYNC_WILL_CLAIM:
+            status = ClaimApplication(app);
+            if (ER_OK == status) {
+                managedApp.syncState = SYNC_OK;
+            }
+            break;
+
+        default:
             do {
                 if (ER_OK != (status = UpdatePolicy(app))) {
                     break;
@@ -294,31 +358,29 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                 if (ER_OK != (status = UpdateMemberships(app))) {
                     break;
                 }
-                status = UpdateIdentity(app);
+                if (ER_OK != (status = UpdateIdentity(app))) {
+                    break;
+                }
+                managedApp.syncState = SYNC_OK;
             } while (0);
         }
 
-        QCC_DbgPrintf(("Updates completed %s returned %s ", secInfo.busName.c_str(), QCC_StatusText(status)));
-        if (ER_OK == status) {
-            uint64_t currentTransaction = transactionID;
-            status = storage->UpdatesCompleted(application, transactionID);
-            if (currentTransaction != transactionID) {
-                //We fetch the application set status to ER_END_OF_DATA if the application would need reset.
-                status = storage->GetManagedApplication(application);
-                if (status != ER_OK && status != ER_END_OF_DATA) {
-                    QCC_LogError(status, ("GetManagedApplication Failed. Abort update."));
-                    break;
-                }
-            } else {
-                //update successful.
-                break;
-            }
+        QCC_DbgPrintf(("Transaction %llu returned %s", transactionID,
+                       QCC_StatusText(status)));
+
+        uint64_t currentTransactionID = transactionID;
+        QStatus storageStatus =
+            storage->UpdatesCompleted(managedApp, transactionID);
+
+        if ((ER_OK == storageStatus) && (currentTransactionID != transactionID)) {
+            // restart updates
+            QCC_DbgPrintf(("Restarted transaction %llu for %s", transactionID,
+                           secInfo.busName.c_str()));
         } else {
-            QCC_LogError(status, ("Failed to update application %s. Aborting update", secInfo.busName.c_str()));
-            return status;
+            // we're done !!
+            break;
         }
     } while (1);
-    QCC_DbgPrintf(("Updating %s returned %s ", secInfo.busName.c_str(), QCC_StatusText(status)));
 
     return status;
 }
@@ -337,7 +399,7 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app)
     if (status != ER_OK) {
         return ER_OK;
     }
-    status = securityAgentImpl->SetUpdatesPending(tmp, true);
+    status = securityAgentImpl->SetSyncState(tmp, SYNC_OK);
     SecurityInfo secInfo;
     secInfo.busName = app.busName;
     status = securityAgentImpl->GetApplicationSecInfo(secInfo);

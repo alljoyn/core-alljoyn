@@ -70,21 +70,23 @@ class TestApplicationListener :
     public ApplicationListener {
   public:
     TestApplicationListener(Condition& _sem,
-                            Mutex& _lock);
+                            Mutex& _lock,
+                            Condition& _errorSem,
+                            Mutex& _errorLock);
 
     vector<OnlineApplication> events;
+    vector<SyncError> syncErrors;
 
   private:
     Condition& sem;
     Mutex& lock;
+    Condition& errorSem;
+    Mutex& errorLock;
 
     void OnApplicationStateChange(const OnlineApplication* old,
                                   const OnlineApplication* updated);
 
-    void OnSyncError(const SyncError* syncError)
-    {
-        QCC_UNUSED(syncError);
-    }
+    void OnSyncError(const SyncError* syncError);
 
     /* To avoid compilation warning that the assignment operator can not be generated */
     TestApplicationListener& operator=(const TestApplicationListener&);
@@ -114,6 +116,8 @@ class BasicTest :
   protected:
     Condition sem;
     Mutex lock;
+    Condition errorSem;
+    Mutex errorLock;
     TestApplicationListener* tal;
     TestAboutListener testAboutListener;
     virtual void SetUp();
@@ -133,13 +137,12 @@ class BasicTest :
 
     BasicTest();
 
-    /* When updatesPending is -1, we will just ignore checking the updatesPending flag,
-     * otherwise it acts as a bool that needs to be checked/waited-for akin to states.
+    /**
      * hasBusName is true if the application is expected to have a busname, i.e., online.
      * */
     bool WaitForState(PermissionConfigurator::ApplicationState newApplicationState,
                       const bool hasBusName,
-                      const int updatesPending = -1);
+                      ApplicationSyncState updateState = SYNC_OK);
 
     bool CheckRemotePolicy(PermissionPolicy& expectedPolicy);
 
@@ -154,9 +157,14 @@ class BasicTest :
 
     bool CheckMemberships(vector<GroupInfo> expectedGroups);
 
-    bool CheckUpdatesPending(bool expected);
+    bool CheckSyncState(ApplicationSyncState updateState);
 
     bool WaitForUpdatesCompleted();
+
+    bool WaitForSyncError(SyncErrorType type,
+                          QStatus status);
+
+    bool CheckUnexpectedSyncErrors();
 
     virtual shared_ptr<AgentCAStorage>& GetAgentCAStorage()
     {
@@ -208,19 +216,11 @@ class DefaultAgentStorageWrapper :
         return ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, adminGroupMemberships);
     }
 
-    virtual QStatus StartApplicationClaiming(const Application& app,
+    virtual QStatus StartApplicationClaiming(Application& app,
                                              const IdentityInfo& idInfo,
-                                             const Manifest& manifest,
-                                             GroupInfo& adminGroup,
-                                             IdentityCertificate& identityCertificate)
+                                             const Manifest& manifest)
     {
-        return ca->StartApplicationClaiming(app, idInfo, manifest, adminGroup, identityCertificate);
-    }
-
-    virtual QStatus FinishApplicationClaiming(const Application& app,
-                                              bool status)
-    {
-        return ca->FinishApplicationClaiming(app, status);
+        return ca->StartApplicationClaiming(app, idInfo, manifest);
     }
 
     virtual QStatus UpdatesCompleted(Application& app, uint64_t& updateID)
@@ -236,6 +236,11 @@ class DefaultAgentStorageWrapper :
     virtual QStatus GetCaPublicKeyInfo(KeyInfoNISTP256& keyInfoOfCA) const
     {
         return ca->GetCaPublicKeyInfo(keyInfoOfCA);
+    }
+
+    virtual QStatus GetAdminGroup(GroupInfo& groupInfo) const
+    {
+        return ca->GetAdminGroup(groupInfo);
     }
 
     virtual QStatus GetMembershipCertificates(const Application& app,

@@ -26,12 +26,12 @@ class TestApplication {
     /**
      * Creates a new TestApplication.
      */
-    TestApplication();
+    TestApplication(string _appName = "Test");
 
     /**
      * Starts this TestApplication.
      */
-    QStatus Start();
+    QStatus Start(bool setDefaultManifest = true);
 
     /**
      * Retrieves the default manifest of this TestApplication
@@ -43,6 +43,11 @@ class TestApplication {
      * Sets the default manifest of this TestApplication.
      */
     QStatus SetManifest();
+
+    /**
+     * Sets the application state as permitted by PermissionConfigurator
+     */
+    QStatus SetApplicationState(const PermissionConfigurator::ApplicationState state);
 
     /**
      * Resets the keystore of this TestApplication.
@@ -62,5 +67,6 @@ class TestApplication {
   private:
     BusAttachment* busAttachment;
     DefaultECDHEAuthListener authListener;
+    string appName;
 };
 } // namespace

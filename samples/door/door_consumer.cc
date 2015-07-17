@@ -177,7 +177,7 @@ void printHelp()
            ">q : Quit\n");
 }
 
-int main(int arg, char** argv)
+int CDECL_CALL main(int arg, char** argv)
 {
     QCC_UNUSED(argv);
     QCC_UNUSED(arg);

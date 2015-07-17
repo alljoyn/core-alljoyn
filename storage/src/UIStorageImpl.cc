@@ -26,8 +26,8 @@ namespace securitymgr {
 QStatus UIStorageImpl::RemoveApplication(Application& app)
 {
     updateLock.Lock();
-    app.updatesPending = true;
-    QStatus status = storage->RemoveApplication(app);
+    app.syncState = SYNC_WILL_RESET;
+    QStatus status = storage->StoreApplication(app, true);
     updateCounter++;
     updateLock.Unlock();
     if (status == ER_OK) {
@@ -136,27 +136,48 @@ QStatus UIStorageImpl::StartUpdates(Application& app, uint64_t& updateID)
 
 QStatus UIStorageImpl::UpdatesCompleted(Application& app, uint64_t& updateID)
 {
+    QStatus status = ER_FAIL;
+    Application managedApp;
+
     updateLock.Lock();
-    QStatus status = storage->GetManagedApplication(app);
-    if (status != ER_END_OF_DATA && status != ER_OK) {
-        //Something went wrong in the storage layer.
-        QCC_LogError(status, ("Failed to GetManagedApplication"));
-    } else if (updateID == updateCounter) {
-        if (status == ER_END_OF_DATA || app.updatesPending) {
-            app.updatesPending = false;
-            if (status == ER_END_OF_DATA) {
-                status = ER_OK;
-            } else {
-                status = storage->StoreApplication(app, true);
-            }
-            updateLock.Unlock();
-            NotifyListeners(app, true);
-            return status;
+
+    switch (app.syncState) {
+    case SYNC_RESET:
+    case SYNC_WILL_CLAIM:
+        status = storage->RemoveApplication(app);
+        app.syncState = SYNC_OK; // default value for CLAIMABLE application
+        updateLock.Unlock();
+        NotifyListeners(app, true);
+        return status;
+
+    case SYNC_OK:
+        // get latest application from storage
+        managedApp.keyInfo = app.keyInfo;
+        status = storage->GetManagedApplication(managedApp);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to GetManagedApplication"));
+            break;
         }
-    } else {
-        status = ER_FAIL;
-        updateID = updateCounter;
+
+        // retrigger updates if needed
+        if (updateID != updateCounter) {
+            app = managedApp;
+            updateID = updateCounter;
+            status = ER_OK;
+            break;
+        }
+
+        // persist new state
+        managedApp.syncState = app.syncState;
+        status = storage->StoreApplication(managedApp, true);
+        updateLock.Unlock();
+        NotifyListeners(managedApp, true);
+        return status;
+
+    default:
+        break;
     }
+
     updateLock.Unlock();
     return status;
 }
@@ -265,17 +286,26 @@ QStatus UIStorageImpl::UpdatePolicy(Application& app, PermissionPolicy& policy)
     if (ER_OK != status) {
         return status;
     }
+
     PermissionPolicy local;
     status = storage->GetPolicy(app, local);
     if (ER_OK != status && ER_END_OF_DATA != status) {
         return status;
     }
-    policy.SetVersion(local.GetVersion() + 1);
+
+    if (policy.GetVersion() == 0) {
+        policy.SetVersion(local.GetVersion() + 1);
+    } else if (local.GetVersion() >= policy.GetVersion()) {
+        status = ER_POLICY_NOT_NEWER;
+        QCC_LogError(status, ("Provided policy is not newer"));
+        return status;
+    }
+
     status = storage->StorePolicy(app, policy);
     if (ER_OK != status) {
         return status;
     }
-    storage->GetPolicy(app, local);
+
     return ApplicationUpdated(app);
 }
 
@@ -322,8 +352,8 @@ QStatus UIStorageImpl::ApplicationUpdated(Application& app)
     QStatus status = storage->GetManagedApplication(app);
     if (status == ER_OK) {
         updateCounter++;
-        if (!app.updatesPending) {
-            app.updatesPending = true;
+        if (app.syncState == SYNC_OK) {
+            app.syncState = SYNC_PENDING;
             status = storage->StoreApplication(app, true);
             updateLock.Unlock();
             NotifyListeners(app);

@@ -75,20 +75,15 @@ class AJNCaStorage :
                                   IdentityCertificateChain& identityCertificates,
                                   vector<MembershipCertificateChain>& adminGroupMemberships);
 
-    virtual QStatus FinishApplicationClaiming(const Application& app,
-                                              bool status);
-
     virtual QStatus StartUpdates(Application& app,
                                  uint64_t& updateID);
 
     virtual QStatus UpdatesCompleted(Application& app,
                                      uint64_t& updateID);
 
-    virtual QStatus StartApplicationClaiming(const Application& app,
+    virtual QStatus StartApplicationClaiming(Application& app,
                                              const IdentityInfo& idInfo,
-                                             const Manifest& mf,
-                                             GroupInfo& adminGroup,
-                                             IdentityCertificate& idCert);
+                                             const Manifest& mf);
 
     virtual QStatus GetCaPublicKeyInfo(KeyInfoNISTP256& CAKeyInfo) const;
 

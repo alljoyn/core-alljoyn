@@ -33,8 +33,9 @@ namespace securitymgr {
  */
 typedef enum {
     SYNC_ER_UNKNOWN, /**< Unknown */
-    SYNC_ER_STORAGE, /**< Storage error */
-    SYNC_ER_REMOTE, /**< Remote error */
+    SYNC_ER_STORAGE, /**< Storage */
+    SYNC_ER_REMOTE, /**< Remote */
+    SYNC_ER_CLAIM, /**< Claim */
     SYNC_ER_RESET, /**< Reset */
     SYNC_ER_IDENTITY, /**< UpdateIdentity */
     SYNC_ER_MEMBERSHIP, /**< InstallMembership */

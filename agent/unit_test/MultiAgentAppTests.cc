@@ -95,5 +95,4 @@ TEST_F(MultiAgentAppTests, DISABLED_SuccessfulUpdateManyApps) {
  **/
 TEST_F(MultiAgentAppTests, DISABLED_SuccessfulRestartSecAgentWithManyApps) {
 }
-
 }

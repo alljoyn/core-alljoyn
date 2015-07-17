@@ -23,17 +23,17 @@
 using namespace std;
 
 namespace secmgr_tests {
-TestApplication::TestApplication() :
-    busAttachment(nullptr)
+TestApplication::TestApplication(string _appName) :
+    busAttachment(nullptr), appName(_appName)
 {
 }
 
-QStatus TestApplication::Start()
+QStatus TestApplication::Start(bool setDefaultManifest)
 {
     QStatus status = ER_OK;
 
     if (!busAttachment) {
-        busAttachment = new BusAttachment("test", true);
+        busAttachment = new BusAttachment(appName.c_str(), true);
 
         status = busAttachment->Start();
         if (ER_OK != status) {
@@ -49,7 +49,9 @@ QStatus TestApplication::Start()
         if (ER_OK != status) {
             return status;
         }
+    }
 
+    if (setDefaultManifest) {
         status = SetManifest();
         if (ER_OK != status) {
             return status;
@@ -132,9 +134,16 @@ QStatus TestApplication::SetManifest()
     return status;
 }
 
+QStatus TestApplication::SetApplicationState(const PermissionConfigurator::ApplicationState state)
+{
+    return busAttachment->GetPermissionConfigurator().SetApplicationState(state);
+}
+
 void TestApplication::Reset()
 {
-    busAttachment->ClearKeyStore();
+    if (busAttachment) {
+        busAttachment->ClearKeyStore();
+    }
 }
 
 TestApplication::~TestApplication()

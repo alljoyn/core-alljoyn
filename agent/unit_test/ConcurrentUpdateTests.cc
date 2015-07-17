@@ -46,24 +46,25 @@ class CCAgentStorageWrapper :
     QStatus UpdatesCompleted(Application& app, uint64_t& updateID)
     {
         QStatus status = ER_OK;
+        Application copy = app; // to avoid impact on agent to storage feedback
         switch (action) {
         case RESET:
-            status = storage->RemoveApplication(app);
+            status = storage->RemoveApplication(copy);
             action = NOTHING;
             break;
 
         case MEMBERSHIP:
-            status = storage->InstallMembership(app, group);
+            status = storage->InstallMembership(copy, group);
             action = NOTHING;
             break;
 
         case POLICY:
-            status = storage->UpdatePolicy(app, policy);
+            status = storage->UpdatePolicy(copy, policy);
             action = NOTHING;
             break;
 
         case MULTI:
-            status = storage->InstallMembership(app, group);
+            status = storage->InstallMembership(copy, group);
             action = POLICY;
             break;
 
@@ -178,11 +179,11 @@ TEST_F(ConcurrentUpdateTests, ResetAfterPolicy) {
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, true));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_WILL_RESET));
     wrappedCa->UnblockNothingAction();
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, false));
-    ASSERT_TRUE(CheckUpdatesPending(false));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_TRUE(CheckSyncState(SYNC_OK));
 }
 
 /**
@@ -203,10 +204,10 @@ TEST_F(ConcurrentUpdateTests, InstallMembershipAfterPolicy) {
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, true));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, false));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
 
-    ASSERT_TRUE(CheckUpdatesPending(false));
+    ASSERT_TRUE(CheckSyncState(SYNC_OK));
     vector<GroupInfo> memberships;
     memberships.push_back(groupInfo);
     ASSERT_TRUE(CheckPolicy(policy));
@@ -233,10 +234,10 @@ TEST_F(ConcurrentUpdateTests, UpdatePolicyAfterPolicy) {
     wrappedCa->SetAction(lastAppInfo, policy);
 
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, p));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, true));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, false));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
 
-    ASSERT_TRUE(CheckUpdatesPending(false));
+    ASSERT_TRUE(CheckSyncState(SYNC_OK));
     policy.SetVersion(2);
     ASSERT_TRUE(CheckPolicy(policy));
 }
@@ -267,10 +268,10 @@ TEST_F(ConcurrentUpdateTests, UpdateMultiple) {
     wrappedCa->SetAction(lastAppInfo, MULTI);
 
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, p));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, true));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, false));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
 
-    ASSERT_TRUE(CheckUpdatesPending(false));
+    ASSERT_TRUE(CheckSyncState(SYNC_OK));
 
     policy.SetVersion(2);
     ASSERT_TRUE(CheckPolicy(policy));

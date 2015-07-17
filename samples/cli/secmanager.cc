@@ -100,6 +100,9 @@ const char* ToString(SyncErrorType errorType)
     case SYNC_ER_REMOTE:
         return "SYNC_ER_REMOTE";
 
+    case SYNC_ER_CLAIM:
+        return "SYNC_ER_CLAIM";
+
     case SYNC_ER_RESET:
         return "SYNC_ER_RESET";
 
@@ -718,7 +721,7 @@ static bool parse(shared_ptr<SecurityAgent>& secAgent,
     return true;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     QCC_UNUSED(argc);
     QCC_UNUSED(argv);

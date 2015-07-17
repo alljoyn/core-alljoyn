@@ -66,40 +66,6 @@ Manifest::Manifest(const PermissionPolicy::Rule* _rules,
     }
 }
 
-Manifest& Manifest::operator=(const Manifest& rhs)
-{
-    if (this == &rhs) {
-        return *this;
-    }
-
-    manifest = rhs.manifest;
-    delete[]byteArray;
-    byteArray = nullptr;
-    size = 0;
-
-    if (rhs.size > 0) {
-        size = rhs.size;
-        byteArray = new uint8_t[size];
-        memcpy(byteArray, rhs.byteArray, size);
-    }
-    return *this;
-}
-
-bool Manifest::operator==(const Manifest& other) const
-{
-    return (manifest == other.manifest);
-}
-
-bool Manifest::operator!=(const Manifest& other) const
-{
-    return (manifest != other.manifest);
-}
-
-string Manifest::ToString() const
-{
-    return manifest.ToString().c_str();
-}
-
 QStatus Manifest::GetByteArray(uint8_t** manifestByteArray, size_t* _size) const
 {
     if (!manifestByteArray) {
@@ -176,7 +142,7 @@ QStatus Manifest::GetDigest(uint8_t* digest) const
     }
 
     Message* msg = nullptr;
-    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(msg);
+    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(&msg);
 
     if (marshaller) {
         status = marshaller->Digest(rules, count, digest, Crypto_SHA256::DIGEST_SIZE);
@@ -197,9 +163,13 @@ QStatus Manifest::SetFromByteArray(const uint8_t* manifestByteArray, const size_
         return ER_BAD_ARG_1;
     }
 
+    if (0 == _size) {
+        return ER_BAD_ARG_2;
+    }
+
     // Reconstruct policy containing manifest
     Message* msg = nullptr;
-    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(msg);
+    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(&msg);
     if (marshaller) {
         if (ER_OK == (status = manifest.Import(*marshaller, manifestByteArray, _size))) {
             size = _size;
@@ -220,6 +190,10 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
         return ER_BAD_ARG_1;
     }
 
+    if (0 == manifestRulesNumber) {
+        return ER_BAD_ARG_2;
+    }
+
     QStatus status = ER_FAIL;
 
     PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1]; // Acls are deleted by PermissionPolicy destructor
@@ -235,7 +209,7 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
     size_t _size = 0;
 
     Message* msg = nullptr;
-    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(msg);
+    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(&msg);
     if (marshaller) {
         status = manifest.Export(*marshaller, &buf, &_size);
 
@@ -260,6 +234,40 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
         delete marshaller;
     }
     return status;
+}
+
+string Manifest::ToString() const
+{
+    return manifest.ToString().c_str();
+}
+
+Manifest& Manifest::operator=(const Manifest& rhs)
+{
+    if (this == &rhs) {
+        return *this;
+    }
+
+    manifest = rhs.manifest;
+    delete[]byteArray;
+    byteArray = nullptr;
+    size = 0;
+
+    if (rhs.size > 0) {
+        size = rhs.size;
+        byteArray = new uint8_t[size];
+        memcpy(byteArray, rhs.byteArray, size);
+    }
+    return *this;
+}
+
+bool Manifest::operator==(const Manifest& other) const
+{
+    return (manifest == other.manifest);
+}
+
+bool Manifest::operator!=(const Manifest& other) const
+{
+    return (manifest != other.manifest);
 }
 }
 }

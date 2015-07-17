@@ -42,7 +42,7 @@ QStatus SQLStorage::StoreApplication(const Application& app, const bool update)
     QStatus funcStatus = ER_FAIL;
     string sqlStmtText;
     int keyPosition = 1;
-    int updatesPendingPos = 1;
+    int updateStatePos = 1;
     size_t keyInfoExportSize;
     uint8_t* publicKeyInfo = nullptr;
 
@@ -56,14 +56,14 @@ QStatus SQLStorage::StoreApplication(const Application& app, const bool update)
         sqlStmtText = "UPDATE ";
         sqlStmtText.append(CLAIMED_APPS_TABLE_NAME);
         sqlStmtText.append(
-            " SET UPDATES_PENDING = ? WHERE APPLICATION_PUBKEY = ?");
+            " SET SYNC_STATE = ? WHERE APPLICATION_PUBKEY = ?");
         keyPosition++;
     } else {
         sqlStmtText = "INSERT INTO ";
         sqlStmtText.append(CLAIMED_APPS_TABLE_NAME);
         sqlStmtText.append(
-            " (APPLICATION_PUBKEY, UPDATES_PENDING) VALUES (?, ?)");
-        updatesPendingPos++;
+            " (APPLICATION_PUBKEY, SYNC_STATE) VALUES (?, ?)");
+        updateStatePos++;
     }
 
     if (app.keyInfo.empty()) {
@@ -94,8 +94,8 @@ QStatus SQLStorage::StoreApplication(const Application& app, const bool update)
                                        SQLITE_TRANSIENT);
 
         sqlRetCode |= sqlite3_bind_int(statement,
-                                       updatesPendingPos,
-                                       (const bool)app.updatesPending);
+                                       updateStatePos,
+                                       static_cast<int>(app.syncState));
         if (SQLITE_OK != sqlRetCode) {
             funcStatus = ER_FAIL;
             LOGSQLERROR(funcStatus);
@@ -244,7 +244,7 @@ QStatus SQLStorage::GetAppMetaData(const Application& app, ApplicationMetaData& 
     do {
         sqlStmtText = "SELECT APP_NAME, DEV_NAME, USER_DEF_NAME FROM ";
         sqlStmtText.append(CLAIMED_APPS_TABLE_NAME);
-        sqlStmtText.append(" WHERE APPLICATION_PUBKEY LIKE ?");
+        sqlStmtText.append(" WHERE APPLICATION_PUBKEY = ?");
 
         sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
                                         -1, &statement, nullptr);
@@ -330,7 +330,7 @@ QStatus SQLStorage::GetManagedApplications(vector<Application>& apps) const
             break;
         }
 
-        app.updatesPending = sqlite3_column_int(statement, 7);
+        app.syncState = static_cast<ApplicationSyncState>(sqlite3_column_int(statement, 7));
         apps.push_back(app);
     }
 
@@ -470,7 +470,7 @@ QStatus SQLStorage::GetManagedApplication(Application& app) const
     do {
         sqlStmtText = "SELECT * FROM ";
         sqlStmtText.append(CLAIMED_APPS_TABLE_NAME);
-        sqlStmtText.append(" WHERE APPLICATION_PUBKEY LIKE ?");
+        sqlStmtText.append(" WHERE APPLICATION_PUBKEY = ?");
 
         sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
                                         -1, &statement, nullptr);
@@ -496,7 +496,7 @@ QStatus SQLStorage::GetManagedApplication(Application& app) const
         }
         sqlRetCode = sqlite3_step(statement);
         if (SQLITE_ROW == sqlRetCode) {
-            app.updatesPending = sqlite3_column_int(statement, 6);
+            app.syncState = static_cast<ApplicationSyncState>(sqlite3_column_int(statement, 6));
         } else if (SQLITE_DONE == sqlRetCode) {
             QCC_DbgHLPrintf(("No managed application was found !"));
             funcStatus = ER_END_OF_DATA;
@@ -1376,7 +1376,7 @@ QStatus SQLStorage::StoreInfo(InfoType type,
         if (type == INFO_GROUP) {
             sqlStmtText.append(", DESC = ?");
         }
-        sqlStmtText.append(" WHERE AUTHORITY = ? AND ID LIKE ?");
+        sqlStmtText.append(" WHERE AUTHORITY = ? AND ID = ?");
     } else {
         sqlStmtText = "INSERT INTO ";
         sqlStmtText.append(type == INFO_GROUP ? GROUPS_TABLE_NAME : IDENTITY_TABLE_NAME);
@@ -1458,7 +1458,7 @@ QStatus SQLStorage::GetInfo(InfoType type,
     }
     sqlStmtText.append(" FROM ");
     sqlStmtText.append(type == INFO_GROUP ? GROUPS_TABLE_NAME : IDENTITY_TABLE_NAME);
-    sqlStmtText.append(" WHERE AUTHORITY = ? AND ID LIKE ?");
+    sqlStmtText.append(" WHERE AUTHORITY = ? AND ID = ?");
     do {
         sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
                                         -1, &statement, nullptr);
@@ -1538,7 +1538,7 @@ QStatus SQLStorage::RemoveInfo(InfoType type,
 
     string sqlStmtText = "DELETE FROM ";
     sqlStmtText.append(type == INFO_GROUP ? GROUPS_TABLE_NAME : IDENTITY_TABLE_NAME);
-    sqlStmtText.append(" WHERE AUTHORITY = ? AND ID LIKE ?");
+    sqlStmtText.append(" WHERE AUTHORITY = ? AND ID = ?");
 
     do {
         sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
@@ -1599,7 +1599,7 @@ QStatus SQLStorage::GetPolicyOrManifest(const Application& app,
         sqlStmtText += ", LENGTH(" + string(type) + ")";
         sqlStmtText += (" FROM ");
         sqlStmtText += CLAIMED_APPS_TABLE_NAME;
-        sqlStmtText += " WHERE APPLICATION_PUBKEY LIKE ?";
+        sqlStmtText += " WHERE APPLICATION_PUBKEY = ?";
 
         sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
                                         -1, &statement, nullptr);

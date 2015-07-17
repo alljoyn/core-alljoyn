@@ -33,16 +33,31 @@ class AutoRejector :
     }
 };
 
-class ClaimingTests :
-    public BasicTest {
-  private:
-
-  protected:
-
+class RejectAfterAcceptListener :
+    public ManifestListener {
   public:
-    ClaimingTests()
+    RejectAfterAcceptListener(const shared_ptr<SecurityAgent>& _secMgr) : secMgr(_secMgr)
     {
     }
+
+    bool ApproveManifest(const OnlineApplication& app,
+                         const Manifest& manifest)
+    {
+        QCC_UNUSED(app);
+        QCC_UNUSED(manifest);
+
+        secMgr->SetManifestListener(&ar);
+
+        return true;
+    }
+
+  private:
+    AutoRejector ar;
+    shared_ptr<SecurityAgent> secMgr;
+};
+
+class ClaimingTests :
+    public BasicTest {
 };
 
 /**
@@ -114,14 +129,64 @@ TEST_F(ClaimingTests, RejectManifest) {
  * @test Basic robustness tests for the claiming, including input validation,
  *       unavailability of manifest listener/CA.
  *      -# Claiming an off-line/unknown application should fail.
+ *      -# Claiming using an unknown identity should fail.
  *      -# Claiming an application that is NOT_CLAIMABALE should fail.
  *      -# Claiming an application that is CLAIMED should fail.
- *      -# Claiming an application that NEEDS_UPDATE should fail.
- *      -# Claiming using an unknown identity should fail.
+ *      -# Claiming an application that NEED_UPDATE should fail.
  *
  *      -# Claiming when no ManifestListener is set should fail.
  *      -# Claiming when application did not specify any manifest should fail.
- *
+ */
+TEST_F(ClaimingTests, BasicRobustness) {
+    IdentityInfo idInfo;
+    idInfo.guid = GUID128();
+    idInfo.name = "StoredTestIdentity";
+    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
+    ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, idInfo));     // No test app exists (or offline)
+
+    TestApplication testApp;
+    IdentityInfo inexistentIdInfo;
+    inexistentIdInfo.guid = GUID128();
+    inexistentIdInfo.name = "InexistentTestIdentity";
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, inexistentIdInfo)); // Claim a claimable app with inexistent ID
+
+    testApp.SetApplicationState(PermissionConfigurator::NOT_CLAIMABLE);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NOT_CLAIMABLE, true));
+    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_CLAIM, ER_PERMISSION_DENIED));
+
+    testApp.SetApplicationState(PermissionConfigurator::CLAIMED);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_CLAIM, ER_PERMISSION_DENIED));
+
+    testApp.SetApplicationState(PermissionConfigurator::NEED_UPDATE);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true));
+    ASSERT_EQ(ER_PERMISSION_DENIED, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_CLAIM, ER_PERMISSION_DENIED));
+
+    secMgr->SetManifestListener(nullptr);
+    testApp.SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, idInfo)); // Secmgr has no mft listener
+
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, false));
+    testApp.Reset();
+
+    TestApplication testApp2("Test2");
+    testApp2.Start(false); // No default manifest
+    AutoAccepter aa;
+    secMgr->SetManifestListener(&aa);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, secMgr->Claim(lastAppInfo, idInfo));  // app has no manifest
+}
+
+/**
+ * @test Basic robustness test with a faulty CA.
+ *       //TODO Wouldn't AS-1616 suffice?
  *      -# Claiming when the CA does not return its public key should fail.
  *      -# Claiming when the CA does not return an identity certificate should
  *         fail.
@@ -129,9 +194,8 @@ TEST_F(ClaimingTests, RejectManifest) {
  *         as to line up with the state persisted in the database.
  *      -# Restarting the application should not be reset.
  */
-TEST_F(ClaimingTests, DISABLED_BasicRobustness) {
+TEST_F(ClaimingTests, DISABLED_BasicRobustnessCAToAgent) {
 }
-
 /**
  * @test Recovery from failure of notifying the CA of failure of claiming an
  *       application should be graceful.
@@ -153,14 +217,38 @@ TEST_F(ClaimingTests, DISABLED_RecoveryFromFinishClaimingFailure) {
  *       original manifest listener should work.
  *       -# Claim a CLAIMABLE application with a known identity.
  *       -# While the manifest listener is called to approve the manifest, a
- *          new manifest listener is installed.
+ *          new manifest listener is installed to reject the manifest.
  *       -# The original listener accepts the manifest.
  *       -# The application should be claimed.
- *       -# Reset the application.
- *       -# Claim the application again.
- *       -# The second application listener should be called now.
+ *       -# Start a new application and try claiming it.
+ *       -# The manifest should be rejected and the claiming should fail.
+ *       -# Make sure the new application is still claimable.
  */
-TEST_F(ClaimingTests, DISABLED_ConcurrentManifestListenerUpdate) {
+TEST_F(ClaimingTests, ConcurrentManifestListenerUpdate) {
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
+
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+
+    IdentityInfo idInfo;
+    idInfo.guid = GUID128();
+    idInfo.name = "TestIdentity";
+    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
+
+    RejectAfterAcceptListener rejectAfterAccept(secMgr);
+    secMgr->SetManifestListener(&rejectAfterAccept);
+
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+
+    TestApplication testApp2("NewTestApp");
+    ASSERT_EQ(ER_OK, testApp2.Start());
+
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_EQ(ER_MANIFEST_REJECTED, secMgr->Claim(lastAppInfo, idInfo));
+
+    testApp2.SetApplicationState(PermissionConfigurator::CLAIMABLE); // Trigger another event
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
 }
 
 /**

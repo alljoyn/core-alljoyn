@@ -295,7 +295,52 @@ TEST_F(ManifestUtilTests, ExtendedPermissionPolicyDigest) {
  *          constructor with valid first argument and size <= 0 and make sure
  *          all will fail (!= ER_OK).
  **/
-TEST_F(ManifestUtilTests, DISABLED_ManifestIllegalArgs) {
+TEST_F(ManifestUtilTests, ManifestIllegalArgs) {
+    ASSERT_EQ(ER_OK, Util::Init(ba));
+
+    PermissionPolicy::Rule* rules = nullptr;
+    size_t count;
+    Manifest defaultManifest;
+
+    Manifest* m = nullptr;
+    m = new Manifest(rules, 0);
+    ASSERT_TRUE(*m == defaultManifest);
+    delete m;
+    m = nullptr;
+
+    uint8_t* nullByteArray = nullptr;
+    m = new Manifest(nullByteArray, 0);
+    ASSERT_TRUE(*m == defaultManifest);
+    delete m;
+    m = nullptr;
+
+    ASSERT_NE(ER_OK, defaultManifest.GetByteArray(nullptr, nullptr));
+    ASSERT_NE(ER_OK, defaultManifest.GetRules(nullptr, nullptr));
+    ASSERT_NE(ER_OK, defaultManifest.GetDigest(nullptr));
+    ASSERT_NE(ER_OK, defaultManifest.SetFromByteArray(nullptr, 0));
+    ASSERT_NE(ER_OK, defaultManifest.SetFromRules(nullptr, 0));
+
+    /*
+     * \CAUTION: Calling SetFromRules and SetFromByteArray
+     *           with a valid first argument and a negative
+     *           second argument (size of type size_t)
+     *            will most probably cause bad_alloc.
+     */
+    rules = nullptr;
+    ASSERT_EQ(ER_OK, GenerateManifest(&rules, &count));
+    ASSERT_NE(ER_OK, defaultManifest.SetFromRules(rules, 0));
+
+    Manifest manifestFromRules(rules, count);
+    uint8_t* byteArray = nullptr;
+    size_t sizeOfByteArray;
+    EXPECT_EQ(ER_OK, manifestFromRules.GetByteArray(&byteArray, &sizeOfByteArray));
+
+    EXPECT_NE(ER_OK, defaultManifest.SetFromByteArray(byteArray, 0));
+
+    delete[]rules;
+    delete[]byteArray;
+
+    ASSERT_EQ(ER_OK, Util::Fini());
 }
 
 /**
@@ -312,6 +357,43 @@ TEST_F(ManifestUtilTests, DISABLED_ManifestIllegalArgs) {
  *          make sure this fails (!= OR_OK).
  *       -# Call Fini on Util and make sure it succeeds (== ER_OK).
  **/
-TEST_F(ManifestUtilTests, DISABLED_UtilIllegalArgs) {
+TEST_F(ManifestUtilTests, UtilIllegalArgs) {
+    ASSERT_NE(ER_OK, Util::Init(nullptr));
+    Message* msg = nullptr;
+    ASSERT_EQ(nullptr, Util::GetDefaultMarshaller(&msg));
+    PermissionPolicy pp;
+
+    ASSERT_EQ(ER_OK, Util::Init(ba)); // Needed to create a valid test policy/manifest
+    PermissionPolicy::Rule* rules = nullptr;
+    size_t count;
+    ASSERT_EQ(ER_OK, GenerateManifest(&rules, &count));
+    Manifest manifestFromRules(rules, count);
+    uint8_t* byteArray = nullptr;
+    size_t sizeOfByteArray;
+    EXPECT_EQ(ER_OK, manifestFromRules.GetByteArray(&byteArray, &sizeOfByteArray));
+    EXPECT_EQ(ER_OK, Util::Fini());
+
+    ASSERT_NE(ER_OK, Util::Init(nullptr));
+    EXPECT_NE(ER_OK, Util::GetPolicy(byteArray, sizeOfByteArray, pp));
+    delete[] byteArray;
+    byteArray = nullptr;
+    sizeOfByteArray = 0;
+    ASSERT_NE(ER_OK, Util::GetPolicyByteArray(pp, &byteArray, &sizeOfByteArray));
+    ASSERT_EQ((size_t)0, sizeOfByteArray);
+    ASSERT_EQ(nullptr, byteArray);
+
+    ASSERT_EQ(ER_OK, Util::Init(ba));
+    EXPECT_EQ(ER_OK, Util::GetPolicyByteArray(pp, &byteArray, &sizeOfByteArray)); //empty pp should be fine
+    EXPECT_NE((size_t)0, sizeOfByteArray);
+    EXPECT_NE(nullptr, byteArray);
+    delete[] byteArray;
+    byteArray = nullptr;
+    sizeOfByteArray = 0;
+
+    ASSERT_EQ(nullptr, Util::GetDefaultMarshaller(nullptr));
+    ASSERT_NE(ER_OK, Util::GetPolicyByteArray(pp, nullptr, nullptr));
+    ASSERT_NE(ER_OK, Util::GetPolicy(nullptr, 0, pp));
+
+    ASSERT_EQ(ER_OK, Util::Fini());
 }
 }

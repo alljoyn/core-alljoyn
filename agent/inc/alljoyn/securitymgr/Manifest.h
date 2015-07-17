@@ -131,18 +131,18 @@ class Manifest {
                          const size_t manifestRulesCount);
 
     /**
-     * @brief The assignment operator for Manifest.
-     *
-     * @param[in] rhs   The manifest to assign from.
-     */
-    Manifest& operator=(const Manifest& rhs);
-
-    /**
      * @brief Return a string representation of this Manifest.
      *
      * @return  A string representation of this manifest.
      */
     string ToString() const;
+
+    /**
+     * @brief The assignment operator for Manifest.
+     *
+     * @param[in] rhs   The manifest to assign from.
+     */
+    Manifest& operator=(const Manifest& rhs);
 
     /**
      * @brief The equality operator for Manifest.

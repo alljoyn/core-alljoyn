@@ -34,8 +34,10 @@ using namespace std;
 
 namespace secmgr_tests {
 TestApplicationListener::TestApplicationListener(Condition& _sem,
-                                                 Mutex& _lock) :
-    sem(_sem), lock(_lock)
+                                                 Mutex& _lock,
+                                                 Condition& _errorSem,
+                                                 Mutex& _errorLock) :
+    sem(_sem), lock(_lock), errorSem(_errorSem), errorLock(_errorLock)
 {
 }
 
@@ -49,6 +51,57 @@ void TestApplicationListener::OnApplicationStateChange(const OnlineApplication* 
     events.push_back(*info);
     sem.Broadcast();
     lock.Unlock();
+}
+
+string ToString(SyncErrorType errorType)
+{
+    switch (errorType) {
+    case SYNC_ER_UNKNOWN:
+        return "SYNC_ER_UNKNOWN";
+
+    case SYNC_ER_STORAGE:
+        return "SYNC_ER_STORAGE";
+
+    case SYNC_ER_REMOTE:
+        return "SYNC_ER_REMOTE";
+
+    case SYNC_ER_CLAIM:
+        return "SYNC_ER_CLAIM";
+
+    case SYNC_ER_RESET:
+        return "SYNC_ER_RESET";
+
+    case SYNC_ER_IDENTITY:
+        return "SYNC_ER_IDENTITY";
+
+    case SYNC_ER_MEMBERSHIP:
+        return "SYNC_ER_MEMBERSHIP";
+
+    case SYNC_ER_POLICY:
+        return "SYNC_ER_POLICY";
+
+    default:
+        return "SYNC_ER_UNEXPECTED";
+    }
+}
+
+string ToString(const SyncError* er)
+{
+    string result = "SyncError >>";
+    result += " busName: " + er->app.busName;
+    result += " type: " + ToString(er->type);
+    result += " status: " + string(QCC_StatusText(er->status));
+
+    return result;
+}
+
+void TestApplicationListener::OnSyncError(const SyncError* er)
+{
+    cout << ToString(er) << endl;
+    errorLock.Lock();
+    syncErrors.push_back(*er);
+    errorSem.Broadcast();
+    errorLock.Unlock();
 }
 
 BasicTest::BasicTest() :
@@ -86,12 +139,11 @@ void BasicTest::SetUp()
     ASSERT_EQ(ER_OK, storageFac.GetStorage("test", storage));
     ASSERT_EQ(ER_OK, storage->GetCaStorage(ca));
     ASSERT_EQ(ER_OK, secFac.GetSecurityAgent(GetAgentCAStorage(), secMgr, ba));
+    ASSERT_NE(nullptr, secMgr);
 
     secMgr->SetManifestListener(&aa);
-
-    tal = new TestApplicationListener(sem, lock);
+    tal = new TestApplicationListener(sem, lock, errorSem, errorLock);
     secMgr->RegisterApplicationListener(tal);
-
     GroupInfo adminGroup;
     storage->GetAdminGroup(adminGroup);
     pg = new PolicyGenerator(adminGroup);
@@ -111,7 +163,8 @@ void BasicTest::UpdateLastAppInfo()
 }
 
 bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
-                             const bool hasBusName, const int updatesPending)
+                             const bool hasBusName,
+                             ApplicationSyncState syncState)
 {
     lock.Lock();
     printf("\nWaitForState: waiting for event(s) ...\n");
@@ -121,8 +174,9 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
         if (tal && tal->events.size()) { //if no event is in the queue, we will return immediately
             UpdateLastAppInfo(); //update latest value.
             printf("WaitForState: Checking event ... ");
-            if (lastAppInfo.applicationState == newState && ((hasBusName == !lastAppInfo.busName.empty())) &&
-                ((updatesPending == -1 ? 1 : ((bool)updatesPending == lastAppInfo.updatesPending)))) {
+            if ((newState == lastAppInfo.applicationState)
+                && (hasBusName == !lastAppInfo.busName.empty())
+                && (syncState == lastAppInfo.syncState)) {
                 printf("ok\n");
                 lock.Unlock();
                 return true;
@@ -143,10 +197,8 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
     printf("\tHas BusName: expected = %s, got %s\n", (hasBusName ? "YES" : "NO"),
            (lastAppInfo.busName.empty() ? "NO" : "YES"));
     printf("\t Busname lastAppInfo.busName (%s)\n", lastAppInfo.busName.c_str());
-    if (updatesPending != -1) {
-        printf("\tUpdatesPending : expected = %s, got %s\n", (updatesPending ? "True" : "False"),
-               (lastAppInfo.updatesPending ? "True" : "False"));
-    }
+    printf("\t SyncState : expected = %s, got %s\n",
+           ToString(syncState), ToString(lastAppInfo.syncState));
 
     lock.Unlock();
     return false;
@@ -379,9 +431,9 @@ bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
     return true;
 }
 
-bool BasicTest::CheckUpdatesPending(bool expected)
+bool BasicTest::CheckSyncState(ApplicationSyncState expected)
 {
-    printf("Checking updates pending in security agent ... ");
+    printf("Checking sync state in security agent ... ");
     OnlineApplication check;
     check.keyInfo = lastAppInfo.keyInfo;
     QStatus status = secMgr->GetApplication(check);
@@ -390,11 +442,10 @@ bool BasicTest::CheckUpdatesPending(bool expected)
         return false;
     }
 
-    bool actual = check.updatesPending;
+    ApplicationSyncState actual = check.syncState;
     if (expected != actual) {
-        printf("unexpected updatesPending: expected %s , got %s\n",
-               expected ? "true" : "false",
-               actual ? "true" : "false");
+        printf("unexpected syncState: expected %s , got %s\n",
+               ToString(expected), ToString(actual));
         return false;
     }
 
@@ -407,25 +458,79 @@ bool BasicTest::WaitForUpdatesCompleted()
     printf("Waiting for updates completed ... ");
     bool result = true;
 
-    result = WaitForState(PermissionConfigurator::CLAIMED, true, true);
+    result = WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING);
     if (!result) {
         return result;
     }
 
-    result = WaitForState(PermissionConfigurator::CLAIMED, true, false);
+    result = WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK);
     if (!result) {
         return result;
     }
 
-    result = CheckUpdatesPending(false);
+    result = CheckSyncState(SYNC_OK);
 
     return result;
+}
+
+bool BasicTest::WaitForSyncError(SyncErrorType type, QStatus status)
+{
+    printf("Waiting for sync error ... ");
+    bool result = false;
+
+    errorLock.Lock();
+    do {
+        if (tal && tal->syncErrors.size()) {
+            vector<SyncError>::iterator it = tal->syncErrors.begin();
+            QStatus errorStatus = it->status;
+            SyncErrorType errorType = it->type;
+            result = ((errorType == type) && (errorStatus == status));
+            tal->syncErrors.erase(it);
+            errorLock.Unlock();
+
+            if (result == true) {
+                printf("ok\n");
+            } else if (errorType != type) {
+                printf("unexpected SyncErrorType: expected %s, got %s\n",
+                       ToString(type).c_str(), ToString(errorType).c_str());
+            } else if (errorStatus != status) {
+                printf("unexpected Status: expected %s, got %s\n",
+                       QCC_StatusText(status), QCC_StatusText(errorStatus));
+            }
+
+            return result;
+        } else {
+            QStatus status = errorSem.TimedWait(errorLock, 5000);
+            if (ER_OK != status) {
+                printf("timeout\n");
+                break;
+            }
+        }
+    } while (true);
+
+    errorLock.Unlock();
+    return false;
+}
+
+bool BasicTest::CheckUnexpectedSyncErrors()
+{
+    printf("Checking for unexpected sync errors ... ");
+    if (tal->syncErrors.size() > 0) {
+        printf("%lu unexpected sync error(s)\n",
+               tal->syncErrors.size());
+        return false;
+    }
+
+    printf("ok\n");
+    return true;
 }
 
 void BasicTest::TearDown()
 {
     delete proxyObjectManager;
     proxyObjectManager = nullptr;
+
+    ASSERT_TRUE(CheckUnexpectedSyncErrors());
 
     if (tal) {
         secMgr->UnregisterApplicationListener(tal);

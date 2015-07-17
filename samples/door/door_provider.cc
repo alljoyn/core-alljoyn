@@ -38,7 +38,7 @@ class SPListener :
     }
 };
 
-int main(int arg, char** argv)
+int CDECL_CALL main(int arg, char** argv)
 {
     QCC_UNUSED(arg);
     QCC_UNUSED(argv);

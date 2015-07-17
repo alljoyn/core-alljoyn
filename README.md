@@ -91,17 +91,17 @@ Example scenario:
     Group: (26141921a7c84a8bf736e4b461886d71 / foo / bar)
 
 * Install a membership certificate for that guild on both provider and consumer.
-  Once installation is complete it should return an UpdatesPending false.
+  Once installation is complete the sync state should be SYNC_OK.
 
     > m 92a2f6d44b030173d307dfeb2fd9c0cc 26141921a7c84a8bf736e4b461886d71
      
-    >> Old application state = OnlineApplication: Busname: :-ARcsaj-.139, Claim state: CLAIMED, Updates     pending: true
-    >> New application state = OnlineApplication: Busname: :-ARcsaj-.139, Claim state: CLAIMED, Updates pending: false
+    >> Old application state = OnlineApplication: Busname: :-ARcsaj-.139, Claim state: CLAIMED, Sync state: SYNC_PENDING
+    >> New application state = OnlineApplication: Busname: :-ARcsaj-.139, Claim state: CLAIMED, Sync state: SYNC_OK
     >> ApplicationId: 92a2f6d44b030173d307dfeb2fd9c0cc
 
 * Install a policy that provides other members of that guild full access on
   both provider and consumer. Again successful installation is indicated when
-  UpdatesPending is false.
+  the sync state is SYNC_OK.
 
     > o 92a2f6d44b030173d307dfeb2fd9c0cc 26141921a7c84a8bf736e4b461886d71
   

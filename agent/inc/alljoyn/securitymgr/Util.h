@@ -56,7 +56,7 @@ class Util {
     /**
      * @brief Return a usable DefaultPolicyMarshaller.
      *
-     * @param[in,out] msg    A pointer to Message of a BusAttachment that will
+     * @param[in,out] msg    A Message of a BusAttachment that will
      *                       be newly allocated by this function.
      *                       Util has no ownership on the returned Message.
      *
@@ -64,7 +64,7 @@ class Util {
      *                                 Util has no ownership on the returned marshaller.
      * @return nullptr                 Otherwise.
      */
-    static DefaultPolicyMarshaller* GetDefaultMarshaller(Message* msg);
+    static DefaultPolicyMarshaller* GetDefaultMarshaller(Message** msg);
 
     /*@brief Export the byte array representing a permission policy using
      *       a statically fetched default marshaller and message.

@@ -94,8 +94,8 @@ class SecurityAgentImpl :
 
     QStatus GetApplication(OnlineApplication& _application) const;
 
-    QStatus SetUpdatesPending(const OnlineApplication& app,
-                              bool updatesPending);
+    QStatus SetSyncState(const OnlineApplication& app,
+                         const ApplicationSyncState syncState);
 
     void UpdateApplications(const vector<OnlineApplication>* apps = nullptr);
 

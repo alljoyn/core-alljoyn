@@ -85,6 +85,8 @@ class ApplicationUpdater :
 
   private:
 
+    QStatus ClaimApplication(const OnlineApplication& app);
+
     QStatus ResetApplication(const OnlineApplication& app);
 
     QStatus UpdateApplication(const OnlineApplication& app,

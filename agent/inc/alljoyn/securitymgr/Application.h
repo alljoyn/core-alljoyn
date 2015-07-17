@@ -33,13 +33,50 @@ using namespace qcc;
 
 namespace ajn {
 namespace securitymgr {
+enum ApplicationSyncState {
+    SYNC_WILL_CLAIM = 0, ///< The application will be claimed when it comes online.
+    SYNC_OK = 1,         ///< The application is claimed and there are no pending changes to its security configuration.
+    SYNC_PENDING = 2,    ///< The security configuration of the application will be updated when it comes online.
+    SYNC_WILL_RESET = 3, ///< The application will be reset when it comes online.
+    SYNC_RESET = 4       ///< The application is successfully reset.
+};
+
 /**
- * @brief Application represents an application with its updates pending state.
+ * @brief Returns the string representation of an application sync state.
+ *
+ * @param[in] state  application sync state
+ *
+ * @return string    a string representation of the application sync state
+ */
+static const char* ToString(const ApplicationSyncState state)
+{
+    switch (state) {
+    case SYNC_WILL_CLAIM:
+        return "SYNC_WILL_CLAIM";
+
+    case SYNC_OK:
+        return "SYNC_OK";
+
+    case SYNC_PENDING:
+        return "SYNC_PENDING";
+
+    case SYNC_WILL_RESET:
+        return "SYNC_WILL_RESET";
+
+    case SYNC_RESET:
+        return "SYNC_RESET";
+    }
+
+    return "UNKNOWN";
+}
+
+/**
+ * @brief Application represents an application with its update status.
  */
 struct Application {
   public:
 
-    Application() : updatesPending(false) { }
+    Application() : syncState(SYNC_OK) { }
 
     /**
      * @brief NIST P-256 ECC KeyInfo.
@@ -48,14 +85,9 @@ struct Application {
     KeyInfoNISTP256 keyInfo;
 
     /**
-     * @brief Indicates whether there are still changes to the security
-     *        configuration of the application that are known to the security agent
-     *        but have not yet been applied to the remote application itself yet.
-     *        It is set to true whenever an administrator changes the configuration of
-     *        an application, and set to false only when the configuration of the remote
-     *        application matches the configuration known to the security agent.
+     * @brief Indicates the current sync state of the application.
      */
-    bool updatesPending;
+    ApplicationSyncState syncState;
 
     /**
      * @brief Equality operator for Application.
@@ -111,8 +143,8 @@ struct OnlineApplication :
         toString += busName;
         toString += ", Claim state: ";
         toString += PermissionConfigurator::ToString(applicationState);
-        toString += ", Updates pending: ";
-        toString += (updatesPending ? "true" : "false");
+        toString += ", Sync state: ";
+        toString += ajn::securitymgr::ToString(syncState);
         return toString;
     }
 

@@ -62,12 +62,10 @@ TEST_F(ResetTests, SuccessfulReset) {
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, false));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true,
+                             SYNC_OK));
 
-    OnlineApplication checkUpdatesPendingInfo;
-    checkUpdatesPendingInfo.keyInfo = lastAppInfo.keyInfo;
-    ASSERT_EQ(ER_OK, secMgr->GetApplication(checkUpdatesPendingInfo));
-    ASSERT_FALSE(checkUpdatesPendingInfo.updatesPending);
+    ASSERT_TRUE(CheckSyncState(SYNC_OK));
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));

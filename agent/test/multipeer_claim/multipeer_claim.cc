@@ -415,7 +415,7 @@ static int be_secmgr(size_t peers)
     return retval;
 }
 
-int main(int argc, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
     int status;
     int peers;
