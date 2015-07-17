@@ -20,6 +20,9 @@
 #include <alljoyn_c/ProxyBusObject.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <qcc/windows/NamedPipeWrapper.h>
+#endif
 #include "ajTestCommon.h"
 
 TEST(BusAttachmentTest, createinterface) {
@@ -208,14 +211,16 @@ TEST(BusAttachmentTest, connect_null)
     /**
      * Note: the default connect spec here must match the one in alljoyn_core BusAttachment.
      */
+    const char* preferredConnectSpec;
+
 #if defined(QCC_OS_GROUP_WINDOWS)
-#if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
-    const char* preferredConnectSpec = "npipe:";
+    if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+        preferredConnectSpec = "npipe:";
+    } else {
+        preferredConnectSpec = "tcp:addr=127.0.0.1,port=9955";
+    }
 #else
-    const char* preferredConnectSpec = "tcp:addr=127.0.0.1,port=9955";
-#endif
-#else
-    const char* preferredConnectSpec = "unix:abstract=alljoyn";
+    preferredConnectSpec = "unix:abstract=alljoyn";
 #endif
 
     /*

@@ -26,16 +26,9 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Time.h>
 #include <windows.h>
-
-/*
- * Compile this file only for Windows version 10 or greater.
- */
-#if (_WIN32_WINNT > 0x0603)
-
-#include <msajtransport.h>
-
 #include <qcc/FileStream.h>
 #include <qcc/Windows/NamedPipeStream.h>
+#include <qcc/windows/NamedPipeWrapper.h>
 
 using namespace std;
 using namespace qcc;
@@ -88,7 +81,7 @@ NamedPipeStream::~NamedPipeStream()
     sinkEvent = NULL;
 
     if (busHandle != INVALID_HANDLE_VALUE) {
-        AllJoynCloseBusHandle(busHandle);
+        qcc::NamedPipeWrapper::AllJoynCloseBusHandle(busHandle);
         busHandle = INVALID_HANDLE_VALUE;
     }
 }
@@ -117,7 +110,7 @@ QStatus NamedPipeStream::PullBytes(void* buf, size_t reqBytes, size_t& actualByt
         /*
          * Non-blocking read
          */
-        success = AllJoynReceiveFromBus(busHandle, buf, reqBytes, &readBytes, nullptr);
+        success = qcc::NamedPipeWrapper::AllJoynReceiveFromBus(busHandle, buf, reqBytes, &readBytes, nullptr);
 
         if (success == FALSE) {
             QCC_DbgTrace(("AllJoynReceiveFromBus failed. The other end closed the pipe."));
@@ -173,7 +166,7 @@ QStatus NamedPipeStream::PushBytes(const void* buf, size_t numBytes, size_t& num
             break;
         }
 
-        success = AllJoynSendToBus(busHandle, buf, numBytes, &writeBytes, nullptr);
+        success = qcc::NamedPipeWrapper::AllJoynSendToBus(busHandle, buf, numBytes, &writeBytes, nullptr);
 
         if (success == FALSE) {
             QCC_LogError(ER_FAIL, ("AllJoynSendToBus failed. The other end closed the pipe (0x%08X).", ::GetLastError()));
@@ -224,5 +217,3 @@ void NamedPipeStream::Close()
     isConnected = false;
     isDetached = true;
 }
-
-#endif //#if (_WIN32_WINNT > 0x0603)

@@ -32,6 +32,10 @@
 #include <alljoyn/Status.h>
 #include <qcc/platform.h>
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <qcc/windows/NamedPipeWrapper.h>
+#endif
+
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Observer.h>
 #include <alljoyn/AboutObj.h>
@@ -52,11 +56,11 @@ using namespace qcc;
 static qcc::String getConnectArg(const char* envvar = "BUS_ADDRESS") {
     qcc::Environ* env = Environ::GetAppEnviron();
 #if defined(QCC_OS_GROUP_WINDOWS)
-    #if (_WIN32_WINNT > 0x0603)
-    return env->Find(envvar, "npipe:");
-    #else
-    return env->Find(envvar, "tcp:addr=127.0.0.1,port=9955");
-    #endif
+    if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+        return env->Find(envvar, "npipe:");
+    } else {
+        return env->Find(envvar, "tcp:addr=127.0.0.1,port=9955");
+    }
 #else
     return env->Find(envvar, "unix:abstract=alljoyn");
 #endif

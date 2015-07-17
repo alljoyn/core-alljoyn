@@ -68,4 +68,12 @@ NamedPipeClientTransport::NamedPipeClientTransport(BusAttachment& bus)
 {
 }
 
+void NamedPipeClientTransport::Init()
+{
+}
+
+void NamedPipeClientTransport::Shutdown()
+{
+}
+
 } // namespace ajn

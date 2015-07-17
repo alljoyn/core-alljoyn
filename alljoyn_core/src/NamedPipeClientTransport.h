@@ -33,6 +33,7 @@
 #include <qcc/String.h>
 
 #include "Transport.h"
+#include "ClientTransport.h"
 #include "RemoteEndpoint.h"
 
 namespace ajn {
@@ -51,7 +52,7 @@ class NamedPipeClientTransport : public ClientTransport {
     NamedPipeClientTransport(BusAttachment& bus);
 
     /**
-     * Validates the connect spec for Named Pipe Transport
+     * Validate the connect spec for Named Pipe Transport
      *
      * @param connectSpec    Input transport connect spec.
      *
@@ -86,7 +87,7 @@ class NamedPipeClientTransport : public ClientTransport {
     QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep);
 
     /**
-     * Returns the name of this transport
+     * Return the name of this transport
      */
     const char* GetTransportName() const { return NamedPipeTransportName; }
 
@@ -96,11 +97,21 @@ class NamedPipeClientTransport : public ClientTransport {
     static const char* NamedPipeTransportName;
 
     /**
-     * Returns true if a client transport is available on this platform. Some platforms only support
+     * Return true if a client transport is available on this platform. Some platforms only support
      * a bundled daemon so don't have a client transport. Transports must have names so if the
      * transport has no name it is not available.
      */
-    static bool IsAvailable() { return NamedPipeTransportName != NULL; }
+    static bool IsAvailable() { return NamedPipeTransportName != nullptr; }
+
+    /**
+     * Initialize the Named Pipe Transport static data.
+     */
+    static void Init();
+
+    /**
+     * Clean-up the Named Pipe Transport if the Windows APIs that the transport depends on are not present.
+     */
+    static void Shutdown();
 
   private:
     BusAttachment& m_bus;               /**< The message bus for this transport */

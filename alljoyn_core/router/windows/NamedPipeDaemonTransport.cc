@@ -19,11 +19,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-/*
- * Compile this file only for Windows version 10 or greater.
- */
- #if (_WIN32_WINNT > 0x0603)
-
 #include <qcc/platform.h>
 #include <qcc/IPAddress.h>
 #include <qcc/Socket.h>
@@ -31,9 +26,9 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Windows/NamedPipeStream.h>
+#include <qcc/Windows/NamedPipeWrapper.h>
 #include <aclapi.h>
 #include <sddl.h>
-#include <MSAJTransport.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Session.h>
@@ -718,7 +713,7 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
          * Creating a new instance of the named pipe.
          */
         static const uint32_t BUFSIZE = 128 * 1024;
-        HANDLE pipeHandle = AllJoynCreateBus(BUFSIZE, BUFSIZE, nullptr);
+        HANDLE pipeHandle = qcc::NamedPipeWrapper::AllJoynCreateBus(BUFSIZE, BUFSIZE, nullptr);
 
         if (pipeHandle == INVALID_HANDLE_VALUE) {
             status = ER_OS_ERROR;
@@ -732,7 +727,7 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
          * when this transport should stop its execution.
          */
         QCC_DbgHLPrintf(("NamedPipeAcceptThread: Waiting for connection on pipeHandle = 0x%p", pipeHandle));
-        DWORD acceptResult = AllJoynAcceptBusConnection(pipeHandle, stopEvent.GetHandle());
+        DWORD acceptResult = qcc::NamedPipeWrapper::AllJoynAcceptBusConnection(pipeHandle, stopEvent.GetHandle());
 
         if (acceptResult == ERROR_SUCCESS) {
             QCC_DbgHLPrintf(("NamedPipeAcceptThread: Accepted client connection on pipeHandle 0x%p", pipeHandle));
@@ -746,7 +741,7 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
                 status = ER_OS_ERROR;
             }
 
-            BOOL success = AllJoynCloseBusHandle(pipeHandle);
+            BOOL success = qcc::NamedPipeWrapper::AllJoynCloseBusHandle(pipeHandle);
             assert(success);
         }
 
@@ -763,5 +758,3 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
 }
 
 } // namespace ajn
-
-#endif // #if (_WIN32_WINNT > 0x0603)

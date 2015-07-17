@@ -27,6 +27,7 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Windows/NamedPipeStream.h>
+#include <qcc/windows/NamedPipeWrapper.h>
 #include <qcc/windows/utility.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AllJoynStd.h>
@@ -37,10 +38,6 @@
 #include "ClientTransport.h"
 #include "NamedPipeClientTransport.h"
 
-#if (_WIN32_WINNT > 0x0603)
-#include <MSAJTransport.h>
-#endif
-
 #define QCC_MODULE "ALLJOYN"
 
 using namespace std;
@@ -48,8 +45,7 @@ using namespace qcc;
 
 namespace ajn {
 
-#if (_WIN32_WINNT > 0x0603)
-const char* NamedPipeClientTransport::NamedPipeTransportName = "npipe";
+const char* NamedPipeClientTransport::NamedPipeTransportName = nullptr;
 
 class _NamedPipeClientEndpoint;
 
@@ -74,13 +70,9 @@ class _NamedPipeClientEndpoint : public _RemoteEndpoint {
   protected:
     NamedPipeClientTransport* m_transport;
 };
-#else
-const char* NamedPipeClientTransport::NamedPipeTransportName = NULL;
-#endif
 
 QStatus NamedPipeClientTransport::IsConnectSpecValid(const char* connectSpec)
 {
-#if (_WIN32_WINNT > 0x0603)
     /*
      * The string in connectSpec, must start with "npipe:"
      */
@@ -93,31 +85,19 @@ QStatus NamedPipeClientTransport::IsConnectSpecValid(const char* connectSpec)
     } else {
         return ER_OK;
     }
-#else
-    QCC_UNUSED(connectSpec);
-    return ER_FAIL;
-#endif
 }
 
 QStatus NamedPipeClientTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
     QCC_UNUSED(argMap);
-
-#if (_WIN32_WINNT > 0x0603)
     outSpec = inSpec;
     return ER_OK;
-#else
-    QCC_UNUSED(inSpec);
-    QCC_UNUSED(outSpec);
-    return ER_FAIL;
-#endif
 }
 
 QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newep)
 {
     QCC_UNUSED(opts);
 
-#if (_WIN32_WINNT > 0x0603)
     QCC_DbgHLPrintf(("NamedPipeClientTransport::Connect(): %s", connectSpec));
 
     if (!IsRunning()) {
@@ -152,7 +132,7 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
         QCC_LogError(status, ("NamedPipeClientTransport::Connect(): could not create pipe connection. Invalid Handle Value \n"));
         return status;
     }
-    clientHandle = AllJoynConnectToBus(wideConnectSpec);
+    clientHandle = qcc::NamedPipeWrapper::AllJoynConnectToBus(wideConnectSpec);
     status = ER_OS_ERROR;
     lastError = ::GetLastError();
 
@@ -179,7 +159,7 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
      */
     uint8_t nul = 0;
 
-    success = AllJoynSendToBus(
+    success = qcc::NamedPipeWrapper::AllJoynSendToBus(
         clientHandle,           // bus handle
         &nul,                   // message
         1,                      // message length
@@ -189,7 +169,7 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
     if (!success) {
         status = ER_OS_ERROR;
         QCC_LogError(status, ("NamedPipeClientTransport::Connect(): WriteFile to pipe failed (0x%08X).", ::GetLastError()));
-        AllJoynCloseBusHandle(clientHandle);
+        qcc::NamedPipeWrapper::AllJoynCloseBusHandle(clientHandle);
         return status;
     }
 
@@ -237,16 +217,25 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
         SetEndPoint(RemoteEndpoint::cast(ep));
     }
     return status;
-#else
-    QCC_UNUSED(connectSpec);
-    QCC_UNUSED(newep);
-    return ER_FAIL;
-#endif
 }
 
 NamedPipeClientTransport::NamedPipeClientTransport(BusAttachment& bus)
     : ClientTransport(bus), m_bus(bus)
 {
+}
+
+void NamedPipeClientTransport::Init()
+{
+    assert(NamedPipeClientTransport::NamedPipeTransportName == nullptr);
+
+    if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+        NamedPipeClientTransport::NamedPipeTransportName = "npipe";
+    }
+}
+
+void NamedPipeClientTransport::Shutdown()
+{
+    NamedPipeClientTransport::NamedPipeTransportName = nullptr;
 }
 
 } // namespace ajn

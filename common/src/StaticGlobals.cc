@@ -29,6 +29,7 @@
 #include <qcc/Util.h>
 #ifdef QCC_OS_GROUP_WINDOWS
 #include <qcc/windows/utility.h>
+#include <qcc/windows/NamedPipeWrapper.h>
 #endif
 #include "Crypto.h"
 #include "DebugControl.h"
@@ -49,7 +50,9 @@ class StaticGlobals {
             printf("WSAStartup failed with error: %d\n", error);
             return ER_OS_ERROR;
         }
+        NamedPipeWrapper::Init();
 #endif
+
         Event::Init();
         Environ::Init();
         String::Init();
@@ -70,7 +73,16 @@ class StaticGlobals {
 
     static QStatus Shutdown()
     {
+        Crypto::Shutdown();
+        Thread::Shutdown();
+        LoggerSetting::Shutdown();
+        DebugControl::Shutdown();
+        String::Shutdown();
+        Environ::Shutdown();
+        Event::Shutdown();
+
 #if defined(QCC_OS_GROUP_WINDOWS)
+        NamedPipeWrapper::Shutdown();
         int error = WSACleanup();
         if (SOCKET_ERROR == error) {
             printf("WSACleanup failed with error: %d\n", WSAGetLastError());
@@ -80,13 +92,6 @@ class StaticGlobals {
              */
         }
 #endif
-        Crypto::Shutdown();
-        Thread::Shutdown();
-        LoggerSetting::Shutdown();
-        DebugControl::Shutdown();
-        String::Shutdown();
-        Environ::Shutdown();
-        Event::Shutdown();
         return ER_OK;
     }
 };

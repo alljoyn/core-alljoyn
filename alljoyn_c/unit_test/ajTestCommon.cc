@@ -20,20 +20,18 @@
 
 #include <qcc/Environ.h>
 #include <qcc/StringUtil.h>
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <qcc/windows/NamedPipeWrapper.h>
+#endif
 
 qcc::String ajn::getConnectArg() {
     qcc::Environ* env = qcc::Environ::GetAppEnviron();
 #if defined(QCC_OS_GROUP_WINDOWS)
-    /*
-     * The test default is to prefer Named Pipe and fall back to bundled router (if Named Pipe is not supported by the OS).
-     * Note that test execution can still override the preferred transport by setting BUS_ADDRESS.
-     * For example, you can issue a "set BUS_ADDRESS=tcp:addr=127.0.0.1,port=9955" before running the test.
-     */
-#if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
-    return env->Find("BUS_ADDRESS", "npipe:");
-#else
-    return env->Find("BUS_ADDRESS", "null:");
-#endif
+    if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+        return env->Find("BUS_ADDRESS", "npipe:");
+    } else {
+        return env->Find("BUS_ADDRESS", "null:");
+    }
 #else
     return env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
 #endif

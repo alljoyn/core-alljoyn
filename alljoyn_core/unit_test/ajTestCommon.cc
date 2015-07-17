@@ -22,6 +22,10 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <qcc/windows/NamedPipeWrapper.h>
+#endif
+
 qcc::String ajn::getConnectArg(const char* envvar) {
     qcc::Environ* env = qcc::Environ::GetAppEnviron();
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -30,11 +34,11 @@ qcc::String ajn::getConnectArg(const char* envvar) {
      * Note that test execution can still override the preferred transport by setting BUS_ADDRESS.
      * For example, you can issue a "set BUS_ADDRESS=tcp:addr=127.0.0.1,port=9955" before running the test.
      */
-#if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
-    return env->Find(envvar, "npipe:");
-#else
-    return env->Find(envvar, "null:");
-#endif
+    if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+        return env->Find(envvar, "npipe:");
+    } else {
+        return env->Find(envvar, "null:");
+    }
 #else
     return env->Find(envvar, "unix:abstract=alljoyn");
 #endif

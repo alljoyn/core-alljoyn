@@ -54,6 +54,10 @@
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <qcc/windows/NamedPipeWrapper.h>
+#endif
+
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
 #include <alljoyn/BusObject.h>
@@ -581,11 +585,11 @@ int CDECL_CALL main(int argc, char** argv)
 
     if (connSpec.empty()) {
 #if defined(QCC_OS_GROUP_WINDOWS)
-    #if (_WIN32_WINNT > 0x0603)
-        connSpec = env->Find("BUS_ADDRESS", "npipe:");
-    #else
-        connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9955");
-    #endif
+        if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+            connSpec = env->Find("BUS_ADDRESS", "npipe:");
+        } else {
+            connSpec = env->Find("BUS_ADDRESS", "tcp:addr=127.0.0.1,port=9955");
+        }
 #else
         connSpec = env->Find("BUS_ADDRESS", "unix:abstract=alljoyn");
 #endif

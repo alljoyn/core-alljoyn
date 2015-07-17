@@ -312,7 +312,8 @@ TEST_F(PerfTest, ErrorMsg_does_not_exist_interface) {
     if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
         String errMsg;
         const char* errName = reply->GetErrorName(&errMsg);
-        EXPECT_STREQ("org.alljoyn.Bus.Blocked", errName);
+        /* The error is org.alljoyn.Bus.Blocked when using the bundled router, and org.freedesktop.DBus.Error.ServiceUnknown when using a standalone router */
+        ASSERT_TRUE((strcmp("org.alljoyn.Bus.Blocked", errName) == 0) || (strcmp("org.freedesktop.DBus.Error.ServiceUnknown", errName) == 0));
     }
 }
 
