@@ -362,24 +362,32 @@ static bool IsAuthorized(const Request& request, const PermissionPolicy* policy,
         }
         /* validate the remote peer auth data to make sure it was granted to perform such action */
         ECCPublicKey peerPublicKey;
+        KeyInfoNISTP256 publicKeyInfo;
         std::vector<ECCPublicKey> issuerPublicKeys;
-        ECCPublicKey* trustedPeerPublicKey = NULL;
-        qcc::String authMechanism;
-        bool publicKeyFound = false;
-        QStatus status = permissionMgmtObj->GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, NULL, issuerPublicKeys);
+        const ECCPublicKey* trustedPeerPublicKey = NULL;
         bool trustedPeer = false;
-        if (ER_OK == status) {
-            /* trusted peer */
-            if (publicKeyFound) {
-                trustedPeerPublicKey = &peerPublicKey;
-                trustedPeer = true;
-            } else if ((authMechanism == KeyExchangerECDHE_PSK::AuthName()) ||
-                       (authMechanism == AuthMechSRP::AuthName()) ||
-                       (authMechanism == AuthMechLogon::AuthName())) {
+        if (peerState->IsLocalPeer()) {
+            if (ER_OK == permissionMgmtObj->GetPublicKey(publicKeyInfo)) {
+                trustedPeerPublicKey = publicKeyInfo.GetPublicKey();
                 trustedPeer = true;
                 enforceManifest = false;
-            } else {
-                enforceManifest = false;
+            }
+        } else {
+            bool publicKeyFound = false;
+            qcc::String authMechanism;
+            if (ER_OK == permissionMgmtObj->GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, NULL, issuerPublicKeys)) {
+                /* trusted peer */
+                if (publicKeyFound) {
+                    trustedPeerPublicKey = &peerPublicKey;
+                    trustedPeer = true;
+                } else if ((authMechanism == KeyExchangerECDHE_PSK::AuthName()) ||
+                           (authMechanism == AuthMechSRP::AuthName()) ||
+                           (authMechanism == AuthMechLogon::AuthName())) {
+                    trustedPeer = true;
+                    enforceManifest = false;
+                } else {
+                    enforceManifest = false;
+                }
             }
         }
         authorized = IsPeerAuthorized(request, policy, peerState, trustedPeer, trustedPeerPublicKey, issuerPublicKeys, right.authByPolicy, denied);
