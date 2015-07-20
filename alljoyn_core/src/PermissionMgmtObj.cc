@@ -463,6 +463,10 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     if (ER_OK != status) {
         goto DoneValidation;
     }
+    if (certificateAuthority->keyInfo.empty()) {
+        status = ER_BAD_ARG_2;
+        goto DoneValidation;
+    }
 
     adminGroupAuthority = new TrustAnchor(TRUST_ANCHOR_SG_AUTHORITY);
     /* get the admin security group id */
@@ -481,6 +485,10 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     /* get the group authority public key */
     status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[3], adminGroupAuthority->keyInfo);
     if (ER_OK != status) {
+        goto DoneValidation;
+    }
+    if (adminGroupAuthority->keyInfo.empty()) {
+        status = ER_BAD_ARG_4;
         goto DoneValidation;
     }
     status = KeyInfoHelper::MsgArgToKeyInfoKeyId(args[4], adminGroupAuthority->keyInfo);
@@ -528,10 +536,6 @@ DoneValidation:
     if (ER_OK == status) {
         /* store the default policy as the initial local policy */
         status = StorePolicy(*defaultPolicy);
-        if (ER_OK == status) {
-            policyVersion = defaultPolicy->GetVersion();
-            PolicyChanged(defaultPolicy);
-        }
     }
     if (ER_OK != status) {
         delete defaultPolicy;
@@ -541,7 +545,8 @@ DoneValidation:
     if (ER_OK == status) {
         applicationState = PermissionConfigurator::CLAIMED;
         StoreApplicationState();
-        StateChanged();
+        policyVersion = defaultPolicy->GetVersion();
+        PolicyChanged(defaultPolicy);
     }
 }
 
@@ -2013,7 +2018,6 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
 
     applicationState = PermissionConfigurator::CLAIMABLE;
     policyVersion = 0;
-    PolicyChanged(NULL);
     return status;
 }
 
@@ -2028,7 +2032,11 @@ QStatus PermissionMgmtObj::Reset()
     }
 
     /* Reset the security configuration. */
-    return PerformReset(true);
+    status = PerformReset(true);
+    if (ER_OK == status) {
+        PolicyChanged(NULL);
+    }
+    return status;
 }
 
 void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Message& msg)
