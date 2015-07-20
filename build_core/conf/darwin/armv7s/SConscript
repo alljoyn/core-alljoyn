@@ -32,7 +32,6 @@ if '' == env.subst('$SYSTEM_DEVELOPER_DIR'):
     env['SYSTEM_DEVELOPER_DIR'] = '/Developer'
 
 # Darwin on ARM (aka. iOS) specific defines
-env.Append(CPPDEFINES=['QCC_CPU_ARM'])
 env.Append(CPPDEFINES=['QCC_OS_IPHONE'])
 
 

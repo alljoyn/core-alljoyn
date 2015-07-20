@@ -16,7 +16,6 @@
 Import('env')
 
 # Linux specific flags
-env.Append(CPPDEFINES=['QCC_CPU_X86'])
 
 # Force 32-bit builds
 env.Append(CXXFLAGS=['-m32'])

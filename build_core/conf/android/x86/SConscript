@@ -17,4 +17,3 @@ import os
 Import('env')
 
 # x86 specific compiler flags
-env.Append(CPPDEFINES = 'QCC_CPU_X86')

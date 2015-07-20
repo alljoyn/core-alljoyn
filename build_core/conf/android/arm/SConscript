@@ -16,6 +16,5 @@
 Import('env')
 
 # Arm specific flags
-env.Append(CPPDEFINES = 'QCC_CPU_ARM')
 env.Append(LINKFLAGS = '-Wl,--fix-cortex-a8')
 

@@ -17,7 +17,6 @@ Import('env')
 import os
 
 # Linux specific flags
-env.Append(CPPDEFINES=['QCC_CPU_ARM'])
 env.Append(CPPFLAGS=['-march=armv6',
                      '-mthumb-interwork'])
 

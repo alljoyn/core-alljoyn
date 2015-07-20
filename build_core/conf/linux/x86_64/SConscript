@@ -20,8 +20,6 @@ vars.Add(BoolVariable('TSAN', 'Enable Thread Sanitizer runtime checks', 'no'))
 vars.Update(env)
 
 # Linux specific flags
-env.Append(CPPDEFINES=['QCC_CPU_X86'])
-env.Append(CPPDEFINES=['QCC_CPU_X86_64'])
 
 # Force 64-bit builds
 env.Append(CXXFLAGS=['-m64', '-fPIC'])
