@@ -21,6 +21,7 @@ router_env = env.Clone()
 
 vars = Variables()
 vars.Add(EnumVariable('POLICYDB', 'Enable policy support', 'off', allowed_values=('on', 'off')))
+vars.Add('TEST_CONFIG', 'The bundled router will attempt to use the specified file as its config file (if present at runtime).')
 vars.Update(router_env)
 Help(vars.GenerateHelpText(router_env))
 
@@ -39,6 +40,9 @@ if router_env['OS'] != "android":
 router_env.Append(CPPPATH = [ router_env.Dir('..').srcnode(),
                               router_env.Dir('.').srcnode(),
                               router_env.Dir('$OS_GROUP').srcnode() ])
+
+if 'TEST_CONFIG' in router_env and router_env['BR'] == "on":
+    router_env.Append(CPPDEFINES = {'TEST_CONFIG' : '\\\"${TEST_CONFIG}\\\"'})
 
 if router_env['POLICYDB'] == 'on':
     router_env.Append(CPPDEFINES = [ 'ENABLE_POLICYDB' ])
