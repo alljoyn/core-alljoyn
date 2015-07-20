@@ -31,6 +31,10 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+#include <qcc/windows/NamedPipeWrapper.h>
+#endif
+
 #include <assert.h>
 #include <algorithm>
 
@@ -476,18 +480,18 @@ QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSp
 
 QStatus BusAttachment::Connect()
 {
+    const char* connectArgs;
+
 #if defined(QCC_OS_GROUP_WINDOWS)
-    /**
-     * Named pipe transport is available on Windows 10 and newer Windows versions.
-     */
-#if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
-    const char* connectArgs = "npipe:";
+    if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+        connectArgs = "npipe:";
+    } else {
+        connectArgs = "tcp:addr=127.0.0.1,port=9955";
+    }
 #else
-    const char* connectArgs = "tcp:addr=127.0.0.1,port=9955";
+    connectArgs = "unix:abstract=alljoyn";
 #endif
-#else
-    const char* connectArgs = "unix:abstract=alljoyn";
-#endif
+
     return Connect(connectArgs);
 }
 

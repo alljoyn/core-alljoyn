@@ -86,7 +86,7 @@ TEST_P(DiscoveryDynamicDeathTest, ComputeDynamicScoreDeathTest)
     uint32_t udpMax = tp.udpMax;
     uint32_t tclAvail = tp.tclAvail;
     uint32_t tclMax = tp.tclMax;
-    ASSERT_DEATH(ajn::IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax), "Assertion.*failed");
+    ASSERT_DEATH(ajn::IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, tclAvail, tclMax), "Assertion.*failed");
 }
 
 INSTANTIATE_TEST_CASE_P(DiscoveryStaticDeath, DiscoveryStaticDeathTest,

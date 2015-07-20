@@ -37,10 +37,7 @@
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 #include <qcc/Util.h>
-
-#if (_WIN32_WINNT > 0x0603)
-#include <MSAJTransport.h>
-#endif
+#include <qcc/windows/NamedPipeWrapper.h>
 
 using namespace std;
 
@@ -52,12 +49,10 @@ namespace qcc {
 static const long READ_SET = FD_READ | FD_CLOSE | FD_ACCEPT;
 static const long WRITE_SET = FD_WRITE | FD_CLOSE | FD_CONNECT;
 
-#if (_WIN32_WINNT > 0x0603)
 /** Read set and Write set for Named Pipe IO events */
 static const long NP_READ_SET = ALLJOYN_READ_READY | ALLJOYN_DISCONNECTED;
 static const long NP_WRITE_SET = ALLJOYN_WRITE_READY | ALLJOYN_DISCONNECTED;
 VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired);
-#endif
 
 VOID WINAPI IpInterfaceChangeCallback(PVOID arg, PMIB_IPINTERFACE_ROW row, MIB_NOTIFICATION_TYPE notificationType);
 
@@ -267,13 +262,10 @@ class IoEventMonitor {
      */
     std::map<SocketFd, EventList*> eventMap;
 
-#if (_WIN32_WINNT > 0x0603)
     /*
      * Mapping from pipe handles to Event registrations
      */
     std::map<HANDLE, EventList*> namedPipeEventMap;
-
-#endif
 
     void RegisterEvent(Event* event)
     {
@@ -378,7 +370,6 @@ class IoEventMonitor {
 
     void RegisterNamedPipeEvent(Event* event)
     {
-#if (_WIN32_WINNT > 0x0603)
         HANDLE pipe = LongToHandle((ULONG)event->GetFD());
         QCC_DbgHLPrintf(("RegisterEvent %s for fd %d (ioHandle=%p)", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", pipe, event->GetHandle()));
         assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
@@ -411,17 +402,13 @@ class IoEventMonitor {
         if (eventList->fdSet != fdSet) {
             eventList->fdSet = fdSet;
             QCC_DbgHLPrintf(("NamedPipeEventSelect %x", fdSet));
-            AllJoynEventSelect(pipe, eventList->ioEvent, fdSet);
+            qcc::NamedPipeWrapper::AllJoynEventSelect(pipe, eventList->ioEvent, fdSet);
         }
         lock.Unlock();
-#else
-        QCC_UNUSED(event);
-#endif
     }
 
     void DeregisterNamedPipeEvent(Event* event)
     {
-#if (_WIN32_WINNT > 0x0603)
         HANDLE pipe = LongToHandle((ULONG)event->GetFD());
         QCC_DbgPrintf(("DeregisterEvent %s for pipe %p", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", pipe));
         assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
@@ -439,7 +426,7 @@ class IoEventMonitor {
              */
             if (eventList->events.empty()) {
                 namedPipeEventMap.erase(iter);
-                AllJoynEventSelect(pipe, eventList->ioEvent, 0);
+                qcc::NamedPipeWrapper::AllJoynEventSelect(pipe, eventList->ioEvent, 0);
                 /*
                  * Make sure event is not in a set state
                  */
@@ -459,9 +446,6 @@ class IoEventMonitor {
             QCC_LogError(ER_OS_ERROR, ("eventList for fd %d missing from event map", event->GetFD()));
         }
         lock.Unlock();
-#else
-        QCC_UNUSED(event);
-#endif
     }
 
 };
@@ -540,7 +524,6 @@ VOID CALLBACK IoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
     IoMonitor->lock.Unlock();
 }
 
-#if (_WIN32_WINNT > 0x0603)
 VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
 {
     QCC_UNUSED(TimerOrWaitFired);
@@ -553,7 +536,7 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
     if (iter != IoMonitor->namedPipeEventMap.end()) {
         IoEventMonitor::EventList*eventList = iter->second;
 
-        ret = AllJoynEnumEvents(pipe, eventList->ioEvent, &eventMask);
+        ret = qcc::NamedPipeWrapper::AllJoynEnumEvents(pipe, eventList->ioEvent, &eventMask);
         if (ret != TRUE) {
             QCC_LogError(ER_OS_ERROR, ("NamedPipeEventEnum returned %d, GLE = %u", ret, ::GetLastError()));
         } else {
@@ -587,9 +570,8 @@ VOID CALLBACK NamedPipeIoEventCallback(PVOID arg, BOOLEAN TimerOrWaitFired)
     }
     IoMonitor->lock.Unlock();
 }
-#endif
 
-QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
+QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs, bool includeStopEvent)
 {
     HANDLE handles[2];
     uint32_t numHandles = 0;
@@ -619,12 +601,16 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
         handles[numHandles++] = evt.timerHandle;
     }
 
-    Thread* thread = Thread::GetThread();
-    Event* stopEvent = &thread->GetStopEvent();
-    handles[numHandles++] = stopEvent->handle;
-    QStatus status = ER_OK;
+    Thread* thread = NULL;
+    Event* stopEvent = NULL;
+    if (includeStopEvent) {
+        thread = Thread::GetThread();
+        stopEvent = &thread->GetStopEvent();
+        handles[numHandles++] = stopEvent->handle;
+    }
     assert(numHandles <= ARRAYSIZE(handles));
 
+    QStatus status = ER_OK;
     evt.IncrementNumThreads();
     DWORD ret = WaitForMultipleObjectsEx(numHandles, handles, FALSE, maxWaitMs, FALSE);
     evt.DecrementNumThreads();
@@ -634,7 +620,7 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs)
             /* If there's a stop during the wait, prioritize the return value and ignore what was signaled */
             status = ER_STOPPING_THREAD;
         } else {
-            if (handles[ret - WAIT_OBJECT_0] == stopEvent->handle) {
+            if (stopEvent && (handles[ret - WAIT_OBJECT_0] == stopEvent->handle)) {
                 /* The wait returned due to stopEvent */
                 status = ER_ALERTED_THREAD;
             } else {
@@ -754,13 +740,14 @@ QStatus AJ_CALL Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& s
             if (somethingSet) {
                 if (evt->eventType == TIMED) {
                     /*
-                     * Avoid calling IsSet() because that will call Wait with zero timeout. The Wait above already
-                     * switched this timer to non-signaled state, so IsSet() would incorrectly return false.
+                     * Avoid calling Wait() here: the Wait above already
+                     * switched this timer to non-signaled state, so calling it
+                     * again here would incorrectly return non-signaled.
                      */
                     if ((evt->timerHandle != nullptr) && (evt->timerHandle == signaledHandle)) {
                         signaledEvents.push_back(evt);
                     }
-                } else if (evt->IsSet()) {
+                } else if (ER_OK == Wait(*evt, 0, false)) {
                     signaledEvents.push_back(evt);
                 }
             }
@@ -1010,12 +997,10 @@ bool Event::IsNetworkEventSet()
         FD_SET(this->ioFd, &fds);
         select(1, this->eventType == IO_READ ? &fds : NULL, this->eventType == IO_WRITE ? &fds : NULL, NULL, &toZero);
         ret = FD_ISSET(this->ioFd, &fds);
-    }
-#if (_WIN32_WINNT > 0x0603)
-    else {
+    } else {
         DWORD eventMask;
         HANDLE pipe = LongToHandle((ULONG) this->ioFd);
-        BOOL success = AllJoynEnumEvents(pipe, NULL, &eventMask);
+        BOOL success = qcc::NamedPipeWrapper::AllJoynEnumEvents(pipe, NULL, &eventMask);
         QCC_UNUSED(success);
         assert(success);
         if ((eventMask & NP_WRITE_SET) && (this->eventType == Event::IO_WRITE)) {
@@ -1025,7 +1010,6 @@ bool Event::IsNetworkEventSet()
             ret = true;
         }
     }
-#endif
     return ret;
 }
 

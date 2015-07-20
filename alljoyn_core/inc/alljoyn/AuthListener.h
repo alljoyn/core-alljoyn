@@ -142,6 +142,12 @@ class AuthListener {
          * keys based on the provided credentials are invalidated and a new authentication exchange will be required. If an
          * expiration is not set the default expiration time for the requested authentication mechanism is used.
          *
+         * The underlying key store will never expire credentials any sooner than MIN_EXPIRATION_DEFAULT seconds.
+         * It is valid to provide a smaller value for expirationSeconds here, but if it is smaller than
+         * MIN_EXPIRATION_DEFAULT, the actual expiration time will be MIN_EXPIRATION_DEFAULT seconds.
+         *
+         * @see KeyBlob::MIN_EXPIRATION_DEFAULT in <qcc/KeyBlob.h>
+         *
          * @param expirationSeconds  The expiration time in seconds.
          */
         void SetExpiration(uint32_t expirationSeconds) { this->expiration = expirationSeconds; mask |= CRED_EXPIRATION; }

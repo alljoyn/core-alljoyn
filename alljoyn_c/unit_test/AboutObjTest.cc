@@ -687,17 +687,17 @@ TEST_F(AboutObjTest, ProxyAccessToAboutObj) {
     EXPECT_STREQ("http://www.example.com", support);
 
     /*
-     * French is specified language.
-     * Expect an error.
+     * French is specified language.  Expect success as the default
+     * language will be used instead.  See RFC 4647 for more discussion.
      */
     alljoyn_msgarg aboutArg_fr = alljoyn_msgarg_create();
     status = alljoyn_aboutproxy_getaboutdata(aProxy, "fr", aboutArg_fr);
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status)
+    EXPECT_EQ(ER_OK, status)
         << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_msgarg objDesc = alljoyn_msgarg_create();
     alljoyn_aboutproxy_getobjectdescription(aProxy, objDesc);
-    EXPECT_EQ(ER_LANGUAGE_NOT_SUPPORTED, status)
+    EXPECT_EQ(ER_OK, status)
         << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_aboutobjectdescription aObjDesc =

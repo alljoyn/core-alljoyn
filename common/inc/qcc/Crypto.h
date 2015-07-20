@@ -801,7 +801,7 @@ class Crypto_DRBG : public Crypto_Rand {
     virtual ~Crypto_DRBG();
 
   private:
-    void Update(uint8_t* data, size_t size);
+    void Update(uint8_t data[SEEDLEN]);
 
     /**
      * Opaque type for the internal context

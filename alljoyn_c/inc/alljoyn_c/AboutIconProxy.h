@@ -2,8 +2,6 @@
  * @file
  * alljoyn_abouticonproxy implements a proxy bus object used to interact with
  * a remote org.alljoyn.Icon interface.
- * This code is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.

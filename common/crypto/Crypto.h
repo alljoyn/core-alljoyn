@@ -26,7 +26,7 @@ namespace qcc {
 
 class Crypto {
   public:
-    static void Init();
+    static QStatus Init();
     static void Shutdown();
 };
 

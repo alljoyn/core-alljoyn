@@ -383,10 +383,6 @@ QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus)
     return (((ajn::BusObjectC*)bus)->IsSecure() == true ? QCC_TRUE : QCC_FALSE);
 }
 
-/**
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
- */
 size_t AJ_CALL alljoyn_busobject_getannouncedinterfacenames(alljoyn_busobject bus,
                                                             const char** interfaces,
                                                             size_t numInterfaces)
@@ -395,10 +391,6 @@ size_t AJ_CALL alljoyn_busobject_getannouncedinterfacenames(alljoyn_busobject bu
     return ((ajn::BusObjectC*)bus)->GetAnnouncedInterfaceNames(interfaces, numInterfaces);
 }
 
-/**
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
- */
 QStatus AJ_CALL alljoyn_busobject_setannounceflag(alljoyn_busobject bus,
                                                   const alljoyn_interfacedescription iface,
                                                   alljoyn_about_announceflag isAnnounced)
@@ -407,10 +399,6 @@ QStatus AJ_CALL alljoyn_busobject_setannounceflag(alljoyn_busobject bus,
     return ((ajn::BusObjectC*)bus)->SetAnnounceFlag((ajn::InterfaceDescription*)iface, (ajn::BusObject::AnnounceFlag)isAnnounced);
 }
 
-/**
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
- */
 QStatus AJ_CALL alljoyn_busobject_addinterface_announced(alljoyn_busobject bus,
                                                          const alljoyn_interfacedescription iface)
 {

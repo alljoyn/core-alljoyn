@@ -3,8 +3,6 @@
  * alljoyn_aboutdatalistener provides a Listener implemented by AllJoyn apps and called
  * by AllJoyn. The Listener is responsible for providing a well formed alljoyn_msgarg
  * dictionary of type a{sv} that contain the fields specified in the About interface.
- * This code is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  */
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.

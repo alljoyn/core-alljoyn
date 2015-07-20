@@ -25,6 +25,7 @@
 #include <alljoyn/PasswordManager.h>
 #include "AutoPingerInternal.h"
 #include "BusInternal.h"
+#include "NamedPipeClientTransport.h"
 
 namespace ajn {
 
@@ -32,6 +33,7 @@ class StaticGlobals {
   public:
     static void Init()
     {
+        NamedPipeClientTransport::Init();
         AutoPingerInternal::Init();
         PasswordManager::Init();
         BusAttachment::Internal::Init();
@@ -42,6 +44,7 @@ class StaticGlobals {
         BusAttachment::Internal::Shutdown();
         PasswordManager::Shutdown();
         AutoPingerInternal::Shutdown();
+        NamedPipeClientTransport::Shutdown();
     }
 };
 

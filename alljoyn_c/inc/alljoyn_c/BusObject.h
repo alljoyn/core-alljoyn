@@ -375,9 +375,6 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_busobject_issecure(alljoyn_busobject bus)
 /**
  * Get a list of the interfaces that are added to this alljoyn_busobject that will be announced.
  *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
- *
  * @param[in] bus           The bus which contains the interfaces
  * @param[in] interfaces    the array of interface names
  * @param[in] numInterfaces the number of interface names
@@ -394,9 +391,6 @@ extern AJ_API size_t AJ_CALL alljoyn_busobject_getannouncedinterfacenames(alljoy
 /**
  * Change the announce flag for an already added interface. Changes in the
  * announce flag are not visible to other devices till Announce is called.
- *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  *
  * @see alljoyn_aboutobj_announce()
  *
@@ -424,9 +418,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_busobject_setannounceflag(alljoyn_busobjec
  *
  * Once an object is registered, it should not add any additional interfaces. Doing so would
  * confuse remote objects that may have already introspected this object.
- *
- * This function is experimental, and as such has not been fully tested.
- * Please help make it more robust by contributing fixes if you find problems.
  *
  * @param bus         The bus on which to add the interface
  * @param iface       The interface to add
