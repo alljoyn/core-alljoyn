@@ -279,6 +279,8 @@ int CDECL_CALL main(void)
 #endif
         }
     }
+
+    alljoyn_aboutobj_unannounce(aboutObj);
     alljoyn_sessionportlistener_destroy(listener);
 
     alljoyn_busattachment_stop(bus);
@@ -288,6 +290,7 @@ int CDECL_CALL main(void)
     alljoyn_aboutdata_destroy(aboutData);
     alljoyn_busobject_destroy(busObject);
     alljoyn_aboutobj_destroy(aboutObj);
+
     alljoyn_busattachment_destroy(bus);
 
 #ifdef ROUTER
