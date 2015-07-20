@@ -53,15 +53,9 @@ namespace ajn {
 #define LEGACY_AUTH_VERSION      2
 
 /**
- * The auth version with support for trust anchors
+ * The auth version with support for KeyInfo
  */
-#define TRUST_ANCHORS_AUTH_VERSION      4
-
-/**
- * The variant types for the org.alljoyn.Bus.Peer.Authentication KeyExchange method call.
- */
-#define EXCHANGE_KEYINFO 1
-#define EXCHANGE_TRUST_ANCHORS 2
+#define KEY_INFO_AUTH_VERSION      4
 
 /* the size of the master secret based on RFC5246 */
 #define MASTER_SECRET_SIZE 48
@@ -437,10 +431,7 @@ void KeyExchangerECDHE::KeyExchangeGenKeyInfo(MsgArg& variant)
     KeyInfoNISTP256 keyInfo;
     const ECCPublicKey* publicKey = GetECDHEPublicKey();
     keyInfo.SetPublicKey(publicKey);
-    MsgArg* keyInfoVariant = new MsgArg();
-    KeyInfoHelper::KeyInfoNISTP256ToMsgArg(keyInfo, *keyInfoVariant);
-    variant.Set("(yv)", EXCHANGE_KEYINFO, keyInfoVariant);
-    variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(keyInfo, variant);
 
     size_t exportedPublicKeySize = publicKey->GetSize();
     uint8_t* exportedPublicKey = new uint8_t[exportedPublicKeySize];
@@ -453,11 +444,8 @@ void KeyExchangerECDHE::KeyExchangeGenKeyInfo(MsgArg& variant)
 
 void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
 {
-    if (PeerSupportsTrustAnchors()) {
-        MsgArg* entries = new MsgArg[1];
-        KeyExchangeGenKeyInfo(entries[0]);
-        variant.Set("a(yv)", 1, entries);
-        variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    if (PeerSupportsKeyInfo()) {
+        KeyExchangeGenKeyInfo(variant);
     } else {
         uint8_t curveType = ecc.GetCurveType();
         const ECCPublicKey* publicKey = GetECDHEPublicKey();
@@ -477,25 +465,6 @@ void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
     }
 }
 
-void KeyExchangerECDHE_ECDSA::KeyExchangeGenTrustAnchorKeyInfos(MsgArg& variant)
-{
-    MsgArg* entries = new MsgArg[trustAnchorList->size()];
-    size_t cnt = 0;
-    size_t exportedPublicKeySize;
-    /* If we ever have keys of different sizes, this will need to change to be the largest possible key size. */
-    uint8_t exportedPublicKey[sizeof(ECCPublicKey)];
-    for (PermissionMgmtObj::TrustAnchorList::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
-        PermissionMgmtObj::TrustAnchor* ta = *it;
-        KeyInfoHelper::KeyInfoNISTP256ToMsgArg(ta->keyInfo, entries[cnt]);
-        exportedPublicKeySize = ta->keyInfo.GetPublicKey()->GetSize();
-        assert(exportedPublicKeySize == sizeof(ECCPublicKey));
-        QCC_VERIFY(ER_OK == ta->keyInfo.GetPublicKey()->Export(exportedPublicKey, &exportedPublicKeySize));
-        peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
-        cnt++;
-    }
-    variant.Set("(yv)", EXCHANGE_TRUST_ANCHORS, new MsgArg("a(yv)", trustAnchorList->size(), entries));
-    variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-}
 
 bool KeyExchangerECDHE_ECDSA::IsTrustAnchor(const ECCPublicKey* publicKey)
 {
@@ -508,25 +477,10 @@ bool KeyExchangerECDHE_ECDSA::IsTrustAnchor(const ECCPublicKey* publicKey)
     return false;
 }
 
-void KeyExchangerECDHE_ECDSA::KeyExchangeGenKey(MsgArg& variant)
-{
-    size_t numEntries = 1;
-    if (trustAnchorList->size() > 0) {
-        numEntries++;
-    }
-    MsgArg* entries = new MsgArg[numEntries];
-    KeyExchangeGenKeyInfo(entries[0]);
-    if (numEntries > 1) {
-        KeyExchangeGenTrustAnchorKeyInfos(entries[1]);
-    }
-    variant.Set("a(yv)", numEntries, entries);
-    variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-}
-
 QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
 {
     KeyInfoNISTP256 keyInfo;
-    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(variant, keyInfo);
+    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(variant, keyInfo);
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::KeyExchangeReadKeyInfo parsing KeyInfo fails status 0x%x\n", status));
         return status;
@@ -543,7 +497,7 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
 
 QStatus KeyExchangerECDHE::KeyExchangeReadKey(MsgArg& variant)
 {
-    if (!PeerSupportsTrustAnchors()) {
+    if (!PeerSupportsKeyInfo()) {
         uint8_t eccCurveID;
         uint8_t* replyPubKey;
         size_t replyPubKeyLen;
@@ -565,124 +519,7 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKey(MsgArg& variant)
 
         return ER_OK;
     }
-    size_t entryCount;
-    MsgArg* entries;
-    QStatus status = variant.Get("a(yv)", &entryCount, &entries);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if (entryCount == 0) {
-        return ER_INVALID_DATA;
-    }
-
-    for (size_t cnt = 0; cnt < entryCount; cnt++) {
-        uint8_t entryType;
-        MsgArg* entryVariant;
-        status = entries[cnt].Get("(yv)", &entryType, &entryVariant);
-        if (ER_OK != status) {
-            return ER_INVALID_DATA;
-        }
-        if (entryType == EXCHANGE_KEYINFO) {
-            status = KeyExchangeReadKeyInfo(*entryVariant);
-            if (ER_OK != status) {
-                return status;
-            }
-        }
-    }
-    return ER_OK;
-}
-
-QStatus KeyExchangerECDHE_ECDSA::KeyExchangeReadTrustAnchorKeyInfo(MsgArg& variant)
-{
-    PermissionMgmtObj::ClearTrustAnchorList(peerTrustAnchorList);
-    size_t numEntries;
-    MsgArg* entries;
-    QStatus status = variant.Get("a(yv)", &numEntries, &entries);
-    if (status != ER_OK) {
-        return status;
-    }
-    if (numEntries == 0) {
-        return ER_OK;  /* nothing to do */
-    }
-
-    for (size_t cnt = 0; cnt < numEntries; cnt++) {
-        PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor();
-        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256(entries[cnt], ta->keyInfo);
-        if (status != ER_OK) {
-            QCC_DbgHLPrintf(("KeyExchangerECDHE::KeyExchangeReadTrustAnchorKeyInfo parsing KeyInfo fails status 0x%x\n", status));
-            delete ta;
-            return status;
-        }
-
-        peerTrustAnchorList.push_back(ta);
-        /* hash the handshake data */
-        size_t exportedPublicKeySize = sizeof(ECCPublicKey);
-        /* If we ever have keys of different sizes, this will need to change to be the largest possible key size. */
-        uint8_t exportedPublicKey[sizeof(ECCPublicKey)];
-        assert(exportedPublicKeySize == ta->keyInfo.GetPublicKey()->GetSize());
-        QCC_VERIFY(ER_OK == ta->keyInfo.GetPublicKey()->Export(exportedPublicKey, &exportedPublicKeySize));
-        peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
-    }
-    return ER_OK;
-}
-
-/**
- * Check to whether the two lists have a common trust anchor
- */
-static bool HasCommonTrustAnchors(PermissionMgmtObj::TrustAnchorList& list1, PermissionMgmtObj::TrustAnchorList& list2)
-{
-    for (PermissionMgmtObj::TrustAnchorList::iterator it1 = list1.begin(); it1 != list1.end(); it1++) {
-        for (PermissionMgmtObj::TrustAnchorList::iterator it2 = list2.begin(); it2 != list2.end(); it2++) {
-            /* compare the public key */
-            if (*(*it1)->keyInfo.GetPublicKey() == *(*it2)->keyInfo.GetPublicKey()) {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-QStatus KeyExchangerECDHE_ECDSA::KeyExchangeReadKey(MsgArg& variant)
-{
-    if (!PeerSupportsTrustAnchors()) {
-        return KeyExchangerECDHE::KeyExchangeReadKey(variant);
-    }
-    size_t entryCount;
-    MsgArg* entries;
-    QStatus status = variant.Get("a(yv)", &entryCount, &entries);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if (entryCount == 0) {
-        return ER_INVALID_DATA;
-    }
-
-    for (size_t cnt = 0; cnt < entryCount; cnt++) {
-        uint8_t entryType;
-        MsgArg* entryVariant;
-        status = entries[cnt].Get("(yv)", &entryType, &entryVariant);
-        if (ER_OK != status) {
-            return ER_INVALID_DATA;
-        }
-        switch (entryType) {
-        case EXCHANGE_KEYINFO:
-            status = KeyExchangeReadKeyInfo(*entryVariant);
-            if (ER_OK != status) {
-                return status;
-            }
-            break;
-
-        case EXCHANGE_TRUST_ANCHORS:
-            status = KeyExchangeReadTrustAnchorKeyInfo(*entryVariant);
-            if (ER_OK != status) {
-                return status;
-            }
-            /* check to see whether there are any common trust anchors */
-            hasCommonTrustAnchors = HasCommonTrustAnchors(*trustAnchorList, peerTrustAnchorList);
-            break;
-        }
-    }
-    return ER_OK;
+    return KeyExchangeReadKeyInfo(variant);
 }
 
 QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& callback, uint32_t* remoteAuthMask)
@@ -1225,7 +1062,6 @@ QStatus KeyExchangerECDHE_ECDSA::ParseCertChainPEM(String& encodedCertChain)
 KeyExchangerECDHE_ECDSA::~KeyExchangerECDHE_ECDSA()
 {
     delete [] certChain;
-    PermissionMgmtObj::ClearTrustAnchorList(peerTrustAnchorList);
     delete peerDSAPubKey;
     peerIssuerPubKeys.clear();
 }
@@ -1674,9 +1510,9 @@ bool KeyExchanger::IsLegacyPeer()
     return (GetPeerAuthVersion() == LEGACY_AUTH_VERSION);
 }
 
-bool KeyExchanger::PeerSupportsTrustAnchors()
+bool KeyExchanger::PeerSupportsKeyInfo()
 {
-    return GetPeerAuthVersion() >= TRUST_ANCHORS_AUTH_VERSION;
+    return GetPeerAuthVersion() >= KEY_INFO_AUTH_VERSION;
 }
 
 } /* namespace ajn */
