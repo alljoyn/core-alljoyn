@@ -154,6 +154,41 @@ class BusAttachment : public MessageReceiver {
     };
 
     /**
+     * Pure virtual base class implemented by classes that wish to call AddMatchAsync().
+     */
+    class AddMatchAsyncCB {
+      public:
+        /** Destructor */
+        virtual ~AddMatchAsyncCB() { }
+
+        /**
+         * Called when AddMatchAsyncCB() completes.
+         *
+         * @param status        ER_OK if successful
+         * @param context       User defined context which will be passed as-is to callback.
+         */
+        virtual void AddMatchCB(QStatus status, void* context) = 0;
+    };
+
+
+    /**
+     * Pure virtual base class implemented by classes that wish to call RemoveMatchAsync().
+     */
+    class RemoveMatchAsyncCB {
+      public:
+        /** Destructor */
+        virtual ~RemoveMatchAsyncCB() { }
+
+        /**
+         * Called when RemoveMatchAsyncCB() completes.
+         *
+         * @param status        ER_OK if successful
+         * @param context       User defined context which will be passed as-is to callback.
+         */
+        virtual void RemoveMatchCB(QStatus status, void* context) = 0;
+    };
+
+    /**
      * Construct a BusAttachment.
      *
      * @param applicationName       Name of the application.
@@ -927,6 +962,24 @@ class BusAttachment : public MessageReceiver {
     QStatus AddMatch(const char* rule);
 
     /**
+     * Add a DBus match rule asynchronously.
+     *
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
+     *
+     * @param[in]  rule     Match rule to be added (see DBus specification for format of this string).
+     * @param[in]  callback The object to be called when AddMatchAsync completes.
+     * @param[in]  context  User-defined context that will be returned to the reply handler
+     *
+     * @return
+     *      - #ER_OK if the AddMatch request was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus AddMatchAsync(const char* rule,
+                          AddMatchAsyncCB* callback,
+                          void* context = NULL);
+
+    /**
      * Remove a DBus match rule.
      * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
      *
@@ -938,6 +991,23 @@ class BusAttachment : public MessageReceiver {
      *      - Other error status codes indicating a failure.
      */
     QStatus RemoveMatch(const char* rule);
+
+    /**
+     * Remove a DBus match rule.
+     * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
+     *
+     * @param[in]  rule     Match rule to be removed (see DBus specification for format of this string).
+     * @param[in]  callback The object to be called when RemoveMatchAsync completes.
+     * @param[in]  context  User-defined context that will be returned to the reply handler
+     *
+     * @return
+     *      - #ER_OK if the RemoveMatch request was successful.
+     *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+     *      - Other error status codes indicating a failure.
+     */
+    QStatus RemoveMatchAsync(const char* rule,
+                             RemoveMatchAsyncCB* callback,
+                             void* context = NULL);
 
     /**
      * Add a DBus match rule.

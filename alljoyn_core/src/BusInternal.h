@@ -274,6 +274,16 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     void SetLinkTimeoutAsyncCB(Message& message, void* context);
 
     /**
+     * AddMatchAsync method_reply handler
+     */
+    void AddMatchAsyncCB(Message& message, void* context);
+
+    /**
+     * RemoveMatchAsync method_reply handler
+     */
+    void RemoveMatchAsyncCB(Message& message, void* context);
+
+    /**
      * PingAsync method_reply handler
      */
     void PingAsyncCB(Message& message, void* context);
