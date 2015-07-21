@@ -1312,7 +1312,7 @@ class ArdpStream : public qcc::Stream {
 
                     m_transport->m_ardpLock.Lock();
                     QCC_DbgPrintf(("ArdpStream::Disconnect(): ARDP_Disconnect()"));
-                    status = ARDP_Disconnect(m_handle, m_conn);
+                    status = ARDP_Disconnect(m_handle, m_conn, m_connId);
                     m_transport->m_ardpLock.Unlock();
                     if (status == ER_OK) {
                         m_discSent = true;
@@ -3052,8 +3052,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
             m_transport->m_connLock.Unlock(MUTEX_CONTEXT);
         }
 
-
-#ifndef NDEBUG
         /*
          * The callback dispatcher looked to see if the endpoint was on the
          * endpoint list before it made the call here, and it incremented the
@@ -3070,8 +3068,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
                 ++found;
             }
         }
-        assert(found == 1 && "_UDPEndpoint::DisconnectCb(): Endpoint is gone");
-#endif
+
+        /*
+         * In case when there are simultaneous local and remote disconnect requests queued up for the came connection ID,
+         * we may find ourselves in a situation when the endpoint is not present. If this is the case, there is nothing for us to do, just return.
+         */
+        //assert(found == 1 && "_UDPEndpoint::DisconnectCb(): Endpoint is gone");
+        if (found == 0) {
+            QCC_DbgHLPrintf(("_UDPEndpoint::DisconnectCb(): endpoint with conn ID == %d. not found on on m_endpointList", connId));
+            return;
+        }
 
         /*
          * We need to figure out if this disconnect callback is due to an
