@@ -80,18 +80,23 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     const EVP_MD* mdAlgorithm = NULL;
 
+    /*
+     * Select the hash algorithm.
+     * No memory allocation/initialization is done; OK to return.
+     */
     switch (alg) {
     case qcc::Crypto_Hash::SHA1:
         mdAlgorithm = EVP_sha1();
         break;
 
-    case qcc::Crypto_Hash::MD5:
-        mdAlgorithm = EVP_md5();
-        break;
-
     case qcc::Crypto_Hash::SHA256:
         mdAlgorithm = EVP_sha256();
         break;
+
+    default:
+        status = ER_BAD_ARG_1;
+        QCC_LogError(status, ("Unsupported hash algorithm %d", alg));
+        return status;
     }
 
     ctx = new Crypto_Hash::Context(MAC);

@@ -99,11 +99,6 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
         algId = BCRYPT_SHA1_ALGORITHM;
         break;
 
-    case qcc::Crypto_Hash::MD5:
-        ctx = new Context(MD5_SIZE);
-        algId = BCRYPT_MD5_ALGORITHM;
-        break;
-
     case qcc::Crypto_Hash::SHA256:
         ctx = new Context(SHA256_SIZE);
         algId = BCRYPT_SHA256_ALGORITHM;
