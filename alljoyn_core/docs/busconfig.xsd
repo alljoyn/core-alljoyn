@@ -173,6 +173,8 @@
         </xs:restriction>
     </xs:simpleType>
 
+<!--Contents must be a filepath.  A URL (e.g. http, ftp)
+    is not valid -->
     <xs:simpleType name="config_file">
         <xs:restriction base="xs:anyURI">
             <xs:pattern value=".*\.conf"/>
@@ -197,6 +199,8 @@
         </xs:complexType>
     </xs:element>
 
+<!--Contents must be a filepath.  A URL (e.g. http, ftp)
+    is not valid -->
     <xs:element name="includedir">
         <xs:complexType>
             <xs:simpleContent>
@@ -276,7 +280,9 @@
             <xs:choice maxOccurs="unbounded">
                 <xs:element name="user" type="xs:string"/>
                 <xs:element name="type" type="xs:string"/>
-                <xs:element name="pidfile" type="xs:string"/>
+            <!--Contents must be a file path.  A URL (e.g. http, ftp)
+                is not valid -->
+                <xs:element name="pidfile" type="xs:anyURI"/>
                 <xs:element name="auth" type="xs:string"/>
                 <xs:element name="listen" type="listen_type"/>
                 <xs:element ref="include"/>
