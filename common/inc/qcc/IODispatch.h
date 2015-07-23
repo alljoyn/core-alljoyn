@@ -244,14 +244,23 @@ class IODispatch : public Thread, public AlarmListener {
 
     /**
      * Stop a stream previously started with this IODispatch.
-     * @param stream           The stream on which to wait for IO events.
-     * @return ER_OK if successful.
+     *
+     * @param[in] stream           The stream on which to wait for IO events.
+     *
+     * @return
+     * - #ER_OK Successful, the exit listener will be called when stream has
+     *          been removed from this IODispatch.
+     * - #ER_INVALID_STREAM The stream was not started or it has already exited.
+     * - #ER_FAIL The stream is exiting.  The exit listener is being called or
+     *            is scheduled to be called.
      */
     QStatus StopStream(Stream* stream);
 
     /**
-     * Stop a stream previously started with this IODispatch.
-     * @param stream           The stream on which to wait for IO events.
+     * Join a stream previously started with this IODispatch.
+     *
+     * @param[in] stream           The stream on which to wait for IO events.
+     *
      * @return ER_OK if successful.
      */
     QStatus JoinStream(Stream* stream);
@@ -323,16 +332,6 @@ class IODispatch : public Thread, public AlarmListener {
     bool IsTimerCallbackThread() const;
 
     /**
-     * Process a read/write/timeout/exit callback.
-     */
-    void AlarmTriggered(const Alarm& alarm, QStatus reason);
-
-    /**
-     * IODispatch main thread
-     */
-    virtual ThreadReturn STDCALL Run(void* arg);
-
-    /**
      * Indicate whether the dispatcher did not have any connected leaf nodes
      * for a specified time.
      * @param minTime          Minimum idle time in milliseconds.
@@ -341,6 +340,16 @@ class IODispatch : public Thread, public AlarmListener {
     static bool AJ_CALL IsIdle(uint64_t minTime);
 
   private:
+
+    /**
+     * Process a read/write/timeout/exit callback.
+     */
+    void AlarmTriggered(const Alarm& alarm, QStatus reason);
+
+    /**
+     * IODispatch main thread
+     */
+    virtual ThreadReturn STDCALL Run(void* arg);
 
     /**
      * Update the dispatcher idle information when a stream is starting or stopping.
@@ -352,14 +361,14 @@ class IODispatch : public Thread, public AlarmListener {
     Timer timer;                                /* The timer used to add and process callbacks */
     Mutex lock;                                 /* Lock for mutual exclusion of dispatchEntries */
     std::map<Stream*, IODispatchEntry> dispatchEntries; /* map holding details of various streams registered with this IODispatch */
-    bool reload;                                /* Flag used for synchronization of various methods with the Run thread */
-    bool isRunning;                             /* Whether the run thread is still running. */
+    volatile bool reload;                       /* Flag used for synchronization of various methods with the Run thread */
+    volatile bool isRunning;                    /* Whether the run thread is still running. */
     volatile int32_t numAlarmsInProgress;       /* Number of alarms currently in progress. */
     /* Whether the main loop is in an event wait.
      * This is used to ensure that a source/sink event is not deleted while the main thread
      * is waiting on it.
      */
-    bool crit;
+    volatile bool crit;
     static volatile int32_t iodispatchCnt;
     static volatile int32_t activeStreamsCnt;     /* Number of streams that have been started and not stopped yet */
     static volatile uint64_t stopStreamTimestamp; /* Timestamp of the last stream stop, in milliseconds */
