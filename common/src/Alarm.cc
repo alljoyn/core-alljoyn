@@ -31,17 +31,17 @@ using namespace qcc;
 
 volatile int32_t qcc::_Alarm::nextId = 0;
 
-_Alarm::_Alarm() : listener(NULL), periodMs(0), context(NULL), id(IncrementAndFetch(&nextId))
+_Alarm::_Alarm() : listener(NULL), periodMs(0), context(NULL), id(IncrementAndFetch(&nextId)), limitable(true)
 {
 }
 
-_Alarm::_Alarm(Timespec absoluteTime, AlarmListener* listener, void* context, uint32_t periodMs)
-    : alarmTime(absoluteTime), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId))
+_Alarm::_Alarm(Timespec absoluteTime, AlarmListener* listener, void* context, uint32_t periodMs, bool limitable)
+    : alarmTime(absoluteTime), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
 {
 }
 
-_Alarm::_Alarm(uint32_t relativeTime, AlarmListener* listener, void* context, uint32_t periodMs)
-    : alarmTime(), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId))
+_Alarm::_Alarm(uint32_t relativeTime, AlarmListener* listener, void* context, uint32_t periodMs, bool limitable)
+    : alarmTime(), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
 {
     if (relativeTime == WAIT_FOREVER) {
         alarmTime = END_OF_TIME;
@@ -51,8 +51,8 @@ _Alarm::_Alarm(uint32_t relativeTime, AlarmListener* listener, void* context, ui
     }
 }
 
-_Alarm::_Alarm(AlarmListener* listener, void* context)
-    : alarmTime(0, TIME_RELATIVE), listener(listener), periodMs(0), context(context), id(IncrementAndFetch(&nextId))
+_Alarm::_Alarm(AlarmListener* listener, void* context, bool limitable)
+    : alarmTime(0, TIME_RELATIVE), listener(listener), periodMs(0), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
 {
 }
 

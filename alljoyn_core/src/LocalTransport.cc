@@ -427,7 +427,9 @@ QStatus _LocalEndpoint::Dispatcher::DispatchMessage(Message& msg)
     uint32_t zero = 0;
     void* context = new Message(msg);
     qcc::AlarmListener* localEndpointListener = this;
-    Alarm alarm(zero, localEndpointListener, context, zero);
+    bool limitable = (endpoint->GetUniqueName() != msg->GetSender());
+    Alarm alarm(zero, localEndpointListener, context, zero, limitable);
+
     QStatus status = AddAlarm(alarm);
     if (status != ER_OK) {
         Message* temp = static_cast<Message*>(context);
