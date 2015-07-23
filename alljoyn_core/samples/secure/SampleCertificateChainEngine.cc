@@ -116,10 +116,11 @@ bool VerifyCertificateChain(const AuthListener::Credentials& creds)
      * 2. Verifies that all CA's in the chain have the CA flag set to TRUE,
      * 3. Verifies the cryptographic binding between each certificate.
      * 4. Verifies the certificates chain up to one of the trusted roots.
+     * 5. Verifies the end-entity certificate is an identity certificate, and the chain is valid
+     *    for this purpose.
      *
-     * Other implementations may make app-dependent decisions, such as:
-     * - checking for particular Key Usages or Extended Key Usages (EKUs) on certificates,
-     * - verifying the certificate's subject name equals some known value. */
+     * Other implementations may make app-dependent decisions, such as verifying the certificate's
+     * subject name equals some known value. */
 
     /* If we didn't get a certificate chain, there's nothing to validate! */
     if (!creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
@@ -172,12 +173,27 @@ bool VerifyCertificateChain(const AuthListener::Credentials& creds)
     bool trusted = false;
 
     if (ER_OK == status) {
+        /* Most of the time in your code you'll be writing code to check identity certificates, and so we check for that
+         * type of certificate in this sample. */
+        if (certChain[0].GetType() == CertificateX509::IDENTITY_CERTIFICATE) {
+            /* Ensure that the Extended Key Usages are valid for the whole chain. In AllJoyn, we insist the end-entity
+             * certificate is not unrestricted (has at least one EKU). We then make sure every Certificate Authority to the
+             * root has that EKU present or is unrestricted. We recommend all CA's, including roots, be issued with AllJoyn
+             * EKUs to ensure they are not used for other purposes. */
+            trusted = CertificateX509::ValidateCertificateTypeInCertChain(certChain, chainLength);
+        }
+        /* trusted will remain false if certificate is not an identity certificate. */
+    }
+
+    if (trusted && (ER_OK == status)) {
+        trusted = false;
         for (size_t iCert = 0; iCert < chainLength; iCert++) {
             /* Every certificate must be time-valid. */
             status = certChain[iCert].VerifyValidity();
             if (ER_OK != status) {
                 printf("VerifyCertificatechain FAILED; following certificate is not time valid:\n%s\n",
                        certChain[iCert].ToString().c_str());
+                status = ER_OK; /* Reset to ER_OK to signal there was no internal failure. trusted is false. */
                 break;
             }
 
@@ -224,15 +240,15 @@ bool VerifyCertificateChain(const AuthListener::Credentials& creds)
                            certChain[iCert].ToString().c_str());
                     break;
                 }
-                /* This would be the place to check transitive EKUs or other chain properties, if desired. */
             }
         }
     }
 
     /* At this point one of three things has happened:
-     * status is not ER_OK; something failed before we could even check the chain, and so we're failing;
-     * status is ER_OK and trusted is false; we successfully checked the chain but no trusted root was found;
-     * or status is ER_OK and trusted is true; we successfully checked the chain and found a trusted root in the path.
+     * status is not ER_OK: something failed before we could even check the chain, and so we're failing;
+     * status is ER_OK and trusted is false: we successfully checked the chain but no trusted root was found
+     * or a certificate was not time-valid;
+     * or status is ER_OK and trusted is true: we successfully checked the chain and found a trusted root in the path.
      *
      * Clean up and return the appropriate result.
      */

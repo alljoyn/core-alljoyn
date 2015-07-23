@@ -398,7 +398,7 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     ECCPublicKey dsaPublicKey;
     ECCPrivateKey subjectPrivateKey;
     ECCPublicKey subjectPublicKey;
-    CertificateX509 x509;
+    IdentityCertificate x509;
 
     /* cert expires in one year */
     QStatus status = GenKeyAndCreateCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 365 * 24 * 3600, x509);
@@ -1247,7 +1247,7 @@ TEST_F(CertificateECCTest, TestValidTypeInCertChain_IUI)
     certs[1] = cert1;
     certs[2] = cert2;
 
-    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not supposed to be valid.";
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is supposed to be valid.";
 }
 
 /**
@@ -1288,7 +1288,7 @@ TEST_F(CertificateECCTest, TestValidTypeInCertChain_MUM)
     certs[1] = cert1;
     certs[2] = cert2;
 
-    EXPECT_FALSE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is not supposed to be valid.";
+    EXPECT_TRUE(CertificateX509::ValidateCertificateTypeInCertChain(certs, 3)) << " The certificate type constraint is supposed to be valid.";
 }
 
 /**

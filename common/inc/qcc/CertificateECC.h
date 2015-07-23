@@ -69,9 +69,13 @@ extern const qcc::String OID_DIG_SHA256;
  */
 extern const qcc::String OID_CUSTOM_DIGEST;
 /**
- * custom OID for the Allseen certificate type (1.3.6.1.4.1.44924.1.1)
+ * custom OID for the Allseen identity certificate EKU (1.3.6.1.4.1.44924.1.1)
  */
-extern const qcc::String OID_CUSTOM_CERT_TYPE;
+extern const qcc::String OID_CUSTOM_EKU_IDENTITY;
+/**
+ * custom OID for the Allseen membership certificate EKU (1.3.6.1.4.1.44924.1.5)
+ */
+extern const qcc::String OID_CUSTOM_EKU_MEMBERSHIP;
 /**
  * Authority Key Identifier OID (2.5.29.35)
  */
@@ -121,7 +125,8 @@ class CertificateX509 {
     typedef enum {
         UNRESTRICTED_CERTIFICATE,  ///< Unrestricted certificate
         IDENTITY_CERTIFICATE,      ///< identity certificate
-        MEMBERSHIP_CERTIFICATE     ///< membership certificate
+        MEMBERSHIP_CERTIFICATE,    ///< membership certificate
+        INVALID_CERTIFICATE        ///< certificate not valid for any AllJoyn purpose
     } CertificateType;
 
     /**

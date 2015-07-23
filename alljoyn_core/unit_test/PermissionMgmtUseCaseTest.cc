@@ -2721,17 +2721,22 @@ TEST_F(PermissionMgmtUseCaseTest, ValidCertChainStructure)
     qcc::GUID128 subject1;
     Crypto_ECC ecc1;
     ecc1.GenerateDSAKeyPair();
-    CertificateX509 certs[2];
+    CertificateX509 cert1;
 
     /* self signed cert */
-    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, true, certs[1])) << " CreateCert failed.";
+    ASSERT_EQ(ER_OK, CreateCert("1010101", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject1, ecc1.GetDSAPublicKey(), validity, true, cert1)) << " CreateCert failed.";
 
     qcc::GUID128 subject0;
     Crypto_ECC ecc0;
     ecc0.GenerateDSAKeyPair();
+    IdentityCertificate cert0;
 
     /* leaf cert signed by cert1 */
-    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, false, certs[0])) << " CreateCert failed.";
+    ASSERT_EQ(ER_OK, CreateCert("2020202", subject1, "organization", ecc1.GetDSAPrivateKey(), ecc1.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, false, cert0)) << " CreateCert failed.";
+
+    CertificateX509 certs[2];
+    certs[0] = cert0;
+    certs[1] = cert1;
 
     EXPECT_TRUE(KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certs, 2)) << " cert chain structure is not valid";
 
