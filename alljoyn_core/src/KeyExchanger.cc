@@ -326,7 +326,7 @@ void KeyExchanger::ShowCurrentDigest(const char* ref)
 
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     peerState->GetDigest(digest, true);
-    QCC_DbgHLPrintf(("Current digest [%d] ref[%s]: %s\n", ++showDigestCounter, ref, BytesToHexString(digest, sizeof(digest)).c_str()));
+    QCC_DbgHLPrintf(("Current digest %s ref[%s]: %s\n", IsInitiator() ? "I" : "R", ref, BytesToHexString(digest, sizeof(digest)).c_str()));
 }
 
 QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask)
@@ -381,7 +381,6 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     args[1].Set("v", &outVariant);
 
     status = peerObj->HandleMethodReply(msg, replyMsg, args, ArraySize(args));
-
     if (ER_OK == status) {
         peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     }
@@ -923,7 +922,6 @@ QStatus KeyExchangerECDHE_PSK::GenerateLocalVerifier(uint8_t* verifier, size_t v
     }
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     peerState->GetDigest(digest, true);
-
     if (GetPeerAuthVersion() >= CONVERSATION_V4) {
         qcc::String seed((const char*)digest, sizeof(digest));
         seed += pskName;

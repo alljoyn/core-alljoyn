@@ -981,7 +981,23 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_PSK_NULL_Prioritized_To_ECDSA)
  * In this test, the ECDHE_ECDSA key exchange fails.  The key exchange
  * downgrades to ECDHE_NULL and it should succeed.
  */
-TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_NULL)
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_NULL_FailOnClient)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    clientAuthListener.failVerifyCertChain = true;
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+}
+
+/**
+ * In this test, the ECDHE_ECDSA key exchange fails.  The key exchange
+ * downgrades to ECDHE_NULL and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_NULL_FailOnServer)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));

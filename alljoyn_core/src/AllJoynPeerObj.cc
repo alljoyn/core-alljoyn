@@ -642,18 +642,25 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
     KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState, false, authMaskList, 1);
     if (!keyExchanger) {
         Message replyMsg(*bus);
-        lock.Unlock(MUTEX_CONTEXT);
         status = ER_AUTH_FAIL;
         MethodReply(msg, status, &replyMsg);
         peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+        lock.Unlock(MUTEX_CONTEXT);
         return;
+    }
+    if ((peerState->GetAuthVersion() >> 16) < CONVERSATION_V4) {
+        /* any peer with auth version smaller than 4 need to start the hash at
+         * the KeyExchange call */
+        peerState->InitializeConversationHash();
     }
 
     /* storing some handle for the given sender  */
     keyExConversations[sender] = keyExchanger;
-    lock.Unlock(MUTEX_CONTEXT);
 
+    /* reply to initiator and block incomping message processing until the
+     * reply message is hashed */
     keyExchanger->RespondToKeyExchange(msg, inVariant, authMask, effectiveAuthMask);
+    lock.Unlock(MUTEX_CONTEXT);
 } /* DoKeyExchange */
 
 QStatus AllJoynPeerObj::RecordMasterSecret(const qcc::String& sender, KeyExchanger*keyExchanger, PeerState peerState)
@@ -737,8 +744,12 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
      * Let remote peer know the authentication failed.
      */
     Message replyMsg(*bus);
+    lock.Lock(MUTEX_CONTEXT);
+    /* reply to initiator and block incomping message processing until the
+     * reply message is hashed */
     MethodReply(msg, status, &replyMsg);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    lock.Unlock(MUTEX_CONTEXT);
 }
 
 void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
@@ -1386,6 +1397,11 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
             }
             smallerSuites[idx++] = requestingAuthList[cnt];
         }
+    }
+    if ((peerState->GetAuthVersion() >> 16) < CONVERSATION_V4) {
+        /* any peer with auth version smaller than 4 need to start the hash at
+         * the KeyExchange call */
+        peerState->InitializeConversationHash();
     }
     status = AuthenticatePeerUsingKeyExchange(smallerSuites, smallerCount, busName, peerState, localGuidStr, remotePeerObj, ifc, mech);
     delete [] smallerSuites;

@@ -94,7 +94,6 @@ class KeyExchanger {
   public:
 
     KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), peerState(peerState), initiator(initiator) {
-        showDigestCounter = 0;
     }
 
     virtual ~KeyExchanger() {
@@ -222,7 +221,6 @@ class KeyExchanger {
     KeyExchanger(const KeyExchanger& other);
 
     bool initiator;
-    int showDigestCounter;
 };
 
 class KeyExchangerECDHE : public KeyExchanger {
