@@ -86,12 +86,6 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
         initialized = false;
     }
 
-    if (alg == qcc::Crypto_Hash::MD5) {
-        status = ER_CRYPTO_ERROR;
-        QCC_LogError(status, ("MD5 not supported"));
-        return status;
-    }
-
     MAC = hmacKey != NULL;
 
     if (MAC && (keyLen == 0)) {
@@ -102,7 +96,13 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     ctx = new Crypto_Hash::Context(alg);
 
-    /* No default case - force compile-time error if additional hash types are added */
+    /* No default case - force compile-time error if additional hash
+     * types are added.
+     *
+     * Create the hash context for the selected hash algorithm, and
+     * abort() if allocation fails till there is a better error
+     * handling for allocation failures.
+     */
     switch (alg) {
     case qcc::Crypto_Hash::SHA1:
         if (MAC) {
@@ -149,7 +149,8 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
         break;
 
     default:
-        return ER_CRYPTO_ERROR;
+        status = ER_BAD_ARG_1;
+        QCC_LogError(status, ("Unsupported hash function %d", alg));
     }
 
     if (status == ER_OK) {
