@@ -1165,6 +1165,11 @@ bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* c
             return false;
         }
     }
+    /* Leaf certificate must have exactly one EKU. */
+    if ((certs[0].GetType() != CertificateX509::IDENTITY_CERTIFICATE) &&
+        (certs[0].GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+        return false;
+    }
     if (numCerts == 1) {
         return true;
     }
@@ -1173,7 +1178,7 @@ bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* c
             QCC_DbgPrintf(("Certificate basic extension CA is false"));
             return false;
         }
-        if (certs[cnt].Verify(certs[cnt + 1].GetSubjectPublicKey()) != ER_OK) {
+        if (!certs[cnt + 1].IsIssuerOf(certs[cnt])) {
             QCC_DbgPrintf(("Certificate chain signature verification failed"));
             return false;
         }
