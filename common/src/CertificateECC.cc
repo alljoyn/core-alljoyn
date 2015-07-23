@@ -52,7 +52,9 @@ const qcc::String OID_DN_CN = "2.5.4.3";
 const qcc::String OID_BASIC_CONSTRAINTS = "2.5.29.19";
 const qcc::String OID_DIG_SHA256 = "2.16.840.1.101.3.4.2.1";
 const qcc::String OID_SUB_ALTNAME = "2.5.29.17";
-const qcc::String OID_CUSTOM_CERT_TYPE = "1.3.6.1.4.1.44924.1.1";
+const qcc::String OID_EKU = "2.5.29.37";
+const qcc::String OID_CUSTOM_EKU_IDENTITY = "1.3.6.1.4.1.44924.1.1";
+const qcc::String OID_CUSTOM_EKU_MEMBERSHIP = "1.3.6.1.4.1.44924.1.5";
 const qcc::String OID_CUSTOM_DIGEST = "1.3.6.1.4.1.44924.1.2";
 const qcc::String OID_CUSTOM_SECURITY_GROUP_ID = "1.3.6.1.4.1.44924.1.3";
 const qcc::String OID_CUSTOM_IDENTITY_ALIAS = "1.3.6.1.4.1.44924.1.4";
@@ -620,13 +622,58 @@ QStatus CertificateX509::DecodeCertificateExt(const qcc::String& ext)
                     return status;
                 }
             }
-        } else if (OID_CUSTOM_CERT_TYPE == oid) {
-            status = Crypto_ASN1::Decode(str, "(i)", (uint32_t*) &type);
+        } else if (OID_EKU == oid) {
+            bool identityEKUPresent = false;
+            bool membershipEKUPresent = false;
+
+            status = Crypto_ASN1::Decode(str, "(.)", &tmp);
             if (ER_OK != status) {
-                status = Crypto_ASN1::Decode(str, "i", (uint32_t*) &type);
-                if (ER_OK != status) {
-                    return status;
+                return status;
+            }
+            /* There has to be at least one EKU listed per the RFC. If tmp is empty,
+             * the cert is malformed. */
+            if (0 == tmp.size()) {
+                return ER_FAIL;
+            }
+            while ((ER_OK == status) && (tmp.size() > 0)) {
+                qcc::String eku;
+                qcc::String rem;
+                status = Crypto_ASN1::Decode(tmp, "o.", &eku, &rem);
+                if (ER_OK == status) {
+                    if (OID_CUSTOM_EKU_IDENTITY == eku) {
+                        if (identityEKUPresent) {
+                            QCC_DbgPrintf(("Identity EKU seen multiple times"));
+                        }
+                        identityEKUPresent = true;
+                    } else if (OID_CUSTOM_EKU_MEMBERSHIP == eku) {
+                        if (membershipEKUPresent) {
+                            QCC_DbgPrintf(("Membership EKU seen multiple times"));
+                        }
+                        membershipEKUPresent = true;
+                    } else {
+                        /* An unrelated EKU. Unexpected but not fatal. Log and move on. */
+                        QCC_DbgPrintf(("Informational: Saw unexpected EKU %s", eku.c_str()));
+                    }
+
+                    tmp = rem;
                 }
+            }
+
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Failed while decoding EKU extension: %s", QCC_StatusText(status)));
+                return status;
+            }
+
+            if (identityEKUPresent && membershipEKUPresent) {
+                type = UNRESTRICTED_CERTIFICATE;
+            } else if (identityEKUPresent) {
+                type = IDENTITY_CERTIFICATE;
+            } else if (membershipEKUPresent) {
+                type = MEMBERSHIP_CERTIFICATE;
+            } else {
+                /* EKUs are present but none belonging to known AllJoyn EKUs, and so certificate is not valid
+                 * for any AllJoyn purpose. */
+                type = INVALID_CERTIFICATE;
             }
         } else if (OID_SUB_ALTNAME == oid) {
             qcc::String otherNameOid;
@@ -685,18 +732,42 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
         QCC_LogError(status, ("Error encoding certificate basic constraint"));
         return status;
     }
-    if (type != UNRESTRICTED_CERTIFICATE) {
-        tmp.clear();
-        status = Crypto_ASN1::Encode(tmp, "(i)", (uint32_t) type);
+
+    tmp.clear();
+    switch (type) {
+    case UNRESTRICTED_CERTIFICATE:
+        status = Crypto_ASN1::Encode(tmp, "(oo)", &OID_CUSTOM_EKU_IDENTITY, &OID_CUSTOM_EKU_MEMBERSHIP);
         if (ER_OK != status) {
             return status;
         }
-        oid = OID_CUSTOM_CERT_TYPE;
-        status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
+        break;
+
+    case IDENTITY_CERTIFICATE:
+        status = Crypto_ASN1::Encode(tmp, "(o)", &OID_CUSTOM_EKU_IDENTITY);
         if (ER_OK != status) {
             return status;
         }
+        break;
+
+    case MEMBERSHIP_CERTIFICATE:
+        status = Crypto_ASN1::Encode(tmp, "(o)", &OID_CUSTOM_EKU_MEMBERSHIP);
+        if (ER_OK != status) {
+            return status;
+        }
+        break;
+
+    default: /* Shouldn't ever happen. */
+        assert(false);
+        QCC_LogError(ER_FAIL, ("Encountered unknown type %u", type));
+        return ER_FAIL;
     }
+
+    oid = OID_EKU;
+    status = Crypto_ASN1::Encode(raw, "(ox)", &oid, &tmp);
+    if (ER_OK != status) {
+        return status;
+    }
+
     if (subjectAltName.size()) {
         qcc::String octet;
         if ((type == IDENTITY_CERTIFICATE) || (type == MEMBERSHIP_CERTIFICATE)) {
@@ -1254,12 +1325,12 @@ bool CertificateX509::ValidateCertificateTypeInCertChain(const CertificateX509* 
     }
 
     /**
-     * Any signing cert in the chain must have the same type or unrestricted
-     * type in order to sign the next cert in the chain.
+     * Any signing cert in the chain must have the same type as the end entity certificate
+     * or be unrestricted in order to sign the next cert in the chain.
      */
     for (size_t cnt = 1; cnt < count; cnt++) {
         if ((certChain[cnt].GetType() != CertificateX509::UNRESTRICTED_CERTIFICATE) &&
-            (certChain[cnt].GetType() != certChain[cnt - 1].GetType())) {
+            (certChain[cnt].GetType() != certChain[0].GetType())) {
             return false;
         }
     }
