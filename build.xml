@@ -17,8 +17,8 @@
   <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9956">
     <equals arg1="${OS}" arg2="win7" /> 
   </condition>
-  <condition property="org.alljoyn.bus.address" value="tcp:addr=127.0.0.1,port=9956">
-    <equals arg1="${OS}" arg2="winxp" /> 
+  <condition property="org.alljoyn.bus.address" value="npipe:">
+    <equals arg1="${OS}" arg2="win10" /> 
   </condition>
   <!-- Default property value if none of the above conditions are met -->
   <property name="org.alljoyn.bus.address" value="unix:abstract=alljoyn" />
