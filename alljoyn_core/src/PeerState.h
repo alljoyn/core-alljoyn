@@ -334,6 +334,16 @@ class _PeerState {
   private:
 
     /**
+     * Private assignment operator
+     */
+    _PeerState& operator =(const _PeerState& other);
+
+    /**
+     * Private copy constructor
+     */
+    _PeerState(const _PeerState& other);
+
+    /**
      * True if this peer state is for the local peer.
      */
     bool isLocalPeer;
