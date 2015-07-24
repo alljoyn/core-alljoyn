@@ -237,20 +237,9 @@ static void AJ_AES_CTR_128(const uint32_t* fkey, const uint8_t* in, uint8_t* out
             *out++ = *p++ ^ *in++;
         }
         /*
-         * The counter field is big-endian (dumb idea given everything else is processed little endian)
+         * The counter field is big-endian
          */
-#if (QCC_TARGET_ENDIAN == QCC_LITTLE_ENDIAN)
-        /*
-         * A big-endian increment of a 32 bit counter on a little-endian CPU.
-         * Only supports counter values up to 2^16 because that is all we need
-         */
-        if (counter[3] == 0xFF000000) {
-            counter[3] += 0x00010000;
-        }
-        counter[3] += 0x01000000;
-#else
-        counter[3] += 1;
-#endif
+        counter[3] = htobe32(1 + betoh32(counter[3]));
     }
 
     Unpack32(ctr, counter);
