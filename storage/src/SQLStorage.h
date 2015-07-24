@@ -17,7 +17,11 @@
 #ifndef ALLJOYN_SECMGR_STORAGE_SQLSTORAGE_H_
 #define ALLJOYN_SECMGR_STORAGE_SQLSTORAGE_H_
 
-#include <sqlite3.h>
+#if defined (QCC_OS_GROUP_WINDOWS)
+#include "sqlite3.h"
+#else
+#include <sqlite3.h>	
+#endif
 
 #include <iostream>
 #include <string>
