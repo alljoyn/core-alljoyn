@@ -287,6 +287,13 @@ TEST_F(SocketTestErrors, RecvWhenNotConnected)
     Close(sockFd);
 }
 
+TEST_F(SocketTestErrors, RecvAfterShutdown)
+{
+    Shutdown(clientFd, QCC_SHUTDOWN_WR);
+    EXPECT_EQ(ER_OK, Recv(acceptedFd, buf, 1, numRecvd));
+    EXPECT_EQ(0U, numRecvd);
+}
+
 TEST_F(SocketTestErrors, RecvAfterOrderlyRelease)
 {
     Close(clientFd);
@@ -399,6 +406,13 @@ TEST_F(SocketTestWithFdsErrors, RecvArgs)
 {
     EXPECT_EQ(ER_BAD_ARG_5, RecvWithFds(acceptedFd, buf, 0, numRecvd, NULL, 0, numFds));
     EXPECT_EQ(ER_BAD_ARG_6, RecvWithFds(acceptedFd, buf, 0, numRecvd, fds, 0, numFds));
+}
+
+TEST_F(SocketTestWithFdsErrors, RecvAfterShutdown)
+{
+    Shutdown(clientFd, QCC_SHUTDOWN_WR);
+    EXPECT_EQ(ER_OK, RecvWithFds(acceptedFd, buf, 1, numRecvd, fds, 1, numFds));
+    EXPECT_EQ(0U, numRecvd);
 }
 
 TEST_F(SocketTestWithFdsErrors, RecvAfterOrderlyRelease)
