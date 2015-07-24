@@ -36,8 +36,8 @@ vars = Variables()
 vars.Add(PathVariable('CORDOVA_BASE', 'Base directory of Cordova (aka PhoneGap)', os.environ.get('CORDOVA_BASE')))
 vars.Add(PathVariable('GECKO_BASE', 'Base directory of Gecko SDK', os.environ.get('GECKO_BASE')))
 vars.Add(PathVariable('JSDOC_DIR', 'The path to the JsDoc toolkit', os.environ.get('JSDOC_DIR'), PathVariable.PathIsDir))
-vars.Add(PathVariable('WIDLPROC', 'Path to widlproc executable', os.environ.get('WIDLPROC')))
-vars.Add(PathVariable('XSLTPROC', 'Path to xsltproc executable', 'xsltproc', PathVariable.PathAccept))
+vars.Add('WIDLPROC', 'DO NOT USE, widlproc is no longer supported', os.environ.get('WIDLPROC'))
+
 vars.Update(jsenv)
 Help(vars.GenerateHelpText(jsenv))
 
@@ -51,7 +51,6 @@ if '' == jsenv.subst('$GECKO_BASE') and '' == jsenv.subst('$CORDOVA_BASE'):
 
 sys.path.append(str(jsenv.Dir('../build_core/tools/scons').srcnode()))
 from jsstatus import JavaScriptStatus
-from widl import Widl
 
 if jsenv.has_key('BULLSEYE_BIN'):
     jsenv.PrependENVPath('PATH', jsenv.get('BULLSEYE_BIN'))
@@ -97,40 +96,14 @@ jsenv.SConscript('samples/SConscript', exports = {'env': jsenv})
 if '' != jsenv.subst('$GECKO_BASE'):
     if jsenv['OS_CONF'] == 'windows':
         jsenv.Install('$JS_DISTDIR/plugin', ['alljoyn64.reg', 'alljoyn.reg', '$JS_DISTDIR/lib/npalljoyn.dll'])
-# TODO
-#    Widl('assets/www/alljoyn.js.in', 'jni/Status.xml', 'assets/www/alljoyn.js')
-#    jsenv.Install('$JS_DISTDIR/assets/www', 'assets/www/alljoyn.js')
 
 # Build docs
-if jsenv['DOCS'] == 'html':
-    jsenv.SConscript('docs/SConscript')
-
-def widlproc_cmd(widl, wxml):
-    xml = open(wxml, 'w')
-    p = subprocess.Popen(jsenv['WIDLPROC'] + ' ' + widl, shell=True, stdout=xml)
-    p.wait()
-    xml.flush()
-    xml.close()
-
 if 'WIDLPROC' in jsenv:
-    print("*******************************************************************")
-    print("* Documentation generated using widlproc has been DEPRECATED      *")
-    print("* please switch to JsDoc3                                         *")
-    print("*******************************************************************")
-    footer = '"<hr/><p class=\\"copyright\\"></p><small>AllJoyn&trade; JavaScript API Reference Manual Version 00.00.01 ' + time.strftime('%a %B %d %H:%M:%S %Z %Y') + '<br/>Copyright AllSeen Alliance, Inc.<br/><p>AllSeen, AllSeen Alliance, and AllJoyn are trademarks of the AllSeen Alliance, Inc in the United States and other jurisdictions.<br/></p><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN \\"AS-IS\\" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b><br/></small>"'
-    Widl('docs/alljoyn.widl.in', 'jni/Status.xml', 'docs/alljoyn.widl')
-    # The target directory 'docs/tmp' is never built this will cause the command to run every time WIDLPROC=foo is set
-    Command('docs/tmp', 'docs/alljoyn.widl', [
-            widlproc_cmd('docs/alljoyn.widl', 'docs/alljoyn.wxml'),
-            jsenv['XSLTPROC'] +
-            ' --stringparam date "' + time.strftime('%d %B %Y') + '"' +
-            ' --stringparam footer ' + footer +
-            ' --path ' + os.path.dirname(jsenv['WIDLPROC']) +
-            ' -o ' + File('docs/html/index.html').path +
-            ' ' + File(os.path.dirname(jsenv['WIDLPROC']) + '/../src/widlprocxmltohtml.xsl').path +
-            ' ' + File('docs/alljoyn.wxml').path
-            ])
-    css = jsenv.Install('docs/html', 'docs/widlhtml.css')
-    # make sure the output from widlproc is cleaned
-    jsenv.Clean([css], env.Dir('docs/html'))
+    print("******************************************")
+    print("* ERROR, widlproc is no longer supported *")
+    print("* please switch to JsDoc3                *")
+    print("******************************************")
+    Exit(1)
 
+if jsenv['DOCS'] == 'html':
+    jsenv.SConscript('docs/SConscript', exports = {'env': jsenv})

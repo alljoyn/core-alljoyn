@@ -30,6 +30,5 @@ if jsdocenv.has_key('JSDOC_DIR'):
 # Build docs
 if jsdocenv.has_key('JSDOC_DIR'):
     jsdocenv['JSDOC_TEMPLATE'] = jsdocenv.Dir('$JSDOC_DIR/templates/default')
-    doc_out = jsdocenv.jsdoc3(target=[jsdocenv.Dir('jsdoc')], source=['alljoyn_doc'])
-    # Don't add the output to the distribution of the time being.
-    #documentation = jsdocenv.Install('$JS_DISTDIR/docs', doc_out)
+    doc_out = jsdocenv.jsdoc3(target=[jsdocenv.Dir('html')], source=['alljoyn_doc'])
+    documentation = jsdocenv.Install('$JS_DISTDIR/docs', 'html')
