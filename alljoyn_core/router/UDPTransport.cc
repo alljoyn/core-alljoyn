@@ -3076,6 +3076,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         //assert(found == 1 && "_UDPEndpoint::DisconnectCb(): Endpoint is gone");
         if (found == 0) {
             QCC_DbgHLPrintf(("_UDPEndpoint::DisconnectCb(): endpoint with conn ID == %d. not found on on m_endpointList", connId));
+            m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             return;
         }
 
