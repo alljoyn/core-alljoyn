@@ -44,7 +44,7 @@ void KeyBlob::Erase()
 {
     if (blobType != EMPTY) {
         tag.clear();
-        memset(data, 0, size);
+        ClearMemory(data, size);
         delete [] data;
         blobType = EMPTY;
         data = NULL;
