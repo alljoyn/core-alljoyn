@@ -41,6 +41,23 @@
 
 namespace ajn {
 
+class MessageEncryptionNotification {
+  public:
+    MessageEncryptionNotification()
+    {
+    }
+    virtual ~MessageEncryptionNotification()
+    {
+    }
+
+    /**
+     * Notify the observer when the message encryption step is complete.
+     */
+    virtual void EncryptionComplete()
+    {
+    }
+};
+
 class PermissionMgmtObj : public BusObject {
 
     friend class PermissionManager;
@@ -591,7 +608,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus RetrieveIdentityCertChainPEM(qcc::String& pem);
     QStatus StoreApplicationState();
     QStatus LoadManifestTemplate(PermissionPolicy& policy);
-    void ClearPeerECDSASecrets();
     bool HasDefaultPolicy();
 
     /**
@@ -603,6 +619,7 @@ class PermissionMgmtObj : public BusObject {
     TrustAnchorList trustAnchors;
     _PeerState::GuildMap guildMap;
     PortListener* portListener;
+    MessageEncryptionNotification* callbackToClearSecrets;
 };
 
 }

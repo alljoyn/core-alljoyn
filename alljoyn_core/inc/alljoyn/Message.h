@@ -164,6 +164,7 @@ class _Message;
 class _RemoteEndpoint;
 class BusAttachment;
 class PeerStateTable;
+class MessageEncryptionNotification;
 
 /**
  * @cond ALLJOYN_DEV
@@ -201,6 +202,7 @@ class _Message {
     friend class DefaultPolicyMarshaller;
     friend class Crypto;
     friend class _PeerState;
+    friend class PermissionMgmtObj;
     friend struct Rule;
 
   public:
@@ -1136,6 +1138,20 @@ class _Message {
     HeaderFields hdrFields;
 
     /**
+     * Set the message encryption notification callback.
+     */
+    void SetMessageEncryptionNotification(MessageEncryptionNotification* notifyTo)
+    {
+        encryptionNotification = notifyTo;
+    }
+
+    /**
+     * The notification handler to call when the encryption step is complete.
+     */
+
+    MessageEncryptionNotification* encryptionNotification;
+
+    /**
      * @defgroup internal_methods_message_unmarshal Internal methods unmarshal side
      *
      * Methods used to unmarshal and AllJoyn header
@@ -1413,6 +1429,7 @@ class _Message {
      */
     static const uint32_t AUTH_FALLBACK_VERSION;
 
+    void NotifyEncryptionComplete();
 
 };
 

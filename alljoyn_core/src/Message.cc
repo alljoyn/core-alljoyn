@@ -39,6 +39,7 @@
 
 #include "BusInternal.h"
 #include "BusUtil.h"
+#include "PermissionMgmtObj.h"
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -340,6 +341,7 @@ void _Message::Init(BusAttachment& busAttachment)
     countWrite = 0;
     msgHeader.msgType = MESSAGE_INVALID;
     msgHeader.endian = myEndian;
+    encryptionNotification = NULL;
 }
 
 _Message::~_Message(void)
@@ -372,7 +374,8 @@ _Message::_Message(const _Message& other) :
     countRead(other.countRead),
     writeState(other.writeState),
     countWrite(other.countWrite),
-    hdrFields(other.hdrFields)
+    hdrFields(other.hdrFields),
+    encryptionNotification(other.encryptionNotification)
 {
     if (bufSize > 0) {
         assert(other.msgBuf != NULL);
@@ -539,6 +542,13 @@ void _Message::ClearHeader()
         handles = NULL;
         encrypt = false;
         authMechanism.clear();
+    }
+}
+
+void _Message::NotifyEncryptionComplete()
+{
+    if (NULL != encryptionNotification) {
+        encryptionNotification->EncryptionComplete();
     }
 }
 

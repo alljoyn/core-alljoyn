@@ -50,7 +50,6 @@ using namespace std;
 
 namespace ajn {
 
-
 #define Marshal8(n) \
     do { \
         *((uint64_t*)bufPos) = n; \
@@ -806,6 +805,9 @@ QStatus _Message::EncryptMessage()
              */
             bodyPtr = reinterpret_cast<uint8_t*>(msgBuf) + hdrLen;
             bufEOD = bodyPtr + msgHeader.bodyLen;
+
+            /* notify the observer if requested */
+            NotifyEncryptionComplete();
         }
     }
     /*
@@ -1380,6 +1382,7 @@ QStatus _Message::ReplyMsg(const Message& call, const qcc::String& sender, const
      */
     status = MarshalMessage(call->replySignature, sender, destination, MESSAGE_METHOD_RET,
                             args, numArgs, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
+    SetMessageEncryptionNotification(call->encryptionNotification);
     return status;
 }
 
@@ -1426,6 +1429,7 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, const
         status = MarshalMessage("s", sender, destination, MESSAGE_ERROR, &arg, 1,
                                 call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
     }
+    SetMessageEncryptionNotification(call->encryptionNotification);
 
 ExitErrorMsg:
     return status;

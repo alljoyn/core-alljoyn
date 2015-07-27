@@ -26,6 +26,7 @@
 #include <qcc/CertificateECC.h>
 #include <qcc/CertificateHelper.h>
 #include <qcc/StringUtil.h>
+#include <qcc/Event.h>
 #include "PermissionMgmtObj.h"
 #include "PeerState.h"
 #include "BusInternal.h"
@@ -58,11 +59,52 @@ const char* PermissionMgmtObj::ERROR_POLICY_NOT_NEWER = "org.alljoyn.Bus.Securit
 const char* PermissionMgmtObj::ERROR_DUPLICATE_CERTIFICATE = "org.alljoyn.Bus.Security.Error.DuplicateCertificate";
 const char* PermissionMgmtObj::ERROR_CERTIFICATE_NOT_FOUND = "org.alljoyn.Bus.Security.Error.CertificateNotFound";
 
+/**
+ * Interest in the encryption step of a message in order to clear the secrets.
+ */
+
+class ClearSecretsWhenMsgDelivered : public MessageEncryptionNotification {
+  public:
+    ClearSecretsWhenMsgDelivered(BusAttachment& bus) : MessageEncryptionNotification(), bus(bus)
+    {
+    }
+
+    ~ClearSecretsWhenMsgDelivered()
+    {
+    }
+
+    /**
+     * Notified the message encryption step is complete.
+     */
+    void EncryptionComplete()
+    {
+        /**
+         * Clear out the master secrets used in ECDSA key exchange
+         */
+        bus.GetInternal().GetKeyStore().Clear(ECDHE_ECDSA_NAME_PATTERN);
+        /* clear all the peer states to force re-authentication */
+        bus.GetInternal().GetPeerStateTable()->Clear();
+    }
+
+  private:
+    /**
+     * Assignment not allowed
+     */
+    ClearSecretsWhenMsgDelivered& operator=(const ClearSecretsWhenMsgDelivered& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    ClearSecretsWhenMsgDelivered(const ClearSecretsWhenMsgDelivered& other);
+
+    BusAttachment& bus;
+};
+
 static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo);
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
     BusObject(objectPath),
-    bus(bus), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0), portListener(NULL)
+    bus(bus), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL)
 {
 }
 
@@ -70,6 +112,7 @@ QStatus PermissionMgmtObj::Init()
 {
     ca = new CredentialAccessor(bus);
     bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
+    callbackToClearSecrets = new ClearSecretsWhenMsgDelivered(bus);
     return bus.RegisterBusObject(*this, true);
 }
 
@@ -118,6 +161,7 @@ PermissionMgmtObj::~PermissionMgmtObj()
         delete portListener;
     }
     bus.UnregisterBusObject(*this);
+    delete callbackToClearSecrets;
 }
 
 void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
@@ -578,14 +622,14 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     if (ER_OK == status) {
         policyVersion = policy->GetVersion();
     }
+    if (ER_OK == status) {
+        /* notify me when the encryption completes for this message so the
+           secrets can be removed */
+        msg->SetMessageEncryptionNotification(callbackToClearSecrets);
+    }
     MethodReply(msg, status);
     if (ER_OK == status) {
         PolicyChanged(policy);
-        /**
-         * Clear out the master secrets used in ECDSA key exchange since there
-         * is a newly installed policy.
-         */
-        ClearPeerECDSASecrets();
     } else {
         delete policy;
     }
@@ -1058,16 +1102,6 @@ Exit:
     return status;
 }
 
-void PermissionMgmtObj::ClearPeerECDSASecrets()
-{
-    /**
-     * Clear out the master secrets used in ECDSA key exchange
-     */
-    bus.GetInternal().GetKeyStore().Clear(ECDHE_ECDSA_NAME_PATTERN);
-    /* clear all the peer states to force re-authentication */
-    bus.GetInternal().GetPeerStateTable()->Clear();
-}
-
 void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
@@ -1093,14 +1127,12 @@ Exit:
         }
     }
     delete [] currentCertArgs;
-    MethodReply(msg, status);
     if (ER_OK == status) {
-        /**
-         * Clear out the master secrets used in ECDSA key exchange since there
-         * is a new identity cert.
-         */
-        ClearPeerECDSASecrets();
+        /* notify me when the encryption completes for this message so the
+           secrets can be removed */
+        msg->SetMessageEncryptionNotification(callbackToClearSecrets);
     }
+    MethodReply(msg, status);
 }
 
 QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
