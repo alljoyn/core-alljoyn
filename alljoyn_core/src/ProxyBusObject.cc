@@ -314,7 +314,6 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
     Condition listenerDone;             /**< Signals that the properties changed listener is done */
     Condition handlerDone;              /**< Signals that the properties changed signal handler is done */
     Condition addMatchDone;             /**< Signals that AddMatch call has completed */
-    QStatus addMatchCallStatus;         /**< Used to determine when AddMatchAsync is done and the resulting status */
     bool registeredPropChangedHandler;  /**< true if our PropertiesChangedHandler is registered */
     map<qcc::Thread*, _PropertiesChangedCB*> handlerThreads;   /**< Thread actively calling PropertiesChangedListeners */
 
@@ -1171,7 +1170,6 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
     }
 
     if (callAddMatch) {
-        addMatchCallStatus = ER_NONE;
         String rule = String("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='") + intf + "'";
         AddMatchCBInfo* cbInfo = new AddMatchCBInfo(intf, it->second.adding);
         QStatus status = bus->AddMatchAsync(rule.c_str(), this, cbInfo);
