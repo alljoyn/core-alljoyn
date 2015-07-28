@@ -28,6 +28,7 @@
 
 #include <qcc/Crypto.h>
 #include "Crypto.h"
+#include <qcc/Util.h>
 
 #include <Status.h>
 
@@ -37,10 +38,26 @@ using namespace qcc;
 
 #define QCC_MODULE  "CRYPTO"
 
-struct Crypto_DRBG::Context {
+class Crypto_DRBG::Context {
+  public:
     uint8_t v[Crypto_DRBG::OUTLEN];
     uint8_t k[Crypto_DRBG::KEYLEN];
     uint32_t c;
+
+    Context()
+    {
+        memset(v, 0, sizeof(v));
+        memset(k, 0, sizeof(k));
+        c = 0;
+    }
+
+    // Clear the sensitive contents of the DRBG state.
+    ~Context()
+    {
+        ClearMemory(v, sizeof(v));
+        ClearMemory(k, sizeof(k));
+        c = 0;
+    }
 };
 
 // One instance per application
@@ -70,15 +87,11 @@ static void Increment(uint8_t* data, size_t size)
 Crypto_DRBG::Crypto_DRBG()
 {
     ctx = new Context();
-    if (ctx) {
-        memset(ctx, 0, sizeof (Context));
-    }
 }
 
 Crypto_DRBG::~Crypto_DRBG()
 {
     if (ctx) {
-        memset(ctx, 0, sizeof (Context));
         delete ctx;
     }
 }
@@ -154,6 +167,7 @@ void Crypto_DRBG::Update(uint8_t* data)
 
     memcpy(ctx->k, tmp, KEYLEN);
     memcpy(ctx->v, tmp + KEYLEN, OUTLEN);
+    ClearMemory(tmp, sizeof(tmp));
 }
 
 QStatus qcc::Crypto_GetRandomBytes(uint8_t* data, size_t len)

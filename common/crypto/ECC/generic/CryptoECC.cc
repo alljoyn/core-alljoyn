@@ -74,6 +74,10 @@ struct ECCSecret::ECCSecretState {
     ECCSecretState() {
         memset(z, 0, ECC_COORDINATE_SZ);
     }
+    ~ECCSecretState()
+    {
+        ClearMemory(z, sizeof(z));
+    }
     void operator=(const ECCSecretState& k)
     {
         memcpy(z, k.z, ECC_COORDINATE_SZ);
@@ -279,7 +283,6 @@ Exit:
 
 ECCSecret::~ECCSecret()
 {
-    memset(eccSecretState, 0, sizeof(ECCSecretState));
     delete eccSecretState;
 }
 
@@ -351,10 +354,9 @@ QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCS
 
 Exit:
 
-    memset((void*)&eccSecretState, 0, sizeof(ECCSecret::ECCSecretState));   // could be optimized out need a secure zero memory
-
-    memset(sec.data, 0, sizeof(sec.data));
-    memset(prv.data, 0, sizeof(prv.data));
+    ClearMemory(&eccSecretState, sizeof(ECCSecret::ECCSecretState));
+    ClearMemory(sec.data, sizeof(sec.data));
+    ClearMemory(prv.data, sizeof(prv.data));
 
     return status;
 }

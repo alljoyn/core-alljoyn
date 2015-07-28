@@ -436,6 +436,8 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
              */
             verifier = BytesToHexString(keymatter + Crypto_AES::AES128_SIZE, VERIFIER_LEN);
         }
+
+        ClearMemory(keymatter, keylen);
         delete [] keymatter;
     }
     /*
