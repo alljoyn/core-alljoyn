@@ -23,8 +23,8 @@ REM is done by CAPI.
 
 REM Please note that this method of generating certificates on Windows does not allow for setting
 REM the CA flag in the basicConstraints extension to FALSE, so client and server certificates
-REM generated with this method have it present and set to TRUE. This still makes them suitable for
-REM use in tests, though.
+REM are generated with no basic constraints extension. In X509v3, this also indicates an end entity
+REM certificate.
 
 REM If you have an incomplete run of this script, you may end up with old certificates still
 REM in your store. Either use the "certmgr.msc" to manually delete them from the Personal store,
