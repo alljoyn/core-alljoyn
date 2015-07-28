@@ -112,13 +112,13 @@ bool DaemonRouter::AddCompatibilityOverride(bool add,
     const bool destIsB2b = (dest->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
 
     if (isBroadcast) {
-        if (!add && isGlobalBroadcast && destIsB2b && (detachId != 0)) {
+        if (isGlobalBroadcast && destIsB2b && detachId != 0) {
+            RemoteEndpoint b2bDest = RemoteEndpoint::cast(dest);
             /*
              * DetachSession Hack Part 2: Ensure that the destination endpoint
-             * get the DetachSession message.
+             * gets the DetachSession message if and only if it is in this session.
              */
-            RemoteEndpoint b2bDest = RemoteEndpoint::cast(dest);
-            add = add || (b2bDest->GetSessionId() == detachId);
+            add = (b2bDest->GetSessionId() == detachId);
         }
     } else if (isSessioncast) {
         if (!add) {

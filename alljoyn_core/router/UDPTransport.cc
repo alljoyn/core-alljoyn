@@ -1312,7 +1312,7 @@ class ArdpStream : public qcc::Stream {
 
                     m_transport->m_ardpLock.Lock();
                     QCC_DbgPrintf(("ArdpStream::Disconnect(): ARDP_Disconnect()"));
-                    status = ARDP_Disconnect(m_handle, m_conn);
+                    status = ARDP_Disconnect(m_handle, m_conn, m_connId);
                     m_transport->m_ardpLock.Unlock();
                     if (status == ER_OK) {
                         m_discSent = true;
@@ -3052,8 +3052,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
             m_transport->m_connLock.Unlock(MUTEX_CONTEXT);
         }
 
-
-#ifndef NDEBUG
         /*
          * The callback dispatcher looked to see if the endpoint was on the
          * endpoint list before it made the call here, and it incremented the
@@ -3070,8 +3068,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
                 ++found;
             }
         }
-        assert(found == 1 && "_UDPEndpoint::DisconnectCb(): Endpoint is gone");
-#endif
+
+        /*
+         * In case when there are simultaneous local and remote disconnect requests queued up for the came connection ID,
+         * we may find ourselves in a situation when the endpoint is not present. If this is the case, there is nothing for us to do, just return.
+         */
+        //assert(found == 1 && "_UDPEndpoint::DisconnectCb(): Endpoint is gone");
+        if (found == 0) {
+            QCC_DbgHLPrintf(("_UDPEndpoint::DisconnectCb(): endpoint with conn ID == %d. not found on on m_endpointList", connId));
+            return;
+        }
 
         /*
          * We need to figure out if this disconnect callback is due to an
@@ -3195,12 +3201,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
                          handle, conn, connId, rcv, QCC_StatusText(status)));
 
         /*
-         * Our contract with ARDP says that it will provide us with valid data
-         * if it calls us back.
-         */
-        assert(rcv != NULL && rcv->data != NULL && rcv->datalen != 0 && "_UDPEndpoint::RecvCb(): No data from ARDP in RecvCb()");
-
-        /*
          * We need to look and see if this endpoint is on the endopint list and
          * then make sure that it stays on the list, so take the lock to make
          * sure at least the UDP transport holds a reference during this
@@ -3209,7 +3209,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Taking m_endpointListLock"));
         m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
 
-#ifndef NDEBUG
         /*
          * The callback dispatcher looked to see if the endpoint was on the
          * endpoint list before it made the call here, and it incremented the
@@ -3226,8 +3225,18 @@ class _UDPEndpoint : public _RemoteEndpoint {
                 ++found;
             }
         }
-        assert(found == 1 && "_UDPEndpoint::RecvCb(): Endpoint is gone");
-#endif
+
+        if (found == 0) {
+            QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Endpoint is gone"));
+            return;
+        }
+
+        /*
+         * Our contract with ARDP says that it will provide us with valid data
+         * if it calls us back.
+         */
+        assert(rcv != NULL && rcv->data != NULL && rcv->datalen != 0 && "_UDPEndpoint::RecvCb(): No data from ARDP in RecvCb()");
+
 
         if (IsEpStarted() == false) {
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Not accepting inbound messages"));

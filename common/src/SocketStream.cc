@@ -104,20 +104,7 @@ SocketStream SocketStream::operator=(const SocketStream& other)
 
 SocketStream::~SocketStream()
 {
-    /*
-     * Must delete the events before closing the socket they monitor
-     */
-    delete sourceEvent;
-    sourceEvent = NULL;
-    delete sinkEvent;
-    sinkEvent = NULL;
-    /*
-     * OK to close the socket now.
-     */
-    if (sock != qcc::INVALID_SOCKET_FD) {
-        qcc::Close(sock);
-        sock = qcc::INVALID_SOCKET_FD;
-    }
+    Close();
 }
 
 QStatus SocketStream::Connect(qcc::String& host, uint16_t port)
@@ -153,16 +140,65 @@ QStatus SocketStream::Connect(qcc::String& path)
             status = qcc::Connect(sock, path.c_str());
         }
     }
+
     isConnected = (ER_OK == status);
     return status;
+}
+
+QStatus SocketStream::Shutdown()
+{
+    if (sock == qcc::INVALID_SOCKET_FD) {
+        return ER_OS_ERROR;
+    } else if (!isConnected || isDetached) {
+        return ER_FAIL;
+    } else {
+        QStatus status = qcc::Shutdown(sock, QCC_SHUTDOWN_WR);
+        /*
+         * An error indicates that we are likely calling Shutdown on a socket
+         * that is already closed.  Since we should not be doing this, assert
+         * here.
+         */
+        assert(ER_OK == status);
+        return status;
+    }
+}
+
+QStatus SocketStream::Abort()
+{
+    if (sock == qcc::INVALID_SOCKET_FD) {
+        return ER_OS_ERROR;
+    } else if (isDetached) {
+        return ER_FAIL;
+    } else {
+        QStatus status = qcc::SetLinger(sock, true, 0);
+        /*
+         * An error indicates that we are likely calling SetLingeron a socket
+         * that is already closed.  Since we should not be doing this, assert
+         * here.
+         */
+        assert(ER_OK == status);
+        return status;
+    }
 }
 
 void SocketStream::Close()
 {
     isConnected = false;
-    if (!isDetached && (sock != qcc::INVALID_SOCKET_FD)) {
-        qcc::SetLinger(sock, true, 0);
-        qcc::Shutdown(sock);
+
+    /*
+     * Must delete the events before closing the socket they monitor
+     */
+    delete sourceEvent;
+    sourceEvent = NULL;
+    delete sinkEvent;
+    sinkEvent = NULL;
+
+    /*
+     * OK to close the socket now.
+     */
+    if (sock != qcc::INVALID_SOCKET_FD) {
+        qcc::Close(sock);
+        sock = qcc::INVALID_SOCKET_FD;
     }
 }
 

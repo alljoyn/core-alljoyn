@@ -109,6 +109,8 @@ class CachedProps {
     bool isFullyCacheable;
     size_t numProperties;
     uint32_t lastMessageSerial;
+    bool enabled;
+
     bool IsCacheable(const char* propname);
     bool IsValidMessageSerial(uint32_t messageSerial);
 
@@ -116,11 +118,13 @@ class CachedProps {
     CachedProps() :
         lock(), values(), description(NULL),
         isFullyCacheable(false),
-        numProperties(0), lastMessageSerial(0) { }
+        numProperties(0), lastMessageSerial(0),
+        enabled(false) { }
 
     CachedProps(const InterfaceDescription*intf) :
         lock(), values(), description(intf),
-        isFullyCacheable(false), lastMessageSerial(0) {
+        isFullyCacheable(false), lastMessageSerial(0),
+        enabled(false) {
         numProperties = description->GetProperties();
         if (numProperties > 0) {
             isFullyCacheable = true;
@@ -139,7 +143,8 @@ class CachedProps {
     CachedProps(const CachedProps& other) :
         lock(), values(other.values), description(other.description),
         isFullyCacheable(other.isFullyCacheable),
-        numProperties(other.numProperties), lastMessageSerial(other.lastMessageSerial) { }
+        numProperties(other.numProperties), lastMessageSerial(other.lastMessageSerial),
+        enabled(other.enabled) { }
 
     CachedProps& operator=(const CachedProps& other) {
         if (&other != this) {
@@ -148,6 +153,7 @@ class CachedProps {
             isFullyCacheable = other.isFullyCacheable;
             numProperties = other.numProperties;
             lastMessageSerial = other.lastMessageSerial;
+            enabled = other.enabled;
         }
         return *this;
     }
@@ -159,6 +165,7 @@ class CachedProps {
     void Set(const char* propname, const MsgArg& val, const uint32_t messageSerial);
     void SetAll(const MsgArg& allValues, const uint32_t messageSerial);
     void PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated, const uint32_t messageSerial);
+    void Enable();
 };
 
 
@@ -174,7 +181,26 @@ struct _SyncReplyContext {
 };
 typedef ManagedObj<_SyncReplyContext> SyncReplyContext;
 
-class ProxyBusObject::Internal : public MessageReceiver {
+class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::AddMatchAsyncCB {
+    class AddMatchCBInfo {
+      public:
+        String ifaceName;
+        bool& addingRef;
+        AddMatchCBInfo(const String& iface, bool& addingRef) : ifaceName(iface), addingRef(addingRef) { }
+      private:
+        AddMatchCBInfo& operator=(const AddMatchCBInfo& other);
+    };
+
+    class MatchRuleInfo {
+      public:
+        bool adding;
+        uint32_t refCount;
+        MatchRuleInfo() : adding(false), refCount(0) { }
+        MatchRuleInfo(bool adding) : adding(adding), refCount(0) { }
+      private:
+        MatchRuleInfo& operator=(const MatchRuleInfo& other);
+    };
+
   public:
     Internal() :
         bus(nullptr),
@@ -256,6 +282,13 @@ class ProxyBusObject::Internal : public MessageReceiver {
      */
     void PropertiesChangedHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& message);
 
+
+    /**
+     * @internal
+     * Handle property AddMatch reply. (Internal use only)
+     */
+    void AddMatchCB(QStatus status, void* context);
+
     bool operator==(const ProxyBusObject::Internal& other) const
     {
         return ((this == &other) ||
@@ -280,6 +313,8 @@ class ProxyBusObject::Internal : public MessageReceiver {
     mutable Mutex lock;                 /**< Lock that protects access to internal state */
     Condition listenerDone;             /**< Signals that the properties changed listener is done */
     Condition handlerDone;              /**< Signals that the properties changed signal handler is done */
+    Condition addMatchDone;             /**< Signals that AddMatch call has completed */
+    QStatus addMatchCallStatus;         /**< Used to determine when AddMatchAsync is done and the resulting status */
     bool registeredPropChangedHandler;  /**< true if our PropertiesChangedHandler is registered */
     map<qcc::Thread*, _PropertiesChangedCB*> handlerThreads;   /**< Thread actively calling PropertiesChangedListeners */
 
@@ -296,8 +331,9 @@ class ProxyBusObject::Internal : public MessageReceiver {
     mutable map<const ProxyBusObject* const, set<SyncReplyContext> > syncMethodCalls;
     mutable Condition syncMethodComplete;
 
-    /** Match rule bookkeeping */
-    map<qcc::StringMapKey, int> matchRuleRefcounts;
+    /** Match rule book keeping */
+    typedef map<StringMapKey, MatchRuleInfo> MatchRuleBookKeeping;
+    MatchRuleBookKeeping matchRuleBookKeeping;
 
     /** Property changed handlers */
     multimap<StringMapKey, PropertiesChangedCB> propertiesChangedCBs;
@@ -305,31 +341,31 @@ class ProxyBusObject::Internal : public MessageReceiver {
 
 ProxyBusObject::Internal::~Internal()
 {
-    lock.Lock(MUTEX_CONTEXT);
-    QCC_DbgPrintf(("Destroying PBO internal (%p) for %s on %s (%s)", this, path.c_str(), serviceName.c_str(), uniqueName.c_str()));
-    if (registeredPropChangedHandler && bus) {
-        /*
-         * Unregister the PropertiesChanged signal handler without holding the
-         * PBO lock, because the signal handler itself acquires the lock. The
-         * unregistration procedure busy-waits for a signal handler to finish
-         * before proceeding with the unregistration, so if we hold the lock here,
-         * we can create a deadlock.
-         */
-        const InterfaceDescription* iface = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
-        if (iface) {
-            bus->UnregisterSignalHandler(this,
-                                         static_cast<MessageReceiver::SignalHandler>(&Internal::PropertiesChangedHandler),
-                                         iface->GetMember("PropertiesChanged"),
-                                         path.c_str());
-        }
-    }
-
-    if (bus) {
-        bus->UnregisterAllHandlers(this);
-    }
-
     /* remove match rules added by the property caching & change notification mechanism */
     RemoveAllPropertiesChangedRules();
+
+    lock.Lock(MUTEX_CONTEXT);
+    QCC_DbgPrintf(("Destroying PBO internal (%p) for %s on %s (%s)", this, path.c_str(), serviceName.c_str(), uniqueName.c_str()));
+    if (bus) {
+        if (registeredPropChangedHandler) {
+            /*
+             * Unregister the PropertiesChanged signal handler without holding
+             * the PBO lock, because the signal handler itself acquires the
+             * lock. The unregistration procedure busy-waits for a signal
+             * handler to finish before proceeding with the unregistration, so
+             * if we hold the lock here, we can create a deadlock.
+             */
+            const InterfaceDescription* iface = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
+            if (iface) {
+                bus->UnregisterSignalHandler(this,
+                                             static_cast<MessageReceiver::SignalHandler>(&Internal::PropertiesChangedHandler),
+                                             iface->GetMember("PropertiesChanged"),
+                                             path.c_str());
+            }
+        }
+
+        bus->UnregisterAllHandlers(this);
+    }
 
     /* Clean up properties changed listeners */
     while (!handlerThreads.empty()) {
@@ -1039,15 +1075,15 @@ const InterfaceDescription* ProxyBusObject::GetInterface(const char* ifaceName) 
 QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
     StringMapKey key(qcc::String(iface.GetName()));
     pair<StringMapKey, const InterfaceDescription*> item(key, &iface);
-    internal->lock.Lock(MUTEX_CONTEXT);
+    bool addRule = false;
 
+    internal->lock.Lock(MUTEX_CONTEXT);
     pair<map<StringMapKey, const InterfaceDescription*>::const_iterator, bool> ret = internal->ifaces.insert(item);
     QStatus status = ret.second ? ER_OK : ER_BUS_IFACE_ALREADY_EXISTS;
 
     if ((status == ER_OK) && internal->cacheProperties && iface.HasCacheableProperties()) {
         internal->caches.insert(std::make_pair(key, CachedProps(&iface)));
-        /* add match rules in case the PropertiesChanged signals are emitted as global broadcast */
-        internal->AddPropertiesChangedRule(iface.GetName(), false);
+        addRule = true;
     }
 
     if ((status == ER_OK) && !internal->hasProperties) {
@@ -1060,6 +1096,12 @@ QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
         }
     }
     internal->lock.Unlock(MUTEX_CONTEXT);
+
+    if (addRule) {
+        /* add match rules in case the PropertiesChanged signals are emitted as global broadcast */
+        internal->AddPropertiesChangedRule(iface.GetName(), false);
+    }
+
     return status;
 }
 
@@ -1074,12 +1116,51 @@ QStatus ProxyBusObject::AddInterface(const char* ifaceName)
     }
 }
 
+void ProxyBusObject::Internal::AddMatchCB(QStatus status, void* context)
+{
+    QCC_UNUSED(status);
+
+    AddMatchCBInfo* info = reinterpret_cast<AddMatchCBInfo*>(context);
+    lock.Lock(MUTEX_CONTEXT);
+    info->addingRef = false;
+    /* enable property caches */
+    map<StringMapKey, CachedProps>::iterator it = caches.find(info->ifaceName);
+    if (it != caches.end()) {
+        it->second.Enable();
+    }
+    addMatchDone.Broadcast();
+    lock.Unlock(MUTEX_CONTEXT);
+    delete info;
+}
+
 void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool blocking)
 {
     QCC_DbgTrace(("%s(%s)", __FUNCTION__, intf));
+
+    bool registerHandler = false;
+    bool callAddMatch = false;
+
     lock.Lock(MUTEX_CONTEXT);
-    /* make sure we have the signal handler online */
+    MatchRuleBookKeeping::iterator it = matchRuleBookKeeping.find(intf);
+    if (it == matchRuleBookKeeping.end()) {
+        callAddMatch = true;
+        pair<MatchRuleBookKeeping::iterator, bool> r;
+        /*
+         * Setup placeholder.  Other threads that call this function with the
+         * same interface after us will block until our AddMatch call completes.
+         */
+        r = matchRuleBookKeeping.insert(pair<StringMapKey, MatchRuleInfo>(qcc::String(intf), true));
+        it = r.first;
+    }
+    ++it->second.refCount;
+
     if (!registeredPropChangedHandler) {
+        registerHandler = true;
+        registeredPropChangedHandler = true;
+    }
+    lock.Unlock(MUTEX_CONTEXT);
+
+    if (registerHandler) {
         QCC_DbgPrintf(("Registering signal handler"));
         const InterfaceDescription* propIntf = bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
         assert(propIntf);
@@ -1087,21 +1168,37 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
                                    static_cast<MessageReceiver::SignalHandler>(&Internal::PropertiesChangedHandler),
                                    propIntf->GetMember("PropertiesChanged"),
                                    path.c_str());
-        registeredPropChangedHandler = true;
     }
 
-    std::map<qcc::StringMapKey, int>::iterator it = matchRuleRefcounts.find(intf);
-    if (it == matchRuleRefcounts.end()) {
-        QCC_DbgPrintf(("Adding match rule"));
+    if (callAddMatch) {
+        addMatchCallStatus = ER_NONE;
         String rule = String("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='") + intf + "'";
-        if (blocking) {
-            bus->AddMatch(rule.c_str());
-        } else {
-            bus->AddMatchNonBlocking(rule.c_str());
+        AddMatchCBInfo* cbInfo = new AddMatchCBInfo(intf, it->second.adding);
+        QStatus status = bus->AddMatchAsync(rule.c_str(), this, cbInfo);
+        if (status != ER_OK) {
+            --it->second.refCount;
+            delete cbInfo;
+            return;
         }
-        matchRuleRefcounts[qcc::String(intf)] = 1;
-    } else {
-        it->second++;
+    }
+
+    lock.Lock(MUTEX_CONTEXT);
+
+    /* If we already have a match rule installed for this interface, enable the property
+     * cache. This is an idempotent operation, so we don't care if we did this before.
+     * If we don't have the match rule yet, PBO::Internal::AddMatchCB will enable the
+     * cache for us. */
+    if (!it->second.adding) {
+        map<StringMapKey, CachedProps>::iterator cit = caches.find(intf);
+        if (cit != caches.end()) {
+            cit->second.Enable();
+        }
+    }
+
+    if (blocking) {
+        while (it->second.adding) {
+            addMatchDone.Wait(lock);
+        }
     }
     lock.Unlock(MUTEX_CONTEXT);
 }
@@ -1109,12 +1206,19 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
 void ProxyBusObject::Internal::RemovePropertiesChangedRule(const char* intf)
 {
     lock.Lock(MUTEX_CONTEXT);
-    std::map<qcc::StringMapKey, int>::iterator it = matchRuleRefcounts.find(intf);
-    if (it != matchRuleRefcounts.end()) {
-        if (--it->second == 0) {
+    MatchRuleBookKeeping::iterator it = matchRuleBookKeeping.find(intf);
+    if (it != matchRuleBookKeeping.end()) {
+        /*
+         * Check if there is a callback pending that will access this iterator.
+         * If so, need to wait for that callback to complete before removing it.
+         */
+        while (it->second.adding) {
+            addMatchDone.Wait(lock);
+        }
+        if (--it->second.refCount == 0) {
             String rule = String("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='") + intf + "'";
             bus->RemoveMatchNonBlocking(rule.c_str());
-            matchRuleRefcounts.erase(it);
+            matchRuleBookKeeping.erase(it);
         }
     }
     lock.Unlock(MUTEX_CONTEXT);
@@ -1123,12 +1227,20 @@ void ProxyBusObject::Internal::RemovePropertiesChangedRule(const char* intf)
 void ProxyBusObject::Internal::RemoveAllPropertiesChangedRules()
 {
     lock.Lock(MUTEX_CONTEXT);
-    std::map<qcc::StringMapKey, int>::iterator it = matchRuleRefcounts.begin();
-    for (; it != matchRuleRefcounts.end(); ++it) {
+    MatchRuleBookKeeping::iterator it = matchRuleBookKeeping.begin();
+    for (; it != matchRuleBookKeeping.end(); ++it) {
+        /*
+         * Check if there is a callback pending that will access the same data
+         * referenced by this iterator.  If so, need to wait for that callback
+         * to complete before removing it.
+         */
+        while (it->second.adding) {
+            addMatchDone.Wait(lock);
+        }
         String rule = String("type='signal',interface='org.freedesktop.DBus.Properties',member='PropertiesChanged',arg0='") + it->first.c_str() + "'";
         bus->RemoveMatchNonBlocking(rule.c_str());
     }
-    matchRuleRefcounts.clear();
+    matchRuleBookKeeping.clear();
     lock.Unlock(MUTEX_CONTEXT);
 }
 
@@ -1142,19 +1254,24 @@ bool ProxyBusObject::IsSecure() const {
 
 void ProxyBusObject::EnablePropertyCaching()
 {
+    vector<String> ifcNames;
     internal->lock.Lock(MUTEX_CONTEXT);
+    ifcNames.reserve(internal->ifaces.size());
     if (!internal->cacheProperties) {
         internal->cacheProperties = true;
         map<StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.begin();
         for (; it != internal->ifaces.end(); ++it) {
             if (it->second->HasCacheableProperties()) {
                 internal->caches.insert(std::make_pair(qcc::String(it->first.c_str()), CachedProps(it->second)));
-                /* add match rules in case the PropertiesChanged signals are emitted as global broadcast */
-                internal->AddPropertiesChangedRule(it->first.c_str(), false);
+                ifcNames.push_back(it->first.c_str());
             }
         }
     }
     internal->lock.Unlock(MUTEX_CONTEXT);
+    for (vector<String>::const_iterator it = ifcNames.begin(); it != ifcNames.end(); ++it) {
+        /* add match rules in case the PropertiesChanged signals are emitted as global broadcast */
+        internal->AddPropertiesChangedRule(it->c_str(), false);
+    }
 }
 
 size_t ProxyBusObject::GetChildren(ProxyBusObject** children, size_t numChildren)
@@ -1930,6 +2047,11 @@ void CachedProps::Set(const char* propname, const MsgArg& val, const uint32_t me
     }
 
     lock.Lock(MUTEX_CONTEXT);
+    if (!enabled) {
+        lock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
+
     if (!IsValidMessageSerial(messageSerial)) {
         values.clear();
     } else {
@@ -1942,6 +2064,10 @@ void CachedProps::Set(const char* propname, const MsgArg& val, const uint32_t me
 void CachedProps::SetAll(const MsgArg& allValues, const uint32_t messageSerial)
 {
     lock.Lock(MUTEX_CONTEXT);
+    if (!enabled) {
+        lock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
 
     size_t nelem;
     MsgArg* elems;
@@ -1984,6 +2110,10 @@ error:
 void CachedProps::PropertiesChanged(MsgArg* changed, size_t numChanged, MsgArg* invalidated, size_t numInvalidated, const uint32_t messageSerial)
 {
     lock.Lock(MUTEX_CONTEXT);
+    if (!enabled) {
+        lock.Unlock(MUTEX_CONTEXT);
+        return;
+    }
 
     QStatus status;
 
@@ -2030,6 +2160,13 @@ error:
 BusAttachment& ProxyBusObject::GetBusAttachment() const
 {
     return *(internal->bus);
+}
+
+void CachedProps::Enable()
+{
+    lock.Lock(MUTEX_CONTEXT);
+    enabled = true;
+    lock.Unlock(MUTEX_CONTEXT);
 }
 
 }

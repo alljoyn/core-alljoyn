@@ -189,12 +189,8 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
     /*
      * Setup the config
      */
-#ifndef NDEBUG
-#if defined(QCC_OS_ANDROID)
-    configFile = "/mnt/sdcard/.alljoyn/config.xml";
-#else
-    configFile = "./config.xml";
-#endif
+#ifdef TEST_CONFIG
+    configFile = TEST_CONFIG;
     qcc::String configStr = bundledConfig;
     if (ExistFile(configFile.c_str())) {
         configStr = "";
@@ -230,7 +226,7 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
 
     QCC_DbgHLPrintf(("Using BundledRouter"));
 
-#ifndef NDEBUG
+#ifdef TEST_CONFIG
     if (configFile.size() > 0) {
         QCC_DbgHLPrintf(("Using external config file: %s", configFile.c_str()));
     }

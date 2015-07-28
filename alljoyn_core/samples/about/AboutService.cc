@@ -224,6 +224,7 @@ int CDECL_CALL main(int argc, char** argv)
         }
     }
 
+    aboutObj->Unannounce();
     delete aboutObj;
     delete busObject;
     delete bus;

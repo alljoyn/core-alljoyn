@@ -308,13 +308,11 @@ class Crypto_Hash {
 
     /// Typedef for abstracting the hash algorithm specifier.
     typedef enum {
-        SHA1,    ///< SHA1 algorithm specifier
-        MD5,     ///< MD5 algorithm specifier
-        SHA256   ///< SHA256 algorithm specifier
+        SHA1,          ///< SHA1 algorithm specifier
+        SHA256         ///< SHA256 algorithm specifier
     } Algorithm;
 
     static const size_t SHA1_SIZE = 20;   ///< SHA1 digest size - 20 bytes == 160 bits
-    static const size_t MD5_SIZE = 16;    ///< MD5 digest size - 16 bytes == 128 bits
     static const size_t SHA256_SIZE = 32; ///< SHA256 digest size - 32 bytes == 256 bits
 
     /**
@@ -361,19 +359,6 @@ class Crypto_SHA1 : public Crypto_Hash {
     }
 
     static const size_t DIGEST_SIZE = Crypto_Hash::SHA1_SIZE;
-};
-
-/**
- * MD5 hash calculation interface abstraction class.
- */
-class Crypto_MD5 : public Crypto_Hash {
-  public:
-    virtual QStatus Init(const uint8_t* hmacKey = NULL, size_t keyLen = 0)
-    {
-        return Crypto_Hash::Init(MD5, hmacKey, keyLen);
-    }
-
-    static const size_t DIGEST_SIZE = Crypto_Hash::MD5_SIZE;
 };
 
 /**
