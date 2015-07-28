@@ -306,7 +306,8 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                          manifest, manifestSize));
 
         for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
-            if (appStateListener.isClaimed(managerBus.GetUniqueName())) {
+            EXPECT_EQ(ER_OK, pcManager.GetApplicationState(applicationStateManager));
+            if (PermissionConfigurator::CLAIMED == applicationStateManager) {
                 break;
             }
             qcc::Sleep(WAIT_MSECS);
@@ -319,7 +320,8 @@ class SecurityPolicyRulesTest : public testing::Test {
         sapWithManager.GetEccPublicKey(managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
-        ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[managerBus.GetUniqueName()]);
+        EXPECT_EQ(ER_OK, pcManager.GetApplicationState(applicationStateManager));
+        ASSERT_EQ(PermissionConfigurator::CLAIMED, applicationStateManager);
 
         //Create peer1 identityCert
         IdentityCertificate identityCertChainPeer1[certChainSize];
@@ -342,13 +344,15 @@ class SecurityPolicyRulesTest : public testing::Test {
                                             manifest, manifestSize));
 
         for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
-            if (appStateListener.isClaimed(peer1Bus.GetUniqueName())) {
+            EXPECT_EQ(ER_OK, pcPeer1.GetApplicationState(applicationStatePeer1));
+            if (PermissionConfigurator::CLAIMED == applicationStatePeer1) {
                 break;
             }
             qcc::Sleep(WAIT_MSECS);
         }
 
-        ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
+        EXPECT_EQ(ER_OK, pcPeer1.GetApplicationState(applicationStatePeer1));
+        ASSERT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer1);
 
         //Create peer2 identityCert
         IdentityCertificate identityCertChainPeer2[certChainSize];
@@ -369,13 +373,15 @@ class SecurityPolicyRulesTest : public testing::Test {
                                             manifest, manifestSize));
 
         for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
-            if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
+            EXPECT_EQ(ER_OK, pcPeer2.GetApplicationState(applicationStatePeer2));
+            if (PermissionConfigurator::CLAIMED == applicationStatePeer2) {
                 break;
             }
             qcc::Sleep(WAIT_MSECS);
         }
 
-        ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
+        EXPECT_EQ(ER_OK, pcPeer2.GetApplicationState(applicationStatePeer2));
+        ASSERT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer2);
 
         //Change the managerBus so it only uses ECDHE_ECDSA
         EXPECT_EQ(ER_OK, managerClaimingBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, true));
