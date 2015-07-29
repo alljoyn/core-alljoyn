@@ -650,7 +650,7 @@ class CertificateX509 {
      * @param[in] other    CertificateX509 to copy
      */
     CertificateX509(const CertificateX509& other) :
-        type(other.type), tbs(other.tbs),
+        type(other.type), tbs(other.tbs), serial(NULL),
         issuer(other.issuer), subject(other.subject),
         validity(other.validity), publickey(other.publickey),
         signature(other.signature), ca(other.ca), digest(other.digest),
