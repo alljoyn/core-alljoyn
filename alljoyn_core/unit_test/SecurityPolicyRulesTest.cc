@@ -2259,7 +2259,7 @@ class SecurityPolicyRulesSignal : public SecurityPolicyRulesTest,
     public testing::WithParamInterface<SignalRulesTestValue> {
 };
 
-TEST_P(SecurityPolicyRulesSignal, DISABLED_PolicyRules)
+TEST_P(SecurityPolicyRulesSignal, PolicyRules)
 {
     PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
@@ -2426,7 +2426,7 @@ class SecurityPolicyRulesSignalManifest : public SecurityPolicyRulesTest,
     public testing::WithParamInterface<SignalRulesTestValue> {
 };
 
-TEST_P(SecurityPolicyRulesSignalManifest, DISABLED_PolicyRules)
+TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
 {
     PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));

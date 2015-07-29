@@ -37,6 +37,7 @@
 #include "CredentialAccessor.h"
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
+#include "BusInternal.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -554,6 +555,19 @@ QStatus BasePermissionMgmtTest::TeardownBus(BusAttachment& bus)
         return status;
     }
     return bus.Join();
+}
+
+void BasePermissionMgmtTest::DetermineStateSignalReachable()
+{
+    /* sleep a max of 1 second to see whether the ApplicationState signal is received */
+    for (int cnt = 0; cnt < 100; cnt++) {
+        if (GetApplicationStateSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    canTestStateSignalReception = GetApplicationStateSignalReceived();
+    SetApplicationStateSignalReceived(false);
 }
 
 bool PermissionMgmtTestHelper::IsPermissionDeniedError(QStatus status, Message& msg)

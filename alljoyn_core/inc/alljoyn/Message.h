@@ -1152,6 +1152,12 @@ class _Message {
     MessageEncryptionNotification* encryptionNotification;
 
     /**
+     * The flag indicating that the permission authorization is checked
+     */
+
+    bool authorizationChecked;
+
+    /**
      * @defgroup internal_methods_message_unmarshal Internal methods unmarshal side
      *
      * Methods used to unmarshal and AllJoyn header

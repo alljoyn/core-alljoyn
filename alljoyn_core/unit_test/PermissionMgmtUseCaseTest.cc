@@ -950,6 +950,20 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         return ER_OK;
     }
 
+    void TestStateSignalReception()
+    {
+        if (canTestStateSignalReception) {
+            /* sleep a second to see whether the ApplicationState signal is received */
+            for (int cnt = 0; cnt < 100; cnt++) {
+                if (GetApplicationStateSignalReceived()) {
+                    break;
+                }
+                qcc::Sleep(10);
+            }
+            EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
+        }
+    }
+
     QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
     {
         SecurityApplicationProxy saProxy(claimerBus, claimedBus.GetUniqueName().c_str());
@@ -1071,15 +1085,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey2)) << "GetPeerPublicKey failed.";
         EXPECT_EQ(memcmp(&claimedPubKey2, &claimedPubKey, sizeof(ECCPublicKey)), 0) << "  The public key of the claimed app has changed.";
 
-        /* sleep a second to see whether the ApplicationState signal is received */
-        for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetApplicationStateSignalReceived()) {
-                break;
-            }
-            qcc::Sleep(10);
-        }
-        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
-
+        TestStateSignalReception();
     }
 
     /**
@@ -1105,14 +1111,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* try to claim a second time */
         EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(false, adminBus, consumerBus, "3030303", "Consumer", true, &adminBus)) << "Claim is not supposed to succeed.";
 
-        /* sleep a second to see whether the ApplicationState signal is received */
-        for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetApplicationStateSignalReceived()) {
-                break;
-            }
-            qcc::Sleep(10);
-        }
-        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
+        TestStateSignalReception();
         /* add the consumer admin security group membership cert to consumer */
         qcc::String currentAuthMechanisms = GetAuthMechanisms();
         EnableSecurity("ALLJOYN_ECDHE_ECDSA");
@@ -1139,14 +1138,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         SetApplicationStateSignalReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus)) << " InvokeClaim failed.";
 
-        /* sleep a second to see whether the ApplicationState signal is received */
-        for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetApplicationStateSignalReceived()) {
-                break;
-            }
-            qcc::Sleep(10);
-        }
-        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
+        TestStateSignalReception();
     }
 
     void Claims(bool usePSK, bool claimRemoteControl)
@@ -1156,6 +1148,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         } else {
             EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
         }
+        DetermineStateSignalReachable();
         ClaimAdmin();
         ClaimService();
         ClaimConsumer();
@@ -1224,14 +1217,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
-        /* sleep a second to see whether the ApplicationState signal is received */
-        for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetApplicationStateSignalReceived()) {
-                break;
-            }
-            qcc::Sleep(10);
-        }
-        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
+        TestStateSignalReception();
         /* install a policy with the same policy version number.  Expect to fail. */
         EXPECT_NE(ER_OK, saProxy.UpdatePolicy(policy)) << "UpdatePolicy again with same policy version number expected to fail, but it did not.";
     }
@@ -1814,14 +1800,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy did not fail.";
         EXPECT_EQ(retPolicy.GetVersion(), (uint32_t) 0) << " Policy after reset is supposed to have policy version 0.";
         EXPECT_NE(retPolicy.GetVersion(), originalPolicyVersion) << " Policy after reset is not supposed to have same version as the non-default policy.";
-        /* sleep a second to see whether the ApplicationState signal is received */
-        for (int cnt = 0; cnt < 100; cnt++) {
-            if (GetApplicationStateSignalReceived()) {
-                break;
-            }
-            qcc::Sleep(10);
-        }
-        EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
+        TestStateSignalReception();
     }
 
     /*

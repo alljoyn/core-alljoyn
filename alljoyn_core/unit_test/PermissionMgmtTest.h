@@ -173,6 +173,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         adminKeyListener(NULL),
         consumerKeyListener(NULL),
         remoteControlKeyListener(NULL),
+        canTestStateSignalReception(false),
         currentTVChannel(1),
         volume(1),
         channelChangedSignalReceived(false),
@@ -231,6 +232,9 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     AuthListener* adminKeyListener;
     AuthListener* consumerKeyListener;
     AuthListener* remoteControlKeyListener;
+    void DetermineStateSignalReachable();
+    bool canTestStateSignalReception;
+
   private:
     void RegisterKeyStoreListeners();
     QStatus SetupBus(BusAttachment& bus);

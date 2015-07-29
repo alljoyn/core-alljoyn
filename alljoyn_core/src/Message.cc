@@ -342,6 +342,7 @@ void _Message::Init(BusAttachment& busAttachment)
     msgHeader.msgType = MESSAGE_INVALID;
     msgHeader.endian = myEndian;
     encryptionNotification = NULL;
+    authorizationChecked = false;
 }
 
 _Message::~_Message(void)
@@ -375,7 +376,8 @@ _Message::_Message(const _Message& other) :
     writeState(other.writeState),
     countWrite(other.countWrite),
     hdrFields(other.hdrFields),
-    encryptionNotification(other.encryptionNotification)
+    encryptionNotification(other.encryptionNotification),
+    authorizationChecked(other.authorizationChecked)
 {
     if (bufSize > 0) {
         assert(other.msgBuf != NULL);

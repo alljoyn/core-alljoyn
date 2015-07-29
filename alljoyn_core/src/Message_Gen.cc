@@ -760,10 +760,11 @@ QStatus _Message::EncryptMessage()
         if (!peerState->IsAuthorized((AllJoynMessageType)msgHeader.msgType, _PeerState::ALLOW_SECURE_TX)) {
             status = ER_BUS_NOT_AUTHORIZED;
             encrypt = false;
-        } else {
+        } else if (!authorizationChecked) {
             Message msg(*this);
             bool send = true;   // encrypting a message means sending
             status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(send, msg, peerState);
+            authorizationChecked = true;
             QCC_DbgHLPrintf(("_Message::EncryptMessage permission authorization returns status 0x%x\n", status));
         }
     }

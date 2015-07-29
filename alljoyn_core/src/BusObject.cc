@@ -678,26 +678,46 @@ QStatus BusObject::Signal(const char* destination,
         ids = bus->GetInternal().GetHostedSessions();
     }
 
-    QStatus status = ER_OK;
+    if (ids.empty()) {
+        return ER_OK;
+    }
+
+    QStatus status = ER_FAIL;
 
     for (std::set<SessionId>::iterator it = ids.begin(); it != ids.end(); ++it) {
         Message msg(*bus);
-        status = msg->SignalMsg(signalMember.signature,
-                                destination,
-                                *it,
-                                path,
-                                signalMember.iface->GetName(),
-                                signalMember.name,
-                                args,
-                                numArgs,
-                                flags,
-                                timeToLive);
-        if (status == ER_OK) {
-            BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-            status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
-            if ((status == ER_OK) && outMsg) {
+        QStatus aStatus = msg->SignalMsg(signalMember.signature,
+                                         destination,
+                                         *it,
+                                         path,
+                                         signalMember.iface->GetName(),
+                                         signalMember.name,
+                                         args,
+                                         numArgs,
+                                         flags,
+                                         timeToLive);
+        if (aStatus == ER_OK) {
+            if (msg->IsEncrypted() && (!bus->GetInternal().GetRouter().IsDaemon())) {
+                /* do an earlier permission authorization to make sure this
+                 * signal is allowed to send to the router for delivery.
+                 */
+                PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetDestination());
+                aStatus = bus->GetInternal().GetPermissionManager().AuthorizeMessage(true, msg, peerState);
+                /* mark the message so the Message::EncryptMessage method does
+                 * not need to authorize the message again */
+                msg->authorizationChecked = true;
+            }
+            if (aStatus == ER_OK) {
+                BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
+                aStatus = bus->GetInternal().GetRouter().PushMessage(msg, bep);
+            }
+            if ((aStatus == ER_OK) && outMsg) {
                 *outMsg = msg;
             }
+        }
+        if (status != ER_OK) {
+            /* Once status is ER_OK, it will return ER_OK */
+            status = aStatus;
         }
     }
     return status;
