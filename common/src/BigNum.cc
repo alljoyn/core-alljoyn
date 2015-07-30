@@ -113,6 +113,10 @@ class BigNum::Storage {
 
     bool DecRef() { return --refCount == 0; }
 
+    ~Storage() {
+        ClearMemory(buffer, size);
+    }
+
     uint32_t* buffer;
     size_t size;
     uint32_t refCount;
