@@ -26,6 +26,7 @@
 #include <qcc/Util.h>
 #include <qcc/String.h>
 #include <string.h>
+#include <string>
 
 #include <qcc/STLContainer.h>
 
@@ -47,6 +48,7 @@ class StringMapKey {
      * @param key   String whose value will be copied into StringMapKey
      */
     StringMapKey(const qcc::String& key) : charPtr(NULL), str(key) { }
+    StringMapKey(const std::string& key) : charPtr(NULL), str(key) { }
 
     /**
      * Create an unbacked version of the StringMapKey

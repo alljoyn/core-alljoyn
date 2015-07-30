@@ -1704,7 +1704,7 @@ size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize, std:
             uint32_t pointer = ((buffer[size] << 8 | buffer[size + 1]) & 0x3FFF);
             if (compressedOffsets.find(pointer) != compressedOffsets.end()) {
                 if (m_name.length() > 0) {
-                    m_name.append('.');
+                    m_name.append(1, '.');
                 }
                 m_name.append(compressedOffsets[pointer]);
                 size += 2;
@@ -1723,7 +1723,7 @@ size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize, std:
             return 0;
         }
         if (m_name.length() > 0) {
-            m_name.append('.');
+            m_name.append(1, '.');
         }
         if (temp_size > 0) {
             offsets.push_back(headerOffset + size - 1);
@@ -2518,7 +2518,7 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::m
             uint32_t pointer = ((buffer[size] << 8 | buffer[size + 1]) & 0x3FFF);
             if (compressedOffsets.find(pointer) != compressedOffsets.end()) {
                 if (m_rdataStr.length() > 0) {
-                    m_rdataStr.append('.');
+                    m_rdataStr.append(1, '.');
                 }
                 m_rdataStr.append(compressedOffsets[pointer]);
                 size += 2;
@@ -2537,7 +2537,7 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::m
             return 0;
         }
         if (m_rdataStr.length() > 0) {
-            m_rdataStr.append('.');
+            m_rdataStr.append(1, '.');
         }
         if (temp_size > 0) {
             offsets.push_back(headerOffset + size - 1);

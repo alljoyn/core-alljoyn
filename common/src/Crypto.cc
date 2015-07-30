@@ -38,7 +38,7 @@ using namespace qcc;
 
 namespace qcc {
 
-QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const qcc::String& seed, uint8_t* out, size_t outLen)
+QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const vector<uint8_t>& seed, uint8_t* out, size_t outLen)
 {
     if (!label) {
         return ER_BAD_ARG_2;
@@ -62,7 +62,7 @@ QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, co
             hash.Update(digest, sizeof(digest));
         }
         hash.Update((const uint8_t*)label, strlen(label));
-        hash.Update((const uint8_t*)seed.data(), seed.size());
+        hash.Update(seed);
         hash.GetDigest(digest);
         len =  (std::min)(sizeof(digest), outLen);
         memcpy(out, digest, len);

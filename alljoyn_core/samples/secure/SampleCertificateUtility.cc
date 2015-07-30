@@ -28,6 +28,7 @@
 #include <signal.h>
 #include <stdio.h>
 #include <fcntl.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <errno.h>
 #include <memory>
@@ -600,7 +601,7 @@ int CreateCA(int argc, char** argv)
 
     subjectCN.assign(argv[1]);
     for (int i = 2; i < argc; i++) {
-        subjectCN.append(' ');
+        subjectCN.append(1, ' ');
         subjectCN.append(argv[i]);
     }
 
@@ -699,7 +700,7 @@ int CreateEE(int argc, char** argv)
 
     subjectCN.assign(argv[1]);
     for (int i = 2; i < argc; i++) {
-        subjectCN.append(' ');
+        subjectCN.append(1, ' ');
         subjectCN.append(argv[i]);
     }
 

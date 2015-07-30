@@ -413,7 +413,7 @@ SessionlessObj::PushMessageWork::PushMessageWork(SessionlessObj& slObj, Message&
 bool SessionlessObj::IsSessionlessEmitter(String name)
 {
     lock.Lock();
-    SessionlessMessageKey key(name.c_str(), "", "", "");
+    String key = MakeSessionlessMessageKey(name.c_str(), "", "", "");
     LocalCache::iterator mit = localCache.lower_bound(key);
     bool ret = (mit != localCache.end() && (mit->first.find(name) == 0));
     lock.Unlock();
@@ -431,12 +431,12 @@ void SessionlessObj::PushMessageWork::Run()
     slObj.SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId);
 
     /* Put the message in the local cache */
-    SessionlessMessageKey key(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
+    String key = MakeSessionlessMessageKey(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
     slObj.advanceChangeId = true;
     SessionlessMessage val(slObj.curChangeId, msg);
     LocalCache::iterator it = slObj.localCache.find(key);
     if (it == slObj.localCache.end()) {
-        slObj.localCache.insert(pair<SessionlessMessageKey, SessionlessMessage>(key, val));
+        slObj.localCache.insert(pair<String, SessionlessMessage>(key, val));
     } else {
         it->second = val;
     }
@@ -567,7 +567,7 @@ void SessionlessObj::CancelMessageWork::Run()
     uint32_t serialNum = msg->GetArg(0)->v_uint32;
 
     slObj.lock.Lock();
-    SessionlessMessageKey key(sender.c_str(), "", "", "");
+    String key = MakeSessionlessMessageKey(sender.c_str(), "", "", "");
     LocalCache::iterator it = slObj.localCache.lower_bound(key);
     while ((it != slObj.localCache.end()) && (sender == it->second.second->GetSender())) {
         if (it->second.second->GetCallSerial() == serialNum) {
@@ -626,7 +626,7 @@ void SessionlessObj::NameOwnerChangedWork::Run()
     }
 
     /* Remove stored sessionless messages sent by the old owner */
-    SessionlessMessageKey key(oldOwner.c_str(), "", "", "");
+    String key = MakeSessionlessMessageKey(oldOwner.c_str(), "", "", "");
     LocalCache::iterator mit = slObj.localCache.lower_bound(key);
     while ((mit != slObj.localCache.end()) && (::strcmp(oldOwner.c_str(), mit->second.second->GetSender()) == 0)) {
         slObj.localCache.erase(mit++);
@@ -858,7 +858,7 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
     uint32_t rangeLen = toChangeId - fromChangeId;
     while (it != localCache.end()) {
         if (IN_WINDOW(uint32_t, fromChangeId, rangeLen, it->second.first)) {
-            SessionlessMessageKey key = it->first;
+            String key = it->first;
             Message msg = it->second.second;
             if (msg->IsExpired()) {
                 /* Remove expired message without sending */
@@ -1279,7 +1279,8 @@ qcc::String SessionlessObj::AdvertisedName(const qcc::String& iface, uint32_t ch
 {
     String name = iface;
     name.append(".sl.");
-    name.append('x' + version);
+    static_assert(SessionlessObj::version <= 1, "Are you sure you want to make SessionlessObj::version greater than 1?");
+    name.append(1, 'x' + version);  // 'x' + version is correct; see comment where version is initialized.
     name.append(bus.GetGlobalGUIDShortString());
     name.append(".x");
     name.append(U32ToString(changeId, 16));

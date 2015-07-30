@@ -2288,7 +2288,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 SocketStream* ss1 = new SocketStream(srcB2bFd);
                 SocketStream* ss2 = new SocketStream(b2bFd);
                 size_t chunkSize = 4096;
-                String threadNameStr = id;
+                String threadNameStr = U32ToString(id);
                 threadNameStr.append("-pump");
                 const char* threadName = threadNameStr.c_str();
                 bool isManaged = true;
@@ -3960,7 +3960,9 @@ QStatus AllJoynObj::AddBusToBusEndpoint(RemoteEndpoint& endpoint)
 
     /* Create a virtual endpoint for talking to the remote bus control object */
     /* This endpoint will also carry broadcast messages for the remote bus */
-    String remoteControllerName(":", 1, 16);
+    String remoteControllerName;
+    remoteControllerName.reserve(16);
+    remoteControllerName.append(":");
     remoteControllerName.append(shortGuidStr);
     remoteControllerName.append(".1");
     AddVirtualEndpoint(remoteControllerName, endpoint->GetUniqueName());
