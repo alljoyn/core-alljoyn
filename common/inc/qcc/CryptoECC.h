@@ -26,8 +26,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
-#include <assert.h>
-
+#include <qcc/Util.h>
 
 namespace qcc {
 
@@ -58,6 +57,13 @@ class ECCPrivateKey {
      */
     ECCPrivateKey() {
         memset(d, 0, ECC_COORDINATE_SZ);
+    }
+
+    /**
+    * ECCPrivateKey destructor
+    */
+    ~ECCPrivateKey() {
+        ClearMemory(d, ECC_COORDINATE_SZ);
     }
 
     /**

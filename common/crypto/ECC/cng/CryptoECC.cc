@@ -206,7 +206,7 @@ QStatus ECCSecret::DerivePreMasterSecret(
 
 Exit:
 
-    SecureZeroMemory(rgbPreMasterSecret, sizeof(rgbPreMasterSecret));
+    ClearMemory(rgbPreMasterSecret, sizeof(rgbPreMasterSecret));
 
     return status;
 
@@ -439,6 +439,7 @@ static ECCPrivateKey* Crypto_ECC_GetPrivateKey(
 Exit:
 
     if (NULL != keyBlob) {
+        ClearMemory(keyBlob, blobSize);
         free(keyBlob);
     }
 
@@ -461,7 +462,7 @@ static QStatus Crypto_ECC_SetPrivateKey(
     PBYTE keyBlob = NULL;
     PBCRYPT_ECCKEY_BLOB header = NULL;
     PBYTE x = NULL, y = NULL, d = NULL;
-    ULONG keySize, blobSize;
+    ULONG keySize, blobSize = 0;
 
     BCRYPT_KEY_HANDLE hPrivateKey = NULL;
 
@@ -558,6 +559,7 @@ static QStatus Crypto_ECC_SetPrivateKey(
 Exit:
 
     if (NULL != keyBlob) {
+        ClearMemory(keyBlob, blobSize);
         free(keyBlob);
     }
 
@@ -907,7 +909,7 @@ Exit:
         }
     }
 
-    SecureZeroMemory(&eccSecretState, sizeof(ECCSecret::ECCSecretState));
+    ClearMemory(&eccSecretState, sizeof(ECCSecret::ECCSecretState));
 
     return status;
 }
@@ -1289,7 +1291,8 @@ Crypto_ECC::~Crypto_ECC()
         }
     }
 
-    SecureZeroMemory(&eccState, sizeof(eccState));
+    // deleting eccState recursively calls destructor on private key objects
+    // these destructors zero the secrets.
     delete eccState;
 }
 
