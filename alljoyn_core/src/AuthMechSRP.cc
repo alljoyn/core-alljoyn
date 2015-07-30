@@ -83,6 +83,7 @@ void AuthMechSRP::ComputeMS()
     masterSecret.Set(keymatter, sizeof(keymatter), KeyBlob::GENERIC);
     QCC_DbgHLPrintf(("MasterSecret:  %s", BytesToHexString(masterSecret.GetData(), masterSecret.GetSize()).c_str()));
     masterSecret.SetExpiration(expiration);
+    ClearMemory(keymatter, sizeof(keymatter));
 }
 
 /*
