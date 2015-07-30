@@ -52,9 +52,7 @@ using namespace qcc;
 
 namespace ajn {
 
-
 static const uint32_t LOCAL_ENDPOINT_CONCURRENCY = 4;
-
 
 class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener {
   public:
@@ -786,19 +784,9 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
     QCC_DbgPrintf(("UnregisterBusObject %s", object.GetPath()));
 
     /* Can't unregister while handlers are in flight. */
-    handlerThreadsLock.Lock(MUTEX_CONTEXT);
-    ActiveHandlers::const_iterator ahit = activeHandlers.find(&object);
-    if ((ahit != activeHandlers.end()) && (ahit->second.find(Thread::GetThread()) != ahit->second.end())) {
-        QCC_LogError(ER_DEADLOCK, ("Attempt to unregister BusObject from said BusObject's message handler -- BusObject not unregistered!"));
-        handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+    if (!OkToUnregisterHandlerObj(&object)) {
         return;
     }
-    unregisteringObjects.insert(&object);
-    while (ahit != activeHandlers.end()) {
-        handlerThreadsDone.Wait(handlerThreadsLock);
-        ahit = activeHandlers.find(&object);
-    }
-    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
 
     /* Remove members */
     methodTable.RemoveAll(&object);
@@ -845,10 +833,7 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
     }
     objectsLock.Unlock(MUTEX_CONTEXT);
 
-    handlerThreadsLock.Lock(MUTEX_CONTEXT);
-    /* Yes object is deleted, but we never actually reference it from unregisteringObjects, so we are safe. */
-    unregisteringObjects.erase(&object);
-    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+    UnregisterComplete(&object);
 }
 
 BusObject* _LocalEndpoint::FindLocalObject(const char* objectPath) {
@@ -1043,6 +1028,33 @@ QStatus _LocalEndpoint::RegisterSignalHandler(MessageReceiver* receiver,
     return ER_OK;
 }
 
+bool _LocalEndpoint::OkToUnregisterHandlerObj(MessageReceiver* receiver)
+{
+    /* Can't unregister while handlers are in flight. */
+    handlerThreadsLock.Lock(MUTEX_CONTEXT);
+    ActiveHandlers::const_iterator ahit = activeHandlers.find(receiver);
+    if ((ahit != activeHandlers.end()) && (ahit->second.find(Thread::GetThread()) != ahit->second.end())) {
+        QCC_LogError(ER_DEADLOCK, ("Attempt to unregister MessageReceiver from said MessageReceiver's message handler -- MessageReceiver not unregistered!"));
+        handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+        return false;
+    }
+    unregisteringObjects.insert(receiver);
+    while (ahit != activeHandlers.end()) {
+        handlerThreadsDone.Wait(handlerThreadsLock);
+        ahit = activeHandlers.find(receiver);
+    }
+    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+
+    return true;
+}
+
+void _LocalEndpoint::UnregisterComplete(MessageReceiver* receiver)
+{
+    handlerThreadsLock.Lock(MUTEX_CONTEXT);
+    unregisteringObjects.erase(receiver);
+    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+}
+
 QStatus _LocalEndpoint::UnregisterSignalHandler(MessageReceiver* receiver,
                                                 MessageReceiver::SignalHandler signalHandler,
                                                 const InterfaceDescription::Member* member,
@@ -1060,11 +1072,20 @@ QStatus _LocalEndpoint::UnregisterSignalHandler(MessageReceiver* receiver,
     if (!matchRule) {
         return ER_BAD_ARG_4;
     }
-    return signalTable.Remove(receiver, signalHandler, member, matchRule);
+
+    QStatus status = ER_DEADLOCK;
+    if (OkToUnregisterHandlerObj(receiver)) {
+        status =  signalTable.Remove(receiver, signalHandler, member, matchRule);
+        UnregisterComplete(receiver);
+    }
+    return status;
 }
 
 QStatus _LocalEndpoint::UnregisterAllHandlers(MessageReceiver* receiver)
 {
+    if (!OkToUnregisterHandlerObj(receiver)) {
+        return ER_DEADLOCK;
+    }
     /*
      * Remove all the signal handlers for this receiver.
      */
@@ -1095,6 +1116,8 @@ QStatus _LocalEndpoint::UnregisterAllHandlers(MessageReceiver* receiver)
         }
     }
     replyMapLock.Unlock(MUTEX_CONTEXT);
+
+    UnregisterComplete(receiver);
     return ER_OK;
 }
 

@@ -555,6 +555,7 @@ class ChangeListener : public ProxyBusObject::PropertiesChangedListener {
         QCC_UNUSED(changed);
         QCC_UNUSED(invalidated);
         QCC_UNUSED(context);
+
         testLock.Lock();
         running = true;
         testCond.Signal();

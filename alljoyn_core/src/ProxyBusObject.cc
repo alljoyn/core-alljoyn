@@ -345,9 +345,12 @@ ProxyBusObject::Internal::~Internal()
     RemoveAllPropertiesChangedRules();
 
     lock.Lock(MUTEX_CONTEXT);
+    bool unregHandler = registeredPropChangedHandler;
+    lock.Unlock(MUTEX_CONTEXT);
+
     QCC_DbgPrintf(("Destroying PBO internal (%p) for %s on %s (%s)", this, path.c_str(), serviceName.c_str(), uniqueName.c_str()));
     if (bus) {
-        if (registeredPropChangedHandler) {
+        if (unregHandler) {
             /*
              * Unregister the PropertiesChanged signal handler without holding
              * the PBO lock, because the signal handler itself acquires the
@@ -367,6 +370,7 @@ ProxyBusObject::Internal::~Internal()
         bus->UnregisterAllHandlers(this);
     }
 
+    lock.Lock(MUTEX_CONTEXT);
     /* Clean up properties changed listeners */
     while (!handlerThreads.empty()) {
         /*
