@@ -91,7 +91,7 @@ struct ECCSecret::ECCSecretState {
 #define ECDSA
 
 /*
- * The exported ECDH derive function.  Differs from ECHD_derive_pt
+ * The exported ECDH derive function.  Differs from ECDH_derive_pt
  * only in that it returns just the X coordinate of the derived point.
  * The ECDH_derive functionality is split in two so that the test
  * program can get the entire point.
@@ -105,6 +105,7 @@ boolean_t ECDH_derive(bigval_t* tgt, bigval_t const* k, affine_point_t const* Q)
     if (rv) {
         *tgt = Q2.x;
     }
+    ClearMemory(&Q2, sizeof(affine_point_t));
     return (rv);
 }
 
@@ -141,6 +142,9 @@ startpoint:
     if (big_is_zero(&sig->s)) {
         goto startpoint;
     }
+
+    ClearMemory(k.data, ECC_BIGVAL_SZ);
+    ClearMemory(t.data, ECC_BIGVAL_SZ);
 
     return (0);
 }
@@ -386,15 +390,25 @@ static QStatus Crypto_ECC_DSASignDigest(const uint8_t* digest, uint32_t len, con
     ECC_hash_to_bigval(&source, digest, len);
     bigval_t privKey;
     ECDSA_sig_t localSig;
+    QStatus Status = ER_FAIL;
+
 
     binary_to_bigval(signingPrivateKey->GetD(), &privKey, signingPrivateKey->GetDSize());
     if (ECDSA_sign(&source, &privKey, &localSig) != 0) {
-        return ER_FAIL;
+        Status = ER_FAIL;
+        goto Exit;
     }
     bigval_to_binary(&localSig.r, sig->r, sizeof(sig->r));
     bigval_to_binary(&localSig.s, sig->s, sizeof(sig->s));
 
-    return ER_OK;
+
+    Status = ER_OK;
+
+Exit:
+
+    ClearMemory(privKey.data, ECC_BIGVAL_SZ);
+
+    return Status;
 }
 
 /*
@@ -622,8 +636,7 @@ QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uin
 
 ECCPrivateKey::~ECCPrivateKey()
 {
-    /* This must be a secure clear that won't get optimized out by the compiler. */
-    ClearMemory(d, GetDSize());
+    ClearMemory(d, ECC_COORDINATE_SZ);
 }
 
 QStatus ECCPrivateKey::Export(uint8_t* data, size_t* size) const
