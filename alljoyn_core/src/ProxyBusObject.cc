@@ -889,7 +889,10 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
     size_t numInvalidProps;
 
     if (uniqueName != message->GetSender()) {
-        QCC_LogError(ER_FAIL, ("message not for us? (uniqueName = %s   sender = %s)", uniqueName.c_str(), message->GetSender()));
+        /*
+         * Message may not be for us if different senders but same object paths:
+         * RegisterSignalHandler is bound to the path, not the sender.
+         */
         return;
     }
 
