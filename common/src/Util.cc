@@ -78,6 +78,7 @@ qcc::String qcc::RandHexString(size_t len, bool toLower)
     uint8_t* bytes = new uint8_t[len];
     qcc::Crypto_GetRandomBytes(bytes, len);
     qcc::String str = qcc::BytesToHexString(bytes, len, toLower, 0);
+    ClearMemory(bytes, len);
     delete [] bytes;
     return str;
 }
@@ -92,6 +93,7 @@ qcc::String qcc::RandomString(const char* prefix, size_t len)
     for (size_t i = 0; i < len; ++i) {
         str += c[bits[i] & 0x3f];
     }
+    ClearMemory(bits, len);
     delete[] bits;
     return str;
 }

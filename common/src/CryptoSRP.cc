@@ -175,6 +175,8 @@ class Crypto_SRP::BN {
             QCC_DbgPrintf(("premaster secret = %s\n", pms.get_hex().c_str()));
             );
     }
+
+    // Destructor will clear out BigNum values.
 };
 
 /*
@@ -261,6 +263,7 @@ static void Update(Crypto_SHA1& sha1, const BigNum& n)
     uint8_t* buf = new uint8_t[len];
     n.get_bytes(buf, len);
     sha1.Update(buf, len);
+    ClearMemory(buf, len);
     delete [] buf;
 }
 
@@ -313,7 +316,10 @@ QStatus Crypto_SRP::ClientFinish(const qcc::String& id, const qcc::String& pwd)
 
     bn->pms = tmp1.mod_exp(tmp2, bn->N);
 
+    ClearMemory(buf, lenN);
     delete [] buf;
+
+    ClearMemory(digest, Crypto_SHA1::DIGEST_SIZE);
 
     return ER_OK;
 }
@@ -356,7 +362,10 @@ void Crypto_SRP::ServerCommon(qcc::String& toClient)
     toClient += ":";
     toClient += bn->B.get_hex();
 
+    ClearMemory(buf, lenN);
     delete [] buf;
+
+    ClearMemory(digest, Crypto_SHA1::DIGEST_SIZE);
 }
 
 QStatus Crypto_SRP::ServerInit(const qcc::String& verifier, qcc::String& toClient)
@@ -406,6 +415,7 @@ QStatus Crypto_SRP::ServerInit(const qcc::String& id, const qcc::String& pwd, qc
     bn->v = bn->g.mod_exp(bn->x, bn->N);
 
     ServerCommon(toClient);
+    ClearMemory(digest, Crypto_SHA1::DIGEST_SIZE);
     return ER_OK;
 
 }
@@ -454,6 +464,7 @@ QStatus Crypto_SRP::ServerFinish(const qcc::String fromClient)
     sha1.GetDigest(digest);
     bn->u.set_bytes(digest, Crypto_SHA1::DIGEST_SIZE);
 
+    ClearMemory(buf, lenN);
     delete [] buf;
 
     /* Calculate premaster secret for server = ((A * v^u) ^ b %N) */
@@ -462,6 +473,8 @@ QStatus Crypto_SRP::ServerFinish(const qcc::String fromClient)
     BigNum tmp = (bn->A * bn->v.mod_exp(bn->u, bn->N)) % bn->N;
     /* pms = tmp ^ b % N  */
     bn->pms = tmp.mod_exp(bn->b, bn->N);
+
+    ClearMemory(digest, Crypto_SHA1::DIGEST_SIZE);
 
     return ER_OK;
 }
@@ -472,6 +485,7 @@ void Crypto_SRP::GetPremasterSecret(KeyBlob& premaster)
     uint8_t* pms = new uint8_t[sz];
     bn->pms.get_bytes(pms, sz);
     premaster.Set(pms, sz, KeyBlob::GENERIC);
+    ClearMemory(pms, sz);
     delete [] pms;
 }
 

@@ -249,6 +249,7 @@ QStatus KeyBlob::Load(qcc::Source& source)
                     tagBytes[pulled] = 0;
                     tag.insert(0, tagBytes, pulled);
                 }
+                ClearMemory(tagBytes, (tagLen + 1));
                 delete [] tagBytes;
             }
         }
@@ -265,6 +266,7 @@ QStatus KeyBlob::Load(qcc::Source& source)
                 data = new uint8_t[size];
                 status = source.PullBytes(data, size, pulled);
                 if (status != ER_OK) {
+                    ClearMemory(data, size);
                     delete [] data;
                     data = NULL;
                 }
@@ -286,6 +288,7 @@ QStatus KeyBlob::Load(qcc::Source& source)
                     if (status == ER_OK) {
                         association.SetBytes(buf);
                     }
+                    ClearMemory(buf, len);
                     delete [] buf;
                     if (associationMode == ASSOCIATE_HEAD) {
                         associationMode = ASSOCIATE_BOTH;
