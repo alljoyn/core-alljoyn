@@ -26,8 +26,6 @@
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
-#include <assert.h>
-
 
 namespace qcc {
 

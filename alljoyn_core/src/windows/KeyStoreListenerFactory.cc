@@ -118,7 +118,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
                 delete[] dataIn.pbData;
 
                 if (dataOut.pbData != NULL) {
-                    SecureZeroMemory(dataOut.pbData, dataOut.cbData);
+                    ClearMemory(dataOut.pbData, dataOut.cbData);
                     LocalFree(dataOut.pbData);
                 }
 
