@@ -26,7 +26,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
-
+#include <qcc/Util.h>
 
 namespace qcc {
 
@@ -60,7 +60,7 @@ class ECCPrivateKey {
     }
 
     /**
-     * ECCPrivateKey destructor
+     * ECCPrivateKey constructor
      */
     ~ECCPrivateKey();
 
