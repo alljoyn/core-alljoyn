@@ -258,23 +258,8 @@ class NameTable {
         SessionOpts::NameTransferType nameTransfer;
     }  VirtualAliasEntry;
 
-    /**
-     * Hash functor
-     */
-    struct Hash {
-        inline size_t operator()(const qcc::String& s) const {
-            return qcc::hash_string(s.c_str());
-        }
-    };
-
-    struct Equal {
-        inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
-            return s1 == s2;
-        }
-    };
-
-    typedef std::unordered_map<qcc::String, std::deque<NameQueueEntry>, Hash, Equal> AliasMap;
-    typedef std::unordered_map<qcc::String, UniqueNameEntry, Hash, Equal> UniqueNameMap;
+    typedef std::unordered_map<std::string, std::deque<NameQueueEntry> > AliasMap;
+    typedef std::unordered_map<std::string, UniqueNameEntry> UniqueNameMap;
 
     mutable qcc::Mutex lock;                                             /**< Lock protecting name tables */
     UniqueNameMap uniqueNames;   /**< Unique name table */

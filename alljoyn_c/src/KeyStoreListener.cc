@@ -87,7 +87,7 @@ QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listen
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::KeyStore& ks = *((ajn::KeyStore*)keyStore);
-    return ((ajn::KeyStoreListener*)listener)->PutKeys(ks, source, password);
+    return ((ajn::KeyStoreListener*)listener)->PutKeys(ks, source ? source : "", password);
 }
 
 QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,

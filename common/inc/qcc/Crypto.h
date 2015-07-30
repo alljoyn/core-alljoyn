@@ -292,6 +292,15 @@ class Crypto_Hash {
     QStatus Update(const qcc::String& str);
 
     /**
+     * Update the digest with the contents of a string
+     *
+     * @param d   The vector<uint8_t> to hash.
+     *
+     * @return  Indication of success or failure.
+     */
+    QStatus Update(const std::vector<uint8_t>& d);
+
+    /**
      * Retrieve the digest into the supplied buffer.  It is assumed that buffer is large enough to
      * store the digest. Unless keepAlive is true, after the digest has been computed the hash
      * instance is not longer usable until re-initialized. Keep alive is not allowed for HMAC.
@@ -385,7 +394,7 @@ class Crypto_SHA256 : public Crypto_Hash {
  * @param out     Output data
  * @param outLen  The required length of the output data.
  */
-QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const qcc::String& seed, uint8_t* out, size_t outLen);
+QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const std::vector<uint8_t>& seed, uint8_t* out, size_t outLen);
 
 /**
  *  Secure Remote Password (SRP6) class. This implements the core algorithm for Secure Remote

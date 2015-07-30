@@ -456,7 +456,8 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
      */
     struct Hash {
         inline size_t operator()(const char* s) const {
-            return qcc::hash_string(s);
+            std::hash<std::string> hash_fn;
+            return hash_fn(std::string(s));
         }
     };
 

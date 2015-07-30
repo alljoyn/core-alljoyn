@@ -141,11 +141,11 @@ QStatus Environ::Parse(Source& source)
         qcc::String line;
         status = source.GetLine(line);
         if (ER_OK == status) {
-            size_t endPos = line.find('#');
+            size_t endPos = line.find("#");
             if (qcc::String::npos != endPos) {
                 line = line.substr(0, endPos);
             }
-            size_t eqPos = line.find('=');
+            size_t eqPos = line.find("=");
             if (qcc::String::npos != eqPos) {
                 vars[Trim(line.substr(0, eqPos))] = Trim(line.substr(eqPos + 1));
             }

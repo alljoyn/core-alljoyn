@@ -206,6 +206,14 @@ qcc::String AJ_CALL LineBreak(const qcc::String& inStr, size_t maxLen = 64, size
 qcc::String AJ_CALL StringVectorToString(const std::vector<qcc::String>* list, const char* sep = "");
 
 /**
+ * Append the contents of a string to a vector<uint8_t>.
+ *
+ * @param str   String to be added.
+ * @param v     Vector to be added to.
+ */
+void AJ_CALL AppendStringToVector(const qcc::String& str, std::vector<uint8_t>& v);
+
+/**
  * Convert a character digit to its non-ascii value
  *
  * @param c            Character to convert.

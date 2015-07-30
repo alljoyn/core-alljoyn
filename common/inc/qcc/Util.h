@@ -94,11 +94,8 @@ namespace qcc {
  * @return Hash value
  */
 inline size_t hash_string(const char* __s) {
-    unsigned long __h = 0;
-    for (; *__s; ++__s)
-        __h = 5 * __h + *__s;
-
-    return size_t(__h);
+    std::hash<std::string> hash_fn;
+    return hash_fn(std::string(__s));
 }
 
 /**

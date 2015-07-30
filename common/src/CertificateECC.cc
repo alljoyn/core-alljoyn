@@ -216,7 +216,7 @@ QStatus AJ_CALL CertificateX509::EncodePublicKeyPEM(const ECCPublicKey* publicKe
     }
 
     // Uncompressed points only
-    qcc::String key(0x4);
+    qcc::String key(1, '\4');
     key += qcc::String((const char*)publicKeyBytes, publicKeySize);
     delete[] publicKeyBytes;
     status = Crypto_ASN1::Encode(der, "((oo)b)", &oid1, &oid2, &key, 8 * key.size());
@@ -580,7 +580,7 @@ QStatus CertificateX509::EncodeCertificatePub(qcc::String& pub) const
     }
 
     // Uncompressed points only
-    qcc::String key(0x4);
+    qcc::String key(1, '\4');
     key += qcc::String((const char*) publicKeyBytes, publicKeySize);
     status = Crypto_ASN1::Encode(pub, "(oo)b", &oid1, &oid2, &key, 8 * key.size());
 
@@ -913,7 +913,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
         return status;
     }
     serialStr.assign((const char*)serial, serialLen);
-    tbs.clear(tbs.size()); //empty the tbs string.
+    tbs.clear(); //empty the tbs string.
     status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(R)(R)(R)R)",
                                  0, x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
 
@@ -977,7 +977,7 @@ QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
         return status;
     }
     // Put the sequence back on the TBS
-    tbs.clear(tbs.size());
+    tbs.clear();
     status = Crypto_ASN1::Encode(tbs, "(R)", &tmp);
     if (ER_OK != status) {
         return status;

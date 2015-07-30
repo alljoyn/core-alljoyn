@@ -149,7 +149,11 @@ TEST(SRPTest, Basic_API) {
         qcc::String clientRand = RandHexString(64);
         uint8_t masterSecret[48];
 
-        status = Crypto_PseudorandomFunction(serverPMS, "foobar", serverRand + clientRand, masterSecret, sizeof(masterSecret));
+        vector<uint8_t> seed;
+        seed.reserve(clientRand.size() + serverRand.size());
+        AppendStringToVector(serverRand, seed);
+        AppendStringToVector(clientRand, seed);
+        status = Crypto_PseudorandomFunction(serverPMS, "foobar", seed, masterSecret, sizeof(masterSecret));
         ASSERT_EQ(ER_OK, status)
             << " SRP ClientFinish failed\n"
             << "Master secret = " << BytesToHexString(masterSecret, sizeof(masterSecret)).c_str();
@@ -197,7 +201,11 @@ TEST(SRPTest, Basic_API) {
         qcc::String clientRand = RandHexString(64);
         uint8_t masterSecret[48];
 
-        status = Crypto_PseudorandomFunction(serverPMS, "foobar", serverRand + clientRand, masterSecret, sizeof(masterSecret));
+        vector<uint8_t> seed;
+        seed.reserve(clientRand.size() + serverRand.size());
+        AppendStringToVector(serverRand, seed);
+        AppendStringToVector(clientRand, seed);
+        status = Crypto_PseudorandomFunction(serverPMS, "foobar", seed, masterSecret, sizeof(masterSecret));
         ASSERT_EQ(ER_OK, status)
             << " SRP ClientFinish failed\n"
             << "Master secret = " << BytesToHexString(masterSecret, sizeof(masterSecret)).c_str();

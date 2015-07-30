@@ -211,6 +211,11 @@ QStatus Crypto_Hash::Update(const qcc::String& str)
     return Update((const uint8_t*)str.data(), str.size());
 }
 
+QStatus Crypto_Hash::Update(const vector<uint8_t>& d)
+{
+    return Update(d.data(), d.size());
+}
+
 QStatus Crypto_Hash::GetDigest(uint8_t* digest, bool keepAlive)
 {
     QStatus status = ER_OK;

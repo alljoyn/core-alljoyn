@@ -198,7 +198,11 @@ int CDECL_CALL main(int argc, char** argv)
 
             printf("testing pseudo random function\n");
 
-            status = Crypto_PseudorandomFunction(serverPMS, "foobar", serverRand + clientRand, masterSecret, sizeof(masterSecret));
+            vector<uint8_t> seed;
+            seed.reserve(clientRand.size() + serverRand.size());
+            AppendStringToVector(serverRand, seed);
+            AppendStringToVector(clientRand, seed);
+            status = Crypto_PseudorandomFunction(serverPMS, "foobar", seed, masterSecret, sizeof(masterSecret));
             if (status != ER_OK) {
                 QCC_LogError(status, ("Crypto_PseudoRandomFunction failed"));
                 goto TestFail;
