@@ -23,8 +23,8 @@
 #define _QCC_STRING_H
 
 #include <qcc/platform.h>
-#include <stdlib.h>
 #include <string.h>
+#include <string>
 #include <iostream>
 
 namespace qcc {
@@ -36,20 +36,30 @@ namespace qcc {
  * is freed.
  */
 class String {
+    std::string s;
+
   public:
     /** String index constant indicating "past the end" */
-    static const size_t npos = static_cast<size_t>(-1);
+#if !defined(QCC_OS_GROUP_WINDOWS)
+    static constexpr auto npos = std::string::npos;
+#else
+    // std::string::npos can't be used as a constexpr with VC++.
+    static const auto npos = static_cast<std::string::size_type>(-1);
+#endif
 
     /** String iterator type */
-    typedef char* iterator;
+    typedef std::string::iterator iterator;
 
     /** const String iterator type */
-    typedef const char* const_iterator;
+    typedef std::string::const_iterator const_iterator;
+
+    /** String size_type type */
+    typedef std::string::size_type size_type;
 
     /**
      * Construct an empty string.
      */
-    String();
+    String() : s() { }
 
     /**
      * Construct a single character string.
@@ -57,7 +67,8 @@ class String {
      * @param c         Initial value for string
      * @param sizeHint  Optional size hint for initial allocation.
      */
-    String(char c, size_t sizeHint = MinCapacity);
+    QCC_DEPRECATED(String(char c, size_t sizeHint)) { s.reserve(sizeHint); s.assign(1, c); }
+    QCC_DEPRECATED(String(char c)) : s(1, c) { }
 
     /**
      * Construct a String with n copies of char.
@@ -66,7 +77,11 @@ class String {
      * @param c         Character used to fill string.
      * @param sizeHint  Optional size hint for initial allocation.
      */
-    String(size_t n, char c, size_t sizeHint = MinCapacity);
+    QCC_DEPRECATED(String(size_type n, char c, size_t sizeHint)) {
+        s.reserve(sizeHint);
+        s.assign(n, c);
+    }
+    String(size_type n, char c) : s(n, c) { }
 
     /**
      * Construct a string from a const char*
@@ -75,20 +90,31 @@ class String {
      * @param strLen     Length of string or 0 if str is null terminated
      * @param sizeHint   Optional size hint used for initial malloc if larger than str length.
      */
-    String(const char* str, size_t strLen = 0, size_t sizeHint = MinCapacity);
+    QCC_DEPRECATED(String(const char* str, size_type strLen, size_t sizeHint));
+    String(const char* str, size_type strLen);
+    String(const char* str);
 
     /**
      * Copy Constructor
      *
      * @param str        String to copy
      */
-    String(const String& str);
+    String(const String& str) : s(str.s) { }
+
+    String(std::string&& str) : s(str) { }
+    String(const std::string& str) : s(str) { }
+
+    String(const const_iterator& start, const const_iterator& end) : s(start, end) { }
+
 
     /** Destructor */
-    virtual ~String();
+    virtual ~String() { }
+
+    operator const std::string & () const { return s; }
+    operator std::string & () { return s; }
 
     /** Assignment operator */
-    String& operator=(const String& assignFromMe);
+    std::string operator=(const String& assignFromMe) { return s = assignFromMe.s; }
 
     /**
      * Assign a value to a string
@@ -97,7 +123,7 @@ class String {
      * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
      * @return  Reference to this string.
      */
-    String& assign(const char* str, size_t len);
+    std::string assign(const char* str, size_type len);
 
     /**
      * Assign a nul-terminated string value to a string
@@ -105,51 +131,53 @@ class String {
      * @param str  Value to assign to string.
      * @return  Reference to this string.
      */
-    String& assign(const char* str) { return assign(str, 0); }
+    std::string assign(const char* str);
 
     /**
      * Get the current storage capacity for this string.
      *
      * @return  Amount of storage allocated to this string.
      */
-    size_t capacity() const { return context->capacity; }
+    size_type capacity() const { return s.capacity(); }
 
     /**
      * Get an iterator to the beginning of the string.
      *
      * @return iterator to start of string
      */
-    iterator begin() { return context->c_str; }
+    iterator begin() { return s.begin(); }
 
     /**
      * Get an iterator to the end of the string.
      *
      * @return iterator to end of string.
      */
-    iterator end() { return context->c_str + context->offset; }
+    iterator end() { return s.end(); }
 
     /**
      * Get a const_iterator to the beginning of the string.
      *
      * @return iterator to start of string
      */
-    const_iterator begin() const { return context->c_str; }
+    const_iterator begin() const { return s.cbegin(); }
 
     /**
      * Get an iterator to the end of the string.
      *
      * @return iterator to end of string.
      */
-    const_iterator end() const { return context->c_str + context->offset; }
+    const_iterator end() const { return s.cend(); }
 
     /**
      * Clear contents of string.
      *
      * @param sizeHint   Allocation size hint used if string must be reallocated.
      */
-    void clear(size_t sizeHint = MinCapacity);
+    QCC_DEPRECATED(void clear(size_t sizeHint)) { s.clear(); s.resize(sizeHint); }
+    void clear() { s.clear(); }
 
     /**
+     * @deprecated
      * Unless you are working with passwords or cryptographic keys you should probably not be
      * calling this function and should call String::clear() instead.
      *
@@ -166,7 +194,7 @@ class String {
      * @return  The number of other string instances that were cleared as a side-effect of clearing
      *          this string.
      */
-    size_t secure_clear();
+    QCC_DEPRECATED(size_type secure_clear());
 
     /**
      * Append a string or substring to string. This function will append all characters up to the
@@ -176,7 +204,8 @@ class String {
      * @param len  Number of characters to append or 0 to insert up to first nul byte in str.
      * @return  Reference to this string.
      */
-    String& append(const char* str, size_t len = 0);
+    std::string append(const char* str, size_type len);
+    std::string append(const char* str);
 
     /**
      * Append a string to another to string.
@@ -184,7 +213,16 @@ class String {
      * @param str  Value to append to string.
      * @return  Reference to this string.
      */
-    String& append(const String& str) { return append(str.c_str(), str.size()); }
+    std::string append(const String& str) { return s.append(str.s); }
+
+    /**
+     * Append a character N times to the string.
+     *
+     * @param n  Number of copies of 'c' to append.
+     * @param c  Character to append to string.
+     * @return  Reference to this string.
+     */
+    std::string append(size_type n, char c) { return s.append(n, c); }
 
     /**
      * Append a single character to string.
@@ -192,7 +230,7 @@ class String {
      * @param c Character to append to string.
      * @return  Reference to this string.
      */
-    String& append(const char c);
+    QCC_DEPRECATED(String append(const char c)) { return s.append(1, c); }
 
     /**
      * Erase a range of chars from string.
@@ -201,7 +239,7 @@ class String {
      * @param n      Number of chars to erase.
      * @return  Reference to this string.
      */
-    String& erase(size_t pos = 0, size_t n = npos);
+    std::string erase(size_type pos = 0, size_type n = npos) { return s.erase(pos, n); }
 
     /**
      * Resize string by appending chars or removing them to make string a specified size.
@@ -209,7 +247,7 @@ class String {
      * @param n     New size for string.
      * @param c     Character to append to string if string size increases.
      */
-    void resize(size_t n, char c = ' ');
+    void resize(size_type n, char c = ' ') { s.resize(n, c); }
 
     /**
      * Set storage space for this string.
@@ -217,14 +255,14 @@ class String {
      *
      * @param newCapacity   The desired capacity for this string. May be greater or less than current capacity.
      */
-    void reserve(size_t newCapacity);
+    void reserve(size_type newCapacity) { s.reserve(newCapacity); }
 
     /**
      * Push a single character to the end of the string.
      *
      * @param c  Char to push
      */
-    void push_back(char c) { append(c); }
+    void push_back(char c) { s.push_back(c); }
 
     /**
      * Append a character.
@@ -232,7 +270,7 @@ class String {
      * @param c Character to append to string.
      * @return  Reference to this string.
      */
-    String& operator+=(const char c) { return append(c); }
+    std::string operator+=(const char c) { return s += c; }
 
     /**
      * Append to string.
@@ -240,7 +278,7 @@ class String {
      * @param str  Value to append to string.
      * @return  Reference to this string.
      */
-    String& operator+=(const char* str) { return append(str); }
+    std::string operator+=(const char* str) { return append(str); }
 
     /**
      * Append to string.
@@ -248,7 +286,9 @@ class String {
      * @param str  Value to append to string.
      * @return  Reference to this string.
      */
-    String& operator+=(const String& str) { return append(str.c_str(), str.size()); }
+    std::string operator+=(const String& str) { return s += str.s; }
+
+    std::string operator+=(const std::string& str) { return s += str; }
 
     /**
      * Insert characters into string at position.
@@ -258,7 +298,9 @@ class String {
      * @param len   Optional number of chars to insert.
      * @return  Reference to the string.
      */
-    String& insert(size_t pos, const char* str, size_t len = 0);
+    std::string insert(size_type pos, const char* str, size_type len);
+
+    std::string insert(size_type pos, const char* str);
 
     /**
      * Return true if string is equal to this string.
@@ -266,7 +308,7 @@ class String {
      * @param str  %String to compare against this string.
      * @return true iff other is equal to this string.
      */
-    bool operator==(const String& str) const;
+    bool operator==(const String& str) const { return s == str.s; }
 
     /**
      * @overload
@@ -280,7 +322,8 @@ class String {
      * @param str  String to compare against this string.
      * @return true iff other is not equal to this string.
      */
-    bool operator!=(const String& str) const { return !operator==(str); }
+    bool operator!=(const String& str) const { return s != str.s; }
+    bool operator!=(const std::string& str) const { return s != str; }
 
     /**
      * @overload
@@ -294,7 +337,7 @@ class String {
      * @param str  String to compare against this string.
      * @return true iff this string is less than other string
      */
-    bool operator<(const String& str) const;
+    bool operator<(const String& str) const { return s < str.s; }
 
     /**
      * @overload
@@ -309,7 +352,7 @@ class String {
      * @param pos    Position offset into string.
      * @return  Reference to character at pos.
      */
-    char& operator[](size_t pos);
+    char& operator[](size_type pos) { return s[pos]; }
 
     /**
      * Get a character at a given position. This function performs no range checking so the caller
@@ -318,42 +361,42 @@ class String {
      * @param pos    Position offset into string.
      * @return       The character at pos.
      */
-    char operator[](size_t pos) const { return context->c_str[pos]; }
+    char operator[](size_type pos) const { return s[pos]; }
 
     /**
      * Get the size of the string.
      *
      * @return size of string.
      */
-    size_t size() const { return context->offset; }
+    size_type size() const { return s.size(); }
 
     /**
      * Get the length of the string.
      *
      * @return size of string.
      */
-    size_t length() const { return size(); }
+    size_type length() const { return s.length(); }
 
     /**
      * Get the null termination char* representation for this String.
      *
      * @return Null terminated string.
      */
-    const char* c_str() const { return context->c_str; }
+    const char* c_str() const { return s.c_str(); }
 
     /**
      * Get the not-necessarily null termination char* representation for this String.
      *
      * @return Null terminated string.
      */
-    const char* data() const { return c_str(); }
+    const char* data() const { return s.data(); }
 
     /**
      * Return true if string contains no chars.
      *
      * @return true iff string is empty
      */
-    bool empty() const { return context->offset == 0; }
+    bool empty() const { return s.empty(); }
 
     /**
      * Find first occurrence of null terminated string within this string.
@@ -362,7 +405,9 @@ class String {
      * @param pos  Optional starting position (in this string) for search.
      * @return     Position of first occurrence of c within string or npos if not found.
      */
-    size_t find(const char* str, size_t pos = 0) const;
+    size_type find(const char* str, size_type pos = 0) const {
+        return s.find(str, pos);
+    }
 
     /**
      * Find first occurrence of string within this string.
@@ -371,7 +416,9 @@ class String {
      * @param pos  Optional starting position (in this string) for search.
      * @return     Position of first occurrence of c within string or npos if not found.
      */
-    size_t find(const qcc::String& str, size_t pos = 0) const;
+    size_type find(const qcc::String& str, size_type pos = 0) const {
+        return s.find(str.s, pos);
+    }
 
     /**
      * Find first occurrence of character within string.
@@ -380,7 +427,9 @@ class String {
      * @param pos  Optional starting position for search.
      * @return     Position of first occurrence of c within string or npos if not found.
      */
-    size_t find_first_of(const char c, size_t pos = 0) const;
+    size_type find_first_of(const char c, size_type pos = 0) const {
+        return s.find_first_of(c, pos);
+    }
 
     /**
      * Find last occurrence of character within string in range [0, pos).
@@ -389,7 +438,9 @@ class String {
      * @param pos  Optional starting position for search (one past end of substring to search).
      * @return     Position of last occurrence of c within string or npos if not found.
      */
-    size_t find_last_of(const char c, size_t pos = npos) const;
+    size_type find_last_of(const char c, size_type pos = npos) const {
+        return s.find_last_of(c, pos);
+    }
 
     /**
      * Find first occurence of any of a set of characters within string.
@@ -398,7 +449,9 @@ class String {
      * @param pos        Optional starting position within this string for search.
      * @return           Position of first occurrence of one of inChars within string or npos if not found.
      */
-    size_t find_first_of(const char* inChars, size_t pos = 0) const;
+    size_type find_first_of(const char* inChars, size_type pos = 0) const {
+        return s.find_first_of(inChars, pos);
+    }
 
     /**
      * Find last occurence of any of a set of characters within string.
@@ -407,7 +460,9 @@ class String {
      * @param pos        Optional starting position within this string for search.
      * @return           Position of last occurrence of one of inChars within string or npos if not found.
      */
-    size_t find_last_of(const char* inChars, size_t pos = npos) const;
+    size_type find_last_of(const char* inChars, size_type pos = npos) const {
+        return s.find_last_of(inChars, pos);
+    }
 
     /**
      * Find first occurrence of a character NOT in a set of characters within string.
@@ -416,7 +471,9 @@ class String {
      * @param pos        Optional starting position within this string for search.
      * @return           Position of first occurrence a character not in setChars or npos if none exists.
      */
-    size_t find_first_not_of(const char* setChars, size_t pos = 0) const;
+    size_type find_first_not_of(const char* setChars, size_type pos = 0) const {
+        return s.find_first_not_of(setChars, pos);
+    }
 
     /**
      * Find last occurrence of a character NOT in a set of characters within string range [0, pos).
@@ -425,7 +482,9 @@ class String {
      * @param pos        Position one past the end of the character of the substring that should be examined or npos for entire string.
      * @return           Position of first occurrence a character not in setChars or npos if none exists.
      */
-    size_t find_last_not_of(const char* setChars, size_t pos = npos) const;
+    size_type find_last_not_of(const char* setChars, size_type pos = npos) const {
+        return s.find_last_not_of(setChars, pos);
+    }
 
     /**
      * Return a substring of this string.
@@ -434,7 +493,7 @@ class String {
      * @param  n    Number of bytes in substring.
      * @return  Substring of this string.
      */
-    String substr(size_t pos = 0, size_t n = npos) const;
+    std::string substr(size_type pos = 0, size_type n = npos) const { return s.substr(pos, n); }
 
     /**
      * Return a substring of this string with the order of the characters reversed.
@@ -443,7 +502,7 @@ class String {
      * @param  n    Number of bytes in substring.
      * @return  The reversed substring of this string.
      */
-    String revsubstr(size_t pos = 0, size_t n = npos) const;
+    QCC_DEPRECATED(std::string revsubstr(size_type pos = 0, size_type n = npos) const);
 
     /**
      * Compare this string with other.
@@ -451,7 +510,7 @@ class String {
      * @param other   String to compare with.
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    int compare(const String& other) const { return compare(0, npos, other); }
+    int compare(const String& other) const { return s.compare(other.s); }
 
     /**
      * Compare a substring of this string with a substring of other.
@@ -464,7 +523,13 @@ class String {
      *
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    int compare(size_t pos, size_t n, const String& other, size_t otherPos, size_t otherN) const;
+    int compare(size_type pos,
+                size_type n,
+                const String& other,
+                size_type otherPos,
+                size_type otherN) const {
+        return s.compare(pos, n, other.s, otherPos, otherN);
+    }
 
     /**
      * Compare a substring of this string with other.
@@ -474,7 +539,9 @@ class String {
      * @param other  String to compare with.
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    int compare(size_t pos, size_t n, const String& other) const;
+    int compare(size_type pos, size_type n, const String& other) const {
+        return s.compare(pos, n, other.s);
+    }
 
     /**
      * @overload
@@ -485,7 +552,9 @@ class String {
      * @param other  String to compare with.
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    int compare(size_t pos, size_t n, const char* other) const { return ::strncmp(context->c_str + pos, other, n < context->offset ? n : context->offset); }
+    int compare(size_type pos, size_type n, const char* other) const {
+        return s.compare(pos, n, other);
+    }
 
     /**
      * Compare this string with an array of chars.
@@ -493,7 +562,7 @@ class String {
      * @param str   Nul terminated array of chars to compare against this string.
      * @return  &lt;0 if this string is less than str, &gt;0 if this string is greater than str, 0 if equal.
      */
-    int compare(const char* str) const { return ::strcmp(context->c_str, str); }
+    int compare(const char* str) const { return s.compare(str); }
 
     /**
      * Returns a reference to the empty string
@@ -504,25 +573,6 @@ class String {
     static void Init();
     static void Shutdown();
     friend class StaticGlobals;
-
-    static const size_t MinCapacity = 16;
-
-    typedef struct {
-        volatile int32_t refCount; /**< The reference count of the context */
-        uint32_t offset;         /**< The offset of the end of the string */
-        uint32_t capacity;       /**< The size of the string buffer */
-        char c_str[MinCapacity]; /**< The buffer holding the actual character string */
-    } ManagedCtx;
-
-    ManagedCtx* context;
-
-    static ManagedCtx nullContext;
-
-    void IncRef();
-
-    void DecRef(ManagedCtx* ctx);
-
-    void NewContext(const char* str, size_t strLen, size_t sizeHint);
 };
 
 }
@@ -534,7 +584,9 @@ class String {
  * @param   s2  String to be concatenated.
  * @return  Concatenated s1 + s2.
  */
-qcc::String AJ_CALL operator+(const qcc::String& s1, const qcc::String& s2);
+inline qcc::String AJ_CALL operator+(const qcc::String& s1, const qcc::String& s2) {
+    return static_cast<const std::string>(s1) + static_cast<const std::string>(s2);
+}
 
 /**
  * Global "<<" operator for qcc::String
@@ -543,5 +595,27 @@ qcc::String AJ_CALL operator+(const qcc::String& s1, const qcc::String& s2);
  * @param   str  String to be printed.
  * @return  Output stream
  */
-std::ostream& AJ_CALL operator<<(std::ostream& os, const qcc::String& str);
+inline std::ostream& AJ_CALL operator<<(std::ostream& os, const qcc::String& str) {
+    return os << static_cast<const std::string>(str);
+}
+
+inline bool AJ_CALL operator==(const std::string& s1, const qcc::String& s2) {
+    return s1 == static_cast<std::string>(s2);
+}
+inline bool AJ_CALL operator!=(const std::string& s1, const qcc::String& s2) {
+    return s1 == static_cast<std::string>(s2);
+}
+inline bool AJ_CALL operator<(const std::string& s1, const qcc::String& s2) {
+    return s1 < static_cast<std::string>(s2);
+}
+inline bool AJ_CALL operator>(const std::string& s1, const qcc::String& s2) {
+    return s1 > static_cast<std::string>(s2);
+}
+inline bool AJ_CALL operator<=(const std::string& s1, const qcc::String& s2) {
+    return s1 <= static_cast<std::string>(s2);
+}
+inline bool AJ_CALL operator>=(const std::string& s1, const qcc::String& s2) {
+    return s1 >= static_cast<std::string>(s2);
+}
+
 #endif

@@ -237,27 +237,27 @@ bool AboutObj::HasAllRequiredFields(MsgArg& aboutDataArg)
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEFAULT_LANGUAGE));
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEVICE_ID));
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::APP_NAME, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::APP_NAME));
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MANUFACTURER));
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MODEL_NUMBER));
         return false;
     }
@@ -267,17 +267,17 @@ bool AboutObj::HasAllRequiredFields(MsgArg& aboutDataArg)
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::DESCRIPTION, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DESCRIPTION));
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::SOFTWARE_VERSION, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::SOFTWARE_VERSION));
         return false;
     }
     status = aboutDataArg.GetElement("{sv}", AboutData::AJ_SOFTWARE_VERSION, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::AJ_SOFTWARE_VERSION));
         return false;
     }
@@ -304,27 +304,27 @@ bool AboutObj::HasAllAnnouncedFields(MsgArg& announcedDataArg)
         return false;
     }
     status = announcedDataArg.GetElement("{sv}", AboutData::DEFAULT_LANGUAGE, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEFAULT_LANGUAGE));
         return false;
     }
     status = announcedDataArg.GetElement("{sv}", AboutData::DEVICE_ID, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::DEVICE_ID));
         return false;
     }
     status = announcedDataArg.GetElement("{sv}", AboutData::APP_NAME, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::APP_NAME));
         return false;
     }
     status = announcedDataArg.GetElement("{sv}", AboutData::MANUFACTURER, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MANUFACTURER));
         return false;
     }
     status = announcedDataArg.GetElement("{sv}", AboutData::MODEL_NUMBER, &field);
-    if (ER_OK != status || field->Signature().compare(ALLJOYN_STRING) != 0) {
+    if (ER_OK != status || field->Signature().compare("s") != 0) {
         QCC_LogError(ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD, ("AboutData Missing %s field", AboutData::MODEL_NUMBER));
         return false;
     }

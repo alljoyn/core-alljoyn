@@ -306,7 +306,8 @@ QStatus KeyExchangerECDHE::GenerateMasterSecret(const ECCPublicKey* remotePubKey
             return status;
         }
         KeyBlob pmsBlob((const uint8_t*) &pms, sizeof (ECCSecretOldEncoding), KeyBlob::GENERIC);
-        status = Crypto_PseudorandomFunction(pmsBlob, "master secret", "", keymatter, sizeof (keymatter));
+        vector<uint8_t> seed;
+        status = Crypto_PseudorandomFunction(pmsBlob, "master secret", seed, keymatter, sizeof (keymatter));
     } else {
         ECCSecret pms;
         status = ecc.GenerateSharedSecret(remotePubKey, &pms);
@@ -316,7 +317,8 @@ QStatus KeyExchangerECDHE::GenerateMasterSecret(const ECCPublicKey* remotePubKey
         uint8_t pmsDigest[Crypto_SHA256::DIGEST_SIZE];
         status = pms.DerivePreMasterSecret(pmsDigest, sizeof(pmsDigest));
         KeyBlob pmsBlob(pmsDigest, sizeof (pmsDigest), KeyBlob::GENERIC);
-        status = Crypto_PseudorandomFunction(pmsBlob, "master secret", "", keymatter, sizeof (keymatter));
+        vector<uint8_t> seed;
+        status = Crypto_PseudorandomFunction(pmsBlob, "master secret", seed, keymatter, sizeof (keymatter));
     }
     masterSecret.Set(keymatter, sizeof(keymatter), KeyBlob::GENERIC);
     return status;
@@ -610,7 +612,9 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
 
 static QStatus GenerateVerifier(const char* label, const uint8_t* handshake, size_t handshakeLen, const KeyBlob& secretBlob, uint8_t* verifier, size_t verifierLen)
 {
-    qcc::String seed((const char*) handshake, handshakeLen);
+    vector<uint8_t> seed;
+    seed.reserve(handshakeLen);
+    seed.insert(seed.end(), handshake, handshake + handshakeLen);
     return Crypto_PseudorandomFunction(secretBlob, label, seed, verifier, verifierLen);
 }
 
@@ -974,11 +978,13 @@ QStatus KeyExchangerECDHE_PSK::GenerateLocalVerifier(uint8_t* verifier, size_t v
     peerState->GetDigest(digest, true);
     peerState->ReleaseConversationHashLock();
     if (GetPeerAuthVersion() >= CONVERSATION_V4) {
-        qcc::String seed((const char*)digest, sizeof(digest));
-        seed += pskName;
-        seed += pskValue;
+        vector<uint8_t> seed;
+        seed.reserve(sizeof(digest) + pskName.size() + pskValue.size());
+        seed.insert(seed.end(), digest, digest + sizeof(digest));
+        AppendStringToVector(pskName, seed);
+        AppendStringToVector(pskValue, seed);
         QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
-        seed.secure_clear();
+        seed.assign(seed.size(), 0);
         return status;
     } else {
         return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
@@ -1004,11 +1010,13 @@ QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* peerPskName, size
      * the seed that generates the verifier.
      */
     if (GetPeerAuthVersion() >= CONVERSATION_V4) {
-        qcc::String seed((const char*)digest, sizeof(digest));
-        seed.append((const char*)peerPskName, peerPskNameLength);
-        seed += pskValue;
+        vector<uint8_t> seed;
+        seed.reserve(sizeof(digest) + peerPskNameLength + pskValue.size());
+        seed.insert(seed.end(), digest, digest + sizeof(digest));
+        seed.insert(seed.end(), peerPskName, peerPskName + peerPskNameLength);
+        AppendStringToVector(pskValue, seed);
         QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
-        seed.secure_clear();
+        seed.assign(seed.size(), 0);
         return status;
     } else {
         return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);

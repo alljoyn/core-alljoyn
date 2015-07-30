@@ -79,7 +79,11 @@ void AuthMechLogon::ComputeMS()
     /*
      * Use the PRF function to compute the master secret.
      */
-    Crypto_PseudorandomFunction(pms, label, clientRandom + serverRandom, keymatter, sizeof(keymatter));
+    vector<uint8_t> seed;
+    seed.reserve(clientRandom.size() + serverRandom.size());
+    AppendStringToVector(clientRandom, seed);
+    AppendStringToVector(serverRandom, seed);
+    Crypto_PseudorandomFunction(pms, label, seed, keymatter, sizeof(keymatter));
     masterSecret.Set(keymatter, sizeof(keymatter), KeyBlob::GENERIC);
     masterSecret.SetExpiration(expiration);
 }
@@ -96,7 +100,9 @@ qcc::String AuthMechLogon::ComputeVerifier(const char* labelStr)
      * Snapshot msg hash and compute the verifier string.
      */
     msgHash.GetDigest(digest, true);
-    qcc::String seed((const char*)digest, sizeof(digest));
+    vector<uint8_t> seed;
+    seed.reserve(sizeof(digest));
+    seed.insert(seed.end(), digest, digest + sizeof(digest));
     Crypto_PseudorandomFunction(masterSecret, labelStr, seed, verifier, sizeof(verifier));
     QCC_DbgHLPrintf(("Verifier:  %s", BytesToHexString(verifier, sizeof(verifier)).c_str()));
     return BytesToHexString(verifier, sizeof(verifier));

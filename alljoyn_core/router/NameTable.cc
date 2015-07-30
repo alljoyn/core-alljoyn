@@ -341,7 +341,7 @@ BusEndpoint NameTable::FindEndpoint(const qcc::String& busName) const
             ep = it->second.endpoint;
         }
     } else {
-        unordered_map<String, deque<NameQueueEntry>, Hash, Equal>::const_iterator it = aliasNames.find(busName);
+        unordered_map<string, deque<NameQueueEntry>>::const_iterator it = aliasNames.find(busName);
         if (it != aliasNames.end()) {
             assert(!it->second.empty());
             ep = FindEndpoint(it->second[0].endpointName);

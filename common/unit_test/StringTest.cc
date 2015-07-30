@@ -17,6 +17,8 @@
 #include <gtest/gtest.h>
 #include <qcc/String.h>
 
+#include <sstream>
+
 TEST(StringTest, constructor) {
     const char* testStr = "abcdefgdijk";
 
@@ -42,7 +44,8 @@ TEST(StringTest, find_last_of) {
 
     /* Test find_last_of */
     ASSERT_EQ(static_cast<size_t>(7), s.find_last_of('d'));
-    ASSERT_EQ(static_cast<size_t>(3), s.find_last_of('d', 7));
+    ASSERT_EQ(static_cast<size_t>(7), s.find_last_of('d', 7));  // Old qcc::String difference
+    ASSERT_EQ(static_cast<size_t>(3), s.find_last_of('d', 6));
     /*
      * unusual use of the unary operator '+' makes gcc compiler see qcc::String::npos as a rvalue
      * this prevents an 'undefined reference' compiler error when building with gcc.
@@ -121,8 +124,8 @@ TEST(StringTest, erase) {
     pre.erase(pre.size(), 2);
     ASSERT_STREQ("abcdghijk", pre.c_str());
 
-    pre.erase(pre.size() + 1, 100);
-    ASSERT_STREQ("abcdghijk", pre.c_str());
+    //pre.erase(pre.size() + 1, 100);  // Causes out_of_range exception for std::string
+    //ASSERT_STREQ("abcdghijk", pre.c_str());
 }
 
 TEST(StringTest, resize) {
@@ -165,14 +168,14 @@ TEST(StringTest, logicOperators) {
     /* Test operator< */
     ASSERT_FALSE(s5 < s6);
     ASSERT_FALSE(s6 < s5);
-    s6.append('m');
+    s6.append(1, 'm');
     ASSERT_TRUE(s5 < s6);
     ASSERT_FALSE(s6 < s5);
 }
 
 TEST(StringTest, threeParamConstructor) {
-    /* Test String(size_t, char, size_t) */
-    qcc::String s3(8, 's', 8);
+    /* Test String(size_t, char) */
+    qcc::String s3(8, 's');
     ASSERT_STREQ("ssssssss", s3.c_str());
     ASSERT_EQ(::strlen("ssssssss"), s3.size());
 }
@@ -203,7 +206,7 @@ TEST(StringTest, arrayOperator3) {
     const char* testStr = "abcdefgdijk";
     qcc::String s = testStr;
     ASSERT_EQ('a', s[0]);
-    ASSERT_EQ('\0', s[11]);
+    ASSERT_EQ('k', s[10]);
 }
 TEST(StringTest, iterators) {
     const char* testChars = "abcdefgh";
@@ -231,7 +234,7 @@ TEST(StringTest, substr) {
     qcc::String s2 = s.substr(0, 4) + "1234";
     ASSERT_TRUE(s2 == "abcd1234");
     ASSERT_TRUE(s2.substr(4, 1) == "1");
-    ASSERT_TRUE(s2.substr(1000, 1) == "");
+    //ASSERT_TRUE(s2.substr(1000, 1) == ""); // std::string throws an exception
     ASSERT_TRUE(s2.substr(0, 0) == "");
     ASSERT_EQ(0, s.compare(1, 2, s2, 1, 2));
 }
@@ -252,6 +255,39 @@ TEST(StringTest, plusEqualsOperator) {
     ASSERT_TRUE(s == "foofooxxx");
 }
 
+
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+TEST(StringTest, secure_clear) {
+    const char* secret = "secret data";
+    const char* clear =  "\0\0\0\0\0\0\0\0\0\0\0";
+    qcc::String s1(secret);
+    qcc::String s2(s1);
+    auto secretSize = s1.size();
+    ASSERT_EQ(0, memcmp(s1.data(), secret, s1.size()));
+    ASSERT_TRUE(s1.data() == s2.data());
+
+    s1.secure_clear();
+    ASSERT_EQ(secretSize, s1.size());
+    ASSERT_EQ(0, memcmp(s1.data(), clear, s1.size()));
+    ASSERT_NE(0, memcmp(s2.data(), secret, s2.size()));
+    ASSERT_TRUE(s1 == s2);
+    ASSERT_TRUE(s1.data() == s2.data());
+}
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+
 /* ASACORE-1058 */
 TEST(StringTest, assignDoesNotAppend) {
     const char* before = "012345678901234567890123456789012345";
@@ -259,4 +295,76 @@ TEST(StringTest, assignDoesNotAppend) {
     qcc::String t(before);
     t.assign(after);
     ASSERT_STREQ(after, t.c_str());
+}
+
+
+static std::string StdStringFunction(const std::string& ss)
+{
+    return ss + "s";
+}
+
+static qcc::String QccStringFunction(const qcc::String& qs)
+{
+    return qs + "q";
+}
+
+TEST(StringTest, stdStringIop) {
+    // Most of the test cases here are actually compile-time compatibility tests.
+    qcc::String qs1("s1");
+    qcc::String qs2("s2");
+
+    std::string ss1("s1");
+    std::string ss2("s2");
+
+    // Mixed comparison
+    ASSERT_TRUE(qs1 == ss1);
+    ASSERT_FALSE(qs1 == ss2);
+    ASSERT_TRUE(qs1 < ss2);
+    ASSERT_TRUE(qs2 > ss1);
+
+    // Mixed copy constructor
+    qcc::String tqs = ss1;
+    std::string tss = qs1;
+    ASSERT_STREQ(qs1.c_str(), tqs.c_str());  // verify contents
+    ASSERT_STREQ(ss1.c_str(), tss.c_str());  // verify contents
+    ASSERT_EQ(qs1.data(), tss.data());  // verify pointer
+    ASSERT_EQ(ss1.data(), tqs.data());  // verify pointer
+
+    // Mixed assignment
+    tqs = ss2;
+    tss = qs2;
+    ASSERT_STREQ(qs2.c_str(), tqs.c_str());  // verify contents
+    ASSERT_STREQ(ss2.c_str(), tss.c_str());  // verify contents
+    ASSERT_EQ(qs2.data(), tss.data());  // verify pointer
+    ASSERT_EQ(ss2.data(), tqs.data());  // verify pointer
+
+    // Mixed append
+    tqs.append(ss1);
+    tss.append(qs1);
+    ASSERT_STREQ("s2s1", tqs.c_str());
+    ASSERT_STREQ("s2s1", tss.c_str());
+
+    // Mixed +
+    tqs = qs1 + ss1;
+    tss = qs1 + ss1;
+    ASSERT_STREQ("s1s1", tqs.c_str());
+    ASSERT_STREQ("s1s1", tss.c_str());
+    tqs = ss2 + qs2;
+    tss = ss2 + qs2;
+    ASSERT_STREQ("s2s2", tqs.c_str());
+    ASSERT_STREQ("s2s2", tss.c_str());
+
+    // Mixed function parameters
+    ASSERT_STREQ("s1s", StdStringFunction(qs1).c_str());
+    ASSERT_STREQ("s2q", QccStringFunction(ss2).c_str());
+
+    // Mixed compare methods
+    ASSERT_EQ(0, ss1.compare(qs1));
+    ASSERT_EQ(0, qs2.compare(ss2));
+
+    // IO stream tests
+    std::ostringstream oss;
+    oss << qs1 << ss2;
+    oss << ss1 << qs2;
+    ASSERT_STREQ("s1s2s1s2", oss.str().c_str());
 }

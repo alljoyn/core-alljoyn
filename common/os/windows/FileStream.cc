@@ -236,7 +236,7 @@ FileSink::FileSink(qcc::String fileName, Mode mode) : handle(INVALID_HANDLE_VALU
         begin += 2;
     }
 
-    for (size_t end = fileName.find('\\', begin); end != String::npos; end = fileName.find('\\', begin)) {
+    for (size_t end = fileName.find("\\", begin); end != String::npos; end = fileName.find("\\", begin)) {
 
 
         /* Skip consecutive slashes */

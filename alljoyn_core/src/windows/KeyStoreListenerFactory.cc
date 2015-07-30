@@ -154,20 +154,42 @@ class DefaultKeyStoreListener : public KeyStoreListener {
     }
 
     QStatus StoreRequest(KeyStore& keyStore) {
+
+        class BufferSink : public Sink {
+          public:
+            virtual ~BufferSink() { }
+
+            QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent)
+            {
+                const uint8_t* start = static_cast<const uint8_t*>(buf);
+                const uint8_t* end = start + numBytes;
+                sbuf.reserve(sbuf.size() + numBytes);
+                sbuf.insert(sbuf.end(), start, end);
+                numSent = numBytes;
+                return ER_OK;
+            }
+            const std::vector<uint8_t>& GetBuffer() const { return sbuf; }
+            void SecureClear() { sbuf.assign(sbuf.size(), 0); }
+
+          private:
+            std::vector<uint8_t> sbuf;    /**< storage for byte stream */
+        };
+
+
         QStatus status;
         FileSink sink(fileName, FileSink::PRIVATE);
-        StringSink stringBuffer;
+        BufferSink buffer;
         DATA_BLOB dataIn = { 0 };
         DATA_BLOB dataOut = { 0 };
         size_t pushed = 0;
 
         if (sink.IsValid()) {
             sink.Lock(true);
-            status = keyStore.Push(stringBuffer);
+            status = keyStore.Push(buffer);
 
             if (status == ER_OK) {
-                dataIn.pbData = (BYTE*)stringBuffer.GetString().data();
-                dataIn.cbData = stringBuffer.GetString().size();
+                dataIn.pbData = (BYTE*)buffer.GetBuffer().data();
+                dataIn.cbData = buffer.GetBuffer().size();
                 if (!CryptProtectData(&dataIn, NULL, NULL, NULL, NULL, 0, &dataOut)) {
                     status = ER_BUS_CORRUPT_KEYSTORE;
                     QCC_LogError(status, ("CryptProtectData writing keystore failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
@@ -191,7 +213,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
             QCC_LogError(status, ("Cannot write key store to %s", fileName.c_str()));
         }
 
-        stringBuffer.GetString().secure_clear();
+        buffer.SecureClear();
         LocalFree(dataOut.pbData);
 
         return status;

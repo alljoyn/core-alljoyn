@@ -407,7 +407,7 @@ void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, M
  */
 #define SESSION_KEY_EXPIRATION (60 * 60 * 24 * 2)
 
-QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& verifier, KeyBlob::Role role)
+QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, const vector<uint8_t>& seed, qcc::String& verifier, KeyBlob::Role role)
 {
     assert(bus);
     QStatus status;
@@ -506,7 +506,13 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
     } else {
         qcc::String nonce = RandHexString(NONCE_LEN);
         qcc::String verifier;
-        status = KeyGen(peerState, msg->GetArg(2)->v_string.str + nonce, verifier, KeyBlob::RESPONDER);
+        auto str = reinterpret_cast<const uint8_t*>(msg->GetArg(2)->v_string.str);
+        auto len = msg->GetArg(2)->v_string.len;
+        vector<uint8_t> seed;
+        seed.reserve(len + nonce.size());
+        seed.insert(seed.end(), str, str + len);
+        AppendStringToVector(nonce, seed);
+        status = KeyGen(peerState, seed, verifier, KeyBlob::RESPONDER);
         if (status == ER_OK) {
             QCC_DbgHLPrintf(("GenSessionKey succeeds for peer %s", msg->GetSender()));
             MsgArg replyArgs[2];
@@ -1168,7 +1174,13 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                 /*
                  * The response completes the seed string so we can generate the session key.
                  */
-                status = KeyGen(peerState, nonce + replyMsg->GetArg(0)->v_string.str, verifier, KeyBlob::INITIATOR);
+                auto str = reinterpret_cast<const uint8_t*>(replyMsg->GetArg(0)->v_string.str);
+                auto len = replyMsg->GetArg(0)->v_string.len;
+                vector<uint8_t> seed;
+                seed.reserve(len + nonce.size());
+                AppendStringToVector(nonce, seed);
+                seed.insert(seed.end(), str, str + len);
+                status = KeyGen(peerState, seed, verifier, KeyBlob::INITIATOR);
                 QCC_DbgHLPrintf(("Initiator KeyGen after receiving response from sender %s", busName.c_str()));
                 if ((status == ER_OK) && (verifier != replyMsg->GetArg(1)->v_string.str)) {
                     status = ER_AUTH_FAIL;

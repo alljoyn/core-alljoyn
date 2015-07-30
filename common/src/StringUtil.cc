@@ -92,7 +92,8 @@ qcc::String AJ_CALL qcc::HexStringToByteString(const qcc::String& hex, char sepa
     } else {
         len = hex.length() / 2;
     }
-    qcc::String result(0, '\0', len);
+    qcc::String result;
+    result.reserve(len);
     qcc::String::const_iterator it = hex.begin();
     for (size_t i = 0; i < len; i++) {
         if (separator && (i != 0)) {
@@ -403,7 +404,7 @@ double AJ_CALL qcc::StringToDouble(const qcc::String& inStr)
         }
         if ((*it == 'e') || (*it == 'E')) {
             ++it;
-            qcc::String exponentString = qcc::String(it, inStr.end() - it);
+            qcc::String exponentString = qcc::String(it, inStr.end());
 
             // verify that the exponent portion is sane
             qcc::String::const_iterator expStrIter = exponentString.begin();
@@ -439,7 +440,7 @@ double AJ_CALL qcc::StringToDouble(const qcc::String& inStr)
 
 qcc::String AJ_CALL qcc::LineBreak(const qcc::String& inStr, size_t maxLen, size_t indent)
 {
-    qcc::String indentStr(' ', indent);
+    qcc::String indentStr(indent, ' ');
     qcc::String outStr;
     outStr.reserve(inStr.size() + maxLen + (inStr.size() / maxLen) * (indent + 1));
     size_t pos = 0;
@@ -497,6 +498,14 @@ qcc::String AJ_CALL qcc::StringVectorToString(const vector<qcc::String>* list, c
         }
     }
     return out;
+}
+
+
+void AJ_CALL qcc::AppendStringToVector(const qcc::String& str, vector<uint8_t>& v)
+{
+    auto begin = reinterpret_cast<const uint8_t*>(str.data());
+    auto end = begin + str.size();
+    v.insert(v.end(), begin, end);
 }
 
 bool AJ_CALL qcc::IsDecimalDigit(char c)

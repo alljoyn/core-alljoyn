@@ -59,7 +59,7 @@ LOCAL_C_INCLUDES := \
 # NOTE2: flag "-Wno-write-strings" removes warning about deprecated conversion
 #        from string constant to �char*�
 #
-LOCAL_CFLAGS := -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DANDROID
+LOCAL_CFLAGS := -std=c++11 -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DANDROID
 
 # The LOCAL_SRC_FILES variables must contain a list of C and/or C++ source
 # files that will be built and assembled into a module. Note that you should

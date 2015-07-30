@@ -214,14 +214,14 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
         QCC_DbgPrintf(("Creating empty PBO internal: %p", this));
     }
     Internal(BusAttachment& bus,
-             String path,
-             String service,
+             const char* objPath,
+             const char* service,
              SessionId sessionId,
              bool isSecure) :
         bus(&bus),
-        path(path),
-        serviceName(service),
-        uniqueName((serviceName[0] == ':') ? service : ""),
+        path(objPath ? objPath : ""),
+        serviceName(service ? service : ""),
+        uniqueName((!serviceName.empty() && (serviceName[0] == ':')) ? serviceName : ""),
         sessionId(sessionId),
         hasProperties(false),
         isSecure(isSecure),
@@ -232,15 +232,15 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
         QCC_DbgPrintf(("Creating PBO internal: %p   path=%s   serviceName=%s   uniqueName=%s", this, path.c_str(), serviceName.c_str(), uniqueName.c_str()));
     }
     Internal(BusAttachment& bus,
-             String path,
-             String serviceName,
-             String uniqueName,
+             const char* objPath,
+             const char* service,
+             const char* unique,
              SessionId sessionId,
              bool isSecure) :
         bus(&bus),
-        path(path),
-        serviceName(serviceName),
-        uniqueName(uniqueName),
+        path(objPath ? objPath : ""),
+        serviceName(service ? service : ""),
+        uniqueName(unique ? unique : ""),
         sessionId(sessionId),
         hasProperties(false),
         isSecure(isSecure),
@@ -1356,7 +1356,7 @@ size_t ProxyBusObject::GetManagedChildren(void* children, size_t numChildren)
 ProxyBusObject* ProxyBusObject::GetChild(const char* inPath)
 {
     /* Add a trailing slash to this path */
-    qcc::String pathSlash = (internal->path == "/") ? internal->path : internal->path + '/';
+    qcc::String pathSlash = (internal->path == "/") ? internal->path : internal->path + "/";
 
     /* Create absolute version of inPath */
     qcc::String inPathStr = ('/' == inPath[0]) ? inPath : pathSlash + inPath;
@@ -1406,7 +1406,7 @@ QStatus ProxyBusObject::AddChild(const ProxyBusObject& child)
     qcc::String childPath = child.GetPath();
 
     /* Sanity check to make sure path is possible */
-    if (((internal->path.size() > 1) && (0 != childPath.find(internal->path + '/'))) ||
+    if (((internal->path.size() > 1) && (0 != childPath.find(internal->path + "/"))) ||
         ((internal->path.size() == 1) && (childPath[0] != '/')) ||
         (childPath[childPath.length() - 1] == '/')) {
         return ER_BUS_BAD_CHILD_PATH;
@@ -1454,7 +1454,7 @@ QStatus ProxyBusObject::RemoveChild(const char* inPath)
     QStatus status;
 
     /* Add a trailing slash to this path */
-    qcc::String pathSlash = (internal->path == "/") ? internal->path : internal->path + '/';
+    qcc::String pathSlash = (internal->path == "/") ? internal->path : internal->path + "/";
 
     /* Create absolute version of inPath */
     qcc::String childPath = ('/' == inPath[0]) ? inPath : pathSlash + inPath;

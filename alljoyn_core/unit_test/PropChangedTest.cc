@@ -311,7 +311,7 @@ static const InterfaceDescription* SetupInterface(BusAttachment& bus,
         EXPECT_TRUE(tmp != NULL);
         if (tmp != NULL) {
             for (int i = ip.rangeProp.first; i <= ip.rangeProp.last; i++) {
-                String name = String("P").append('0' + i);
+                String name = String("P").append(1, '0' + i);
                 AddProperty(*tmp, name.c_str(), ip.emitsChanged.c_str());
             }
             if (ip.emitsFalse) {
@@ -525,7 +525,7 @@ static String BuildXML(const TestParameters& tp)
         xml.append("\">\n");
         for (int num = ip.rangeProp.first; num <= ip.rangeProp.last; num++) {
             String name("P");
-            name.append('0' + num);
+            name.append(1, '0' + num);
             BuildXMLProperty(xml, name, ip.emitsChanged.c_str());
         }
         if (ip.emitsFalse) {
@@ -783,7 +783,7 @@ class PropChangedTestProxyBusObject :
                 ASSERT_EQ(ALLJOYN_DICT_ENTRY, elems[i].typeId);
                 // validate property name
                 ASSERT_EQ(ALLJOYN_STRING, elems[i].v_dictEntry.key->typeId);
-                String name = String("P").append('0' + num);
+                String name = String("P").append(1, '0' + num);
                 EXPECT_STREQ(name.c_str(), elems[i].v_dictEntry.key->v_string.str);
                 // validate property value
                 ASSERT_EQ(ALLJOYN_VARIANT, elems[i].v_dictEntry.val->typeId);
@@ -800,7 +800,7 @@ class PropChangedTestProxyBusObject :
 
                 // validate property name
                 ASSERT_EQ(ALLJOYN_STRING, elems[i].typeId);
-                String name = String("P").append('0' + num);
+                String name = String("P").append(1, '0' + num);
                 EXPECT_STREQ(name.c_str(), elems[i].v_string.str);
             }
         }

@@ -193,7 +193,7 @@ FileSink::FileSink(qcc::String fileName, Mode mode)
 
     /* Create the intermediate directories */
     size_t begin = 0;
-    for (size_t end = fileName.find('/', begin); end != String::npos; end = fileName.find('/', begin)) {
+    for (size_t end = fileName.find("/", begin); end != String::npos; end = fileName.find("/", begin)) {
 
         /* Skip consecutive slashes */
         if (begin == end) {

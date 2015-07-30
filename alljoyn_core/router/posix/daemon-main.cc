@@ -597,7 +597,7 @@ int daemon(OptParse& opts) {
         } else {
             Log(LOG_INFO, "Setting up transport for address: %s\n", addrStr.c_str());
             if (!listenSpecs.empty()) {
-                listenSpecs.append(';');
+                listenSpecs.append(1, ';');
             }
             listenSpecs.append(addrStr);
         }
