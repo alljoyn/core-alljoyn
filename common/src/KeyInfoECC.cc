@@ -93,31 +93,36 @@ QStatus KeyInfoECC::Import(const uint8_t* buf, size_t count)
     return ER_OK;
 }
 
-qcc::String KeyInfoECC::ToString() const
+qcc::String KeyInfoECC::ToString(size_t indent) const
 {
     qcc::String str;
-    str += "KeyInfo:\n";
-    str += "  format: ";
-    str += U32ToString(GetFormat());
-    str += "  algorithm: ";
-    str += U32ToString(GetAlgorithm());
-    str += "  curve: ";
-    str += U32ToString(GetCurve());
+    qcc::String in = qcc::String(indent, ' ');
+    str += in + "<keyInfo>\n";
+    str += in + "  <format>" + U32ToString(GetFormat()) + "</format>\n";
+    str += in + "  <algorithm>" + U32ToString(GetAlgorithm()) + "</algorithm>\n";
+    str += in + "  <curve>" + U32ToString(GetCurve()) + "</curve>\n";
     if (GetKeyIdLen() > 0) {
-        str += "  ID: ";
-        str += BytesToHexString(GetKeyId(), GetKeyIdLen());
+        str += in + "  <id>" + BytesToHexString(GetKeyId(), GetKeyIdLen()) + "</id>\n";
     }
-    str += "\n";
+    str += in + "</keyInfo>\n";
     return str;
 }
 
-qcc::String KeyInfoNISTP256::ToString() const
+qcc::String KeyInfoNISTP256::ToString(size_t indent) const
 {
     qcc::String str;
-    str += KeyInfoECC::ToString();
-    str += "  public key: ";
+    qcc::String in = qcc::String(indent, ' ');
+    str += in + "<NISP256KeyInfo>\n";
+    str += in + "  <format>" + U32ToString(GetFormat()) + "</format>\n";
+    str += in + "  <algorithm>" + U32ToString(GetAlgorithm()) + "</algorithm>\n";
+    str += in + "  <curve>" + U32ToString(GetCurve()) + "</curve>\n";
+    if (GetKeyIdLen() > 0) {
+        str += in + "  <id>" + BytesToHexString(GetKeyId(), GetKeyIdLen()) + "</id>\n";
+    }
+    str += in + "  <publickey>";
     str += BytesToHexString((const uint8_t*) GetPublicKey(), sizeof(ECCPublicKey));
-    str += "\n";
+    str += "</publickey>\n";
+    str += in + "</NISP256KeyInfo>\n";
     return str;
 }
 

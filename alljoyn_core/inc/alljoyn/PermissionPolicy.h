@@ -137,9 +137,12 @@ class PermissionPolicy {
 
             /**
              * A String representation of the Member
+             *
+             * @param indent Number of space chars to indent the start of each line
+             *
              * @return A String representation of the Member
              */
-            qcc::String ToString() const;
+            qcc::String ToString(size_t indent = 0) const;
 
             /**
              * Comparison operators equality
@@ -222,9 +225,12 @@ class PermissionPolicy {
 
         /**
          * String representation of the Rule
+         *
+         * @param indent Number of space chars to indent the start of each line
+         *
          * @return string representation of the rule
          */
-        qcc::String ToString() const;
+        qcc::String ToString(size_t indent = 0) const;
 
         /**
          * Comparison operators equality
@@ -335,7 +341,14 @@ class PermissionPolicy {
          */
         const qcc::KeyInfoNISTP256* GetKeyInfo() const;
 
-        qcc::String ToString() const;
+        /**
+         * A String representation of the Peer
+         *
+         * @param indent Number of space chars to indent the start of each line
+         *
+         * @return A String representation of the Peer
+         */
+        qcc::String ToString(size_t indent = 0) const;
 
         /**
          * Comparison operators equality
@@ -432,9 +445,12 @@ class PermissionPolicy {
 
         /**
          * Get a string representation of the Acl
+         *
+         * @param indent Number of space chars to indent the start of each line
+         *
          * @return a string representation of the Acl
          */
-        qcc::String ToString() const;
+        qcc::String ToString(size_t indent = 0) const;
 
         /**
          * Comparison operators equality
@@ -600,7 +616,14 @@ class PermissionPolicy {
         return acls;
     }
 
-    qcc::String ToString() const;
+    /**
+     * A String representation of the PermissionPolicy
+     *
+     * @param indent Number of space chars to indent the start of each line
+     *
+     * @return A String representation of the PermissionPolicy
+     */
+    qcc::String ToString(size_t indent = 0) const;
 
     /**
      * Comparison operator equality
