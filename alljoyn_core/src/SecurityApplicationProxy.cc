@@ -336,12 +336,8 @@ QStatus SecurityApplicationProxy::Reset()
 
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "Reset", NULL, 0, reply);
     if (ER_OK != status) {
-        if (reply->GetErrorName() != NULL) {
-            if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_PERMISSION_DENIED) == 0) {
-                status = ER_PERMISSION_DENIED;
-            } else {
-                QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
-            }
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
         return status;
     }
