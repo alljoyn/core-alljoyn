@@ -18,8 +18,8 @@
   -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.alljoyn.about.test"
-    android:versionCode="15040097"
-    android:versionName="15.04.00a" >
+    android:versionCode="15040098"
+    android:versionName="15.04.00b" >
 
 
 

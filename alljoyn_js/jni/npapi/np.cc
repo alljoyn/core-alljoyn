@@ -99,7 +99,7 @@ NP_EXPORT(char*) NP_GetPluginVersion()
 {
     InitializeDebug();
     QCC_DbgPrintf(("%s", __FUNCTION__));
-    return const_cast<char*>("15.04.00a");
+    return const_cast<char*>("15.04.00b");
 }
 
 NP_EXPORT(char*) NP_GetMIMEDescription()
