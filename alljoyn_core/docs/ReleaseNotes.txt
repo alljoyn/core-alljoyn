@@ -1,4 +1,4 @@
-AllJoyn Version 15.04a Release Notes
+AllJoyn Version 15.04b Release Notes
 =====================================
 
 Fully Validated Platforms
@@ -13,10 +13,10 @@ Fully Validated Platforms
 
 See the release review page for other platforms that have not been fully
 verified, but may work:
-wiki.allseenalliance.org/core/core_15.04_release_review?&#regression_test
+https://wiki.allseenalliance.org/core/core_15.04_release_review?&#regression_test
 
 
-Features added in Version 15.04a
+Features added in Version 15.04b
 --------------------------------
 * Property cache feature which adds a simple, optional cache to ProxyBusObject
   that keeps track of property values as received in GetProperty,
@@ -40,7 +40,7 @@ Features added in Version 15.04a
 * Support for iOS 8.1 (ASACORE-936)
 
 
-Issues Addressed in Version 15.04a
+Issues Addressed in Version 15.04b
 ----------------------------------
 ASACORE-370  AllJoyn does not build with Android 4.4 (KitKat) sources
 ASACORE-732  Duplicate About announcements received while running large number
@@ -81,12 +81,12 @@ ASACORE-2032 Reduce error traces in "happy" path
 ASACORE-2035 Fix memory leaks in AboutData and AboutObjectDescription
 ASACORE-2048 SessionLost callback cannot be used reliably for destroying
              SessionListener object
+ASACORE-2247 Allow little-endian CTR block counter to go past 511 (Android)
 
 For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20fixVersion%20in%20%28%2215.04%22%2C%20%2215.04a%22%29%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20fixVersion%20in%20(%2215.04%22%2C%20%2215.04a%22%2C%20%2215.04b%22)%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
 
-
-Known Issues in Version 15.04a
+Known Issues in Version 15.04b
 ------------------------------
 ASACORE-49   Multipoint session lost on joiner side and not binder side
              prevents joiner from rejoining
@@ -121,8 +121,7 @@ ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
 ASACORE-1907 Permission Functionality in Android does not work correctly
 
 For a complete list of open issues:
-https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
-
+https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20AND%20status%20not%20in%20(closed%2C%20resolved)%20AND%20type%20not%20in%20(task%2C%20%22New%20Feature%22)%20%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20priority%20DESC%2C%20id%20ASC
 
 Compatibility
 -------------
@@ -176,13 +175,13 @@ Version 15.04:
   changed to accept connections on TCP port 9955 instead of TCP port 9956
   (ASACORE-2000); the default bus connect spec on Windows has been changed
   accordingly. Older Windows apps (using the older default bus connect spec)
-  will no longer be able to connect to a 15.04a routing node. These apps should
+  will no longer be able to connect to a 15.04 routing node. These apps should
   be recompiled using the new default connect spec. They may also require
   changes to your firewall settings.
-* Another impact of ASACORE-2000 is 15.04a Bundled Routers now only accept
+* Another impact of ASACORE-2000 is 15.04 Bundled Routers now only accept
   connections on ephemeral TCP and UDP ports and don’t accept any connections
   using other transports. This means that applications using the default bus
-  connect spec can no longer connect to a 15.04a Bundled Router on the local
+  connect spec can no longer connect to a 15.04 Bundled Router on the local
   machine that is using the default bundledConfig settings.
 * The SessionListener::SessionLost(SessionId sessionId) callback (which has been
   deprecated since before 14.02) has been removed (ASACORE-2048). Applications
@@ -206,6 +205,7 @@ For details of previous releases/release families please see the release notes:
 
 Change history
 -------------
+15.04b - Bug fixes: ASACORE-2247, ASACORE-2270
 15.04a - Bug fixes: ASACORE-1917, ASACORE-1920, ASACORE-1921, ASACORE-1929,
          ASACORE-1934, ASACORE-1946, ASACORE-1954, ASACORE-1959, ASACORE-1960,
          ASACORE-1961, ASACORE-1975, ASACORE-1977, ASACORE-1978, ASACORE-2000,
