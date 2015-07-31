@@ -195,7 +195,32 @@ class Stream : public Source, public Sink {
     /** Destructor */
     virtual ~Stream() { }
 
-    /* Close the stream */
+    /**
+     * Used to perform an 'orderly' release of the stream.  The orderly release
+     * is as follows:
+     * -# PushBytes() or PushBytesAndFds() to transmit all bytes.
+     * -# Shutdown()
+     * -# PullBytes() or PullBytesAndFds() until the receive side is drained.
+     * -# Close()
+     *
+     * @return #ER_OK if successful
+     */
+    virtual QStatus Shutdown() { return ER_OK; }
+
+    /**
+     * Sets the stream to discard any queued data and immediately tear down
+     * the resource on Close().
+     *
+     * This is used to perform an 'abortive' release of the stream.  The
+     * abortive release is as follows:
+     * -# Abort()
+     * -# Close()
+     *
+     * @return #ER_OK if successful
+     */
+    virtual QStatus Abort() { return ER_OK; }
+
+    /** Close the stream */
     virtual void Close() { }
 };
 

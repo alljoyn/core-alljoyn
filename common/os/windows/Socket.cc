@@ -315,29 +315,25 @@ QStatus Accept(SocketFd sockfd, SocketFd& newSockfd)
 }
 
 
-QStatus Shutdown(SocketFd sockfd)
+QStatus Shutdown(SocketFd sockfd, ShutdownHow how)
 {
     QStatus status = ER_OK;
     int ret;
 
-    QCC_DbgHLPrintf(("Shutdown(sockfd = %d)", sockfd));
+    QCC_DbgHLPrintf(("Shutdown(sockfd = %d, how = %d)", sockfd, how));
 
-    ret = shutdown(static_cast<SOCKET>(sockfd), SD_BOTH);
+    ret = shutdown(static_cast<SOCKET>(sockfd), static_cast<int>(how));
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-    } else {
-        /*
-         * The winsock documentation recommends flushing data from the IP transport
-         * by receiving until the recv returns 0 or fails.
-         */
-        do {
-            char buf[64];
-            ret = recv(static_cast<SOCKET>(sockfd), buf, sizeof(buf), 0);
-        } while (ret > 0);
+        QCC_LogError(status, ("Shutdown socket (sockfd = %d): %s", sockfd, GetLastErrorString().c_str()));
     }
     return status;
 }
 
+QStatus Shutdown(SocketFd sockfd)
+{
+    return Shutdown(sockfd, QCC_SHUTDOWN_RDWR);
+}
 
 void Close(SocketFd sockfd)
 {

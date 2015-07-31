@@ -75,7 +75,7 @@ class BundledRouter : public RouterLauncher, public TransportFactoryContainer {
     qcc::Mutex lock;
     std::set<NullTransport*> transports;
     ConfigDB* config;
-#ifndef NDEBUG
+#ifdef TEST_CONFIG
     qcc::String configFile;
 #endif
 };

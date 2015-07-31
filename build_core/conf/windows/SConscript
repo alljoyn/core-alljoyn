@@ -48,10 +48,9 @@ if env['OS'] == 'win10':
 elif env['OS'] == 'win7':
     # Windows 7
     env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN7')])
-elif env['OS'] == 'winxp':
-    # WinXP SP3
-    env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WINXP')])
-    env.Append(CPPDEFINES=[('NTDDI_VERSION', '0x05010300')])
+else:
+    print 'Error: Unknown Windows OS type: ' + env['OS']
+    Exit(1)
                                
 #Suppress specific warnings
 # C4244 'conversion' conversion from one type to another type results in a possible
@@ -108,8 +107,9 @@ env.Append(LINKFLAGS=['/NODEFAULTLIB:libcmt.lib'])
 # using the /Z7 option to solve this problem.  Since another more acceptable
 # solution has not yet been found we are going with the recommendation from the
 # SCons documentation. 
-if env['VARIANT'] == 'debug':
-    env['CCPDBFLAGS'] = '/Z7'
+env['CCPDBFLAGS'] = '/Z7'
+env['PDB'] = '${TARGET.base}.pdb'
+env.Append(LINKFLAGS=['/PDB:${TARGET.base}.pdb'])
 
 # Debug/Release variants
 if env['VARIANT'] == 'debug':
@@ -123,9 +123,9 @@ if env['VARIANT'] == 'debug':
    env.Append(LINKFLAGS=['/debug'])
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
 else:
-   # MSVC 2010 an newer require _ITERATOR_DEBUG_LEVEL specified
-   if env['MSVC_VERSION'] >= '10.0':
-       env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
+   # MSVC 2010 and newer require _ITERATOR_DEBUG_LEVEL specified
+   env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
+   
    env.Append(CFLAGS=['/MD', '/Gy', '/O1', '/Ob2'])
    env.Append(CXXFLAGS=['/MD', '/Gy', '/O1', '/Ob2', '/W4', '/WX'])
    env.Append(LINKFLAGS=['/opt:ref'])

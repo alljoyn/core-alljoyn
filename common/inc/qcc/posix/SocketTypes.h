@@ -121,6 +121,15 @@ typedef enum {
     QCC_MSG_OOB =       MSG_OOB         /**< Out of band data (SOCK_STREAM sockets). */
 } SendMsgFlags;
 
+/**
+ * How to shutdown parts of a full-duplex connection.
+ */
+typedef enum {
+    QCC_SHUTDOWN_RD = SHUT_RD, /**< Further receptions will be disallowed */
+    QCC_SHUTDOWN_WR = SHUT_WR, /**< Further transmissions will be disallowed */
+    QCC_SHUTDOWN_RDWR = SHUT_RDWR /**< Further receptions and transmissions will be disallowed */
+} ShutdownHow;
+
 }
 
 #endif

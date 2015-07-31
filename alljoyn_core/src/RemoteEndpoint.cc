@@ -454,12 +454,13 @@ QStatus _RemoteEndpoint::Start()
     if (status == ER_OK) {
         /* Register endpoint with router */
         status = router.RegisterEndpoint(bep);
-
-        if (status != ER_OK) {
-            /* Failed to register with iodispatch */
-            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
-            router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
-        }
+    } else {
+        /*
+         * Set started to false only if StartStream fails.
+         * If registering with the router or enabling read callback fails,
+         * we still need to Join the endpoint.
+         */
+        internal->started = false;
     }
 
     if (status == ER_OK) {
@@ -468,12 +469,10 @@ QStatus _RemoteEndpoint::Start()
         if (status != ER_OK) {
             /* Failed to start read with iodispatch */
             internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
-            router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
         }
     }
     if (status != ER_OK) {
         Invalidate();
-        internal->started = false;
     }
 
     return status;
@@ -489,7 +488,6 @@ QStatus _RemoteEndpoint::Start(uint32_t idleTimeout, uint32_t probeTimeout, uint
     internal->maxControlMessages = sendTimeout * MAX_CONTROL_MSGS_PER_SECOND;
     if (status != ER_OK) {
         Invalidate();
-        internal->started = false;
     }
     return status;
 }
@@ -805,7 +803,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                 }
 
                 /* Check pause condition. Block until stopped */
-                if (internal->armRxPause && internal->started && (msg->GetType() == MESSAGE_METHOD_RET)) {
+                if (internal->armRxPause && !internal->stopping && (msg->GetType() == MESSAGE_METHOD_RET)) {
                     status = ER_BUS_ENDPOINT_CLOSING;
                     internal->bus.GetInternal().GetIODispatch().DisableReadCallback(internal->stream);
                     return ER_OK;
