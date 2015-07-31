@@ -214,12 +214,12 @@ static NSString * const kPathPrefix = @"/test/";
         [self.aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
 
         AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-        [ajSoftwareVersion setValue:@"s", "15.04.00a"];
+        [ajSoftwareVersion setValue:@"s", "15.04.00b"];
         [ajSoftwareVersion stabilize];
         [self.aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
 
         AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-        [hwSoftwareVersion setValue:@"s", "15.04.00a"];
+        [hwSoftwareVersion setValue:@"s", "15.04.00b"];
         [hwSoftwareVersion stabilize];
         [self.aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
 

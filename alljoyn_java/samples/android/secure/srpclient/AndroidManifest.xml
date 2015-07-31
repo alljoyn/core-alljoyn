@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
 	package="org.alljoyn.bus.samples.srpclient"
-	android:versionCode="15040097"
-	android:versionName="15.04.00a">
+	android:versionCode="15040098"
+	android:versionName="15.04.00b">
     <uses-sdk android:minSdkVersion="16" />
     <!-- Permission required to use the TCP transport -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
