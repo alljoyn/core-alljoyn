@@ -24,7 +24,9 @@
 
 #include <assert.h>
 #include <qcc/platform.h>
+#include <qcc/GUID.h>
 #include <qcc/CryptoECC.h>
+#include <qcc/KeyInfoECC.h>
 
 namespace qcc {
 
@@ -62,6 +64,33 @@ extern const qcc::String OID_BASIC_CONSTRAINTS;
  * The sha256NoSign Hash Algorithm OID (2.16.840.1.101.3.4.2.1)
  */
 extern const qcc::String OID_DIG_SHA256;
+/**
+ * custom OID for the digest of external data (1.3.6.1.4.1.44924.1.2)
+ */
+extern const qcc::String OID_CUSTOM_DIGEST;
+/**
+ * custom OID for the Allseen identity certificate EKU (1.3.6.1.4.1.44924.1.1)
+ */
+extern const qcc::String OID_CUSTOM_EKU_IDENTITY;
+/**
+ * custom OID for the Allseen membership certificate EKU (1.3.6.1.4.1.44924.1.5)
+ */
+extern const qcc::String OID_CUSTOM_EKU_MEMBERSHIP;
+/**
+ * Authority Key Identifier OID (2.5.29.35)
+ */
+extern const qcc::String OID_AUTHORITY_KEY_IDENTIFIER;
+
+/**
+ * custom OID for the Allseen security group Id (1.3.6.1.4.1.44924.1.3)
+ */
+extern const qcc::String OID_CUSTOM_SECURITY_GROUP_ID;
+
+/**
+ * custom OID for the Allseen identity alias (1.3.6.1.4.1.44924.1.4)
+ */
+extern const qcc::String OID_CUSTOM_IDENTITY_ALIAS;
+
 /** @} */
 /**
  * X.509 Certificate
@@ -69,6 +98,11 @@ extern const qcc::String OID_DIG_SHA256;
 class CertificateX509 {
 
   public:
+
+    /**
+     * The Authority key identifier size in bytes
+     */
+    static const size_t AUTHORITY_KEY_ID_SZ = 8;
 
     /**
      * The validity period
@@ -88,10 +122,25 @@ class CertificateX509 {
         ENCODING_X509_DER_PEM = 1  ///< X.509 DER PEM format
     } EncodingType;
 
+    typedef enum {
+        UNRESTRICTED_CERTIFICATE,  ///< Unrestricted certificate
+        IDENTITY_CERTIFICATE,      ///< identity certificate
+        MEMBERSHIP_CERTIFICATE,    ///< membership certificate
+        INVALID_CERTIFICATE        ///< certificate not valid for any AllJoyn purpose
+    } CertificateType;
+
     /**
      * Default Constructor
      */
-    CertificateX509() : encodedLen(0), encoded(NULL), serialLen(0), serial(NULL), ca(0)
+    CertificateX509() : type(UNRESTRICTED_CERTIFICATE), serialLen(0), serial(NULL), ca(0)
+    {
+    }
+
+    /**
+     * Constructor
+     * @param type the certificate type.
+     */
+    CertificateX509(CertificateType type) : type(type), serialLen(0), serial(NULL), ca(0)
     {
     }
 
@@ -107,7 +156,7 @@ class CertificateX509 {
      * @param[out] pem the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus EncodeCertificatePEM(qcc::String& pem);
+    QStatus EncodeCertificatePEM(qcc::String& pem) const;
 
     /**
      * Helper function to generate PEM encoded string using a DER encoded string.
@@ -122,14 +171,14 @@ class CertificateX509 {
      * @param der the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus DecodeCertificateDER(const qcc::String& der);
+    virtual QStatus DecodeCertificateDER(const qcc::String& der);
 
     /**
      * Export the certificate as DER encoded.
      * @param[out] der the encoded certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus EncodeCertificateDER(qcc::String& der);
+    QStatus EncodeCertificateDER(qcc::String& der) const;
 
     /**
      * Encode the private key in a PEM string.
@@ -223,6 +272,15 @@ class CertificateX509 {
     QStatus Sign(const ECCPrivateKey* key);
 
     /**
+     * Sign the certificate and generate the authority key identifier.
+     * @param privateKey the ECDSA private key.
+     * @param publicKey the ECDSA public key to generate the authority key
+     *                  identifier.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus SignAndGenerateAuthorityKeyId(const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey);
+
+    /**
      * Verify a self-signed certificate.
      * @return ER_OK for success; otherwise, error code.
      */
@@ -236,10 +294,17 @@ class CertificateX509 {
     QStatus Verify(const ECCPublicKey* key) const;
 
     /**
+     * Verify the certificate against the trust anchor.
+     * @param trustAnchor the trust anchor
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus Verify(const KeyInfoNISTP256& trustAnchor) const;
+
+    /**
      * Verify the validity period of the certificate.
      * @return ER_OK for success; otherwise, error code.
      */
-    QStatus VerifyValidity();
+    QStatus VerifyValidity() const;
 
     /**
      * Set the serial number field
@@ -250,8 +315,12 @@ class CertificateX509 {
     {
         serialLen = len;
         delete[] this->serial;
-        this->serial = new uint8_t[serialLen];
-        memcpy(this->serial, serialNumber, serialLen);
+        if ((serialLen > 0) && serialNumber) {
+            this->serial = new uint8_t[serialLen];
+            memcpy(this->serial, serialNumber, serialLen);
+        } else {
+            this->serial = NULL;
+        }
     }
 
     /**
@@ -357,6 +426,7 @@ class CertificateX509 {
     {
         subject.SetCN(cn, len);
     }
+
     /**
      * Get the length of the subject common name field
      * @return the length of the subject common name field
@@ -373,6 +443,44 @@ class CertificateX509 {
     {
         return subject.cn;
     }
+
+    /**
+     * Set the subject alt name field
+     * @param subjectAltName the subject alt name
+     */
+    void SetSubjectAltName(const qcc::String& subjectAltName)
+    {
+        this->subjectAltName = subjectAltName;
+    }
+    /**
+     * Get the subject alt name field
+     * @return the subject alt name
+     */
+    const qcc::String& GetSubjectAltName() const
+    {
+        return subjectAltName;
+    }
+
+    /**
+     * Generate the authority key identifier.
+     * @param issuerPubKey the issuer's public key
+     * @param[out] authorityKeyId the authority key identifier
+     * @return ER_OK for success; otherwise, error code.
+     */
+    static QStatus AJ_CALL GenerateAuthorityKeyId(const qcc::ECCPublicKey* issuerPubKey, qcc::String& authorityKeyId);
+
+    /**
+     * Generate the issuer authority key identifier for the certificate.
+     * @param issuerPubKey the issuer's public key
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus GenerateAuthorityKeyId(const qcc::ECCPublicKey* issuerPubKey);
+
+    const qcc::String& GetAuthorityKeyId() const
+    {
+        return aki;
+    }
+
     /**
      * Set the validity field
      * @param validPeriod the validity period
@@ -426,24 +534,41 @@ class CertificateX509 {
     }
 
     /**
-     * Get the encoded bytes for the certificate
-     * @return the encoded bytes
+     * Set the digest of the external data.
+     * @param digest the digest of the external data
+     * @param count the size of the digest.
      */
-    const uint8_t* GetEncoded();
+    void SetDigest(const uint8_t* digest, size_t size)
+    {
+        this->digest = qcc::String((char*) digest, size);
+    }
 
     /**
-     * Get the length of the encoded bytes for the certificate
-     * @return the length of the encoded bytes
+     * Get the digest of the external data.
+     * @param digest the digest of the external data
      */
-    size_t GetEncodedLen();
+    const uint8_t* GetDigest() const
+    {
+        return (const uint8_t*) digest.data();
+    }
 
     /**
-     * Load the encoded bytes for the certificate
-     * @param encodedBytes the encoded bytes
-     * @param len the length of the encoded bytes
-     * @return ER_OK for success; otherwise, error code.
+     * Get the size of the digest of the external data.
+     * @return the size of the digest of the external data
      */
-    QStatus LoadEncoded(const uint8_t* encodedBytes, size_t len);
+    const size_t GetDigestSize() const
+    {
+        return digest.size();
+    }
+
+    /**
+     * Is the optional digest field present in the certificate?
+     * @return whether this optional field is present in the certificate.
+     */
+    bool IsDigestPresent()
+    {
+        return !digest.empty();
+    }
 
     /**
      * Get the PEM encoded bytes for the certificate
@@ -500,10 +625,14 @@ class CertificateX509 {
     /**
      * Destructor
      */
-    ~CertificateX509()
+    virtual ~CertificateX509()
     {
-        delete [] encoded;
         delete [] serial;
+    }
+
+    const CertificateType GetType() const
+    {
+        return type;
     }
 
     /**
@@ -515,17 +644,57 @@ class CertificateX509 {
      */
     static QStatus AJ_CALL DecodeCertChainPEM(const String& encoded, CertificateX509* certChain, size_t count);
 
+    /**
+     * Copy Constructor for CertificateX509
+     *
+     * @param[in] other    CertificateX509 to copy
+     */
+    CertificateX509(const CertificateX509& other) :
+        type(other.type), tbs(other.tbs), serial(NULL),
+        issuer(other.issuer), subject(other.subject),
+        validity(other.validity), publickey(other.publickey),
+        signature(other.signature), ca(other.ca), digest(other.digest),
+        subjectAltName(other.subjectAltName), aki(other.aki) {
+        SetSerial(other.serial, other.serialLen);
+    }
+
+    /**
+     * Assign operator for CertificateX509
+     *
+     * @param[in] other    CertificateX509 to assign from
+     */
+    CertificateX509& operator=(const CertificateX509& other) {
+        if (&other != this) {
+            type = other.type;
+            tbs = other.tbs;
+
+            SetSerial(other.serial, other.serialLen);
+            issuer = other.issuer;
+            subject = other.subject;
+            validity = other.validity;
+            publickey = other.publickey;
+            signature = other.signature;
+
+            ca = other.ca;
+            digest = other.digest;
+            subjectAltName = other.subjectAltName;
+            aki = other.aki;
+        }
+        return *this;
+    }
+
+    /**
+     * Validate the certificate type of each cert in the certificate chain.
+     * The end-entity cert must have a type.
+     * Any signing cert in the chain must have the same type or unrestricted
+     * type in order to sign the next cert in the chain.
+     * @param[in] certChain the array of certs.
+     * @param[in] count the number of certs
+     * @return true if valid; false, otherwise;
+     */
+    static bool AJ_CALL ValidateCertificateTypeInCertChain(const CertificateX509* certChain, size_t count);
+
   private:
-
-    /**
-     * Assignment operator is private
-     */
-    CertificateX509& operator=(const CertificateX509& other);
-
-    /**
-     * Copy constructor is private
-     */
-    CertificateX509(const CertificateX509& other);
 
     struct DistinguishedName {
         uint8_t* ou;
@@ -556,30 +725,45 @@ class CertificateX509 {
             delete [] ou;
             delete [] cn;
         }
-      private:
-        /* private copy constructor to prevent double freeing of dynamic memory */
-        DistinguishedName(const DistinguishedName&);
-        /* private assign operator to prevent double freeing of dynamic memory */
-        DistinguishedName& operator=(const DistinguishedName&);
+
+        DistinguishedName(const DistinguishedName& other) :
+            ouLen(other.ouLen), cnLen(other.cnLen) {
+            ou = new uint8_t[ouLen];
+            memcpy(ou, other.ou, ouLen);
+            cn = new uint8_t[cnLen];
+            memcpy(cn, other.cn, cnLen);
+        }
+
+        DistinguishedName& operator=(const DistinguishedName& other) {
+            if (&other != this) {
+                ouLen = other.ouLen;
+                cnLen = other.cnLen;
+                delete[] ou;
+                ou = new uint8_t[ouLen];
+                memcpy(ou, other.ou, ouLen);
+                delete[] cn;
+                cn = new uint8_t[cnLen];
+                memcpy(cn, other.cn, cnLen);
+            }
+            return *this;
+        }
     };
 
     QStatus DecodeCertificateTBS();
     QStatus EncodeCertificateTBS();
     QStatus DecodeCertificateName(const qcc::String& dn, CertificateX509::DistinguishedName& name);
-    QStatus EncodeCertificateName(qcc::String& dn, CertificateX509::DistinguishedName& name);
+    QStatus EncodeCertificateName(qcc::String& dn, const CertificateX509::DistinguishedName& name) const;
     QStatus DecodeCertificateTime(const qcc::String& time);
-    QStatus EncodeCertificateTime(qcc::String& time);
+    QStatus EncodeCertificateTime(qcc::String& time) const;
     QStatus DecodeCertificatePub(const qcc::String& pub);
-    QStatus EncodeCertificatePub(qcc::String& pub);
+    QStatus EncodeCertificatePub(qcc::String& pub) const;
     QStatus DecodeCertificateExt(const qcc::String& ext);
-    QStatus EncodeCertificateExt(qcc::String& ext);
+    QStatus EncodeCertificateExt(qcc::String& ext) const;
     QStatus DecodeCertificateSig(const qcc::String& sig);
-    QStatus EncodeCertificateSig(qcc::String& sig);
-    QStatus GenEncoded();
+    QStatus EncodeCertificateSig(qcc::String& sig) const;
 
+    CertificateType type;
     qcc::String tbs;
-    size_t encodedLen;
-    uint8_t* encoded;
 
     size_t serialLen;
     uint8_t* serial;
@@ -588,7 +772,99 @@ class CertificateX509 {
     ValidPeriod validity;
     ECCPublicKey publickey;
     ECCSignature signature;
+    /*
+     * Extensions
+     */
     uint32_t ca;
+    qcc::String digest;
+    qcc::String subjectAltName;
+    qcc::String aki;
+};
+
+class MembershipCertificate : public CertificateX509 {
+
+  public:
+    MembershipCertificate() : CertificateX509(MEMBERSHIP_CERTIFICATE)
+    {
+    }
+    /**
+     * Destructor
+     */
+    virtual ~MembershipCertificate()
+    {
+    }
+
+    /**
+     * Check if a guild is set for this certificate.
+     *
+     * @return true if this certificate has a valid guild set, false otherwise
+     */
+    bool IsGuildSet() const
+    {
+        return GetSubjectAltName().size() > 0;
+    }
+
+    /**
+     * Set the guild GUID
+     * @param guid the guild GUID
+     */
+    void SetGuild(const qcc::GUID128& guid)
+    {
+        qcc::String sgId((const char*) guid.GetBytes(), guid.SIZE);
+        SetSubjectAltName(sgId);
+    }
+
+    /**
+     * Get the guild GUID
+     * @return the guild GUID
+     */
+    GUID128 GetGuild() const
+    {
+        GUID128 guid(0);
+        qcc::String sgId = GetSubjectAltName();
+        if (sgId.size() == GUID128::SIZE) {
+            guid.SetBytes((const uint8_t*) sgId.data());
+        } else if (sgId.size() > 0) {
+            uint8_t bytes[GUID128::SIZE];
+            memset(bytes, 0, GUID128::SIZE);
+            memcpy(bytes, sgId.data(), sgId.size() > GUID128::SIZE ? GUID128::SIZE : sgId.size());
+            guid.SetBytes(bytes);
+        }
+        return guid;
+    }
+};
+
+class IdentityCertificate : public CertificateX509 {
+
+  public:
+    IdentityCertificate() : CertificateX509(IDENTITY_CERTIFICATE)
+    {
+    }
+    /**
+     * Destructor
+     */
+    virtual ~IdentityCertificate()
+    {
+    }
+
+    /**
+     * Set the alias field
+     * @param alias the alias
+     */
+    void SetAlias(const qcc::String& alias)
+    {
+        SetSubjectAltName(alias);
+    }
+
+    /**
+     * Get the alias field
+     * @return the alias
+     */
+    const qcc::String& GetAlias() const
+    {
+        return GetSubjectAltName();
+    }
+
 };
 
 } /* namespace qcc */

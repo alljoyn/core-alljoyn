@@ -40,9 +40,11 @@
 #include <qcc/Mutex.h>
 #include <qcc/Event.h>
 #include <qcc/time.h>
+#include <qcc/CertificateECC.h>
 #include <qcc/Crypto.h>
 
 #include <alljoyn/Status.h>
+#include <alljoyn/PermissionPolicy.h>
 
 namespace ajn {
 
@@ -88,10 +90,35 @@ class _PeerState {
 
   public:
 
+    PermissionPolicy::Rule* manifest;
+    size_t manifestSize;
+
+    struct GuildMetadata {
+        std::vector<qcc::CertificateX509*> certChain;
+
+        GuildMetadata()
+        {
+        }
+
+        ~GuildMetadata()
+        {
+            for (std::vector<qcc::CertificateX509*>::iterator it = certChain.begin(); it != certChain.end(); it++) {
+                delete *it;
+            }
+            certChain.clear();
+        }
+
+    };
+
+    typedef std::map<const qcc::String, GuildMetadata*> GuildMap;
+
     /**
      * Default constructor
      */
     _PeerState() :
+        manifest(NULL),
+        manifestSize(0),
+        guildArgsSentCount(0),
         isLocalPeer(false),
         clockOffset((std::numeric_limits<int32_t>::max)()),
         firstClockAdjust(true),
@@ -269,6 +296,63 @@ class _PeerState {
         }
     }
 
+
+    /**
+     * Set the guild metadata indexed by the serial number and the issuer.
+     * @param serial the membership certificate serial number
+     * @param issuerAki the membership certificate issuer authority key id
+     * @param guild the guild metadata
+     */
+    void SetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki,        GuildMetadata* guild);
+
+    /**
+     * Retrieve the guild metadata indexed by the serial number and the issuer.
+     * @param serial the membership certificate serial number
+     * @param issuerAki the membership certificate issuer authority key id
+     * @return the guild metadata
+     */
+    GuildMetadata* GetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki);
+
+    /**
+     * Mapping table for guild memberships
+     */
+    GuildMap guildMap;
+
+    /**
+     * Clear the guild map and its members
+     */
+    static void ClearGuildMap(GuildMap& guildMap)
+    {
+        for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
+            delete it->second;
+        }
+        guildMap.clear();
+    }
+
+    /**
+     * Clear the list of guild message args
+     */
+
+    static void ClearGuildArgs(std::vector<std::vector<MsgArg*> >& args)
+    {
+        for (std::vector<std::vector<MsgArg*> >::iterator i = args.begin(); i != args.end(); i++) {
+            for (std::vector<MsgArg*>::iterator j = (*i).begin(); j != (*i).end(); j++) {
+                delete *j;
+            }
+            (*i).clear();
+        }
+        args.clear();
+    }
+
+    /**
+     * The list of membership data msg args to reply to the peer
+     */
+    std::vector<std::vector<MsgArg*> > guildArgs;
+    /**
+     * The number of membership data msg args already replied to the peer
+     */
+    uint8_t guildArgsSentCount;
+
     /**
      * Update the conversation hash with a single byte
      * InitializeConversationHash must first be called before calling this method.
@@ -332,6 +416,15 @@ class _PeerState {
     ~_PeerState();
 
   private:
+    /**
+     * private assignment operator to prevent double freeing of memory
+     */
+    _PeerState& operator=(const _PeerState& src);
+
+    /**
+     * private copy constructor to prevent double freeing of memory
+     */
+    _PeerState(const _PeerState& src);
 
     /**
      * True if this peer state is for the local peer.
@@ -368,11 +461,6 @@ class _PeerState {
      * Event used to prevent simultaneous authorization requests to this peer.
      */
     qcc::Event* authEvent;
-
-    /**
-     * Set to true if this remote peer was not authenticated by the local peer.
-     */
-    bool peerNotAuthenticated;
 
     /**
      * The GUID for this peer.

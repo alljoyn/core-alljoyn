@@ -40,6 +40,7 @@
 #include "PeerState.h"
 #include "AuthMechanism.h"
 #include "KeyExchanger.h"
+#include "SecurityApplicationObj.h"
 
 namespace ajn {
 
@@ -97,9 +98,10 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *
      * @param authMechanisms   The names of the authentication mechanisms to set
      * @param listener         Required for authentication mechanisms that require interation with the user
+     * @param bus          Bus to associate with /org/alljoyn/Bus/Peer message handler.
      *                         or application. Can be NULL if not required.
      */
-    void SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener);
+    void SetupPeerAuthentication(const qcc::String& authMechanisms, AuthListener* listener, BusAttachment& bus);
 
     /**
      * Check if authentication has been enabled.
@@ -425,13 +427,43 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * Authenticate Peer using SASL protocol
      */
-    QStatus AuthenticatePeerUsingSASL(const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
+    QStatus AuthenticatePeerUsingSASL(const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, KeyStore::Key& remotePeerKey, qcc::String& mech);
 
     /**
      * Authenticate Peer using new Key Exchanger protocol for ECDHE auths
      */
-    QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::GUID128& remotePeerGuid, qcc::String& mech);
+    QStatus AuthenticatePeerUsingKeyExchange(const uint32_t* requestingAuthList, size_t requestingAuthCount, const qcc::String& busName, PeerState peerState, qcc::String& localGuidStr, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, qcc::String& mech);
 
+    /**
+     * SendManifest method call handler
+     *
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    void HandleSendManifest(const InterfaceDescription::Member* member, Message& msg);
+    /**
+     * Send the manifest to the peer
+     * @param remotePeerObj  The remote peer
+     * @param ifc     The interface object
+     * @param peerState the peer state object
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus SendManifest(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, PeerState& peerState);
+
+    /**
+     * Send an SendMembership to the peer
+     * @param remotePeerObj  The remote peer
+     * @param ifc     The interface object
+     */
+    QStatus SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc);
+
+    /**
+     * SendMembership method call handler
+     *
+     * @param member  The member that was called
+     * @param msg     The method call message
+     */
+    void SendMemberships(const InterfaceDescription::Member* member, Message& msg);
     /**
      * The peer-to-peer authentication mechanisms available to this object
      */
@@ -440,7 +472,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * The listener for interacting with the application
      */
-    ProtectedAuthListener peerAuthListener;
+    PermissionMgmtObj::KeyExchangeListener peerAuthListener;
 
     /**
      * Peer endpoints currently in an authentication conversation
@@ -463,6 +495,9 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
 
     uint16_t supportedAuthSuitesCount;
     uint32_t* supportedAuthSuites;
+
+    /* PermissionMgmtObj to handle message permssion */
+    SecurityApplicationObj securityApplicationObj;
 };
 
 

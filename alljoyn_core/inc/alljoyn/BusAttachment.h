@@ -41,6 +41,10 @@
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/Translator.h>
+#include <alljoyn/ApplicationStateListener.h>
+#include <alljoyn/PermissionPolicy.h>
+#include <alljoyn/PermissionConfigurator.h>
+#include <alljoyn/FactoryResetListener.h>
 
 namespace ajn {
 
@@ -763,36 +767,36 @@ class BusAttachment : public MessageReceiver {
      * own key store implementation it must have already called RegisterKeyStoreListener() before
      * calling this function.
      *
-     * Once peer security has been enabled it is not possible to change the authMechanism set without
-     * clearing it first (setting authMechanism to NULL). This is true regardless of whether the BusAttachment
-     * has been disconnected or not.
+     * This method can be called multiple times with different auth mechanisms.
      *
-     * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
-     *                         If this parameter is NULL peer-to-peer authentication is disabled.  This is a
-     *                         space separated list of any of the following values:
-     *                         ALLJOYN_SRP_LOGON, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
-     *                         ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     * @param authMechanisms       The authentication mechanism(s) to use for peer-to-peer authentication.
+     *                             If this parameter is NULL peer-to-peer authentication is disabled.  This is a
+     *                             space separated list of any of the following values:
+     *                             ALLJOYN_SRP_LOGON, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
+     *                             ALLJOYN_ECDHE_ECDSA, GSSAPI.
      *
-     * @param listener         Passes password and other authentication related requests to the application.
+     * @param authListener         Passes password and other authentication related requests to the application.
      *
-     * @param keyStoreFileName Optional parameter to specify the filename of the default key store. The
-     *                         default value is the applicationName parameter of BusAttachment().
-     *                         Note that this parameter is only meaningful when using the default
-     *                         key store implementation.
+     * @param keyStoreFileName     Optional parameter to specify the filename of the default key store. The
+     *                             default value is the applicationName parameter of BusAttachment().
+     *                             Note that this parameter is only meaningful when using the default
+     *                             key store implementation.
      *
-     * @param isShared         optional parameter that indicates if the key store is shared between multiple
-     *                         applications. It is generally harmless to set this to true even when the
-     *                         key store is not shared but it adds some unnecessary calls to the key store
-     *                         listener to load and store the key store in this case.
+     * @param isShared             optional parameter that indicates if the key store is shared between multiple
+     *                             applications. It is generally harmless to set this to true even when the
+     *                             key store is not shared but it adds some unnecessary calls to the key store
+     *                             listener to load and store the key store in this case.
+     * @param factoryResetListener Passes factory reset requests to the application.
      *
      * @return
      *      - #ER_OK if peer security was enabled.
      *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
      */
     QStatus EnablePeerSecurity(const char* authMechanisms,
-                               AuthListener* listener,
+                               AuthListener* authListener,
                                const char* keyStoreFileName = NULL,
-                               bool isShared = false);
+                               bool isShared = false,
+                               FactoryResetListener* factoryResetListener = NULL);
 
     /**
      * Check is peer security has been enabled for this bus attachment.
@@ -800,7 +804,6 @@ class BusAttachment : public MessageReceiver {
      * @return   Returns true if peer security has been enabled, false otherwise.
      */
     bool IsPeerSecurityEnabled();
-
 
     /**
      * Register an object that will receive bus event notifications.
@@ -1620,6 +1623,13 @@ class BusAttachment : public MessageReceiver {
     Translator* GetDescriptionTranslator();
 
     /**
+     * Get the permission configurator for the bus attachment.
+     * @return the permission configurator
+     */
+
+    PermissionConfigurator& GetPermissionConfigurator();
+
+    /**
      * Registers a handler to receive the org.alljoyn.about Announce signal.
      *
      * The handler is only called if a call to WhoImplements has been has been
@@ -1632,7 +1642,7 @@ class BusAttachment : public MessageReceiver {
     void RegisterAboutListener(AboutListener& aboutListener);
 
     /**
-     * Unregisters the AnnounceHandler from receiving the org.alljoyn.about Announce signal.
+     * Unregisters the handler from receiving the org.alljoyn.about Announce signal.
      *
      * @param[in] aboutListener reference to AboutListener to unregister
      */
@@ -1816,6 +1826,50 @@ class BusAttachment : public MessageReceiver {
      *    - An error status otherwise
      */
     QStatus CancelWhoImplementsNonBlocking(const char* iface);
+
+    /**
+     * Registers a handler to receive the org.alljoyn.Bus.Application
+     * State signal.
+     *
+     * @param[in] applicationStateListener reference to an ApplicationStateListener
+     */
+    void RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
+
+    /**
+     * Unregisters the ApplicationStateListener from receiving the
+     * org.alljoyn.Bus.Application State signal.
+     *
+     * @param[in] applicationStateListener reference to an
+     *                                     ApplicationStateListener to
+     *                                     unregister
+     */
+    void UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
+
+    /**
+     * This is a helper function that will add the match rule responsible for
+     * receiving the org.alljoyn.Bus.Application State signal.
+     *
+     * The ApplicationStateListener should be registered before calling this method.
+     *
+     * This will only call AddMatch for the State signal.
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus AddApplicationStateRule();
+
+    /**
+     * This is a helper function that will remove the match rule responsible for
+     * receiving the org.alljoyn.Bus.Application State signal.
+     *
+     * This will only call RemoveMatch for the State signal.
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - An error status otherwise
+     */
+    QStatus RemoveApplicationStateRule();
 
     /// @cond ALLJOYN_DEV
     /**

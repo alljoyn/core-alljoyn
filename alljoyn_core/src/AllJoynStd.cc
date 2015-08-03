@@ -51,6 +51,19 @@ const char* org::alljoyn::Bus::WellKnownName = "org.alljoyn.Bus";
 const char* org::alljoyn::Bus::Secure = "org.alljoyn.Bus.Secure";
 const char* org::alljoyn::Bus::Peer::ObjectPath = "/org/alljoyn/Bus/Peer";
 
+/** org.alljoy.Bus.Application interface definitions */
+const char* org::alljoyn::Bus::Application::InterfaceName = "org.alljoyn.Bus.Application";
+
+/** org.alljoyn.Bus.Peer.* interface definitions */
+const char* org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName = "org.alljoyn.Bus.Peer.HeaderCompression";
+const char* org::alljoyn::Bus::Peer::Authentication::InterfaceName = "org.alljoyn.Bus.Peer.Authentication";
+const char* org::alljoyn::Bus::Peer::Session::InterfaceName = "org.alljoyn.Bus.Peer.Session";
+
+const char* org::alljoyn::Bus::Security::ObjectPath = "/org/alljoyn/Bus/Security";
+const char* org::alljoyn::Bus::Security::Application::InterfaceName = "org.alljoyn.Bus.Security.Application";
+const char* org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName = "org.alljoyn.Bus.Security.ClaimableApplication";
+const char* org::alljoyn::Bus::Security::ManagedApplication::InterfaceName = "org.alljoyn.Bus.Security.ManagedApplication";
+
 /** org.alljoyn.Daemon interface definitions */
 const char* org::alljoyn::Daemon::ErrorName = "org.alljoyn.Daemon.ErStatus";
 const char* org::alljoyn::Daemon::ObjectPath = "/org/alljoyn/Bus";
@@ -60,11 +73,6 @@ const char* org::alljoyn::Daemon::WellKnownName = "org.alljoyn.Daemon";
 /** org.alljoyn.Daemon.Debug interface definitions */
 const char* org::alljoyn::Daemon::Debug::ObjectPath = "/org/alljoyn/Debug";
 const char* org::alljoyn::Daemon::Debug::InterfaceName = "org.alljoyn.Debug";
-
-/** org.alljoyn.Bus.Peer.* interface definitions */
-const char* org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName = "org.alljoyn.Bus.Peer.HeaderCompression";
-const char* org::alljoyn::Bus::Peer::Authentication::InterfaceName = "org.alljoyn.Bus.Peer.Authentication";
-const char* org::alljoyn::Bus::Peer::Session::InterfaceName = "org.alljoyn.Bus.Peer.Session";
 
 /** org.allseen.Introsoectable interface definitions */
 const char* org::allseen::Introspectable::InterfaceName = "org.allseen.Introspectable";
@@ -157,7 +165,21 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 
         ifc->Activate();
     }
+    {
+        /* Create the org.alljoyn.Bus.Application interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::Bus::Application::InterfaceName, ifc, AJ_IFC_SECURITY_OFF);
 
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Application::InterfaceName));
+            return status;
+        }
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddSignal("State", "(yyayay)q", "publicKey,state", 0);
+
+        ifc->Activate();
+    }
     {
         /* Create the org.alljoyn.Daemon interface */
         InterfaceDescription* ifc = NULL;
@@ -219,6 +241,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("ExchangeSuites",     "au",   "au",  "localAuthList,remoteAuthList");
         ifc->AddMethod("KeyExchange",     "uv",   "uv",  "localAuthMask,localPublicKey, remoteAuthMask, remotePublicKey");
         ifc->AddMethod("KeyAuthentication",     "v",   "v",  "localVerifier,remoteVerifier");
+        ifc->AddMethod("SendManifest",     "a(ssa(syy))",   "a(ssa(syy))", "manifest,manifest");
+        ifc->AddMethod("SendMemberships",     "ya(yay)",   "ya(yay)", "sendCode,memberships,sendCode,memberships");
         ifc->AddProperty("Mechanisms",  "s", PROP_ACCESS_READ);
         ifc->AddProperty("Version",     "u", PROP_ACCESS_READ);
         ifc->Activate();
@@ -233,6 +257,84 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         }
         ifc->AddMethod("AcceptSession", "qus" SESSIONOPTS_SIG, "b", "port,id,src,opts,accepted");
         ifc->AddSignal("SessionJoined", "qus", "port,id,src", MEMBER_ANNOTATE_UNICAST);
+        ifc->Activate();
+    }
+    {
+        /* Create the org.alljoyn.Bus.Security.Application interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::Bus::Security::Application::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Security::Application::InterfaceName));
+            return status;
+        }
+        ifc->AddAnnotation(org::alljoyn::Bus::Secure, "true");
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("ApplicationState", "q", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("ApplicationState", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("ManifestTemplateDigest", "(yay)", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("ManifestTemplateDigest", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("EccPublicKey", "(yyayay)", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("EccPublicKey", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("ManufacturerCertificate", "a(yay)", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("ManufacturerCertificate", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("ManifestTemplate", "a(ssa(syy))", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("ManifestTemplate", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("ClaimCapabilities", "q", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("ClaimCapabilities", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("ClaimCapabilityAdditionalInfo", "q", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("ClaimCapabilityAdditionalInfo", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+
+        ifc->Activate();
+    }
+    {
+        /* Create the org.alljoyn.Bus.Security.ClaimableApplication interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName));
+            return status;
+        }
+        ifc->AddAnnotation(org::alljoyn::Bus::Secure, "true");
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddMethod("Claim", "(yyayay)ayay(yyayay)aya(yay)a(ssa(syy))", "",
+                       "certificateAuthority,authorityKeyIdentifier,adminSecurityGroupId,adminSecurityGroupAuthority,adminGroupAuthorityKeyIdentifier,identityCertificateChain,manifest");
+
+        ifc->Activate();
+    }
+    {
+        /* Create the org.alljoyn.Bus.Security.ManagedApplication interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, ifc, AJ_IFC_SECURITY_REQUIRED);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create interface \"%s\"", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
+            return status;
+        }
+        ifc->AddAnnotation(org::alljoyn::Bus::Secure, "true");
+        ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddMethod("Reset", "", "", "");
+        ifc->AddMethod("UpdateIdentity", "a(yay)a(ssa(syy))", "", "certificateChain,manifest");
+        ifc->AddProperty("Identity", "a(yay)", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("Identity", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("Manifest", "a(ssa(syy))", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("Manifest", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("IdentityCertificateId", "(ayay(yyayay))", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("IdentityCertificateId", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("PolicyVersion", "u", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("PolicyVersion", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddMethod("UpdatePolicy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", "", "policy");
+        ifc->AddProperty("Policy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("Policy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("DefaultPolicy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("DefaultPolicy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddMethod("ResetPolicy", "", "", "");
+        ifc->AddMethod("InstallMembership", "a(yay)", "", "certificateChain,");
+        ifc->AddMethod("RemoveMembership", "(ayay(yyayay))", "", "certificateId");
+        ifc->AddProperty("MembershipSummaries", "a(ayay(yyayay))", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("MembershipSummaries", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+
         ifc->Activate();
     }
     {

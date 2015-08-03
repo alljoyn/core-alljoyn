@@ -92,12 +92,6 @@ class AboutProxy : public ProxyBusObject {
      * @return ER_OK on success
      */
     QStatus GetVersion(uint16_t& version);
-  private:
-
-    /**
-     *  pointer to  BusAttachment
-     */
-    ajn::BusAttachment* m_BusAttachment;
 };
 
 }

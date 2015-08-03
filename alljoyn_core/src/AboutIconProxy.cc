@@ -23,8 +23,7 @@
 using namespace ajn;
 
 AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus, const char* busName, SessionId sessionId) :
-    ProxyBusObject(bus, busName, org::alljoyn::Icon::ObjectPath, sessionId),
-    m_BusAttachment(&bus)
+    ProxyBusObject(bus, busName, org::alljoyn::Icon::ObjectPath, sessionId)
 {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     const InterfaceDescription* p_InterfaceDescription = bus.GetInterface(org::alljoyn::Icon::InterfaceName);
@@ -36,7 +35,7 @@ QStatus AboutIconProxy::GetIcon(AboutIcon& icon) {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
-    Message replyMsg(*m_BusAttachment);
+    Message replyMsg(GetBusAttachment());
     status = MethodCall(org::alljoyn::Icon::InterfaceName, "GetContent", NULL, 0, replyMsg);
     if (status == ER_OK) {
         const ajn::MsgArg* returnArgs;

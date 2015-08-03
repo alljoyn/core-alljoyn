@@ -164,6 +164,7 @@ class _Message;
 class _RemoteEndpoint;
 class BusAttachment;
 class PeerStateTable;
+class MessageEncryptionNotification;
 
 /**
  * @cond ALLJOYN_DEV
@@ -198,8 +199,10 @@ class _Message {
     friend class AllJoynObj;
     friend class DeferredMsg;
     friend class AllJoynPeerObj;
+    friend class DefaultPolicyMarshaller;
     friend class Crypto;
     friend class _PeerState;
+    friend class PermissionMgmtObj;
     friend struct Rule;
 
   public:
@@ -289,6 +292,14 @@ class _Message {
      * @param[out] numArgs The number of arguments
      */
     void GetArgs(size_t& numArgs, const MsgArg*& args) { args = msgArgs; numArgs = numMsgArgs; }
+
+    /**
+     * Return the reference arguments for this message.  These arguments are copied when the message is marshalled.
+     *
+     * @param[out] args  Returns the arguments
+     * @param[out] numArgs The number of arguments
+     */
+    void GetRefArgs(size_t& numArgs, const MsgArg*& args) { args = refMsgArgs; numArgs = numRefMsgArgs; }
 
     /**
      * Return a specific argument.
@@ -1044,6 +1055,20 @@ class _Message {
     size_t GetBufferSize() const { return bufEOD - reinterpret_cast<uint8_t*>(msgBuf); }
 
     /**
+     * Get a pointer to the current buffer for the message body.
+     *
+     * @return pointer to the message backing buffer for the message body
+     */
+    uint8_t const* const GetBodyBuffer() const { return const_cast<uint8_t const* const>(reinterpret_cast<uint8_t*>(bodyPtr)); }
+
+    /**
+     * Get the number of bytes of data currently in the message body.
+     *
+     * @return the size of the message body
+     */
+    size_t GetBodyBufferSize() const { return GetBufferSize() - (GetBodyBuffer() - GetBuffer()); }
+
+    /**
      * Struct representing the header for the AllJoyn Message
      */
     typedef struct MessageHeader {
@@ -1076,6 +1101,8 @@ class _Message {
     MsgArg* msgArgs;             ///< Pointer to the unmarshaled arguments.
     uint8_t numMsgArgs;          ///< Number of message args (signature cannot be longer than 255 chars).
 
+    MsgArg* refMsgArgs;             ///< Pointer to the copy of the marshalled arguments.
+    uint8_t numRefMsgArgs;          ///< size of the copy of the marshalled arguments
     size_t bufSize;              ///< The current allocated size of the msg buffer.
     uint8_t* bufEOD;             ///< End of data currently in buffer.
     uint8_t* bufPos;             ///< Pointer to the position in buffer.
@@ -1109,6 +1136,26 @@ class _Message {
      * type defined in the message header.
      */
     HeaderFields hdrFields;
+
+    /**
+     * Set the message encryption notification callback.
+     */
+    void SetMessageEncryptionNotification(MessageEncryptionNotification* notifyTo)
+    {
+        encryptionNotification = notifyTo;
+    }
+
+    /**
+     * The notification handler to call when the encryption step is complete.
+     */
+
+    MessageEncryptionNotification* encryptionNotification;
+
+    /**
+     * The flag indicating that the permission authorization is checked
+     */
+
+    bool authorizationChecked;
 
     /**
      * @defgroup internal_methods_message_unmarshal Internal methods unmarshal side
@@ -1388,6 +1435,7 @@ class _Message {
      */
     static const uint32_t AUTH_FALLBACK_VERSION;
 
+    void NotifyEncryptionComplete();
 
 };
 

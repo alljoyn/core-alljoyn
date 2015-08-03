@@ -591,6 +591,7 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
         }
     }
 
+    bool permissionCheckMet = true;
     if (msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED) {
         bool broadcast = (hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_INVALID);
         size_t hdrLen = bodyPtr - (uint8_t*)msgBuf;
@@ -598,7 +599,7 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
         KeyBlob key;
         status = peerState->GetKey(key, broadcast ? PEER_GROUP_KEY : PEER_SESSION_KEY);
         if (status != ER_OK) {
-            QCC_LogError(status, ("Unable to decrypt message"));
+            QCC_LogError(status, ("Unable to decrypt (broadcast %d) message from sender %s", broadcast, GetSender()));
             /*
              * This status triggers a call to the security failure handler.
              */
@@ -611,6 +612,21 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
         if (!peerState->IsAuthorized((AllJoynMessageType)msgHeader.msgType, _PeerState::ALLOW_SECURE_RX)) {
             status = ER_BUS_NOT_AUTHORIZED;
             goto ExitUnmarshalArgs;
+        }
+        QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt message %s from sender %s\n", ToString().c_str(), GetSender()));
+
+        if (strcmp(GetInterface(), "org.freedesktop.DBus.Properties") == 0) {
+            /* delay the permission check until the unmarshaling of the args complete to know the interface name and property name that the caller wants to retrieve */
+            permissionCheckMet = false;
+        } else {
+            permissionCheckMet = true;
+            Message msg(*this);
+            /* decrypting a message means receiving */
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState);
+            QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x\n", status));
+            if (status != ER_OK) {
+                goto ExitUnmarshalArgs;
+            }
         }
 
         /*
@@ -686,6 +702,15 @@ ExitUnmarshalArgs:
          */
         msgArgs = _msgArgs;
         numMsgArgs = _numMsgArgs;
+        if (!permissionCheckMet) {
+            /* the permission check was delayed for property so it must be
+                performed now */
+            Message msg(*this);
+            /* decrypting a message means receiving */
+            PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(GetSender());
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState);
+            QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x\n", status));
+        }
     } else {
         if (_msgArgs) {
             delete [] _msgArgs;

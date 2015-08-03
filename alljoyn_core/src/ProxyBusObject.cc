@@ -1959,6 +1959,7 @@ ProxyBusObject::ProxyBusObject(const ProxyBusObject& other) : internal(other.int
 ProxyBusObject::ProxyBusObject(ManagedObj<ProxyBusObject::Internal> internal) : internal(internal), isExiting(false) {
 }
 
+
 bool ProxyBusObject::operator==(const ProxyBusObject& other) const {
     return internal == other.internal;
 }
@@ -2156,6 +2157,11 @@ error:
     QCC_LogError(status, ("Failed to parse PropertiesChanged signal or inconsistent message serial number. Invalidating property cache."));
     values.clear();
     lock.Unlock(MUTEX_CONTEXT);
+}
+
+BusAttachment& ProxyBusObject::GetBusAttachment() const
+{
+    return *(internal->bus);
 }
 
 void CachedProps::Enable()

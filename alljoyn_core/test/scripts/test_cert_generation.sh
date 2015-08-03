@@ -34,11 +34,35 @@
 #    ecparam.pem : A file with the elliptic curve parameters.  These are
 #    required to create keys and certificates with OpenSSL, and not for AllJoyn.
 #
-#    eckey.pem : A file with the PEM encoding of the private key in PKCS#8 DER
+#    caeckey.pem : A file with the PEM encoding of the private key in PKCS#8 DER
 #    format.
 #
-#    cert.pem : A self-signed ECDSA certificate corresponding to the private key
-#    eckey.pem
+#    cacsr.pem : A certificate signing request for the CA. This is not needed for AllJoyn.
+#
+#    cacert.pem : A self-signed ECDSA certificate corresponding to the private key
+#    caeckey.pem
+#
+#    cacert.srl : Last serial number used for tracking CA issuance in OpenSSL. This is not
+#    needed for AllJoyn.
+#
+#    clieckey.pem : A file with the PEM encoding of the private key for the client
+#    in PKCS#8 DER format.
+#
+#    clicsr.pem : A certificate signing request for the client. This is not needed for AllJoyn.
+#
+#    clicert.pem : An ECDSA certificate corresponding to the private key clieckey.pem
+#    and signed by caeckey.pem.
+#
+#    srveckey.pem : A file with the PEM encoding of the private key for the service
+#    in PKCS#8 DER format. This is suitable for pasting into the SecurityX509Test tests that
+#    take an OpenSSL-generated certificate.
+#
+#    srvpubkey.pem : A file with the PEM encoding of the public key for the service. This is used
+#    by SecurityX509Test code for verification.
+#
+#    srvcsr.pem : A certificate signing request for the service. This is not needed for AllJoyn.
+#
+#    srvcert.pem : A self-signed ECDSA certificate corresponding to the private key srveckey.pem.
 #
 #
 #  Steps
@@ -57,11 +81,11 @@ openssl ecparam -outform PEM -name prime256v1 -out ecparams.pem
 #      openssl ecparam -list_curves
 #  can be used to list available curves.
 #
-#  2. Create the private key:
+#  2. Create the private key for the CA:
 
-openssl ecparam -genkey -outform PEM -in ecparams.pem -out eckey.pem 
+openssl ecparam -genkey -outform PEM -in ecparams.pem -out caeckey.pem 
 
-#  The file eckey.pem should have something like this:
+#  The file caeckey.pem should have something like this:
 #  -----BEGIN EC PARAMETERS-----
 #  BggqhkjOPQMBBw==
 #  -----END EC PARAMETERS-----
@@ -71,18 +95,68 @@ openssl ecparam -genkey -outform PEM -in ecparams.pem -out eckey.pem
 #  gomUGnIbHZWFDiT2pbHQZv3IxspDEYNKXA==
 #  -----END EC PRIVATE KEY-----
 #
-#  3. Create a self-signed certificate for the private key:
+#  3. Create a certificate signing request for the CA with the private key:
 
-openssl req -x509 -newkey ec:ecparams.pem -key eckey.pem -out cert.pem \
--days 5000 -sha256 -batch -subj /O=AllJoynTestSelfSignedName 
+openssl req -new -key caeckey.pem -out cacsr.pem \
+-sha256 -batch -subj /O=AllJoynTestSelfSignedName
+
+#  4. Self-sign the certificate with its key and add the 'unrestricted'
+#     EKUs (both identity and membership)
+
+openssl x509 -req -in cacsr.pem -out cacert.pem -signkey caeckey.pem \
+-days 5000 -extfile openssl-ajekus.cnf -extensions unrestricted
 
 #
-#  4. [Optional] View the certificate with:
+#  5. [Optional] View the certificate with:
 
-openssl x509 -in cert.pem -noout -text ;
+openssl x509 -in cacert.pem -noout -text ;
 
-#  Alternatively, in Windows, you can rename the file to 'cert.cer' and double
+#  Alternatively, in Windows, you can rename the file to 'cacert.cer' and double
 #  click on the file to view it.
+
+#  6. Create the private key for the client:
+
+openssl ecparam -genkey -outform PEM -in ecparams.pem -out clieckey.pem 
+
+#  7. Create a certificate signing request for the client with the private key:
+
+openssl req -new -key clieckey.pem -out clicsr.pem \
+-sha256 -batch -subj /O=AllJoynTestClientName
+
+#  8. Sign the certificate with the CA key and add the 'identity' EKU
+
+openssl x509 -req -in clicsr.pem -out clicert.pem -CA cacert.pem \
+-CAkey caeckey.pem -extfile openssl-ajekus.cnf -extensions identity \
+-CAcreateserial
+
+#
+#  9. [Optional] View the certificate with:
+
+openssl x509 -in clicert.pem -noout -text ;
+
+#  10. Create the private key for the service:
+
+openssl ecparam -genkey -outform PEM -in ecparams.pem -out srveckey.pem 
+
+#  11. Create a certificate signing request for the service with the private key:
+
+openssl req -new -key srveckey.pem -out srvcsr.pem \
+-sha256 -batch -subj /O=AllJoynTestServiceName
+
+#  12. Sign the certificate with the service's key and add the 'identity' EKU
+
+openssl x509 -req -in srvcsr.pem -out srvcert.pem -signkey srveckey.pem \
+-extfile openssl-ajekus.cnf -extensions identity 
+
+#  13. Compute the public key from the private key for the service and output it to srvpubkey.pem.
+
+openssl ec -in srveckey.pem -pubout -out srvpubkey.pem
+
+#
+#  14. [Optional] View the certificate with:
+
+openssl x509 -in srvcert.pem -noout -text ;
+
 #
 #
 #  Notes

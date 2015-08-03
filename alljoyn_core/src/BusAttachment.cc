@@ -64,6 +64,7 @@
 #include "ClientTransport.h"
 #include "NullTransport.h"
 #include "NamedPipeClientTransport.h"
+#include "KeyInfoHelper.h"
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -151,6 +152,7 @@ struct RemoveMatchCBContext {
 
 namespace ajn {
 
+
 BusAttachment::Internal::Internal(const char* appName,
                                   BusAttachment& bus,
                                   TransportFactoryContainer& factories,
@@ -174,9 +176,12 @@ BusAttachment::Internal::Internal(const char* appName,
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
     stopCount(0),
+    permissionManager(),
+    permissionConfigurator(bus),
     hostedSessions(),
     hostedSessionsLock(),
-    observerManager(NULL)
+    observerManager(NULL),
+    factoryResetListener(NULL)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -197,6 +202,7 @@ BusAttachment::Internal::Internal(const char* appName,
     /* Register bus client authentication mechanisms */
     authManager.RegisterMechanism(AuthMechExternal::Factory, AuthMechExternal::AuthName());
     authManager.RegisterMechanism(AuthMechAnonymous::Factory, AuthMechAnonymous::AuthName());
+
 }
 
 BusAttachment::Internal::~Internal()
@@ -206,6 +212,10 @@ BusAttachment::Internal::~Internal()
         observerManager->Join();
         delete observerManager;
         observerManager = NULL;
+    }
+    if (factoryResetListener) {
+        delete factoryResetListener;
+        factoryResetListener = NULL;
     }
     /*
      * Make sure that all threads that might possibly access this object have been joined.
@@ -295,7 +305,7 @@ BusAttachment::~BusAttachment(void)
          * so We need to yield the CPU to them, too.  We need to get ourselves
          * off of the ready queue, so we need to really execute a sleep.  The
          * Sleep(1) will translate into a mimimum sleep of one scheduling quantum
-         * which is, for example, one Jiffy in Liux which is 1/250 second or
+         * which is, for example, one Jiffy in Linux which is 1/250 second or
          * 4 ms.  It's not as arbitrary as it might seem.
          */
         qcc::Sleep(1);
@@ -589,6 +599,16 @@ QStatus BusAttachment::RegisterSignalHandlers()
             status = RegisterSignalHandler(busInternal,
                                            static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                            announceSignalMember,
+                                           NULL);
+        }
+        const InterfaceDescription* applicationIface = GetInterface(org::alljoyn::Bus::Application::InterfaceName);
+        if (ER_OK == status) {
+            assert(applicationIface);
+            const ajn::InterfaceDescription::Member* stateSignalMember = applicationIface->GetMember("State");
+            assert(stateSignalMember);
+            status = RegisterSignalHandler(busInternal,
+                                           static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                           stateSignalMember,
                                            NULL);
         }
         if (ER_OK == status) {
@@ -982,22 +1002,30 @@ void BusAttachment::UnregisterBusObject(BusObject& object)
 }
 
 QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
-                                          AuthListener* listener,
+                                          AuthListener* authListener,
                                           const char* keyStoreFileName,
-                                          bool isShared)
+                                          bool isShared,
+                                          FactoryResetListener* factoryResetListener)
 {
     QStatus status = ER_OK;
+
+    busInternal->SetFactoryResetListener(factoryResetListener);
 
     /* If there are no auth mechanisms peer security is being disabled. */
     if (authMechanisms) {
         busInternal->keyStore.SetKeyEventListener(&busInternal->ksKeyEventListener);
         status = busInternal->keyStore.Init(keyStoreFileName, isShared);
+        if (status == ER_KEY_STORE_ALREADY_INITIALIZED) {
+            status = ER_OK;
+        }
         if (status == ER_OK) {
             /* Register peer-to-peer authentication mechanisms */
             busInternal->authManager.RegisterMechanism(AuthMechSRP::Factory, AuthMechSRP::AuthName());
             busInternal->authManager.RegisterMechanism(AuthMechLogon::Factory, AuthMechLogon::AuthName());
             /* Validate the list of auth mechanisms */
             status =  busInternal->authManager.CheckNames(authMechanisms);
+            /* Clear peer state */
+            busInternal->peerStateTable.Clear();
         }
     } else {
         status = busInternal->keyStore.Reset();
@@ -1008,7 +1036,7 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     if (status == ER_OK) {
         AllJoynPeerObj* peerObj = busInternal->localEndpoint->GetPeerObj();
         if (peerObj) {
-            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? listener : NULL);
+            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? authListener : NULL, *this);
         } else {
             return ER_BUS_SECURITY_NOT_ENABLED;
         }
@@ -2444,6 +2472,34 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                     sessionListenersLock[i].Unlock(MUTEX_CONTEXT);
                 }
             }
+        } else if (0 == strcmp("State", msg->GetMemberName())) {
+            if (numArgs == 2) {
+#if !defined(NDEBUG)
+                for (int i = 0; i < 2; i++) {
+                    QCC_DbgPrintf(("args[%d]=%s", i, args[i].ToString().c_str()));
+                }
+#endif
+                /* Call applicationStateListener */
+                applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+                if (!applicationStateListeners.empty()) {
+                    qcc::KeyInfoNISTP256 keyInfo;
+                    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[0], keyInfo);
+                    if (ER_OK == status) {
+                        PermissionConfigurator::ApplicationState applicationState = (PermissionConfigurator::ApplicationState) args[1].v_uint16;
+                        if (applicationState <= PermissionConfigurator::ApplicationState::NEED_UPDATE) {
+                            ApplicationStateListenerSet::iterator it = applicationStateListeners.begin();
+                            while (it != applicationStateListeners.end()) {
+                                ProtectedApplicationStateListener listener = *it;
+                                applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+                                (*listener)->State(msg->GetSender(), keyInfo, applicationState);
+                                applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+                                it = applicationStateListeners.upper_bound(listener);
+                            }
+                        }
+                    }
+                }
+                applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+            }
         } else {
             QCC_DbgPrintf(("Unrecognized signal \"%s.%s\" received", msg->GetInterface(), msg->GetMemberName()));
         }
@@ -2611,6 +2667,55 @@ QStatus BusAttachment::CancelWhoImplements(const char* iface)
     return CancelWhoImplements(tmp, 1);
 }
 
+void BusAttachment::RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
+{
+    busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+    ApplicationStateListener* pListener = &applicationStateListener;
+    Internal::ProtectedApplicationStateListener protectedListener(pListener);
+    busInternal->applicationStateListeners.insert(pListener);
+    busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+}
+
+void BusAttachment::UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
+{
+    busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+
+    /* Look for listener on ListenerSet */
+    Internal::ApplicationStateListenerSet::iterator it = busInternal->applicationStateListeners.begin();
+    while (it != busInternal->applicationStateListeners.end()) {
+        if (**it == &applicationStateListener) {
+            break;
+        }
+        ++it;
+    }
+
+    /* Wait for all refs to ProtectedBusListener to exit */
+    while ((it != busInternal->applicationStateListeners.end()) && (it->GetRefCount() > 1)) {
+        Internal::ProtectedApplicationStateListener l = *it;
+        busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+        qcc::Sleep(5);
+        busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+        it = busInternal->applicationStateListeners.find(l);
+    }
+
+    /* Delete the listeners entry and call user's callback (unlocked) */
+    if (it != busInternal->applicationStateListeners.end()) {
+        Internal::ProtectedApplicationStateListener l = *it;
+        busInternal->applicationStateListeners.erase(it);
+    }
+    busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+}
+
+QStatus BusAttachment::AddApplicationStateRule() {
+    const char* stateMatchRule = "type='signal',interface='org.alljoyn.Bus.Application',member='State',sessionless='t'";
+    return AddMatch(stateMatchRule);
+}
+
+QStatus BusAttachment::RemoveApplicationStateRule() {
+    const char* stateMatchRule = "type='signal',interface='org.alljoyn.Bus.Application',member='State',sessionless='t'";
+    return RemoveMatch(stateMatchRule);
+}
+
 QStatus BusAttachment::CancelWhoImplementsNonBlocking(const char* iface)
 {
     if (iface == NULL) {
@@ -2769,8 +2874,9 @@ QStatus BusAttachment::ClearKeys(const qcc::String& guid)
         return ER_INVALID_GUID;
     } else {
         qcc::GUID128 g(guid);
-        if (busInternal->keyStore.HasKey(g)) {
-            return busInternal->keyStore.DelKey(g);
+        KeyStore::Key key(KeyStore::Key::REMOTE, g);
+        if (busInternal->keyStore.HasKey(key)) {
+            return busInternal->keyStore.DelKey(key);
         } else {
             return ER_BUS_KEY_UNAVAILABLE;
         }
@@ -2786,9 +2892,10 @@ QStatus BusAttachment::SetKeyExpiration(const qcc::String& guid, uint32_t timeou
         return ER_INVALID_GUID;
     } else {
         qcc::GUID128 g(guid);
+        KeyStore::Key key(KeyStore::Key::REMOTE, g);
         uint64_t millis = 1000ull * timeout;
         Timespec expiration(millis, TIME_RELATIVE);
-        return busInternal->keyStore.SetKeyExpiration(g, expiration);
+        return busInternal->keyStore.SetKeyExpiration(key, expiration);
     }
 }
 
@@ -2798,8 +2905,9 @@ QStatus BusAttachment::GetKeyExpiration(const qcc::String& guid, uint32_t& timeo
         return ER_INVALID_GUID;
     } else {
         qcc::GUID128 g(guid);
+        KeyStore::Key key(KeyStore::Key::REMOTE, g);
         Timespec expiration;
-        QStatus status = busInternal->keyStore.GetKeyExpiration(g, expiration);
+        QStatus status = busInternal->keyStore.GetKeyExpiration(key, expiration);
         if (status == ER_OK) {
             int64_t deltaMillis = expiration - Timespec(0, TIME_RELATIVE);
             if (deltaMillis < 0) {
@@ -3124,10 +3232,10 @@ void BusAttachment::Internal::GetNameOwnerAsyncCB(Message& reply, void* context)
     delete ctx;
 }
 
-bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUID128& guid)
+bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const KeyStore::Key& key)
 {
     KeyBlob kb;
-    QStatus status = holder->GetKey(guid, kb);
+    QStatus status = holder->GetKey(key, kb);
     if (status != ER_OK) {
         return false;
     }
@@ -3135,9 +3243,9 @@ bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const qcc::GUI
         (kb.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
         return false;
     }
-    qcc::GUID128* list;
+    KeyStore::Key* list;
     size_t numItems;
-    status = holder->SearchAssociatedKeys(guid, &list, &numItems);
+    status = holder->SearchAssociatedKeys(key, &list, &numItems);
     if (status != ER_OK) {
         return false;
     }
@@ -3161,6 +3269,11 @@ Translator* BusAttachment::GetDescriptionTranslator()
     return translator;
 }
 
+PermissionConfigurator& BusAttachment::GetPermissionConfigurator()
+{
+    return busInternal->permissionConfigurator;
+}
+
 void BusAttachment::Internal::Init()
 {
     clientTransportsContainer = new ClientTransportFactoryContainer();
@@ -3170,6 +3283,30 @@ void BusAttachment::Internal::Shutdown()
 {
     delete clientTransportsContainer;
     clientTransportsContainer = NULL;
+}
+
+QStatus BusAttachment::Internal::CallFactoryResetListener()
+{
+    QStatus status = ER_OK;
+
+    factoryResetListenerLock.Lock(MUTEX_CONTEXT);
+    if (factoryResetListener) {
+        FactoryResetListener* listener = (**factoryResetListener);
+        if (listener) {
+            status = listener->FactoryReset();
+        }
+    }
+    factoryResetListenerLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
+QStatus BusAttachment::Internal::SetFactoryResetListener(FactoryResetListener* listener)
+{
+    factoryResetListenerLock.Lock(MUTEX_CONTEXT);
+    delete factoryResetListener;
+    factoryResetListener = new ProtectedFactoryResetListener(listener);
+    factoryResetListenerLock.Unlock(MUTEX_CONTEXT);
+    return ER_OK;
 }
 
 }

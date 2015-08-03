@@ -35,6 +35,7 @@
 #include "KeyExchanger.h"
 #include "AllJoynPeerObj.h"
 #include "CredentialAccessor.h"
+#include "KeyInfoHelper.h"
 
 #define QCC_MODULE "AUTH_KEY_EXCHANGER"
 
@@ -50,6 +51,46 @@ namespace ajn {
  * The legacy auth version with old ECC encoding
  */
 #define LEGACY_AUTH_VERSION      2
+
+/**
+ * The auth version with support for KeyInfo
+ */
+#define KEY_INFO_AUTH_VERSION      4
+
+/* the size of the master secret based on RFC5246 */
+#define MASTER_SECRET_SIZE 48
+/* the size of the master secret used in the PIN key exchange */
+#define MASTER_SECRET_PINX_SIZE 24
+
+/* the current PeerSecretRecord version */
+#define PEER_SECRET_RECORD_VERSION 1
+
+/**
+ * Calculate the size of the Peer secret record.  This record has the
+ * following fields:
+ *  uint8_t version;
+ *  uint8_t secret[MASTER_SECRET_SIZE];
+ *  ECCPublicKey publicKey;
+ *  uint8_t manifestDigest[Crypto_SHA256::DIGEST_SIZE];
+ *  uint8_t numIssuerPublicKeys;
+ *  uint8_t* issuerPublicKeys;
+ */
+
+static size_t CalcPeerSecretRecordSize(uint8_t numIssuerKeys)
+{
+    size_t ret = sizeof(uint8_t) + /* version */
+                 MASTER_SECRET_SIZE + /* secret */
+                 sizeof(ECCPublicKey) + /* publicKey */
+                 Crypto_SHA256::DIGEST_SIZE + /* manifestDigest */
+                 sizeof(uint8_t); /* numIssuerPublicKeys */
+    if (numIssuerKeys == 0) {
+        ret += sizeof(uint8_t*);
+    } else {
+        /* issuerPublicKeys array */
+        ret += numIssuerKeys * sizeof(ECCPublicKey);
+    }
+    return ret;
+}
 
 class SigInfo {
 
@@ -229,7 +270,6 @@ class SigInfoECC : public SigInfo {
     ECCSignature sig;
 };
 
-
 QStatus KeyExchangerECDHE::GenerateECDHEKeyPair()
 {
     return ecc.GenerateDHKeyPair();
@@ -256,7 +296,7 @@ void KeyExchangerECDHE::SetECDHEPrivateKey(const ECCPrivateKey* privateKey)
 QStatus KeyExchangerECDHE::GenerateMasterSecret(const ECCPublicKey* remotePubKey)
 {
     QStatus status;
-    uint8_t keymatter[48];      /* RFC5246 */
+    uint8_t keymatter[MASTER_SECRET_SIZE];      /* RFC5246 */
     if (IsLegacyPeer()) {
         ECCSecretOldEncoding pms;
         status = Crypto_ECC_OldEncoding::GenerateSharedSecret(ecc, remotePubKey, &pms);
@@ -286,11 +326,13 @@ void KeyExchanger::ShowCurrentDigest(const char* ref)
 
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     peerState->GetDigest(digest, true);
-    QCC_DbgHLPrintf(("Current digest [%d] ref[%s]: %s\n", ++showDigestCounter, ref, BytesToHexString(digest, sizeof(digest)).c_str()));
+    QCC_DbgHLPrintf(("Current digest %s ref[%s]: %s\n", IsInitiator() ? "I" : "R", ref, BytesToHexString(digest, sizeof(digest)).c_str()));
 }
 
 QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask)
 {
+    Message replyMsg(bus);
+
     QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange"));
     /* hash the handshake data */
     peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(remoteAuthMask, 16, 2 * sizeof(remoteAuthMask), '0')));
@@ -305,19 +347,25 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     }
     if (ER_OK != status) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange received invalid data from peer"));
-        return peerObj->HandleMethodReply(msg, ER_INVALID_DATA);
+        status = peerObj->HandleMethodReply(msg, replyMsg, ER_INVALID_DATA);
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+        return status;
     }
 
     status = GenerateECDHEKeyPair();
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange failed to generate ECDHE key pair"));
-        return peerObj->HandleMethodReply(msg, status);
+        status = peerObj->HandleMethodReply(msg, replyMsg, status);
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+        return status;
     }
 
     status = GenerateMasterSecret(&peerPubKey);
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange failed to generate master secret"));
-        return peerObj->HandleMethodReply(msg, status);
+        status = peerObj->HandleMethodReply(msg, replyMsg, status);
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+        return status;
     }
     /* hash the handshake data */
     peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof(authMask), '0')));
@@ -332,11 +380,9 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     args[0].Set("u", authMask);
     args[1].Set("v", &outVariant);
 
-    Message sentMsg(bus);
-    status = peerObj->HandleMethodReply(msg, sentMsg, args, ArraySize(args));
-
+    status = peerObj->HandleMethodReply(msg, replyMsg, args, ArraySize(args));
     if (ER_OK == status) {
-        peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     }
 
     return status;
@@ -386,48 +432,100 @@ QStatus KeyExchangerECDHE::KeyExchangeReadLegacyKey(MsgArg& variant)
     return ER_OK;
 }
 
-void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
+void KeyExchangerECDHE::KeyExchangeGenKeyInfo(MsgArg& variant)
 {
-    uint8_t curveType = ecc.GetCurveType();
+    KeyInfoNISTP256 keyInfo;
     const ECCPublicKey* publicKey = GetECDHEPublicKey();
+    keyInfo.SetPublicKey(publicKey);
+    KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(keyInfo, variant);
+
     size_t exportedPublicKeySize = publicKey->GetSize();
     uint8_t* exportedPublicKey = new uint8_t[exportedPublicKeySize];
     QCC_VERIFY(ER_OK == publicKey->Export(exportedPublicKey, &exportedPublicKeySize));
 
-    variant.Set("(yay)", curveType, exportedPublicKeySize, exportedPublicKey);
-
-    /* The MsgArg takes ownership of exportedPublicKey and will delete it on destruction. */
-    variant.SetOwnershipFlags(MsgArg::OwnsArgs | MsgArg::OwnsData, true);
-    peerState->UpdateHash(CONVERSATION_V1, &curveType, sizeof(curveType));
     peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
 
-    /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
-     * RespondToKeyExchange. So no hashing is done here for that version.
-     */
+    delete[] exportedPublicKey;
+}
+
+void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
+{
+    if (PeerSupportsKeyInfo()) {
+        KeyExchangeGenKeyInfo(variant);
+    } else {
+        uint8_t curveType = ecc.GetCurveType();
+        const ECCPublicKey* publicKey = GetECDHEPublicKey();
+        size_t exportedPublicKeySize = publicKey->GetSize();
+        uint8_t* exportedPublicKey = new uint8_t[exportedPublicKeySize];
+        QCC_VERIFY(ER_OK == publicKey->Export(exportedPublicKey, &exportedPublicKeySize));
+        variant.Set("(yay)", curveType, exportedPublicKeySize, exportedPublicKey);
+
+        /* The MsgArg takes ownership of exportedPublicKey and will delete it on destruction. */
+        variant.SetOwnershipFlags(MsgArg::OwnsArgs | MsgArg::OwnsData, true);
+        peerState->UpdateHash(CONVERSATION_V1, &curveType, sizeof(curveType));
+        peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
+
+        /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
+         * RespondToKeyExchange. So no hashing is done here for that version.
+         */
+    }
+}
+
+
+bool KeyExchangerECDHE_ECDSA::IsTrustAnchor(const ECCPublicKey* publicKey)
+{
+    for (PermissionMgmtObj::TrustAnchorList::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
+
+        if (*(*it)->keyInfo.GetPublicKey() == *publicKey) {
+            return true;
+        }
+    }
+    return false;
+}
+
+QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
+{
+    KeyInfoNISTP256 keyInfo;
+    QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(variant, keyInfo);
+    if (status != ER_OK) {
+        QCC_DbgHLPrintf(("KeyExchangerECDHE::KeyExchangeReadKeyInfo parsing KeyInfo fails status 0x%x\n", status));
+        return status;
+    }
+    peerPubKey = *keyInfo.GetPublicKey();
+    /* hash the handshake data */
+    size_t exportedPublicKeySize = peerPubKey.GetSize();
+    uint8_t* exportedPublicKey = new uint8_t [exportedPublicKeySize];
+    QCC_VERIFY(ER_OK == peerPubKey.Export(exportedPublicKey, &exportedPublicKeySize));
+    peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
+    delete[] exportedPublicKey;
+    return ER_OK;
 }
 
 QStatus KeyExchangerECDHE::KeyExchangeReadKey(MsgArg& variant)
 {
-    uint8_t eccCurveID;
-    uint8_t* replyPubKey;
-    size_t replyPubKeyLen;
-    variant.Get("(yay)", &eccCurveID, &replyPubKeyLen, &replyPubKey);
-    if (replyPubKeyLen != sizeof(ECCPublicKey)) {
-        return ER_INVALID_DATA;
-    }
-    if (eccCurveID != ecc.GetCurveType()) {
-        return ER_INVALID_DATA;
-    }
-    QCC_VERIFY(ER_OK == peerPubKey.Import(replyPubKey, sizeof(ECCPublicKey)));
-    /* hash the handshake data */
-    peerState->UpdateHash(CONVERSATION_V1, &eccCurveID, sizeof(eccCurveID));
-    peerState->UpdateHash(CONVERSATION_V1, replyPubKey, replyPubKeyLen);
+    if (!PeerSupportsKeyInfo()) {
+        uint8_t eccCurveID;
+        uint8_t* replyPubKey;
+        size_t replyPubKeyLen;
+        variant.Get("(yay)", &eccCurveID, &replyPubKeyLen, &replyPubKey);
+        if (replyPubKeyLen != sizeof(ECCPublicKey)) {
+            return ER_INVALID_DATA;
+        }
+        if (eccCurveID != ecc.GetCurveType()) {
+            return ER_INVALID_DATA;
+        }
+        QCC_VERIFY(ER_OK == peerPubKey.Import(replyPubKey, sizeof(ECCPublicKey)));
+        /* hash the handshake data */
+        peerState->UpdateHash(CONVERSATION_V1, &eccCurveID, sizeof(eccCurveID));
+        peerState->UpdateHash(CONVERSATION_V1, replyPubKey, replyPubKeyLen);
 
-    /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
-     * RespondToKeyExchange. So no hashing is done here for that version.
-     */
+        /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
+         * RespondToKeyExchange. So no hashing is done here for that version.
+         */
 
-    return ER_OK;
+        return ER_OK;
+    }
+    return KeyExchangeReadKeyInfo(variant);
 }
 
 QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& callback, uint32_t* remoteAuthMask)
@@ -459,6 +557,8 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     }
 
     status = callback.SendKeyExchange(args, ArraySize(args), &sentMsg, &replyMsg);
+    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange send KeyExchange fails status 0x%x\n", status));
         return status;
@@ -473,9 +573,6 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
 
     /* hash the handshake data */
     peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(*remoteAuthMask, 16, 2 * sizeof(*remoteAuthMask), '0')));
-
-    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
 
     if (IsLegacyPeer()) {
         status = KeyExchangeReadLegacyKey(*outVariant);
@@ -557,7 +654,8 @@ static QStatus DoStoreMasterSecret(BusAttachment& bus, const qcc::GUID128& guid,
     if (status == ER_OK) {
         qcc::String tagStr((const char*) tag, tagLen);
         secretBlob.SetTag(tagStr, initiator ? KeyBlob::INITIATOR : KeyBlob::RESPONDER);
-        status = keyStore.AddKey(guid, secretBlob, accessRights);
+        KeyStore::Key key(KeyStore::Key::REMOTE, guid);
+        status = keyStore.AddKey(key, secretBlob, accessRights);
     }
     return status;
 }
@@ -567,9 +665,135 @@ QStatus KeyExchangerECDHE::StoreMasterSecret(const qcc::GUID128& guid, const uin
     return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
 }
 
+QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys, bool& publicKeyAvailable)
+{
+    publicKeyAvailable = false;
+    if ((rec.GetSize() == MASTER_SECRET_SIZE) || (rec.GetSize() == MASTER_SECRET_PINX_SIZE)) {
+        /* support older format by the non ECDHE key exchanges */
+        masterSecret = rec;
+        if (publicKey) {
+            memset(publicKey, 0, sizeof(ECCPublicKey));
+        }
+        if (manifestDigest) {
+            memset(manifestDigest, 0, Crypto_SHA256::DIGEST_SIZE);
+        }
+        return ER_OK;
+    }
+    if (rec.GetSize() == 0) {
+        return ER_INVALID_DATA;
+    }
+    uint8_t* pBuf = (uint8_t*) rec.GetData();
+    uint8_t version = *pBuf;
+    size_t bytesRead = sizeof(version);
+    if (bytesRead > rec.GetSize()) {
+        return ER_INVALID_DATA;
+    }
+    if (version != PEER_SECRET_RECORD_VERSION) {
+        return ER_NOT_IMPLEMENTED;
+    }
+    pBuf += sizeof(version);
+    if ((bytesRead + MASTER_SECRET_SIZE) > rec.GetSize()) {
+        return ER_INVALID_DATA;
+    }
+    masterSecret.Set(pBuf, MASTER_SECRET_SIZE, rec.GetType());
+    bytesRead += MASTER_SECRET_SIZE;
+    pBuf += MASTER_SECRET_SIZE;
+    /* recopy other fields from rec */
+    masterSecret.SetTag(rec.GetTag(), rec.GetRole());
+    Timespec expiration;
+    if (rec.GetExpiration(expiration)) {
+        masterSecret.SetExpiration(expiration);
+    }
+
+    /* the public key field */
+    if ((bytesRead + sizeof(ECCPublicKey)) > rec.GetSize()) {
+        return ER_INVALID_DATA;
+    }
+    if (publicKey) {
+        publicKey->Import(pBuf, sizeof(ECCPublicKey));
+    }
+    bytesRead += sizeof(ECCPublicKey);
+    pBuf += sizeof(ECCPublicKey);
+
+    /* the manifest field */
+    if ((bytesRead + Crypto_SHA256::DIGEST_SIZE) > rec.GetSize()) {
+        return ER_INVALID_DATA;
+    }
+    if (manifestDigest) {
+        memcpy(manifestDigest, pBuf, Crypto_SHA256::DIGEST_SIZE);
+    }
+    bytesRead += Crypto_SHA256::DIGEST_SIZE;
+    pBuf += Crypto_SHA256::DIGEST_SIZE;
+
+    /* the number of issuers field */
+    if ((bytesRead + sizeof(uint8_t)) > rec.GetSize()) {
+        return ER_INVALID_DATA;
+    }
+    uint8_t numIssuerPublicKeys = *pBuf;
+    bytesRead += sizeof(numIssuerPublicKeys);
+    pBuf += sizeof(numIssuerPublicKeys);
+    for (size_t cnt = 0; cnt < numIssuerPublicKeys; cnt++) {
+        if ((bytesRead + sizeof(ECCPublicKey)) > rec.GetSize()) {
+            return ER_INVALID_DATA;
+        }
+        ECCPublicKey issuerPubKey;
+        issuerPubKey.Import(pBuf, sizeof(ECCPublicKey));
+        issuerPublicKeys.push_back(issuerPubKey);
+        bytesRead += sizeof(ECCPublicKey);
+        pBuf += sizeof(ECCPublicKey);
+    }
+    publicKeyAvailable = true;
+    return ER_OK;
+}
+
+QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret)
+{
+    bool publicKeyAvail;
+    std::vector<ECCPublicKey> issuerKeys;
+    return ParsePeerSecretRecord(rec, masterSecret, NULL, NULL, issuerKeys, publicKeyAvail);
+}
+
+QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
+{
+    if (peerDSAPubKey) {
+        /* build a new keyblob with master secret, peer DSA public key, manifest digest, and issuer public keys */
+        size_t bufferSize = CalcPeerSecretRecordSize(peerIssuerPubKeys.size());
+        uint8_t* buffer = new uint8_t[bufferSize];
+        uint8_t* pBuf = buffer;
+        /* the version field */
+        *pBuf = PEER_SECRET_RECORD_VERSION;
+        pBuf += sizeof(uint8_t);
+        /* the master secret field */
+        memcpy(pBuf, masterSecret.GetData(), MASTER_SECRET_SIZE);
+        pBuf += MASTER_SECRET_SIZE;
+        /* the public key field */
+        size_t keySize = sizeof(ECCPublicKey);
+        peerDSAPubKey->Export(pBuf, &keySize);
+        pBuf += keySize;
+        /* the manifest digest field */
+        memcpy(pBuf, peerManifestDigest, sizeof(peerManifestDigest));
+        pBuf += sizeof(peerManifestDigest);
+        /* the numIssuerPublicKeys field */
+        *pBuf = (uint8_t) peerIssuerPubKeys.size();
+        pBuf += sizeof(uint8_t);
+        if (peerIssuerPubKeys.size() > 0) {
+            for (size_t cnt = 0; cnt < peerIssuerPubKeys.size(); cnt++) {
+                size_t bufSize = sizeof(ECCPublicKey);
+                peerIssuerPubKeys[cnt].Export(pBuf, &bufSize);
+                pBuf += sizeof(ECCPublicKey);
+            }
+        }
+        KeyBlob kb(buffer, bufferSize, KeyBlob::GENERIC);
+        delete [] buffer;
+
+        return DoStoreMasterSecret(bus, guid, kb, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
+    } else {
+        return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
+    }
+}
+
 QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
 {
-    peerState->UpdateHash(CONVERSATION_V4, msg);
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
     QStatus status = GenerateLocalVerifier(verifier, sizeof(verifier));
@@ -578,8 +802,11 @@ QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
     }
     MsgArg variant;
     variant.Set("ay", sizeof(verifier), verifier);
-    MsgArg replyMsg("v", &variant);
-    return peerObj->HandleMethodReply(msg, &replyMsg, 1);
+    MsgArg replyArg("v", &variant);
+    Message replyMsg(bus);
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    return status;
 }
 
 QStatus KeyExchangerECDHE_NULL::RequestCredentialsCB(const char* peerName)
@@ -593,7 +820,7 @@ QStatus KeyExchangerECDHE_NULL::RequestCredentialsCB(const char* peerName)
     if (creds.IsSet(AuthListener::CRED_EXPIRATION)) {
         SetSecretExpiration(creds.GetExpiration());
     } else {
-        SetSecretExpiration(86400);      /* expires in one day */
+        SetSecretExpiration(1);      /* expires in one second */
     }
     return ER_OK;
 }
@@ -620,22 +847,25 @@ QStatus KeyExchangerECDHE_NULL::KeyAuthentication(KeyExchangerCB& callback, cons
     peerState->UpdateHash(CONVERSATION_V1, verifier, sizeof(verifier));
 
     status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
+    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
     if (status != ER_OK) {
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return status;
     }
-    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
 
     MsgArg* variant;
     status = replyMsg->GetArg(0)->Get("v", &variant);
     if (status != ER_OK) {
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return status;
     }
-    return ValidateRemoteVerifierVariant(peerName, variant, authorized);
+    status = ValidateRemoteVerifierVariant(peerName, variant, authorized);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    return status;
 }
 
 QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
 {
-    peerState->UpdateHash(CONVERSATION_V4, msg);
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
     QStatus status = GenerateLocalVerifier(verifier, sizeof(verifier));
@@ -644,8 +874,12 @@ QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
     }
     MsgArg variant;
     variant.Set("(ayay)", pskName.length(), pskName.data(), sizeof(verifier), verifier);
-    MsgArg replyMsg("v", &variant);
-    return peerObj->HandleMethodReply(msg, &replyMsg, 1);
+    MsgArg replyArg("v", &variant);
+    Message replyMsg(bus);
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    return status;
+
 }
 
 QStatus KeyExchangerECDHE_PSK::RequestCredentialsCB(const char* peerName)
@@ -688,10 +922,19 @@ QStatus KeyExchangerECDHE_PSK::GenerateLocalVerifier(uint8_t* verifier, size_t v
     }
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     peerState->GetDigest(digest, true);
-    return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
+    if (GetPeerAuthVersion() >= CONVERSATION_V4) {
+        qcc::String seed((const char*)digest, sizeof(digest));
+        seed += pskName;
+        seed += pskValue;
+        QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
+        seed.secure_clear();
+        return status;
+    } else {
+        return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
+    }
 }
 
-QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* verifier, size_t verifierLen)
+QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* peerPskName, size_t peerPskNameLength, uint8_t* verifier, size_t verifierLen)
 {
     qcc::String label;
     if (IsInitiator()) {
@@ -701,7 +944,22 @@ QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* verifier, size_t 
     }
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     peerState->GetDigest(digest, true);
-    return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
+
+    /* In CONVERSATION_V4, the hash captures the entire conversation for its protection, and so
+     * the PSK cannot be hashed into it, because if the PSK between the peers mismatches the digests will never
+     * agree, and no other auth mechanism could possibly succeed. Instead, the PSK is added here as an input to
+     * the seed that generates the verifier.
+     */
+    if (GetPeerAuthVersion() >= CONVERSATION_V4) {
+        qcc::String seed((const char*)digest, sizeof(digest));
+        seed.append((const char*)peerPskName, peerPskNameLength);
+        seed += pskValue;
+        QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
+        seed.secure_clear();
+        return status;
+    } else {
+        return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
+    }
 }
 
 QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized)
@@ -721,16 +979,12 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
         }
         peerState->UpdateHash(CONVERSATION_V1, peerPskName, peerPskNameLen);
         peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*) pskValue.data(), pskValue.length());
-
-        peerState->UpdateHash(CONVERSATION_V4, peerPskName, peerPskNameLen);
-        peerState->UpdateHash(CONVERSATION_V4, (const uint8_t*)pskValue.data(), pskValue.length());
-
     }
     if (remoteVerifierLen != AUTH_VERIFIER_LEN) {
         return ER_INVALID_DATA;
     }
     uint8_t computedRemoteVerifier[AUTH_VERIFIER_LEN];
-    status = GenerateRemoteVerifier(computedRemoteVerifier, sizeof(computedRemoteVerifier));
+    status = GenerateRemoteVerifier(peerPskName, peerPskNameLen, computedRemoteVerifier, sizeof(computedRemoteVerifier));
     if (status != ER_OK) {
         return status;
     }
@@ -758,9 +1012,6 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskName.data(), pskName.length());
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskValue.data(), pskValue.length());
 
-    peerState->UpdateHash(CONVERSATION_V4, (const uint8_t*)pskName.data(), pskName.length());
-    peerState->UpdateHash(CONVERSATION_V4, (const uint8_t*)pskValue.data(), pskValue.length());
-
     uint8_t verifier[AUTH_VERIFIER_LEN];
     GenerateLocalVerifier(verifier, sizeof(verifier));
     Message sentMsg(bus);
@@ -775,16 +1026,20 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     peerState->UpdateHash(CONVERSATION_V1, verifier, sizeof(verifier));
 
     status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
+    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
     if (status != ER_OK) {
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return status;
     }
-    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
     MsgArg* variant;
     status = replyMsg->GetArg(0)->Get("v", &variant);
     if (status != ER_OK) {
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return status;
     }
-    return ValidateRemoteVerifierVariant(peerName, variant, authorized);
+    status = ValidateRemoteVerifierVariant(peerName, variant, authorized);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    return status;
 }
 
 QStatus KeyExchangerECDHE_ECDSA::ParseCertChainPEM(String& encodedCertChain)
@@ -815,6 +1070,8 @@ QStatus KeyExchangerECDHE_ECDSA::ParseCertChainPEM(String& encodedCertChain)
 KeyExchangerECDHE_ECDSA::~KeyExchangerECDHE_ECDSA()
 {
     delete [] certChain;
+    delete peerDSAPubKey;
+    peerIssuerPubKeys.clear();
 }
 
 QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
@@ -894,7 +1151,7 @@ QStatus KeyExchangerECDHE_ECDSA::VerifyCredentialsCB(const char* peerName, Certi
 /**
  * validate whether the certificate chain structure is a valid
  */
-static bool IsCertChainStructureValid(CertificateX509* certs, size_t numCerts)
+bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* certs, size_t numCerts)
 {
     if ((numCerts == 0) || !certs) {
         QCC_DbgPrintf(("Empty certificate chain"));
@@ -906,6 +1163,11 @@ static bool IsCertChainStructureValid(CertificateX509* certs, size_t numCerts)
             return false;
         }
     }
+    /* Leaf certificate must have exactly one EKU. */
+    if ((certs[0].GetType() != CertificateX509::IDENTITY_CERTIFICATE) &&
+        (certs[0].GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+        return false;
+    }
     if (numCerts == 1) {
         return true;
     }
@@ -914,12 +1176,61 @@ static bool IsCertChainStructureValid(CertificateX509* certs, size_t numCerts)
             QCC_DbgPrintf(("Certificate basic extension CA is false"));
             return false;
         }
-        if (certs[cnt].Verify(certs[cnt + 1].GetSubjectPublicKey()) != ER_OK) {
+        if (!certs[cnt + 1].IsIssuerOf(certs[cnt])) {
             QCC_DbgPrintf(("Certificate chain signature verification failed"));
             return false;
         }
     }
     return true;
+}
+
+/**
+ * Extract the list of issuer keys from the cert chain
+ */
+static void ExtractIssuerPublicKeys(const CertificateX509* certs, size_t numCerts, const PermissionMgmtObj::TrustAnchorList* trustAnchorList, std::vector<ECCPublicKey>& issuerKeys)
+{
+    if ((numCerts == 0) || !certs) {
+        return;
+    }
+    if (numCerts == 1) {
+        /* use issuer authority key id to locate the issuer's public key
+         * from the list of trust anchors
+         */
+        qcc::String aki = certs[0].GetAuthorityKeyId();
+        if (aki.size() == 0) {
+            return;
+        }
+        for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
+            if ((aki.size() == (*it)->keyInfo.GetKeyIdLen()) &&
+                (memcmp(aki.data(), (*it)->keyInfo.GetKeyId(), aki.size()) == 0) &&
+                (ER_OK == certs[0].Verify((*it)->keyInfo.GetPublicKey()))) {
+                issuerKeys.push_back(*(*it)->keyInfo.GetPublicKey());
+            }
+        }
+    }
+    /* Skip the end-entity cert[0], go through the issuer certs to collect
+     * the issuers' public key.
+     */
+    for (size_t cnt = 1; cnt < numCerts; cnt++) {
+        issuerKeys.push_back(*certs[cnt].GetSubjectPublicKey());
+    }
+}
+
+/**
+ * Calculate the number of seconds before the secret expires based on the input
+ * expiry and the certificate validity period.  The secret can't outlast the
+ * certificate validity period.
+ * @param cert the certificate
+ * @param expiry[in,out] the number of seconds before the secret expires.
+ */
+static void CalculateSecretExpiration(const CertificateX509& cert, uint32_t& expiry)
+{
+    uint64_t currentTime = GetEpochTimestamp() / 1000;
+    if (cert.GetValidity()->validTo < currentTime) {
+        expiry = 0;
+    } else if ((cert.GetValidity()->validTo - currentTime) < expiry) {
+        expiry = cert.GetValidity()->validTo - currentTime;
+    }
 }
 
 QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized)
@@ -932,7 +1243,6 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
             return status;
         }
     }
-    *authorized = false;
 
     MsgArg* sigInfoVariant;
     uint8_t certChainEncoding;
@@ -1014,9 +1324,9 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
             return status;
         }
         if (certChainEncoding == CertificateX509::ENCODING_X509_DER) {
-            status = certs[cnt].LoadEncoded(encoded, encodedLen);
+            status = certs[cnt].DecodeCertificateDER(String((const char*) encoded, encodedLen));
         } else if (certChainEncoding == CertificateX509::ENCODING_X509_DER_PEM) {
-            status = certs[cnt].LoadPEM(String((const char*) encoded, encodedLen));
+            status = certs[cnt].DecodeCertificatePEM(String((const char*) encoded, encodedLen));
         } else {
             delete [] certs;
             QCC_LogError(status, ("Peer's certificate chain data are not in DER or PEM format"));
@@ -1049,26 +1359,42 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         return ER_OK;
     }
     status = VerifyCredentialsCB(peerName, certs, numCerts);
-    *authorized = (ER_OK == status);
-    if (!*authorized) {
+    if (ER_OK != status) {
+        if (!IsTrustAnchor(certs[0].GetSubjectPublicKey())) {
+            *authorized = false;
+        }
+    }
+
+    if (*authorized) {
+        peerDSAPubKey = new ECCPublicKey();
+        *peerDSAPubKey = *(certs[0].GetSubjectPublicKey());
+        if (certs[0].GetDigestSize() == Crypto_SHA256::DIGEST_SIZE) {
+            memcpy(peerManifestDigest, certs[0].GetDigest(), Crypto_SHA256::DIGEST_SIZE);
+        }
+        ExtractIssuerPublicKeys(certs, numCerts, trustAnchorList, peerIssuerPubKeys);
+        CalculateSecretExpiration(certs[0], secretExpiration);
+    } else {
         QCC_DbgPrintf(("Not authorized by VerifyCredential callback"));
     }
     delete [] certs;
     return ER_OK;
 }
 
+
 QStatus KeyExchangerECDHE_ECDSA::ReplyWithVerifier(Message& msg)
 {
     QStatus status;
     MsgArg variant;
-    peerState->UpdateHash(CONVERSATION_V4, msg);
     status = GenVerifierSigInfoArg(variant, false);
     if (ER_OK != status) {
         return status;
     }
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-    MsgArg replyMsg("v", &variant);
-    return peerObj->HandleMethodReply(msg, &replyMsg, 1);
+    MsgArg replyArg("v", &variant);
+    Message replyMsg(bus);
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    return status;
 }
 
 QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool updateHash)
@@ -1122,9 +1448,16 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
         certArgs = new MsgArg[certChainLen];
         /* add the local cert chain to the list of certs to send */
         for (size_t cnt = 0; cnt < certChainLen; cnt++) {
-            certArgs[cnt].Set("(ay)", certChain[cnt].GetEncodedLen(), certChain[cnt].GetEncoded());
+            String der;
+            status = certChain[cnt].EncodeCertificateDER(der);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to generate DER encoding for certificate"));
+                return status;
+            }
+            certArgs[cnt].Set("(ay)", der.size(), (const uint8_t*) der.data());
+            certArgs[cnt].Stabilize();
             if (updateHash) {
-                peerState->UpdateHash(CONVERSATION_V1, certChain[cnt].GetEncoded(), certChain[cnt].GetEncodedLen());
+                peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*) der.data(), der.size());
             }
         }
     }
@@ -1173,19 +1506,28 @@ QStatus KeyExchangerECDHE_ECDSA::KeyAuthentication(KeyExchangerCB& callback, con
     peerState->UpdateHash(CONVERSATION_V4, sentMsg);
 
     if (status != ER_OK) {
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return status;
     }
     MsgArg* remoteVariant;
     status = replyMsg->GetArg(0)->Get("v", &remoteVariant);
     if (status != ER_OK) {
+        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
         return status;
     }
-    return ValidateRemoteVerifierVariant(peerName, remoteVariant, authorized);
+    status = ValidateRemoteVerifierVariant(peerName, remoteVariant, authorized);
+    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+    return status;
 }
 
 bool KeyExchanger::IsLegacyPeer()
 {
     return (GetPeerAuthVersion() == LEGACY_AUTH_VERSION);
+}
+
+bool KeyExchanger::PeerSupportsKeyInfo()
+{
+    return GetPeerAuthVersion() >= KEY_INFO_AUTH_VERSION;
 }
 
 } /* namespace ajn */

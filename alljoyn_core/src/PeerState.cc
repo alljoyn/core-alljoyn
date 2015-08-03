@@ -215,6 +215,9 @@ void _PeerState::GetDigest(uint8_t* digest, bool keepAlive)
 
 _PeerState::~_PeerState()
 {
+    ClearGuildMap(guildMap);
+    ClearGuildArgs(guildArgs);
+    delete [] manifest;
     delete hashUtil;
 }
 
@@ -297,6 +300,46 @@ PeerStateTable::~PeerStateTable()
     lock.Lock(MUTEX_CONTEXT);
     peerMap.clear();
     lock.Unlock(MUTEX_CONTEXT);
+}
+
+static String GenGuildMetadataKey(const qcc::String& serial, const qcc::String& issuerAki)
+{
+    return serial + "::" + issuerAki;
+}
+
+void _PeerState::SetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki, GuildMetadata* guild)
+{
+    String key = GenGuildMetadataKey(serial, issuerAki);
+    GuildMap::iterator iter = guildMap.find(key);
+    if (iter != guildMap.end()) {
+        /* found existing one */
+        delete iter->second;
+        guildMap.erase(key);
+    }
+    guildMap[key] = guild;
+}
+
+_PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& serial, const String& issuerAki)
+{
+    String key = GenGuildMetadataKey(serial, issuerAki);
+    GuildMap::iterator iter = guildMap.find(key);
+    if (iter != guildMap.end()) {
+        return iter->second;  /* direct hit at the leaf cert */
+    }
+
+    /* the <serial,issuer> pair may be of a cert in the chain */
+    for (GuildMap::iterator it = guildMap.begin(); it != guildMap.end(); it++) {
+        GuildMetadata* meta = it->second;
+        for (std::vector<CertificateX509*>::iterator ccit = meta->certChain.begin(); ccit != meta->certChain.end(); ccit++) {
+            if (((*ccit)->GetSerialLen() == serial.size()) &&
+                (memcmp((*ccit)->GetSerial(), serial.data(), serial.size()) == 0) &&
+                ((*ccit)->GetAuthorityKeyId() == issuerAki)) {
+                return meta;
+            }
+        }
+    }
+
+    return NULL;
 }
 
 }

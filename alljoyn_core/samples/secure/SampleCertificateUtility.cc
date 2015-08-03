@@ -117,7 +117,7 @@ void PrintUsage()
     printf(
         "   -createEE <validity in days> <end entity subject name>\n"
         "        Create an end-entity certificate suitable for use as an AllJoyn\n"
-        "        authentication certificate. %s and %s must exist\n"
+        "        identity certificate. %s and %s must exist\n"
         "        in the current working directory as created by a previous call to\n"
         "        -createCa. %s will contain the certificate and \n"
         "        %s will contain the private key.\n"
@@ -234,7 +234,9 @@ static uint64_t GetEpochTimestamp()
  * @param[in] issuerPrivateKey Pointer to ECCPrivateKey containing the issuer's private key for signing.
  * @param[in] validity ValidPeriod structure containing the notValidBefore and notValidAfter dates for the certificate.
  * @param[in] isCA Whether or not the certificate should be labeled as a certificate authority (true) or an end entity (false).
- * @param[out] certificate Output which will receive the signed certificate.
+ * @param[out] certificate Output which will receive the signed certificate. For identity certificates, create an
+               IdentityCertificate object to pass in here. For membership certificates, a MembershipCertificate object.
+               For a CA/unrestricted certificate, a CertificateX509 object.
  * @return A QStatus indicating success or failure; ER_OK means certificate was successfully created and signed, any other
  *         value means failure and the contents of certificate should not be used.
  */
@@ -275,7 +277,6 @@ QStatus CreateAndSignCertificate(
             return ER_BAD_ARG_4;
         }
     }
-
 
     certificate.SetSubjectCN(subjectCN, subjectCNSize);
     certificate.SetIssuerCN(issuerCN, issuerCNSize);
@@ -706,7 +707,7 @@ int CreateEE(int argc, char** argv)
     validity.validFrom = GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + (validityInDays * 86400);
 
-    CertificateX509 eeCertificate;
+    IdentityCertificate eeCertificate;
 
     status = CreateAndSignCertificate(
         reinterpret_cast<const uint8_t*>(subjectCN.c_str()),
