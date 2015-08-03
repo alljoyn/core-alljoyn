@@ -425,10 +425,11 @@ _Message::_Message(const _Message& other) :
     }
 }
 
-QStatus _Message::ReMarshal(const char* senderName)
+QStatus _Message::ReMarshal(const char* senderName, const char* destination)
 {
     if (senderName) {
         hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].Set("s", senderName);
+        hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].Set("s", destination);
     }
 
     /*

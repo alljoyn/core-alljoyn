@@ -49,7 +49,8 @@ typedef enum {
     ENDPOINT_TYPE_LOCAL,   /**< The local endpoint */
     ENDPOINT_TYPE_REMOTE,  /**< A remote endpoint */
     ENDPOINT_TYPE_BUS2BUS, /**< An endpoint connecting two busses */
-    ENDPOINT_TYPE_VIRTUAL  /**< Represents an endpoint on another bus */
+    ENDPOINT_TYPE_VIRTUAL,  /**< Represents an endpoint on another bus */
+    ENDPOINT_TYPE_MQTT /**< An endpoint connecting to an MQTT broker */
 } EndpointType;
 
 /**

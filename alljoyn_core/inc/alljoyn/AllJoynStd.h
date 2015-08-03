@@ -115,7 +115,14 @@ extern const char* ObjectPath;                    /**< Object path */
 extern const char* InterfaceName;                 /**< Interface name */
 }
 }
+/** Interface definitions for org.alljoyn.MQTT */
+namespace MQTT {
 
+extern const char* ErrorName;                     /**< Standard MQTT error name */
+extern const char* ObjectPath;                    /**< Object path */
+extern const char* InterfaceName;                 /**< Interface name */
+extern const char* WellKnownName;                 /**< Well known bus name */
+}
 QStatus CreateInterfaces(BusAttachment& bus);          /**< Create the org.alljoyn.* interfaces and sub-interfaces */
 }
 

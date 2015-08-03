@@ -108,8 +108,8 @@ bool DaemonRouter::AddCompatibilityOverride(bool add,
                                             const bool isGlobalBroadcast,
                                             const SessionId detachId)
 {
-    const bool srcIsB2b = (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
-    const bool destIsB2b = (dest->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
+    const bool srcIsB2b = (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) || (src->GetEndpointType() == ENDPOINT_TYPE_MQTT);
+    const bool destIsB2b = (dest->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) || (dest->GetEndpointType() == ENDPOINT_TYPE_MQTT);
 
     if (isBroadcast) {
         if (isGlobalBroadcast && destIsB2b && detachId != 0) {
@@ -164,7 +164,7 @@ QStatus DaemonRouter::StatusCompatibilityOverride(QStatus status,
                                                   const bool isSessionless,
                                                   const bool policyRejected)
 {
-    const bool srcIsB2b = (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
+    const bool srcIsB2b = (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) || (src->GetEndpointType() == ENDPOINT_TYPE_MQTT);
 
     if (isSessioncast && srcIsB2b && isSessionless && !policyRejected) {
         /*
@@ -204,9 +204,9 @@ bool DaemonRouter::IsSessionDeliverable(SessionId sessionId, BusEndpoint& src, B
 
 QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
 {
-    QCC_DbgTrace(("DaemonRouter::PushMessage(): Routing %s\"%s\" (%d) from \"%s\"",
+    QCC_DbgTrace(("DaemonRouter::PushMessage(): Routing %s\"%s\" (%d) from \"%s\" to %s, sender %s",
                   msg->IsSessionless() ? "sessionless " : "",
-                  msg->Description().c_str(), msg->GetCallSerial(), src->GetUniqueName().c_str()));
+                  msg->Description().c_str(), msg->GetCallSerial(), src->GetUniqueName().c_str(), msg->GetDestination(), msg->GetSender()));
 
     assert(src->GetEndpointType() != ENDPOINT_TYPE_VIRTUAL);
     /*
@@ -319,7 +319,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
     const bool msgIsSessionless =     msg->IsSessionless();
     const bool msgIsGlobalBroadcast = msg->IsGlobalBroadcast();
 
-    const bool srcIsB2b =             (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
+    const bool srcIsB2b =             (src->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) || (src->GetEndpointType() == ENDPOINT_TYPE_MQTT);
     const bool srcIsOurEp =           (!srcIsB2b);  // EP is directly connected to this router
     const bool srcAllowsRemote =      src->AllowRemoteMessages();
 
@@ -390,7 +390,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
         const bool destIsOurEp =      ((dest->GetEndpointType() == ENDPOINT_TYPE_LOCAL) ||
                                        (dest->GetEndpointType() == ENDPOINT_TYPE_NULL) ||
                                        (dest->GetEndpointType() == ENDPOINT_TYPE_REMOTE));
-        const bool destIsB2b =        (dest->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS);
+        const bool destIsB2b =        (dest->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) || (dest->GetEndpointType() == ENDPOINT_TYPE_MQTT);
         const bool destAllowsRemote = dest->AllowRemoteMessages();
 
         bool add = true;
@@ -651,7 +651,7 @@ QStatus DaemonRouter::RegisterEndpoint(BusEndpoint& endpoint)
         m_Lock.Unlock();
     }
 
-    if (endpoint->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS) {
+    if (endpoint->GetEndpointType() == ENDPOINT_TYPE_BUS2BUS || endpoint->GetEndpointType() == ENDPOINT_TYPE_MQTT) {
         /* AllJoynObj is in charge of managing bus-to-bus endpoints and their names */
         RemoteEndpoint busToBusEndpoint = RemoteEndpoint::cast(endpoint);
         status = alljoynObj->AddBusToBusEndpoint(busToBusEndpoint);

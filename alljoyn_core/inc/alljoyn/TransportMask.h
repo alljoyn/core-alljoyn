@@ -32,7 +32,7 @@ const TransportMask TRANSPORT_NONE          = 0x0000;  /**< no transports */
 const TransportMask TRANSPORT_LOCAL         = 0x0001;  /**< Local (same device) transport */
 const TransportMask TRANSPORT_TCP           = 0x0004;  /**< Transport using TCP as the underlying mechanism */
 const TransportMask TRANSPORT_UDP           = 0x0100;  /**< Transport using UDP as the underlying mechanism */
-
+const TransportMask TRANSPORT_MQTT          = 0x0200;  /**< Transport using MQTT as the underlying mechanism */
 /**
  * A placeholder for an experimental transport that has not yet reached the
  * performance, stability or testing requirements of a commercialized transport.
@@ -57,7 +57,7 @@ const TransportMask TRANSPORT_IP        = (TRANSPORT_TCP | TRANSPORT_UDP);
  * more transports are introduced and reach commercial quality, we expect the
  * corresponding mask bits to be added here.
  */
-const TransportMask TRANSPORT_ANY       = (TRANSPORT_LOCAL | TRANSPORT_IP);
+const TransportMask TRANSPORT_ANY       = (TRANSPORT_LOCAL | TRANSPORT_IP | TRANSPORT_MQTT);
 
 /**
  * Obsolete mask indicating that any transport as long as it is running over the

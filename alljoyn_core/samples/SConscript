@@ -30,6 +30,9 @@ samples_env.SConscript('aboutlistener/SConscript', exports = {'env': samples_env
 # Basic Sample programs
 samples_env.SConscript('basic/SConscript', exports = {'env': samples_env})
 
+# MQTT Sample programs
+samples_env.SConscript('mqtt/SConscript', exports = {'env': samples_env})
+
 # Simple Sample programs
 samples_env.SConscript('simple/SConscript', exports = {'env': samples_env})
 

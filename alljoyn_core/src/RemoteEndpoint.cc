@@ -1327,7 +1327,7 @@ void _RemoteEndpoint::RegisterSessionId(uint32_t sessionId)
     if (internal) {
         QCC_DbgPrintf(("_RemoteEndpoint::RegisterSessionId (%s,%u)", GetUniqueName().c_str(), sessionId));
         internal->sessionIdSet.insert(sessionId);
-        assert(!internal->features.isBusToBus || (internal->sessionIdSet.size() == 1));
+        assert((endpointType != ENDPOINT_TYPE_BUS2BUS) || (internal->sessionIdSet.size() == 1));
     }
 }
 

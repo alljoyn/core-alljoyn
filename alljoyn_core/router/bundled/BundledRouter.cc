@@ -43,6 +43,7 @@
 #include "Transport.h"
 #include "TCPTransport.h"
 #include "UDPTransport.h"
+#include "MQTTTransport.h"
 
 #define QCC_MODULE "ALLJOYN_ROUTER"
 
@@ -56,6 +57,7 @@ static const char bundledConfig[] =
     "  <type>alljoyn_bundled</type>"
     "  <listen>tcp:iface=*,port=0</listen>"
     "  <listen>udp:iface=*,port=0</listen>"
+    "  <listen>mqtt:</listen>"
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"
@@ -268,6 +270,7 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
         if (!transportsInitialized) {
             Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
             Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
+            Add(new TransportFactory<MQTTTransport>(MQTTTransport::TransportName, false));
             transportsInitialized = true;
         }
         QCC_DbgPrintf(("Starting bundled router bus attachment"));

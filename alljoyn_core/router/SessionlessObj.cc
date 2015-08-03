@@ -149,7 +149,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_exponential", 32),
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_max", 15 * 60))
 {
-    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY);
+    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY | TRANSPORT_MQTT);
 }
 
 SessionlessObj::~SessionlessObj()
@@ -362,6 +362,9 @@ void SessionlessObj::AddRuleWork::Run()
 
     slObj.FindAdvertisedNames();
 
+    if (slObj.mqttEp->IsValid()) {
+        slObj.mqttEp->SubscribeToSessionless(rule.iface, rule.member);
+    }
     slObj.lock.Unlock();
     slObj.router.UnlockNameTable();
 
@@ -443,6 +446,14 @@ void SessionlessObj::PushMessageWork::Run()
 
     slObj.lock.Unlock();
     slObj.router.UnlockNameTable();
+    Message clone = Message(msg, true);
+
+    if (slObj.mqttEp->IsValid()) {
+        slObj.mqttEp->PublishPresence(msg->GetSender(), true);
+        slObj.mqttEp->SubscribeForDestination(msg->GetSender());
+        slObj.mqttEp->PushMessage(clone);
+    }
+
 }
 
 QStatus SessionlessObj::PushMessage(Message& msg)
@@ -466,6 +477,13 @@ void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
 
     router.LockNameTable();
     lock.Lock();
+
+    if (sid == 0) {
+        SendMatchingThroughEndpoint(sid, msg, nextRulesId - (numeric_limits<uint32_t>::max() >> 1), nextRulesId);
+        lock.Unlock();
+        router.UnlockNameTable();
+        return;
+    }
 
     RemoteCaches::iterator cit = FindRemoteCache(sid);
     if (cit == remoteCaches.end()) {
@@ -568,19 +586,34 @@ void SessionlessObj::CancelMessageWork::Run()
 
     slObj.lock.Lock();
     SessionlessMessageKey key(sender.c_str(), "", "", "");
+    String iface;
+    String member;
     LocalCache::iterator it = slObj.localCache.lower_bound(key);
+    bool otherFound = false;
     while ((it != slObj.localCache.end()) && (sender == it->second.second->GetSender())) {
         if (it->second.second->GetCallSerial() == serialNum) {
             if (!it->second.second->IsExpired()) {
                 status = ER_OK;
             }
+            iface = it->second.second->GetInterface();
+            member = it->second.second->GetMemberName();
             slObj.localCache.erase(it);
             break;
+        } else {
+            otherFound = true;
         }
         ++it;
     }
     slObj.lock.Unlock();
 
+    if (status == ER_OK) {
+        if (slObj.mqttEp->IsValid()) {
+            slObj.mqttEp->CancelMessage(sender, iface, member);
+            if (!otherFound) {
+                slObj.mqttEp->PublishPresence(msg->GetSender(), false);
+            }
+        }
+    }
     slObj.busController->GetAllJoynObj().CancelSessionlessMessageReply(msg, status);
 }
 
@@ -628,7 +661,11 @@ void SessionlessObj::NameOwnerChangedWork::Run()
     /* Remove stored sessionless messages sent by the old owner */
     SessionlessMessageKey key(oldOwner.c_str(), "", "", "");
     LocalCache::iterator mit = slObj.localCache.lower_bound(key);
+    set<pair<String, String> > ifaces;
     while ((mit != slObj.localCache.end()) && (::strcmp(oldOwner.c_str(), mit->second.second->GetSender()) == 0)) {
+        String iface = mit->second.second->GetInterface();
+        String member = mit->second.second->GetMemberName();
+        ifaces.insert(pair<String, String>(iface, member));
         slObj.localCache.erase(mit++);
     }
 
@@ -637,6 +674,14 @@ void SessionlessObj::NameOwnerChangedWork::Run()
         slObj.CancelFindAdvertisedNames();
     }
     slObj.lock.Unlock();
+    if (slObj.mqttEp->IsValid()) {
+        for (set<pair<String, String> >::iterator it = ifaces.begin(); it != ifaces.end(); ++it) {
+            slObj.mqttEp->CancelMessage(oldOwner, (*it).first, (*it).second);
+        }
+        if (ifaces.size() != 0) {
+            slObj.mqttEp->PublishPresence(oldOwner, false);
+        }
+    }
     slObj.router.UnlockNameTable();
 }
 
@@ -695,7 +740,9 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
         }
         cit->second.transports |= transport;
     }
-    ScheduleWork(doInitialBackoff);
+    if (transport != TRANSPORT_MQTT) {
+        ScheduleWork(doInitialBackoff);
+    }
     lock.Unlock();
 }
 

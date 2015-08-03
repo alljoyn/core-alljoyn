@@ -620,7 +620,8 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * @param msg           The signal message.
      */
     void DetachSessionSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg);
-
+    void PresenceSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg);
+    void MPSessionChangedSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg);
     void NameOwnerChanged(const qcc::String& alias,
                           const qcc::String* oldOwner, SessionOpts::NameTransferType oldOwnerNameTransfer,
                           const qcc::String* newOwner, SessionOpts::NameTransferType newOwnerNameTransfer);
@@ -801,6 +802,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     qcc::Mutex stateLock;                 /**< Lock that protects AlljoynObj state */
 
     const InterfaceDescription* daemonIface;               /**< org.alljoyn.Daemon interface */
+    const InterfaceDescription* mqttIface;               /**< org.alljoyn.MQTT interface */
 
     const InterfaceDescription::Member* foundNameSignal;   /**< org.alljoyn.Bus.FoundName signal */
     const InterfaceDescription::Member* lostAdvNameSignal; /**< org.alljoyn.Bus.LostAdvertisdName signal */
@@ -934,6 +936,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     const qcc::GUID128& daemonGuid;                            /**< Global GUID of this daemon */
 
     const InterfaceDescription::Member* detachSessionSignal;   /**< org.alljoyn.Daemon.DetachSession signal member */
+    const InterfaceDescription::Member* presenceSignal;   /**< org.alljoyn.MQTT.Presence signal member */
 
     std::map<qcc::String, VirtualEndpoint> virtualEndpoints;   /**< Map of endpoints that reside behind a connected AllJoyn daemon */
 

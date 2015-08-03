@@ -50,6 +50,7 @@
 #include "Transport.h"
 #include "TCPTransport.h"
 #include "UDPTransport.h"
+#include "MQTTTransport.h"
 #include "DaemonTransport.h"
 #if defined(QCC_OS_LINUX)
 #include "DaemonSLAPTransport.h"
@@ -157,6 +158,7 @@ static const char internalConfig[] =
 #endif
     "  <listen>tcp:iface=*,port=9955</listen>"
     "  <listen>udp:iface=*,port=9955</listen>"
+    "  <listen>mqtt:</listen>"
     "</busconfig>";
 
 static const char versionPreamble[] =
@@ -194,6 +196,7 @@ class OptParse {
         argc(argc), argv(argv),
         fork(false), noFork(false),
         noSLAP(false),
+        noMQTT(false),
         noTCP(false),
         noUDP(false),
 #if defined(QCC_OS_DARWIN)
@@ -220,6 +223,9 @@ class OptParse {
     }
     bool GetNoSLAP() const {
         return noSLAP;
+    }
+    bool GetNoMQTT() const {
+        return noMQTT;
     }
     bool GetNoTCP() const {
         return noTCP;
@@ -271,6 +277,7 @@ class OptParse {
     bool fork;
     bool noFork;
     bool noSLAP;
+    bool noMQTT;
     bool noTCP;
     bool noUDP;
 #if defined(QCC_OS_DARWIN)
@@ -485,6 +492,8 @@ OptParse::ParseResultCode OptParse::ParseResult()
             // Obsolete - kept for backwards compatibility
         } else if (arg.compare("--no-slap") == 0) {
             noSLAP = true;
+        } else if (arg.compare("--no-mqtt") == 0) {
+            noMQTT = true;
         } else if (arg.compare("--no-tcp") == 0) {
             noTCP = true;
         } else if (arg.compare("--no-udp") == 0) {
@@ -583,10 +592,10 @@ int daemon(OptParse& opts) {
             skip = opts.GetNoTCP();
         } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
             skip = opts.GetNoUDP();
-
         } else if (addrStr.compare(0, sizeof("slap:") - 1, "slap:") == 0) {
             skip = opts.GetNoSLAP();
-
+        } else if (addrStr.compare(0, sizeof("mqtt:") - 1, "mqtt:") == 0) {
+            skip = opts.GetNoMQTT();
         } else {
             Log(LOG_ERR, "Unsupported listen address: %s (ignoring)\n", addrStr.c_str());
             continue;
@@ -615,6 +624,8 @@ int daemon(OptParse& opts) {
     cntr.Add(new TransportFactory<DaemonTransport>(DaemonTransport::TransportName, false));
     cntr.Add(new TransportFactory<TCPTransport>(TCPTransport::TransportName, false));
     cntr.Add(new TransportFactory<UDPTransport>(UDPTransport::TransportName, false));
+    cntr.Add(new TransportFactory<MQTTTransport>(MQTTTransport::TransportName, false));
+
 #if defined(QCC_OS_LINUX)
     cntr.Add(new TransportFactory<DaemonSLAPTransport>(DaemonSLAPTransport::TransportName, false));
 #endif

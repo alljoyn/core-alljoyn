@@ -936,7 +936,60 @@ class ProxyBusObject : public MessageReceiver {
     BusAttachment& GetBusAttachment() const;
 
   private:
+    /**
+     * Make a synchronous method call from this object
+     *
+     * @param method       Method being invoked.
+     * @param sender       Name of message sender.
+     * @param args         The arguments for the method call (can be NULL)
+     * @param numArgs      The number of arguments
+     * @param replyMsg     The reply message received for the method call
+     * @param timeout      Timeout specified in milliseconds to wait for a reply
+     * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
+     *                     - If #ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
+     *                     - If #ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
+     * @param callMsg      Pointer to a Message object to receive a copy of the sent call message (can be NULL if not needed)
+     *
+     *
+     * @return
+     *      - #ER_OK if the method call succeeded and the reply message type is #MESSAGE_METHOD_RET
+     *      - #ER_BUS_REPLY_IS_ERROR_MESSAGE if the reply message type is #MESSAGE_ERROR
+     */
+    QStatus MethodCall(const InterfaceDescription::Member& method,
+                       const char* sender,
+                       const MsgArg* args,
+                       size_t numArgs,
+                       Message& replyMsg,
+                       uint32_t timeout,
+                       uint8_t flags,
+                       Message* callMsg = NULL) const;
 
+    /**
+     * Make a synchronous method call from this object
+     *
+     * @param ifaceName    Name of interface.
+     * @param methodName   Name of method.
+     * @param sender       Name of message sender.
+     * @param args         The arguments for the method call (can be NULL)
+     * @param numArgs      The number of arguments
+     * @param replyMsg     The reply message received for the method call
+     * @param timeout      Timeout specified in milliseconds to wait for a reply
+     * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
+     *                     - If #ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
+     *                     - If #ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
+     *
+     * @return
+     *      - #ER_OK if the method call succeeded and the reply message type is #MESSAGE_METHOD_RET
+     *      - #ER_BUS_REPLY_IS_ERROR_MESSAGE if the reply message type is #MESSAGE_ERROR
+     */
+    QStatus MethodCall(const char* ifaceName,
+                       const char* methodName,
+                       const char* sender,
+                       const MsgArg* args,
+                       size_t numArgs,
+                       Message& replyMsg,
+                       uint32_t timeout = DefaultCallTimeout,
+                       uint8_t flags = 0) const;
     class Internal;
     qcc::ManagedObj<Internal> internal; /**< Internal ProxyBusObject state */
 

@@ -194,9 +194,11 @@ class _Message {
     friend class _LocalEndpoint;
     friend class _NullEndpoint;
     friend class _UDPEndpoint;
+    friend class _MQTTEndpoint;
     friend class UDPTransport;
     friend class DaemonRouter;
     friend class AllJoynObj;
+    friend class SessionlessObj;
     friend class DeferredMsg;
     friend class AllJoynPeerObj;
     friend class DefaultPolicyMarshaller;
@@ -964,7 +966,7 @@ class _Message {
      *      - #ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus ReMarshal(const char* senderName = NULL);
+    QStatus ReMarshal(const char* senderName = NULL, const char* destination = NULL);
 
     /**
      * @internal

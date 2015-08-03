@@ -82,6 +82,12 @@ const char* org::allseen::Introspectable::IntrospectDocType =
     "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\""
     ">\n";
 
+/** org.alljoyn.mqtt interface definitions */
+const char* org::alljoyn::MQTT::ErrorName = "org.alljoyn.MQTT.ErStatus";
+const char* org::alljoyn::MQTT::ObjectPath = "/org/alljoyn/Bus";
+const char* org::alljoyn::MQTT::InterfaceName = "org.alljoyn.MQTT";
+const char* org::alljoyn::MQTT::WellKnownName = "org.alljoyn.MQTT";
+
 QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 {
     QStatus status;
@@ -349,6 +355,18 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         introspectIntf->AddMethod("IntrospectWithDescription",   "s",  "s",  "languageTag,data");
         introspectIntf->Activate();
     }
+    {
+        /* Create the MQTT interface */
+        InterfaceDescription* ifc = NULL;
+        status = bus.CreateInterface(org::alljoyn::MQTT::InterfaceName, ifc);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to create %s interface", org::alljoyn::MQTT::InterfaceName));
+            return status;
+        }
+        ifc->AddSignal("Presence", "sb", "name,info", 0);
+        ifc->Activate();
+    }
+
     return status;
 }
 

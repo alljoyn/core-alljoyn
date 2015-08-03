@@ -37,6 +37,7 @@
 
 #include "Bus.h"
 #include "DaemonRouter.h"
+#include "MQTTTransport.h"
 #include "NameTable.h"
 #include "RuleTable.h"
 #include "Transport.h"
@@ -124,6 +125,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param msg   Sesionless message to be routed.
      */
     virtual void RouteSessionlessMessage(uint32_t sid, Message& msg);
+
+    void RegisterMQTTEndpoint(MQTTEndpoint ep) { mqttEp = ep; };
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.
@@ -363,17 +366,20 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     qcc::Timer timer;                     /**< Timer object for reaping expired names */
 
+
+    MQTTEndpoint mqttEp;
+
     /** A key into the local sessionless message queue */
     class SessionlessMessageKey : public qcc::String {
       public:
         SessionlessMessageKey(const char* sender, const char* iface, const char* member, const char* objPath) :
             qcc::String(sender, 0, ::strlen(sender) + ::strlen(iface) + ::strlen(member) + ::strlen(objPath) + 4)
         {
-            append(':');
+            append('/');
             append(iface);
-            append(':');
+            append('/');
             append(member);
-            append(':');
+            append('/');
             append(objPath);
         }
     };

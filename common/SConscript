@@ -34,6 +34,7 @@ env['OBJDIR_COMMON'] = env['OBJDIR'] + '/common'
 # All AllJoyn subprojects have access to common so add the include path to the global environment
 env.Append(CPPPATH = [env.Dir('inc')])
 
+
 commonenv = env.Clone()
 
 # Variant settings

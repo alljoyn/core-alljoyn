@@ -1599,6 +1599,18 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
                                    uint8_t flags,
                                    Message* callMsg) const
 {
+    return MethodCall(method, NULL, args, numArgs, replyMsg, timeout, flags, callMsg);
+}
+
+QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
+                                   const char* sender,
+                                   const MsgArg* args,
+                                   size_t numArgs,
+                                   Message& replyMsg,
+                                   uint32_t timeout,
+                                   uint8_t flags,
+                                   Message* callMsg) const
+{
     QStatus status;
     Message msg(*internal->bus);
     LocalEndpoint localEndpoint = internal->bus->GetInternal().GetLocalEndpoint();
@@ -1632,7 +1644,7 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
         status = ER_BUS_SECURITY_NOT_ENABLED;
         goto MethodCallExit;
     }
-    status = msg->CallMsg(method.signature, internal->serviceName, internal->sessionId, internal->path, method.iface->GetName(), method.name, args, numArgs, flags);
+    status = msg->CallMsg(method.signature, sender ? sender : localEndpoint->GetUniqueName().c_str(), internal->serviceName, internal->sessionId, internal->path, method.iface->GetName(), method.name, args, numArgs, flags);
     if (status != ER_OK) {
         goto MethodCallExit;
     }
@@ -1756,6 +1768,7 @@ MethodCallExit:
 
 QStatus ProxyBusObject::MethodCall(const char* ifaceName,
                                    const char* methodName,
+                                   const char* sender,
                                    const MsgArg* args,
                                    size_t numArgs,
                                    Message& replyMsg,
@@ -1773,7 +1786,18 @@ QStatus ProxyBusObject::MethodCall(const char* ifaceName,
     if (NULL == member) {
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
-    return MethodCall(*member, args, numArgs, replyMsg, timeout, flags);
+    return MethodCall(*member, sender, args, numArgs, replyMsg, timeout, flags);
+}
+
+QStatus ProxyBusObject::MethodCall(const char* ifaceName,
+                                   const char* methodName,
+                                   const MsgArg* args,
+                                   size_t numArgs,
+                                   Message& replyMsg,
+                                   uint32_t timeout,
+                                   uint8_t flags) const
+{
+    return MethodCall(ifaceName, methodName, NULL, args, numArgs, replyMsg, timeout, flags);
 }
 
 void ProxyBusObject::SetSecure(bool isSecure) {

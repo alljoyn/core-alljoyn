@@ -89,7 +89,7 @@ env.SConscript('${CPU}/SConscript')
 
 env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
 if env['CRYPTO'] == 'openssl':
-    env.AppendUnique(LIBS =['crypto', 'ssl'])
+    env.AppendUnique(LIBS =['crypto', 'ssl','mosquittopp'])
     print 'Using OpenSSL crypto'
 else:
     print 'Using builtin crypto'
