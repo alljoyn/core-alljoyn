@@ -119,8 +119,8 @@ QStatus IODispatch::StartStream(Stream* stream, IOReadListener* readListener, IO
     if (dispatchEntries.find(stream) != dispatchEntries.end()) {
         lock.Unlock();
         return ER_INVALID_STREAM;
-
     }
+
     dispatchEntries[stream] = IODispatchEntry(stream, readListener, writeListener, exitListener, readEnable, writeEnable);
     dispatchEntries[stream].readCtxt = new CallbackContext(stream, IO_READ);
     dispatchEntries[stream].writeCtxt = new CallbackContext(stream, IO_WRITE);
@@ -135,7 +135,7 @@ QStatus IODispatch::StartStream(Stream* stream, IOReadListener* readListener, IO
     UpdateIdleInformation(true);
     Thread::Alert();
 
-    /* Dont need to wait for the IODispatch::Run thread to reload
+    /* Don't need to wait for the IODispatch::Run thread to reload
      * the set of file descriptors since we are adding a new stream.
      */
     return ER_OK;
@@ -181,7 +181,8 @@ QStatus IODispatch::StopStream(Stream* stream)
          * added the exit alarm for this stream. The exit alarm makes the exit callback
          * which ensures that the RemoteEndpoint can be joined.
          */
-        if (it->second.stopping_state == IO_STOPPING) {
+        it = dispatchEntries.find(stream);
+        if (it != dispatchEntries.end() && it->second.stopping_state == IO_STOPPING) {
             /* Add the exit alarm since it has not added by the main IODispatch::Run thread. */
             it->second.stopping_state = IO_STOPPED;
             /* We dont need to keep track of the exit alarm, since we never remove

@@ -51,9 +51,38 @@ namespace ajn {
 
 #define ENDPOINT_IS_DEAD_ALERTCODE  1
 
+/*
+ * SetState is defined as a macro so that the line number in the debug logs
+ * corresponds to the location the state was changed at.
+ */
+#ifndef NDEBUG
+#define SetState(to)                                                    \
+    do {                                                                \
+        Internal::State from = internal->state;                         \
+        QCC_DbgHLPrintf(("%s: %s -> %s", internal->uniqueName.c_str(), Internal::StateText[from], Internal::StateText[to])); \
+        internal->state = to;                                           \
+    } while (0)
+#else
+#define SetState(to)                            \
+    do {                                        \
+        internal->state = to;                   \
+    } while (0)
+#endif
+
 class _RemoteEndpoint::Internal {
     friend class _RemoteEndpoint;
   public:
+
+    /** The states of the stream */
+    typedef enum {
+        STOPPED = 0,         /**< Not started. */
+        STARTED,             /**< StartStream() has been called. */
+        STOP_WAIT,           /**< Other end is closed and Stop() has not been called. */
+        OTHER_END_STOP_WAIT, /**< Stop() has been called, waiting for other end to close. */
+        STOPPING,            /**< Other end is closed and txQueue is not empty. */
+        EXIT_WAIT            /**< StopStream() has been called. */
+    } State;
+    static const char* StateText[];
 
     Internal(BusAttachment& bus, bool incoming, const qcc::String& connectSpec, Stream* stream, const char* threadName, bool isSocket) :
         bus(bus),
@@ -61,7 +90,6 @@ class _RemoteEndpoint::Internal {
         txQueue(),
         txWaitQueue(),
         lock(),
-        exitCount(0),
         listener(NULL),
         connSpec(connectSpec),
         incoming(incoming),
@@ -75,13 +103,13 @@ class _RemoteEndpoint::Internal {
         idleTimeout(0),
         probeTimeout(0),
         threadName(threadName),
-        started(false),
         currentReadMsg(bus),
         validateSender(incoming),
         hasRxSessionMsg(false),
         getNextMsg(true),
         currentWriteMsg(bus),
-        stopping(false),
+        state(STOPPED),
+        stopAfterTxEmpty(false),
         pingCallSerial(0),
         sendTimeout(0),
         maxControlMessages(30),
@@ -99,7 +127,6 @@ class _RemoteEndpoint::Internal {
     std::deque<Message> txQueue;             /**< Transmit message queue */
     std::deque<qcc::Thread*> txWaitQueue;    /**< Threads waiting for txQueue to become not-full */
     qcc::Mutex lock;                         /**< Mutex that protects the txQueue and timeout values */
-    int32_t exitCount;                       /**< Number of sub-threads (rx and tx) that have exited (atomically incremented) */
 
     EndpointListener* listener;              /**< Listener for thread exit and untrusted client start and exit notifications. */
 
@@ -111,7 +138,7 @@ class _RemoteEndpoint::Internal {
     uint32_t alljoynVersion;                 /**< AllJoyn version of the process at the remote end of this endpoint */
     volatile int32_t refCount;               /**< Number of active users of this remote endpoint */
     bool isSocket;                           /**< True iff this endpoint contains a SockStream as its 'stream' member */
-    bool armRxPause;                         /**< Pause Rx after receiving next METHOD_REPLY message */
+    volatile bool armRxPause;                /**< Pause Rx after receiving next METHOD_REPLY message */
 
     uint32_t idleTimeoutCount;               /**< Number of consecutive idle timeouts */
     uint32_t maxIdleProbes;                  /**< Maximum number of missed idle probes before shutdown */
@@ -122,49 +149,43 @@ class _RemoteEndpoint::Internal {
     String remoteName;                       /**< Obtained from EndpointAuth */
     GUID128 remoteGUID;                      /**< Obtained from EndpointAuth */
     const char* threadName;                  /**< Transport Name for the Endpoint */
-    bool started;                            /**< Is this EP started? */
 
     Message currentReadMsg;                  /**< The message currently being read for this endpoint */
-    bool validateSender;                     /**< If true, the sender field on incomming messages will be overwritten with actual endpoint name */
+    const bool validateSender;               /**< If true, the sender field on incomming messages will be overwritten with actual endpoint name */
     bool hasRxSessionMsg;                    /**< true iff this endpoint has previously processed a non-control message */
     bool getNextMsg;                         /**< If true, read the next message from the txQueue */
     Message currentWriteMsg;                 /**< The message currently being read for this endpoint */
-    bool stopping;                           /**< Is this EP stopping? */
+    State state;                             /**< The state of the stream, protected by lock */
+    bool stopAfterTxEmpty;                   /**< True to StopStream() when txQueue is empty */
     set<SessionId> sessionIdSet;                    /**< Set of session Ids that this endpoint is a part of */
     uint32_t pingCallSerial;                 /**< Serial number of last Heartbeat DBus ping sent */
     uint32_t sendTimeout;                    /**< Send timeout for this endpoint i.e. time after which the Routing node must
-                                                  disconnect the remote node if it has not read a message from the link
+                                                  disconnect the remote node if the remote node has not read a message from the link
                                                   in the situation that the send buffer on this end and receive buffer on
                                                   the remote end are full. */
     size_t maxControlMessages;               /**< Number of control messages that can be queued up before disconnecting this endpoint.
                                                   - used on Routing nodes only */
-    size_t numControlMessages;               /**< Number of control messages in txQueue - used on Routing nodes only */
-    size_t numDataMessages;                  /**< Number of data messages in txQueue - used on Routing nodes only */
+    volatile size_t numControlMessages;      /**< Number of control messages in txQueue - used on Routing nodes only */
+    volatile size_t numDataMessages;         /**< Number of data messages in txQueue - used on Routing nodes only */
   private:
     Internal& operator=(const Internal&);
 };
 
+const char* _RemoteEndpoint::Internal::StateText[] = { "STOPPED", "STARTED", "STOP_WAIT", "OTHER_END_STOP_WAIT", "STOPPING", "EXIT_WAIT" };
 
 void _RemoteEndpoint::SetStream(qcc::Stream* s)
 {
-
     if (internal) {
         internal->stream = s;
     }
 }
 
-
-void _RemoteEndpoint::SetStarted(bool value)
+void _RemoteEndpoint::SetStarted()
 {
     if (internal) {
-        internal->started = value;
-    }
-}
-
-void _RemoteEndpoint::SetStopping(bool value)
-{
-    if (internal) {
-        internal->stopping = value;
+        internal->lock.Lock(MUTEX_CONTEXT);
+        SetState(Internal::STARTED);
+        internal->lock.Unlock(MUTEX_CONTEXT);
     }
 }
 
@@ -217,7 +238,6 @@ void _RemoteEndpoint::SetRemoteGUID(const qcc::GUID128& remoteGUID)
     }
 }
 
-
 qcc::Stream& _RemoteEndpoint::GetStream()
 {
     if (internal) {
@@ -228,7 +248,7 @@ qcc::Stream& _RemoteEndpoint::GetStream()
     }
 }
 
-const qcc::String&  _RemoteEndpoint::GetConnectSpec() const
+const qcc::String& _RemoteEndpoint::GetConnectSpec() const
 {
     if (internal) {
         return internal->connSpec;
@@ -291,7 +311,6 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
             internal->features.protocolVersion = auth.GetRemoteProtocolVersion();
             internal->features.trusted = (authUsed != "ANONYMOUS");
             internal->features.nameTransfer = (SessionOpts::NameTransferType)auth.GetNameTransfer();
-
         }
     }
     return status;
@@ -300,8 +319,11 @@ QStatus _RemoteEndpoint::Establish(const qcc::String& authMechanisms, qcc::Strin
 QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t& idleTimeout)
 {
     QCC_UNUSED(idleTimeout);
+
     if (internal) {
+        internal->lock.Lock(MUTEX_CONTEXT);
         internal->idleTimeout = 0;
+        internal->lock.Unlock(MUTEX_CONTEXT);
     }
     return ER_OK;
 }
@@ -323,11 +345,12 @@ _RemoteEndpoint::~_RemoteEndpoint()
 {
     if (internal) {
         Stop();
-        Join();
+        Join(0);
         delete internal;
         internal = NULL;
     }
 }
+
 QStatus _RemoteEndpoint::UntrustedClientStart() {
 
     /* If a transport expects to accept untrusted clients, it MUST implement the
@@ -341,6 +364,7 @@ QStatus _RemoteEndpoint::UntrustedClientStart() {
     QCC_ASSERT(internal->listener);
     return internal->listener->UntrustedClientStart();
 }
+
 QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t maxIdleProbes)
 {
     QCC_DbgTrace(("_RemoteEndpoint::SetLinkTimeout(%u, %u, %u) for %s", idleTimeout, probeTimeout, maxIdleProbes, GetUniqueName().c_str()));
@@ -354,26 +378,29 @@ QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTime
         internal->idleTimeout = idleTimeout;
         internal->probeTimeout = probeTimeout;
         internal->maxIdleProbes = maxIdleProbes;
-        IODispatch& iodispatch = internal->bus.GetInternal().GetIODispatch();
         uint32_t timeout = (internal->idleTimeoutCount == 0) ? internal->idleTimeout : internal->probeTimeout;
-
-        QStatus status = iodispatch.EnableTimeoutCallback(internal->stream, timeout);
+        QStatus status = internal->bus.GetInternal().GetIODispatch().EnableTimeoutCallback(internal->stream, timeout);
         internal->lock.Unlock(MUTEX_CONTEXT);
         return status;
     } else {
         return ER_ALLJOYN_SETLINKTIMEOUT_REPLY_NO_DEST_SUPPORT;
     }
 }
+
 QStatus _RemoteEndpoint::SetIdleTimeouts(uint32_t& idleTimeout, uint32_t& probeTimeout)
 {
     QCC_UNUSED(idleTimeout);
     QCC_UNUSED(probeTimeout);
+
     if (internal) {
+        internal->lock.Lock(MUTEX_CONTEXT);
         internal->idleTimeout = 0;
         internal->probeTimeout = 0;
+        internal->lock.Unlock(MUTEX_CONTEXT);
     }
     return ER_OK;
 }
+
 QStatus _RemoteEndpoint::SetIdleTimeouts(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t maxIdleProbes)
 {
     QCC_DbgPrintf(("_RemoteEndpoint::SetIdleTimeouts(%u, %u, %u) for %s", idleTimeout, probeTimeout, maxIdleProbes, GetUniqueName().c_str()));
@@ -386,14 +413,12 @@ QStatus _RemoteEndpoint::SetIdleTimeouts(uint32_t idleTimeout, uint32_t probeTim
     internal->idleTimeout = idleTimeout;
     internal->probeTimeout = probeTimeout;
     internal->maxIdleProbes = maxIdleProbes;
-    IODispatch& iodispatch = internal->bus.GetInternal().GetIODispatch();
     internal->idleTimeoutCount = 0;
-
-    QStatus status = iodispatch.EnableTimeoutCallback(internal->stream, internal->idleTimeout);
+    QStatus status = internal->bus.GetInternal().GetIODispatch().EnableTimeoutCallback(internal->stream, internal->idleTimeout);
     internal->lock.Unlock(MUTEX_CONTEXT);
     return status;
-
 }
+
 uint32_t _RemoteEndpoint::GetProbeTimeout()
 {
     if (internal) {
@@ -412,167 +437,211 @@ uint32_t _RemoteEndpoint::GetIdleTimeout()
     }
 }
 
-QStatus _RemoteEndpoint::Start()
+QStatus _RemoteEndpoint::Start(bool enableIdleTimeouts, uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes)
 {
     QCC_ASSERT(internal);
+    QCC_ASSERT(minimalEndpoint || internal->stream);
 
-    if (minimalEndpoint) {
-        if (internal->features.isBusToBus) {
-            endpointType = ENDPOINT_TYPE_BUS2BUS;
-        }
-        return ER_OK;
-    }
-
-    QCC_ASSERT(internal->stream);
-    QCC_DbgPrintf(("_RemoteEndpoint::Start(%s, isBusToBus = %s, allowRemote = %s)", GetUniqueName().c_str(),
+    QCC_DbgPrintf(("_RemoteEndpoint::Start(%s) isBusToBus=%s,allowRemote=%s", GetUniqueName().c_str(),
                    internal->features.isBusToBus ? "true" : "false",
                    internal->features.allowRemote ? "true" : "false"));
-    QStatus status;
-    internal->started = true;
-    Router& router = internal->bus.GetInternal().GetRouter();
-    IODispatch& iodispatch = internal->bus.GetInternal().GetIODispatch();
 
     if (internal->features.isBusToBus) {
         endpointType = ENDPOINT_TYPE_BUS2BUS;
     }
 
-    /* Set the send timeout for this endpoint
-     * Note that this is set to zero even though the actual send timeout is different.
-     * This is because we want non-blocking functionality from the underlying stream.
-     * Send timeout is implemented using a timedout WriteCallback from IODispatch.
-     */
-    internal->stream->SetSendTimeout(0);
+    internal->lock.Lock(MUTEX_CONTEXT);
+    SetState(Internal::STARTED);
+    internal->lock.Unlock(MUTEX_CONTEXT);
+
+    if (minimalEndpoint) {
+        return ER_OK;
+    }
 
     /* Endpoint needs to be wrapped before we can use it */
-    RemoteEndpoint me = RemoteEndpoint::wrap(this);
+    RemoteEndpoint rep = RemoteEndpoint::wrap(this);
+    BusEndpoint bep = BusEndpoint::cast(rep);
 
-    BusEndpoint bep = BusEndpoint::cast(me);
-
-    /* Register endpoint with IODispatch - enable write, disable read */
-    status = iodispatch.StartStream(internal->stream, this, this, this, false, true);
+    Router& router = internal->bus.GetInternal().GetRouter();
+    QStatus status = router.RegisterEndpoint(bep);
     if (status == ER_OK) {
-        /* Register endpoint with router */
-        status = router.RegisterEndpoint(bep);
-    } else {
+        internal->lock.Lock(MUTEX_CONTEXT);
         /*
-         * Set started to false only if StartStream fails.
-         * If registering with the router or enabling read callback fails,
-         * we still need to Join the endpoint.
+         * Set the send timeout for this endpoint
+         * Note that this is set to zero even though the actual send timeout is different.
+         * This is because we want non-blocking functionality from the underlying stream.
+         * Send timeout is implemented using a timedout WriteCallback from IODispatch.
          */
-        internal->started = false;
-    }
+        internal->stream->SetSendTimeout(0);
 
-    if (status == ER_OK) {
-        /* Enable read for this endpoint */
-        status = internal->bus.GetInternal().GetIODispatch().EnableReadCallback(internal->stream);
+        status = internal->bus.GetInternal().GetIODispatch().StartStream(internal->stream, this, this, this, false, true);
         if (status != ER_OK) {
-            /* Failed to start read with iodispatch */
-            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+            internal->stream->Abort();
+            SetState(Internal::STOPPED);
+            Invalidate();
+        } else {
+            status = internal->bus.GetInternal().GetIODispatch().EnableReadCallback(internal->stream);
+            if (status == ER_OK && enableIdleTimeouts) {
+                status = SetIdleTimeouts(idleTimeout, probeTimeout, numProbes);
+            }
+            if (status != ER_OK) {
+                internal->stream->Abort();
+                internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                SetState(Internal::EXIT_WAIT);
+                Invalidate();
+            }
         }
+        internal->lock.Unlock(MUTEX_CONTEXT);
     }
     if (status != ER_OK) {
-        Invalidate();
+        router.UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
     }
 
     return status;
 }
+
 QStatus _RemoteEndpoint::Start(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes, uint32_t sendTimeout)
 {
-    QStatus status = Start();
-    if (status == ER_OK && endpointType == ENDPOINT_TYPE_REMOTE) {
-        /* Set idle timeouts for leaf nodes only */
-        status = SetIdleTimeouts(idleTimeout, probeTimeout, numProbes);
-    }
+    QCC_DbgTrace(("_RemoteEndpoint::Start(%s,idleTimeout=%u,probeTimeout=%u,numProbes=%u,sendTimeout=%u)",
+                  GetUniqueName().c_str(), idleTimeout, probeTimeout, numProbes, sendTimeout));
+
+    bool enableIdleTimeouts = (endpointType == ENDPOINT_TYPE_REMOTE); /* For leaf nodes only */
+    QStatus status = Start(enableIdleTimeouts, idleTimeout, probeTimeout, numProbes);
+    internal->lock.Lock(MUTEX_CONTEXT);
     internal->sendTimeout = sendTimeout;
     internal->maxControlMessages = sendTimeout * MAX_CONTROL_MSGS_PER_SECOND;
-    if (status != ER_OK) {
-        Invalidate();
-    }
+    internal->lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
+QStatus _RemoteEndpoint::Start()
+{
+    return Start(false, 0, 0, 0); /* Don't enable idle timeouts */
+}
+
 void _RemoteEndpoint::SetListener(EndpointListener* listener)
 {
     if (internal) {
         internal->listener = listener;
     }
-
 }
 
-QStatus _RemoteEndpoint::Stop(void)
+QStatus _RemoteEndpoint::Stop(bool stopAfterTxEmpty)
 {
-    QStatus ret = ER_OK;
-    /* Ensure the endpoint is valid */
     if (!internal) {
         return ER_BUS_NO_ENDPOINT;
     }
-    QCC_DbgPrintf(("_RemoteEndpoint::Stop(%s) called", GetUniqueName().c_str()));
+    QCC_DbgPrintf(("_RemoteEndpoint::Stop(%s,stopAfterTxEmpty=%d) called", GetUniqueName().c_str(), stopAfterTxEmpty));
 
-    if (minimalEndpoint == false) {
-        /*
-         * Make the endpoint invalid - this prevents any further use of the endpoint that might delay
-         * its ultimate demise.
-         */
-        if (internal->started) {
-            ret = internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
-        }
-    }
-    internal->stopping = true;
-    Invalidate();
-    return ret;
-
-}
-
-QStatus _RemoteEndpoint::StopAfterTxEmpty(uint32_t maxWaitMs)
-{
-    QStatus status;
-    /* Init wait time */
-    uint32_t startTime = maxWaitMs ? GetTimestamp() : 0;
-
-    /* Ensure the endpoint is valid */
-    if (!internal || minimalEndpoint) {
-        return ER_BUS_NO_ENDPOINT;
+    if (minimalEndpoint) {
+        internal->lock.Lock(MUTEX_CONTEXT);
+        SetState(Internal::STOPPED);
+        Invalidate();
+        internal->lock.Unlock(MUTEX_CONTEXT);
+        return ER_OK;
     }
 
-    /* Wait for txqueue to empty before triggering stop */
+    QStatus status = ER_OK;
     internal->lock.Lock(MUTEX_CONTEXT);
-    for (;;) {
-        if (internal->txQueue.empty() || (maxWaitMs && (qcc::GetTimestamp() > (startTime + maxWaitMs)))) {
-            status = Stop();
-            break;
-        } else {
-            internal->lock.Unlock(MUTEX_CONTEXT);
-            qcc::Sleep(5);
-            internal->lock.Lock(MUTEX_CONTEXT);
+    switch (internal->state) {
+    case Internal::STARTED:
+        SetState(Internal::OTHER_END_STOP_WAIT);
+        internal->stopAfterTxEmpty = stopAfterTxEmpty;
+        if (internal->txQueue.empty() && internal->txWaitQueue.empty()) {
+            status = internal->stream->Shutdown();
+            if ((ER_OK == status) && internal->stopAfterTxEmpty) {
+                internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                SetState(Internal::EXIT_WAIT);
+                Invalidate();
+            }
         }
+        break;
+
+    case Internal::STOP_WAIT:
+        SetState(Internal::STOPPING);
+        if (internal->txQueue.empty() && internal->txWaitQueue.empty()) {
+            status = internal->stream->Shutdown();
+            if (ER_OK == status) {
+                internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                SetState(Internal::EXIT_WAIT);
+                Invalidate();
+            }
+        }
+        break;
+
+    case Internal::OTHER_END_STOP_WAIT:
+    case Internal::STOPPING:
+    case Internal::STOPPED:
+    case Internal::EXIT_WAIT:
+        /* Nothing to do */
+        break;
     }
     internal->lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
+QStatus _RemoteEndpoint::Stop()
+{
+    return Stop(false);
+}
+
+QStatus _RemoteEndpoint::StopAfterTxEmpty()
+{
+    return Stop(true);
+}
+
 QStatus _RemoteEndpoint::PauseAfterRxReply()
 {
     if (internal) {
+        internal->lock.Lock(MUTEX_CONTEXT);
         internal->armRxPause = true;
+        internal->lock.Unlock(MUTEX_CONTEXT);
         return ER_OK;
     } else {
         return ER_BUS_NO_ENDPOINT;
     }
 }
 
-QStatus _RemoteEndpoint::Join(void)
+QStatus _RemoteEndpoint::Join()
 {
-/* Ensure the endpoint is valid */
+    /*
+     * How long to wait for an orderly release of the connection?  The TCP and
+     * UDP transports have a 30 second timer that will kick-in for a
+     * non-responsive connection, so re-use that value here.
+     */
+    return Join(30000);
+}
+
+QStatus _RemoteEndpoint::Join(uint32_t maxWaitMs)
+{
     QCC_DbgPrintf(("_RemoteEndpoint::Join(%s) called", GetUniqueName().c_str()));
 
     if (!internal) {
         return ER_BUS_NO_ENDPOINT;
     }
-    if (internal->started) {
-        while (internal->exitCount < 1) {
-            qcc::Sleep(5);
-        }
-        internal->started = false;
+
+    internal->lock.Lock(MUTEX_CONTEXT);
+    /* First wait for an orderly release */
+    uint32_t startTime = GetTimestamp();
+    while ((internal->state != Internal::STOPPED) && (qcc::GetTimestamp() < (startTime + maxWaitMs))) {
+        internal->lock.Unlock(MUTEX_CONTEXT);
+        qcc::Sleep(5);
+        internal->lock.Lock(MUTEX_CONTEXT);
     }
+    /* Abortively release if we didn't exit before the timeout */
+    if ((internal->state != Internal::STOPPED) && ((startTime + maxWaitMs) <= qcc::GetTimestamp())) {
+        internal->stream->Abort();
+        internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+        SetState(Internal::EXIT_WAIT);
+        Invalidate();
+        while (internal->state != Internal::STOPPED) {
+            internal->lock.Unlock(MUTEX_CONTEXT);
+            qcc::Sleep(5);
+            internal->lock.Lock(MUTEX_CONTEXT);
+        }
+    }
+    QCC_ASSERT(internal->state == Internal::STOPPED);
+    internal->lock.Unlock(MUTEX_CONTEXT);
     return ER_OK;
 }
 
@@ -615,23 +684,27 @@ void _RemoteEndpoint::Exit()
 
     Invalidate();
 
-    RemoteEndpoint rep = RemoteEndpoint::wrap(this);
     /* Un-register this remote endpoint from the router */
     internal->bus.GetInternal().GetRouter().UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
 
     if (internal->listener) {
+        RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         internal->listener->EndpointExit(rep);
         internal->listener = NULL;
     }
 
-    internal->exitCount = 1;
+    internal->lock.Lock(MUTEX_CONTEXT);
+    SetState(Internal::STOPPED);
+    internal->lock.Unlock(MUTEX_CONTEXT);
 }
 
 void _RemoteEndpoint::Exited()
 {
     QCC_DbgTrace(("_RemoteEndpoint::Exited(%s)", GetUniqueName().c_str()));
     if (internal) {
-        internal->exitCount = 1;
+        internal->lock.Lock(MUTEX_CONTEXT);
+        SetState(Internal::STOPPED);
+        internal->lock.Unlock(MUTEX_CONTEXT);
     }
 }
 
@@ -642,14 +715,15 @@ void _RemoteEndpoint::ExitCallback()
     if (!internal) {
         return;
     }
+
     /* Alert any threads that are on the wait queue */
     internal->lock.Lock(MUTEX_CONTEXT);
     deque<Thread*>::iterator it = internal->txWaitQueue.begin();
     while (it != internal->txWaitQueue.end()) {
         (*it++)->Alert(ENDPOINT_IS_DEAD_ALERTCODE);
     }
-
     internal->lock.Unlock(MUTEX_CONTEXT);
+
     RemoteEndpoint rep = RemoteEndpoint::wrap(this);
     /* Un-register this remote endpoint from the router */
     internal->bus.GetInternal().GetRouter().UnregisterEndpoint(this->GetUniqueName(), this->GetEndpointType());
@@ -674,9 +748,27 @@ void _RemoteEndpoint::ExitCallback()
      * Explicitly close the socketstream i.e. destroy the source and sink events and
      * close the associated socket here.
      */
+    internal->lock.Lock(MUTEX_CONTEXT);
+    switch (internal->state) {
+    case Internal::STOPPED:
+        /* Invalid */
+        QCC_LogError(ER_WARNING, ("%s: unexpected state in ExitCallback: %s", GetUniqueName().c_str(),
+                                  Internal::StateText[internal->state]));
+        break;
 
+    case Internal::STARTED:
+    case Internal::STOP_WAIT:
+    case Internal::OTHER_END_STOP_WAIT:
+    case Internal::STOPPING:
+    case Internal::EXIT_WAIT:
+        if (!(internal->txQueue.empty() && internal->txWaitQueue.empty())) {
+            internal->stream->Abort();
+        }
+        SetState(Internal::STOPPED);
+        break;
+    }
     internal->stream->Close();
-    internal->exitCount = 1;
+    internal->lock.Unlock(MUTEX_CONTEXT);
 }
 
 QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
@@ -691,28 +783,28 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
         return ER_BUS_NO_ENDPOINT;
     }
 
-    QStatus status;
-
-    const bool bus2bus = ENDPOINT_TYPE_BUS2BUS == GetEndpointType();
-    Router& router = internal->bus.GetInternal().GetRouter();
-    RemoteEndpoint rep = RemoteEndpoint::wrap(this);
+    QStatus status = ER_OK;
     if (!isTimedOut) {
-        status = ER_OK;
+        Router& router = internal->bus.GetInternal().GetRouter();
+        const bool bus2bus = (ENDPOINT_TYPE_BUS2BUS == GetEndpointType());
+        RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         while (status == ER_OK) {
-
             status = internal->currentReadMsg->ReadNonBlocking(rep, (internal->validateSender && !bus2bus));
             if (status == ER_OK) {
-                /* Message read complete.Proceed to unmarshal it. */
+                /* Message read complete.  Proceed to unmarshal it. */
+                internal->lock.Lock(MUTEX_CONTEXT);
                 Message msg = internal->currentReadMsg;
                 status = msg->Unmarshal(rep, (internal->validateSender && !bus2bus));
-
                 switch (status) {
                 case ER_OK:
                     internal->idleTimeoutCount = 0;
                     bool isAck;
-                    if ((internal->pingCallSerial != 0) && (msg->GetType() == MESSAGE_METHOD_RET) && (internal->pingCallSerial == msg->GetReplySerial())) {
+                    if ((internal->pingCallSerial != 0) &&
+                        (msg->GetType() == MESSAGE_METHOD_RET) &&
+                        (msg->GetReplySerial() == internal->pingCallSerial)) {
                         /* This is a response to the DBus ping sent from RN to LN. Consume the reply quietly. */
                         internal->pingCallSerial = 0;
+
                     } else if (IsProbeMsg(msg, isAck)) {
                         QCC_DbgPrintf(("%s: Received %s", GetUniqueName().c_str(), isAck ? "ProbeAck" : "ProbeReq"));
                         if (!isAck) {
@@ -720,14 +812,18 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                             Message probeMsg(internal->bus);
                             status = GenProbeMsg(true, probeMsg);
                             if (status == ER_OK) {
+                                internal->lock.Unlock(MUTEX_CONTEXT);
                                 status = PushMessage(probeMsg);
+                                internal->lock.Lock(MUTEX_CONTEXT);
                             }
                             QCC_DbgPrintf(("%s: Sent ProbeAck (%s)", GetUniqueName().c_str(), QCC_StatusText(status)));
                         }
-                    } else {
-                        BusEndpoint bep  = BusEndpoint::cast(rep);
 
+                    } else {
+                        internal->lock.Unlock(MUTEX_CONTEXT);
+                        BusEndpoint bep = BusEndpoint::cast(rep);
                         status = router.PushMessage(msg, bep);
+                        internal->lock.Lock(MUTEX_CONTEXT);
                         if (status != ER_OK) {
                             /*
                              * There are five cases where a failure to push a message to the router is ok:
@@ -737,19 +833,23 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                              * 3) A daemon is pushing the message to a connected client or service.
                              * 4) Pushing a message to an endpoint that has closed.
                              * 5) Pushing the first non-control message of a new session (must wait for route to be fully setup)
-                             *
                              */
-
                             if (status == ER_BUS_NO_ROUTE) {
-
                                 int retries = 20;
-                                while (!internal->stopping && (status == ER_BUS_NO_ROUTE) && !internal->hasRxSessionMsg && retries--) {
+                                while ((internal->state != Internal::STOPPED) &&
+                                       (status == ER_BUS_NO_ROUTE) && !internal->hasRxSessionMsg && retries--) {
+                                    internal->lock.Unlock(MUTEX_CONTEXT);
                                     qcc::Sleep(10);
                                     status = router.PushMessage(msg, bep);
+                                    internal->lock.Lock();
                                 }
                             }
-                            if ((router.IsDaemon() && !bus2bus) || (status == ER_BUS_SIGNATURE_MISMATCH) || (status == ER_BUS_UNMATCHED_REPLY_SERIAL) || (status == ER_BUS_ENDPOINT_CLOSING)) {
-                                QCC_DbgHLPrintf(("%s: Discarding %s: %s", GetUniqueName().c_str(), msg->Description().c_str(), QCC_StatusText(status)));
+                            if ((router.IsDaemon() && !bus2bus) ||
+                                (status == ER_BUS_SIGNATURE_MISMATCH) ||
+                                (status == ER_BUS_UNMATCHED_REPLY_SERIAL) ||
+                                (status == ER_BUS_ENDPOINT_CLOSING)) {
+                                QCC_DbgHLPrintf(("%s: Discarding %s: %s", GetUniqueName().c_str(), msg->Description().c_str(),
+                                                 QCC_StatusText(status)));
                                 status = ER_OK;
                             }
                         }
@@ -801,23 +901,24 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
                     break;
                 }
 
-                /* Check pause condition. Block until stopped */
-                if (internal->armRxPause && !internal->stopping && (msg->GetType() == MESSAGE_METHOD_RET)) {
+                /* Check pause condition. */
+                if (internal->armRxPause && (internal->state != Internal::STOPPED) && (msg->GetType() == MESSAGE_METHOD_RET)) {
                     status = ER_BUS_ENDPOINT_CLOSING;
                     internal->bus.GetInternal().GetIODispatch().DisableReadCallback(internal->stream);
+                    internal->lock.Unlock(MUTEX_CONTEXT);
                     return ER_OK;
                 }
                 if (status == ER_OK) {
                     internal->currentReadMsg = Message(internal->bus);
                 }
+                internal->lock.Unlock(MUTEX_CONTEXT);
             }
         }
-        if (status == ER_TIMEOUT) {
-            internal->lock.Lock(MUTEX_CONTEXT);
-            internal->bus.GetInternal().GetIODispatch().EnableReadCallback(internal->stream, internal->idleTimeout);
-            internal->lock.Unlock(MUTEX_CONTEXT);
-        } else {
 
+        internal->lock.Lock(MUTEX_CONTEXT);
+        if (status == ER_TIMEOUT) {
+            internal->bus.GetInternal().GetIODispatch().EnableReadCallback(internal->stream, internal->idleTimeout);
+        } else {
             if ((status != ER_STOPPING_THREAD) && (status != ER_SOCK_OTHER_END_CLOSED) && (status != ER_BUS_STOPPING)) {
                 QCC_DbgPrintf(("Endpoint Rx failed (%s): %s", GetUniqueName().c_str(), QCC_StatusText(status)));
             }
@@ -825,10 +926,48 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
             if (disconnectStatus == ER_OK) {
                 disconnectStatus = (status == ER_STOPPING_THREAD) ? ER_OK : status;
             }
-            Invalidate();
-            internal->stopping = true;
-            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+            switch (internal->state) {
+            case Internal::STARTED:
+                /*
+                 * The other end has stopped writing to the stream.  Now we need
+                 * to stop writing to the connection before we close it.  How do
+                 * we know we are done writing to the connection?  We don't
+                 * unless the upper layer calls Stop() which may or may not
+                 * happen depending on the messages sent by the other end.  So
+                 * instead, we rely on the state of pending sends to tell us
+                 * when we can close the connection.
+                 */
+                if (internal->txQueue.empty() && internal->txWaitQueue.empty()) {
+                    internal->stream->Shutdown();
+                    internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                    SetState(Internal::EXIT_WAIT);
+                    Invalidate();
+                } else {
+                    SetState(Internal::STOP_WAIT);
+                }
+                break;
+
+            case Internal::OTHER_END_STOP_WAIT:
+                if (internal->txQueue.empty() && internal->txWaitQueue.empty()) {
+                    internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                    SetState(Internal::EXIT_WAIT);
+                    Invalidate();
+                } else {
+                    SetState(Internal::STOPPING);
+                }
+                break;
+
+            case Internal::STOP_WAIT:
+            case Internal::STOPPING:
+            case Internal::STOPPED:
+            case Internal::EXIT_WAIT:
+                /* Invalid */
+                QCC_LogError(ER_WARNING, ("%s: unexpected state in ReadCallback: %s", GetUniqueName().c_str(),
+                                          Internal::StateText[internal->state]));
+                break;
+            }
         }
+        internal->lock.Unlock(MUTEX_CONTEXT);
     } else {
 
         /* This is a timeout alarm, try to send a probe message if maximum idle
@@ -876,13 +1015,15 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 
             QCC_LogError(ER_TIMEOUT, ("Endpoint Rx timed out (%s)", GetUniqueName().c_str()));
             status = ER_BUS_ENDPOINT_CLOSING;
-            Invalidate();
-            internal->stopping = true;
+            internal->stream->Abort();
             internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+            SetState(Internal::EXIT_WAIT);
+            Invalidate();
         }
     }
     return status;
 }
+
 /* Note: isTimedOut indicates that this is a timeout alarm. This is used to implement
  * the SendTimeout functionality.
  */
@@ -891,47 +1032,91 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
     QCC_UNUSED(sink);
     QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::WriteCallback(): Where did a callback come from if no thread?");
 
-    /* Remote endpoints can be invalid if they were created with the default
-     * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
-     * endpoint was created with the default constructor. i.e. internal=NULL
-     */
     if (!internal) {
         return ER_BUS_NO_ENDPOINT;
     }
+
     if (isTimedOut) {
         /* On an unexpected disconnect save the status that cause the thread exit */
         if (disconnectStatus == ER_OK) {
             disconnectStatus = ER_TIMEOUT;
         }
-
         QCC_LogError(ER_TIMEOUT, ("Endpoint Tx timed out (%s)", GetUniqueName().c_str()));
-        Invalidate();
-        internal->stopping = true;
+        internal->lock.Lock(MUTEX_CONTEXT);
+        internal->stream->Abort();
         internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+        SetState(Internal::EXIT_WAIT);
+        Invalidate();
+        internal->lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_ENDPOINT_CLOSING;
     }
+
+    internal->lock.Lock(MUTEX_CONTEXT);
     QStatus status = ER_OK;
     while (status == ER_OK) {
         if (!IsValid()) {
+            internal->lock.Unlock(MUTEX_CONTEXT);
             return ER_BUS_NO_ENDPOINT;
         }
+
+        /* Get the message */
         if (internal->getNextMsg) {
-            internal->lock.Lock(MUTEX_CONTEXT);
             if (!internal->txQueue.empty()) {
-                /* Make a deep copy of the message since there is state information inside the message.
-                 * Each copy of the message could be in different write state.
+                /*
+                 * Make a deep copy of the message since there is state
+                 * information inside the message.  Each copy of the message
+                 * could be in different write state.
                  */
                 internal->currentWriteMsg = Message(internal->txQueue.back(), true);
                 internal->getNextMsg = false;
-                internal->lock.Unlock(MUTEX_CONTEXT);
             } else {
-
                 internal->bus.GetInternal().GetIODispatch().DisableWriteCallback(internal->stream);
+                if (internal->txWaitQueue.empty()) {
+                    switch (internal->state) {
+                    case Internal::STARTED:
+                        /* Nothing to do */
+                        break;
+
+                    case Internal::STOP_WAIT:
+                        if (internal->txWaitQueue.empty()) {
+                            internal->stream->Shutdown();
+                            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                            SetState(Internal::EXIT_WAIT);
+                            Invalidate();
+                        }
+                        break;
+
+                    case Internal::OTHER_END_STOP_WAIT:
+                        internal->stream->Shutdown();
+                        if (internal->stopAfterTxEmpty) {
+                            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                            SetState(Internal::EXIT_WAIT);
+                            Invalidate();
+                        }
+                        break;
+
+                    case Internal::STOPPING:
+                        internal->stream->Shutdown();
+                        internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                        SetState(Internal::EXIT_WAIT);
+                        Invalidate();
+                        break;
+
+                    case Internal::STOPPED:
+                    case Internal::EXIT_WAIT:
+                        /* Invalid */
+                        QCC_LogError(ER_WARNING, ("%s: unexpected state in WriteCallback: %s", GetUniqueName().c_str(),
+                                                  Internal::StateText[internal->state]));
+                        break;
+                    }
+                }
                 internal->lock.Unlock(MUTEX_CONTEXT);
                 return ER_OK;
             }
         }
-        /* Deliver message */
+
+        /* Deliver the message */
+        internal->lock.Unlock(MUTEX_CONTEXT);
         RemoteEndpoint rep = RemoteEndpoint::wrap(this);
         status = internal->currentWriteMsg->DeliverNonBlocking(rep);
         /* Report authorization failure as a security violation */
@@ -946,11 +1131,9 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
              */
             status = ER_OK;
         }
+        internal->lock.Lock(MUTEX_CONTEXT);
         if (status == ER_OK) {
-
-            /* Message has been successfully delivered. i.e. PushBytes is complete
-             */
-            internal->lock.Lock(MUTEX_CONTEXT);
+            /* Message has been successfully delivered. i.e. PushBytes is complete */
             internal->txQueue.pop_back();
             internal->getNextMsg = true;
             if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
@@ -968,17 +1151,15 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
                     QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
                 }
             }
-            internal->lock.Unlock(MUTEX_CONTEXT);
         }
     }
 
     if (status == ER_TIMEOUT) {
-        /* Timed-out in the middle of a message write. */
-        internal->lock.Lock(MUTEX_CONTEXT);
-
-        /* Set writecallback after sendtimeout. */
+        /*
+         * Timed-out in the middle of a message write.  Re-enable the write
+         * callback after a send timeout.
+         */
         internal->bus.GetInternal().GetIODispatch().EnableWriteCallback(internal->stream, internal->sendTimeout);
-        internal->lock.Unlock(MUTEX_CONTEXT);
     } else if (status != ER_OK) {
         /* On an unexpected disconnect save the status that cause the thread exit */
         if (disconnectStatus == ER_OK) {
@@ -987,13 +1168,15 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
         if ((status != ER_OK) && (status != ER_STOPPING_THREAD) && (status != ER_SOCK_OTHER_END_CLOSED) && (status != ER_BUS_STOPPING)) {
             QCC_LogError(status, ("Endpoint Tx failed (%s)", GetUniqueName().c_str()));
         }
-
-        Invalidate();
-        internal->stopping = true;
+        internal->stream->Abort();
         internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+        SetState(Internal::EXIT_WAIT);
+        Invalidate();
     }
+    internal->lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
 QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
 {
     QStatus status = ER_OK;
@@ -1004,23 +1187,20 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
     bool wasEmpty = (count == 0);
 
     if (IsControlMessage(msg)) {
-
         if (internal->numControlMessages < internal->maxControlMessages) {
             internal->txQueue.push_front(msg);
             internal->numControlMessages++;
             if (wasEmpty) {
                 internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
             }
-            internal->lock.Unlock(MUTEX_CONTEXT);
         } else {
-            internal->lock.Unlock(MUTEX_CONTEXT);
-            Invalidate();
-            internal->stopping = true;
-            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
             QCC_LogError(ER_BUS_ENDPOINT_CLOSING, ("Endpoint Tx failed (%s)", GetUniqueName().c_str()));
+            internal->stream->Abort();
+            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+            SetState(Internal::EXIT_WAIT);
+            Invalidate();
             status = ER_BUS_ENDPOINT_CLOSING;
         }
-
     } else {
         /* If the txWaitQueue is not empty, dont queue the message.
          * There are other threads that are blocked trying to send a message to
@@ -1076,7 +1256,6 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
                         }
                         internal->txQueue.push_front(msg);
                         internal->numDataMessages++;
-
                         status = ER_OK;
                         break;
                     }
@@ -1093,13 +1272,22 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
                     thread->GetStopEvent().ResetEvent();
                 }
 
-                if (internal->stopping) {
+                switch (internal->state) {
+                case Internal::STARTED:
+                case Internal::STOP_WAIT:
+                case Internal::OTHER_END_STOP_WAIT:
+                case Internal::STOPPING:
+                case Internal::EXIT_WAIT:
+                    /* Waiting for txQueue and txWaitQueue to drain. */
+                    break;
+
+                case Internal::STOPPED:
                     status = ER_BUS_ENDPOINT_CLOSING;
+                    break;
                 }
                 if ((ER_OK != status) && (ER_ALERTED_THREAD != status) && (ER_TIMEOUT != status)) {
                     break;
                 }
-
             }
             /* Remove thread from wait queue. */
             thread->RemoveAuxListener(this);
@@ -1119,16 +1307,15 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
 
         }
 
-
         if (wasEmpty && (status == ER_OK)) {
             internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
         }
-        internal->lock.Unlock(MUTEX_CONTEXT);
-
     }
+    internal->lock.Unlock(MUTEX_CONTEXT);
 
     return status;
 }
+
 QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
 {
     static const size_t MAX_TX_QUEUE_SIZE = 1;
@@ -1199,13 +1386,22 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
                 thread->GetStopEvent().ResetEvent();
             }
 
-            if (internal->stopping) {
+            switch (internal->state) {
+            case Internal::STARTED:
+            case Internal::STOP_WAIT:
+            case Internal::OTHER_END_STOP_WAIT:
+            case Internal::STOPPING:
+            case Internal::EXIT_WAIT:
+                /* Waiting for txQueue and txWaitQueue to drain. */
+                break;
+
+            case Internal::STOPPED:
                 status = ER_BUS_ENDPOINT_CLOSING;
+                break;
             }
             if ((ER_OK != status) && (ER_ALERTED_THREAD != status) && (ER_TIMEOUT != status)) {
                 break;
             }
-
         }
         /* Remove thread from wait queue. */
         thread->RemoveAuxListener(this);
@@ -1222,10 +1418,7 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
                 QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
             }
         }
-
-
     }
-
 
     if (wasEmpty && (status == ER_OK)) {
         internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
@@ -1233,6 +1426,7 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
     internal->lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
+
 QStatus _RemoteEndpoint::PushMessage(Message& msg)
 {
     QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
@@ -1240,10 +1434,7 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 
     QStatus status = ER_OK;
     size_t count;
-    /* Remote endpoints can be invalid if they were created with the default
-     * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
-     * endpoint was created with the default constructor. i.e. internal=NULL
-     */
+
     if (!internal) {
         return ER_BUS_NO_ENDPOINT;
     }
@@ -1252,9 +1443,13 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
      * Otherwise we risk deadlock when sending NameOwnerChanged signal to
      * this dying endpoint
      */
-    if (internal->stopping) {
+    internal->lock.Lock(MUTEX_CONTEXT);
+    if (internal->state != Internal::STARTED) {
+        internal->lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_ENDPOINT_CLOSING;
     }
+    internal->lock.Unlock(MUTEX_CONTEXT);
+
     if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
         status = PushMessageRouter(msg, count);
     } else {
@@ -1287,16 +1482,8 @@ void _RemoteEndpoint::DecrementRef()
     int32_t refs = DecrementAndFetch(&internal->refCount);
     QCC_DbgPrintf(("_RemoteEndpoint::DecrementRef(%s) refs=%d", GetUniqueName().c_str(), refs));
     if (refs <= 0) {
-        if (minimalEndpoint && refs == 0) {
+        if (!minimalEndpoint || (refs == 0)) {
             Stop();
-            return;
-        }
-
-        Thread* curThread = Thread::GetThread();
-        if (curThread && (internal->bus.GetInternal().GetIODispatch().IsTimerCallbackThread())) {
-            Stop();
-        } else {
-            StopAfterTxEmpty(500);
         }
     }
 }
