@@ -26,6 +26,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
+#include <assert.h>
 
 
 namespace qcc {
@@ -236,6 +237,17 @@ class ECCPublicKey {
     }
 
     /**
+     * Copy constructor for ECCPublicKey
+     *
+     * @param[in] other   the ECCPublicKey to copy
+     */
+    ECCPublicKey(const ECCPublicKey& other)
+    {
+        memcpy(x, other.x, ECC_COORDINATE_SZ);
+        memcpy(y, other.y, ECC_COORDINATE_SZ);
+    }
+
+    /**
      * Assign operator for ECCPublicKey
      *
      * @param[in] other the ECCPublic key to assign
@@ -330,9 +342,6 @@ class ECCPublicKey {
 
         return sizeof(this->x);
     }
-
-
-
 };
 
 /**
@@ -415,6 +424,18 @@ struct ECCSignature {
     ECCSignature() {
         memset(r, 0, ECC_COORDINATE_SZ);
         memset(s, 0, ECC_COORDINATE_SZ);
+    }
+
+    /**
+     * The ECCSignature copy operator
+     *
+     * @param[in] other the ECCSignature to copy
+     */
+
+    ECCSignature(const ECCSignature& other)
+    {
+        memcpy(r, other.r, ECC_COORDINATE_SZ);
+        memcpy(s, other.s, ECC_COORDINATE_SZ);
     }
 
     /**

@@ -50,7 +50,6 @@ using namespace std;
 
 namespace ajn {
 
-
 #define Marshal8(n) \
     do { \
         *((uint64_t*)bufPos) = n; \
@@ -496,6 +495,10 @@ QStatus _Message::Deliver(RemoteEndpoint& endpoint)
         if (status == ER_BUS_AUTHENTICATION_PENDING) {
             return ER_OK;
         }
+        if (ER_PERMISSION_DENIED == status) {
+            return status;
+        }
+
     }
     /*
      * Push the message to the endpoint sink (only push handles in the first chunk)
@@ -566,6 +569,9 @@ QStatus _Message::DeliverNonBlocking(RemoteEndpoint& endpoint)
              */
             if (status == ER_BUS_AUTHENTICATION_PENDING) {
                 return ER_OK;
+            }
+            if (ER_PERMISSION_DENIED == status) {
+                return status;
             }
             /*
              * Recompute because encryption increases the packet length
@@ -754,6 +760,12 @@ QStatus _Message::EncryptMessage()
         if (!peerState->IsAuthorized((AllJoynMessageType)msgHeader.msgType, _PeerState::ALLOW_SECURE_TX)) {
             status = ER_BUS_NOT_AUTHORIZED;
             encrypt = false;
+        } else if (!authorizationChecked) {
+            Message msg(*this);
+            bool send = true;   // encrypting a message means sending
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(send, msg, peerState);
+            authorizationChecked = true;
+            QCC_DbgHLPrintf(("_Message::EncryptMessage permission authorization returns status 0x%x\n", status));
         }
     }
     if (status == ER_OK) {
@@ -794,6 +806,9 @@ QStatus _Message::EncryptMessage()
              */
             bodyPtr = reinterpret_cast<uint8_t*>(msgBuf) + hdrLen;
             bufEOD = bodyPtr + msgHeader.bodyLen;
+
+            /* notify the observer if requested */
+            NotifyEncryptionComplete();
         }
     }
     /*
@@ -987,6 +1002,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
         bodyPtr = NULL;
         goto ExitMarshalMessage;
     }
+
     /*
      * Marshal the message body
      */
@@ -1012,6 +1028,19 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
      */
     assert((bufPos - bodyPtr) == (ptrdiff_t)argsLen);
     bufEOD = bodyPtr + msgHeader.bodyLen;
+
+    /* track the msgArgs so it can be used to check the ACLs for properties */
+    if ((numArgs > 0) && (strcmp(GetInterface(), "org.freedesktop.DBus.Properties") == 0)) {
+        refMsgArgs = new MsgArg[numArgs];
+        for (int cnt = 0; cnt < numArgs; cnt++) {
+            refMsgArgs[cnt] = args[cnt];
+        }
+        numRefMsgArgs = numArgs;
+    } else {
+        numRefMsgArgs = 0;
+        refMsgArgs = NULL;
+    }
+
     while (numArgs--) {
         QCC_DbgPrintf(("\n%s\n", args->ToString().c_str()));
         ++args;
@@ -1354,6 +1383,7 @@ QStatus _Message::ReplyMsg(const Message& call, const qcc::String& sender, const
      */
     status = MarshalMessage(call->replySignature, sender, destination, MESSAGE_METHOD_RET,
                             args, numArgs, call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
+    SetMessageEncryptionNotification(call->encryptionNotification);
     return status;
 }
 
@@ -1400,6 +1430,7 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, const
         status = MarshalMessage("s", sender, destination, MESSAGE_ERROR, &arg, 1,
                                 call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, sessionId);
     }
+    SetMessageEncryptionNotification(call->encryptionNotification);
 
 ExitErrorMsg:
     return status;

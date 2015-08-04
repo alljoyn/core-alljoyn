@@ -29,6 +29,7 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_PATH = "/org/alljoyn/test";
+static const void* FACTORY_RESET_CONTEXT = ((const void*) 0x12345678);
 
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
@@ -61,6 +62,7 @@ static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacede
 
 static QCC_BOOL requestcredentials_service_flag = QCC_FALSE;
 static QCC_BOOL authenticationcomplete_service_flag = QCC_FALSE;
+static QCC_BOOL factoryreset_service_flag = QCC_FALSE;
 
 static QCC_BOOL requestcredentials_client_flag = QCC_FALSE;
 static QCC_BOOL authenticationcomplete_client_flag = QCC_FALSE;
@@ -162,7 +164,7 @@ class ObjectSecurityTest : public testing::Test {
         EXPECT_TRUE(name_owner_changed_flag);
     }
 
-    void SetupAuthClientWitSecureProxyBusObject() {
+    void SetUpAuthClientWithSecureProxyBusObject() {
         // make a secure proxybusobject
         alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create_secure(clientbus, OBJECT_NAME, OBJECT_PATH, 0);
         EXPECT_TRUE(proxyObj);
@@ -184,9 +186,27 @@ class ObjectSecurityTest : public testing::Test {
 
     }
 
+    void SetUpResetClientWithSecureProxyBusObject() {
+        alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create_secure(clientbus, OBJECT_NAME, "/org/alljoyn/Bus/Security", 0);
+        EXPECT_TRUE(proxyObj);
+        EXPECT_TRUE(alljoyn_proxybusobject_issecure(proxyObj));
+        status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
+        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        alljoyn_message reply = alljoyn_message_create(clientbus);
+        status = alljoyn_proxybusobject_methodcall(proxyObj, "org.alljoyn.Bus.Security.ManagedApplication",
+                                                   "Reset", NULL, 0, reply, ALLJOYN_MESSAGE_DEFAULT_TIMEOUT, 0);
+        /* Reset is not allowed before the application is claimed */
+        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
+
+        alljoyn_message_destroy(reply);
+        alljoyn_proxybusobject_destroy(proxyObj);
+    }
+
     void ResetAuthFlags() {
         requestcredentials_service_flag = QCC_FALSE;
         authenticationcomplete_service_flag = QCC_FALSE;
+        factoryreset_service_flag = QCC_FALSE;
 
         requestcredentials_client_flag = QCC_FALSE;
         authenticationcomplete_client_flag = QCC_FALSE;
@@ -256,8 +276,13 @@ static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(
     authenticationcomplete_client_flag = QCC_TRUE;
 }
 
+static QStatus AJ_CALL factoryresetlistener_factoryreset(const void* context) {
+    EXPECT_EQ(context, FACTORY_RESET_CONTEXT);
+    factoryreset_service_flag = QCC_TRUE;
+    return ER_OK;
+}
 
-TEST_F(ObjectSecurityTest, insecure_interface_sercure_object) {
+TEST_F(ObjectSecurityTest, insecure_interface_secure_object) {
     //create an interface that is not marked with any security
     alljoyn_interfacedescription service_intf;
     status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &service_intf);
@@ -271,13 +296,13 @@ TEST_F(ObjectSecurityTest, insecure_interface_sercure_object) {
     ResetAuthFlags();
 
     /*
-     * if an interface is created without security is should default to an
+     * if an interface is created without security it should default to an
      * inherit security policy.
      */
     EXPECT_EQ(AJ_IFC_SECURITY_INHERIT, alljoyn_interfacedescription_getsecuritypolicy(service_intf));
 
     /*
-     * clear the busattachment keystore to make sure authentication is performed
+     * clear the busattachment key store to make sure authentication is performed
      * if needed.
      */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -294,7 +319,7 @@ TEST_F(ObjectSecurityTest, insecure_interface_sercure_object) {
 
     status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
+    /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
 
     SetUpAuthServiceWithSecureBusObject();
@@ -311,10 +336,10 @@ TEST_F(ObjectSecurityTest, insecure_interface_sercure_object) {
 
     status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
+    /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
 
-    SetupAuthClientWitSecureProxyBusObject();
+    SetUpAuthClientWithSecureProxyBusObject();
 
     EXPECT_TRUE(requestcredentials_service_flag);
     EXPECT_TRUE(authenticationcomplete_service_flag);
@@ -326,7 +351,7 @@ TEST_F(ObjectSecurityTest, insecure_interface_sercure_object) {
     alljoyn_authlistener_destroy(clientauthlistener);
 }
 
-TEST_F(ObjectSecurityTest, interface_security_off_sercure_object) {
+TEST_F(ObjectSecurityTest, interface_security_off_secure_object) {
     //create an interface that is not marked with any security
     alljoyn_interfacedescription service_intf;
     status = alljoyn_busattachment_createinterface_secure(servicebus, INTERFACE_NAME, &service_intf, AJ_IFC_SECURITY_OFF);
@@ -345,7 +370,7 @@ TEST_F(ObjectSecurityTest, interface_security_off_sercure_object) {
     EXPECT_EQ(AJ_IFC_SECURITY_OFF, alljoyn_interfacedescription_getsecuritypolicy(service_intf));
 
     /*
-     * clear the busattachment keystore to make sure authentication is performed
+     * clear the busattachment key store to make sure authentication is performed
      * if needed.
      */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -362,7 +387,7 @@ TEST_F(ObjectSecurityTest, interface_security_off_sercure_object) {
 
     status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
+    /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
 
     SetUpAuthServiceWithSecureBusObject();
@@ -379,10 +404,10 @@ TEST_F(ObjectSecurityTest, interface_security_off_sercure_object) {
 
     status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
+    /* Clear the key store between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
 
-    SetupAuthClientWitSecureProxyBusObject();
+    SetUpAuthClientWithSecureProxyBusObject();
 
     EXPECT_FALSE(requestcredentials_service_flag);
     EXPECT_FALSE(authenticationcomplete_service_flag);
@@ -390,6 +415,83 @@ TEST_F(ObjectSecurityTest, interface_security_off_sercure_object) {
     EXPECT_FALSE(requestcredentials_client_flag);
     EXPECT_FALSE(authenticationcomplete_client_flag);
 
+    alljoyn_authlistener_destroy(serviceauthlistener);
+    alljoyn_authlistener_destroy(clientauthlistener);
+}
+
+TEST_F(ObjectSecurityTest, factory_reset) {
+    // Create an interface that is not marked with any security.
+    alljoyn_interfacedescription service_intf;
+    status = alljoyn_busattachment_createinterface(servicebus, INTERFACE_NAME, &service_intf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(service_intf != NULL);
+    status = alljoyn_interfacedescription_addmember(service_intf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_interfacedescription_activate(service_intf);
+
+    // Make sure all the auth flags are in a known state.
+    ResetAuthFlags();
+
+    /*
+     * If an interface is created without security it should default to an
+     * inherit security policy.
+     */
+    EXPECT_EQ(AJ_IFC_SECURITY_INHERIT, alljoyn_interfacedescription_getsecuritypolicy(service_intf));
+
+    /*
+     * Clear the busattachment key store to make sure authentication is performed if needed.
+     */
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    /* Set up the service */
+    alljoyn_authlistener_callbacks authlistener_cb_service = {
+        authlistener_requestcredentials_service_srp_keyx,     //requestcredentials
+        NULL,     //verifycredentials
+        NULL,     //securityviolation
+        alljoyn_authlistener_authenticationcomplete_service_srp_keyx     //authenticationcomplete
+    };
+    alljoyn_factoryresetlistener_callbacks factoryresetlistener_cb_service = {
+        factoryresetlistener_factoryreset
+    };
+
+    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, NULL);
+    alljoyn_factoryresetlistener servicefactoryresetlistener = alljoyn_factoryresetlistener_create(&factoryresetlistener_cb_service, FACTORY_RESET_CONTEXT);
+
+    status = alljoyn_busattachment_enablepeersecuritywithfactoryresetlistener(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE, servicefactoryresetlistener);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    /* Clear the key store between runs. */
+    alljoyn_busattachment_clearkeystore(servicebus);
+
+    SetUpAuthServiceWithSecureBusObject();
+
+    /* Set up the client. */
+    alljoyn_authlistener_callbacks authlistener_cb_client = {
+        authlistener_requestcredentials_client_srp_keyx,     // requestcredentials
+        NULL,     // verifycredentials
+        NULL,     // securityviolation
+        alljoyn_authlistener_authenticationcomplete_client_srp_keyx // authenticationcomplete
+    };
+
+    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, NULL);
+
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    /* Clear the key store between runs. */
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    SetUpResetClientWithSecureProxyBusObject();
+
+    EXPECT_TRUE(requestcredentials_service_flag);
+    EXPECT_TRUE(authenticationcomplete_service_flag);
+    /* Reset is not allowed before the application is claimed */
+    EXPECT_FALSE(factoryreset_service_flag);
+
+    EXPECT_TRUE(requestcredentials_client_flag);
+    EXPECT_TRUE(authenticationcomplete_client_flag);
+
+    alljoyn_factoryresetlistener_destroy(servicefactoryresetlistener);
     alljoyn_authlistener_destroy(serviceauthlistener);
     alljoyn_authlistener_destroy(clientauthlistener);
 }

@@ -401,18 +401,36 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
             size_t numProps = ifc->GetProperties();
             props = new const InterfaceDescription::Property*[numProps];
             ifc->GetProperties(props, numProps);
+            bool* allowed = new bool[numProps];
+            for (size_t i = 0; i < numProps; i++) {
+                allowed[i] = true;
+            }
             size_t readable = 0;
             /* Count readable properties */
-            for (size_t i = 0; i < numProps; i++) {
-                if (props[i]->access & PROP_ACCESS_READ) {
-                    readable++;
+            if (msg->IsEncrypted()) {
+                PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
+                for (size_t i = 0; i < numProps; i++) {
+                    if (props[i]->access & PROP_ACCESS_READ) {
+                        if (ER_OK == bus->GetInternal().GetPermissionManager().AuthorizeGetProperty(msg->GetObjectPath(), ifc->GetName(), props[i]->name.c_str(), peerState)) {
+                            readable++;
+                        } else {
+                            /* mark the property as not allowed because of permission denied */
+                            allowed[i] = false;
+                        }
+                    }
+                }
+            } else {
+                for (size_t i = 0; i < numProps; i++) {
+                    if (props[i]->access & PROP_ACCESS_READ) {
+                        readable++;
+                    }
                 }
             }
             MsgArg* dict = new MsgArg[readable];
             MsgArg* entry = dict;
             /* Get readable properties */
             for (size_t i = 0; i < numProps; i++) {
-                if (props[i]->access & PROP_ACCESS_READ) {
+                if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
                     MsgArg* val = new MsgArg();
                     status = Get(iface->v_string.str, props[i]->name.c_str(), *val);
                     if (status != ER_OK) {
@@ -426,6 +444,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
             }
             vals.Set("a{sv}", readable, dict);
             vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
+            delete [] allowed;
         }
     } else {
         status = ER_BUS_UNKNOWN_INTERFACE;
@@ -659,26 +678,46 @@ QStatus BusObject::Signal(const char* destination,
         ids = bus->GetInternal().GetHostedSessions();
     }
 
-    QStatus status = ER_OK;
+    if (ids.empty()) {
+        return ER_OK;
+    }
+
+    QStatus status = ER_FAIL;
 
     for (std::set<SessionId>::iterator it = ids.begin(); it != ids.end(); ++it) {
         Message msg(*bus);
-        status = msg->SignalMsg(signalMember.signature,
-                                destination,
-                                *it,
-                                path,
-                                signalMember.iface->GetName(),
-                                signalMember.name,
-                                args,
-                                numArgs,
-                                flags,
-                                timeToLive);
-        if (status == ER_OK) {
-            BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-            status = bus->GetInternal().GetRouter().PushMessage(msg, bep);
-            if ((status == ER_OK) && outMsg) {
+        QStatus aStatus = msg->SignalMsg(signalMember.signature,
+                                         destination,
+                                         *it,
+                                         path,
+                                         signalMember.iface->GetName(),
+                                         signalMember.name,
+                                         args,
+                                         numArgs,
+                                         flags,
+                                         timeToLive);
+        if (aStatus == ER_OK) {
+            if (msg->IsEncrypted() && (!bus->GetInternal().GetRouter().IsDaemon())) {
+                /* do an earlier permission authorization to make sure this
+                 * signal is allowed to send to the router for delivery.
+                 */
+                PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetDestination());
+                aStatus = bus->GetInternal().GetPermissionManager().AuthorizeMessage(true, msg, peerState);
+                /* mark the message so the Message::EncryptMessage method does
+                 * not need to authorize the message again */
+                msg->authorizationChecked = true;
+            }
+            if (aStatus == ER_OK) {
+                BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
+                aStatus = bus->GetInternal().GetRouter().PushMessage(msg, bep);
+            }
+            if ((aStatus == ER_OK) && outMsg) {
                 *outMsg = msg;
             }
+        }
+        if (status != ER_OK) {
+            /* Once status is ER_OK, it will return ER_OK */
+            status = aStatus;
         }
     }
     return status;
@@ -753,7 +792,7 @@ QStatus BusObject::MethodReply(const Message& msg, const MsgArg* args, size_t nu
     return status;
 }
 
-QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const char* errorMessage)
+QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const char* errorMessage, Message* replyMsg)
 {
     QStatus status;
 
@@ -777,11 +816,14 @@ QStatus BusObject::MethodReply(const Message& msg, const char* errorName, const 
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             status = bus->GetInternal().GetRouter().PushMessage(error, bep);
         }
+        if (NULL != replyMsg) {
+            *replyMsg = error;
+        }
     }
     return status;
 }
 
-QStatus BusObject::MethodReply(const Message& msg, QStatus status)
+QStatus BusObject::MethodReply(const Message& msg, QStatus status, Message* replyMsg)
 {
     /* Protect against calling before object is registered */
     if (!bus) {
@@ -794,7 +836,8 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
     }
 
     if (status == ER_OK) {
-        return MethodReply(msg);
+        /* Casts needed to unambiguously call the correct overload of MethodReply. */
+        return MethodReply(msg, (const MsgArg*)NULL, (size_t)0, replyMsg);
     } else {
         if (msg->GetType() != MESSAGE_METHOD_CALL) {
             return ER_BUS_NO_CALL_FOR_REPLY;
@@ -803,6 +846,9 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status)
             QStatus result = error->ErrorMsg(msg, status);
             assert(ER_OK == result);
             QCC_UNUSED(result);
+            if (NULL != replyMsg) {
+                *replyMsg = error;
+            }
             BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
             return bus->GetInternal().GetRouter().PushMessage(error, bep);
         }

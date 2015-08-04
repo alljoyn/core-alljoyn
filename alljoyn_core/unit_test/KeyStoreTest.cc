@@ -125,6 +125,10 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
     qcc::GUID128 guid2;
     qcc::GUID128 guid3;
     qcc::GUID128 guid4;
+    KeyStore::Key idx1(KeyStore::Key::LOCAL, guid1);
+    KeyStore::Key idx2(KeyStore::Key::LOCAL, guid2);
+    KeyStore::Key idx3(KeyStore::Key::LOCAL, guid3);
+    KeyStore::Key idx4(KeyStore::Key::LOCAL, guid4);
     QStatus status = ER_OK;
     KeyBlob key;
 
@@ -138,9 +142,9 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         keyStore.Clear();
 
         key.Rand(620, KeyBlob::GENERIC);
-        keyStore.AddKey(guid1, key);
+        keyStore.AddKey(idx1, key);
         key.Rand(620, KeyBlob::GENERIC);
-        keyStore.AddKey(guid2, key);
+        keyStore.AddKey(idx2, key);
 
         status = keyStore.Store();
         ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
@@ -153,11 +157,11 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         KeyStore keyStore("keystore_test");
         keyStore.Init(NULL, true);
 
-        status = keyStore.GetKey(guid1, key);
-        ASSERT_EQ(ER_OK, status) << " Failed to load guid1";
+        status = keyStore.GetKey(idx1, key);
+        ASSERT_EQ(ER_OK, status) << " Failed to load key1";
 
-        status = keyStore.GetKey(guid2, key);
-        ASSERT_EQ(ER_OK, status) << " Failed to load guid2";
+        status = keyStore.GetKey(idx2, key);
+        ASSERT_EQ(ER_OK, status) << " Failed to load key2";
     }
 
     /*
@@ -168,7 +172,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         keyStore.Init(NULL, true);
 
         key.Rand(620, KeyBlob::GENERIC);
-        keyStore.AddKey(guid4, key);
+        keyStore.AddKey(idx4, key);
 
         {
             KeyStore keyStore2("keystore_test");
@@ -176,14 +180,14 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
 
             /* Replace a key */
             key.Rand(620, KeyBlob::GENERIC);
-            keyStore2.AddKey(guid1, key);
+            keyStore2.AddKey(idx1, key);
 
             /* Add a key */
             key.Rand(620, KeyBlob::GENERIC);
-            keyStore2.AddKey(guid3, key);
+            keyStore2.AddKey(idx3, key);
 
             /* Delete a key */
-            keyStore2.DelKey(guid2);
+            keyStore2.DelKey(idx2);
 
             status = keyStore2.Store();
             ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
@@ -192,17 +196,17 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         status = keyStore.Reload();
         ASSERT_EQ(ER_OK, status) << " Failed to reload keystore";
 
-        status = keyStore.GetKey(guid1, key);
-        ASSERT_EQ(ER_OK, status) << " Failed to load guid1";
+        status = keyStore.GetKey(idx1, key);
+        ASSERT_EQ(ER_OK, status) << " Failed to load idx1";
 
-        status = keyStore.GetKey(guid2, key);
-        ASSERT_EQ(ER_BUS_KEY_UNAVAILABLE, status) << " guid2 was not deleted";
+        status = keyStore.GetKey(idx2, key);
+        ASSERT_EQ(ER_BUS_KEY_UNAVAILABLE, status) << " idx2 was not deleted";
 
-        status = keyStore.GetKey(guid3, key);
-        ASSERT_EQ(ER_OK, status) << " Failed to load guid3";
+        status = keyStore.GetKey(idx3, key);
+        ASSERT_EQ(ER_OK, status) << " Failed to load idx3";
 
-        status = keyStore.GetKey(guid4, key);
-        ASSERT_EQ(ER_OK, status) << " Failed to load guid4";
+        status = keyStore.GetKey(idx4, key);
+        ASSERT_EQ(ER_OK, status) << " Failed to load idx4";
 
         /* Store merged key store */
         status = keyStore.Store();

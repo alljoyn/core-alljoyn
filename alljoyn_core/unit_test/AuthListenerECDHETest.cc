@@ -113,139 +113,134 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     /* the server key and certificate are generated the unit test common/unit_test/CertificateECCTest::GenSelfSignECCX509CertForBBservice */
                     serverPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
-                        "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n"
+                        "MDECAQEEICCRJMbxSiWUqj4Zs7jFQRXDJdBRPWX6fIVqE1BaXd08oAoGCCqGSM49\n"
                         "AwEH\n"
                         "-----END EC PRIVATE KEY-----";
 
                     serverCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----\n"
-                        "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n"
-                        "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n"
-                        "Fw0xNjAyMjYyMTU1MjVaMCsxKTAnBgNVBAMMIDZhYWM5MjQwNDNjYjc5NmQ2ZGIy\n"
-                        "NmRlYmRkMGM5OWJkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEP/HbYga30Afm\n"
-                        "0fB6g7KaB5Vr5CDyEkgmlif/PTsgwM2KKCMiAfcfto0+L1N0kvyAUgff6sLtTHU3\n"
-                        "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n"
-                        "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n"
-                        "0GOQizWlQm8mpKaQ3uE=\n"
+                        "MIIBuDCCAV2gAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjBCMRUwEwYDVQQLDAxv\n"
+                        "cmdhbml6YXRpb24xKTAnBgNVBAMMIDgxM2FkZDFmMWNiOTljZTk2ZmY5MTVmNTVk\n"
+                        "MzQ4MjA2MB4XDTE1MDcyMjIxMDYxNFoXDTE2MDcyMTIxMDYxNFowQjEVMBMGA1UE\n"
+                        "CwwMb3JnYW5pemF0aW9uMSkwJwYDVQQDDCAzOWIxZGNmMjBmZDJlNTNiZGYzMDU3\n"
+                        "NzMzMjBlY2RjMzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGJ/9F4xHn3Klw7z\n"
+                        "6LREmHJgzu8yJ4i09b4EWX6a5MgUpQoGKJcjWgYGWb86bzbciMCFpmKzfZ42Hg+k\n"
+                        "BJs2ZWajPjA8MAwGA1UdEwQFMAMBAf8wFQYDVR0lBA4wDAYKKwYBBAGC3nwBATAV\n"
+                        "BgNVHSMEDjAMoAoECELxjRK/fVhaMAoGCCqGSM49BAMCA0kAMEYCIQDixoulcO7S\n"
+                        "df6Iz6lvt2CDy0sjt/bfuYVW3GeMLNK1LAIhALNklms9SP8ZmTkhCKdpC+/fuwn0\n"
+                        "+7RX8CMop11eWCih\n"
                         "-----END CERTIFICATE-----";
 
                     /* the client key and certificate are generated using openssl */
 
                     clientPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
-                        "MHcCAQEEIAqN6AtyOAPxY5k7eFNXAwzkbsGMl4uqvPrYkIj0LNZBoAoGCCqGSM49\n"
-                        "AwEHoUQDQgAEvnRd4fX9opwgXX4Em2UiCMsBbfaqhB1U5PJCDZacz9HumDEzYdrS\n"
-                        "MymSxR34lL0GJVgEECvBTvpaHP2bpTIl6g==\n"
+                        "MHcCAQEEIAzfibK85el6fvczuL5vIaKBiZ5hTTaNIo0LEkvJ2dCMoAoGCCqGSM49\n"
+                        "AwEHoUQDQgAE3KsljHhEdm5JLdpRr0g1zw9EMmMqcQJdxYoMr8AAF//G8fujudM9\n"
+                        "HMlXLcyBk195YnGp+hY8Tk+QNNA3ZVNavw==\n"
                         "-----END EC PRIVATE KEY-----";
 
                     clientCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----\n"
-                        "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
-                        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
-                        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n"
-                        "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
-                        "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
-                        "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n"
-                        "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n"
-                        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSQAwRgIhAKfmglMgl67L5ALF\n"
-                        "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n"
-                        "IizUeK0oI5c=\n"
+                        "MIIBYTCCAQigAwIBAgIJAKdvmRDLDVWQMAoGCCqGSM49BAMCMCQxIjAgBgNVBAoM\n"
+                        "GUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwNzIyMjAxMTA3WhcNMTUw\n"
+                        "ODIxMjAxMTA3WjAgMR4wHAYDVQQKDBVBbGxKb3luVGVzdENsaWVudE5hbWUwWTAT\n"
+                        "BgcqhkjOPQIBBggqhkjOPQMBBwNCAATcqyWMeER2bkkt2lGvSDXPD0QyYypxAl3F\n"
+                        "igyvwAAX/8bx+6O50z0cyVctzIGTX3lican6FjxOT5A00DdlU1q/oycwJTAVBgNV\n"
+                        "HSUEDjAMBgorBgEEAYLefAEBMAwGA1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDRwAw\n"
+                        "RAIgQsvHZ747URkPCpYtBxi56V1OcMF3oKWnGuz2jazWr4YCICCU5/itaYVt1SzQ\n"
+                        "cBYyChWx/4KXL4QKWLdm9/6ispdq\n"
                         "-----END CERTIFICATE-----\n"
                         "\n"
                         "-----BEGIN CERTIFICATE-----\n"
-                        "MIIBszCCAVmgAwIBAgIJAILNujb37gH2MAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
-                        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
-                        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjNaFw0x\n"
-                        "NjAyMjYyMTUxMjNaMFYxKTAnBgNVBAsMIDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBm\n"
-                        "NzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5\n"
-                        "ZGQwMjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGEkAUATvOE4uYmt/10vkTcU\n"
-                        "SA0C+YqHQ+fjzRASOHWIXBvpPiKgHcINtNFQsyX92L2tMT2Kn53zu+3S6UAwy6yj\n"
-                        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgKit5yeq1uxTvdFmW\n"
-                        "LDeoxerqC1VqBrmyEvbp4oJfamsCIQDvMTmulW/Br/gY7GOP9H/4/BIEoR7UeAYS\n"
-                        "4xLyu+7OEA==\n"
-                        "-----END CERTIFICATE-----";
+                        "MIIBdDCCARugAwIBAgIJANOdlTtGQiNsMAoGCCqGSM49BAMCMCQxIjAgBgNVBAoM\n"
+                        "GUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwNzIyMjAxMTA2WhcNMjkw\n"
+                        "MzMwMjAxMTA2WjAkMSIwIAYDVQQKDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1l\n"
+                        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfN5/iDyZAHt9zLEvR2/y02jVovfW\n"
+                        "U+lxLtDe0I+fTOoZn3WMd3EyZWKKdfela66adLWwzijKpBlXpj5KKQn5vKM2MDQw\n"
+                        "IQYDVR0lBBowGAYKKwYBBAGC3nwBAQYKKwYBBAGC3nwBBTAPBgNVHRMBAf8EBTAD\n"
+                        "AQH/MAoGCCqGSM49BAMCA0cAMEQCIDT7r6txazffbFN8VxPg3tRuyWvtTNwYiS2y\n"
+                        "tn0H/nsaAiBzKmTHjrmhSLmYidtNvcU/OjKzmRHmdGTaURz0s2NBcQ==\n"
+                        "-----END CERTIFICATE-----\n";
                 } else {
                     /*
                      * Use server and client certificates generated with the Windows
                      * Cryptography APIs (CAPI2 and CNG).
+                     * See alljoyn_core\test\scripts\CAPI_Test_Cert_Generation.cmd and
+                     * pfx2pem.cmd.
                      */
                     serverPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
-                        "MHcCAQEEINNeGvnMwhw8hFogzdIPbGtD1GJmuEMVmYrI02kqUUGjoAoGCCqGSM49\n"
-                        "AwEHoUQDQgAE6bkGScqtqAK8qhibGWY+5tZ0hyTMFYiye3XSKmSlz/AJnSF64HNu\n"
-                        "zIyOUIeEtXm5MBin1j2zgvTJ3lNDYpORtQ==\n"
+                        "MHcCAQEEICZ4ITrSMWazoGPBCjxcv7goxSGvfOWAgSsebNq822JPoAoGCCqGSM49\n"
+                        "AwEHoUQDQgAEp+fTvMjkcXZsE6h6i3JtBiO5N5kiOjXvGMHPhmPH70YLB3lw7tZK\n"
+                        "E2im95nQWWOno9g5sdJOhZ1jftT1ksXKng==\n"
                         "-----END EC PRIVATE KEY-----";
 
                     serverCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----"
-                        "MIIBszCCAVmgAwIBAgIQjFfnB+d1updAWus0q+x2czAKBggqhkjOPQQDAjAkMSIw\n"
-                        "IAYDVQQDDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1lMB4XDTE1MDQxMzIyMjkz\n"
-                        "MloXDTE2MDQxMjIyMjkzMlowJDEiMCAGA1UEAwwZQWxsSm95blRlc3RTZWxmU2ln\n"
-                        "bmVkTmFtZTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABOm5BknKragCvKoYmxlm\n"
-                        "PubWdIckzBWIsnt10ipkpc/wCZ0heuBzbsyMjlCHhLV5uTAYp9Y9s4L0yd5TQ2KT\n"
-                        "kbWjbTBrMFUGA1UdAQROMEyAEI/DZGNF3hRZTlUvIKShHtyhJjAkMSIwIAYDVQQD\n"
-                        "DBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1lghCMV+cH53W6l0Ba6zSr7HZzMBIG\n"
-                        "A1UdEwEB/wQIMAYBAf8CAQAwCgYIKoZIzj0EAwIDSAAwRQIhALQ4HosrOh/jpOTj\n"
-                        "VxsIlvXoXRgqRrUytDnNmdJymi98AiANuPPUIdPPJPPKC83T8OJXPUOE+983jXTV\n"
-                        "yo85U6lLmw==\n"
+                        "MIIBhjCCASygAwIBAgIQXiWpM8rMappGXsKSElFtNzAKBggqhkjOPQQDAjAgMR4w\n"
+                        "HAYDVQQDDBVBbGxKb3luVGVzdFNlcnZlck5hbWUwHhcNMTUwNzI4MTkzNjA4WhcN\n"
+                        "MjkwNDA1MTk0NjA4WjAgMR4wHAYDVQQDDBVBbGxKb3luVGVzdFNlcnZlck5hbWUw\n"
+                        "WTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASn59O8yORxdmwTqHqLcm0GI7k3mSI6\n"
+                        "Ne8Ywc+GY8fvRgsHeXDu1koTaKb3mdBZY6ej2Dmx0k6FnWN+1PWSxcqeo0gwRjAO\n"
+                        "BgNVHQ8BAf8EBAMCB4AwFQYDVR0lBA4wDAYKKwYBBAGC3nwBATAdBgNVHQ4EFgQU\n"
+                        "vgKPPyMDzPUyW+t+q2krMQm5UUwwCgYIKoZIzj0EAwIDSAAwRQIhAKwlQpn74JbA\n"
+                        "rYfeZcXyuPkXh733BxYprQlEkRbnYJzrAiBuzBFeuc812oCBUGSdHbp4kAJSEtAc\n"
+                        "Cj7u3Pnwi1XLpg==\n"
                         "-----END CERTIFICATE-----";
 
                     clientPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
-                        "MHcCAQEEIIeHXx2u1DCKPEXBU8k/Yq41EYPkOj943cRZo16U9M7GoAoGCCqGSM49\n"
-                        "AwEHoUQDQgAE6P83dRC0bMiQhUmAj4HDqOIA5soojXcffYqwXg4+xcTxe8FDeAbi\n"
-                        "8uutBucKWIasaqFGUeGsbtN9Ie0o88+39A==\n"
+                        "MHcCAQEEIMEI3eVg2wJu9vteb8HA9rPZWznDpYy9daaDt5MFoAAeoAoGCCqGSM49\n"
+                        "AwEHoUQDQgAEI63hx/KJK4CB4hexkkliN8NLWypIHd1sy8qcJgzGgHGlLzgTiPL1\n"
+                        "V8vI7NQj3tL1oeuhlAuCgp6gZrYG+qbZIQ==\n"
                         "-----END EC PRIVATE KEY-----";
 
                     clientCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----\n"
-                        "MIIB5DCCAYqgAwIBAgIQhaPs10tyAqhJiplkfYYF4jAKBggqhkjOPQQDAjAeMRww\n"
-                        "GgYDVQQDDBNBbGxKb3luVGVzdFJvb3ROYW1lMB4XDTE1MDQxNTAwNTc0OFoXDTE2\n"
-                        "MDQxNDAwNTc0OFowITEfMB0GA1UEAwwWQWxsSm95blRlc3RTdWJqZWN0TmFtZTBZ\n"
-                        "MBMGByqGSM49AgEGCCqGSM49AwEHA0IABOj/N3UQtGzIkIVJgI+Bw6jiAObKKI13\n"
-                        "H32KsF4OPsXE8XvBQ3gG4vLrrQbnCliGrGqhRlHhrG7TfSHtKPPPt/SjgaYwgaMw\n"
-                        "TwYDVR0BBEgwRoAQyes/4pm9KpZiQ+Ah8k6tCaEgMB4xHDAaBgNVBAMME0FsbEpv\n"
-                        "eW5UZXN0Um9vdE5hbWWCEJ/mTeFT1kiWQAr0bPOfanYwDAYDVR0TAQH/BAIwADAO\n"
-                        "BgNVHQ8BAf8EBAMCBDAwEwYDVR0lBAwwCgYIKwYBBQUHAwIwHQYDVR0OBBYEFOvr\n"
-                        "fqtHSjRz7OWoxeWAczh3g1F+MAoGCCqGSM49BAMCA0gAMEUCIQCBCPqkG0dKDNXb\n"
-                        "J2ZrORNcjDIeyrVgqQVaa6oE/M1Q8wIgWtuQwR1vsyrCqvfwE+1M3D4wuD7HhqvY\n"
-                        "zP3KuH18pwg=\n"
+                        "MIIBrDCCAVGgAwIBAgIQNwCHFovV/4FOTrJFpn6vKTAKBggqhkjOPQQDAjAkMSIw\n"
+                        "IAYDVQQDDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1lMB4XDTE1MDcyODE5Mzcw\n"
+                        "NVoXDTI5MDQwNTE5NDcwNVowIDEeMBwGA1UEAwwVQWxsSm95blRlc3RDbGllbnRO\n"
+                        "YW1lMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEI63hx/KJK4CB4hexkkliN8NL\n"
+                        "WypIHd1sy8qcJgzGgHGlLzgTiPL1V8vI7NQj3tL1oeuhlAuCgp6gZrYG+qbZIaNp\n"
+                        "MGcwDgYDVR0PAQH/BAQDAgeAMBUGA1UdJQQOMAwGCisGAQQBgt58AQEwHwYDVR0j\n"
+                        "BBgwFoAUg4ZsZU12ghreVKZ0u2eyYHkiqeUwHQYDVR0OBBYEFFKYyjampcsD5WSv\n"
+                        "+6EmxXIhXlOHMAoGCCqGSM49BAMCA0kAMEYCIQC8+DwrriZ4P/Mj+O4WUsIBiXNx\n"
+                        "0Elf/P5YsoTnT3ycPgIhAMmIBBZTE+Xg7Hnpc8paraTlvvdBlsvyrYir9JalL0jy\n"
                         "-----END CERTIFICATE-----\n"
                         "\n"
                         "-----BEGIN CERTIFICATE-----\n"
-                        "MIIBoDCCAUegAwIBAgIQn+ZN4VPWSJZACvRs859qdjAKBggqhkjOPQQDAjAeMRww\n"
-                        "GgYDVQQDDBNBbGxKb3luVGVzdFJvb3ROYW1lMB4XDTE1MDQxNTAwNTc0OFoXDTE2\n"
-                        "MDQxNDAwNTc0OFowHjEcMBoGA1UEAwwTQWxsSm95blRlc3RSb290TmFtZTBZMBMG\n"
-                        "ByqGSM49AgEGCCqGSM49AwEHA0IABCzk3mCogENzSELCAjWSEbeVccWxdKHZOyaJ\n"
-                        "urXwtZ/R0HSV4ZJqMgrdOoVFcOSsZYKng9xq0pGmTGFbq3EYCIyjZzBlME8GA1Ud\n"
-                        "AQRIMEaAEMnrP+KZvSqWYkPgIfJOrQmhIDAeMRwwGgYDVQQDDBNBbGxKb3luVGVz\n"
-                        "dFJvb3ROYW1lghCf5k3hU9ZIlkAK9Gzzn2p2MBIGA1UdEwEB/wQIMAYBAf8CAQAw\n"
-                        "CgYIKoZIzj0EAwIDRwAwRAIgRO+QlHzGaiu1s68L89WLDm2rKdYGM0/K7Fz+OJWE\n"
-                        "VkcCIAzAliYZKzBSXkM5QTvMxMyn8TxIkF95BkJntrGsug5V\n"
+                        "MIIBqzCCAVGgAwIBAgIQXlRHtjYelopJmcl8ZqvOXzAKBggqhkjOPQQDAjAkMSIw\n"
+                        "IAYDVQQDDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1lMB4XDTE1MDcyODE5MzYw\n"
+                        "N1oXDTI5MDQwNTE5NDYwN1owJDEiMCAGA1UEAwwZQWxsSm95blRlc3RTZWxmU2ln\n"
+                        "bmVkTmFtZTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABFd3KMaxDMpXEkunL/my\n"
+                        "LKou5xLNIJdSoMatDjC0Z8YMo9Ipk6hyIRoomZ1y0NvzPuvxW/HSiHuk91aTsQAS\n"
+                        "iYijZTBjMA4GA1UdDwEB/wQEAwIBhjAhBgNVHSUEGjAYBgorBgEEAYLefAEBBgor\n"
+                        "BgEEAYLefAEFMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFIOGbGVNdoIa3lSm\n"
+                        "dLtnsmB5IqnlMAoGCCqGSM49BAMCA0gAMEUCIQDs7425v9snEPXNDQpP6JDWY0E4\n"
+                        "fH4qVDQmeI0hisytZgIgINH4bxNiXXEL7V9cHOnm3gYdVTNpArbQvRjhwCuhX+M=\n"
                         "-----END CERTIFICATE-----\n";
                 }
 
                 /* There is one set of invalid test certs, for both values of useCAPICerts */
                 static const char pkWithInvalidChain[] =
                     "-----BEGIN EC PRIVATE KEY-----\n"
-                    "MHcCAQEEIJxWUY1L8fnEMZlo6uFoGxBm/uIOZV6rpOoXXg5Tv01EoAoGCCqGSM49\n"
-                    "AwEHoUQDQgAE4bEJQIGst7py9SpK1R//hhPsm7BVHLuHptbxdhudE7bM9kI7y3Uh\n"
-                    "XLBHSSxEW7soqXqtJcKFrOzWPRTlF3bFjA==\n"
+                    "MHcCAQEEIAzfibK85el6fvczuL5vIaKBiZ5hTTaNIo0LEkvJ2dCMoAoGCCqGSM49\n"
+                    "AwEHoUQDQgAE3KsljHhEdm5JLdpRr0g1zw9EMmMqcQJdxYoMr8AAF//G8fujudM9\n"
+                    "HMlXLcyBk195YnGp+hY8Tk+QNNA3ZVNavw==\n"
                     "-----END EC PRIVATE KEY-----";
 
                 static const char invalidChainCert2HasCA[] =
                     "-----BEGIN CERTIFICATE-----\n"
-                    "MIIBsTCCAVagAwIBAgIJAIgT+FrlL1qVMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
-                    "IDEyMEFGQTU2Q0MwNjZFRkM5QUNCOEVBRTcyNjgxRDI5MSkwJwYDVQQDDCAxMjBB\n"
-                    "RkE1NkNDMDY2RUZDOUFDQjhFQUU3MjY4MUQyOTAeFw0xNTAzMDQxNzA2MThaFw0x\n"
-                    "NjAzMDMxNzA2MThaMFYxKTAnBgNVBAsMIDEyMEFGQTU2Q0MwNjZFRkM5QUNCOEVB\n"
-                    "RTcyNjgxRDI5MSkwJwYDVQQDDCAxMjBBRkE1NkNDMDY2RUZDOUFDQjhFQUU3MjY4\n"
-                    "MUQyOTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABOGxCUCBrLe6cvUqStUf/4YT\n"
-                    "7JuwVRy7h6bW8XYbnRO2zPZCO8t1IVywR0ksRFu7KKl6rSXChazs1j0U5Rd2xYyj\n"
-                    "DTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAwRgIhAKKDBhCn9ZqYVtJDU6Tw\n"
-                    "xwq8BXPzoDrQySHXtDvVpB5pAiEApGStoG974xGLfsIGeMWpUoiOTNe3FIYNmsEW\n"
-                    "v6praiU=\n"
-                    "-----END CERTIFICATE-----"
+                    "MIIBYTCCAQigAwIBAgIJAKdvmRDLDVWQMAoGCCqGSM49BAMCMCQxIjAgBgNVBAoM\n"
+                    "GUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwNzIyMjAxMTA3WhcNMTUw\n"
+                    "ODIxMjAxMTA3WjAgMR4wHAYDVQQKDBVBbGxKb3luVGVzdENsaWVudE5hbWUwWTAT\n"
+                    "BgcqhkjOPQIBBggqhkjOPQMBBwNCAATcqyWMeER2bkkt2lGvSDXPD0QyYypxAl3F\n"
+                    "igyvwAAX/8bx+6O50z0cyVctzIGTX3lican6FjxOT5A00DdlU1q/oycwJTAVBgNV\n"
+                    "HSUEDjAMBgorBgEEAYLefAEBMAwGA1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDRwAw\n"
+                    "RAIgQsvHZ747URkPCpYtBxi56V1OcMF3oKWnGuz2jazWr4YCICCU5/itaYVt1SzQ\n"
+                    "cBYyChWx/4KXL4QKWLdm9/6ispdq\n"
+                    "-----END CERTIFICATE-----\n"
                     "\n"
                     "-----BEGIN CERTIFICATE-----\n"
                     "MIIBszCCAVmgAwIBAgIJALDTHYnf6i6VMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
@@ -258,21 +253,19 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIgPY25+ozlDxgXVJ6T\n"
                     "Uh/vcIUonFt3pqqKtIe99Sc8AdMCIQC8VrFHBFp38e6UkY+Azuikrqi8tXDz8cr3\n"
                     "noKTwIxMpw==\n"
-                    "-----END CERTIFICATE-----";
+                    "-----END CERTIFICATE-----\n";
 
                 static const char invalidChainCert2HasNoCA[] =
                     "-----BEGIN CERTIFICATE-----\n"
-                    "MIIBsTCCAVagAwIBAgIJAIgT+FrlL1qVMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
-                    "IDEyMEFGQTU2Q0MwNjZFRkM5QUNCOEVBRTcyNjgxRDI5MSkwJwYDVQQDDCAxMjBB\n"
-                    "RkE1NkNDMDY2RUZDOUFDQjhFQUU3MjY4MUQyOTAeFw0xNTAzMDQxNzA2MThaFw0x\n"
-                    "NjAzMDMxNzA2MThaMFYxKTAnBgNVBAsMIDEyMEFGQTU2Q0MwNjZFRkM5QUNCOEVB\n"
-                    "RTcyNjgxRDI5MSkwJwYDVQQDDCAxMjBBRkE1NkNDMDY2RUZDOUFDQjhFQUU3MjY4\n"
-                    "MUQyOTBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABOGxCUCBrLe6cvUqStUf/4YT\n"
-                    "7JuwVRy7h6bW8XYbnRO2zPZCO8t1IVywR0ksRFu7KKl6rSXChazs1j0U5Rd2xYyj\n"
-                    "DTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSQAwRgIhAKKDBhCn9ZqYVtJDU6Tw\n"
-                    "xwq8BXPzoDrQySHXtDvVpB5pAiEApGStoG974xGLfsIGeMWpUoiOTNe3FIYNmsEW\n"
-                    "v6praiU=\n"
-                    "-----END CERTIFICATE-----"
+                    "MIIBYTCCAQigAwIBAgIJAKdvmRDLDVWQMAoGCCqGSM49BAMCMCQxIjAgBgNVBAoM\n"
+                    "GUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwNzIyMjAxMTA3WhcNMTUw\n"
+                    "ODIxMjAxMTA3WjAgMR4wHAYDVQQKDBVBbGxKb3luVGVzdENsaWVudE5hbWUwWTAT\n"
+                    "BgcqhkjOPQIBBggqhkjOPQMBBwNCAATcqyWMeER2bkkt2lGvSDXPD0QyYypxAl3F\n"
+                    "igyvwAAX/8bx+6O50z0cyVctzIGTX3lican6FjxOT5A00DdlU1q/oycwJTAVBgNV\n"
+                    "HSUEDjAMBgorBgEEAYLefAEBMAwGA1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDRwAw\n"
+                    "RAIgQsvHZ747URkPCpYtBxi56V1OcMF3oKWnGuz2jazWr4YCICCU5/itaYVt1SzQ\n"
+                    "cBYyChWx/4KXL4QKWLdm9/6ispdq\n"
+                    "-----END CERTIFICATE-----\n"
                     "\n"
                     "-----BEGIN CERTIFICATE-----\n"
                     "MIIBsDCCAVagAwIBAgIJAP0No5ho6xiVMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
@@ -285,7 +278,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     "DTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSAAwRQIhAIOU2n6o8QXXbbJVEQe+\n"
                     "n5VkU6DybD3lnsjXSH+1PQVZAiBPCpi8p5xwlBUcFZI1EMPHoLi9XHZtchiJHEo/\n"
                     "OkxLog==\n"
-                    "-----END CERTIFICATE-----";
+                    "-----END CERTIFICATE-----\n";
 
                 static const char pkForExpiredChain[] =
                     "-----BEGIN EC PRIVATE KEY-----\n"
@@ -933,6 +926,114 @@ TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_ECDSA_AcceptableDowngradeByServer)
 {
     EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
     EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_ECDSA_Prioritized_To_ECDSA)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_PSK_ECDSA_Prioritized_To_ECDSA)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_ECDSA"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_NULL_PSK_Prioritized_To_PSK)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_PSK");
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_PSK_NULL_Prioritized_To_ECDSA)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_ECDSA");
+}
+
+/**
+ * In this test, the ECDHE_ECDSA key exchange fails.  The key exchange
+ * downgrades to ECDHE_NULL and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_NULL_FailOnClient)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    clientAuthListener.failVerifyCertChain = true;
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+}
+
+/**
+ * In this test, the ECDHE_ECDSA key exchange fails.  The key exchange
+ * downgrades to ECDHE_NULL and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_NULL_FailOnServer)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL"));
+    serverAuthListener.failVerifyCertChain = true;
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+}
+
+/**
+ * In this test, the ECDHE_PSK key exchange fails.  The key exchange
+ * downgrades to ECDHE_NULL and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_PSK_Downgrade_To_ECDHE_NULL)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL"));
+    serverAuthListener.psk = "03781075975973295739873982aabbcc";
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), "ALLJOYN_ECDHE_NULL");
+}
+
+/**
+ * In this test, the ECDHE_ECDSA key exchange fails.  The key exchange
+ * downgrades to ECDHE_PSK and it should succeed.
+ */
+TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Downgrade_To_ECDHE_PSK)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK"));
+    serverAuthListener.failVerifyCertChain = true;
     EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);

@@ -144,8 +144,10 @@ class MyBusListener : public BusListener, public SessionListener {
  * If any other authMechanism is used other than ECDHE Key Exchange authentication
  * will fail.
  */
+
 class ECDHEKeyXListener : public AuthListener {
   public:
+
     ECDHEKeyXListener()
     {
     }
@@ -214,7 +216,7 @@ class ECDHEKeyXListener : public AuthListener {
                  * The application has to option to verify the certificate
                  * chain.  If the cert chain is validated and trusted then return true; otherwise, return false.
                  */
-                printf("VerifyCredentials receives cert chain %s\n", creds.GetCertChain().c_str());
+                return true;
             }
             return VerifyCertificateChain(creds);
         }
@@ -282,6 +284,7 @@ QStatus StartMessageBus(void)
 /** Enable security, report the result to stdout, and return the result status. */
 QStatus EnableSecurity()
 {
+    QCC_SetDebugLevel("ALLJOYN", 3);
     QCC_SetDebugLevel("ALLJOYN_AUTH", 3);
     QCC_SetDebugLevel("CRYPTO", 3);
     QCC_SetDebugLevel("AUTH_KEY_EXCHANGER", 3);

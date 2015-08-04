@@ -928,6 +928,13 @@ class ProxyBusObject : public MessageReceiver {
      */
     void EnablePropertyCaching();
 
+  protected:
+    /**
+     * Bus associated with object
+     * @return the bus
+     */
+    BusAttachment& GetBusAttachment() const;
+
   private:
 
     class Internal;

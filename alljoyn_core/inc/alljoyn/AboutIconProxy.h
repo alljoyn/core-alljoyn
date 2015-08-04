@@ -66,12 +66,6 @@ class AboutIconProxy : public ProxyBusObject {
      * - an error status indicating failure
      */
     QStatus GetVersion(uint16_t& version);
-
-  private:
-    /**
-     * pointer to BusAttachment
-     */
-    BusAttachment* m_BusAttachment;
 };
 }
 

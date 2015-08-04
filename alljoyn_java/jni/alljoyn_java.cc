@@ -10390,8 +10390,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEn
                                  (strcmp(org::allseen::Introspectable::InterfaceName, name.c_str()) == 0);
         }
         if ((status != ER_OK) &&
-            isDBusStandardIfac &&
-            (intf->GetSecurityPolicy() == static_cast<InterfaceSecurityPolicy>(org_alljoyn_bus_InterfaceDescription_AJ_IFC_SECURITY_OFF))) {
+            ((isDBusStandardIfac &&
+              (intf->GetSecurityPolicy() == static_cast<InterfaceSecurityPolicy>(org_alljoyn_bus_InterfaceDescription_AJ_IFC_SECURITY_OFF))) ||
+             (strcmp(org::alljoyn::Bus::Security::Application::InterfaceName, name.c_str()) == 0) ||
+             (strcmp(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, name.c_str()) == 0) ||
+             (strcmp(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, name.c_str()) == 0) ||
+             (strcmp(org::alljoyn::Bus::Application::InterfaceName, name.c_str()) == 0)
+            )
+            ) {
             status = ER_OK;
         }
     }

@@ -278,5 +278,23 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE" value="0x912a" comment="General error indicating the value given for an About Data field is invalid."/>
   <status name="ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE" value="0x912b" comment="Error indicating the AppId field is not a 128-bit bite array."/>
   <status name="ER_BUS_TRANSPORT_ACCESS_DENIED" value="0x912c" comment="The transport denied the connection attempt because the application doesn't have the required permissions."/>
-  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x912d" comment="Attempt to send a signal with the wrong type."/>
+  <status name="ER_INVALID_CERTIFICATE" value="0x912d" comment="Invalid certificate"/>
+  <status name="ER_CERTIFICATE_NOT_FOUND" value="0x912e" comment="Certificate not found"/>
+  <status name="ER_DUPLICATE_CERTIFICATE" value="0x912f" comment="Duplicate Certificate found"/>
+  <status name="ER_UNKNOWN_CERTIFICATE" value="0x9130" comment="Unknown Certificate"/>
+  <status name="ER_MISSING_DIGEST_IN_CERTIFICATE" value="0x9131" comment="Missing digest in certificate"/>
+  <status name="ER_DIGEST_MISMATCH" value="0x9132" comment="Digest mismatch"/>
+  <status name="ER_DUPLICATE_KEY" value="0x9133" comment="Duplicate key found"/>
+  <status name="ER_NO_COMMON_TRUST" value="0x9134" comment="No common trust anchor found"/>
+  <status name="ER_MANIFEST_NOT_FOUND" value="0x9135" comment="Permission manifest not found"/>
+  <status name="ER_INVALID_CERT_CHAIN" value="0x9136" comment="Invalid certificate chain"/>
+  <status name="ER_NO_TRUST_ANCHOR" value="0x9137" comment="No trust anchor"/>
+  <status name="ER_INVALID_APPLICATION_STATE" value="0x9138" comment="Invalid application state"/>
+  <status name="ER_FEATURE_NOT_AVAILABLE" value="0x9139" comment="Feature is not available"/>
+  <status name="ER_KEY_STORE_ALREADY_INITIALIZED" value="0x913a" comment="Key store is already initialized"/>
+  <status name="ER_KEY_STORE_ID_NOT_YET_SET" value="0x913b" comment="Key store ID is not yet set"/>
+  <status name="ER_POLICY_NOT_NEWER" value="0x913c" comment="Installing permission policy not newer than existing policy"/>
+  <status name="ER_MANIFEST_REJECTED" value="0x913d" comment="The manifest of the application was rejected."/>
+  <status name="ER_INVALID_CERTIFICATE_USAGE" value="0x913e" comment="The certificate extended key usage is not Alljoyn specific."/>
+  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x913f" comment="Attempt to send a signal with the wrong type."/>  
 </status_block>
