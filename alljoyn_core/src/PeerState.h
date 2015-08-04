@@ -419,20 +419,10 @@ class _PeerState {
     /**
      * private assignment operator to prevent double freeing of memory
      */
-    _PeerState& operator=(const _PeerState& src);
+    _PeerState& operator=(const _PeerState& other);
 
     /**
      * private copy constructor to prevent double freeing of memory
-     */
-    _PeerState(const _PeerState& src);
-
-    /**
-     * Private assignment operator
-     */
-    _PeerState& operator =(const _PeerState& other);
-
-    /**
-     * Private copy constructor
      */
     _PeerState(const _PeerState& other);
 
