@@ -1155,6 +1155,8 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
         r = matchRuleBookKeeping.insert(pair<StringMapKey, MatchRuleInfo>(qcc::String(intf), true));
         it = r.first;
     }
+
+    assert(it != matchRuleBookKeeping.end());
     ++it->second.refCount;
 
     if (!registeredPropChangedHandler) {

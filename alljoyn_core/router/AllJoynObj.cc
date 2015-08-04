@@ -4950,8 +4950,9 @@ QStatus AllJoynObj::AddSessionRoute(SessionId id,
         }
     }
 
+    assert((srcIsVirt && (srcB2bEp != nullptr)) || (!srcIsVirt && (srcB2bEp == nullptr)));
+
     if (srcB2bEp) {
-        assert(srcIsVirt);
         if (srcIsVirt) {
             status = AddSessionRef(VirtualEndpoint::cast(srcEp), id, *srcB2bEp);
             if (status != ER_OK) {
@@ -4969,7 +4970,7 @@ QStatus AllJoynObj::AddSessionRoute(SessionId id,
         destEp->RegisterSessionId(id);
     }
 
-    if (srcIsVirt) {
+    if (srcIsVirt && srcB2bEp) {
         (*srcB2bEp)->RegisterSessionId(id);
     } else {
         srcEp->RegisterSessionId(id);
