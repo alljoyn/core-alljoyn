@@ -91,7 +91,7 @@ while (<GIT_DIFF>) {
 
         my $execution_count = "        -";
         printf("%s:%5d:", $execution_count, $line_number_a);
-        print RED, "$line\n", RESET;
+        print "$line\n";
         ++$line_number_a;
 
     } elsif (/^(\+.*)/) {
@@ -104,7 +104,7 @@ while (<GIT_DIFF>) {
             }
         }
         printf("%s:%5d:", $execution_count, $line_number_b);
-        print GREEN, "$line\n", RESET;
+        print "$line\n";
         ++$line_number_b;
 
     } else {
