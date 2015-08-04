@@ -1002,11 +1002,7 @@ public class BusAttachment {
     /** Specify if the attachment is connected */
     private boolean isConnected;
 
-    private Method foundAdvertisedName;
-
     private ExecutorService executor;
-
-    private Method lostAdvertisedName;
 
     private DBusProxyObj dbus;
     private ProxyBusObject dbusbo;
@@ -1035,18 +1031,6 @@ public class BusAttachment {
         isConnected = false;
         this.allowRemoteMessages = (policy == RemoteMessage.Receive);
         busAuthListener = new AuthListenerInternal();
-        try {
-            foundAdvertisedName = getClass().getDeclaredMethod(
-                    "foundAdvertisedName", String.class, Short.class, String.class);
-            foundAdvertisedName.setAccessible(true);
-            lostAdvertisedName = getClass().getDeclaredMethod(
-                    "lostAdvertisedName", String.class, Short.class, String.class);
-            lostAdvertisedName.setAccessible(true);
-        } catch (NoSuchMethodException ex) {
-            /* This will not happen */
-            System.err.println("Unexpected NoSuchMethodException for the "
-                    + "foundAdvertisedName or lostAdvertisedName methods");
-        }
         create(applicationName, allowRemoteMessages, concurrency);
 
         /*
