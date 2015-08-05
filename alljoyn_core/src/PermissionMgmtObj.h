@@ -516,6 +516,16 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus GetPublicKey(qcc::KeyInfoNISTP256& publicKeyInfo);
 
+    /**
+     * Is ready for service?
+     * @see Load()
+     * @return true if it is ready for service; false, otherwise.
+     */
+    bool IsReady()
+    {
+        return ready;
+    }
+
   protected:
     void Claim(const InterfaceDescription::Member* member, Message& msg);
     BusAttachment& bus;
@@ -620,6 +630,7 @@ class PermissionMgmtObj : public BusObject {
     _PeerState::GuildMap guildMap;
     PortListener* portListener;
     MessageEncryptionNotification* callbackToClearSecrets;
+    bool ready;
 };
 
 }
