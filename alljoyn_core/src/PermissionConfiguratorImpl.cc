@@ -35,6 +35,13 @@ using namespace qcc;
 
 namespace ajn {
 
+const PermissionConfigurator::ClaimCapabilities PermissionConfigurator::CAPABLE_ECDHE_NULL;
+const PermissionConfigurator::ClaimCapabilities PermissionConfigurator::CAPABLE_ECDHE_PSK;
+const PermissionConfigurator::ClaimCapabilities PermissionConfigurator::CAPABLE_ECDHE_ECDSA;
+
+const PermissionConfigurator::ClaimCapabilityAdditionalInfo PermissionConfigurator::PSK_GENERATED_BY_SECURITY_MANAGER;
+const PermissionConfigurator::ClaimCapabilityAdditionalInfo PermissionConfigurator::PSK_GENERATED_BY_APPLICATION;
+
 QStatus PermissionConfiguratorImpl::SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
