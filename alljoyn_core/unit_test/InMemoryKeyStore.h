@@ -69,6 +69,27 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         return status;
     }
 
+    /**
+     * Assignment operator
+     */
+    InMemoryKeyStoreListener& operator=(const InMemoryKeyStoreListener& other)
+    {
+        if (this != &other) {
+            pwd = other.pwd;
+            CopySink(other.sink);
+        }
+        return *this;
+    }
+
+    /**
+     * Copy constructor
+     */
+    InMemoryKeyStoreListener(const InMemoryKeyStoreListener& other)
+    {
+        pwd = other.pwd;
+        CopySink(other.sink);
+    }
+
   private:
 
     QStatus CopySink(qcc::String& other)
@@ -77,15 +98,10 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         return sink.PushBytes(other.data(), other.length(), numSent);
     }
 
-    /**
-     * Assignment operator is private
-     */
-    InMemoryKeyStoreListener& operator=(const InMemoryKeyStoreListener& other);
-
-    /**
-     * Copy constructor is private
-     */
-    InMemoryKeyStoreListener(const InMemoryKeyStoreListener& other);
+    QStatus CopySink(const qcc::StringSink& other)
+    {
+        return CopySink(((qcc::StringSink&) other).GetString());
+    }
 
     qcc::Mutex lock;
     qcc::StringSink sink;

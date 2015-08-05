@@ -2034,11 +2034,30 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
         return status;
     }
 
+    GetACLKey(ENTRY_DEFAULT_POLICY, key);
+    status = ca->DeleteKey(key);
+    if (ER_OK != status) {
+        return status;
+    }
+
     GetACLKey(ENTRY_MEMBERSHIPS, key);
     status = ca->DeleteKey(key);
     if (ER_OK != status) {
         return status;
     }
+
+    GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
+    status = ca->DeleteKey(key);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    GetACLKey(ENTRY_MANIFEST, key);
+    status = ca->DeleteKey(key);
+    if (ER_OK != status) {
+        return status;
+    }
+
     GetACLKey(ENTRY_CONFIGURATION, key);
     status = ca->DeleteKey(key);
     if (ER_OK != status) {
