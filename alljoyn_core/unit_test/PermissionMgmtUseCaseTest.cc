@@ -2721,6 +2721,36 @@ TEST_F(PermissionMgmtUseCaseTest, ValidCertChainStructure)
 
 }
 
+TEST_F(PermissionMgmtUseCaseTest, ClaimWithInvalidCertChain)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    GenerateCAKeys();
+    IdentityCertificate identityCert;
+    PermissionPolicy::Rule* manifest = NULL;
+    size_t manifestSize = 0;
+    GenerateAllowAllManifest(&manifest, &manifestSize);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    /* retrieve public key from to-be-claimed app to create identity cert */
+    ECCPublicKey claimedPubKey;
+    EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+
+    IdentityCertificate signingCert;
+    ECCPublicKey consumerPubKey;
+    SecurityApplicationProxy consumerProxy(adminBus, consumerBus.GetUniqueName().c_str());
+    EXPECT_EQ(ER_OK, consumerProxy.GetEccPublicKey(consumerPubKey)) << " Fail to retrieve to-be-claimed public key.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "1011", "signer", &consumerPubKey, "consumer alias", 3600, signingCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+
+    IdentityCertificate certChain[2];
+    certChain[0] = identityCert;
+    certChain[1] = signingCert;
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
+    /* do a second claim and expect the same error code returned */
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
+}
+
 TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
 {
 
