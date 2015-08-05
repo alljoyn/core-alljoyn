@@ -1959,7 +1959,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                         /* Session is multipoint. Look for an existing (already joined) session */
                         while ((sit != ajObj.sessionMap.end()) && (sit->first.first == destUniqueName)) {
                             creatorEp = ajObj.FindEndpoint(sit->second.sessionHost);
-                            if ((sit->first.second != 0) && (sit->second.sessionPort == sessionPort) && (creatorEp == sessionHostEp)) {
+                            if ((sit->second.isActive) && (sit->first.second != 0) && (sit->second.sessionPort == sessionPort) && (creatorEp == sessionHostEp)) {
                                 sme = sit->second;
                                 foundSessionMapEntry = true;
                                 QCC_DbgPrintf(("AllJoynObj::RunAttach(): Found session map entry"));
