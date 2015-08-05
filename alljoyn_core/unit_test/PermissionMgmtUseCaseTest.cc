@@ -2677,6 +2677,36 @@ TEST_F(PermissionMgmtUseCaseTest, GetApplicationStateBeforeEnableSecurity)
     EXPECT_EQ(ER_FEATURE_NOT_AVAILABLE, pc.GetApplicationState(applicationState));
 }
 
+TEST_F(PermissionMgmtUseCaseTest, DisconnectAndReenableSecurity)
+{
+    Claims(false);
+    /* stop the bus */
+    EXPECT_EQ(ER_OK, consumerBus.EnablePeerSecurity("", NULL, NULL, true)) << "adminBus.EnablePeerSecurity with empty auth mechanism failed.";
+    TeardownBus(consumerBus);
+    /* restart the bus */
+    SetupBus(consumerBus);
+    DefaultECDHEAuthListener cpConsumerAuthListener;
+    EXPECT_EQ(ER_OK, consumerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &cpConsumerAuthListener, NULL, false)) << "adminBus.EnablePeerSecurity failed.";
+
+    BusAttachment cpAdminBus("CopyPermissionMgmtTestAdmin", false);
+    InMemoryKeyStoreListener cpAdminKSListener = adminKeyStoreListener;
+    SetupBus(cpAdminBus);
+    EXPECT_EQ(ER_OK, cpAdminBus.RegisterKeyStoreListener(cpAdminKSListener)) << " RegisterKeyStoreListener failed";
+    DefaultECDHEAuthListener cpAdminAuthListener;
+    EXPECT_EQ(ER_OK, cpAdminBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpAdminAuthListener, NULL, false)) << "cpAdminBus.EnablePeerSecurity failed.";
+
+    SessionId sessionId;
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    status = PermissionMgmtTestHelper::JoinPeerSession(cpAdminBus, consumerBus, sessionId);
+    EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
+
+    SecurityApplicationProxy saProxy(cpAdminBus, consumerBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    PermissionPolicy policy;
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    TeardownBus(cpAdminBus);
+}
+
 static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPublicKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, bool isCA, CertificateX509& cert)
 {
     QStatus status = ER_CRYPTO_ERROR;
