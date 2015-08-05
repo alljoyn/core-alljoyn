@@ -45,6 +45,23 @@ DefaultECDHEAuthListener::DefaultECDHEAuthListener(const uint8_t* psk, size_t ps
     this->pskSize = pskSize;
 }
 
+QStatus DefaultECDHEAuthListener::SetPSK(const uint8_t* _psk, size_t _pskSize)
+{
+    delete[] psk;
+    if (_psk) {
+        if (_pskSize < 16) {
+            return ER_BAD_ARG_2;
+        }
+        psk = new uint8_t[_pskSize];
+        memcpy(psk, _psk, _pskSize);
+        pskSize = _pskSize;
+    } else {
+        pskSize = 0;
+        psk = NULL;
+    }
+    return ER_OK;
+}
+
 
 bool DefaultECDHEAuthListener::RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials) {
     QCC_DbgTrace(("DefaultECDHEAuthListener::%s", __FUNCTION__));
