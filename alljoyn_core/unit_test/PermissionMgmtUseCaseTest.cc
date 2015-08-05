@@ -1017,9 +1017,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionConfigurator& pc = adminBus.GetPermissionConfigurator();
         status = pc.Reset();
         EXPECT_EQ(ER_OK, status) << "  Reset failed.  Actual Status: " << QCC_StatusText(status);
-        /* Test Gen DSA keys */
-        status = pc.GenerateSigningKeyPair();
-        EXPECT_EQ(ER_OK, status) << "  GenerateSigningKeyPair failed.  Actual Status: " << QCC_StatusText(status);
         GenerateCAKeys();
 
         SecurityApplicationProxy saProxy(adminBus, adminBus.GetUniqueName().c_str());

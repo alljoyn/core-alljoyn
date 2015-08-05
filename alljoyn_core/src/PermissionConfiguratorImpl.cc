@@ -73,22 +73,6 @@ QStatus PermissionConfiguratorImpl::Reset()
     return permissionMgmtObj->Reset();
 }
 
-QStatus PermissionConfiguratorImpl::GenerateSigningKeyPair()
-{
-    Crypto_ECC ecc;
-    QStatus status = ecc.GenerateDSAKeyPair();
-
-    if (status != ER_OK) {
-        return ER_CRYPTO_KEY_UNAVAILABLE;
-    }
-    CredentialAccessor ca(bus);
-    status = PermissionMgmtObj::StoreDSAKeys(&ca, ecc.GetDSAPrivateKey(), ecc.GetDSAPublicKey());
-    if (status != ER_OK) {
-        return ER_CRYPTO_KEY_UNAVAILABLE;
-    }
-    return ER_OK;
-}
-
 QStatus PermissionConfiguratorImpl::GetSigningPublicKey(KeyInfoECC& keyInfo)
 {
     if (keyInfo.GetCurve() != Crypto_ECC::ECC_NIST_P256) {
