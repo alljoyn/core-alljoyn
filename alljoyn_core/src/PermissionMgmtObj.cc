@@ -503,11 +503,15 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     if (ER_OK != status) {
         goto DoneValidation;
     }
+    if (certificateAuthority->keyInfo.empty()) {
+        status = ER_BAD_ARG_1;
+        goto DoneValidation;
+    }
     status = KeyInfoHelper::MsgArgToKeyInfoKeyId(args[1], certificateAuthority->keyInfo);
     if (ER_OK != status) {
         goto DoneValidation;
     }
-    if (certificateAuthority->keyInfo.empty()) {
+    if (certificateAuthority->keyInfo.GetKeyIdLen() == 0) {
         status = ER_BAD_ARG_2;
         goto DoneValidation;
     }
@@ -537,6 +541,10 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     }
     status = KeyInfoHelper::MsgArgToKeyInfoKeyId(args[4], adminGroupAuthority->keyInfo);
     if (ER_OK != status) {
+        goto DoneValidation;
+    }
+    if (adminGroupAuthority->keyInfo.GetKeyIdLen() == 0) {
+        status = ER_BAD_ARG_5;
         goto DoneValidation;
     }
 
