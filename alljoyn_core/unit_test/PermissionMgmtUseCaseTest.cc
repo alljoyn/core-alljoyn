@@ -1500,7 +1500,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install Membership to the admin
      */
-    void InstallMembershipToAdmin(const String& serial, const GUID128& membershipGUID, BusAttachment& authorityBus)
+    void InstallMembershipToAdmin(const String& serial, const GUID128& membershipGUID, BusAttachment& authorityBus, bool expectSuccess = true)
     {
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(adminBus, &claimedPubKey);
@@ -1508,7 +1508,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         qcc::String subjectCN(consumerGUID.ToString());
         status = PermissionMgmtTestHelper::InstallMembership(serial, adminBus, adminBus.GetUniqueName(), authorityBus, subjectCN, &claimedPubKey, membershipGUID);
 
-        EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin cert1 failed.  Actual Status: " << QCC_StatusText(status);
+        if (expectSuccess) {
+            EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin cert1 failed.";
+        } else {
+            EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  InstallMembershipToAdmin cert1 is not support to succeed.";
+        }
     }
 
     /**
@@ -2747,6 +2751,12 @@ TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
 
 }
 
+TEST_F(PermissionMgmtUseCaseTest, InstallMembershipBeforeClaimMustFail)
+{
+    GenerateCAKeys();
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    InstallMembershipToAdmin(adminMembershipSerial1, adminAdminGroupGUID, adminBus, false);
+}
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
 {
