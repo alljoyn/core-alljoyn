@@ -146,6 +146,7 @@ void PermissionMgmtObj::Load()
         policy = NULL;
     }
     PolicyChanged(policy);
+    StateChanged();
 }
 
 
@@ -170,7 +171,6 @@ void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
     ca->GetGuid(localGUID);
     bus.GetInternal().GetPermissionManager().SetPolicy(policy);
     ManageTrustAnchors(policy);
-    StateChanged();
 }
 
 static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo)
@@ -591,6 +591,7 @@ DoneValidation:
         StoreApplicationState();
         policyVersion = defaultPolicy->GetVersion();
         PolicyChanged(defaultPolicy);
+        StateChanged();
     }
 }
 
@@ -2067,6 +2068,7 @@ QStatus PermissionMgmtObj::Reset()
     status = PerformReset(true);
     if (ER_OK == status) {
         PolicyChanged(NULL);
+        StateChanged();
     }
     return status;
 }
