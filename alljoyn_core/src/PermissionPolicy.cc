@@ -72,31 +72,31 @@ const uint8_t PermissionPolicy::Rule::Member::GetActionMask() const
     return actionMask;
 }
 
-qcc::String PermissionPolicy::Rule::Member::ToString() const
+qcc::String PermissionPolicy::Rule::Member::ToString(size_t indent) const
 {
     qcc::String str;
-    str += "Member:\n";
+    qcc::String in = qcc::String(indent, ' ');
+    str += in + "<member>\n";
     if (memberName.length() > 0) {
-        str += "  memberName: " + memberName + "\n";
+        str += in + "  <name>" + memberName + "</name>\n";
     }
     if (memberType == METHOD_CALL) {
-        str += "  method call\n";
+        str += in + "  <type>method call</type>\n";
     } else if (memberType == SIGNAL) {
-        str += "  signal\n";
+        str += in + "  <type>signal</type>\n";
     } else if (memberType == PROPERTY) {
-        str += "  property\n";
+        str += in + "  <type>property</type>\n";
     }
-    str += "  action mask:";
     if ((actionMask & ACTION_PROVIDE) == ACTION_PROVIDE) {
-        str += " Provide";
+        str += in + "  <action>Provide</action>\n";
     }
     if ((actionMask & ACTION_OBSERVE) == ACTION_OBSERVE) {
-        str += " Observe";
+        str += in + "  <action>Observe</action>\n";
     }
     if ((actionMask & ACTION_MODIFY) == ACTION_MODIFY) {
-        str += " Modify";
+        str += in + "  <action>Modify</action>\n";
     }
-    str += "\n";
+    str += in + "</member>\n";
     return str;
 }
 
@@ -172,19 +172,21 @@ const size_t PermissionPolicy::Rule::GetMembersSize() const
     return membersSize;
 }
 
-qcc::String PermissionPolicy::Rule::ToString() const
+qcc::String PermissionPolicy::Rule::ToString(size_t indent) const
 {
     qcc::String str;
-    str += "Rule:\n";
+    qcc::String in = qcc::String(indent, ' ');
+    str += in + "<rule>\n";
     if (objPath.length() > 0) {
-        str += "  objPath: " + objPath + "\n";
+        str += in + "  <objPath>" + objPath + "</objPath>\n";
     }
     if (interfaceName.length() > 0) {
-        str += "  interfaceName: " + interfaceName + "\n";
+        str += in + "  <interfaceName>" + interfaceName + "</interfaceName>\n";
     }
     for (size_t cnt = 0; cnt < GetMembersSize(); cnt++) {
-        str += members[cnt].ToString();
+        str += members[cnt].ToString(indent + 2);
     }
+    str += in + "</rule>\n";
     return str;
 }
 
@@ -282,30 +284,33 @@ const qcc::KeyInfoNISTP256* PermissionPolicy::Peer::GetKeyInfo() const
     return keyInfo;
 }
 
-qcc::String PermissionPolicy::Peer::ToString() const
+qcc::String PermissionPolicy::Peer::ToString(size_t indent) const
 {
     qcc::String str;
-    str += "Peer:\n";
+    qcc::String in = qcc::String(indent, ' ');
+    str += in + "<Peer>\n";
     if (type == PEER_ALL) {
-        str += "  type: ALL\n";
+        str += in + "  <type>ALL</type>\n";
     } else if (type == PEER_ANY_TRUSTED) {
-        str += "  type: ANY_TRUSTED\n";
+        str += in + "  <type>ANY_TRUSTED</type>\n";
     } else if (type == PEER_FROM_CERTIFICATE_AUTHORITY) {
-        str += "  type: FROM_CERTIFICATE_AUTHORITY\n";
+        str += in + "  <type>FROM_CERTIFICATE_AUTHORITY</type>\n";
         if (keyInfo) {
-            str += keyInfo->ToString();
+            str += keyInfo->ToString(indent + 2);
         }
     } else if (type == PEER_WITH_PUBLIC_KEY) {
-        str += "  type: WITH_PUBLIC_KEY\n";
+        str += in + "  <type>WITH_PUBLIC_KEY</type>\n";
         if (keyInfo) {
-            str += keyInfo->ToString();
+            str += keyInfo->ToString(indent + 2);
         }
     } else if (type == PEER_WITH_MEMBERSHIP) {
-        str += "  type: WITH_MEMBERSHIP security group Id: " + securityGroupId.ToString() + "\n";
+        str += in + "  <type>WITH_MEMBERSHIP</type>\n";
+        str += in + "  <groupId>" + securityGroupId.ToString() + "</groupId>\n";
         if (keyInfo) {
-            str += keyInfo->ToString();
+            str += keyInfo->ToString(indent + 2);
         }
     }
+    str += in + "<Peer>\n";
     return str;
 }
 
@@ -415,20 +420,22 @@ const PermissionPolicy::Rule* PermissionPolicy::Acl::GetRules() const
     return rules;
 }
 
-qcc::String PermissionPolicy::Acl::ToString() const
+qcc::String PermissionPolicy::Acl::ToString(size_t indent) const
 {
     qcc::String str;
-    str += "Acl:\n";
+    qcc::String in = qcc::String(indent, ' ');
+    str += in + "<acl>\n";
     if ((peersSize > 0) && peers) {
         for (size_t cnt = 0; cnt < peersSize; cnt++) {
-            str += "  peers[" + U32ToString(cnt) + "]: " + peers[cnt].ToString();
+            str += peers[cnt].ToString(indent + 2);
         }
     }
     if ((rulesSize > 0) && rules) {
         for (size_t cnt = 0; cnt < rulesSize; cnt++) {
-            str += "  rules[" + U32ToString(cnt) + "]: " + rules[cnt].ToString();
+            str += rules[cnt].ToString(indent + 2);
         }
     }
+    str += in + "</acl>\n";
     return str;
 }
 
@@ -492,18 +499,20 @@ PermissionPolicy::Acl::Acl(const PermissionPolicy::Acl& other) :
     }
 }
 
-qcc::String PermissionPolicy::ToString() const
+qcc::String PermissionPolicy::ToString(size_t indent) const
 {
     qcc::String str;
-    str += "PermissionPolicy:\n";
-    str += "  specification version: " +  U32ToString(specificationVersion) + "\n";
-    str += "  version: " + U32ToString(version) + "\n";
+    qcc::String in = qcc::String(indent, ' ');
+    str += in + "<permissionPolicy>\n";
+    str += in + "  <specificationVersion>" +  U32ToString(specificationVersion) + "</specificationVersion>\n";
+    str += in + "  <version>" + U32ToString(version) + "</version>\n";
 
     if ((aclsSize > 0) && acls) {
         for (size_t cnt = 0; cnt < aclsSize; cnt++) {
-            str += "  acls[" + U32ToString(cnt) + "]: " + acls[cnt].ToString();
+            str += acls[cnt].ToString(indent + 2);
         }
     }
+    str += in + "</permissionPolicy>\n";
     return str;
 }
 

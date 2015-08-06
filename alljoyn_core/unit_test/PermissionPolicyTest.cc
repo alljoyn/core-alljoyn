@@ -267,17 +267,20 @@ TEST(PermissionPolicyTest, rule_ToString)
     rule.SetInterfaceName("baz");
     rule.SetMembers(2, members);
 
-    const char* expected = "Rule:\n"
-                           "  objPath: /foo/bar\n"
-                           "  interfaceName: baz\n"
-                           "Member:\n"
-                           "  memberName: foo\n"
-                           "  method call\n"
-                           "  action mask: Modify\n"
-                           "Member:\n"
-                           "  memberName: bar\n"
-                           "  signal\n"
-                           "  action mask: Observe\n";
+    const char* expected = "<rule>\n"
+                           "  <objPath>/foo/bar</objPath>\n"
+                           "  <interfaceName>baz</interfaceName>\n"
+                           "  <member>\n"
+                           "    <name>foo</name>\n"
+                           "    <type>method call</type>\n"
+                           "    <action>Modify</action>\n"
+                           "  </member>\n"
+                           "  <member>\n"
+                           "    <name>bar</name>\n"
+                           "    <type>signal</type>\n"
+                           "    <action>Observe</action>\n"
+                           "  </member>\n"
+                           "</rule>\n";
     EXPECT_STREQ(expected, rule.ToString().c_str());
 }
 
