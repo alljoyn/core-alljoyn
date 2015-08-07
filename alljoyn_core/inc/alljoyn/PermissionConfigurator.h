@@ -78,16 +78,20 @@ class PermissionConfigurator {
     /**@name ClaimCapabilities */
     // {@
     typedef uint16_t ClaimCapabilities;
-    static const ClaimCapabilities CAPABLE_ECDHE_NULL      = 0x01;
-    static const ClaimCapabilities CAPABLE_ECDHE_PSK = 0x02;
-    static const ClaimCapabilities CAPABLE_ECDHE_ECDSA  = 0x04;
+    typedef enum {
+        CAPABLE_ECDHE_NULL      = 0x01,
+        CAPABLE_ECDHE_PSK = 0x02,
+        CAPABLE_ECDHE_ECDSA  = 0x04,
+    } ClaimCapabilityMasks;
     // @}
 
     /**@name ClaimCapabilityAdditionalInfo */
     // {@
     typedef uint16_t ClaimCapabilityAdditionalInfo;
-    static const ClaimCapabilityAdditionalInfo PSK_GENERATED_BY_SECURITY_MANAGER = 0x01;
-    static const ClaimCapabilityAdditionalInfo PSK_GENERATED_BY_APPLICATION = 0x02;
+    typedef enum {
+        PSK_GENERATED_BY_SECURITY_MANAGER = 0x01,
+        PSK_GENERATED_BY_APPLICATION = 0x02,
+    } ClaimCapabilityAdditionalInfoMasks;
     // @}
     /**
      * Constructor
