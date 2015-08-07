@@ -232,18 +232,18 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     AuthListener* adminKeyListener;
     AuthListener* consumerKeyListener;
     AuthListener* remoteControlKeyListener;
-    void DetermineStateSignalReachable();
-    bool canTestStateSignalReception;
-
-  private:
-    void RegisterKeyStoreListeners();
-    QStatus SetupBus(BusAttachment& bus);
-    QStatus TeardownBus(BusAttachment& bus);
-
     InMemoryKeyStoreListener adminKeyStoreListener;
     InMemoryKeyStoreListener serviceKeyStoreListener;
     InMemoryKeyStoreListener consumerKeyStoreListener;
     InMemoryKeyStoreListener remoteControlKeyStoreListener;
+    void DetermineStateSignalReachable();
+    bool canTestStateSignalReception;
+    QStatus SetupBus(BusAttachment& bus);
+    QStatus TeardownBus(BusAttachment& bus);
+
+  private:
+    void RegisterKeyStoreListeners();
+
     uint32_t currentTVChannel;
     uint32_t volume;
     bool channelChangedSignalReceived;

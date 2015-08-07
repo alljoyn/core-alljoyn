@@ -2867,3 +2867,34 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
     KeyInfoNISTP256 emptyKeyInfo;
     EXPECT_EQ(ER_BAD_ARG_4, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
 }
+
+TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)
+{
+    Claims(false);
+
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, saProxy.GetApplicationState(applicationState)) << "  GetApplicationState failed.";
+
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState) << " The application state is not claimed.";
+
+    EXPECT_EQ(ER_OK, saProxy.Reset()) << "  Reset failed.";
+    /* close the consumer bus */
+    TeardownBus(consumerBus);
+
+    /* create a copy the consumer bus */
+    BusAttachment cpConsumerBus("CopyPermissionMgmtTestConsumer", false);
+    InMemoryKeyStoreListener cpConsumerListener = consumerKeyStoreListener;
+
+    SetupBus(cpConsumerBus);
+    EXPECT_EQ(ER_OK, cpConsumerBus.RegisterKeyStoreListener(cpConsumerListener)) << " RegisterKeyStoreListener failed.";
+    DefaultECDHEAuthListener cpConsumerAuthListener;
+    EXPECT_EQ(ER_OK, cpConsumerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpConsumerAuthListener, NULL, false)) << "cpConsumerBus.EnablePeerSecurity failed.";
+
+    PermissionConfigurator& pc = cpConsumerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pc.GetApplicationState(applicationState)) << "  GetApplicationState failed.";
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState) << " The application state is not claimable.";
+
+    TeardownBus(cpConsumerBus);
+}
+
