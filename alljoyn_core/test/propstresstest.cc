@@ -72,7 +72,7 @@ using namespace qcc;
 
 static volatile sig_atomic_t quit;
 static const SessionPort PORT = 123;
-static const SessionOpts SESSION_OPTS(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+static SessionOpts SESSION_OPTS(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
 static const char* propStressTestInterfaceXML =
     "<node name=\"/org/alljoyn/Testing/PropertyStressTest\">"
@@ -512,7 +512,10 @@ void Usage()
            "    -c            Run as client (runs as service by default).\n"
            "    -n <NAME>     Use <NAME> for well known bus name.\n"
            "    -s <SEC>      Run for <SEC> seconds.\n"
-           "    -o <NBR>      Create <NBR> objects.\n");
+           "    -o <NBR>      Create <NBR> objects.\n"
+           "    -t            Advertise/Discover over TCP (enables selective advertising)\n"
+           "    -l            Advertise/Discover locally (enables selective advertising)\n"
+           "    -u            Advertise/Discover over UDP-based ARDP (enables selective advertising)\n");
 }
 
 int CDECL_CALL main(int argc, char** argv)
@@ -565,12 +568,17 @@ int CDECL_CALL main(int argc, char** argv)
         } else if (strcmp(argv[i], "-h") == 0) {
             Usage();
             exit(1);
+        } else if (0 == strcmp("-t", argv[i])) {
+            SESSION_OPTS.transports = TRANSPORT_TCP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            SESSION_OPTS.transports = TRANSPORT_LOCAL;
+        } else if (0 == strcmp("-u", argv[i])) {
+            SESSION_OPTS.transports = TRANSPORT_UDP;
         } else {
             Usage();
             exit(1);
         }
     }
-
 
     signal(SIGINT, SignalHandler);
     signal(SIGTERM, SignalHandler);

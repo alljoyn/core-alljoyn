@@ -102,7 +102,9 @@ static void usage(void)
     printf("Options:\n");
     printf("   -h                    = Print this help message\n");
     printf("   -n <name>             = Well-known name to advertise\n");
-    printf("   -t <transport_mask>   = Set the transports that are used for advertising. (Defaults to TRANSPORT_ANY)\n");
+    printf("   -t                    = Advertise over TCP (enables selective advertising)\n");
+    printf("   -l                    = Advertise locally (enables selective advertising)\n");
+    printf("   -u                    = Advertise over UDP-based ARDP (enables selective advertising)\n");
 }
 
 /** Main entry point */
@@ -119,7 +121,7 @@ int CDECL_CALL main(int argc, char** argv)
 #endif
 
     QStatus status = ER_OK;
-    TransportMask transportMask = TRANSPORT_ANY;
+    TransportMask transportMask = TRANSPORT_NONE;
 
     printf("AllJoyn Library version: %s\n", ajn::GetVersion());
     printf("AllJoyn Library build info: %s\n", ajn::GetBuildInfo());
@@ -142,19 +144,11 @@ int CDECL_CALL main(int argc, char** argv)
                 g_wellKnownName = argv[i];
             }
         } else if (0 == strcmp("-t", argv[i])) {
-            ++i;
-            if (i == argc) {
-                printf("option %s requires a paramter\n", argv[i - 1]);
-                usage();
-                exit(1);
-            } else {
-                transportMask = (TransportMask) StringToU32(argv[i], 16, 0);
-                if (transportMask == 0) {
-                    printf("Invalid transport mask 0x%x\n", transportMask);
-                    usage();
-                    exit(1);
-                }
-            }
+            transportMask |= TRANSPORT_TCP;
+        } else if (0 == strcmp("-u", argv[i])) {
+            transportMask |= TRANSPORT_UDP;
+        } else if (0 == strcmp("-l", argv[i])) {
+            transportMask |= TRANSPORT_LOCAL;
         } else {
             status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
@@ -162,7 +156,10 @@ int CDECL_CALL main(int argc, char** argv)
             exit(1);
         }
     }
-
+    /* If no transport option was specifie, then make session options very open */
+    if (transportMask == 0) {
+        transportMask = TRANSPORT_ANY;
+    }
     /* Get env vars */
     Environ* env = Environ::GetAppEnviron();
     qcc::String clientArgs = env->Find("DBUS_STARTER_ADDRESS");
