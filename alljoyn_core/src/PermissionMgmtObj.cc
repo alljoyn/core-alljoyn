@@ -63,13 +63,13 @@ const char* PermissionMgmtObj::ERROR_CERTIFICATE_NOT_FOUND = "org.alljoyn.Bus.Se
  * Interest in the encryption step of a message in order to clear the secrets.
  */
 
-class ClearSecretsWhenMsgDelivered : public MessageEncryptionNotification {
+class ClearSecretsWhenMsgDeliveredNotification : public MessageEncryptionNotification {
   public:
-    ClearSecretsWhenMsgDelivered(BusAttachment& bus) : MessageEncryptionNotification(), bus(bus)
+    ClearSecretsWhenMsgDeliveredNotification(BusAttachment& bus) : MessageEncryptionNotification(), bus(bus)
     {
     }
 
-    ~ClearSecretsWhenMsgDelivered()
+    ~ClearSecretsWhenMsgDeliveredNotification()
     {
     }
 
@@ -90,12 +90,12 @@ class ClearSecretsWhenMsgDelivered : public MessageEncryptionNotification {
     /**
      * Assignment not allowed
      */
-    ClearSecretsWhenMsgDelivered& operator=(const ClearSecretsWhenMsgDelivered& other);
+    ClearSecretsWhenMsgDeliveredNotification& operator=(const ClearSecretsWhenMsgDeliveredNotification& other);
 
     /**
      * Copy constructor not allowed
      */
-    ClearSecretsWhenMsgDelivered(const ClearSecretsWhenMsgDelivered& other);
+    ClearSecretsWhenMsgDeliveredNotification(const ClearSecretsWhenMsgDeliveredNotification& other);
 
     BusAttachment& bus;
 };
@@ -112,7 +112,7 @@ QStatus PermissionMgmtObj::Init()
 {
     ca = new CredentialAccessor(bus);
     bus.GetInternal().GetPermissionManager().SetPermissionMgmtObj(this);
-    callbackToClearSecrets = new ClearSecretsWhenMsgDelivered(bus);
+    callbackToClearSecrets = new ClearSecretsWhenMsgDeliveredNotification(bus);
     return bus.RegisterBusObject(*this, true);
 }
 
@@ -583,6 +583,7 @@ DoneValidation:
     delete certificateAuthority;
     if (ER_OK != status) {
         delete defaultPolicy;
+        PerformReset(true);
         MethodReply(msg, status);
         return;
     }
@@ -594,6 +595,7 @@ DoneValidation:
     }
     if (ER_OK != status) {
         delete defaultPolicy;
+        PerformReset(true);
     }
     MethodReply(msg, status);
 
