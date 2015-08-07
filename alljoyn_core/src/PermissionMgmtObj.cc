@@ -104,7 +104,7 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
     BusObject(objectPath),
-    bus(bus), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL)
+    bus(bus), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL), ready(false)
 {
 }
 
@@ -135,6 +135,9 @@ void PermissionMgmtObj::Load()
         }
         StoreApplicationState();
     }
+
+    ready = true;
+
     /* notify others */
     PermissionPolicy* policy = new PermissionPolicy();
     status = RetrievePolicy(*policy);

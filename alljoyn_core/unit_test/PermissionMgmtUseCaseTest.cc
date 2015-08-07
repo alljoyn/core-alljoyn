@@ -2667,6 +2667,13 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimFailsWithoutSecurityEnabled)
     delete [] manifest;
 }
 
+TEST_F(PermissionMgmtUseCaseTest, GetApplicationStateBeforeEnableSecurity)
+{
+    PermissionConfigurator& pc = adminBus.GetPermissionConfigurator();
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_FEATURE_NOT_AVAILABLE, pc.GetApplicationState(applicationState));
+}
+
 static QStatus CreateCert(const qcc::String& serial, const qcc::GUID128& issuer, const qcc::String& organization, const ECCPrivateKey* issuerPrivateKey, const ECCPublicKey* issuerPublicKey, const qcc::GUID128& subject, const ECCPublicKey* subjectPubKey, CertificateX509::ValidPeriod& validity, bool isCA, CertificateX509& cert)
 {
     QStatus status = ER_CRYPTO_ERROR;

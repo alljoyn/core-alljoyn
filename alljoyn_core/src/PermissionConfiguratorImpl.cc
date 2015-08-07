@@ -38,7 +38,7 @@ namespace ajn {
 QStatus PermissionConfiguratorImpl::SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         QCC_DbgPrintf(("PermissionConfiguratorImpl::SetPermissionManifest does not have PermissionMgmtObj initialized"));
         return ER_FEATURE_NOT_AVAILABLE;
     }
@@ -48,7 +48,7 @@ QStatus PermissionConfiguratorImpl::SetPermissionManifest(PermissionPolicy::Rule
 QStatus PermissionConfiguratorImpl::GetApplicationState(ApplicationState& applicationState)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     applicationState = permissionMgmtObj->GetApplicationState();
@@ -58,7 +58,7 @@ QStatus PermissionConfiguratorImpl::GetApplicationState(ApplicationState& applic
 QStatus PermissionConfiguratorImpl::SetApplicationState(ApplicationState newState)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetApplicationState(newState);
@@ -67,7 +67,7 @@ QStatus PermissionConfiguratorImpl::SetApplicationState(ApplicationState newStat
 QStatus PermissionConfiguratorImpl::Reset()
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->Reset();
@@ -109,7 +109,7 @@ QStatus PermissionConfiguratorImpl::SignCertificate(CertificateX509& cert)
 QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey);
@@ -118,7 +118,7 @@ QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& gui
 QStatus PermissionConfiguratorImpl::SetClaimCapabilities(PermissionConfigurator::ClaimCapabilities claimCapabilities)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetClaimCapabilities(claimCapabilities);
@@ -127,7 +127,7 @@ QStatus PermissionConfiguratorImpl::SetClaimCapabilities(PermissionConfigurator:
 QStatus PermissionConfiguratorImpl::SetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetClaimCapabilityAdditionalInfo(additionalInfo);
@@ -136,7 +136,7 @@ QStatus PermissionConfiguratorImpl::SetClaimCapabilityAdditionalInfo(PermissionC
 QStatus PermissionConfiguratorImpl::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->GetClaimCapabilities(claimCapabilities);
@@ -145,7 +145,7 @@ QStatus PermissionConfiguratorImpl::GetClaimCapabilities(PermissionConfigurator:
 QStatus PermissionConfiguratorImpl::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
 {
     PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
-    if (!permissionMgmtObj) {
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->GetClaimCapabilityAdditionalInfo(additionalInfo);
