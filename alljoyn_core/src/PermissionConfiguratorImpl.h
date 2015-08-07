@@ -83,12 +83,6 @@ class PermissionConfiguratorImpl : public PermissionConfigurator {
     QStatus SetApplicationState(ApplicationState newState);
 
     /**
-     * Generate the signing key pair and store it in the key store.
-     * @return ER_OK if successful; otherwise, an error code.
-     */
-    QStatus GenerateSigningKeyPair();
-
-    /**
      * Retrieve the public key info fo the signing key.
      * @param[out] the public key info
      * @return ER_OK if successful; otherwise, an error code.
