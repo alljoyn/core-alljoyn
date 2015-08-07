@@ -249,9 +249,6 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
     }
     MsgArg inputs[7];
     qcc::KeyInfoNISTP256 caKeyInfo(certificateAuthority);
-    if (caKeyInfo.GetKeyIdLen() == 0) {
-        KeyInfoHelper::GenerateKeyId(caKeyInfo);
-    }
     KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(caKeyInfo, inputs[0]);
     KeyInfoHelper::KeyInfoKeyIdToMsgArg(caKeyInfo, inputs[1]);
 
@@ -260,9 +257,6 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
         return status;
     }
     qcc::KeyInfoNISTP256 adminGroupKeyInfo(adminGroup);
-    if (adminGroupKeyInfo.GetKeyIdLen() == 0) {
-        KeyInfoHelper::GenerateKeyId(adminGroupKeyInfo);
-    }
     KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(adminGroupKeyInfo, inputs[3]);
     KeyInfoHelper::KeyInfoKeyIdToMsgArg(adminGroupKeyInfo, inputs[4]);
 
