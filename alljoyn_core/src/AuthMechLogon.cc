@@ -224,9 +224,8 @@ QStatus AuthMechLogon::AddLogonEntry(KeyStore& keyStore, const char* userName, c
     Crypto_SRP srp;
     qcc::String tmp;
     qcc::GUID128 userGuid(0);
-    KeyStore::Key key(KeyStore::Key::REMOTE, userGuid);
-
     UserNameToGuid(userGuid, userName);
+    KeyStore::Key key(KeyStore::Key::REMOTE, userGuid);
 
     if (password) {
         status = srp.ServerInit(userName, password, tmp);
@@ -279,6 +278,7 @@ qcc::String AuthMechLogon::Challenge(const qcc::String& response,
         /*
          * Check if there is already an SRP user logon entry for this user name.
          */
+        key.SetGUID(userGuid);
         if (keyStore.GetKey(key, userBlob) == ER_OK) {
             QCC_DbgHLPrintf(("Using precomputed SRP logon entry string for %s", userName.c_str()));
             qcc::String logonEntry((const char*)userBlob.GetData(), userBlob.GetSize());
