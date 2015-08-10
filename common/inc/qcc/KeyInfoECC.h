@@ -278,7 +278,14 @@ class KeyInfoECC : public KeyInfo {
 
     QStatus Import(const uint8_t* buf, size_t count);
 
-    virtual qcc::String ToString() const;
+    /**
+     * A String representation of the KeyInfoECC
+     *
+     * @param indent Number of space chars to indent the start of each line
+     *
+     * @return A String representation of the KeyInfoECC
+     */
+    virtual qcc::String ToString(size_t indent = 0) const;
 
     /**
      * Comparison operators equality
@@ -399,7 +406,14 @@ class KeyInfoNISTP256 : public KeyInfoECC {
 
     QStatus Import(const uint8_t* buf, size_t count);
 
-    virtual qcc::String ToString() const;
+    /**
+     * A String representation of the KeyInfoNISTP256
+     *
+     * @param indent Number of space chars to indent the start of each line
+     *
+     * @return A String representation of the KeyInfoNISTP256
+     */
+    virtual qcc::String ToString(size_t indent = 0) const;
 
     /**
      * Comparison operators equality
