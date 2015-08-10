@@ -387,6 +387,28 @@ ProxyBusObject::Internal::~Internal()
     lock.Unlock(MUTEX_CONTEXT);
 }
 
+/**
+ * Figure out the new status code based on the the reply message's error.
+ * If the status code is ER_BUS_REPLY_IS_ERROR_MESSAGE then the error
+ * message is searched to compute the status code.
+ * @param reply the reply message
+ * @param[in,out] status the status code
+ */
+static void GetReplyErrorStatus(Message& reply, QStatus& status)
+{
+    if (ER_BUS_REPLY_IS_ERROR_MESSAGE != status) {
+        return;
+    }
+    if (reply->GetErrorName() == NULL) {
+        return;
+    }
+    if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_PERMISSION_DENIED) == 0) {
+        status = ER_PERMISSION_DENIED;
+    } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
+        status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
+    }
+}
+
 static inline bool SecurityApplies(const ProxyBusObject* obj, const InterfaceDescription* ifc)
 {
     InterfaceSecurityPolicy ifcSec = ifc->GetSecurityPolicy();
@@ -603,6 +625,8 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
                     }
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
+            } else {
+                GetReplyErrorStatus(reply, status);
             }
         }
     }
@@ -739,15 +763,8 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
                                 reply,
                                 timeout,
                                 flags);
-            if ((status == ER_BUS_REPLY_IS_ERROR_MESSAGE) &&
-                (reply->GetErrorName() != NULL) &&
-                (::strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0)) {
-                const char* err;
-                uint16_t rawStatus;
-                if (reply->GetArgs("sq", &err, &rawStatus) == ER_OK) {
-                    status = static_cast<QStatus>(rawStatus);
-                    QCC_DbgPrintf(("SetProperty call returned %s", err));
-                }
+            if (ER_OK != status) {
+                GetReplyErrorStatus(reply, status);
             }
         }
     }

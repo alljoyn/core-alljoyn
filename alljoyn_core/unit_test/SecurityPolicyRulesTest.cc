@@ -1071,11 +1071,11 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
         prop1Arg.Get("i", &prop1);
         EXPECT_EQ(42, prop1);
     } else if (GetParam().proxyObjAllowedToCallGetProperty && !GetParam().busObjAllowedToRespondToGetPropertyCall) {
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, getPropertyStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, getPropertyStatus);
         //Currently no way to find out that the error string is org.alljoyn.Bus.Security.Error.PermissionDenied
     } else { //!GetParam().proxyObjAllowedToCallSetProperty
         // Maybe this should be ER_PERMISSION_DENIED like it is for the SetProperty call
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, getPropertyStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, getPropertyStatus);
     }
 
     /* clean up */
@@ -1296,11 +1296,11 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
         prop1Arg.Get("i", &prop1);
         EXPECT_EQ(42, prop1);
     } else if (GetParam().proxyObjAllowedToCallGetProperty && !GetParam().busObjAllowedToRespondToGetPropertyCall) {
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, getPropertyStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, getPropertyStatus);
         //Currently no way to find out that the error string is org.alljoyn.Bus.Security.Error.PermissionDenied
     } else { //!GetParam().proxyObjAllowedToCallSetProperty
         // Maybe this should be ER_PERMISSION_DENIED like it is for the SetProperty call
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, getPropertyStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, getPropertyStatus);
     }
 
     /* clean up */
@@ -1929,8 +1929,7 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
         //Verify Prop1 is changed.
         EXPECT_EQ(513, peer2BusObject.ReadProp1());
     } else if (GetParam().proxyObjAllowedToCallSetProperty && !GetParam().busObjAllowedToRespondToSetPropertyCall) {
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, setPropertyStatus);
-        //Currently no way to find out that the error string is org.alljoyn.Bus.Security.Error.PermissionDenied
+        EXPECT_EQ(ER_PERMISSION_DENIED, setPropertyStatus);
         //Verify Prop1 is unchanged (note prop1 defaults to 42 by the constructor)
         EXPECT_EQ(42, peer2BusObject.ReadProp1());
     } else { //!GetParam().proxyObjAllowedToCallSetProperty

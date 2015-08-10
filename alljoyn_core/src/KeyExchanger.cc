@@ -1166,6 +1166,7 @@ bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* c
     /* Leaf certificate must have exactly one EKU. */
     if ((certs[0].GetType() != CertificateX509::IDENTITY_CERTIFICATE) &&
         (certs[0].GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+        QCC_DbgPrintf(("Invalid EKU"));
         return false;
     }
     if (numCerts == 1) {
@@ -1356,6 +1357,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     if (!IsCertChainStructureValid(certs, numCerts)) {
         *authorized = false;
         delete [] certs;
+        QCC_LogError(ER_OK, ("Certificate chain structure is invalid"));
         return ER_OK;
     }
     status = VerifyCredentialsCB(peerName, certs, numCerts);
