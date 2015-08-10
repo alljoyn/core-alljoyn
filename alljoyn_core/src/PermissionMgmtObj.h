@@ -206,13 +206,6 @@ class PermissionMgmtObj : public BusObject {
     virtual QStatus Init();
 
     /**
-     * Called by the message bus when the object has been successfully registered. The object can
-     * perform any initialization such as adding match rules at this time.
-     */
-
-    virtual void ObjectRegistered(void);
-
-    /**
      * Generates the message args to send the membership data to the peer.
      * @param args[out] the vector of the membership cert chain args.
      * @return

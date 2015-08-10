@@ -138,6 +138,9 @@ void PermissionMgmtObj::Load()
 
     ready = true;
 
+    /* Bind to the reserved port for PermissionMgmt */
+    BindPort();
+
     /* notify others */
     PermissionPolicy* policy = new PermissionPolicy();
     status = RetrievePolicy(*policy);
@@ -2408,22 +2411,20 @@ bool PermissionMgmtObj::KeyExchangeListener::VerifyCredentials(const char* authM
     return ProtectedAuthListener::VerifyCredentials(authMechanism, peerName, credentials);
 }
 
-void PermissionMgmtObj::ObjectRegistered(void)
-{
-    /* Bind to the reserved port for PermissionMgmt */
-    BindPort();
-}
-
 QStatus PermissionMgmtObj::BindPort()
 {
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     SessionPort sessionPort = ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
     if (portListener) {
-        bus.UnbindSessionPort(sessionPort);
-        delete portListener;
+        if (ER_OK == bus.UnbindSessionPort(sessionPort)) {
+            delete portListener;
+            portListener = NULL;
+        }
     }
 
-    portListener = new PortListener();
+    if (portListener == NULL) {
+        portListener = new PortListener();
+    }
     QStatus status = bus.BindSessionPort(sessionPort, opts, *portListener);
     if (ER_OK != status) {
         delete portListener;
