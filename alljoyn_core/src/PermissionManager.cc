@@ -556,6 +556,9 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
             ) {
             authorized = true;
             return true;  /* handled */
+        } else if (!permissionMgmtObj->HasTrustAnchors()) {
+            authorized = false;
+            return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
         if (
