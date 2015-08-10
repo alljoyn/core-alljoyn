@@ -3491,6 +3491,15 @@ void IpNameServiceImpl::SendProtocolMessage(
 
     uint32_t nsVersion, msgVersion;
     packet->GetVersion(nsVersion, msgVersion);
+    if (msgVersion == 2) {
+        MDNSPacket mdnsPacket = MDNSPacket::cast(packet);
+        /* If the names in this packet are no longer valid, then return.
+         * e.g. AdvertiseName packet with names that have been cancelled.
+         */
+        if (!PurgeAndUpdatePacket(mdnsPacket, false)) {
+            return;
+        }
+    }
 
     size_t size = packet->GetSerializedSize();
     if (size > NS_MESSAGE_MAX) {
@@ -7736,14 +7745,6 @@ bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
         }
         QCC_DbgHLPrintf(("Erase from peer info map: guid=%s", guid.c_str()));
         m_peerInfoMap.erase(guid);
-        unordered_map<pair<String, IPEndpoint>, MDNSPacketTrackerEntry, HashPacketTracker, EqualPacketTracker>::iterator it1 = m_mdnsPacketTracker.begin();
-        while (it1 != m_mdnsPacketTracker.end()) {
-            if (it1->first.first == guid) {
-                m_mdnsPacketTracker.erase(it1++);
-            } else {
-                it1++;
-            }
-        }
         m_mutex.Unlock();
         return true;
     }
