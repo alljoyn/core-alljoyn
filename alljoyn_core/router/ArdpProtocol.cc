@@ -1819,11 +1819,20 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         if (status == ER_OK) {
             sBuf->inUse = true;
             UpdateTimer(handle, conn, &sBuf->timer, timeout, 1);
-            /* Since we scheduled a retransmit timer, cancel active persist timer */
-            QCC_DbgHLPrintf(("Cancel persist timer: handle=%p, conn=%p, id=%u (%d)",
-                             handle, conn, conn->id, conn->id));
 
-            conn->persistTimer.retry = 0;
+            if (sendReady) {
+                /* Since we scheduled a valid retransmit timer, cancel active persist timer */
+                QCC_DbgHLPrintf(("Cancel persist timer: handle=%p, conn=%p, id=%u (%d)",
+                                 handle, conn, conn->id, conn->id));
+
+                conn->persistTimer.retry = 0;
+
+                /* Advance NXT counter for in simple mode */
+                if (conn->modeSimple) {
+                    conn->snd.thinNXT++;
+                }
+            }
+
             EnList(handle->dataTimers.bwd, (ListNode*) &sBuf->timer);
             conn->snd.pending++;
             assert(((conn->snd.pending) <= conn->snd.SEGMAX) && "Number of pending segments in send queue exceeds MAX!");
