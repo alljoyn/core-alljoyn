@@ -1214,7 +1214,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
         EXPECT_EQ(policy.GetAclsSize(), retPolicy.GetAclsSize()) << " GetPolicy failed. Different incoming acls size.";
-        TestStateSignalReception();
         /* install a policy with the same policy version number.  Expect to fail. */
         EXPECT_NE(ER_OK, saProxy.UpdatePolicy(policy)) << "UpdatePolicy again with same policy version number expected to fail, but it did not.";
     }
@@ -1797,7 +1796,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy did not fail.";
         EXPECT_EQ(retPolicy.GetVersion(), (uint32_t) 0) << " Policy after reset is supposed to have policy version 0.";
         EXPECT_NE(retPolicy.GetVersion(), originalPolicyVersion) << " Policy after reset is not supposed to have same version as the non-default policy.";
-        TestStateSignalReception();
     }
 
     /*

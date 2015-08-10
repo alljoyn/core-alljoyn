@@ -930,14 +930,6 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
                                                        securityManagerKey,
                                                        identityCertChain, 1,
                                                        manifest, manifestSize));
-
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
-        if (appStateListener.stateChanged) {
-            break;
-        }
-        qcc::Sleep(WAIT_MSECS);
-    }
 }
 
 /*
