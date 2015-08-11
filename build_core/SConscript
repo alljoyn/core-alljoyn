@@ -16,6 +16,19 @@
 import os
 import platform
 
+def CheckCXXFlag(context, flag):
+   prog = "int main(void) { return 0; }"
+   context.Message('Checking c++ compiler support for %s flag... ' % flag)
+   prevCXXFLAGS = context.env.get('CXXFLAGS')
+
+   context.env.Replace(CXXFLAGS = [ flag ])
+   r = context.TryCompile(prog, '.cc')
+   if not r:
+      context.env.Replace(CXXFLAGS = prevCXXFLAGS)
+   context.Result(r)
+   return r
+
+
 if platform.system() == 'Linux':
     default_target_os = 'linux'
     allowed_target_oss = ('linux', 'android', 'openwrt')
@@ -238,7 +251,7 @@ else:
     env['LIBTYPE'] = 'static'
 
 # Read OS and CPU specific SConscript file
-Export('env')
+Export('env', 'CheckCXXFlag')
 env.SConscript('conf/${OS_CONF}/SConscript')
 
 # Whitespace policy

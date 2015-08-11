@@ -26,7 +26,7 @@ min_ndk_version = "r9b"
 # NDK should be equal to or lower as min_api_level
 ndk_level = min_api_level
 
-Import('env')
+Import('env', 'CheckCXXFlag')
 
 env['ANDROID_STL'] = 'gnustl_static'
 
@@ -189,6 +189,14 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
       env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
 
    env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
+
+   config = Configure(env, custom_tests = { 'CheckCXXFlag' : CheckCXXFlag })
+   if not config.CheckCXXFlag('-std=c++11'):
+      if not config.CheckCXXFlag('-std=c++0x'):
+         print '*** Compiler too old to build AllJoyn.  Aborting.'
+         Exit(1)
+   env = config.Finish()
+
    env.Append(CFLAGS = ['-Wall',
                        '-pipe',
                        '-Wno-long-long',
@@ -198,7 +206,6 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
                        '-fPIE'])
    env.Append(CXXFLAGS = ['-Wall',
                        '-pipe',
-                       '-std=gnu++0x',
                        '-Wno-long-long',
                        '-Wno-deprecated',
                        '-Wno-unknown-pragmas',

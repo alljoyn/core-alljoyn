@@ -69,9 +69,15 @@ env.Replace(RANLIB = env['TARGET_RANLIB'])
 env['ENV']['PATH'] = env['TARGET_PATH']
 env['ENV']['STAGING_DIR'] = env['STAGING_DIR']
 
+config = Configure(env, custom_tests = { 'CheckCXXFlag' : CheckCXXFlag })
+if not config.CheckCXXFlag('-std=c++11'):
+   if not config.CheckCXXFlag('-std=c++0x'):
+      print '*** Compiler too old to build AllJoyn.  Aborting.'
+      Exit(1)
+env = config.Finish()
+
 # Set Project and platform flags.
 env.Append(CPPFLAGS=['-Wno-deprecated'])  # AllJoyn uses various deprecated template classes (i.e., hash_map)
-env.Append(CXXFLAGS=['-std=c++0x',
-                     '-fno-exceptions'])
+env.Append(CXXFLAGS=['-fno-exceptions'])
 env.Append(CPPDEFINES=['QCC_OS_LINUX'])
 env.Append(LIBS=['m'])  # STL needs libm on OpenWrt

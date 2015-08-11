@@ -1,8 +1,9 @@
 #ignore files created by kdiff3 mergetool
 *.orig
-
 whitespace.db
+config.log
 .sconsign.dblite
+.sconf_temp/
 build/
 alljoyn_core/tags
 alljoyn_java/cscope.out
