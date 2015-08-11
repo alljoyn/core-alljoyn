@@ -1607,9 +1607,9 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Set a Translator for all BusObjects and InterfaceDescriptions. This Translator is used for
-     * descriptions appearing in introspection. Note that any Translators set on a specific
-     * InterfaceDescription or BusObject will be used for those specific elements - this Translator
-     * is used only for BusObjects and InterfaceDescriptions that do not have Translators set for them.
+     * descriptions appearing in introspection, and localizable text in about data. Note that any Translators
+     * set on a specific InterfaceDescription or BusObject will be used for those specific elements - this
+     * Translator is used only for BusObjects and InterfaceDescriptions that do not have Translators set for them.
      *
      * @param[in]  translator       The Translator instance
      */
@@ -2059,7 +2059,7 @@ class BusAttachment : public MessageReceiver {
         BusAttachment* bus;
     };
 
-    Translator* translator;       /**< Global translator for descriptions */
+    Translator* translator;       /**< Global translator for localizable text */
 
     JoinObj joinObj;          /**< MUST BE LAST MEMBER. Ensure all threads are joined before BusAttachment destruction */
 
