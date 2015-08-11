@@ -23,11 +23,10 @@
  ******************************************************************************/
 
 #include <alljoyn/Status.h>
+#include <assert.h>
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
-#include <assert.h>
-
 
 namespace qcc {
 
