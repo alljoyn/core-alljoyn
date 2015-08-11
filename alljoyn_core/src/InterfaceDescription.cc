@@ -308,19 +308,27 @@ struct InterfaceDescription::Definitions {
     AnnotationsMap annotations;     /**< Interface Annotations */
     qcc::String languageTag;
     qcc::String description;
+    StringTableTranslator stringTableTranslator;
     Translator* translator;
     bool hasDescription;
 
 
     Definitions() :
-        translator(NULL), hasDescription(false)
+        translator(&stringTableTranslator), hasDescription(false)
     { }
 
     Definitions(const MemberMap& m, const PropertyMap& p, const AnnotationsMap& a,
-                const qcc::String& langTag, const qcc::String& desc, Translator* dt, bool hd) :
+                const qcc::String& langTag, const qcc::String& desc, Translator* dt, bool isDefaultTranslator, bool hd) :
         members(m), properties(p), annotations(a),
-        languageTag(langTag), description(desc), translator(dt), hasDescription(hd)
-    { }
+        languageTag(langTag), description(desc), hasDescription(hd)
+    {
+        if (isDefaultTranslator) {
+            translator = &stringTableTranslator;
+            *translator = *dt;
+        } else {
+            translator = dt;
+        }
+    }
 };
 
 bool InterfaceDescription::Member::GetAnnotation(const qcc::String& annotationName, qcc::String& value) const
@@ -360,7 +368,8 @@ InterfaceDescription::~InterfaceDescription()
 
 InterfaceDescription::InterfaceDescription(const InterfaceDescription& other) :
     defs(new Definitions(other.defs->members, other.defs->properties, other.defs->annotations,
-                         other.defs->languageTag, other.defs->description, other.defs->translator, other.defs->hasDescription)),
+                         other.defs->languageTag, other.defs->description, other.defs->translator,
+                         other.defs->translator == &other.defs->stringTableTranslator, other.defs->hasDescription)),
     name(other.name),
     isActivated(false),
     secPolicy(other.secPolicy)
@@ -480,13 +489,22 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
             xml += " access=\"readwrite\"";
         }
 
-        //Does this property have a description? Only if (a) we're doing descriptions,
-        //(b) the property has some description text, and (c) that text is not a
-        //lookup key (empty language tag)  with no Translator to produce a description string
-        bool propWithDescription = withDescriptions && !property.description.empty()
-                                   && !(defs->languageTag.empty() && !myTranslator);
+        // Does this property have a description? Only if (a) we're doing descriptions,
+        // (b) the property has some description text, (c) that text is not a
+        // lookup key (empty language tag) with no Translator to produce a description string,
+        // and (d) the translator has a description in the requested language.
+        bool propWithDescription = withDescriptions &&
+                                   !property.description.empty() &&
+                                   !(defs->languageTag.empty() && !myTranslator);
+        if (propWithDescription) {
+            qcc::String buffer;
+            const char* d = Translate(languageTag, property.description.c_str(), buffer, myTranslator);
+            if (!d || d[0] == '\0') {
+                propWithDescription = false;
+            }
+        }
 
-        //Does this property element have any sub-elements?
+        // Does this property element have any sub-elements?
         if (property.annotations->size() || propWithDescription) {
             xml += ">\n";
 
@@ -831,7 +849,9 @@ const char* InterfaceDescription::Translate(const char* toLanguage, const char* 
     }
 
     if (translator) {
-        const char* ret = translator->Translate(defs->languageTag.c_str(), toLanguage, text, buffer);
+        qcc::String bestLanguage;
+        translator->GetBestLanguage(toLanguage, defs->languageTag, bestLanguage);
+        const char* ret = translator->Translate(defs->languageTag.c_str(), bestLanguage.c_str(), text, buffer);
         if (ret) {
             return ret;
         }

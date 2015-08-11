@@ -95,7 +95,7 @@ class MyTranslator : public Translator {
         QCC_UNUSED(sourceLanguage);
 
         size_t i = 0;
-        if (targetLanguage && (0 == strcmp(targetLanguage, "de"))) {
+        if (targetLanguage && (0 == strcasecmp(targetLanguage, "de"))) {
             i = 1;
         }
 
@@ -149,7 +149,7 @@ class BasicSampleObject : public BusObject {
         status = AddInterface(*intf);
 
         if (status == ER_OK) {
-            /* Register the signal handler 'nameChanged' with the bus*/
+            /* Register the signal handler 'nameChanged' with the bus */
             nameChangedMember = intf->GetMember("nameChanged");
             assert(nameChangedMember);
         } else {

@@ -289,9 +289,9 @@ class MyTranslator : public Translator {
         const char* tag = (*targetLanguage == '\0') ? "en" : targetLanguage;
         size_t i = 0;
 
-        if (0 == strcmp(tag, "en")) {
+        if (0 == strcasecmp(tag, "en")) {
             i = 0;
-        } else if (0 == strcmp(tag, "de")) {
+        } else if (0 == strcasecmp(tag, "de")) {
             i = 1;
         } else {
             return NULL;
@@ -428,7 +428,9 @@ class DescriptionTest : public::testing::Test {
         Message replyMsg(*s_msgBusClient);
         EXPECT_EQ(ER_OK, remoteObj->MethodCall("org.allseen.Introspectable", "IntrospectWithDescription", &msgArg, 1, replyMsg));
         char* str = NULL;
-        EXPECT_EQ(ER_OK, replyMsg->GetArg(0)->Get("s", &str));
+        const MsgArg* replyArg = replyMsg->GetArg(0);
+        ASSERT_TRUE(replyArg != NULL);
+        EXPECT_EQ(ER_OK, replyArg->Get("s", &str));
         ASSERT_STREQ(IntrospectWithDescriptionStr, str);
     }
 };
@@ -457,6 +459,41 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObject) {
 
     DescriptionLanguages(m_remoteObj);
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString1[0]);
+    IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString1[0]);
+    IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
+}
+
+TEST_F(DescriptionTest, IntrospectableDescriptionObjectDefaultTranslator)
+{
+    // Service part
+    InterfaceDescription* intf = NULL;
+    EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
+    ASSERT_TRUE(intf != NULL);
+
+    intf->AddProperty("name", "s", PROP_ACCESS_RW);
+    intf->SetDescriptionLanguage("");
+    intf->SetDescription(ifcId);
+    intf->SetPropertyDescription("name", propId);
+
+    Translator* translator = intf->GetDescriptionTranslator();
+    for (int i = 0; i < 2; i++) {
+        EXPECT_EQ(ER_OK, translator->AddStringTranslation(objId, objDescription[i], tags[i]));
+        EXPECT_EQ(ER_OK, translator->AddStringTranslation(ifcId, ifcDescription[i], tags[i]));
+        EXPECT_EQ(ER_OK, translator->AddStringTranslation(propId, namePropDescription[i], tags[i]));
+    }
+    intf->Activate();
+
+    ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
+    m_testObj->SetDescriptionTranslator(translator);
+    ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
+    ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
+
+    ASSERT_TRUE((m_remoteObj = new ProxyBusObject(*s_msgBusClient, s_msgBusServer->GetUniqueName().c_str(), SERVICE_PATH, 0)) != NULL);
+    EXPECT_EQ(ER_OK, m_remoteObj->IntrospectRemoteObject());
+
+    DescriptionLanguages(m_remoteObj);
+    IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString1[0]);
+    IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString1[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
 }
 
@@ -484,6 +521,7 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoTranslate) {
 
     DescriptionLanguages(m_remoteObj);
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString2[0]);
+    IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString2[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString2[1]);
 }
 
@@ -508,6 +546,7 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoIntfTranslate) {
     EXPECT_EQ(ER_OK, m_remoteObj->IntrospectRemoteObject());
 
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString3[0]);
+    IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString3[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString3[1]);
 }
 
