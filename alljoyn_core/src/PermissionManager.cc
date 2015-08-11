@@ -102,8 +102,9 @@ static bool IsActionAllowed(uint8_t allowedActions, uint8_t requestedAction)
 
 /**
  * Verify whether the given rule is a match for the given message.
- * If the rule has object path, the message must prefix match the object path.
- * If the rule has interface name, the message must prefix match the interface name.
+ * A rule must have an object path, interface name, and member name.
+ * The message must prefix match the object path.
+ * The message must prefix match the interface name.
  * Find match in member name
  * Verify whether the requested right is allowed by the authorization at the
  * member.
@@ -117,16 +118,18 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
     if (rule.GetMembersSize() == 0) {
         return false;
     }
-    if (!rule.GetObjPath().empty()) {
-        /* rule has an object path */
-        if (!((rule.GetObjPath() == request.objPath) || MatchesPrefix(request.objPath, rule.GetObjPath()))) {
-            return false;  /* object path not matched */
-        }
+    if (rule.GetObjPath().empty()) {
+        return false;
     }
-    if (!rule.GetInterfaceName().empty()) {
-        if (!((rule.GetInterfaceName() == request.iName) || MatchesPrefix(request.iName, rule.GetInterfaceName()))) {
-            return false;  /* interface name not matched */
-        }
+    if (rule.GetInterfaceName().empty()) {
+        return false;
+    }
+    /* check the object path */
+    if (!((rule.GetObjPath() == request.objPath) || MatchesPrefix(request.objPath, rule.GetObjPath()))) {
+        return false;  /* object path not matched */
+    }
+    if (!((rule.GetInterfaceName() == request.iName) || MatchesPrefix(request.iName, rule.GetInterfaceName()))) {
+        return false;  /* interface name not matched */
     }
 
     /**
@@ -157,6 +160,9 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
          */
         bool allowed = false;
         for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
+            if (members[cnt].GetMemberName().empty()) {
+                continue; /* skip the unspecified member name */
+            }
             if (members[cnt].GetMemberName() == "*") {
                 if (scanForDenied) {
                     /* now check the action mask for explicit deny if requested and
@@ -197,10 +203,11 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
         bool allowed = false;
         for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
             /* match member name */
-            if (!members[cnt].GetMemberName().empty()) {
-                if (!((members[cnt].GetMemberName() == request.mbrName) || MatchesPrefix(request.mbrName, members[cnt].GetMemberName()))) {
-                    continue;  /* member name not matched */
-                }
+            if (members[cnt].GetMemberName().empty()) {
+                continue; /* skip the unspecified member name */
+            }
+            if (!((members[cnt].GetMemberName() == request.mbrName) || MatchesPrefix(request.mbrName, members[cnt].GetMemberName()))) {
+                continue;  /* member name not matched */
             }
             /* match member type */
             if (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED) {

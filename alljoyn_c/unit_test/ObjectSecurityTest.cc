@@ -197,7 +197,7 @@ class ObjectSecurityTest : public testing::Test {
         status = alljoyn_proxybusobject_methodcall(proxyObj, "org.alljoyn.Bus.Security.ManagedApplication",
                                                    "Reset", NULL, 0, reply, ALLJOYN_MESSAGE_DEFAULT_TIMEOUT, 0);
         /* Reset is not allowed before the application is claimed */
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_PERMISSION_DENIED, status) << "  Actual Status: " << QCC_StatusText(status);
 
         alljoyn_message_destroy(reply);
         alljoyn_proxybusobject_destroy(proxyObj);

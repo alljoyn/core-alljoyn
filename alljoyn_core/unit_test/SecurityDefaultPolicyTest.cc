@@ -733,8 +733,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDSA_everything_passes)
  *              peer1Bus == ASA bus
  *              peer2Bus == app. bus
  */
-// See ASACORE-2293 to see why this test is DISABLED (please remove this comment and re-enable test when fixed)
-TEST_F(SecurityDefaultPolicyTest, DISABLED_DefaultPolicy_ECDHE_NULL_everything_fails)
+TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDHE_NULL_everything_fails)
 {
     InstallMemberShipOnManager();
     InstallMemberShipOnPeer1();
@@ -776,10 +775,7 @@ TEST_F(SecurityDefaultPolicyTest, DISABLED_DefaultPolicy_ECDHE_NULL_everything_f
         // Verify Method call
         MsgArg arg("s", "String that should be Echoed back.");
         Message replyMsg(peer1Bus);
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
-        ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
-        EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16)
-            << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
 
         // Verify Set/Get Property and GetAll Properties
         MsgArg prop1Arg;
@@ -791,7 +787,7 @@ TEST_F(SecurityDefaultPolicyTest, DISABLED_DefaultPolicy_ECDHE_NULL_everything_f
         EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
 
         MsgArg props;
-        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props)) << "Peer2 failed GetAllProperties call";;
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props)) << "Peer2 failed GetAllProperties call";
         EXPECT_EQ((size_t)0, props.v_array.GetNumElements());
     }
     //2. App. bus sends a signal to to the ASG bus.
@@ -842,20 +838,20 @@ TEST_F(SecurityDefaultPolicyTest, DISABLED_DefaultPolicy_ECDHE_NULL_everything_f
         // Verify Method call
         MsgArg arg("s", "String that should be Echoed back.");
         Message replyMsg(peer1Bus);
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
         EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
 
         // Verify Set/Get Property and GetAll Properties
         MsgArg prop1Arg;
         EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
         EXPECT_EQ(42, peer2BusObject.ReadProp1());
 
         MsgArg prop1ArgOut;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
 
         MsgArg props;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props)) << "Peer2 failed GetAllProperties call";;
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props)) << "Peer2 failed GetAllProperties call";;
         EXPECT_EQ((size_t)0, props.v_array.GetNumElements());
     }
     // 4. ASG bus sends a signal to the app. bus.
@@ -1062,7 +1058,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_MemberShipCertificate_not_instal
         // Verify Method call
         MsgArg arg("s", "String that should be Echoed back.");
         Message replyMsg(peer1Bus);
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
         EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
 
         // Verify Set/Get Property and GetAll Properties
@@ -1075,7 +1071,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_MemberShipCertificate_not_instal
         EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
 
         MsgArg props;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props));
         EXPECT_EQ((size_t)0, props.v_array.GetNumElements());
     }
     // 4. Peer A (Peer1) sends a signal to the app. bus (Peer2).
