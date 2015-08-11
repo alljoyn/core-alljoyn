@@ -723,6 +723,25 @@ class PermissionPolicy {
      */
     PermissionPolicy(const PermissionPolicy& other);
 
+    /*
+     * Checks whether each explicit deny rule of this policy is linked to one
+     * or more peers of type PEER_WITH_PUBLIC_KEY.
+     *
+     * Checks whether each Member that has an explicit deny ActionMask (== 0)
+     * - has a MemberName which is equal to "*"
+     * - has a MemberType which is NOT_SPECIFIED
+     * - the Rule it is included in has only one Member
+     * - the ObjPath and InterfaceName of that Rule are both equal to "*"
+     * - the ACL it is included in has only one Rule
+     * - the Peers of that ACL are all of type PEER_WITH_PUBLIC_KEY and
+     *   have unique KeyInfo objects
+     *
+     * @return
+     *      - true   if all deny rules in this policy are valid
+     *      - false  if the policy contains at least one invalid deny rule
+     */
+    bool HasValidDenyRules() const;
+
   private:
     uint16_t specificationVersion;
     uint32_t version;
