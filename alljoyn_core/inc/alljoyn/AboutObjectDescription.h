@@ -83,7 +83,7 @@ class AboutObjectDescription {
      * Fill in the ObjectDescription fields using a MsgArg
      *
      * The MsgArg must contain an array of type a(oas) The expected use of this
-     * class is to fill in the ObjectDescription using a MsgArg obtain from the
+     * class is to fill in the ObjectDescription using a MsgArg obtained from the
      * Announce signal or the GetObjectDescription method from org.alljoyn.about
      * interface.
      *
