@@ -258,6 +258,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
         const size_t manifestSize = 1;
         PermissionPolicy::Rule manifest[manifestSize];
+        manifest[0].SetObjPath("*");
         manifest[0].SetInterfaceName("*");
         manifest[0].SetMembers(1, member);
 
@@ -704,6 +705,7 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -756,10 +758,10 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
         replyMsg->GetArg(0)->Get("s", &echoReply);
         EXPECT_STREQ("String that should be Echoed back.", echoReply);
     } else if (GetParam().proxyObjAllowedToCallMethod && !GetParam().busObjAllowedToRespondToMethodCall) {
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, methodCallStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, methodCallStatus);
         EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
     } else { //!GetParam().proxyObjAllowedToCallMethod
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, methodCallStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, methodCallStatus);
         ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
         EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16) << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
     }
@@ -859,6 +861,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
         {
             PermissionPolicy::Rule rules[1];
 
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -916,6 +919,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Echo", PermissionPolicy::Rule::Member::METHOD_CALL, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, members);
     }
@@ -950,6 +954,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Echo", PermissionPolicy::Rule::Member::METHOD_CALL, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, members);
     }
@@ -990,10 +995,10 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
         replyMsg->GetArg(0)->Get("s", &echoReply);
         EXPECT_STREQ("String that should be Echoed back.", echoReply);
     } else if (GetParam().proxyObjAllowedToCallMethod && !GetParam().busObjAllowedToRespondToMethodCall) {
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, methodCallStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, methodCallStatus);
         EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
     } else { //!GetParam().proxyObjAllowedToCallMethod
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, methodCallStatus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, methodCallStatus);
         ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
         EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16) << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
     }
@@ -1121,6 +1126,7 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -1273,6 +1279,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -1324,6 +1331,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, members);
     }
@@ -1358,6 +1366,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, members);
     }
@@ -1528,6 +1537,7 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -1679,6 +1689,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[2];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -1688,6 +1699,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
                 rules[0].SetMembers(1, members);
             }
             //make sure peer2 can call UpdateIdentity to update the manifest
+            rules[1].SetObjPath("*");
             rules[1].SetObjPath(org::alljoyn::Bus::Security::ObjectPath);
             rules[1].SetInterfaceName(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
             {
@@ -1740,6 +1752,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, members);
     }
@@ -1774,6 +1787,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, members);
     }
@@ -1952,6 +1966,7 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member peer2Prms[1];
@@ -2171,6 +2186,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member member[1];
         member[0].Set("Chirp", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, member);
     }
@@ -2206,6 +2222,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member member[1];
         member[0].Set("Chirp", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, member);
     }
@@ -2856,7 +2873,7 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test4_no_properties_fetched)
     EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
     EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
     MsgArg props;
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props));
 
     /* clean up */
     peer2Bus.UnregisterBusObject(peer2BusObject);
@@ -2985,7 +3002,7 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test5_no_properties_fetched)
     EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
     EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
     MsgArg props;
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props));
 
     /* clean up */
     peer2Bus.UnregisterBusObject(peer2BusObject);
@@ -3398,7 +3415,7 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test8_no_properties_fetched)
     EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
     EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
     MsgArg props;
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props));
 
     /* clean up */
     peer2Bus.UnregisterBusObject(peer2BusObject);
@@ -3526,7 +3543,7 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test9_no_properties_fetched)
     EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
     EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
     MsgArg props;
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetAllProperties(interfaceName, props));
 
     /* clean up */
     peer2Bus.UnregisterBusObject(peer2BusObject);
@@ -4326,6 +4343,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
     const size_t manifestSize = 1;
     PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
     manifest[0].SetInterfaceName("*");
     manifest[0].SetMembers(1, member);
 
@@ -4590,6 +4608,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
     const size_t manifestSize = 1;
     PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
     manifest[0].SetInterfaceName("*");
     manifest[0].SetMembers(1, member);
 
@@ -5224,7 +5243,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
  * Verify that method call, get/set property calls, signal cannot be sent by
  * sender.
  */
-TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_9)
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_9)
 {
     PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
@@ -5345,10 +5364,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_9)
     // Verify Method call
     MsgArg arg("s", "String that should be Echoed back.");
     Message replyMsg(peer1Bus);
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
-    ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
-    EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16)
-        << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
 
     // Verify Set/Get Property
     MsgArg prop1Arg;
@@ -5522,7 +5538,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_10)
     // Verify Method call
     MsgArg arg("s", "String that should be Echoed back.");
     Message replyMsg(peer1Bus);
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
     EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
 
     // Verify Set/Get Property
@@ -5716,6 +5732,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
             rules[9].SetInterfaceName("*");
             {
                 PermissionPolicy::Rule::Member members[1];
+                members[0].SetMemberName("*");
                 members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -6012,6 +6029,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
             rules[9].SetInterfaceName("*");
             {
                 PermissionPolicy::Rule::Member members[1];
+                members[0].SetMemberName("*");
                 members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -6235,6 +6253,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_13)
         peer1Manifest[9].SetObjPath("*");
         peer1Manifest[9].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                  PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -6463,6 +6482,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_14)
         peer2Manifest[9].SetObjPath("*");
         peer2Manifest[9].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                  PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -6607,6 +6627,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_15)
         peer1Manifest[1].SetObjPath("*");
         peer1Manifest[1].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                  PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -6756,6 +6777,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_16)
         peer2Manifest[1].SetObjPath("*");
         peer2Manifest[1].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |

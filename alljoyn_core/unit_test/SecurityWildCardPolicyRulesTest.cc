@@ -755,7 +755,7 @@ QStatus SecurityWildCardPolicyRulesTest::UpdatePolicyWithValuesFromDefaultPolicy
  * Verify that "march" method call is successful.
  * Verify that "mint" method call is not sent by the sender.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_Wildcard_object_path) {
+TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_object_path) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -843,7 +843,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_Wildcard_object_path) {
  * Verify that "mob" method call is not sent by the sender.
  * Verify that "mini" get property call is not sent by the sender.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_Wildcard_interface_names) {
+TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_interface_names) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -993,7 +993,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_member_names) {
 
     EXPECT_TRUE(argentinaProxy.ImplementsInterface(test::california::InterfaceName)) << test::california::InterfaceName;
     Message replyMsg(peer1Bus);
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, argentinaProxy.MethodCall(test::california::InterfaceName, test::california::method::metal, NULL, 0, replyMsg));
+    EXPECT_EQ(ER_PERMISSION_DENIED, argentinaProxy.MethodCall(test::california::InterfaceName, test::california::method::metal, NULL, 0, replyMsg));
     ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
     EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16)
         << "\n" << replyMsg->GetArg(0)->ToString().c_str()
@@ -1024,7 +1024,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_member_names) {
  * Verify that "motel" get property call is not sent by the sender.
  * Verify that "mob" method call is successful.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_Wildcard_message_type_matched_properly_in_rule) {
+TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_message_type_matched_properly_in_rule) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -1119,7 +1119,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_Wildcard_message_type_matched_p
  * Verify that "meal" get property call is not sent by the sender.
  * Verify that "metal" method call is not sent by the sender.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_unspecified_action_mask_is_explicitly_DENIED) {
+TEST_F(SecurityWildCardPolicyRulesTest, unspecified_action_mask_is_explicitly_DENIED) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -1190,7 +1190,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_unspecified_action_mask_is_expl
 
     Message replyMsg(peer1Bus);
     EXPECT_TRUE(argentinaProxy.ImplementsInterface(test::california::InterfaceName)) << test::california::InterfaceName;
-    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, argentinaProxy.MethodCall(test::california::InterfaceName, test::california::method::metal, NULL, 0, replyMsg));
+    EXPECT_EQ(ER_PERMISSION_DENIED, argentinaProxy.MethodCall(test::california::InterfaceName, test::california::method::metal, NULL, 0, replyMsg));
     ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
     EXPECT_EQ(ER_PERMISSION_DENIED, (QStatus)replyMsg->GetArg(1)->v_uint16)
         << "\n" << replyMsg->GetArg(0)->ToString().c_str()
@@ -1221,7 +1221,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_unspecified_action_mask_is_expl
  * Verification:
  * Verify that "march" method call is not sent by the sender.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_object_path_not_specified_rule_not_considered_as_match) {
+TEST_F(SecurityWildCardPolicyRulesTest, object_path_not_specified_rule_not_considered_as_match) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -1279,7 +1279,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_object_path_not_specified_rule_
 
     EXPECT_TRUE(argentinaProxy.ImplementsInterface(test::calcium::InterfaceName)) << test::calcium::InterfaceName;
     Message replyMsg(peer1Bus);
-    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, argentinaProxy.MethodCall(test::calcium::InterfaceName, test::calcium::method::march, NULL, 0, replyMsg));
+    ASSERT_EQ(ER_PERMISSION_DENIED, argentinaProxy.MethodCall(test::calcium::InterfaceName, test::calcium::method::march, NULL, 0, replyMsg));
     ASSERT_STREQ(org::alljoyn::Bus::ErrorName, replyMsg->GetErrorName());
     EXPECT_EQ(ER_PERMISSION_DENIED, static_cast<QStatus>(replyMsg->GetArg(1)->v_uint16));
 }
@@ -1297,7 +1297,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_object_path_not_specified_rule_
  * Verification:
  * Verify that "march" method call is not sent by the sender.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_interface_name_not_specified_rule_not_considered_as_match) {
+TEST_F(SecurityWildCardPolicyRulesTest, interface_name_not_specified_rule_not_considered_as_match) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -1355,7 +1355,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_interface_name_not_specified_ru
 
     EXPECT_TRUE(argentinaProxy.ImplementsInterface(test::calcium::InterfaceName)) << test::calcium::InterfaceName;
     Message replyMsg(peer1Bus);
-    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, argentinaProxy.MethodCall(test::calcium::InterfaceName, test::calcium::method::march, NULL, 0, replyMsg));
+    ASSERT_EQ(ER_PERMISSION_DENIED, argentinaProxy.MethodCall(test::calcium::InterfaceName, test::calcium::method::march, NULL, 0, replyMsg));
     ASSERT_STREQ(org::alljoyn::Bus::ErrorName, replyMsg->GetErrorName());
     EXPECT_EQ(ER_PERMISSION_DENIED, static_cast<QStatus>(replyMsg->GetArg(1)->v_uint16));
 }
@@ -1373,7 +1373,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_interface_name_not_specified_ru
  * Verification:
  * Verify that "march" method call is not sent by the sender.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_empty_string_not_considered_as_match) {
+TEST_F(SecurityWildCardPolicyRulesTest, empty_string_not_considered_as_match) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -1432,7 +1432,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_empty_string_not_considered_as_
 
     EXPECT_TRUE(argentinaProxy.ImplementsInterface(test::calcium::InterfaceName)) << test::calcium::InterfaceName;
     Message replyMsg(peer1Bus);
-    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, argentinaProxy.MethodCall(test::calcium::InterfaceName, test::calcium::method::march, NULL, 0, replyMsg));
+    ASSERT_EQ(ER_PERMISSION_DENIED, argentinaProxy.MethodCall(test::calcium::InterfaceName, test::calcium::method::march, NULL, 0, replyMsg));
     ASSERT_STREQ(org::alljoyn::Bus::ErrorName, replyMsg->GetErrorName());
     EXPECT_EQ(ER_PERMISSION_DENIED, static_cast<QStatus>(replyMsg->GetArg(1)->v_uint16));
 }
