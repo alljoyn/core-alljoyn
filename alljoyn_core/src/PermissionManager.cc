@@ -112,7 +112,7 @@ static bool IsActionAllowed(uint8_t allowedActions, uint8_t requestedAction)
  *
  */
 
-static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& request, uint8_t requiredAuth, bool scanForDenied, bool& denied)
+static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& request, uint8_t requiredAuth, bool scanForDenied, bool& denied, bool strictGetAllProperties)
 {
     if (rule.GetMembersSize() == 0) {
         return false;
@@ -145,7 +145,52 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
     /* the member name is not specified when the caller wants to get all allowed properties */
     bool msgMbrNameEmpty = !request.mbrName || (strlen(request.mbrName) == 0);
     if (msgMbrNameEmpty) {
-        return true;
+        if (!request.propertyRequest) {
+            return false;
+        }
+        /* This is the GetAllProperties call.
+         * If the flag strictGetAllProperties is on then
+         *     Need to check to see it is authorized for all properties in
+         *     this interface.  So a rule with member name = * is required.
+         * otherwise,
+         *     Allowed when at least one property is allowed
+         */
+        bool allowed = false;
+        for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
+            if (members[cnt].GetMemberName() == "*") {
+                if (scanForDenied) {
+                    /* now check the action mask for explicit deny if requested and
+                     * when member name = *
+                     */
+                    if (IsActionDenied(members[cnt].GetActionMask())) {
+                        denied = true;
+                        return false;
+                    }
+                }
+                /* only interested in PROPERTY_TYPE or not specified */
+                if ((members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::PROPERTY) &&
+                    (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::NOT_SPECIFIED)) {
+                    continue;
+                }
+                /* now check the action mask for at least one allowed */
+                if (!allowed) {
+                    allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
+                }
+            } else if (!strictGetAllProperties) {
+                if (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::PROPERTY) {
+                    continue;  /* only interested in PROPERTY_TYPE when name is specified */
+
+                }
+                /* now check the action mask for at least one allowed */
+                if (!allowed) {
+                    allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
+                }
+            }
+            if (allowed && !scanForDenied) {
+                return allowed;
+            }
+        }
+        return allowed;
     } else {
         /* typical message with a member name */
         /* scan all member entries to look for denied and one allowed */
@@ -175,6 +220,9 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
             if (!allowed) {
                 allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
             }
+            if (allowed && !scanForDenied) {
+                return allowed;
+            }
         }
         return allowed;
     }
@@ -182,10 +230,11 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
 
 static bool IsPolicyAclMatched(const PermissionPolicy::Acl& acl, const Request& request, uint8_t requiredAuth, bool scanForDenied, bool& denied)
 {
+    bool strictGetAllProperties = request.outgoing;
     const PermissionPolicy::Rule* rules = acl.GetRules();
     bool allowed = false;
     for (size_t cnt = 0; cnt < acl.GetRulesSize(); cnt++) {
-        if (IsRuleMatched(rules[cnt], request, requiredAuth, scanForDenied, denied)) {
+        if (IsRuleMatched(rules[cnt], request, requiredAuth, scanForDenied, denied, strictGetAllProperties)) {
             allowed = true; /* track it */
         } else if (denied) {
             /* skip the remainder of the search */
@@ -238,17 +287,18 @@ static void GenRight(const Request& request, Right& right)
  * Enforce the peer's manifest
  */
 
-static bool EnforcePeerManifest(const Request& request, const Right& right, PeerState& peerState)
+static bool IsAuthorizedByPeerManifest(const Request& request, const Right& right, PeerState& peerState)
 {
     /* no manifest then default not allowed */
     if ((peerState->manifest == NULL) || (peerState->manifestSize == 0)) {
         return false;
     }
 
+    bool strictGetAllProperties = request.outgoing;
     for (size_t cnt = 0; cnt < peerState->manifestSize; cnt++) {
         /* validate the peer manifest to make sure it was granted the same thing */
         bool denied = false;
-        if (IsRuleMatched(peerState->manifest[cnt], request, right.authByPolicy, false, denied)) {
+        if (IsRuleMatched(peerState->manifest[cnt], request, right.authByPolicy, false, denied, strictGetAllProperties)) {
             return true;
         } else if (denied) {
             /* skip the remainder of the search */
@@ -409,7 +459,8 @@ static bool IsAuthorized(const Request& request, const PermissionPolicy* policy,
     }
 
     if (authorized && enforceManifest) {
-        authorized = EnforcePeerManifest(request, right, peerState);
+        authorized = IsAuthorizedByPeerManifest(request, right, peerState);
+        QCC_DbgPrintf(("Enforce peer's manifest: Authorized: %d", authorized));
     }
     return authorized;
 }

@@ -37,6 +37,64 @@ static const char* membershipSerial4 = "40004";
 static const char* adminMembershipSerial1 = "900001";
 static const char* adminMembershipSerial2 = "900002";
 
+static QStatus AddAclsToDefaultPolicy(PermissionPolicy& defaultPolicy, PermissionPolicy::Acl* acls, size_t count, bool keepCAentry, bool keepAdminGroupEntry, bool keepInstallMembershipEntry, bool keepAnyTrusted)
+{
+    size_t newCount = count;
+    /** The default policy has 4 entries:
+     *       The FROM_CERTIFICATE_AUTHORITY entry for the certificate authority
+     *       The WITH_MEMBERSHIP entry for the admin group
+     *       The WITH_PUBLIC_KEY entry for allowing the application to
+     *                  self-install membership certificates
+     *       The ANY_TRUSTED entry for allowing the application to send
+     *                  outbound messages
+     * Any of these entries can be copied into the new policy.
+     */
+    if (keepCAentry) {
+        ++newCount;
+    }
+    if (keepAdminGroupEntry) {
+        ++newCount;
+    }
+    if (keepInstallMembershipEntry) {
+        ++newCount;
+    }
+    if (keepAnyTrusted) {
+        ++newCount;
+    }
+
+    PermissionPolicy::Acl* newAcls = new PermissionPolicy::Acl[newCount];
+    size_t idx = 0;
+    for (size_t cnt = 0; cnt < defaultPolicy.GetAclsSize(); ++cnt) {
+        assert(idx < newCount);
+        if (defaultPolicy.GetAcls()[cnt].GetPeersSize() > 0) {
+            if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) {
+                if (keepCAentry) {
+                    newAcls[idx++] = defaultPolicy.GetAcls()[cnt];
+                }
+            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+                if (keepAdminGroupEntry) {
+                    newAcls[idx++] = defaultPolicy.GetAcls()[cnt];
+                }
+            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY) {
+                if (keepInstallMembershipEntry) {
+                    newAcls[idx++] = defaultPolicy.GetAcls()[cnt];
+                }
+            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_ANY_TRUSTED) {
+                if (keepAnyTrusted) {
+                    newAcls[idx++] = defaultPolicy.GetAcls()[cnt];
+                }
+            }
+        }
+    }
+    for (size_t cnt = 0; cnt < count; ++cnt) {
+        assert(idx < newCount);
+        newAcls[idx++] = acls[cnt];
+    }
+    defaultPolicy.SetAcls(newCount, newAcls);
+    delete [] newAcls;
+    return ER_OK;
+}
+
 static QStatus AddAcls(PermissionPolicy& policy, PermissionPolicy::Acl* acls, size_t count)
 {
     if (count == 0) {
@@ -46,17 +104,19 @@ static QStatus AddAcls(PermissionPolicy& policy, PermissionPolicy::Acl* acls, si
         policy.SetAcls(count, acls);
         return ER_OK;
     }
-    PermissionPolicy::Acl* newAcls = new PermissionPolicy::Acl[policy.GetAclsSize() + count];
+    size_t policyAclsSize = policy.GetAclsSize();
+    size_t newSize = policyAclsSize + count;
+    PermissionPolicy::Acl* newAcls = new PermissionPolicy::Acl[newSize];
     if (newAcls == NULL) {
         return ER_OUT_OF_MEMORY;
     }
-    for (size_t cnt = 0; cnt < policy.GetAclsSize(); cnt++) {
+    for (size_t cnt = 0; cnt < policyAclsSize; cnt++) {
         newAcls[cnt] = policy.GetAcls()[cnt];
     }
     for (size_t cnt = 0; cnt < count; cnt++) {
-        newAcls[cnt + policy.GetAclsSize()] = acls[cnt];
+        newAcls[cnt + policyAclsSize] = acls[cnt];
     }
-    policy.SetAcls(count + policy.GetAclsSize(), newAcls);
+    policy.SetAcls(newSize, newAcls);
     delete [] newAcls;
     return ER_OK;
 }
@@ -132,6 +192,65 @@ static QStatus GenerateAllowAllPeersPolicy(BusAttachment& bus, BusAttachment& ta
     return AddAcls(policy, acls, ArraySize(acls));
 }
 
+static QStatus GenerateNoOutboundGetPropertyPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
+{
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(22);
+
+    /* add the acls section */
+    PermissionPolicy::Acl acls[1];
+    /* acls record 0  ANY-USER */
+    PermissionPolicy::Peer peers[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(ArraySize(peers), peers);
+    PermissionPolicy::Rule rules[1];
+    rules[0].SetInterfaceName("org.allseenalliance.control.*");
+    PermissionPolicy::Rule::Member prms[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(ArraySize(prms), prms);
+    acls[0].SetRules(ArraySize(rules), rules);
+
+    return AddAclsToDefaultPolicy(policy, acls, ArraySize(acls), true, true, false, false);
+}
+
+static QStatus GenerateGetAllPropertiesPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, uint8_t actionMask)
+{
+    SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
+    /* retrieve the default policy */
+    EXPECT_EQ(ER_OK, saProxy.GetDefaultPolicy(policy)) << "GetDefaultPolicy failed.";
+    policy.SetVersion(23);
+
+    /* add the acls section */
+    PermissionPolicy::Acl acls[1];
+    /* acls record 0  ANY-USER */
+    PermissionPolicy::Peer peers[1];
+    peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acls[0].SetPeers(ArraySize(peers), peers);
+    PermissionPolicy::Rule rules[1];
+    rules[0].SetInterfaceName("org.allseenalliance.control.*");
+    PermissionPolicy::Rule::Member prms[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[0].SetActionMask(actionMask);
+    rules[0].SetMembers(ArraySize(prms), prms);
+    acls[0].SetRules(ArraySize(rules), rules);
+
+    return AddAclsToDefaultPolicy(policy, acls, ArraySize(acls), true, true, false, false);
+}
+
+static QStatus GenerateGetAllPropertiesProvidePolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
+{
+    return GenerateGetAllPropertiesPolicy(bus, targetBus, policy, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+}
+
+static QStatus GenerateGetAllPropertiesObservePolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
+{
+    return GenerateGetAllPropertiesPolicy(bus, targetBus, policy, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+}
 
 /**
  * Add ACLs to existing default policy of the target bus.
@@ -393,6 +512,7 @@ static QStatus ReplaceAnyTrustAcl(PermissionPolicy& policy, PermissionPolicy::Ac
         }
     }
     if (anyTrustedIdx == -1) {
+        delete [] acls;
         return ER_FAIL;
     }
 
@@ -812,6 +932,22 @@ static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, 
         prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
         rules[1].SetMembers(1, prms);
+    }
+    *retRules = rules;
+    return ER_OK;
+}
+
+static QStatus GenerateManifestNoGetAllProperties(PermissionPolicy::Rule** retRules, size_t* count)
+{
+    *count = 1;
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    {
+        rules[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("Volume");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        rules[0].SetMembers(1, prms);
     }
     *retRules = rules;
     return ER_OK;
@@ -1974,7 +2110,6 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     AnyUserCanCallOnAndNotOff(consumerBus);
     SetChannelChangedSignalReceived(false);
     ConsumerCanTVUpAndDownAndNotChannel();
-    ConsumerCanGetTVCaption();
     /* sleep a second to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
@@ -2106,7 +2241,6 @@ TEST_F(PermissionMgmtUseCaseTest, AccessByPublicKey)
     CreateAppInterfaces(consumerBus, false);
 
     ConsumerCanTVUpAndDownAndNotChannel();
-    ConsumerCanGetTVCaption();
 }
 
 TEST_F(PermissionMgmtUseCaseTest, AccessDeniedForPeerPublicKey)
@@ -2971,5 +3105,145 @@ TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)
     EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState) << " The application state is not claimable.";
 
     TeardownBus(cpConsumerBus);
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByOutgoingPolicy)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateNoOutboundGetPropertyPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCannotGetTVCaption();
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesAllowed)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GenerateGetAllPropertiesObservePolicy(adminBus, serviceBus, policy)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateGetAllPropertiesProvidePolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCanGetTVCaption();
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesWithAtLeastOnePropertyAllowedByProviderPolicy)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateGetAllPropertiesProvidePolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCanGetTVCaption();
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesNotAllowedByProviderPolicy)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateGetAllPropertiesProvidePolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCannotGetTVCaption();
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByProviderManifest)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateGetAllPropertiesProvidePolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    PermissionPolicy::Rule* manifest;
+    size_t manifestSize;
+    GenerateManifestNoGetAllProperties(&manifest, &manifestSize);
+    ReplaceIdentityCert(adminBus, serviceBus, manifest, manifestSize, false);
+    delete [] manifest;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCannotGetTVCaption();
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByConsumerManifest)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    PermissionPolicy consumerPolicy;
+    ASSERT_EQ(ER_OK, GenerateGetAllPropertiesProvidePolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    PermissionPolicy::Rule* manifest;
+    size_t manifestSize;
+    GenerateManifestNoGetAllProperties(&manifest, &manifestSize);
+    ReplaceIdentityCert(adminBus, consumerBus, manifest, manifestSize, false);
+    delete [] manifest;
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    ConsumerCannotGetTVCaption();
 }
 
