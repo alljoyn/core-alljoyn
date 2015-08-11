@@ -127,8 +127,7 @@ hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
                                 'inc/qcc/CertificateECC.h',
                                 'inc/qcc/platform.h']),
          'qcc/${OS_GROUP}': commonenv.File(['inc/qcc/${OS_GROUP}/atomic.h',
-                                            'inc/qcc/${OS_GROUP}/platform_types.h',
-                                            'inc/qcc/${OS_GROUP}/Mutex.h']) }
+                                            'inc/qcc/${OS_GROUP}/platform_types.h']) }
 
 if commonenv['OS_GROUP'] == 'windows':
     hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])

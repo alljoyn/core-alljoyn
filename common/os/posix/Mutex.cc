@@ -102,34 +102,6 @@ QStatus Mutex::Lock()
     return ER_OK;
 }
 
-QStatus Mutex::Lock(const char* file, uint32_t line)
-{
-#ifdef NDEBUG
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Lock();
-#else
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-
-    QStatus status;
-    if (TryLock()) {
-        status = ER_OK;
-    } else {
-        status = Lock();
-    }
-    if (status == ER_OK) {
-        QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
-        this->file = reinterpret_cast<const char*>(file);
-        this->line = line;
-    } else {
-        QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
-    }
-    return status;
-#endif
-}
-
 QStatus Mutex::Unlock()
 {
     if (!isInitialized) {
@@ -145,30 +117,6 @@ QStatus Mutex::Unlock()
         return ER_OS_ERROR;
     }
     return ER_OK;
-}
-
-QStatus Mutex::Unlock(const char* file, uint32_t line)
-{
-#ifdef NDEBUG
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Unlock();
-#else
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
-    this->file = NULL;
-    this->line = -1;
-    int ret = pthread_mutex_unlock(&mutex);
-    if (ret != 0) {
-        fflush(stdout);
-        printf("***** Mutex unlock failure: %s:%d %d - %s\n", file, line, ret, strerror(ret));
-        assert(false);
-        return ER_OS_ERROR;
-    }
-    return ER_OK;
-#endif
 }
 
 bool Mutex::TryLock(void)
