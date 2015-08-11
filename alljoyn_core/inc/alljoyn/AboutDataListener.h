@@ -201,13 +201,12 @@ class AboutDataListener {
      * "requested" language be the most specific it can (e.g., "en-US" in
      * order to match either "en-US" or "en" if supported).
      *
-     * If the user has not
-     * provided ALL of the required fields return the QStatus
+     * If the user has not provided ALL of the required fields return the QStatus
      * #ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD
      *
      * @param[out] msgArg a dictionary containing all of the AboutData fields for
      *                    the requested language.  If language is not specified, the default
-     *                    language will be returned
+     *                    language will be returned.
      * @param[in] language IETF language tag specified by RFC 5646. If the string
      *                     is NULL or an empty string, the MsgArg for the default
      *                     language will be returned.

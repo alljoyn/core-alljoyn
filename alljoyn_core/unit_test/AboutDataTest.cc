@@ -178,10 +178,10 @@ TEST(AboutDataTest, CopyConstructor) {
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
 
     //should be able to change each copy independent of one another
-    QStatus status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    QStatus status = aboutData.SetDeviceName("Device");
     EXPECT_EQ(ER_OK, status);
 
-    status = aboutDataCopy.SetDeviceName(qcc::String("Copy Device").c_str());
+    status = aboutDataCopy.SetDeviceName("Copy Device");
     EXPECT_EQ(ER_OK, status);
 
     char* deviceName;
@@ -214,10 +214,10 @@ TEST(AboutDataTest, AssignmentOperator) {
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
 
     //should be able to change each copy independent of one another
-    QStatus status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    QStatus status = aboutData.SetDeviceName("Device");
     EXPECT_EQ(ER_OK, status);
 
-    status = aboutDataCopy.SetDeviceName(qcc::String("Copy Device").c_str());
+    status = aboutDataCopy.SetDeviceName("Copy Device");
     EXPECT_EQ(ER_OK, status);
 
     char* deviceName;
@@ -365,7 +365,7 @@ TEST(AboutDataTest, SetDeviceName) {
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ(ajn::GetVersion(), ajSoftwareVersion);
 
-    status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    status = aboutData.SetDeviceName("Device");
     EXPECT_EQ(ER_OK, status);
 
     char* deviceName;
@@ -729,6 +729,7 @@ TEST(AboutDataTest, IsValid_Negative)
     EXPECT_EQ(ER_OK, status);
     EXPECT_TRUE(aboutData.IsValid("es"));
 }
+
 TEST(AboutDataTest, GetAboutData)
 {
     QStatus status = ER_FAIL;
@@ -803,7 +804,6 @@ TEST(AboutDataTest, GetAboutData)
     args->Get("s", &modelNumber);
     EXPECT_STREQ("123456", modelNumber);
 }
-
 
 TEST(AboutDataTest, GetMsgArg_es_language)
 {
@@ -924,6 +924,106 @@ TEST(AboutDataTest, GetMsgArg_best_language)
     EXPECT_EQ(ER_OK, status);
     status = aboutData.SetDescription("de-CH description", "de-CH");
     EXPECT_EQ(ER_OK, status);
+    EXPECT_TRUE(aboutData.IsValid("de-CH"));
+
+    // Test requesting languages that resolve to the language that happens
+    // to be the default language.
+    VerifyAppName(aboutData, "EN", "en appName");
+    VerifyAppName(aboutData, "EN-US", "en appName");
+    VerifyAppName(aboutData, "en-a-bbb-x-a-ccc", "en appName");
+
+    // Test requesting languages that resolve to a language other than
+    // the default language.
+    VerifyAppName(aboutData, "DE-CH", "de-CH appName");
+    VerifyAppName(aboutData, "de-ch-1901", "de-CH appName");
+
+    // Test requesting languages that resolve to nothing and so use the
+    // default language.
+    VerifyAppName(aboutData, "de", "en appName");
+    VerifyAppName(aboutData, "fr", "en appName");
+}
+
+static const char* targetLanguages[] = { "en", "de-CH" };
+class MyAboutDataTranslator : public Translator {
+  public:
+
+    MyAboutDataTranslator()
+    {
+        appName[0].Set("s", "en appName");
+        appName[1].Set("s", "de-CH appName");
+        manufacturer[0].Set("s", "en manufacturer");
+        manufacturer[1].Set("s", "de-CH manufacturer");
+        description[0].Set("s", "en description");
+        description[1].Set("s", "de-CH description");
+    }
+
+    virtual ~MyAboutDataTranslator() { }
+
+    virtual size_t NumTargetLanguages() {
+        return 2;
+    }
+
+    virtual void GetTargetLanguage(size_t index, qcc::String& ret) {
+        ret.assign(targetLanguages[index]);
+    }
+
+    virtual QStatus TranslateToMsgArg(const char* sourceLanguage,
+                                      const char* targetLanguage, const char* source, ajn::MsgArg*& msgarg)
+    {
+        QCC_UNUSED(sourceLanguage);
+        size_t i = 0;
+
+        for (i = 0; i < 2; i++) {
+            if (strcasecmp(targetLanguage, targetLanguages[i]) == 0) {
+                break;
+            }
+        }
+        if (i == 2) {
+            return ER_LANGUAGE_NOT_SUPPORTED;
+        }
+
+        if (0 == strcmp(source, "AppName")) {
+            msgarg = &appName[i];
+            return ER_OK;
+        }
+
+        if (0 == strcmp(source, "Manufacturer")) {
+            msgarg = &manufacturer[i];
+            return ER_OK;
+        }
+
+        if (0 == strcmp(source, "Description")) {
+            msgarg = &description[i];
+            return ER_OK;
+        }
+
+        return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
+    }
+
+  private:
+    MsgArg appName[2];
+    MsgArg manufacturer[2];
+    MsgArg description[2];
+};
+
+TEST(AboutDataTest, GetMsgArg_custom_translator)
+{
+    QStatus status = ER_FAIL;
+    AboutData aboutData("en");
+
+    uint8_t appId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
+    status = aboutData.SetAppId(appId, 16);
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetDeviceId("fakeID");
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetModelNumber("123456");
+    EXPECT_EQ(ER_OK, status);
+    status = aboutData.SetSoftwareVersion("0.1.2");
+    EXPECT_EQ(ER_OK, status);
+
+    MyAboutDataTranslator translator;
+    aboutData.SetTranslator(&translator);
+    EXPECT_TRUE(aboutData.IsValid());
     EXPECT_TRUE(aboutData.IsValid("de-CH"));
 
     // Test requesting languages that resolve to the language that happens
@@ -2065,7 +2165,7 @@ TEST(AboutDataTest, caseInsensitiveLanguageTag) {
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("en", language);
     /* set the device name in english the default name tag all lowercase "en" */
-    status = aboutData.SetDeviceName(qcc::String("Device").c_str());
+    status = aboutData.SetDeviceName("Device");
     EXPECT_EQ(ER_OK, status);
 
     /* set the device name in spanish the default name tag all lowercase "es" */

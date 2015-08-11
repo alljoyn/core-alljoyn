@@ -59,26 +59,16 @@ class AboutData::Internal {
         }
     };
 
-    /**
-     * key: Field Name
-     * value: map of language / Data
-     */
-    std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> > localizedPropertyStore;
+    MsgArgTableTranslator defaultTranslator;
+    Translator* translator;
 
     /**
-     * typedef const iterator
+     * The pseudo-language of a Field Name.  Currently this is always the
+     * empty string, and is used to allow a translator to "translate"
+     * a field name into its description by identifying the source text
+     * as field name.
      */
-    typedef std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> >::const_iterator localizedPropertyStoreConstIterator;
-
-    /**
-     * local member variable for supported languages
-     */
-    std::set<qcc::String, CaseInsensitiveCompare> supportedLanguages;
-
-    /**
-     * typedef supported languages iterator
-     */
-    typedef std::set<qcc::String, CaseInsensitiveCompare>::iterator supportedLanguagesIterator;
+    qcc::String keyLanguage;
 
     /**
      * mutex lock to protect the property store.
