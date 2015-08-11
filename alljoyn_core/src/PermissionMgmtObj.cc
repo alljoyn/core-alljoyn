@@ -427,6 +427,7 @@ static void GenerateDefaultPolicy(const KeyInfoNISTP256& certificateAuthority, c
         acls[1].SetPeers(1, peers);
 
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("*");
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("*");
@@ -449,6 +450,7 @@ static void GenerateDefaultPolicy(const KeyInfoNISTP256& certificateAuthority, c
         acls[2].SetPeers(1, peers);
 
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("org.alljoyn.Bus.Security.ManagedApplication");
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("InstallMembership");
@@ -463,6 +465,7 @@ static void GenerateDefaultPolicy(const KeyInfoNISTP256& certificateAuthority, c
         acls[3].SetPeers(1, peers);
 
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("*");
         PermissionPolicy::Rule::Member prms[3];
         prms[0].SetMemberName("*");

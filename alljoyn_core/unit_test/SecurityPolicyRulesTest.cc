@@ -257,6 +257,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
         const size_t manifestSize = 1;
         PermissionPolicy::Rule manifest[manifestSize];
+        manifest[0].SetObjPath("*");
         manifest[0].SetInterfaceName("*");
         manifest[0].SetMembers(1, member);
 
@@ -601,6 +602,7 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -756,6 +758,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
         {
             PermissionPolicy::Rule rules[1];
 
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -813,6 +816,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Echo", PermissionPolicy::Rule::Member::METHOD_CALL, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, members);
     }
@@ -847,6 +851,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Echo", PermissionPolicy::Rule::Member::METHOD_CALL, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, members);
     }
@@ -1018,6 +1023,7 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -1170,6 +1176,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -1221,6 +1228,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, members);
     }
@@ -1255,6 +1263,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, members);
     }
@@ -1442,6 +1451,7 @@ TEST_P(SecurityPolicyRulesGetAllProperties, DISABLED_PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member methods[2];
@@ -1616,6 +1626,7 @@ TEST_P(SecurityPolicyRulesGetAllPropertiesManifest, DISABLED_PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[2];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[2];
@@ -1681,6 +1692,7 @@ TEST_P(SecurityPolicyRulesGetAllPropertiesManifest, DISABLED_PolicyRules)
         PermissionPolicy::Rule::Member members[2];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1Prop1ActionMask);
         members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1Prop2ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(2, members);
     }
@@ -1716,6 +1728,7 @@ TEST_P(SecurityPolicyRulesGetAllPropertiesManifest, DISABLED_PolicyRules)
         PermissionPolicy::Rule::Member members[2];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2Prop1ActionMask);
         members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2Prop2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(2, members);
     }
@@ -1886,6 +1899,7 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -2038,6 +2052,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[2];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member members[1];
@@ -2099,6 +2114,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, members);
     }
@@ -2133,6 +2149,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member members[1];
         members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, members);
     }
@@ -2311,6 +2328,7 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
         }
         {
             PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(interfaceName);
             {
                 PermissionPolicy::Rule::Member peer2Prms[1];
@@ -2530,6 +2548,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member member[1];
         member[0].Set("Chirp", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer1ActionMask);
+        peer1Manifest[0].SetObjPath("*");
         peer1Manifest[0].SetInterfaceName(interfaceName);
         peer1Manifest[0].SetMembers(1, member);
     }
@@ -2565,6 +2584,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     {
         PermissionPolicy::Rule::Member member[1];
         member[0].Set("Chirp", PermissionPolicy::Rule::Member::SIGNAL, GetParam().peer2ActionMask);
+        peer2Manifest[0].SetObjPath("*");
         peer2Manifest[0].SetInterfaceName(interfaceName);
         peer2Manifest[0].SetMembers(1, member);
     }
@@ -4328,6 +4348,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
             rules[9].SetInterfaceName("*");
             {
                 PermissionPolicy::Rule::Member members[1];
+                members[0].SetMemberName("*");
                 members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -4619,11 +4640,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
                                0 /*DENY*/);
                 rules[8].SetMembers(1, members);
             }
-            //rule 10 Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+            //rule 10 Object Path: *, Interface: *, Member Name: *; Action: PROVIDE|OBSERVE|MODIFY
             rules[9].SetObjPath("*");
             rules[9].SetInterfaceName("*");
             {
                 PermissionPolicy::Rule::Member members[1];
+                members[0].SetMemberName("*");
                 members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -4843,10 +4865,11 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_13)
                        0 /*DENY*/);
         peer1Manifest[8].SetMembers(1, members);
     }
-    { //Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+    { //Rule 10: Object Path: *, Interface: *, Member Name: *; Action: PROVIDE|OBSERVE|MODIFY
         peer1Manifest[9].SetObjPath("*");
         peer1Manifest[9].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                  PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -5071,10 +5094,11 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_14)
                        0 /*DENY*/);
         peer2Manifest[8].SetMembers(1, members);
     }
-    { //Rule 10: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+    { //Rule 10: Object Path: *, Interface: *, Member Name: *; Action: PROVIDE|OBSERVE|MODIFY
         peer2Manifest[9].SetObjPath("*");
         peer2Manifest[9].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                  PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -5215,10 +5239,11 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_15)
                        0 /*DENY*/);
         peer1Manifest[0].SetMembers(1, members);
     }
-    { //Rule 2: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+    { //Rule 2: Object Path: *, Interface: *, Member Name: *; Action: PROVIDE|OBSERVE|MODIFY
         peer1Manifest[1].SetObjPath("*");
         peer1Manifest[1].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |
                                  PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -5364,10 +5389,11 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_16)
                        0 /*DENY*/);
         peer2Manifest[0].SetMembers(1, members);
     }
-    { //Rule 2: Object Path: *, Interface: *, Member Name: NS; Action: PROVIDE|OBSERVE|MODIFY
+    { //Rule 2: Object Path: *, Interface: *, Member Name: *; Action: PROVIDE|OBSERVE|MODIFY
         peer2Manifest[1].SetObjPath("*");
         peer2Manifest[1].SetInterfaceName("*");
         PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
         members[0].SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
         members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                                  PermissionPolicy::Rule::Member::ACTION_MODIFY |

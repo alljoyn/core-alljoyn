@@ -135,11 +135,13 @@ static QStatus GenerateWildCardPolicy(BusAttachment& bus, BusAttachment& targetB
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule rules[1];
+    rules[0].SetObjPath("*");
     rules[0].SetInterfaceName("org.allseenalliance.control.*");
     PermissionPolicy::Rule::Member prms[3];
     prms[0].SetMemberName("*");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    prms[1].SetMemberName("*");
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
     prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
     prms[2].SetMemberName("*");
@@ -166,6 +168,7 @@ static QStatus GenerateAllowAllPeersPolicy(BusAttachment& bus, BusAttachment& ta
         peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
         acls[0].SetPeers(1, peers);
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("On");
@@ -180,6 +183,7 @@ static QStatus GenerateAllowAllPeersPolicy(BusAttachment& bus, BusAttachment& ta
         peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
         acls[1].SetPeers(1, peers);
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("Off");
@@ -206,6 +210,7 @@ static QStatus GenerateNoOutboundGetPropertyPolicy(BusAttachment& bus, BusAttach
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acls[0].SetPeers(ArraySize(peers), peers);
     PermissionPolicy::Rule rules[1];
+    rules[0].SetObjPath("*");
     rules[0].SetInterfaceName("org.allseenalliance.control.*");
     PermissionPolicy::Rule::Member prms[1];
     prms[0].SetMemberName("*");
@@ -231,6 +236,7 @@ static QStatus GenerateGetAllPropertiesPolicy(BusAttachment& bus, BusAttachment&
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acls[0].SetPeers(ArraySize(peers), peers);
     PermissionPolicy::Rule rules[1];
+    rules[0].SetObjPath("*");
     rules[0].SetInterfaceName("org.allseenalliance.control.*");
     PermissionPolicy::Rule::Member prms[1];
     prms[0].SetMemberName("*");
@@ -288,6 +294,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
             prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
             rules[0].SetMembers(1, prms);
         }
+        rules[1].SetObjPath("*");
         rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         {
             PermissionPolicy::Rule::Member prms[2];
@@ -298,6 +305,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
             prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
             rules[1].SetMembers(2, prms);
         }
+        rules[2].SetObjPath("*");
         rules[2].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
         {
             PermissionPolicy::Rule::Member prms[1];
@@ -320,6 +328,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
         acls[1].SetPeers(1, peers);
         PermissionPolicy::Rule rules[2];
         {
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
             PermissionPolicy::Rule::Member prms[5];
             prms[0].SetMemberName("Up");
@@ -340,6 +349,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
             rules[0].SetMembers(5, prms);
         }
         {
+            rules[1].SetObjPath("*");
             rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
             PermissionPolicy::Rule::Member prms[1];
             prms[0].SetMemberName("*");
@@ -361,6 +371,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
         PermissionPolicy::Rule rules[3];
         {
             rules[0].SetObjPath("/control/settings");
+            rules[0].SetInterfaceName("*");
             PermissionPolicy::Rule::Member prms[1];
             prms[0].SetMemberName("*");
             prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);  /* only allow read */
@@ -376,6 +387,7 @@ static QStatus GeneratePolicy(BusAttachment& bus, BusAttachment& targetBus, Perm
         }
         {
             rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
             PermissionPolicy::Rule::Member prms[1];
             prms[0].SetMemberName("*");
             prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
@@ -424,6 +436,7 @@ static void AddSpecificCertAuthorityToPolicy(PermissionPolicy& policy, const Key
         acls[newAclsSize - 1].SetPeers(1, peers);
         PermissionPolicy::Rule rules[2];
         {
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
             PermissionPolicy::Rule::Member prms[5];
             prms[0].SetMemberName("Up");
@@ -444,6 +457,7 @@ static void AddSpecificCertAuthorityToPolicy(PermissionPolicy& policy, const Key
             rules[0].SetMembers(5, prms);
         }
         {
+            rules[1].SetObjPath("*");
             rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
             PermissionPolicy::Rule::Member prms[1];
             prms[0].SetMemberName("*");
@@ -473,6 +487,7 @@ static QStatus GenerateSmallAnyUserPolicy(BusAttachment& bus, BusAttachment& tar
         acls[0].SetPeers(1, peers);
         PermissionPolicy::Rule rules[2];
         {
+            rules[0].SetObjPath("*");
             rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
             PermissionPolicy::Rule::Member prms[2];
             prms[0].SetMemberName("Off");
@@ -484,6 +499,7 @@ static QStatus GenerateSmallAnyUserPolicy(BusAttachment& bus, BusAttachment& tar
             rules[0].SetMembers(2, prms);
         }
         {
+            rules[1].SetObjPath("*");
             rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
             PermissionPolicy::Rule::Member prms[1];
             prms[0].SetMemberName("ChannelChanged");
@@ -537,6 +553,7 @@ static QStatus GenerateFullAccessAnyUserPolicy(BusAttachment& bus, BusAttachment
     acl.SetPeers(1, peers);
     PermissionPolicy::Rule rules[2];
     {
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         PermissionPolicy::Rule::Member prms[2];
         prms[0].SetMemberName("Off");
@@ -548,6 +565,7 @@ static QStatus GenerateFullAccessAnyUserPolicy(BusAttachment& bus, BusAttachment
         rules[0].SetMembers(2, prms);
     }
     {
+        rules[1].SetObjPath("*");
         rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
         size_t count = 0;
         PermissionPolicy::Rule::Member* prms = NULL;
@@ -585,6 +603,7 @@ static QStatus GenerateAnyUserDeniedPrefixPolicy(BusAttachment& bus, BusAttachme
     acl.SetPeers(1, peers);
     PermissionPolicy::Rule rules[2];
     {
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         PermissionPolicy::Rule::Member prms[2];
         prms[0].SetMemberName("Of*");
@@ -595,6 +614,7 @@ static QStatus GenerateAnyUserDeniedPrefixPolicy(BusAttachment& bus, BusAttachme
         rules[0].SetMembers(2, prms);
     }
     {
+        rules[1].SetObjPath("*");
         rules[1].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("ChannelChanged");
@@ -619,6 +639,7 @@ static QStatus GenerateFullAccessOutgoingPolicy(BusAttachment& bus, BusAttachmen
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acl.SetPeers(1, peers);
     PermissionPolicy::Rule rules[1];
+    rules[0].SetObjPath("*");
     rules[0].SetInterfaceName("*");
     PermissionPolicy::Rule::Member* prms = NULL;
     size_t count = 0;
@@ -658,6 +679,7 @@ static QStatus GenerateFullAnonymousAccessOutgoingPolicy(BusAttachment& bus, Bus
     peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
     acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule rules[1];
+    rules[0].SetObjPath("*");
     rules[0].SetInterfaceName("*");
     PermissionPolicy::Rule::Member prms[1];
     prms[0].SetMemberName("*");
@@ -688,6 +710,7 @@ static QStatus GenerateFullAccessOutgoingPolicyWithGuestServices(BusAttachment& 
         peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
         acls[0].SetPeers(1, peers);
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("*");
         PermissionPolicy::Rule::Member* prms = NULL;
         size_t count = 0;
@@ -720,6 +743,7 @@ static QStatus GenerateFullAccessOutgoingPolicyWithGuestServices(BusAttachment& 
         peers[0].SetKeyInfo(&keyInfo);
         acls[1].SetPeers(1, peers);
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("*");
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("*");
@@ -751,6 +775,7 @@ static QStatus GenerateGuildSpecificAccessOutgoingPolicy(BusAttachment& bus, Bus
         peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
         acls[0].SetPeers(1, peers);
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         PermissionPolicy::Rule::Member prms[3];
         prms[0].SetMemberName("*");
@@ -778,6 +803,7 @@ static QStatus GenerateGuildSpecificAccessOutgoingPolicy(BusAttachment& bus, Bus
         peers[0].SetKeyInfo(&keyInfo);
         acls[1].SetPeers(1, peers);
         PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
         PermissionPolicy::Rule::Member prms[3];
         prms[0].SetMemberName("*");
@@ -835,6 +861,7 @@ static QStatus GeneratePolicyPeerPublicKey(BusAttachment& bus, BusAttachment& ta
         rules[0].SetMembers(4, prms);
     }
     {
+        rules[1].SetObjPath("*");
         rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("*");
@@ -863,6 +890,7 @@ static QStatus GeneratePolicyDenyPeerPublicKey(BusAttachment& bus, BusAttachment
     acls[0].SetPeers(1, peers);
     PermissionPolicy::Rule rules[2];
     {
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
         PermissionPolicy::Rule::Member prms[4];
         prms[0].SetMemberName("Up");
@@ -895,6 +923,7 @@ static QStatus GenerateAllowAllManifest(PermissionPolicy::Rule** retRules, size_
 {
     *count = 1;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    rules[0].SetObjPath("*");
     rules[0].SetInterfaceName("*");
     PermissionPolicy::Rule::Member prms[1];
     prms[0].SetMemberName("*");
@@ -909,6 +938,7 @@ static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, 
     *count = 2;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
     {
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
         PermissionPolicy::Rule::Member prms[4];
         prms[0].SetMemberName("Up");
@@ -926,6 +956,7 @@ static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, 
         rules[0].SetMembers(4, prms);
     }
     {
+        rules[1].SetObjPath("*");
         rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("*");
@@ -942,6 +973,7 @@ static QStatus GenerateManifestNoGetAllProperties(PermissionPolicy::Rule** retRu
     *count = 1;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
     {
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("*");
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("Volume");
@@ -957,6 +989,7 @@ static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Permissio
 {
     *count = 2;
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    rules[0].SetObjPath("*");
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     {
         PermissionPolicy::Rule::Member prms[5];
@@ -986,6 +1019,7 @@ static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Permissio
         rules[0].SetMembers(5, prms);
     }
     {
+        rules[1].SetObjPath("*");
         rules[1].SetInterfaceName(BasePermissionMgmtTest::ONOFF_IFC_NAME);
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("*");
@@ -1003,6 +1037,7 @@ static QStatus GenerateManifestTemplate(PermissionPolicy::Rule** retRules, size_
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
     // Rule 1
     {
+        rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
         PermissionPolicy::Rule::Member prms[2];
         prms[0].SetMemberName("Up");
@@ -1015,6 +1050,7 @@ static QStatus GenerateManifestTemplate(PermissionPolicy::Rule** retRules, size_
     }
     // Rule 2
     {
+        rules[1].SetObjPath("*");
         rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
         PermissionPolicy::Rule::Member prms[1];
         prms[0].SetMemberName("*");
