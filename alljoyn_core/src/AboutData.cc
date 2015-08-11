@@ -71,6 +71,9 @@ AboutData::AboutData(const MsgArg arg, const char* language) {
 AboutData::AboutData(const AboutData& src) {
     InitializeFieldDetails();
     *aboutDataInternal = *(src.aboutDataInternal);
+    if (src.aboutDataInternal->translator == &src.aboutDataInternal->defaultTranslator) {
+        aboutDataInternal->translator = &aboutDataInternal->defaultTranslator;
+    }
 }
 
 AboutData& AboutData::operator=(const AboutData& src) {
@@ -81,6 +84,9 @@ AboutData& AboutData::operator=(const AboutData& src) {
     aboutDataInternal = NULL;
     InitializeFieldDetails();
     *aboutDataInternal = *(src.aboutDataInternal);
+    if (src.aboutDataInternal->translator == &src.aboutDataInternal->defaultTranslator) {
+        aboutDataInternal->translator = &aboutDataInternal->defaultTranslator;
+    }
     return *this;
 }
 
@@ -101,6 +107,7 @@ void AboutData::InitializeFieldDetails() {
     aboutDataInternal->aboutFields[AJ_SOFTWARE_VERSION] = FieldDetails(REQUIRED, "s");
     aboutDataInternal->aboutFields[HARDWARE_VERSION] = FieldDetails(EMPTY_MASK, "s");
     aboutDataInternal->aboutFields[SUPPORT_URL] = FieldDetails(EMPTY_MASK, "s");
+    aboutDataInternal->translator = &aboutDataInternal->defaultTranslator;
 }
 
 AboutData::~AboutData()
@@ -223,6 +230,15 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
 
 bool AboutData::IsValid(const char* language)
 {
+    if (language == nullptr) {
+        char* defaultLanguage;
+        if (GetDefaultLanguage(&defaultLanguage) != ER_OK) {
+            // No default language exists.
+            return false;
+        }
+        language = const_cast<char*>(defaultLanguage);
+    }
+
     /*
      * required fields
      * AppId
@@ -244,25 +260,12 @@ bool AboutData::IsValid(const char* language)
      */
     typedef std::map<qcc::String, FieldDetails>::const_iterator it_aboutFields;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
-        if (IsFieldRequired(it->first.c_str())) {
-            if (IsFieldLocalized(it->first.c_str())) {
-                if (aboutDataInternal->localizedPropertyStore.find(it->first) == aboutDataInternal->localizedPropertyStore.end()) {
+        const char* fieldname = it->first.c_str();
+        if (IsFieldRequired(fieldname)) {
+            if (IsFieldLocalized(fieldname)) {
+                MsgArg* arg;
+                if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), language, fieldname, arg) != ER_OK) || (arg->typeId == ALLJOYN_INVALID)) {
                     return false;
-                } else {
-                    if (language == NULL) {
-                        char* defaultLanguage;
-                        QStatus status = aboutDataInternal->propertyStore[DEFAULT_LANGUAGE].Get(aboutDataInternal->aboutFields[DEFAULT_LANGUAGE].signature.c_str(), &defaultLanguage);
-                        if (status != ER_OK) {
-                            return false;
-                        }
-                        if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) == aboutDataInternal->localizedPropertyStore[it->first].end()) {
-                            return false;
-                        }
-                    } else {
-                        if (aboutDataInternal->localizedPropertyStore[it->first].find(language) == aboutDataInternal->localizedPropertyStore[it->first].end()) {
-                            return false;
-                        }
-                    }
                 }
             } else {
                 if (aboutDataInternal->propertyStore.find(it->first) == aboutDataInternal->propertyStore.end()) {
@@ -297,14 +300,14 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
             return status;
         }
     }
-    for (size_t i = 0; i < numFields; ++i) {
+    for (size_t i = 0; (i < numFields) && (status == ER_OK); ++i) {
         char* fieldName;
         MsgArg* fieldValue;
         status = fields[i].Get("{sv}", &fieldName, &fieldValue);
         if (status != ER_OK) {
             return status;
         }
-        // OEM specific field found add that field to the aboutDataInternal->m_aboutFields
+        // OEM-specific field found. Add that field to the aboutDataInternal->m_aboutFields
         if (aboutDataInternal->aboutFields.find(fieldName) == aboutDataInternal->aboutFields.end()) {
             aboutDataInternal->aboutFields[fieldName] = FieldDetails(LOCALIZED, fieldValue->Signature().c_str());
         }
@@ -313,16 +316,16 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
         }
         if (IsFieldLocalized(fieldName)) {
             if (language != NULL) {
-                aboutDataInternal->localizedPropertyStore[fieldName][language] = *fieldValue;
+                status = aboutDataInternal->translator->AddMsgArgTranslation(fieldName, fieldValue, language);
             } else {
-                aboutDataInternal->localizedPropertyStore[fieldName][defaultLanguage] = *fieldValue;
+                status = aboutDataInternal->translator->AddMsgArgTranslation(fieldName, fieldValue, defaultLanguage);
             }
-
         } else {
             aboutDataInternal->propertyStore[fieldName] = *fieldValue;
-            //Since the GetSupportedLanguages function looks at the member
-            // variable m_supportedLanguages we must set up the make sure
-            // the member function is filled in.
+
+            // Since the GetSupportedLanguages function looks at the
+            // translator's target languages, we must set up the make sure
+            // the member is filled in.
             if (strcmp(SUPPORTED_LANGUAGES, fieldName) == 0) {
                 size_t language_count;
                 MsgArg* languagesArg;
@@ -330,7 +333,7 @@ QStatus AboutData::CreatefromMsgArg(const MsgArg& arg, const char* language)
                 for (size_t i = 0; i < language_count; ++i) {
                     char* lang;
                     languagesArg[i].Get("s", &lang);
-                    aboutDataInternal->supportedLanguages.insert(lang);
+                    status = aboutDataInternal->translator->AddTargetLanguage(lang);
                 }
             }
         }
@@ -576,18 +579,16 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
     //TODO add in logic to check information about the tag all of the tags must
     //     conform to the RFC5646 there is currently nothing to make sure the
     //     tags conform to this RFC
-    QStatus status = ER_OK;
-
-    std::pair<AboutData::Internal::supportedLanguagesIterator, bool> ret =  aboutDataInternal->supportedLanguages.insert(language);
-    // A new language has been added rebuild the MsgArg and update the field.
-    if (true == ret.second) {
-        size_t supportedLangsNum = aboutDataInternal->supportedLanguages.size();
-        //char* supportedLangs[supportedLangsNum];
+    bool added;
+    QStatus status = aboutDataInternal->translator->AddTargetLanguage(language, &added);
+    if ((status == ER_OK) && added) {
+        // A new language has been added. Rebuild the MsgArg and update the field.
+        size_t supportedLangsNum = aboutDataInternal->translator->NumTargetLanguages();
         const char** supportedLangs = new const char*[supportedLangsNum];
-        size_t count = 0;
-        for (AboutData::Internal::supportedLanguagesIterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
-            supportedLangs[count] = it->c_str();
-            ++count;
+        for (size_t count = 0; count < supportedLangsNum; count++) {
+            qcc::String lang;
+            aboutDataInternal->translator->GetTargetLanguage(count, lang);
+            supportedLangs[count] = lang.c_str();
         }
         MsgArg arg;
         status = arg.Set(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
@@ -602,13 +603,15 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
 
 size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
 {
-    if (languageTags == NULL) {
-        return aboutDataInternal->supportedLanguages.size();
+    size_t numTargetLanguages = aboutDataInternal->translator->NumTargetLanguages();
+    if (!languageTags) {
+        return numTargetLanguages;
     }
-    size_t count = 0;
-    for (AboutData::Internal::supportedLanguagesIterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end() && count < num; ++it) {
-        languageTags[count] = it->c_str();
-        ++count;
+    qcc::String language;
+    size_t count;
+    for (count = 0; (count < numTargetLanguages) && (count < num); count++) {
+        aboutDataInternal->translator->GetTargetLanguage(count, language);
+        languageTags[count] = language.c_str();
     }
     return count;
 }
@@ -744,8 +747,8 @@ QStatus AboutData::GetSupportUrl(char** supportUrl)
 
 QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* language) {
     QStatus status = ER_OK;
-    // The user is adding an OEM specific field.
-    // At this time OEM specific fields are added as
+    // The user is adding an OEM-specific field.
+    // At this time OEM-specific fields are added as
     //    not required
     //    not announced
     //    if the field is a string it can be localized not localized otherwise
@@ -767,10 +770,11 @@ QStatus AboutData::SetField(const char* name, ajn::MsgArg value, const char* lan
             if (status != ER_OK) {
                 return status;
             }
-            aboutDataInternal->localizedPropertyStore[name][static_cast<qcc::String>(defaultLanguage)] = value;
+            aboutDataInternal->translator->AddMsgArgTranslation(name, &value, defaultLanguage);
         } else {
-            aboutDataInternal->localizedPropertyStore[name][language] = value;
-            //implicitly add all language tags to the supported languages
+            aboutDataInternal->translator->AddMsgArgTranslation(name, &value, language);
+
+            // Implicitly add all language tags to the supported languages.
             status = SetSupportedLanguage(language);
             if (status != ER_OK) {
                 return status;
@@ -794,9 +798,9 @@ QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* l
             if (status != ER_OK) {
                 return status;
             }
-            value = &(aboutDataInternal->localizedPropertyStore[name][static_cast<qcc::String>(defaultLanguage)]);
+            status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, name, value);
         } else {
-            value = &(aboutDataInternal->localizedPropertyStore[name][language]);
+            status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), language, name, value);
         }
     }
     return status;
@@ -804,8 +808,9 @@ QStatus AboutData::GetField(const char* name, ajn::MsgArg*& value, const char* l
 
 size_t AboutData::GetFields(const char** fields, size_t num_fields) const
 {
+    size_t numLocalizedFields = aboutDataInternal->defaultTranslator.NumFields();
     if (fields == NULL) {
-        return (aboutDataInternal->propertyStore.size() + aboutDataInternal->localizedPropertyStore.size());
+        return (aboutDataInternal->propertyStore.size() + numLocalizedFields);
     }
     size_t field_count = 0;
     std::map<qcc::String, MsgArg>::const_iterator pstore_it;
@@ -816,49 +821,12 @@ size_t AboutData::GetFields(const char** fields, size_t num_fields) const
         ++field_count;
     }
 
-    AboutData::Internal::localizedPropertyStoreConstIterator lpstore_it;
-    for (lpstore_it = aboutDataInternal->localizedPropertyStore.begin();
-         (lpstore_it != aboutDataInternal->localizedPropertyStore.end()) && (field_count < num_fields);
-         ++lpstore_it) {
-        fields[field_count] = lpstore_it->first.c_str();
+    qcc::String text;
+    for (size_t index = 0; index < numLocalizedFields; index++) {
+        fields[field_count] = aboutDataInternal->defaultTranslator.GetFieldId(index);
         ++field_count;
     }
     return field_count;
-}
-
-// Find the best matching language tag, using the lookup algorithm in
-// RFC 4647 section 3.4.  This algorithm requires that the "supported"
-// languages be the least specific they can (e.g., "en" in order to match
-// both "en" and "en-US" if requested), and the "requested" language be
-// the most specific it can (e.g., "en-US" in order to match either "en-US"
-// or "en" if supported).
-const char* AboutData::GetBestLanguage(const char* requested) const
-{
-    if ((requested != NULL) && (*requested != 0)) {
-        qcc::String languageToCheck(requested);
-        for (;;) {
-            // Look for a supported language matching the language to check.
-            for (AboutData::Internal::supportedLanguagesIterator it = aboutDataInternal->supportedLanguages.begin(); it != aboutDataInternal->supportedLanguages.end(); ++it) {
-                if (strcasecmp(it->c_str(), languageToCheck.c_str()) == 0) {
-                    return it->c_str();
-                }
-            }
-
-            // Drop the last subtag and try again.
-            size_t pos = languageToCheck.find_last_of('-');
-            if (pos == qcc::String::npos) {
-                break;
-            }
-            languageToCheck.erase(pos);
-        }
-    }
-
-    // No match found, so return the default language.
-    char* bestLanguage = NULL;
-    if (GetDefaultLanguage(&bestLanguage) != ER_OK) {
-        return NULL;
-    }
-    return bestLanguage;
 }
 
 QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
@@ -868,48 +836,64 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
         return ER_ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD;
     }
 
-    const char* bestLanguage = GetBestLanguage(language);
+    char* defaultLanguage = NULL;
+    GetDefaultLanguage(&defaultLanguage);
+    // A default language must exist or IsValid would have been false above.
+    assert(defaultLanguage != NULL);
+
+    qcc::String defaultLang(defaultLanguage);
+    qcc::String bestLanguage;
+    aboutDataInternal->translator->GetBestLanguage(language, defaultLang, bestLanguage);
 
     // At least a default language must exist or IsValid would have been
     // false above.
-    assert(bestLanguage != NULL);
+    assert(bestLanguage.c_str() != NULL);
 
-    size_t dictonarySize = 0;
+    size_t dictionarySize = 0;
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
-        if (IsFieldRequired(it->first.c_str())) {
-            dictonarySize++;
+        const char* fieldname = it->first.c_str();
+        if (IsFieldRequired(fieldname)) {
+            dictionarySize++;
         } else {
-            if (IsFieldLocalized(it->first.c_str())) {
-                if (aboutDataInternal->localizedPropertyStore[it->first].find(bestLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
-                    dictonarySize++;
+            if (IsFieldLocalized(fieldname)) {
+                MsgArg* arg;
+                if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), bestLanguage.c_str(), fieldname, arg) == ER_OK) && (arg->typeId == ALLJOYN_STRING)) {
+                    dictionarySize++;
                 }
             } else {
                 if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
-                    dictonarySize++;
+                    dictionarySize++;
                 }
             }
         }
     }
 
-    MsgArg* aboutDictionary = new MsgArg[dictonarySize];
+    MsgArg* aboutDictionary = new MsgArg[dictionarySize];
     size_t count = 0;
 
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
-        if (IsFieldRequired(it->first.c_str())) {
-            if (IsFieldLocalized(it->first.c_str())) {
-                status = aboutDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][bestLanguage]);
+        const char* fieldname = it->first.c_str();
+        if (IsFieldRequired(fieldname)) {
+            if (IsFieldLocalized(fieldname)) {
+                MsgArg* arg;
+                status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), bestLanguage.c_str(), fieldname, arg);
+                if (status == ER_OK) {
+                    status = aboutDictionary[count++].Set("{sv}", fieldname, arg);
+                }
             } else {
-                status = aboutDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
+                status = aboutDictionary[count++].Set("{sv}", fieldname, &aboutDataInternal->propertyStore[it->first]);
             }
         } else {
-            if (IsFieldLocalized(it->first.c_str())) {
-                if (aboutDataInternal->localizedPropertyStore[it->first].find(bestLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
-                    status = aboutDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][bestLanguage]);
+            if (IsFieldLocalized(fieldname)) {
+                MsgArg* arg;
+                if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), bestLanguage.c_str(), fieldname, arg) == ER_OK) &&
+                    (arg->typeId == ALLJOYN_STRING)) {
+                    status = aboutDictionary[count++].Set("{sv}", fieldname, arg);
                 }
             } else {
                 if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
-                    status = aboutDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
+                    status = aboutDictionary[count++].Set("{sv}", fieldname, &aboutDataInternal->propertyStore[it->first]);
                 }
             }
         }
@@ -918,9 +902,9 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
             return status;
         }
     }
-    assert(dictonarySize == count);
+    assert(dictionarySize == count);
 
-    msgArg->Set("a{sv}", dictonarySize, aboutDictionary);
+    msgArg->Set("a{sv}", dictionarySize, aboutDictionary);
     msgArg->Stabilize();
     delete [] aboutDictionary;
     return status;
@@ -940,40 +924,47 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
         return status;
     }
 
-    size_t dictonarySize = 0;
+    size_t dictionarySize = 0;
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldAnnounced(it->first.c_str())) {
             if (IsFieldRequired(it->first.c_str())) {
-                dictonarySize++;
+                dictionarySize++;
             } else {
                 if (IsFieldLocalized(it->first.c_str())) {
-                    if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
-                        dictonarySize++;
+                    MsgArg* arg;
+                    if ((aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, it->first.c_str(), arg) == ER_OK) && (arg->typeId == ALLJOYN_STRING)) {
+                        dictionarySize++;
                     }
                 } else {
                     if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
-                        dictonarySize++;
+                        dictionarySize++;
                     }
                 }
             }
         }
     }
 
-    MsgArg* announceDictionary = new MsgArg[dictonarySize];
+    MsgArg* announceDictionary = new MsgArg[dictionarySize];
     size_t count = 0;
     for (it_aboutFields it = aboutDataInternal->aboutFields.begin(); it != aboutDataInternal->aboutFields.end(); ++it) {
         if (IsFieldAnnounced(it->first.c_str())) {
             if (IsFieldRequired(it->first.c_str())) {
                 if (IsFieldLocalized(it->first.c_str())) {
-                    status = announceDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][defaultLanguage]);
+                    MsgArg* arg;
+                    status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, it->first.c_str(), arg);
+                    if (status == ER_OK) {
+                        status = announceDictionary[count++].Set("{sv}", it->first.c_str(), arg);
+                    }
                 } else {
                     status = announceDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->propertyStore[it->first]);
                 }
             } else {
                 if (IsFieldLocalized(it->first.c_str())) {
-                    if (aboutDataInternal->localizedPropertyStore[it->first].find(defaultLanguage) != aboutDataInternal->localizedPropertyStore[it->first].end()) {
-                        status = announceDictionary[count++].Set("{sv}", it->first.c_str(), &aboutDataInternal->localizedPropertyStore[it->first][defaultLanguage]);
+                    MsgArg* arg;
+                    status = aboutDataInternal->translator->TranslateToMsgArg(aboutDataInternal->keyLanguage.c_str(), defaultLanguage, it->first.c_str(), arg);
+                    if ((status == ER_OK) && (arg->typeId == ALLJOYN_STRING)) {
+                        status = announceDictionary[count++].Set("{sv}", it->first.c_str(), arg);
                     }
                 } else {
                     if (aboutDataInternal->propertyStore.find(it->first) != aboutDataInternal->propertyStore.end()) {
@@ -988,9 +979,9 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
         }
     }
 
-    assert(dictonarySize == count);
+    assert(dictionarySize == count);
 
-    msgArg->Set("a{sv}", dictonarySize, announceDictionary);
+    msgArg->Set("a{sv}", dictionarySize, announceDictionary);
     msgArg->Stabilize();
     delete [] announceDictionary;
     return status;
@@ -1032,4 +1023,15 @@ QStatus AboutData::SetNewFieldDetails(const char* fieldName, AboutFieldMask fiel
     }
     return ER_OK;
 }
+
+void AboutData::SetTranslator(Translator* translator)
+{
+    aboutDataInternal->translator = translator;
+}
+
+Translator* AboutData::GetTranslator() const
+{
+    return aboutDataInternal->translator;
+}
+
 } //end namespace ajn

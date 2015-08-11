@@ -76,11 +76,11 @@ class AboutProxy : public ProxyBusObject {
      * either "en-US" or "en" if supported).
      *
      * @param[in] languageTag The requested language.
-     * @param[out] data Reference of AboutData that is filled by the function
+     * @param[out] data Reference of AboutData that is filled by the function.
      *
      * @return
      *    - ER_OK if successful.
-     *    - ER_BUS_REPLY_IS_ERROR_MESSAGE on unknown failure
+     *    - ER_BUS_REPLY_IS_ERROR_MESSAGE on unknown failure.
      */
     QStatus GetAboutData(const char* languageTag, MsgArg& data);
 

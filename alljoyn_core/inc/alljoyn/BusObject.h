@@ -211,7 +211,7 @@ class BusObject : public MessageReceiver {
     /**
      * Set the introspection description for this BusObject.
      *
-     * Note that when SetDescriptoinTranslator is used the text in this method may
+     * Note that when SetDescriptionTranslator is used the text in this method may
      * actually be a "lookup key". When generating the introspection the "text" is first
      * passed to the Translator where the key should be used to lookup the actual
      * description. In such a case, language should be set to "".
@@ -222,8 +222,8 @@ class BusObject : public MessageReceiver {
     void SetDescription(const char* language, const char* text);
 
     /**
-     * Set the Translator that provides this BusObject's introspection description
-     * in multiple languages.
+     * Set the Translator that provides this BusObject's ability to translate text such as
+     * introspection descriptions and localized about data in multiple languages.
      *
      * @param translator The Translator instance.
      */
@@ -656,7 +656,7 @@ class BusObject : public MessageReceiver {
     /** Default Description */
     qcc::String description;
 
-    /** Provides descriptions in other languages */
+    /** Provides translation of text into other languages */
     Translator* translator;
 };
 

@@ -587,7 +587,7 @@ class InterfaceDescription {
     void SetDescriptionLanguage(const char* language);
 
     /**
-     * Get the language tag for the instrospection descriptions of this InterfaceDescription
+     * Get the language tag for the introspection descriptions of this InterfaceDescription
      *
      * @return The langauge tag
      */

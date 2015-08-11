@@ -939,7 +939,9 @@ const char* BusObject::GetDescription(const char* toLanguage, qcc::String& buffe
     }
 
     if (myTranslator) {
-        const char* ret = myTranslator->Translate(languageTag.c_str(), toLanguage, description.c_str(), buffer);
+        qcc::String bestLanguage;
+        myTranslator->GetBestLanguage(toLanguage, languageTag, bestLanguage);
+        const char* ret = myTranslator->Translate(languageTag.c_str(), bestLanguage.c_str(), description.c_str(), buffer);
         if (ret) {
             return ret;
         }
@@ -998,7 +1000,7 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
     bool hasDescription = false;
     bool someoneHasNoTranslator = false;
 
-    //First merge this objects languages...
+    // First merge this object's languages...
     if (!languageTag.empty()) {
         langs.insert(languageTag);
         hasDescription = true;
