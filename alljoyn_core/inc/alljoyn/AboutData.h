@@ -25,6 +25,7 @@
 #include <alljoyn/AboutKeys.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Status.h>
+#include <alljoyn/Translator.h>
 
 #include <qcc/String.h>
 
@@ -188,7 +189,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * If a language field is given this will return if all required fields are
      * listed for the given language.
      *
-     * If no language is given default language will be checked
+     * If no language is given, the default language will be checked
      *
      * @param[in] language IETF language tags specified by RFC 5646
      *
@@ -301,13 +302,20 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus GetDefaultLanguage(char** defaultLanguage) const;
 
     /**
-     * Get the best matching language according to RFC 4647 section 3.4.
+     * Set the Translator that provides this InterfaceDescription's
+     * introspection description in multiple languages.
      *
-     * @param[in] requested The requested IETF language range.
-     *
-     * @return A pointer to the best language tag, or NULL if none exists.
+     * @param[in] translator The Translator instance.
      */
-    const char* GetBestLanguage(const char* requested) const;
+    void SetTranslator(Translator* translator);
+
+    /**
+     * Get the Translator used to translate field values into multiple
+     * languages.
+     *
+     * @return The Translator instance.
+     */
+    Translator* GetTranslator() const;
 
     /**
      * Set the DeviceName to the AboutData
@@ -316,7 +324,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * DeviceName is part of the Announce signal
      * DeviceName can be localized for other languages
      *
-     * @param[in] deviceName the deviceName (UTF8 encoded string)
+     * @param[in] deviceName the deviceName (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the DeviceName will be set for the default language.
      *
@@ -335,7 +343,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * DeviceName is part of the Announce signal
      * DeviceName can be localized for other languages
      *
-     * @param[out] deviceName the deviceName found in the AboutData (UTF8 encoded string)
+     * @param[out] deviceName the deviceName found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the DeviceName for the default language will be returned.
      *
@@ -374,7 +382,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * AppName is part of the announce signal
      * AppName can be localized for other languages
      *
-     * @param[in] appName the AppName (UTF8 encoded string)
+     * @param[in] appName the AppName (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the AppName will be set for the default language.
      *
@@ -393,7 +401,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * AppName is part of the announce signal
      * AppName can be localized for other languages
      *
-     * @param[out] appName the AppName found in the AboutData (UTF8 encoded string)
+     * @param[out] appName the AppName found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the AppName for the default language will be returned.
      *
@@ -402,15 +410,15 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus GetAppName(char** appName, const char* language = NULL);
 
     /**
-     * Set the Manufacture to the AboutData
+     * Set the Manufacturer to the AboutData
      *
-     * Manufacture is required
-     * Manufacture is part of the announce signal
-     * Manufacture can be localized for other languages
+     * Manufacturer is required
+     * Manufacturer is part of the announce signal
+     * Manufacturer can be localized for other languages
      *
-     * @param[in] manufacturer the Manufacturer (UTF8 encoded string)
+     * @param[in] manufacturer the Manufacturer (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
-     *            if language is NULL the Manufacture will be set for the default language.
+     *            if language is NULL the Manufacturer will be set for the default language.
      *
      * @return
      *  - #ER_OK on success
@@ -423,11 +431,11 @@ class AboutData : public AboutDataListener, public AboutKeys {
     /**
      * Get the Manufacturer from the About data
      *
-     * Manufacture is required
-     * Manufacture is part of the announce signal
-     * Manufacture can be localized for other languages
+     * Manufacturer is required
+     * Manufacturer is part of the announce signal
+     * Manufacturer can be localized for other languages
      *
-     * @param[out] manufacturer the Manufacturer found in the AboutData (UTF8 encoded string)
+     * @param[out] manufacturer the Manufacturer found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the Manufacturer for the default language will be returned.
      *
@@ -497,7 +505,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * Description IS NOT part of the announce signal
      * Description CAN BE localized for other languages
      *
-     * @param[in] description the Description (UTF8 encoded string)
+     * @param[in] description the Description (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the Description will be set for the default language.
      *
@@ -516,7 +524,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
      * Description IS NOT part of the announce signal
      * Description CAN BE localized for other languages
      *
-     * @param[out] description the Description found in the AboutData (UTF8 encoded string)
+     * @param[out] description the Description found in the AboutData (UTF-8 encoded string)
      * @param[in] language the IETF language tag specified by RFC 5646
      *            if language is NULL the Description for the default language will be returned.
      *
@@ -525,7 +533,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus GetDescription(char** description, const char* language = NULL);
 
     /**
-     * Set the DatOfManufacture to the AboutData
+     * Set the DateOfManufacture to the AboutData
      *
      * The date of manufacture using the format YYYY-MM-DD.  Known as XML
      * DateTime format.
@@ -541,7 +549,7 @@ class AboutData : public AboutDataListener, public AboutKeys {
     QStatus SetDateOfManufacture(const char* dateOfManufacture);
 
     /**
-     * Get the DatOfManufacture from the AboutData
+     * Get the DateOfManufacture from the AboutData
      *
      * The date of manufacture using the format YYYY-MM-DD.  Known as XML
      * DateTime format.
