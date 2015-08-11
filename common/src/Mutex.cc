@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * Define a class that abstracts Windows mutexs.
+ * Define a class that abstracts mutexes.
  */
 
 /******************************************************************************
@@ -19,68 +19,57 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-
 #include <qcc/platform.h>
-
-#include <windows.h>
-#include <assert.h>
-#include <stdio.h>
-
-#include <qcc/Thread.h>
 #include <qcc/Mutex.h>
-#include <qcc/windows/utility.h>
+#include <qcc/Debug.h>
 
 /** @internal */
 #define QCC_MODULE "MUTEX"
 
 using namespace qcc;
 
-void Mutex::Init()
+QStatus Mutex::Lock(const char* file, uint32_t line)
 {
-    if (isInitialized) {
-        isInitialized = false;
-        DeleteCriticalSection(&mutex);
+#ifdef NDEBUG
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
+    return Lock();
+#else
+    if (!isInitialized) {
+        return ER_INIT_FAILED;
     }
 
-#ifndef NDEBUG
-    file = NULL;
-    line = static_cast<uint32_t>(-1);
+    QStatus status;
+    if (TryLock()) {
+        status = ER_OK;
+    } else {
+        status = Lock();
+    }
+    if (status == ER_OK) {
+        QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
+        this->file = file;
+        this->line = line;
+    } else {
+        QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
+    }
+    return status;
 #endif
-
-    InitializeCriticalSection(&mutex);
-    isInitialized = true;
 }
 
-Mutex::~Mutex()
+QStatus Mutex::Unlock(const char* file, uint32_t line)
 {
-    if (isInitialized) {
-        isInitialized = false;
-        DeleteCriticalSection(&mutex);
-    }
-}
-
-QStatus Mutex::Lock(void)
-{
+#ifdef NDEBUG
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
+    return Unlock();
+#else
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
-    EnterCriticalSection(&mutex);
-    return ER_OK;
-}
 
-QStatus Mutex::Unlock(void)
-{
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-    LeaveCriticalSection(&mutex);
-    return ER_OK;
-}
-
-bool Mutex::TryLock(void)
-{
-    if (!isInitialized) {
-        return false;
-    }
-    return TryEnterCriticalSection(&mutex);
+    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
+    this->file = NULL;
+    this->line = static_cast<uint32_t>(-1);
+    return Unlock();
+#endif
 }
