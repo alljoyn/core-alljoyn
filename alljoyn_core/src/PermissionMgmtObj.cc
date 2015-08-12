@@ -1772,15 +1772,77 @@ Exit:
     return status;
 }
 
-QStatus PermissionMgmtObj::GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args)
+bool PermissionMgmtObj::IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<ECCPublicKey> peerIssuers)
+{
+    /*
+     * A membership cert is considered relevant to this exchange if any certificate in the membership chain was issued by an issuer
+     * in the peer's identity cert chain.  We have only public keys to compare from the identity cert chain, the certificates themselves
+     * are not persisted as auth metadata.
+     */
+
+    QStatus status;
+    CertificateX509 cert;
+
+    if (membershipChain.size() == 0) {
+        return false;
+    }
+
+    /* Compare membership chain to peerIssuers. */
+    for (size_t i = 0; i < membershipChain.size(); i++) {
+        status = LoadX509CertFromMsgArg(membershipChain[i][0], cert);
+        if (status != ER_OK) {
+            QCC_DbgPrintf(("PermissionMgmtObj::IsRelevantMembershipCert failed to load certificate in membership chain"));
+            return false;
+        }
+
+        for (size_t j = 0; j < peerIssuers.size(); j++) {
+            if (cert.IsSubjectPublicKeyEqual(&(peerIssuers[j]))) {
+                return true;
+            }
+        }
+    }
+
+    /* Check if this chain ends in a root, if so we're done, if not, check the installed roots. */
+    if (cert.IsIssuerOf(cert)) {
+        return false;
+    }
+
+    TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, cert.GetAuthorityKeyId());
+    if (anchors.size() == 0) {
+        QCC_DbgPrintf(("PermissionMgmtObj::IsRelevantMembershipCert: Membership certificate present, but no trust anchors are installed"));
+        return false;
+    }
+
+    for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
+        for (size_t j = 0; j < peerIssuers.size(); j++) {
+            if (*(*it)->keyInfo.GetPublicKey() == peerIssuers[j]) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+QStatus PermissionMgmtObj::GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args, const qcc::GUID128& remotePeerGuid)
 {
     MembershipCertMap certMap;
+    ECCPublicKey peerPublicKey;
+    std::vector<ECCPublicKey> peerIssuers;
+    bool publicKeyFound = false;
+    qcc::String authMechanism;
+
     QStatus status = GetAllMembershipCerts(certMap);
     if (ER_OK != status) {
         return status;
     }
     if (certMap.size() == 0) {
         return ER_OK;
+    }
+
+    status = this->GetConnectedPeerAuthMetadata(remotePeerGuid, authMechanism, publicKeyFound, &peerPublicKey, NULL, peerIssuers);
+    if ((status != ER_OK) || !publicKeyFound) {
+        goto Exit;
     }
 
     for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
@@ -1790,7 +1852,6 @@ QStatus PermissionMgmtObj::GenerateSendMemberships(std::vector<std::vector<MsgAr
         status = cert->EncodeCertificateDER(der);
         if (ER_OK != status) {
             goto Exit;
-            return status;
         }
         MsgArg* msgArg = new MsgArg("(yay)", CertificateX509::ENCODING_X509_DER, der.length(), der.c_str());
         msgArg->Stabilize();
@@ -1802,7 +1863,11 @@ QStatus PermissionMgmtObj::GenerateSendMemberships(std::vector<std::vector<MsgAr
             ClearArgVector(argList);
             goto Exit;
         }
-        args.push_back(argList);
+
+        /* Now that we have the membership cert chain, determine whether it's relevant for this protocol instance. */
+        if (this->IsRelevantMembershipCert(argList, peerIssuers)) {
+            args.push_back(argList);
+        }
     }
 
 Exit:
@@ -1810,7 +1875,7 @@ Exit:
     if (ER_OK != status) {
         _PeerState::ClearGuildArgs(args);
     }
-    return ER_OK;
+    return status;
 }
 
 QStatus PermissionMgmtObj::ParseSendManifest(Message& msg, PeerState& peerState)
@@ -1935,6 +2000,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                     verified = false;
                     break;
                 }
+
                 /* build the vector of certs to verify.  The membership cert is the leaf node -- first item on the vector */
                 /* check membership cert chain against the security group trust anchors */
                 status = ValidateMembershipCertificateChain(metadata->certChain, &trustAnchors);

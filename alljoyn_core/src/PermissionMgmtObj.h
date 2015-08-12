@@ -110,7 +110,7 @@ class PermissionMgmtObj : public BusObject {
      * For the SendMemberships call, the app sends one cert chain at time since
      * thin client peer may not be able to handle large amount of data.  The app
      * reads back the membership cert chain from the peer.  It keeps looping until
-     * both sides exchanged all the membeship cert chains.
+     * both sides exchanged all the relevant membership cert chains.
      * A send code of
      *     SEND_MEMBERSHIP_NONE indicates the peer does not have any membership
      *          cert chain or already sent all of its membership cert chain in
@@ -208,12 +208,13 @@ class PermissionMgmtObj : public BusObject {
     /**
      * Generates the message args to send the membership data to the peer.
      * @param args[out] the vector of the membership cert chain args.
+     * @param remotePeerGuid[in] the peer's authentication GUID.
      * @return
      *         - ER_OK if successful.
      *         - an error status otherwise.
      */
 
-    QStatus GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args);
+    QStatus GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args, const qcc::GUID128& remotePeerGuid);
 
     /**
      * Parse the message received from the PermissionMgmt's SendMembership method.
@@ -612,6 +613,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus StoreApplicationState();
     QStatus LoadManifestTemplate(PermissionPolicy& policy);
     bool HasDefaultPolicy();
+    bool PermissionMgmtObj::IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.
