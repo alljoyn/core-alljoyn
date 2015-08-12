@@ -160,6 +160,12 @@ TEST(AboutIconTest, GetUrl) {
     status = alljoyn_abouticon_seturl(icon, "image/png", "http://www.example.com");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+    const char* iconUrl = NULL;
+    const char* iconMediaType[] = NULL;
+    alljoyn_abouticon_geturl(icon, &iconMediaType, &iconUrl);
+    EXPECT_STREQ("image/png", iconMediaType);
+    EXPECT_STREQ("http://www.example.com", iconUrl);
+
     alljoyn_abouticonobj aboutIcon = alljoyn_abouticonobj_create(serviceBus, icon);
 
     alljoyn_busattachment clientBus =
@@ -223,6 +229,14 @@ TEST(AboutIconTest, GetIcon) {
                                           sizeof(aboutIconContent) / sizeof(aboutIconContent[0]),
                                           false);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    uint8_t* contentData = NULL;
+    size_t dataSize = 0;
+    alljoyn_abouticon_getcontent(icon, &contentData, &dataSize);
+    EXPECT_EQ((sizeof(aboutIconContent) / sizeof(aboutIconContent[0])), dataSize);
+    for (size_t i = 0; i < dataSize; ++i) {
+        EXPECT_EQ(aboutIconContent[i], contentData[i]);
+    }
 
     alljoyn_abouticonobj aboutIcon = alljoyn_abouticonobj_create(serviceBus, icon);
 
