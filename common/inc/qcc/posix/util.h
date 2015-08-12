@@ -22,75 +22,10 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+
 #if defined(QCC_OS_DARWIN)
 #include <machine/endian.h>
 #include <libkern/OSByteOrder.h>
-#else
-#include <endian.h>
-#endif
-
-/*
- * Make the target's endianness known to the rest of the code in portable manner.
- */
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-/**
- * This target is little endian
- */
-#define QCC_TARGET_ENDIAN QCC_LITTLE_ENDIAN
-#else
-/**
- * This target is big endian
- */
-#define QCC_TARGET_ENDIAN QCC_BIG_ENDIAN
-#endif
-
-#if defined __GLIBC__
-
-/*
- * GLibC and BSD both define nice helper macros for converting between
- * big/little endian and the host machine's endian.  Unfortunately, for some
- * of those macros, they use slightly different names.  This unifies the names
- * to match BSD names (also used by Android'd Bionic).
- */
-#if __BYTE_ORDER == __LITTLE_ENDIAN
-
-#define letoh16(_val) (_val)
-#define letoh32(_val) (_val)
-#define letoh64(_val) (_val)
-
-#define betoh16(_val) __bswap_16(_val)
-#define betoh32(_val) __bswap_32(_val)
-#define betoh64(_val) __bswap_64(_val)
-
-#else
-
-#define letoh16(_val) __bswap_16(_val)
-#define letoh32(_val) __bswap_32(_val)
-#define letoh64(_val) __bswap_64(_val)
-
-#define betoh16(_val) (_val)
-#define betoh32(_val) (_val)
-#define betoh64(_val) (_val)
-
-#endif
-
-// Undefine GlibC's versions the macros to help prevent writing non-portable code.
-#undef le16toh
-#undef le32toh
-#undef le64toh
-
-#undef be16toh
-#undef be32toh
-#undef be64toh
-
-// Again follow Android's Bionic example for compatability below
-#define __swap16(_val) __bswap_16(_val)
-#define __swap32(_val) __bswap_32(_val)
-#define __swap64(_val) __bswap_64(_val)
-
-#endif
-
-#if defined(QCC_OS_DARWIN)
 
 #define letoh16(_val) (OSSwapLittleToHostInt16(_val))
 #define letoh32(_val) (OSSwapLittleToHostInt32(_val))
@@ -124,6 +59,55 @@
 #define EndianSwap64(_val) (OSSwapConstInt64(_val))
 
 #else
+#include <byteswap.h>
+#include <endian.h>
+
+#if !defined(QCC_OS_ANDROID)
+#if !defined(betoh16)
+/*
+ * GLibC and BSD both define nice helper macros for converting between
+ * big/little endian and the host machine's endian.  Unfortunately, for some
+ * of those macros, they use slightly different names.  This unifies the names
+ * to match BSD names (also used by Android'd Bionic).
+ */
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+
+#define letoh16(_val) (_val)
+#define letoh32(_val) (_val)
+#define letoh64(_val) (_val)
+
+#define betoh16(_val) bswap_16(_val)
+#define betoh32(_val) bswap_32(_val)
+#define betoh64(_val) bswap_64(_val)
+
+#else
+
+#define letoh16(_val) bswap_16(_val)
+#define letoh32(_val) bswap_32(_val)
+#define letoh64(_val) bswap_64(_val)
+
+#define betoh16(_val) (_val)
+#define betoh32(_val) (_val)
+#define betoh64(_val) (_val)
+
+#endif
+#endif
+
+// Undefine GlibC's versions the macros to help prevent writing non-portable code.
+#undef le16toh
+#undef le32toh
+#undef le64toh
+
+#undef be16toh
+#undef be32toh
+#undef be64toh
+
+// Again follow Android's Bionic example for compatability below
+#define __swap16(_val) bswap_16(_val)
+#define __swap32(_val) bswap_32(_val)
+#define __swap64(_val) bswap_64(_val)
+#endif
+
 /**
  * Swap bytes to convert endianness of a 16 bit integer
  */
@@ -139,6 +123,21 @@
  */
 #define EndianSwap64(_val) (__swap64(_val))
 
+#endif
+
+/*
+ * Make the target's endianness known to the rest of the code in portable manner.
+ */
+#if __BYTE_ORDER == __LITTLE_ENDIAN
+/**
+ * This target is little endian
+ */
+#define QCC_TARGET_ENDIAN QCC_LITTLE_ENDIAN
+#else
+/**
+ * This target is big endian
+ */
+#define QCC_TARGET_ENDIAN QCC_BIG_ENDIAN
 #endif
 
 #define ER_DIR_SEPARATOR  "/"
