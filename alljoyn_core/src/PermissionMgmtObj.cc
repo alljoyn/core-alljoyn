@@ -2099,6 +2099,12 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
         if (status != ER_OK) {
             return status;
         }
+        GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
+        status = ca->DeleteKey(key);
+        if (ER_OK != status) {
+            return status;
+        }
+
     }
     ca->GetLocalKey(KeyBlob::PEM, key);
     status = ca->DeleteKey(key);
@@ -2124,12 +2130,6 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
     }
 
     GetACLKey(ENTRY_MEMBERSHIPS, key);
-    status = ca->DeleteKey(key);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
     status = ca->DeleteKey(key);
     if (ER_OK != status) {
         return status;
