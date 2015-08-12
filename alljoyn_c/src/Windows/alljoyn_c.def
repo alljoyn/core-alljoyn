@@ -49,6 +49,8 @@ alljoyn_aboutdatalistener_destroy
 alljoyn_abouticon_clear
 alljoyn_abouticon_create
 alljoyn_abouticon_destroy
+alljoyn_abouticon_getcontent
+alljoyn_abouticon_geturl
 alljoyn_abouticon_setcontent
 alljoyn_abouticon_setcontent_frommsgarg
 alljoyn_abouticon_seturl
@@ -205,6 +207,8 @@ alljoyn_credentials_setusername
 alljoyn_getbuildinfo
 alljoyn_getnumericversion
 alljoyn_getversion
+alljoyn_factoryresetlistener_create
+alljoyn_factoryresetlistener_destroy
 alljoyn_init
 alljoyn_interfacedescription_activate
 alljoyn_interfacedescription_addannotation

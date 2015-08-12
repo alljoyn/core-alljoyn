@@ -46,6 +46,17 @@ extern AJ_API alljoyn_abouticon AJ_CALL alljoyn_abouticon_create();
 extern AJ_API void AJ_CALL alljoyn_abouticon_destroy(alljoyn_abouticon icon);
 
 /**
+ * Returns a pointer to the icon's internal content data as well as the size of this data.
+ *
+ * @param[in]   icon  the alljoyn_abouticon object this call is made for
+ * @param[out]  data  pointer to the icon content data
+ * @param[out]  size  size (in number of bytes) of the icon content data
+ */
+extern AJ_API void AJ_CALL alljoyn_abouticon_getcontent(alljoyn_abouticon icon,
+                                                        const uint8_t** data,
+                                                        size_t* size);
+
+/**
  * Set the content for an icon.  The content must fit into a alljoyn_msgarg so the
  * largest size for the icon data is ALLJOYN_MAX_ARRAY_LEN bytes.
  *
@@ -73,6 +84,17 @@ extern AJ_API QStatus AJ_CALL alljoyn_abouticon_setcontent(alljoyn_abouticon ico
                                                            uint8_t* data,
                                                            size_t csize,
                                                            bool ownsData);
+
+/**
+ * Gets the URL that contains the icon for the application.
+ *
+ * @param[in]  icon  the alljoyn_abouticon object this call is made for
+ * @param[out] type  the Media Type indicating the icon image type
+ * @param[out] url   the URL that contains the location of the icon
+ */
+extern AJ_API void AJ_CALL alljoyn_abouticon_geturl(alljoyn_abouticon icon,
+                                                    const char** type,
+                                                    const char** url);
 
 /**
  * Set a url that contain the icon for the application.
