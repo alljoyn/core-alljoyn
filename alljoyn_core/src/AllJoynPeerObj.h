@@ -454,8 +454,9 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * Send an SendMembership to the peer
      * @param remotePeerObj  The remote peer
      * @param ifc     The interface object
+     * @param remotePeerGuid The remote peer's authentication GUID
      */
-    QStatus SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc);
+    QStatus SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, const qcc::GUID128& remotePeerGuid);
 
     /**
      * SendMembership method call handler

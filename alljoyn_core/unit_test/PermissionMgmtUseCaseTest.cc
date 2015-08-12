@@ -434,7 +434,7 @@ static void AddSpecificCertAuthorityToPolicy(PermissionPolicy& policy, const Key
             prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
             prms[2].SetMemberName("Volume");
             prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-            prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+            prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY);
             prms[3].SetMemberName("InputSource");
             prms[3].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
             prms[3].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
@@ -1648,20 +1648,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     }
 
     /**
-     *  Install Membership to the admin
-     */
-    void InstallAdminMembershipToBus(BusAttachment& issuerBus, BusAttachment& targetBus, const char* adminGroupSerial, const GUID128& adminGroupGUID)
-    {
-        ECCPublicKey targetPublicKey;
-        status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(targetBus, &targetPublicKey);
-        EXPECT_EQ(ER_OK, status) << "  InstallMembershipToAdmin RetrieveDSAPublicKeyFromKeyStore failed.  Actual Status: " << QCC_StatusText(status);
-        qcc::String subjectCN(consumerGUID.ToString());
-        status = PermissionMgmtTestHelper::InstallMembership(adminGroupSerial, issuerBus, targetBus.GetUniqueName(), targetBus, subjectCN, &targetPublicKey, adminGroupGUID);
-
-        EXPECT_EQ(ER_OK, status) << "  InstallAdminMembershipToBus cert1 failed.  Actual Status: " << QCC_StatusText(status);
-    }
-
-    /**
      *  App can call On
      */
     void AppCanCallOn(BusAttachment& bus, BusAttachment& targetBus)
@@ -1741,7 +1727,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void AppCannotCallTVOff(BusAttachment& bus, BusAttachment& targetBus)
     {
-
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
         QStatus status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
         EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOff ExcerciseOff should have failed.  Actual Status: " << QCC_StatusText(status);
@@ -1749,7 +1734,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
     void AppCanSetTVVolume(BusAttachment& bus, BusAttachment& targetBus, uint32_t tvVolume)
     {
-
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
         EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SetTVVolume(bus, clientProxyObject, tvVolume)) << "  AppCanSetTVVolume SetTVVolume failed.";
         uint32_t newTvVolume = 0;
