@@ -1024,7 +1024,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_member_names) {
  * Verify that "motel" get property call is not sent by the sender.
  * Verify that "mob" method call is successful.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_Wildcard_message_type_matched_properly_in_rule) {
+TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_message_type_matched_properly_in_rule) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);
@@ -1119,7 +1119,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_Wildcard_message_type_matched_p
  * Verify that "meal" get property call is not sent by the sender.
  * Verify that "metal" method call is not sent by the sender.
  */
-TEST_F(SecurityWildCardPolicyRulesTest, DISABLED_unspecified_action_mask_is_explicitly_DENIED) {
+TEST_F(SecurityWildCardPolicyRulesTest, unspecified_action_mask_is_explicitly_DENIED) {
     ArgentinaTestBusObject peer1ArgentinaBusObject(peer1Bus, test::argentinaObjPath);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1ArgentinaBusObject));
     ArabicTestBusObject peer1ArabicBusObject(peer1Bus, test::arabicObjPath);

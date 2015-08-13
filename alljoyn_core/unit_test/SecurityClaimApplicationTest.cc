@@ -265,7 +265,7 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
  * caPublic key == adminGroupSecurityPublicKey
  * Identity = Single certificate signed by CA
  */
-TEST_F(SecurityClaimApplicationTest, DISABLED_claim_fails_using_empty_caPublicKeyIdentifier)
+TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_caPublicKeyIdentifier)
 {
     //EnablePeerSecurity
     securityManagerKeyListener = new DefaultECDHEAuthListener();
@@ -359,7 +359,7 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_claim_fails_using_empty_caPublicKe
  * caPublic key == adminGroupSecurityPublicKey
  * Identity = Single certificate signed by CA
  */
-TEST_F(SecurityClaimApplicationTest, DISABLED_claim_fails_using_empty_adminGroupSecurityPublicKeyIdentifier)
+TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_adminGroupSecurityPublicKeyIdentifier)
 {
     //EnablePeerSecurity
     securityManagerKeyListener = new DefaultECDHEAuthListener();
@@ -1190,7 +1190,7 @@ TEST_F(SecurityClaimApplicationTest, fail_when_claiming_non_claimable)
  * Claimer does not have security enabled.
  * Claimer makes a claim call.
  */
-TEST_F(SecurityClaimApplicationTest, DISABLED_fail_claimer_security_not_enabled)
+TEST_F(SecurityClaimApplicationTest, fail_claimer_security_not_enabled)
 {
     Claim_ApplicationStateListener appStateListener;
     securityManagerBus.RegisterApplicationStateListener(appStateListener);
@@ -1832,7 +1832,7 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal)
  * publickey curveIdentifier = 0
  * publickey xCo-ordinate and yCo-ordinate are populated and are same as before.
  */
-TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_claimed_peer)
+TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_peer)
 {
     StateNotification_ApplicationStateListener appStateListener;
     securityManagerBus.RegisterApplicationStateListener(appStateListener);
@@ -2136,7 +2136,7 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
         qcc::Sleep(WAIT_MSECS);
     }
 
-    EXPECT_TRUE(appStateListener.stateChanged);
+    ASSERT_TRUE(appStateListener.stateChanged);
 
     EXPECT_EQ(peer1Bus.GetUniqueName(), appStateListener.busNames.front());
     appStateListener.busNames.pop();

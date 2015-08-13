@@ -5224,7 +5224,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
  * Verify that method call, get/set property calls, signal cannot be sent by
  * sender.
  */
-TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_9)
+TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_9)
 {
     PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
