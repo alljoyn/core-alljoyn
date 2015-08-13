@@ -780,6 +780,7 @@ class Crypto_DRBG : public Crypto_Rand {
     static const size_t KEYLEN = Crypto_AES::AES128_SIZE;
     static const size_t OUTLEN = sizeof (Crypto_AES::Block);
     static const size_t SEEDLEN = KEYLEN + OUTLEN;
+    static const uint32_t RESEED_COUNT = 0x80000000;
     Crypto_DRBG();
     virtual QStatus Seed(uint8_t* seed, size_t size);
     virtual QStatus Generate(uint8_t* rand, size_t size);
