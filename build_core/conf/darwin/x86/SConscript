@@ -38,7 +38,6 @@ if '' == env.subst('$SYSTEM_DEVELOPER_DIR'):
     env['SYSTEM_DEVELOPER_DIR'] = '/Developer'
 
 # Darwing specific flags
-env.Append(CPPDEFINES=['QCC_CPU_X86'])
 
 env['IPHONEOS_PLATFORM_DIR'] = '$SYSTEM_DEVELOPER_DIR/Platforms/iPhoneOS.platform'
 

@@ -17,7 +17,7 @@ ALLJOYN_DIST := ../..
 
 ALLJOYN_LIB := $(ALLJOYN_DIST)/lib/liballjoyn.a
 
-CXXFLAGS = -Wall -pipe -std=c++98 -fno-rtti -fno-exceptions -Wno-long-long -Wno-deprecated -g -DQCC_OS_LINUX -DQCC_OS_GROUP_POSIX -DQCC_CPU_X86
+CXXFLAGS = -Wall -pipe -std=c++98 -fno-rtti -fno-exceptions -Wno-long-long -Wno-deprecated -g -DQCC_OS_LINUX -DQCC_OS_GROUP_POSIX
 
 LIBS = -lalljoyn -lstdc++ -lcrypto -lpthread -lrt 
 

@@ -27,8 +27,7 @@ if env['MSVC_VERSION'] >= '8.0':
     env.Append(SHLINKCOM=[env['SHLINKCOM'], 'mt.exe -nologo -manifest ${TARGET}.manifest -outputresource:$TARGET;2'])
 
 # Windows specific compiler flags
-env.Append(CPPDEFINES=['QCC_CPU_X86',
-                       'UNICODE',
+env.Append(CPPDEFINES=['UNICODE',
                        '_UNICODE',
                        'WIN32_LEAN_AND_MEAN',
                        ('_VARIADIC_MAX','10')])
