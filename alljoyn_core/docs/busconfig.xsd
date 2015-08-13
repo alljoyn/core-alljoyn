@@ -162,7 +162,6 @@
             <xs:enumeration value="router_availability"/>
             <xs:enumeration value="router_mobility"/>
             <xs:enumeration value="router_power_source"/>
-            <xs:enumeration value="ns_interfaces"/>
             <xs:enumeration value="router_advertisement_prefix"/>
         </xs:restriction>
     </xs:simpleType>
