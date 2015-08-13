@@ -1207,7 +1207,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                     }
                     if (sendManifest) {
                         SendManifest(remotePeerObj, ifc, peerState);
-                        SendMembershipData(remotePeerObj, ifc);
+                        SendMembershipData(remotePeerObj, ifc, remotePeerGuid);
                     }
                 }
             }
@@ -1953,10 +1953,10 @@ Exit:
     return status;
 }
 
-QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc)
+QStatus AllJoynPeerObj::SendMembershipData(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, const qcc::GUID128& remotePeerGuid)
 {
     std::vector<std::vector<MsgArg*> > args;
-    QStatus status = securityApplicationObj.GenerateSendMemberships(args);
+    QStatus status = securityApplicationObj.GenerateSendMemberships(args, remotePeerGuid);
     if (ER_OK != status) {
         return status;
     }
@@ -2011,7 +2011,7 @@ void AllJoynPeerObj::SendMemberships(const InterfaceDescription::Member* member,
         goto Exit;
     }
     if (peerState->guildArgs.size() == 0) {
-        status = securityApplicationObj.GenerateSendMemberships(peerState->guildArgs);
+        status = securityApplicationObj.GenerateSendMemberships(peerState->guildArgs, peerState->GetGuid());
         if (ER_OK != status) {
             goto Exit;
         }
