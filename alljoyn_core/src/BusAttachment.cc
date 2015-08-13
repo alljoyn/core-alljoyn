@@ -335,6 +335,27 @@ BusAttachment::~BusAttachment(void)
     }
     busInternal->listenersLock.Unlock(MUTEX_CONTEXT);
 
+    /*
+     * Make sure there is no ApplicationStateListener callback is in progress.
+     * Then remove listener.
+     */
+    busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+    Internal::ApplicationStateListenerSet::iterator aslit = busInternal->applicationStateListeners.begin();
+    while (aslit != busInternal->applicationStateListeners.end()) {
+        Internal::ProtectedApplicationStateListener l = *aslit;
+
+        /* Remove listener and wait for any outstanding listener callback(s) to complete */
+        busInternal->applicationStateListeners.erase(aslit);
+        busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+        while (l.GetRefCount() > 1) {
+            qcc::Sleep(4);
+        }
+
+        busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+        aslit = busInternal->applicationStateListeners.begin();
+    }
+    busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+
     /* clear the contents of the sessionListeners and wait for any outstanding callbacks. */
     for (size_t i = 0; i < sizeof(busInternal->sessionListeners) / sizeof(busInternal->sessionListeners[0]); ++i) {
         busInternal->sessionListenersLock[i].Lock(MUTEX_CONTEXT);
@@ -719,6 +740,15 @@ void BusAttachment::UnregisterSignalHandlers()
             UnregisterSignalHandler(busInternal,
                                     static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                     announceSignalMember,
+                                    NULL);
+        }
+        const InterfaceDescription* applicationIface = GetInterface(org::alljoyn::Bus::Application::InterfaceName);
+        if (applicationIface) {
+            const ajn::InterfaceDescription::Member* stateSignalMember = applicationIface->GetMember("State");
+            assert(stateSignalMember);
+            UnregisterSignalHandler(busInternal,
+                                    static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
+                                    stateSignalMember,
                                     NULL);
         }
     }
@@ -2533,7 +2563,7 @@ void BusAttachment::UnregisterAboutListener(AboutListener& aboutListener)
         ++it;
     }
 
-    /* Wait for all refs to ProtectedBusListener to exit */
+    /* Wait for all refs to ProtectedAboutListener to exit */
     while ((it != busInternal->aboutListeners.end()) && (it->GetRefCount() > 1)) {
         Internal::ProtectedAboutListener l = *it;
         busInternal->aboutListenersLock.Unlock(MUTEX_CONTEXT);
@@ -2557,7 +2587,7 @@ void BusAttachment::UnregisterAllAboutListeners()
     /* Look for listener on ListenerSet */
     Internal::AboutListenerSet::iterator it = busInternal->aboutListeners.begin();
     while (it != busInternal->aboutListeners.end()) {
-        /* Wait for all refs to ProtectedBusListener to exit */
+        /* Wait for all refs to ProtectedAboutListener to exit */
         while ((it != busInternal->aboutListeners.end()) && (it->GetRefCount() > 1)) {
             Internal::ProtectedAboutListener l = *it;
             busInternal->aboutListenersLock.Unlock(MUTEX_CONTEXT);
@@ -2689,7 +2719,7 @@ void BusAttachment::UnregisterApplicationStateListener(ApplicationStateListener&
         ++it;
     }
 
-    /* Wait for all refs to ProtectedBusListener to exit */
+    /* Wait for all refs to ProtectedApplicationStateListener to exit */
     while ((it != busInternal->applicationStateListeners.end()) && (it->GetRefCount() > 1)) {
         Internal::ProtectedApplicationStateListener l = *it;
         busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
@@ -2698,7 +2728,7 @@ void BusAttachment::UnregisterApplicationStateListener(ApplicationStateListener&
         it = busInternal->applicationStateListeners.find(l);
     }
 
-    /* Delete the listeners entry and call user's callback (unlocked) */
+    /* Delete the listeners entry */
     if (it != busInternal->applicationStateListeners.end()) {
         Internal::ProtectedApplicationStateListener l = *it;
         busInternal->applicationStateListeners.erase(it);
