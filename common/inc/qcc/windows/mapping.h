@@ -26,7 +26,6 @@
 #include <float.h>
 /// @cond ALLJOYN_DEV
 
-#if _MSC_VER <= 1800   /* MSVC 2013 or older */
 /**
  * Map snprintf to _snprintf
  *
@@ -35,7 +34,6 @@
  * Windows.
  */
 #define snprintf _snprintf
-#endif
 
 /**
  * Map stroll to _strtoi64

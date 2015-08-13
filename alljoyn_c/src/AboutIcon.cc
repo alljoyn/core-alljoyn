@@ -40,6 +40,15 @@ void AJ_CALL alljoyn_abouticon_destroy(alljoyn_abouticon icon)
     delete (ajn::AboutIcon*)icon;
 }
 
+void AJ_CALL alljoyn_abouticon_getcontent(alljoyn_abouticon icon,
+                                          const uint8_t** data,
+                                          size_t* size)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    *data = ((ajn::AboutIcon*)icon)->content;
+    *size = ((ajn::AboutIcon*)icon)->contentSize;
+}
+
 QStatus AJ_CALL alljoyn_abouticon_setcontent(alljoyn_abouticon icon,
                                              const char* type,
                                              uint8_t* data,
@@ -48,6 +57,16 @@ QStatus AJ_CALL alljoyn_abouticon_setcontent(alljoyn_abouticon icon,
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::AboutIcon*)icon)->SetContent(type, data, csize, ownsData);
+}
+
+void AJ_CALL alljoyn_abouticon_geturl(alljoyn_abouticon icon,
+                                      const char** type,
+                                      const char** url)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    *type = ((ajn::AboutIcon*)icon)->mimetype.c_str();
+    *url = ((ajn::AboutIcon*)icon)->url.c_str();
+
 }
 
 QStatus AJ_CALL alljoyn_abouticon_seturl(alljoyn_abouticon icon,
