@@ -33,6 +33,7 @@ using namespace std;
  * Also busy wait loops do not require any platform specific threading code.
  */
 #define WAIT_MSECS 5
+#define TEN_MINS 600
 
 static String PrintActionMask(uint8_t actionMask) {
     String result;
@@ -445,6 +446,15 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                     bool keepAdminGroupEntry = false,
                                                     bool keepInstallMembershipEntry = false);
 
+    /*
+     * The policy for all of the GetAllProperties tests only differs by what is
+     * defined in the members.  This Will build the same policy with only the members
+     * changed for all of the GetAllProperties tests.
+     */
+    void CreatePolicyWithMembersForGetAllProperties(PermissionPolicy& policy, PermissionPolicy::Rule::Member* members, size_t membersSize);
+    void UpdatePeer1Manifest(PermissionPolicy::Rule* manifest, size_t manifestSize);
+    void UpdatePeer2Manifest(PermissionPolicy::Rule* manifest, size_t manifestSize);
+
     BusAttachment managerBus;
     BusAttachment peer1Bus;
     BusAttachment peer2Bus;
@@ -521,6 +531,99 @@ QStatus SecurityPolicyRulesTest::UpdatePolicyWithValuesFromDefaultPolicy(const P
     policy.SetAcls(count, acls);
     delete [] acls;
     return ER_OK;
+}
+
+/*
+ * The policy for all of the GetAllProperties tests only differs by what is
+ * defined in the members.  This Will build the same policy with only the members
+ * changed for all of the GetAllProperties tests.
+ */
+void SecurityPolicyRulesTest::CreatePolicyWithMembersForGetAllProperties(PermissionPolicy& policy, PermissionPolicy::Rule::Member* members, size_t membersSize) {
+    policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[2];
+            rules[0].SetObjPath("/test");
+            rules[0].SetInterfaceName(interfaceName);
+            rules[0].SetMembers(membersSize, members);
+            //make sure peer1 can call UpdateIdentity to update the manifest
+            rules[1].SetObjPath(org::alljoyn::Bus::Security::ObjectPath);
+            rules[1].SetInterfaceName(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY);
+                rules[1].SetMembers(1, members);
+            }
+            acls[0].SetRules(2, rules);
+        }
+        policy.SetAcls(1, acls);
+    }
+}
+
+void SecurityPolicyRulesTest::UpdatePeer1Manifest(PermissionPolicy::Rule* manifest, size_t manifestSize) {
+    const size_t certChainSize = 1;
+    /*************Update Peer1 Manifest *************/
+    //peer1 key
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               manifest, manifestSize,
+                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifest, manifestSize));
+}
+
+void SecurityPolicyRulesTest::UpdatePeer2Manifest(PermissionPolicy::Rule* manifest, size_t manifestSize) {
+    const size_t certChainSize = 1;
+    /*************Update peer2 Manifest *************/
+    //peer2 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               manifest, manifestSize,
+                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifest, manifestSize));
 }
 
 class MethodRulesTestValue {
@@ -1345,467 +1448,6 @@ INSTANTIATE_TEST_CASE_P(GetProperty, SecurityPolicyRulesGetPropertyManifest,
                                                       PermissionPolicy::Rule::Member::ACTION_OBSERVE,
                                                       false,
                                                       true)
-                            ));
-
-class GetAllPropertiesRulesTestValue {
-  public:
-    GetAllPropertiesRulesTestValue(uint8_t mask1prop1, uint8_t mask1prop2,
-                                   uint8_t mask2prop1, uint8_t mask2prop2,
-                                   bool fetchProp1,
-                                   bool fetchProp2) :
-        peer1Prop1ActionMask(mask1prop1),
-        peer1Prop2ActionMask(mask1prop2),
-        peer2Prop1ActionMask(mask2prop1),
-        peer2Prop2ActionMask(mask2prop2),
-        shouldFetchProp1(fetchProp1),
-        shouldFetchProp2(fetchProp2) { }
-    friend ostream& operator<<(ostream& os, const GetAllPropertiesRulesTestValue& val);
-
-    uint8_t peer1Prop1ActionMask;
-    uint8_t peer1Prop2ActionMask;
-    uint8_t peer2Prop1ActionMask;
-    uint8_t peer2Prop2ActionMask;
-    bool shouldFetchProp1;
-    bool shouldFetchProp2;
-};
-
-::std::ostream& operator<<(::std::ostream& os, const GetAllPropertiesRulesTestValue& val) {
-    os << "\n";
-    os << "peer1Prop1Mask = " << PrintActionMask(val.peer1Prop1ActionMask).c_str() << "\n";
-    os << "peer1Prop2Mask = " << PrintActionMask(val.peer1Prop2ActionMask).c_str() << "\n";
-    os << "peer2Prop1Mask = " << PrintActionMask(val.peer2Prop1ActionMask).c_str() << "\n";
-    os << "peer2Prop2Mask = " << PrintActionMask(val.peer2Prop2ActionMask).c_str() << "\n";
-    if (val.shouldFetchProp1) {
-        os << "ProxyBusObject should fetch Prop1\n";
-    } else {
-        os << "ProxyBusObject should NOT fetch Prop1\n";
-    }
-    if (val.shouldFetchProp2) {
-        os << "ProxyBusObject should fetch Prop2\n";
-    } else {
-        os << "ProxyBusObject should NOT fetch Prop2\n";
-    }
-    return os;
-}
-
-class SecurityPolicyRulesGetAllProperties : public SecurityPolicyRulesTest,
-    public testing::WithParamInterface<GetAllPropertiesRulesTestValue> {
-};
-
-/**
- * The GetAllProperties test cases need to be rewritten because of the
- * new requirement that a rule with member_name = "*" is required
- */
-TEST_P(SecurityPolicyRulesGetAllProperties, DISABLED_PolicyRules)
-{
-    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
-    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
-
-    /* install permissions make method calls */
-    //Permission policy that will be installed on peer1
-    PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
-    {
-        PermissionPolicy::Acl acls[1];
-        {
-            PermissionPolicy::Peer peers[1];
-            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-            acls[0].SetPeers(1, peers);
-        }
-        {
-            PermissionPolicy::Rule rules[1];
-            rules[0].SetObjPath("/test");
-            rules[0].SetInterfaceName(interfaceName);
-            {
-                PermissionPolicy::Rule::Member members[2];
-                members[0].Set("Prop1",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               GetParam().peer1Prop1ActionMask);
-                members[1].Set("Prop2",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               GetParam().peer1Prop2ActionMask);
-                rules[0].SetMembers(2, members);
-            }
-            acls[0].SetRules(1, rules);
-        }
-        peer1Policy.SetAcls(1, acls);
-    }
-    // Permission policy that will be installed on peer2
-    PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
-    {
-        PermissionPolicy::Acl acls[1];
-        {
-            PermissionPolicy::Peer peers[1];
-            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-            acls[0].SetPeers(1, peers);
-        }
-        {
-            PermissionPolicy::Rule rules[1];
-            rules[0].SetInterfaceName(interfaceName);
-            {
-                PermissionPolicy::Rule::Member methods[2];
-                methods[0].Set("Prop1",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               GetParam().peer2Prop1ActionMask);
-                methods[1].Set("Prop2",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               GetParam().peer2Prop2ActionMask);
-                rules[0].SetMembers(2, methods);
-            }
-            acls[0].SetRules(1, rules);
-        }
-        peer2Policy.SetAcls(1, acls);
-    }
-
-    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
-    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
-
-    {
-        PermissionPolicy peer1DefaultPolicy;
-        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
-    }
-    {
-        PermissionPolicy peer2DefaultPolicy;
-        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
-    }
-
-    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
-    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-
-    SessionOpts opts;
-    SessionId peer1ToPeer2SessionId;
-    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
-
-    /* Create the ProxyBusObject and call the Echo method on the interface */
-    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
-    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
-    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
-    MsgArg props;
-    EXPECT_EQ(ER_OK, proxy.GetAllProperties(interfaceName, props));
-    if (GetParam().shouldFetchProp1) {
-        int32_t prop1;
-        MsgArg* propArg;
-        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
-        EXPECT_EQ(ER_OK, propArg->Get("i", &prop1)) << propArg->ToString().c_str();
-        EXPECT_EQ(42, prop1);
-    } else {
-        MsgArg* propArg;
-        EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
-    }
-    if (GetParam().shouldFetchProp2) {
-        int32_t prop2;
-        MsgArg* propArg;
-        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
-        EXPECT_EQ(ER_OK, propArg->Get("i", &prop2)) << propArg->ToString().c_str();
-        EXPECT_EQ(17, prop2);
-    } else {
-        MsgArg* propArg;
-        EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
-    }
-
-    /* clean up */
-    peer2Bus.UnregisterBusObject(peer2BusObject);
-}
-
-INSTANTIATE_TEST_CASE_P(GetAllProperties, SecurityPolicyRulesGetAllProperties,
-                        ::testing::Values(
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //0
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           true,  // GetAppProperties should fetch prop1
-                                                           true), // GetAppProperties should fetch prop2
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //1
-                                                           0, //DENY
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           true,
-                                                           true), //GetAllProperties can fetch properties that would be blocked by GetProperty
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //2
-                                                           PermissionPolicy::Rule::Member::ACTION_MODIFY,
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           true,
-                                                           true), //GetAllProperties can fetch properties that would be blocked by GetProperty
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //3
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           PermissionPolicy::Rule::Member::ACTION_MODIFY,
-                                                           true,
-                                                           false),
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //4
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           0, //DENY
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           false,
-                                                           true),
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_PROVIDE, //5
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           PermissionPolicy::Rule::Member::ACTION_MODIFY,
-                                                           PermissionPolicy::Rule::Member::ACTION_MODIFY,
-                                                           false,
-                                                           false)
-
-                            ));
-
-class SecurityPolicyRulesGetAllPropertiesManifest : public SecurityPolicyRulesTest,
-    public testing::WithParamInterface<GetAllPropertiesRulesTestValue> {
-};
-
-/**
- * The GetAllProperties test cases need to be rewritten because of the
- * new requirement that a rule with member_name = "*" is required
- */
-TEST_P(SecurityPolicyRulesGetAllPropertiesManifest, DISABLED_PolicyRules)
-{
-    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
-    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
-
-    /* install permissions make method calls */
-    //Permission policy that will be installed on peer1
-    PermissionPolicy peer1Policy;
-    peer1Policy.SetVersion(1);
-    {
-        PermissionPolicy::Acl acls[1];
-        {
-            PermissionPolicy::Peer peers[1];
-            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-            acls[0].SetPeers(1, peers);
-        }
-        {
-            PermissionPolicy::Rule rules[2];
-            rules[0].SetObjPath("/test");
-            rules[0].SetInterfaceName(interfaceName);
-            {
-                PermissionPolicy::Rule::Member members[2];
-                members[0].Set("Prop1",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-                members[1].Set("Prop2",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-                rules[0].SetMembers(2, members);
-            }
-            //make sure peer1 can call UpdateIdentity to update the manifest
-            rules[1].SetObjPath(org::alljoyn::Bus::Security::ObjectPath);
-            rules[1].SetInterfaceName(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
-            {
-                PermissionPolicy::Rule::Member members[1];
-                members[0].Set("*",
-                               PermissionPolicy::Rule::Member::METHOD_CALL,
-                               PermissionPolicy::Rule::Member::ACTION_MODIFY);
-                rules[1].SetMembers(1, members);
-            }
-            acls[0].SetRules(2, rules);
-        }
-        peer1Policy.SetAcls(1, acls);
-    }
-
-    // Permission policy that will be installed on peer2
-    PermissionPolicy peer2Policy;
-    peer2Policy.SetVersion(1);
-    {
-        PermissionPolicy::Acl acls[1];
-        {
-            PermissionPolicy::Peer peers[1];
-            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-            acls[0].SetPeers(1, peers);
-        }
-        {
-            PermissionPolicy::Rule rules[2];
-            rules[0].SetInterfaceName(interfaceName);
-            {
-                PermissionPolicy::Rule::Member members[2];
-                members[0].Set("Prop1",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-                members[1].Set("Prop2",
-                               PermissionPolicy::Rule::Member::PROPERTY,
-                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-                rules[0].SetMembers(2, members);
-            }
-            //make sure peer2 can call UpdateIdentity to update the manifest
-            rules[1].SetObjPath(org::alljoyn::Bus::Security::ObjectPath);
-            rules[1].SetInterfaceName(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
-            {
-                PermissionPolicy::Rule::Member members[1];
-                members[0].Set("*",
-                               PermissionPolicy::Rule::Member::METHOD_CALL,
-                               PermissionPolicy::Rule::Member::ACTION_MODIFY);
-                rules[1].SetMembers(1, members);
-            }
-            acls[0].SetRules(2, rules);
-        }
-        peer2Policy.SetAcls(1, acls);
-    }
-
-    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
-    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
-
-    {
-        PermissionPolicy peer1DefaultPolicy;
-        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
-    }
-    {
-        PermissionPolicy peer2DefaultPolicy;
-        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
-    }
-
-    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
-    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
-
-    const size_t manifestSize = 1;
-    const size_t certChainSize = 1;
-    /*************Update Peer1 Manifest *************/
-    //peer1 key
-    KeyInfoNISTP256 peer1Key;
-    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
-    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
-
-    // Peer1 manifest
-    PermissionPolicy::Rule peer1Manifest[manifestSize];
-    {
-        PermissionPolicy::Rule::Member members[2];
-        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1Prop1ActionMask);
-        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer1Prop2ActionMask);
-        peer1Manifest[0].SetInterfaceName(interfaceName);
-        peer1Manifest[0].SetMembers(2, members);
-    }
-
-    uint8_t peer1Digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                               peer1Manifest, manifestSize,
-                                                               peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
-    //Create peer1 identityCert
-    IdentityCertificate identityCertChainPeer1[certChainSize];
-
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0],
-                                                                  peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
-
-    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
-
-    /*************Update peer2 Manifest *************/
-    //peer2 key
-    KeyInfoNISTP256 peer2Key;
-    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
-    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
-
-    // Peer1 manifest
-    PermissionPolicy::Rule peer2Manifest[manifestSize];
-    {
-        PermissionPolicy::Rule::Member members[2];
-        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2Prop1ActionMask);
-        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, GetParam().peer2Prop2ActionMask);
-        peer2Manifest[0].SetInterfaceName(interfaceName);
-        peer2Manifest[0].SetMembers(2, members);
-    }
-
-    uint8_t peer2Digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                               peer2Manifest, manifestSize,
-                                                               peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
-    //Create peer2 identityCert
-    IdentityCertificate identityCertChainPeer2[certChainSize];
-
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0],
-                                                                  peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
-
-    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
-
-    SessionOpts opts;
-    SessionId peer1ToPeer2SessionId;
-    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
-
-    /* Create the ProxyBusObject and call the Echo method on the interface */
-    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
-    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
-    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
-    MsgArg props;
-    EXPECT_EQ(ER_OK, proxy.GetAllProperties(interfaceName, props));
-    if (GetParam().shouldFetchProp1) {
-        int32_t prop1;
-        MsgArg* propArg;
-        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
-        EXPECT_EQ(ER_OK, propArg->Get("i", &prop1)) << propArg->ToString().c_str();
-        EXPECT_EQ(42, prop1);
-    } else {
-        MsgArg* propArg;
-        EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
-    }
-    if (GetParam().shouldFetchProp2) {
-        int32_t prop2;
-        MsgArg* propArg;
-        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
-        EXPECT_EQ(ER_OK, propArg->Get("i", &prop2)) << propArg->ToString().c_str();
-        EXPECT_EQ(17, prop2);
-    } else {
-        MsgArg* propArg;
-        EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
-    }
-
-    /* clean up */
-    peer2Bus.UnregisterBusObject(peer2BusObject);
-}
-
-INSTANTIATE_TEST_CASE_P(GetAllProperties, SecurityPolicyRulesGetAllPropertiesManifest,
-                        ::testing::Values(
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //0
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           true,  // GetAppProperties should fetch prop1
-                                                           true), // GetAppProperties should fetch prop2
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //1
-                                                           PermissionPolicy::Rule::Member::ACTION_MODIFY,
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           true,
-                                                           false),
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //2
-                                                           0,     //DENY
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           true,
-                                                           false),
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //3
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           0,     //DENY
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           true, //GetAllProperties can fetch properties that would be blocked by GetProperty
-                                                           true),
-                            GetAllPropertiesRulesTestValue(PermissionPolicy::Rule::Member::ACTION_OBSERVE, //4
-                                                           PermissionPolicy::Rule::Member::ACTION_OBSERVE,
-                                                           PermissionPolicy::Rule::Member::ACTION_PROVIDE,
-                                                           PermissionPolicy::Rule::Member::ACTION_MODIFY,
-                                                           true,
-                                                           true) //GetAllProperties can fetch properties that would be blocked by GetProperty
                             ));
 
 class SetPropertyRulesTestValue {
@@ -2671,6 +2313,1226 @@ INSTANTIATE_TEST_CASE_P(Signal, SecurityPolicyRulesSignalManifest,
                             ));
 
 /*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ *
+ * Expected Result:
+ * Both properties Prop1 and Prop2 will be fetched.
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test1_properties_succesfully_sent)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(2, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 2);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(interfaceName, props));
+
+    {
+        int32_t prop1;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop1)) << propArg->ToString().c_str();
+        EXPECT_EQ(42, prop1);
+    }
+    {
+        int32_t prop2;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop2)) << propArg->ToString().c_str();
+        EXPECT_EQ(17, prop2);
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties will be successfully sent.
+ * Only Prop1 will be fetched.
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test2_only_prop1_successfully_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(1, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 2);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(interfaceName, props));
+
+    {
+        int32_t prop1;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop1)) << propArg->ToString().c_str();
+        EXPECT_EQ(42, prop1);
+    }
+    {
+        MsgArg* propArg;
+        EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties will be successfully sent.
+ * Only Prop1 will be fetched.
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test3_only_prop1_successfully_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(2, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 1);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(interfaceName, props));
+
+    {
+        int32_t prop1;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop1)) << propArg->ToString().c_str();
+        EXPECT_EQ(42, prop1);
+    }
+    {
+        MsgArg* propArg;
+        EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Method_call, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties won’t be sent. Because, The wildcard rule is for a Method
+ * and not for a Property
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test4_no_properties_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(2, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 2);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Method_call, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties won’t be sent. Because, the wildcard rule is for a Method
+ * and not for a Property
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test5_no_properties_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::METHOD_CALL,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(2, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 2);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties will be successfully sent.
+ * Both properties Prop1 and Prop2 will be fetched.
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test6_properties_successfully_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(2, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 1);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(interfaceName, props));
+
+    {
+        int32_t prop1;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop1)) << propArg->ToString().c_str();
+        EXPECT_EQ(42, prop1);
+    }
+    {
+        int32_t prop2;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop2)) << propArg->ToString().c_str();
+        EXPECT_EQ(17, prop2);
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties will be successfully sent.
+ * Both properties Prop1 and Prop2 will be fetched
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test7_properties_successfully_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(1, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 2);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(interfaceName, props));
+
+    {
+        int32_t prop1;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop1", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop1)) << propArg->ToString().c_str();
+        EXPECT_EQ(42, prop1);
+    }
+    {
+        int32_t prop2;
+        MsgArg* propArg;
+        EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Prop2", &propArg)) << props.ToString().c_str();
+        EXPECT_EQ(ER_OK, propArg->Get("i", &prop2)) << propArg->ToString().c_str();
+        EXPECT_EQ(17, prop2);
+    }
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties won’t be sent. Because, the receiver manifest does not have
+ * the wildcard for the property
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test8_no_properties_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(2, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 2);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
+ * Setup following policies and manifests
+ *
+ * Peer1 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, PROVIDE}
+ * Peer1 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 policy
+ * -----------------
+ * PeerType: ANY_TRUSTED
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { Prop1, Property, OBSERVE}, {Prop2, Property, OBSERVE}
+ * Peer2 manifest:
+ * ------------------
+ * Rule:
+ *   ObjectPath: /test
+ *   interfaceName: org.allseen.test.SecurityApplication.rules
+ *   Members: { *, Property, PROVIDE}
+ *
+ * Expected Result:
+ * GetAllProperties won’t be sent. Because, the sender local policy does not
+ * have the wildcard for Property.
+ */
+TEST_F(SecurityPolicyRulesTest, GetAllProperties_test9_no_properties_fetched)
+{
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+    const size_t manifestSize = 1;
+
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        CreatePolicyWithMembersForGetAllProperties(peer1Policy, members, 1);
+    }
+
+    // Peer1 manifest
+    PermissionPolicy::Rule peer1Manifest[manifestSize];
+    peer1Manifest[0].SetObjPath("/test");
+    peer1Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        peer1Manifest[0].SetMembers(2, members);
+    }
+
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].Set("Prop1",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        members[1].Set("Prop2",
+                       PermissionPolicy::Rule::Member::PROPERTY,
+                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        CreatePolicyWithMembersForGetAllProperties(peer2Policy, members, 2);
+    }
+
+    // Peer2 manifest
+    PermissionPolicy::Rule peer2Manifest[manifestSize];
+    peer2Manifest[0].SetObjPath("/test");
+    peer2Manifest[0].SetInterfaceName(interfaceName);
+    {
+        PermissionPolicy::Rule::Member members[1];
+        members[0].Set("*", PermissionPolicy::Rule::Member::PROPERTY, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        peer2Manifest[0].SetMembers(1, members);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+
+    /*
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy retPolicy;
+    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    sapWithPeer2.GetPolicy(retPolicy);
+
+    UpdatePeer1Manifest(peer1Manifest, manifestSize);
+    UpdatePeer2Manifest(peer2Manifest, manifestSize);
+    //------------------------------------------------------------------------//
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    MsgArg props;
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/*
  * Purpose
  * Verify that DENY rules that are specific or wild card do not take effect if
  * the ACL has a peer type of ALL.
@@ -3355,6 +4217,533 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_4)
 
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not take effect
+ * if the ACL has a peer type of WITH_CA
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * ICC of Peer2: CA1->Peer2
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: WITH_CA Public Key: CA1
+ * Rule 0: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 1: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 2: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t subjectCN[] = { 1, 2, 3, 4 };
+    uint8_t issuerCN[] = { 5, 6, 7, 8 };
+
+    //Create the CA1 cert
+    qcc::IdentityCertificate ca1Cert;
+    ca1Cert.SetSerial((uint8_t*)"5678", 5);
+    ca1Cert.SetIssuerCN(issuerCN, 4);
+    ca1Cert.SetSubjectCN(issuerCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validityCA.validTo = validityCA.validFrom + TEN_MINS;
+    ca1Cert.SetValidity(&validityCA);
+    ca1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 peer1PublicKey;
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1PublicKey));
+
+    ca1Cert.SetSubjectPublicKey(peer1PublicKey.GetPublicKey());
+    ca1Cert.SetAlias("ca1-cert-alias");
+    ca1Cert.SetCA(true);
+
+    //sign the ca1 cert
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(ca1Cert));
+
+    // Create the peer2Cert
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"1234", 5);
+    peer2Cert.SetIssuerCN(issuerCN, 4);
+    peer2Cert.SetSubjectCN(subjectCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+
+    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    //PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(peer2Cert));
+
+    //We need identityCert chain CA1->Peer2
+    const size_t certChainSize = 2;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer2Cert;
+    identityCertChain[1] = ca1Cert;
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    /*
+     * After updating the identity, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy dummyPolicy;
+    sapWithPeer2.GetPolicy(dummyPolicy);
+
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&peer1PublicKey);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+    // Verify Method call
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    // Verify Set/Get Property
+    MsgArg prop1Arg;
+    EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+    EXPECT_EQ(ER_OK, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+    EXPECT_EQ(513, peer2BusObject.ReadProp1());
+
+    MsgArg prop1ArgOut;
+    EXPECT_EQ(ER_OK, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+    uint32_t prop1;
+    prop1Arg.Get("i", &prop1);
+    EXPECT_EQ((uint32_t)513, prop1);
+
+    // Send/Receive Signal
+    ChirpSignalReceiver chirpSignalReceiver;
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterSignalHandler(&chirpSignalReceiver, static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler), peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+    arg.Set("s", "Chirp this String out in the signal.");
+    // Signals are send and forget.  They will always return ER_OK.
+    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
+
+    //Wait for a maximum of 2 sec for the Chirp Signal.
+    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        if (chirpSignalReceiver.signalReceivedFlag) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+
+    /* clean up */
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+
+/*
+ * Purpose
+ * Verify that DENY rules that are specific or wild card do not
+ * take effect if the ACL has a peer type of WITH_CA.
+ *
+ * Setup
+ * Sender and Receiver bus implement the following :
+ * Object Path:  /test
+ * Interface Name: "org.allseen.test.SecurityApplication.rules"
+ * Member name: Echo (method call)
+ * Member name: Prop1  (property, read write)
+ * Member name: Chirp (signal)
+ * Peer1 and Peer2 set up an ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ * Peer1 sends a signal to Peer2.
+ * Peer1 makes a get property call on Peer2
+ * Peer1 makes a set property call on Peer2
+ *
+ * Peer1 rules:
+ * ACL: Peer type: ANY_TRUSTED
+ * Rule 0: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ * Peer2 rules:
+ * ACL: Peer type: WITH_CA Public Key: CA1
+ * Rule 0: Object Path= *, Interface=*, Member name=*, Member Type = NS, Action mask = DENY
+ * Rule 1: Object Path=/test, Interface = org.allseen.test.SecurityApplication.rules, Member name = *, Member type = NS, Action Mask = DENY
+ * Rule 2: Object Path= *, Interface=*, Member Name=*, Member Type= NS, Action Mask = PROVIDE|MODIFY|OBSERVE
+ *
+ *
+ *
+ * verification:
+ * Verify that method call, get/set property calls are successful.
+ * Verify that signal is received by Peer2.
+ */
+TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t subjectCN[] = { 1, 2, 3, 4 };
+    uint8_t issuerCN[] = { 5, 6, 7, 8 };
+
+    //Create the CA1 cert
+    qcc::IdentityCertificate ca1Cert;
+    ca1Cert.SetSerial((uint8_t*)"5678", 5);
+    ca1Cert.SetIssuerCN(issuerCN, 4);
+    ca1Cert.SetSubjectCN(issuerCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = 1427404154;
+    validityCA.validTo = 1427404154 + 630720000;
+    ca1Cert.SetValidity(&validityCA);
+    ca1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 peer1PublicKey;
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1PublicKey));
+
+    ca1Cert.SetSubjectPublicKey(peer1PublicKey.GetPublicKey());
+    ca1Cert.SetAlias("ca1-cert-alias");
+    ca1Cert.SetCA(true);
+
+    //sign the ca1 cert
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(ca1Cert));
+
+    // Create the peer2Cert
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"1234", 5);
+    peer2Cert.SetIssuerCN(issuerCN, 4);
+    peer2Cert.SetSubjectCN(subjectCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+
+    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(peer2Cert));
+
+    //We need identityCert chain CA1->Peer2
+    const size_t certChainSize = 2;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer2Cert;
+    identityCertChain[1] = ca1Cert;
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    /*
+     * After updating the identity, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation.  So just make the call and ignore the outcome.
+     */
+    PermissionPolicy dummyPolicy;
+    sapWithPeer2.GetPolicy(dummyPolicy);
+
+    PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer1
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer2
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&peer1PublicKey);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[3];
+            //rule 0
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[0].SetMembers(1, members);
+            }
+            //rule 1
+            rules[1].SetObjPath("/test");
+            rules[1].SetInterfaceName(interfaceName);
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               0 /*DENY*/);
+                rules[1].SetMembers(1, members);
+            }
+            //rule 2
+            rules[2].SetObjPath("*");
+            rules[2].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[2].SetMembers(1, members);
+            }
+            acls[0].SetRules(3, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
 
     {
         PermissionPolicy peer1DefaultPolicy;
