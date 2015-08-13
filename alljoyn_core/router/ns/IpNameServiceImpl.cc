@@ -3495,8 +3495,9 @@ void IpNameServiceImpl::SendProtocolMessage(
         MDNSPacket mdnsPacket = MDNSPacket::cast(packet);
         /* If the names in this packet are no longer valid, then return.
          * e.g. AdvertiseName packet with names that have been cancelled.
+         * Make sure to check the quietly advertised names too.
          */
-        if (!PurgeAndUpdatePacket(mdnsPacket, false)) {
+        if (!PurgeAndUpdatePacket(mdnsPacket, false, true)) {
             return;
         }
     }
@@ -8545,13 +8546,13 @@ set<String> IpNameServiceImpl::GetAdvertisingQuietly(TransportMask transportMask
 
 }
 
-bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid)
+bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid, bool checkQuietNames)
 {
     MDNSResourceRecord* refRecord;
     mdnspacket->GetAdditionalRecord("sender-info.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &refRecord);
     MDNSSenderRData* refRData = static_cast<MDNSSenderRData*>(refRecord->GetRData());
-    int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
     if (updateSid) {
+        int32_t id = IncrementAndFetch(&INCREMENTAL_PACKET_ID);
         refRData->SetSearchID(id);
     }
     if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
@@ -8596,6 +8597,7 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
         }
         return (numSearch > 0);
     } else {
+        /* If checkQuietNames is true, then we need to check the quietly advertised names too. */
         MDNSResourceRecord* advRecord;
         mdnspacket->GetAdditionalRecord("advertise.*", MDNSResourceRecord::TXT, MDNSTextRData::TXTVERS, &advRecord);
         MDNSAdvertiseRData* advRData = static_cast<MDNSAdvertiseRData*>(advRecord->GetRData());
@@ -8607,12 +8609,14 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
         for (int i = 0; i < 3; i++) {
             TransportMask tm = transportMaskArr[i];
             set<String> advertising = GetAdvertising(tm);
+            set<String> advertisingQuietly = GetAdvertisingQuietly(tm);
             numNames[i] = advRData->GetNumNames(tm);
             for (uint32_t k = 0; k < numNames[i]; k++) {
                 if (ttl == 0) {
                     //If this is a packet with ttl == 0, ensure that we are NOT advertising the names mentioned in the packet.
 
-                    if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) != advertising.end()) {
+                    if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) != advertising.end() ||
+                        (checkQuietNames && (std::find(advertisingQuietly.begin(), advertisingQuietly.end(), advRData->GetNameAt(tm, k)) != advertisingQuietly.end()))) {
 
                         advRData->RemoveNameAt(tm, k);
                         // a name has been removed from the IsAt response header make
@@ -8628,11 +8632,14 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
 
                     if ((tm == (TRANSPORT_TCP | TRANSPORT_UDP)) && m_enabledReliableIPv4[TRANSPORT_INDEX_TCP] && !m_enabledUnreliableIPv4[TRANSPORT_INDEX_UDP]) {
                         advertising = GetAdvertising(TRANSPORT_TCP);
+                        advertisingQuietly = GetAdvertisingQuietly(TRANSPORT_TCP);
                     }
                     if ((tm == (TRANSPORT_TCP | TRANSPORT_UDP)) && !m_enabledReliableIPv4[TRANSPORT_INDEX_TCP] && m_enabledUnreliableIPv4[TRANSPORT_INDEX_UDP]) {
                         advertising = GetAdvertising(TRANSPORT_UDP);
+                        advertisingQuietly = GetAdvertisingQuietly(TRANSPORT_UDP);
                     }
-                    if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) == advertising.end()) {
+                    if (std::find(advertising.begin(), advertising.end(), advRData->GetNameAt(tm, k)) == advertising.end() &&
+                        (!checkQuietNames || (std::find(advertisingQuietly.begin(), advertisingQuietly.end(), advRData->GetNameAt(tm, k)) == advertisingQuietly.end()))) {
 
                         advRData->RemoveNameAt(tm, k);
                         // a name has been removed from the IsAt response header make
