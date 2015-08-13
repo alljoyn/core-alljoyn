@@ -164,15 +164,9 @@ class PermissionMgmtObj : public BusObject {
 
         TrustAnchor() : use(TRUST_ANCHOR_CA), securityGroupId(0)
         {
-            qcc::ECCPublicKey pubKey;
-            memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
-            keyInfo.SetPublicKey(&pubKey);
         }
         TrustAnchor(TrustAnchorType use) : use(use), securityGroupId(0)
         {
-            qcc::ECCPublicKey pubKey;
-            memset(&pubKey, 0, sizeof(qcc::ECCPublicKey));
-            keyInfo.SetPublicKey(&pubKey);
         }
         TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256& keyInfo) : use(use), keyInfo(keyInfo), securityGroupId(0)
         {

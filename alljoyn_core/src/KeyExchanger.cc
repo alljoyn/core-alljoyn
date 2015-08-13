@@ -78,16 +78,18 @@ namespace ajn {
 
 static size_t CalcPeerSecretRecordSize(uint8_t numIssuerKeys)
 {
+    ECCPublicKey emptyKey;
+    size_t publicKeySize = emptyKey.GetSize();
     size_t ret = sizeof(uint8_t) + /* version */
                  MASTER_SECRET_SIZE + /* secret */
-                 sizeof(ECCPublicKey) + /* publicKey */
+                 publicKeySize + /* publicKey */
                  Crypto_SHA256::DIGEST_SIZE + /* manifestDigest */
                  sizeof(uint8_t); /* numIssuerPublicKeys */
     if (numIssuerKeys == 0) {
         ret += sizeof(uint8_t*);
     } else {
         /* issuerPublicKeys array */
-        ret += numIssuerKeys * sizeof(ECCPublicKey);
+        ret += numIssuerKeys * publicKeySize;
     }
     return ret;
 }
@@ -508,13 +510,13 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKey(MsgArg& variant)
         uint8_t* replyPubKey;
         size_t replyPubKeyLen;
         variant.Get("(yay)", &eccCurveID, &replyPubKeyLen, &replyPubKey);
-        if (replyPubKeyLen != sizeof(ECCPublicKey)) {
+        if (replyPubKeyLen != peerPubKey.GetSize()) {
             return ER_INVALID_DATA;
         }
         if (eccCurveID != ecc.GetCurveType()) {
             return ER_INVALID_DATA;
         }
-        QCC_VERIFY(ER_OK == peerPubKey.Import(replyPubKey, sizeof(ECCPublicKey)));
+        QCC_VERIFY(ER_OK == peerPubKey.Import(replyPubKey, replyPubKeyLen));
         /* hash the handshake data */
         peerState->UpdateHash(CONVERSATION_V1, &eccCurveID, sizeof(eccCurveID));
         peerState->UpdateHash(CONVERSATION_V1, replyPubKey, replyPubKeyLen);
@@ -672,7 +674,7 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
         /* support older format by the non ECDHE key exchanges */
         masterSecret = rec;
         if (publicKey) {
-            memset(publicKey, 0, sizeof(ECCPublicKey));
+            publicKey->Clear();
         }
         if (manifestDigest) {
             memset(manifestDigest, 0, Crypto_SHA256::DIGEST_SIZE);
@@ -706,14 +708,21 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
     }
 
     /* the public key field */
-    if ((bytesRead + sizeof(ECCPublicKey)) > rec.GetSize()) {
+    size_t publicKeySize;
+    if (publicKey) {
+        publicKeySize = publicKey->GetSize();
+    } else {
+        ECCPublicKey emptyKey;
+        publicKeySize = emptyKey.GetSize();
+    }
+    if ((bytesRead + publicKeySize) > rec.GetSize()) {
         return ER_INVALID_DATA;
     }
     if (publicKey) {
-        publicKey->Import(pBuf, sizeof(ECCPublicKey));
+        publicKey->Import(pBuf, publicKeySize);
     }
-    bytesRead += sizeof(ECCPublicKey);
-    pBuf += sizeof(ECCPublicKey);
+    bytesRead += publicKeySize;
+    pBuf += publicKeySize;
 
     /* the manifest field */
     if ((bytesRead + Crypto_SHA256::DIGEST_SIZE) > rec.GetSize()) {
@@ -733,14 +742,14 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
     bytesRead += sizeof(numIssuerPublicKeys);
     pBuf += sizeof(numIssuerPublicKeys);
     for (size_t cnt = 0; cnt < numIssuerPublicKeys; cnt++) {
-        if ((bytesRead + sizeof(ECCPublicKey)) > rec.GetSize()) {
+        if ((bytesRead + publicKeySize) > rec.GetSize()) {
             return ER_INVALID_DATA;
         }
         ECCPublicKey issuerPubKey;
-        issuerPubKey.Import(pBuf, sizeof(ECCPublicKey));
+        issuerPubKey.Import(pBuf, publicKeySize);
         issuerPublicKeys.push_back(issuerPubKey);
-        bytesRead += sizeof(ECCPublicKey);
-        pBuf += sizeof(ECCPublicKey);
+        bytesRead += publicKeySize;
+        pBuf += publicKeySize;
     }
     publicKeyAvailable = true;
     return ER_OK;
@@ -767,7 +776,7 @@ QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, con
         memcpy(pBuf, masterSecret.GetData(), MASTER_SECRET_SIZE);
         pBuf += MASTER_SECRET_SIZE;
         /* the public key field */
-        size_t keySize = sizeof(ECCPublicKey);
+        size_t keySize = peerDSAPubKey->GetSize();
         peerDSAPubKey->Export(pBuf, &keySize);
         pBuf += keySize;
         /* the manifest digest field */
@@ -778,9 +787,9 @@ QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, con
         pBuf += sizeof(uint8_t);
         if (peerIssuerPubKeys.size() > 0) {
             for (size_t cnt = 0; cnt < peerIssuerPubKeys.size(); cnt++) {
-                size_t bufSize = sizeof(ECCPublicKey);
+                size_t bufSize = peerIssuerPubKeys[cnt].GetSize();
                 peerIssuerPubKeys[cnt].Export(pBuf, &bufSize);
-                pBuf += sizeof(ECCPublicKey);
+                pBuf += bufSize;
             }
         }
         KeyBlob kb(buffer, bufferSize, KeyBlob::GENERIC);

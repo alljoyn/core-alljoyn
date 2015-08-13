@@ -128,7 +128,7 @@ qcc::String KeyInfoNISTP256::ToString(size_t indent) const
 
 const size_t KeyInfoNISTP256::GetExportSize() const
 {
-    return KeyInfoECC::GetExportSize() + sizeof(pubkey);
+    return KeyInfoECC::GetExportSize() + sizeof(pubkey.form) + pubkey.key.GetSize();
 }
 
 QStatus KeyInfoNISTP256::Export(uint8_t* buf) const
@@ -137,7 +137,14 @@ QStatus KeyInfoNISTP256::Export(uint8_t* buf) const
     buf += KeyInfoECC::GetExportSize();
     memcpy(buf, &pubkey.form, sizeof(uint8_t));
     buf += sizeof(uint8_t);
-    memcpy(buf, &pubkey.key, sizeof(ECCPublicKey));
+    size_t keySize = pubkey.key.GetSize();
+    QStatus status = pubkey.key.Export(buf, &keySize);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (keySize != pubkey.key.GetSize()) {
+        return ER_INVALID_DATA;
+    }
     return ER_OK;
 }
 
@@ -149,10 +156,8 @@ QStatus KeyInfoNISTP256::Import(const uint8_t* buf, size_t count)
     KeyInfoECC::Import(buf, count);
     uint8_t* p = (uint8_t*) buf;
     p += KeyInfoECC::GetExportSize();
-    memcpy(&pubkey.form, p, sizeof(uint8_t));
     p += sizeof(uint8_t);
-    memcpy(&pubkey.key, p, sizeof(ECCPublicKey));
-    return ER_OK;
+    return pubkey.key.Import(p, pubkey.key.GetSize());
 }
 
 } /* namespace qcc */
