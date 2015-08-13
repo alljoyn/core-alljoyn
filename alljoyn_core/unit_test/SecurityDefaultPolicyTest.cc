@@ -1068,11 +1068,11 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_MemberShipCertificate_not_instal
         // Verify Set/Get Property and GetAll Properties
         MsgArg prop1Arg;
         EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.SetProperty(interfaceName, "Prop1", prop1Arg));
         EXPECT_EQ(42, peer2BusObject.ReadProp1());
 
         MsgArg prop1ArgOut;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
+        EXPECT_EQ(ER_PERMISSION_DENIED, proxy.GetProperty(interfaceName, "Prop1", prop1Arg));
 
         MsgArg props;
         EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.GetAllProperties(interfaceName, props));
