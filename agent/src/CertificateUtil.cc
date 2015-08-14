@@ -41,14 +41,18 @@ QStatus CertificateUtil::ToIdentityCertificate(const Application& app,
                                                const uint64_t validityPeriod,
                                                IdentityCertificate& cert)
 {
+    QStatus status = ER_FAIL;
+    if (!validityPeriod) {
+        return status;
+    }
     cert.SetAlias(idInfo.guid.ToString());
     cert.SetSubjectPublicKey(app.keyInfo.GetPublicKey());
     cert.SetSubjectOU((const uint8_t*)idInfo.name.data(), idInfo.name.size());
     cert.SetCA(false);
-    SetSubjectName(cert, app);
+    status = SetSubjectName(cert, app);
     SetValityPeriod(validityPeriod, cert);
 
-    return ER_OK;
+    return status;
 }
 
 QStatus CertificateUtil::ToMembershipCertificate(const Application& app,
@@ -56,13 +60,17 @@ QStatus CertificateUtil::ToMembershipCertificate(const Application& app,
                                                  const uint64_t validityPeriod,
                                                  MembershipCertificate& cert)
 {
+    QStatus status = ER_FAIL;
+    if (!validityPeriod) {
+        return status;
+    }
     cert.SetGuild(groupInfo.guid);
     cert.SetSubjectPublicKey(app.keyInfo.GetPublicKey());
     cert.SetCA(false);
-    SetSubjectName(cert, app);
+    status = SetSubjectName(cert, app);
     SetValityPeriod(validityPeriod, cert);
 
-    return ER_OK;
+    return status;
 }
 
 QStatus CertificateUtil::SetSubjectName(CertificateX509& cert, const Application& app)

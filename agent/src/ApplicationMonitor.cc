@@ -97,7 +97,7 @@ void ApplicationMonitor::State(const char* busName,
         appsMutex.Unlock(__FILE__, __LINE__);
 
         //Intentional sleep, see: ASACORE-1493
-        qcc::Sleep(500);
+        qcc::Sleep(1500);
 
         QStatus status = pinger->AddDestination(AUTOPING_GROUPNAME, info.busName.c_str());
         if (ER_OK != status) {
@@ -142,9 +142,15 @@ QStatus ApplicationMonitor::GetApplication(SecurityInfo& secInfo) const
 void ApplicationMonitor::RegisterSecurityInfoListener(SecurityInfoListener* al)
 {
     if (nullptr != al) {
+        appsMutex.Lock(__FILE__, __LINE__);
         securityListenersMutex.Lock(__FILE__, __LINE__);
+        map<string, SecurityInfo>::const_iterator it = applications.begin();
+        for (; it != applications.end(); ++it) {
+            al->OnSecurityStateChange(nullptr, &(it->second));
+        }
         listeners.push_back(al);
         securityListenersMutex.Unlock(__FILE__, __LINE__);
+        appsMutex.Unlock(__FILE__, __LINE__);
     }
 }
 

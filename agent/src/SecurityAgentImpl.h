@@ -33,6 +33,7 @@
 #include <alljoyn/securitymgr/IdentityInfo.h>
 #include <alljoyn/securitymgr/SecurityAgent.h>
 #include <alljoyn/securitymgr/AgentCAStorage.h>
+#include <alljoyn/securitymgr/ManifestUpdate.h>
 
 #include "ApplicationMonitor.h"
 #include "ProxyObjectManager.h"
@@ -50,23 +51,38 @@ struct SecurityInfo;
 
 class AppListenerEvent {
   public:
-    AppListenerEvent(const OnlineApplication* oldInfo,
-                     const OnlineApplication* newInfo,
-                     const SyncError* error) :
-        oldApp(oldInfo), newApp(newInfo), syncError(error)
+    AppListenerEvent(const OnlineApplication* _oldInfo,
+                     const OnlineApplication* _newInfo) :
+        oldApp(_oldInfo), newApp(_newInfo), syncError(nullptr), manifestUpdate(nullptr)
+    {
+    }
+
+    AppListenerEvent(const SyncError* _error) :
+        oldApp(nullptr), newApp(nullptr), syncError(_error), manifestUpdate(nullptr)
+    {
+    }
+
+    AppListenerEvent(const ManifestUpdate* _manifestUpdate) :
+        oldApp(nullptr), newApp(nullptr), syncError(nullptr), manifestUpdate(_manifestUpdate)
     {
     }
 
     ~AppListenerEvent()
     {
         delete oldApp;
+        oldApp = nullptr;
         delete newApp;
+        newApp = nullptr;
         delete syncError;
+        syncError = nullptr;
+        delete manifestUpdate;
+        manifestUpdate = nullptr;
     }
 
     const OnlineApplication* oldApp;
     const OnlineApplication* newApp;
     const SyncError* syncError;
+    const ManifestUpdate* manifestUpdate;
 };
 
 /**
@@ -103,9 +119,11 @@ class SecurityAgentImpl :
 
     const KeyInfoNISTP256& GetPublicKeyInfo() const;
 
+    void NotifyApplicationListeners(const ManifestUpdate* manifestUpdate);
+
     void NotifyApplicationListeners(const SyncError* syncError);
 
-    void SetManifestListener(ManifestListener* listener);
+    void SetClaimListener(ClaimListener* listener);
 
     void RegisterApplicationListener(ApplicationListener* al);
 
@@ -143,6 +161,52 @@ class SecurityAgentImpl :
 
   private:
 
+    class PendingClaim {
+      public:
+        PendingClaim(const OnlineApplication& _app, vector<OnlineApplication>* _list, Mutex& _lock)
+            : remove(false), app(_app), list(_list), lock(_lock)
+        {
+        }
+
+        QStatus Init()
+        {
+            QStatus status = ER_BAD_ARG_1;
+            lock.Lock();
+            for (size_t i = 0; i < list->size(); i++) {
+                if (app == (*list)[i]) {
+                    goto out;
+                }
+            }
+            remove = true;
+            list->push_back(app);
+            status = ER_OK;
+        out:
+            lock.Unlock();
+            return status;
+        }
+
+        ~PendingClaim()
+        {
+            if (remove) {
+                lock.Lock();
+                vector<OnlineApplication>::iterator it = list->begin();
+                for (; it != list->end(); it++) {
+                    if (app == *it) {
+                        list->erase(it);
+                        break;
+                    }
+                }
+                lock.Unlock();
+            }
+        }
+
+      private:
+        bool remove;
+        OnlineApplication app;
+        vector<OnlineApplication>* list;
+        Mutex lock;
+    };
+
     KeyInfoNISTP256 publicKeyInfo;
     OnlineApplicationMap applications;
     vector<ApplicationListener*> listeners;
@@ -153,8 +217,9 @@ class SecurityAgentImpl :
     const shared_ptr<AgentCAStorage>& caStorage;
     mutable Mutex appsMutex;
     mutable Mutex applicationListenersMutex;
+    vector<OnlineApplication> pendingClaims;
     TaskQueue<AppListenerEvent*, SecurityAgentImpl> queue;
-    ManifestListener* mfListener;
+    ClaimListener* claimListener;
 };
 }
 }

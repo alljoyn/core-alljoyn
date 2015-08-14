@@ -23,7 +23,7 @@ using namespace ajn::securitymgr;
 
 namespace secmgr_tests {
 class RestartAgentTests :
-    public BasicTest {
+    public SecurityAgentTest {
   private:
 
   protected:
@@ -37,8 +37,9 @@ class RestartAgentTests :
 /**
  * @test Verify that the agent can restart and maintain a
  *       consistent view on the online applications.
- *       -# Start an X number of applications and make sure they are claimable.
- *       -# Using a dedicated idtityInfo (per application) and a default manifest,
+ *       // See AS-1634 for the number of applications issue
+ *       -# Start an even X number of applications and make sure they are claimable.
+ *       -# Using a dedicated IdtityInfo (per application) and a default manifest,
  *          claim an X/2 (claimedApps) of the applications.
  *       -# Verify that claimedApps are in a CLAIMED state and that the other
  *          X/2 (claimableApps) are still in a CLAIMABLE state.
@@ -47,6 +48,34 @@ class RestartAgentTests :
  *       -# Verify that all online applications are in a consistent
  *          online application state from the security agent perspective.
  **/
-TEST_F(RestartAgentTests, DISABLED_SuccessfulAgentRestart) {
+TEST_F(RestartAgentTests, SuccessfulAgentRestart) {
+    size_t numOfApps = 3;
+    vector<shared_ptr<TestApplication> > apps;
+    vector<IdentityInfo> identities;
+
+    for (size_t i = 0; i < numOfApps; i++) {
+        identities.push_back(IdentityInfo());
+        apps.push_back(shared_ptr<TestApplication>(new TestApplication(std::to_string(i) + "-Testapp")));
+        ASSERT_EQ(ER_OK, storage->StoreIdentity(identities[i]));
+    }
+
+    for (size_t i = numOfApps / 2; i < numOfApps; i++) {
+        ASSERT_EQ(ER_OK, apps[i]->Start());
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    }
+
+    for (size_t i = 0; i < numOfApps / 2; i++) {
+        ASSERT_EQ(ER_OK, apps[i]->Start());
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+        ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, identities[i]));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    }
+
+    RemoveSecAgent();
+    InitSecAgent();
+    WaitForEvents(numOfApps);
+    RemoveSecAgent();
+
+    apps.clear();
 }
 }

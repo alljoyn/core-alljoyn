@@ -64,17 +64,30 @@ class PolicyGenerator {
     QStatus DefaultPolicy(const vector<GroupInfo>& groupInfos,
                           PermissionPolicy& policy) const;
 
+    /**
+     * @brief Vector containing all KeyInfo objects of applications for which
+     *        any access should be denied.
+     */
+    vector<KeyInfoNISTP256> deniedKeys;
+
   private:
+
+    /**
+     * @brief Generate an ACL for denied applications.
+     *
+     * @param[in,out] acl   The ACL that will contain the permissions for the
+     *                      denied applications.
+     */
+    void DenyAcl(const vector<KeyInfoNISTP256>& keys,
+                 PermissionPolicy::Acl& acl) const;
+
     /**
      * @brief Generate an ACL for the admin security group.
      *
      * @param[in,out] acl   The ACL that will contain the permissions for the
      *                      admin security group.
-     *
-     * @return ER_OK        If ACL was generated successfully.
-     * @return others       On failure.
      */
-    QStatus AdminAcl(PermissionPolicy::Acl& acl) const;
+    void AdminAcl(PermissionPolicy::Acl& acl) const;
 
     /**
      * @brief Generate a default ACL for a security group, giving members of
@@ -82,12 +95,9 @@ class PolicyGenerator {
      *
      * @param[in,out] acl   The ACL that will contain the default permissions
      *                      for the security group.
-     *
-     * @return ER_OK        If ACL was generated successfully.
-     * @return others       On failure.
      */
-    QStatus DefaultGroupPolicyAcl(const GroupInfo& group,
-                                  PermissionPolicy::Acl& acl) const;
+    void DefaultGroupPolicyAcl(const GroupInfo& group,
+                               PermissionPolicy::Acl& acl) const;
 
     /**
      * @brief Generate a default rule for a security group, giving members of
@@ -95,12 +105,9 @@ class PolicyGenerator {
      *
      * @param[in,out] rule  The rule that will contain the default permissions
      *                      for a security group.
-     *
-     * @return ER_OK        If rule was generated successfully.
-     * @return others       On failure.
      */
 
-    QStatus DefaultGroupPolicyRule(PermissionPolicy::Rule& rule) const;
+    void DefaultGroupPolicyRule(PermissionPolicy::Rule& rule) const;
 
     GroupInfo adminGroup;
 };

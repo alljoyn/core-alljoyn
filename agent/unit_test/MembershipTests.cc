@@ -24,7 +24,7 @@ using namespace ajn::securitymgr;
 
 namespace secmgr_tests {
 class MembershipTests :
-    public BasicTest {
+    public SecurityAgentTest {
   private:
 
   protected:
@@ -69,6 +69,11 @@ class MembershipTests :
  *       -# Verify that removal of membership using groupInfo1 is successful.
  *       -# Make sure updates have been completed.
  *       -# Repeat the previous 2 steps for groupInfo2.
+ *       -# Install memberships for both groupInfo1 and groupInfo2 successfully.
+ *       -# Verify that deleting groupInfo1 and groupInfo2 will result in syncing the app
+ *          again and in removing the memberships associated.
+ *       -# Repeat the previous step but verify the removal of memberships associated
+ *          immediately after the deletion of each group.
  **/
 TEST_F(MembershipTests, SuccessfulInstallMembership) {
     /* Create groups */
@@ -117,6 +122,60 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     ASSERT_TRUE(WaitForUpdatesCompleted());
     memberships.erase(memberships.begin());
     ASSERT_TRUE(CheckMemberships(memberships));
+
+    /* *
+     * Install memberships for groupinfo1 and groupinfo1 then
+     * remove both and make sure the app is synced and the
+     * memberships associated are deleted.
+     * */
+    ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    memberships.push_back(groupInfo1);
+    ASSERT_TRUE(CheckMemberships(memberships));
+
+    ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo2));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    memberships.push_back(groupInfo2);
+    ASSERT_TRUE(CheckMemberships(memberships));
+
+    ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo1));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo2));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    memberships.erase(memberships.begin());
+    memberships.erase(memberships.begin());
+    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo1));
+    ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo2));
+
+    /* *
+     * Install memberships for both groups but remove and
+     * verify immediately after each removal.
+     */
+    ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo1));
+    ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo2));
+
+    ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    memberships.push_back(groupInfo1);
+    ASSERT_TRUE(CheckMemberships(memberships));
+
+    ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo2));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    memberships.push_back(groupInfo2);
+    ASSERT_TRUE(CheckMemberships(memberships));
+
+    ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo1));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    memberships.erase(memberships.begin());
+    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo1));
+
+    ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo2));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    memberships.erase(memberships.begin());
+    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo2));
 }
 
 /**

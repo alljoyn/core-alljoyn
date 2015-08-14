@@ -34,7 +34,7 @@ using namespace qcc;
 namespace ajn {
 namespace securitymgr {
 enum ApplicationSyncState {
-    SYNC_WILL_CLAIM = 0, ///< The application will be claimed when it comes online.
+    SYNC_UNKNOWN = 0,  ///< The application is not known.
     SYNC_OK = 1,         ///< The application is claimed and there are no pending changes to its security configuration.
     SYNC_PENDING = 2,    ///< The security configuration of the application will be updated when it comes online.
     SYNC_WILL_RESET = 3, ///< The application will be reset when it comes online.
@@ -51,8 +51,8 @@ enum ApplicationSyncState {
 static const char* ToString(const ApplicationSyncState state)
 {
     switch (state) {
-    case SYNC_WILL_CLAIM:
-        return "SYNC_WILL_CLAIM";
+    case SYNC_UNKNOWN:
+        return "SYNC_UNKNOWN";
 
     case SYNC_OK:
         return "SYNC_OK";
@@ -107,6 +107,16 @@ struct Application {
     bool operator!=(const Application& rhs) const
     {
         return keyInfo !=  rhs.keyInfo;
+    }
+
+    /**
+     * @brief less then operator for Application.
+     *
+     * @param[in] rhs  The application to compare with.
+     */
+    bool operator<(const Application& rhs) const
+    {
+        return keyInfo <  rhs.keyInfo;
     }
 };
 

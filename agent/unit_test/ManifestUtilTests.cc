@@ -58,6 +58,94 @@ class ManifestUtilTests :
         *retRules = rules;
         return ER_OK;
     }
+
+    void GetManifest(Manifest& mf)
+    {
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+        PermissionPolicy::Rule::Member prms[3];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("Channel");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        rules[0].SetMembers(3, prms);
+
+        mf.SetFromRules(rules, 1);
+    }
+
+    void GetPermutedManifest(Manifest& mf)
+    {
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+        PermissionPolicy::Rule::Member prms[3];
+        prms[0].SetMemberName("Channel");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("Up");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(3, prms);
+
+        mf.SetFromRules(rules, 1);
+    }
+
+    void GetSplitManifest(Manifest& mf)
+    {
+        PermissionPolicy::Rule rules[2];
+        rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+        PermissionPolicy::Rule::Member prms[2];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(2, prms);
+
+        rules[1].SetInterfaceName("org.allseenalliance.control.TV");
+        PermissionPolicy::Rule::Member tprms[1];
+        tprms[0].SetMemberName("Channel");
+        tprms[0].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        tprms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        rules[1].SetMembers(1, tprms);
+
+        mf.SetFromRules(rules, 2);
+    }
+
+    void GetExtendedManifest(Manifest& mf)
+    {
+        PermissionPolicy::Rule rules[2];
+
+        rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+        PermissionPolicy::Rule::Member prms[3];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("Channel");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE |
+                              PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(3, prms);
+
+        rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+        PermissionPolicy::Rule::Member mprms[1];
+        mprms[0].SetMemberName("*");
+        mprms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(1, mprms);
+
+        mf.SetFromRules(rules, 2);
+    }
 };
 
 static void PrintDigest(const uint8_t* const buf)
@@ -232,6 +320,8 @@ TEST_F(ManifestUtilTests, ExtendedPermissionPolicyDigest) {
     PermissionPolicy::Acl* acl = new PermissionPolicy::Acl[1];
     acl[0].SetRules(size, rules);
     permPolicy.SetAcls(1, acl);
+    delete[] acl;
+    acl = nullptr;
 
     uint8_t* originalDigest = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
 
@@ -393,6 +483,99 @@ TEST_F(ManifestUtilTests, UtilIllegalArgs) {
     ASSERT_EQ(nullptr, Util::GetDefaultMarshaller(nullptr));
     ASSERT_NE(ER_OK, Util::GetPolicyByteArray(pp, nullptr, nullptr));
     ASSERT_NE(ER_OK, Util::GetPolicy(nullptr, 0, pp));
+
+    ASSERT_EQ(ER_OK, Util::Fini());
+}
+
+/**
+ * @test Verify the difference between two manifest is computed correctly.
+ *       -# Create two manifests: one basic manifest, and one extending the basic manifest by
+ *          adding another interface and by extending the action mask on a specific member.
+ *       -# Compute the difference between the extended manifest and the basic manifest, and
+ *          check whether the outcome is as expected.
+ *       -# Compute the difference between the basic manifest and the extend manifest, and
+ *          make sure it is empty.
+ */
+TEST_F(ManifestUtilTests, Difference) {
+    ASSERT_EQ(ER_OK, Util::Init(ba));
+
+    Manifest manifest;
+    GetManifest(manifest);
+    Manifest permutedManifest;
+    GetPermutedManifest(permutedManifest);
+    Manifest splitManifest;
+    GetSplitManifest(splitManifest);
+    Manifest extendedManifest;
+    GetExtendedManifest(extendedManifest);
+
+    // compare two identical manifests
+    Manifest differenceMM;
+    manifest.Difference(manifest, differenceMM);
+    ASSERT_EQ((size_t)0, differenceMM.GetRulesSize());
+
+    Manifest differencePP;
+    permutedManifest.Difference(permutedManifest, differencePP);
+    ASSERT_EQ((size_t)0, differencePP.GetRulesSize());
+
+    Manifest differenceSS;
+    splitManifest.Difference(splitManifest, differenceSS);
+    ASSERT_EQ((size_t)0, differenceSS.GetRulesSize());
+
+    Manifest differenceEE;
+    extendedManifest.Difference(extendedManifest, differenceEE);
+    ASSERT_EQ((size_t)0, differenceEE.GetRulesSize());
+
+    // compare permuted manifest
+    Manifest differenceMP;
+    manifest.Difference(permutedManifest, differenceMP);
+    ASSERT_EQ((size_t)0, differenceMP.GetRulesSize());
+
+    Manifest differencePM;
+    permutedManifest.Difference(manifest, differencePM);
+    ASSERT_EQ((size_t)0, differencePM.GetRulesSize());
+
+    // compare split manifest
+    Manifest differenceSM;
+    splitManifest.Difference(manifest, differenceSM);
+    ASSERT_EQ((size_t)0, differenceSM.GetRulesSize());
+
+    Manifest differenceMS;
+    manifest.Difference(splitManifest, differenceMS);
+    ASSERT_EQ((size_t)0, differenceMS.GetRulesSize());
+
+    // compare split with permuted manifest
+    Manifest differencePS;
+    permutedManifest.Difference(splitManifest, differencePS);
+    ASSERT_EQ((size_t)0, differencePS.GetRulesSize());
+
+    Manifest differenceSP;
+    splitManifest.Difference(permutedManifest, differenceSP);
+    ASSERT_EQ((size_t)0, differencePS.GetRulesSize());
+
+    // compare extended manifest
+    Manifest differenceEM;
+    extendedManifest.Difference(manifest, differenceEM);
+    ASSERT_EQ((size_t)2, differenceEM.GetRulesSize());
+
+    Manifest differenceES;
+    extendedManifest.Difference(splitManifest, differenceES);
+    ASSERT_EQ((size_t)2, differenceES.GetRulesSize());
+
+    Manifest differenceEP;
+    extendedManifest.Difference(permutedManifest, differenceEP);
+    ASSERT_EQ((size_t)2, differenceEP.GetRulesSize());
+
+    Manifest differenceME;
+    manifest.Difference(extendedManifest, differenceME);
+    ASSERT_EQ((size_t)0, differenceME.GetRulesSize());
+
+    Manifest differenceSE;
+    splitManifest.Difference(extendedManifest, differenceSE);
+    ASSERT_EQ((size_t)0, differenceSE.GetRulesSize());
+
+    Manifest differencePE;
+    permutedManifest.Difference(permutedManifest, differencePE);
+    ASSERT_EQ((size_t)0, differencePE.GetRulesSize());
 
     ASSERT_EQ(ER_OK, Util::Fini());
 }

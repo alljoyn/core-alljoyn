@@ -77,7 +77,6 @@ class CertificateUtil {
                                          const uint64_t validityPeriod,
                                          IdentityCertificate& identityCert);
 
-  private:
     /**
      * @brief Set the validity period of a certificate.
      *
@@ -92,6 +91,7 @@ class CertificateUtil {
     static void SetValityPeriod(const uint64_t validityPeriod,
                                 CertificateX509& cert);
 
+  private:
     /**
      * @brief Set the subject name of a certificate based on an application.
      *

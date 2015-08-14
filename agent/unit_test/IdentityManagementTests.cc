@@ -41,12 +41,12 @@ TEST_F(IdentityManagementTests, IdentityManipBasic) {
 
     GUID128 guid("B509480EE7B5A000B82A7E37E");
     string name = "Hello Identity";
-    string desc = "This is a hello world test identity";
 
-    identityInfo.guid = guid;
     identityInfo.name = name;
+    identityInfo.guid = guid;
 
     ASSERT_EQ(storage->StoreIdentity(identityInfo), ER_OK);
+    ASSERT_FALSE(identityInfo.authority.empty());
 
     identityInfo.name.clear();
     ASSERT_EQ(identityInfo.name, string(""));

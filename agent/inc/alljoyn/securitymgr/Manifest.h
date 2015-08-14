@@ -158,6 +158,27 @@ class Manifest {
      */
     bool operator!=(const Manifest& other) const;
 
+    /**
+     * @brief Computes a manifest containing all rules that are not defined in another manifest.
+     *
+     * @param[in]  other   The other manifest.
+     * @param[out] result  A manifest containing all the rules that are defined in this
+     *                     manifest, but not in the other manifest.
+     *
+     * @return ER_OK    If the difference was computed successfully.
+     * @return others   On failure
+     *
+     */
+    QStatus Difference(const Manifest& other,
+                       Manifest& result) const;
+
+    /**
+     * @brief Get the number of rules in the manifest.
+     *
+     * @return the number of Rules in the manifest
+     */
+    const size_t GetRulesSize() const;
+
   private:
 
     /**

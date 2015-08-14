@@ -27,38 +27,13 @@
 #include "Application.h"
 #include "IdentityInfo.h"
 #include "ApplicationListener.h"
+#include "ClaimListener.h"
 #include "Manifest.h"
 
 using namespace qcc;
 
 namespace ajn {
 namespace securitymgr {
-/**
- * @brief A class providing a callback for approving the manifest.
- */
-class ManifestListener {
-  public:
-    ManifestListener() { }
-
-    virtual ~ManifestListener() { }
-
-    /**
-     * @brief This method is called by the security agent when it requires
-     * acceptance of a manifest.
-     *
-     * @param[in] app                 The application.
-     *                                That the manifest belongs to.
-     * @param[in] manifest            The manifest the application requested.
-     *
-     * @return true if the manifest is approved, false otherwise.
-     *
-     */
-    virtual bool ApproveManifest(const OnlineApplication& app,
-                                 const Manifest& manifest) = 0;
-};
-
-class SecurityAgentImpl;
-
 class SecurityAgent {
   public:
 
@@ -69,37 +44,38 @@ class SecurityAgent {
      * known to the security agent.
      *
      * This method will also fetch the manifest of the application, that
-     * should be approved by the ManifestListener. If no ManifestListener
-     * is registered, this method will return ER_FAIL. If the listener rejects
-     * the manifest, the application will be automatically reset.
+     * should be approved by the ClaimListener. The Claimlistener should also
+     * select a session type to do the claiming.  If no ClaimListener
+     * is registered, this method will return ER_FAIL.
+
      *
-     * Once an application is claimed, it is persisted together with
-     * its manifest in the local storage.
+     * Once the manifest is accepted by the manifest listener and the session type
+     * is selected the application will be claimed.
      *
      * @param[in] app      The application that will be claimed.
      * @param[in] idInfo   The identity that should be assigned to the
      *                     application.
      *
-     * @return ER_OK                 On success.
-     * @return ER_MANIFEST_REJECTED  When the ManifestListener rejects the manifest.
-     * @return Others                When no ManifestListener is registered or
+     * @return ER_OK                 On successful storage of the claim request.
+     * @return ER_MANIFEST_REJECTED  When the ClaimListener rejects the manifest.
+     * @return Others                When no ClaimListener is registered or
      *                               in case of other failures.
      */
     virtual QStatus Claim(const OnlineApplication& app,
                           const IdentityInfo& idInfo) = 0;
 
     /**
-     * @brief Register a ManifestListener to the security agent, which will
+     * @brief Register a ClaimListener to the security agent, which will
      * be called during Claim.
      *
      * This method should not be called when Claim is ongoing. This results in
      * an undefined behavior.
      *
-     * @param[in] listener  A new ManifestListener to approve manifest or nullptr
+     * @param[in] listener  A new ClaimListener to assist during the claim process or nullptr
      *                      to remove the one currently set; the security agent
      *                      does not take ownership of the passed pointer.
      */
-    virtual void SetManifestListener(ManifestListener* listener) = 0;
+    virtual void SetClaimListener(ClaimListener* listener) = 0;
 
     /**
      * @brief Add an ApplicationListener to the security agent.

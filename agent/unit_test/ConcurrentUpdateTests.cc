@@ -16,6 +16,7 @@
 
 #include <gtest/gtest.h>
 #include "TestUtil.h"
+#include "AgentStorageWrapper.h"
 
 #include <qcc/GUID.h>
 #include <qcc/String.h>
@@ -38,10 +39,10 @@ enum Action {
 };
 
 class CCAgentStorageWrapper :
-    public DefaultAgentStorageWrapper {
+    public AgentStorageWrapper {
   public:
     CCAgentStorageWrapper(shared_ptr<AgentCAStorage>& _ca, shared_ptr<UIStorage>& _storage)
-        : DefaultAgentStorageWrapper(_ca), action(NOTHING), storage(_storage), locked(false) { }
+        : AgentStorageWrapper(_ca), action(NOTHING), storage(_storage), locked(false) { }
 
     QStatus UpdatesCompleted(Application& app, uint64_t& updateID)
     {

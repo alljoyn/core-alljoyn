@@ -26,26 +26,42 @@ using namespace sample::securitymgr::door;
 using namespace ajn;
 using namespace std;
 
-class SPListener :
-    public SessionPortListener {
-    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
-    {
-        QCC_UNUSED(opts);
-        QCC_UNUSED(joiner);
-        QCC_UNUSED(sessionPort);
-
-        return true;
-    }
-};
-
-int CDECL_CALL main(int arg, char** argv)
+void UpdateManifest(DoorCommon& common)
 {
-    QCC_UNUSED(arg);
-    QCC_UNUSED(argv);
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName(DOOR_INTERFACE);
+
+    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
+    prms[0].SetMemberName("*");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[1].SetMemberName("*");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    prms[2].SetMemberName("*");
+    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+
+    rules[0].SetMembers(3, prms);
+
+    Manifest manifest;
+    manifest.SetFromRules(rules, 1);
+
+    common.UpdateManifest(manifest);
+}
+
+int CDECL_CALL main(int argc, char** argv)
+{
+    string appName = "DoorProvider";
+    if (argc > 1) {
+        appName = string(argv[1]);
+    }
+    printf("Starting door provider %s\n", appName.c_str());
 
     if (AllJoynInit() != ER_OK) {
         return EXIT_FAILURE;
     }
+
 #ifdef ROUTER
     if (AllJoynRouterInit() != ER_OK) {
         AllJoynShutdown();
@@ -54,11 +70,8 @@ int CDECL_CALL main(int arg, char** argv)
 #endif
 
     //Do the common set-up
-    DoorCommon common("DoorProvider");     //TODO make name commandline param
-    QStatus status = common.Init("/tmp/provdb.ks", true); //TODO allow keystore to be defined from cmdline
-    SessionOpts opts;
-    SessionPort port = DOOR_APPLICATION_PORT;
-    SPListener spl;
+    DoorCommon common(appName);
+    QStatus status = common.Init(true);
     BusAttachment* ba = common.GetBusAttachment();;
 
     do {
@@ -68,20 +81,12 @@ int CDECL_CALL main(int arg, char** argv)
         //Create bus object
         Door door(ba);
 
-        status = ba->RegisterBusObject(door, DOOR_INTF_SECURE ? true : false);
+        status = ba->RegisterBusObject(door, true);
         if (ER_OK != status) {
             printf("Failed to RegisterBusObject\n");
             break;
         }
 
-        //Host session
-        status = ba->BindSessionPort(port, opts, spl);
-        if (ER_OK != status) {
-            printf("Failed to BindSesssionPort\n");
-            break;
-        }
-
-        // Announce about
         status = common.AnnounceAbout();
         if (ER_OK != status) {
             printf("Failed to announce about\n");
@@ -90,8 +95,32 @@ int CDECL_CALL main(int arg, char** argv)
 
         printf("Door provider initialized; Waiting for consumers ...");
         printf("Type 'q' to quit\n");
+        printf(">");
 
-        while ((cin.get()) != 'q') {
+        char cmd;
+        while ((cmd = cin.get()) != 'q') {
+            printf(">");
+
+            switch (cmd) {
+            case 'u':
+                printf("Updating manifest ...\n");
+                UpdateManifest(common);
+                break;
+
+            case 'c':
+                printf("Canceling manifest update request ...\n");
+                common.CancelManifestUpdate();
+                break;
+
+            case '\n':
+                break;
+
+            case '\r':
+                break;
+
+            default:
+                break;
+            }
         }
     } while (0);
 
@@ -100,6 +129,7 @@ int CDECL_CALL main(int arg, char** argv)
 #ifdef ROUTER
     AllJoynRouterShutdown();
 #endif
+
     AllJoynShutdown();
     return (int)status;
 }

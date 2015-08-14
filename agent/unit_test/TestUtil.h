@@ -42,6 +42,8 @@ using namespace std;
 /** @file TestUtil.h */
 
 namespace secmgr_tests {
+#define TEST_STORAGE_NAME "test"
+
 class TestSessionListener :
     public SessionListener {
     void SessionLost(SessionId sessionId, SessionLostReason reason)
@@ -72,36 +74,42 @@ class TestApplicationListener :
     TestApplicationListener(Condition& _sem,
                             Mutex& _lock,
                             Condition& _errorSem,
-                            Mutex& _errorLock);
+                            Mutex& _errorLock,
+                            Condition& _manifestSem,
+                            Mutex& _manifestLock);
 
     vector<OnlineApplication> events;
     vector<SyncError> syncErrors;
+    vector<ManifestUpdate> manifestUpdates;
 
   private:
     Condition& sem;
     Mutex& lock;
     Condition& errorSem;
     Mutex& errorLock;
+    Condition& manifestSem;
+    Mutex& manifestLock;
 
     void OnApplicationStateChange(const OnlineApplication* old,
                                   const OnlineApplication* updated);
 
     void OnSyncError(const SyncError* syncError);
 
+    void OnManifestUpdate(const ManifestUpdate* manifestUpdate);
+
     /* To avoid compilation warning that the assignment operator can not be generated */
     TestApplicationListener& operator=(const TestApplicationListener&);
 };
 
 class AutoAccepter :
-    public ManifestListener {
-    bool ApproveManifest(const OnlineApplication& app,
-                         const Manifest& manifest)
+    public ClaimListener {
+    QStatus ApproveManifestAndSelectSessionType(ClaimContext& ctx)
     {
-        QCC_UNUSED(app);
+        ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_NULL);
+        ctx.ApproveManifest();
+        lastManifest = ctx.GetManifest();
 
-        lastManifest = manifest;
-
-        return true;
+        return ER_OK;
     }
 
   public:
@@ -118,6 +126,8 @@ class BasicTest :
     Mutex lock;
     Condition errorSem;
     Mutex errorLock;
+    Condition manifestSem;
+    Mutex manifestLock;
     TestApplicationListener* tal;
     TestAboutListener testAboutListener;
     virtual void SetUp();
@@ -134,6 +144,7 @@ class BasicTest :
     AutoAccepter aa;
     PolicyGenerator* pg;
     ProxyObjectManager* proxyObjectManager;
+    Mutex secAgentLock;
 
     BasicTest();
 
@@ -152,6 +163,11 @@ class BasicTest :
 
     bool CheckDefaultPolicy();
 
+    bool CheckRemoteIdentity(IdentityInfo& expectedIdentity,
+                             Manifest& expectedManifest,
+                             IdentityCertificate& remoteIdentity,
+                             Manifest& remoteManifest);
+
     bool CheckIdentity(IdentityInfo& expectedIdentity,
                        Manifest& expectedManifest);
 
@@ -164,16 +180,37 @@ class BasicTest :
     bool WaitForSyncError(SyncErrorType type,
                           QStatus status);
 
+    bool WaitForEvents(size_t numOfEvents);
+
     bool CheckUnexpectedSyncErrors();
+
+    bool WaitForManifestUpdate(ManifestUpdate& manifestUpdate);
+
+    bool CheckUnexpectedManifestUpdates();
 
     virtual shared_ptr<AgentCAStorage>& GetAgentCAStorage()
     {
         return ca;
     }
+
+    void InitSecAgent();
+
+    void RemoveSecAgent();
+};
+
+class SecurityAgentTest :
+    public BasicTest {
+  public:
+
+    void SetUp()
+    {
+        BasicTest::SetUp();
+        InitSecAgent();
+    }
 };
 
 class ClaimedTest :
-    public BasicTest {
+    public SecurityAgentTest {
   public:
 
     IdentityInfo idInfo;
@@ -181,7 +218,7 @@ class ClaimedTest :
 
     void SetUp()
     {
-        BasicTest::SetUp();
+        SecurityAgentTest::SetUp();
 
         idInfo.guid = GUID128(0xEF);
         idInfo.name = "MyTest ID Name";
@@ -192,87 +229,8 @@ class ClaimedTest :
         secMgr->Claim(lastAppInfo, idInfo);
         ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
         ASSERT_EQ(ER_OK, secMgr->GetApplication(lastAppInfo));
+        ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
     }
-};
-
-class DefaultAgentStorageWrapper :
-    public AgentCAStorage {
-  public:
-    DefaultAgentStorageWrapper(shared_ptr<AgentCAStorage>& _ca) : ca(_ca) { }
-
-    virtual ~DefaultAgentStorageWrapper() { }
-
-    virtual QStatus GetManagedApplication(Application& app) const
-    {
-        return ca->GetManagedApplication(app);
-    }
-
-    virtual QStatus RegisterAgent(const KeyInfoNISTP256& agentKey,
-                                  const Manifest& manifest,
-                                  GroupInfo& adminGroup,
-                                  IdentityCertificateChain& identityCertificates,
-                                  vector<MembershipCertificateChain>& adminGroupMemberships)
-    {
-        return ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, adminGroupMemberships);
-    }
-
-    virtual QStatus StartApplicationClaiming(Application& app,
-                                             const IdentityInfo& idInfo,
-                                             const Manifest& manifest)
-    {
-        return ca->StartApplicationClaiming(app, idInfo, manifest);
-    }
-
-    virtual QStatus UpdatesCompleted(Application& app, uint64_t& updateID)
-    {
-        return ca->UpdatesCompleted(app, updateID);
-    }
-
-    virtual QStatus StartUpdates(Application& app, uint64_t& updateID)
-    {
-        return ca->StartUpdates(app, updateID);
-    }
-
-    virtual QStatus GetCaPublicKeyInfo(KeyInfoNISTP256& keyInfoOfCA) const
-    {
-        return ca->GetCaPublicKeyInfo(keyInfoOfCA);
-    }
-
-    virtual QStatus GetAdminGroup(GroupInfo& groupInfo) const
-    {
-        return ca->GetAdminGroup(groupInfo);
-    }
-
-    virtual QStatus GetMembershipCertificates(const Application& app,
-                                              MembershipCertificateChain& membershipCertificates) const
-    {
-        return ca->GetMembershipCertificates(app, membershipCertificates);
-    }
-
-    virtual QStatus GetIdentityCertificatesAndManifest(const Application& app,
-                                                       IdentityCertificateChain& identityCertificates,
-                                                       Manifest& manifest) const
-    {
-        return ca->GetIdentityCertificatesAndManifest(app, identityCertificates, manifest);
-    }
-
-    virtual QStatus GetPolicy(const Application& app, PermissionPolicy& policy) const
-    {
-        return ca->GetPolicy(app, policy);
-    }
-
-    virtual void RegisterStorageListener(StorageListener* listener)
-    {
-        return ca->RegisterStorageListener(listener);
-    }
-
-    virtual void UnRegisterStorageListener(StorageListener* listener)
-    {
-        return ca->UnRegisterStorageListener(listener);
-    }
-
-  protected:
-    shared_ptr<AgentCAStorage> ca;
 };
 }
 #endif /* ALLJOYN_SECMGR_TESTUTIL_H_ */

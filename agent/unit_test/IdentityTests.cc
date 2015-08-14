@@ -22,7 +22,7 @@ using namespace ajn::securitymgr;
 
 namespace secmgr_tests {
 class IdentityTests :
-    public BasicTest {
+    public SecurityAgentTest {
   private:
 
   protected:
@@ -39,21 +39,25 @@ class IdentityTests :
  *       -# Make sure the application is in a CLAIMABLE state.
  *       -# Create and store an IdentityInfo.
  *       -# Claim the application using the IdentityInfo.
- *       -# Accept the manifest of the application.
  *       -# Check whether the application becomes CLAIMED.
  *       -# Create and store another IdentityInfo.
  *       -# Update the identity certificate of the application.
  *       -# Wait for the updates to be completed.
  *       -# Check whether the identity certificate was installed successfully.
+ *       -# Remove the latest identity and make sure the app is removed and
+ *          that it becomes claimable again.
+ *       -# Use the original identity to claim 2 apps successfully.
+ *       -# Remove the original identity and verify that the applications
+ *          are removed and they are claimable again.
+ *       -# Get all managed applications and verify that none exists.
  **/
-TEST_F(IdentityTests, SuccessfulInstallIdentity) {
+TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {//Requires solution for ASACORE-2342
     /* Start the application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
-
     IdentityInfo info;
     info.name = "MyName";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(info));
@@ -67,23 +71,37 @@ TEST_F(IdentityTests, SuccessfulInstallIdentity) {
     IdentityInfo info2;
     info2.name = "AnotherName";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(info2));
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, info2));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, info2, aa.lastManifest));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     ASSERT_TRUE(CheckIdentity(info2, aa.lastManifest));
-}
 
-/**
- * @test Verify that claiming with a different manifest digest in the
- *       generated identity certificate would be handled correctly.
- *       -# Start an application and make sure it's claimable.
- *       -# Try to claim the application after generating an identity
- *          certificate based on an ALTERED version of the received
- *          manifest.
- *       -# Verify that the claiming would fail and that the application
- *          is still claimable.
- *       -# Make sure that agent does not manage the application.
- **/
-TEST_F(IdentityTests, DISABLED_IdentityDigestFail) {
+    /* Remove the identity info and make sure the app is claimable again*/
+    ASSERT_EQ(ER_OK, storage->RemoveIdentity(info2));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
+
+    /*
+     * Use the original identity to claim 2 apps and make sure when the
+     * identity is removed those apps are also removed
+     * */
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(CheckIdentity(info, aa.lastManifest));
+
+    TestApplication testApp1("NewApp");
+    ASSERT_EQ(ER_OK, testApp1.Start());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(CheckIdentity(info, aa.lastManifest));
+
+    ASSERT_EQ(ER_OK, storage->RemoveIdentity(info)); // Should remove testApp and testApp1
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK)); //First app is claimable again
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK)); //Second app is claimable again
+
+    vector<Application> apps;
+    ASSERT_EQ(ER_OK, storage->GetManagedApplications(apps));
+    ASSERT_TRUE(apps.empty());
 }
 
 /**

@@ -82,4 +82,20 @@ TEST_F(PolicyGeneratorTest, BasicIllegalArgTest) {
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
     ASSERT_EQ((size_t)1, pol.GetAclsSize()) << "Policy is: " << pol.ToString().c_str();
 }
+
+/**
+ * @test Validate the generation of a policy with deny rules.
+ *       -# Create a policy generator and add a random application to its blacklist.
+ *       -# Generate a default policy for an empty vector of groups.
+ *       -# Check that the resulting policy has 2 ACLs.
+ *       -# Check that the resulting policy only contains valid deny rules.
+ **/
+TEST_F(PolicyGeneratorTest, DenyRules) {
+    OnlineApplication app;
+    pg->deniedKeys.push_back(app.keyInfo);
+    vector<GroupInfo> groups; // Intentionally empty
+    PermissionPolicy pol;
+    ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
+    ASSERT_EQ((size_t)2, pol.GetAclsSize());
+}
 }

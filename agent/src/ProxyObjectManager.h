@@ -30,8 +30,10 @@
 #include <alljoyn/securitymgr/GroupInfo.h>
 #include <alljoyn/securitymgr/Application.h>
 #include <alljoyn/securitymgr/Manifest.h>
+#include <alljoyn/securitymgr/AgentCAStorage.h>
 
 #define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
+#define KEYX_ECDHE_PSK "ALLJOYN_ECDHE_PSK"
 #define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
 #define AJNKEY_STORE "/.alljoyn_keystore/c_ecdhe.ks"
 
@@ -61,21 +63,20 @@ class ProxyObjectManager :
     QStatus Claim(const OnlineApplication& app,
                   KeyInfoNISTP256& certificateAuthority,
                   GroupInfo& adminGroup,
-                  IdentityCertificate* identityCertChain,
-                  size_t identityCertChainSize,
-                  const Manifest& manifest);
+                  IdentityCertificateChain identityCertChain,
+                  const Manifest& manifest,
+                  const SessionType type,
+                  AuthListener& listener);
 
     QStatus GetIdentity(const OnlineApplication& app,
-                        IdentityCertificate* cert);
+                        IdentityCertificateChain& cert);
 
     QStatus UpdateIdentity(const OnlineApplication& app,
-                           IdentityCertificate* certChain,
-                           size_t certChainSize,
+                           IdentityCertificateChain certChain,
                            const Manifest& mf);
 
     QStatus InstallMembership(const OnlineApplication& app,
-                              const MembershipCertificate* certificateChain,
-                              size_t certificateChainSize);
+                              const MembershipCertificateChain certificateChain);
 
     QStatus RemoveMembership(const OnlineApplication& app,
                              const string& serial,
@@ -104,13 +105,20 @@ class ProxyObjectManager :
     QStatus GetManifest(const OnlineApplication& app,
                         Manifest& manifest);
 
+    QStatus GetClaimCapabilities(const OnlineApplication& app,
+                                 PermissionConfigurator::ClaimCapabilities& claimCapabilities,
+                                 PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo);
+
     QStatus Reset(const OnlineApplication& app);
 
     static AuthListener* listener;
 
   private:
-
-    Mutex lock;
+    /*
+     * Lock made static as different instances of ProxyObjectManager
+     * might use the same busattachment.
+     */
+    static Mutex lock;
     BusAttachment* bus;
 
     /* SessionListener */
@@ -128,13 +136,15 @@ class ProxyObjectManager :
      */
     QStatus GetProxyObject(const OnlineApplication app,
                            SessionType type,
-                           SecurityApplicationProxy** remoteObject);
+                           SecurityApplicationProxy** remoteObject,
+                           AuthListener* al = nullptr);
 
     /**
      * @brief Release the remoteObject.
      * @param[in] remoteObject The object to be released.
      */
-    QStatus ReleaseProxyObject(SecurityApplicationProxy* remoteObject);
+    QStatus ReleaseProxyObject(SecurityApplicationProxy* remoteObject,
+                               bool resetListener = false);
 };
 }
 }

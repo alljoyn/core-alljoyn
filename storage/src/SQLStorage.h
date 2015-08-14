@@ -17,10 +17,15 @@
 #ifndef ALLJOYN_SECMGR_STORAGE_SQLSTORAGE_H_
 #define ALLJOYN_SECMGR_STORAGE_SQLSTORAGE_H_
 
+#if defined (QCC_OS_GROUP_WINDOWS)
+#include "sqlite3.h"
+#else
 #include <sqlite3.h>
+#endif
 
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include <qcc/CertificateECC.h>
 #include <qcc/CryptoECC.h>
@@ -33,7 +38,6 @@
 #include <alljoyn/securitymgr/IdentityInfo.h>
 #include <alljoyn/securitymgr/Manifest.h>
 #include <alljoyn/securitymgr/storage/ApplicationMetaData.h>
-
 #include "SQLStorageConfig.h"
 
 /**
@@ -86,7 +90,8 @@ class SQLStorage {
 
     QStatus RemoveInfo(InfoType type,
                        const KeyInfoNISTP256& authority,
-                       const GUID128& guid);
+                       const GUID128& guid,
+                       vector<Application>& appsToSync);
 
     QStatus BindCertForStorage(const Application& app,
                                CertificateX509& certificate,
@@ -112,6 +117,10 @@ class SQLStorage {
                                   const uint8_t* byteArray,
                                   const size_t size,
                                   const char* type);
+
+    QStatus GetApplicationsPerGuid(const InfoType type,
+                                   const GUID128& guid,
+                                   vector<Application>& apps);
 
   public:
 
@@ -171,7 +180,8 @@ class SQLStorage {
 
     QStatus StoreGroup(const GroupInfo& groupInfo);
 
-    QStatus RemoveGroup(const GroupInfo& groupInfo);
+    QStatus RemoveGroup(const GroupInfo& groupInfo,
+                        vector<Application>& appsToSync);
 
     QStatus GetGroup(GroupInfo& groupInfo) const;
 
@@ -179,13 +189,14 @@ class SQLStorage {
 
     QStatus StoreIdentity(const IdentityInfo& idInfo);
 
-    QStatus RemoveIdentity(const IdentityInfo& idInfo);
+    QStatus RemoveIdentity(const IdentityInfo& idInfo,
+                           vector<Application>& appsToSync);
 
     QStatus GetIdentity(IdentityInfo& idInfo) const;
 
     QStatus GetIdentities(vector<IdentityInfo>& idInfos) const;
 
-    QStatus GetNewSerialNumber(string& serialNumber) const;
+    QStatus GetNewSerialNumber(CertificateX509& cert) const;
 
     void Reset();
 

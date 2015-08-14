@@ -18,6 +18,7 @@ app_env = secenv.Clone()
 app_env.Append(CPPPATH = ['generated'])
 app_env.Append(LIBPATH = ['$SEC_DISTDIR/lib'])
 app_env.Prepend(LIBS = ['alljoyn'])
+app_env.Prepend(LIBS = ['ajsecmgr'])
 
 #Bundled router
 if app_env['BR'] == 'on':

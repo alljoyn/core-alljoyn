@@ -85,34 +85,27 @@ TEST_F(AJNCaStorageTest, BasicTest) {
     ASSERT_EQ(ER_OK, cert2.EncodeCertificateDER(der2));
     ASSERT_EQ(der.size(), der2.size());
     ASSERT_EQ(ER_OK, cert2.Verify(key));
-
-    ASSERT_NE((size_t)0, cert.GetEncodedLen());
-    ASSERT_FALSE(nullptr == cert.GetEncoded());
+    qcc::String der_;
+    ASSERT_EQ(ER_OK, cert.EncodeCertificateDER(der_));
     MembershipCertificate cert3;
-    ASSERT_EQ(ER_OK, cert3.LoadEncoded(cert.GetEncoded(), cert.GetEncodedLen()));
+    ASSERT_EQ(ER_OK, cert3.DecodeCertificateDER(der_));
     ASSERT_EQ(ER_OK, cert3.Verify(key));
-    ASSERT_EQ(cert.GetEncodedLen(), cert3.GetEncodedLen());
-    ASSERT_EQ(0, memcmp(cert.GetEncoded(), cert3.GetEncoded(), cert3.GetEncodedLen()));
+    qcc::String der2_;
+    ASSERT_EQ(ER_OK, cert.EncodeCertificateDER(der2_));
+    ASSERT_EQ(der, der2_);
 
-    vector<MembershipCertificate> local;
-    local.push_back(cert3);
-    vector<MembershipCertificate>::iterator localIt;
-    for (localIt = local.begin(); localIt != local.end(); ++localIt) {
-        ASSERT_EQ(ER_OK, localIt->Verify(key));
-        ASSERT_EQ(cert.GetEncodedLen(), localIt->GetEncodedLen());
-        ASSERT_EQ(0, memcmp(cert.GetEncoded(), localIt->GetEncoded(), localIt->GetEncodedLen()));
-    }
     MembershipCertificate cert4;
-    ASSERT_EQ(ER_OK, cert4.LoadEncoded(cert.GetEncoded(), cert.GetEncodedLen()));
+    ASSERT_EQ(ER_OK, cert4.DecodeCertificateDER(der));
     ASSERT_EQ(ER_OK, cert4.Verify(key));
     cert4.SetGuild(cert.GetGuild());
-    ASSERT_EQ(cert.GetEncodedLen(), cert4.GetEncodedLen());
-    ASSERT_EQ(0, memcmp(cert.GetEncoded(), cert4.GetEncoded(), cert4.GetEncodedLen()));
+    qcc::String der4;
+    ASSERT_EQ(ER_OK, cert.EncodeCertificateDER(der4));
+    ASSERT_EQ(der, der4);
 
     AJNCa realCa;
     ASSERT_EQ(ER_OK, realCa.Init(storeName));
     MembershipCertificate cert5;
-    ASSERT_EQ(ER_OK, cert5.LoadEncoded(cert.GetEncoded(), cert.GetEncodedLen()));
+    ASSERT_EQ(ER_OK, cert5.DecodeCertificateDER(der));
     ASSERT_EQ(ER_OK, cert5.Verify(key));
     ASSERT_EQ(ER_OK, realCa.SignCertificate(cert5));
     ASSERT_EQ(ER_OK, cert5.Verify(key));
@@ -120,22 +113,7 @@ TEST_F(AJNCaStorageTest, BasicTest) {
     MembershipCertificate cert6;
     String der5;
     ASSERT_EQ(ER_OK, cert5.EncodeCertificateDER(der5));
-    // ASSERT_EQ(ER_OK, cert6.DecodeCertificateDER(der5));
-    // ASSERT_EQ(ER_OK, cert6.Verify(key));
-}
-
-/**
- * @test Verify that corrupt output from CAStorage is handled
- *       well by the security agent.Note: Use a wrapper on storage.
- *       -# Start and claim an application successfully.
- *       -# Make sure the wrapper has the membership getter adapted
- *          to return an intentionally manipulated output; (e.g., certificate
- *          signed by a different authority).
- *       -# Store a valid membership certificate which should trigger an update.
- *       -# Make sure the security agent is able to detect the inconsistency
- *          after trying to update form the wrapped storage.
- *       -# Verify that the application has no membership certificate.
- **/
-TEST_F(AJNCaStorageTest, DISABLED_CorruptCAStorageMembershipOutput) {
+    ASSERT_EQ(ER_OK, cert6.DecodeCertificateDER(der5));
+    ASSERT_EQ(ER_OK, cert6.Verify(key));
 }
 }

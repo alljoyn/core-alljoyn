@@ -41,9 +41,6 @@ if env['CXX'][:5] == 'clang':
 if not env.has_key('_ALLJOYN_ABOUT_') and os.path.exists('../../core/alljoyn/services/about/SConscript'):
     env.SConscript('../../core/alljoyn/services/about/SConscript')
 
-if not env.has_key('_ALLJOYN_SERVICES_COMMON_') and os.path.exists('../../services/base/services_common/SConscript'):
-    env.SConscript('../../services/base/services_common/SConscript')
-
 if 'cpp' in env['bindings'] and not env.has_key('_ALLJOYNCORE_') and os.path.exists('../../core/alljoyn/alljoyn_core/SConscript'):
     env.SConscript('../../core/alljoyn/alljoyn_core/SConscript')
 
@@ -75,7 +72,7 @@ AddMethod(secenv, create_libpath, "CreateLibPath")
 secenv['SEC_DISTDIR'] = env['DISTDIR'] + '/security'
 secenv['JARDIR'] = secenv['SEC_DISTDIR'] + '/jar'
 
-secenv.Append(LIBS = ['alljoyn_about', 'alljoyn_services_common'])
+secenv.Append(LIBS = ['alljoyn_about'])
 
 buildroot = secenv.subst('build/${OS}/${CPU}/${VARIANT}')
 
@@ -86,7 +83,12 @@ secenv.Append(CPPPATH = ['$SEC_DISTDIR/security/inc'])
 secenv.Append(CPPPATH = ['../../../../../../agent/inc/'])
 secenv.Append(CPPPATH = ['../../../../../../storage/inc'])
 
-secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
+if env['OS_GROUP'] == 'windows':
+    print "Please download sqlite-amalgamation-3081002.zip from http://www.sqlite.org/download.html and copy sqlite3.c sqlite3.h in external\\sqlite3\\"
+    sqlite_objs = secenv.SConscript('external/sqlite3/SConscript', exports = ['secenv'], variant_dir=buildroot+'/ext/lib/sqlite3', duplicate=0)
+    secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/SConscript', exports = ['secenv', 'sqlite_objs'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
+else:
+    secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
 secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('agent/src/SConscript', exports = ['secenv'], variant_dir=buildroot+'/lib/agent', duplicate=0))
 
 # Security Manager App building

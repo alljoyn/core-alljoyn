@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include "TestUtil.h"
+#include "AgentStorageWrapper.h"
 
 using namespace ajn;
 using namespace ajn::securitymgr;
@@ -23,15 +24,17 @@ using namespace ajn::securitymgr;
 
 namespace secmgr_tests {
 class ResetTests :
-    public BasicTest {
-  private:
-
-  protected:
+    public SecurityAgentTest {
+  public:
+    shared_ptr<AgentCAStorage>& GetAgentCAStorage()
+    {
+        wrappedCA = shared_ptr<FailingStorageWrapper>(new FailingStorageWrapper(ca, storage));
+        ca = wrappedCA;
+        return ca;
+    }
 
   public:
-    ResetTests()
-    {
-    }
+    shared_ptr<FailingStorageWrapper> wrappedCA;
 };
 
 /**
@@ -47,7 +50,7 @@ class ResetTests :
  *       -# Claim the application again.
  *       -# Check whether it becomes CLAIMED again.
  **/
-TEST_F(ResetTests, SuccessfulReset) {
+TEST_F(ResetTests, DISABLED_SuccessfulReset) { //Requires solution for ASACORE-2342
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
@@ -72,13 +75,99 @@ TEST_F(ResetTests, SuccessfulReset) {
 }
 
 /**
- * @test Verify that resetting an application with no keystore after claiming
- *       will fail.
- *       -# Start the application.
- *       -# Claim the application successfully.
- *       -# Remove only the keystore of the application.
- *       -# Try to remove the application and make sure this fails.
- **/
-TEST_F(ResetTests, DISABLED_FailedReset) {
+ * @test Recovery from failure of notifying the CA of failure to reset an
+ *       application should be graceful.
+ *       -# Start a test application and claim it.
+ *       -# Make sure remote reset fails.
+ *       -# Stop the application.
+ *       -# Make sure the UpdatesCompleted to storage fails.
+ *       -# Reset the application and check that this succeeds.
+ *       -# Restart the test application and make sure it is removed from
+ *          storage.
+ */
+TEST_F(ResetTests, DISABLED_RecoveryFromResetFailure) { // see ASACORE-2262
+    // create and store identity
+    IdentityInfo idInfo;
+    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
+
+    // start and claim test app
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+
+    // make sure remote reset will fail
+    proxyObjectManager->Reset(lastAppInfo);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+
+    // make sure storage will fail on UpdatesCompleted
+    wrappedCA->failOnUpdatesCompleted = true;
+
+    // reset the test application
+    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_WILL_RESET));
+
+    // stop agent to make sure update is completed
+    RemoveSecAgent();
+
+    // stop the test application
+    ASSERT_EQ(ER_OK, testApp.Stop());
+
+    // make sure storage will succeed on UpdatesCompleted
+    wrappedCA->failOnUpdatesCompleted = false;
+
+    // restart agent
+    InitSecAgent();
+
+    // start the remote application
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+
+    // check storage
+    ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
+    ASSERT_EQ(ER_FAIL, storage->RemoveApplication(lastAppInfo));
+}
+
+/**
+ * @test Recovery from failure of notifying the CA of successful resetting an
+ *       application should be graceful.
+ *       -# Start a test application and claim it.
+ *       -# Make sure the UpdatesCompleted to storage fails.
+ *       -# Reset the application and check that this succeeds.
+ *       -# Restart the test application and make sure it is removed from
+ *          storage.
+ */
+TEST_F(ResetTests, DISABLED_RecoveryFromResetSuccess) { // see ASACORE-2262
+    // create and store identity
+    IdentityInfo idInfo;
+    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
+
+    // start and claim test app
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+
+    // make sure storage will fail on UpdatesCompleted
+    wrappedCA->failOnUpdatesCompleted = true;
+
+    // reset the application
+    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_WILL_RESET));
+    ASSERT_NE(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
+
+    // stop the test app
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, false, SYNC_WILL_RESET));
+
+    // restore connectivity to storage
+    wrappedCA->failOnUpdatesCompleted = false;
+
+    // restart the app and check whether it is removed from storage
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
 }
 } // namespace

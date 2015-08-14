@@ -16,11 +16,34 @@
 
 #include <string>
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/securitymgr/Manifest.h>
+
+#include <qcc/GUID.h>
 
 using namespace std;
 using namespace ajn;
+using namespace ajn::securitymgr;
+using namespace qcc;
 
 namespace secmgr_tests {
+class TestAppAuthListener :
+    public DefaultECDHEAuthListener {
+  public:
+    TestAppAuthListener(GUID128& psk) :
+        DefaultECDHEAuthListener(psk.GetBytes(), GUID128::SIZE)
+    {
+    }
+
+    void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
+    {
+        QCC_UNUSED(peerName);
+        QCC_UNUSED(success);
+        lastAuthMechanism = authMechanism;
+    }
+
+    string lastAuthMechanism;
+};
+
 class TestApplication {
   public:
     /**
@@ -31,18 +54,22 @@ class TestApplication {
     /**
      * Starts this TestApplication.
      */
-    QStatus Start(bool setDefaultManifest = true);
+    QStatus Start();
 
     /**
-     * Retrieves the default manifest of this TestApplication
+     * Sets the manifest of this TestApplication.
      */
-    void GetManifest(PermissionPolicy::Rule** rules,
-                     size_t& count);
+    QStatus SetManifest(const Manifest& manifest);
 
     /**
-     * Sets the default manifest of this TestApplication.
+     * Sets the manifest on the BusAttachment.
      */
-    QStatus SetManifest();
+    QStatus AnnounceManifest();
+
+    /**
+     * Updates the manifest of this TestApplication.
+     */
+    QStatus UpdateManifest(const Manifest& manifest);
 
     /**
      * Sets the application state as permitted by PermissionConfigurator
@@ -59,6 +86,20 @@ class TestApplication {
      */
     QStatus Stop();
 
+    QStatus SetClaimByPSK();
+
+    const GUID128& GetPsk() const
+    {
+        return psk;
+    }
+
+    const string GetBusName() const;
+
+    const string& GetLastAuthMechanism()
+    {
+        return authListener.lastAuthMechanism;
+    }
+
     /*
      * Destructor for TestApplication.
      */
@@ -66,7 +107,10 @@ class TestApplication {
 
   private:
     BusAttachment* busAttachment;
-    DefaultECDHEAuthListener authListener;
     string appName;
+    PermissionPolicy::Rule* manifestRules;
+    size_t manifestRulesCount;
+    GUID128 psk;
+    TestAppAuthListener authListener;
 };
 } // namespace

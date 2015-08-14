@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include "ApplicationUpdater.h"
+#include <alljoyn/securitymgr/ManifestUpdate.h>
 
 #include <stdlib.h>
 #include <string>
@@ -27,67 +28,33 @@ using namespace qcc;
 using namespace ajn;
 using namespace ajn::securitymgr;
 
-QStatus ApplicationUpdater::ClaimApplication(const OnlineApplication& app)
-{
-    QStatus status = ER_FAIL;
-
-    QCC_DbgPrintf(("Claiming application"));
-
-    KeyInfoNISTP256 CAKeyInfo;
-    status = storage->GetCaPublicKeyInfo(CAKeyInfo);
-    if (ER_OK != status) {
-        SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
-        securityAgentImpl->NotifyApplicationListeners(error);
-        QCC_LogError(status, ("Could not get CA public key"));
-        return status;
-    }
-
-    GroupInfo adminGroup;
-    status = storage->GetAdminGroup(adminGroup);
-    if (ER_OK != status) {
-        SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
-        securityAgentImpl->NotifyApplicationListeners(error);
-        QCC_LogError(status, ("Could not get admin group"));
-        return status;
-    }
-
-    IdentityCertificateChain idCerts;
-    Manifest manifest;
-    status = storage->GetIdentityCertificatesAndManifest(app, idCerts, manifest);
-    if (ER_OK != status) {
-        SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
-        securityAgentImpl->NotifyApplicationListeners(error);
-        QCC_LogError(status, ("Could not get identity certificate"));
-        return status;
-    }
-
-    status = proxyObjectManager->Claim(app, CAKeyInfo, adminGroup,
-                                       &(idCerts[0]), 1, manifest);
-
-    if (ER_OK != status) {
-        SyncError* error = new SyncError(app, status, SYNC_ER_CLAIM);
-        securityAgentImpl->NotifyApplicationListeners(error);
-    }
-
-    QCC_DbgPrintf(("Claiming application returned %s",
-                   QCC_StatusText(status)));
-
-    return status;
-}
-
 QStatus ApplicationUpdater::ResetApplication(const OnlineApplication& app)
 {
     QStatus status = ER_FAIL;
 
     QCC_DbgPrintf(("Resetting application"));
-    status = proxyObjectManager->Reset(app);
 
-    if (ER_OK != status) {
-        SyncError* error = new SyncError(app, status, SYNC_ER_RESET);
-        securityAgentImpl->NotifyApplicationListeners(error);
+    switch (app.applicationState) {
+    case PermissionConfigurator::NOT_CLAIMABLE: // implicit fallthrough
+    case PermissionConfigurator::CLAIMABLE:
+        QCC_DbgPrintf(("Application was already reset"));
+        status = ER_OK;
+        break;
+
+    case PermissionConfigurator::CLAIMED: // implicit fallthrough
+    case PermissionConfigurator::NEED_UPDATE:
+        status = proxyObjectManager->Reset(app);
+        if (ER_OK != status) {
+            SyncError* error = new SyncError(app, status, SYNC_ER_RESET);
+            securityAgentImpl->NotifyApplicationListeners(error);
+        }
+        QCC_DbgPrintf(("Resetting application returned %s",
+                       QCC_StatusText(status)));
+        break;
+
+    default:
+        QCC_LogError(status, ("Unexpected ApplicationState"));
     }
-
-    QCC_DbgPrintf(("Resetting application returned %s", QCC_StatusText(status)));
 
     return status;
 }
@@ -156,33 +123,33 @@ QStatus ApplicationUpdater::UpdatePolicy(const OnlineApplication& app)
 }
 
 QStatus ApplicationUpdater::InstallMissingMemberships(const OnlineApplication& app,
-                                                      const vector<MembershipCertificate>& local,
+                                                      const vector<MembershipCertificateChain>& local,
                                                       const vector<MembershipSummary>& remote)
 {
     QStatus status = ER_OK;
 
-    vector<MembershipCertificate>::const_iterator localIt;
+    vector<MembershipCertificateChain>::const_iterator localIt;
     vector<MembershipSummary>::const_iterator remoteIt;
 
     QCC_DbgPrintf(("Installing membership certificates"));
 
     for (localIt = local.begin(); localIt != local.end(); ++localIt) {
-        string localSerial = string((const char*)localIt->GetSerial(), localIt->GetSerialLen());
         bool install = true;
+        const MembershipCertificate leaf = (*localIt)[0];
 
         for (remoteIt = remote.begin(); remoteIt != remote.end(); ++remoteIt) {
-            if (remoteIt->serial == localSerial) {
+            if (IsSameCertificate(*remoteIt, leaf)) {
                 install = false;
                 break;
             }
         }
 
         if (install) {
-            status = proxyObjectManager->InstallMembership(app, &(*localIt), 1);
+            status = proxyObjectManager->InstallMembership(app, *localIt);
             QCC_DbgPrintf(("Installing membership certificate %s returned %i",
-                           localSerial.c_str(), status));
+                           leaf.GetGuild().ToString().c_str(), status));
             if (ER_OK != status) {
-                SyncError* error = new SyncError(app, status, *localIt);
+                SyncError* error = new SyncError(app, status, (*localIt)[0]);
                 securityAgentImpl->NotifyApplicationListeners(error);
                 QCC_LogError(status, ("Failed to InstallMembership"));
                 break;
@@ -194,12 +161,12 @@ QStatus ApplicationUpdater::InstallMissingMemberships(const OnlineApplication& a
 }
 
 QStatus ApplicationUpdater::RemoveRedundantMemberships(const OnlineApplication& app,
-                                                       const vector<MembershipCertificate>& local,
+                                                       const vector<MembershipCertificateChain>& local,
                                                        const vector<MembershipSummary>& remote)
 {
     QStatus status = ER_OK;
 
-    vector<MembershipCertificate>::const_iterator localIt;
+    vector<MembershipCertificateChain>::const_iterator localIt;
     vector<MembershipSummary>::const_iterator remoteIt;
 
     QCC_DbgPrintf(("Removing membership certificates"));
@@ -209,7 +176,7 @@ QStatus ApplicationUpdater::RemoveRedundantMemberships(const OnlineApplication& 
         bool remove = true;
 
         for (localIt = local.begin(); localIt != local.end(); ++localIt) {
-            if (string((const char*)localIt->GetSerial(), localIt->GetSerialLen()) == remoteSerial) {
+            if (IsSameCertificate(*remoteIt, (*localIt)[0])) {
                 remove = false;
                 break;
             }
@@ -238,7 +205,7 @@ QStatus ApplicationUpdater::UpdateMemberships(const OnlineApplication& app)
 
     QStatus status = ER_OK;
 
-    vector<MembershipCertificate> local;
+    vector<MembershipCertificateChain> local;
     if (ER_OK != (status = storage->GetMembershipCertificates(app, local))) {
         QCC_DbgPrintf(("Failed to GetMembershipCertificates"));
         SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
@@ -278,7 +245,7 @@ QStatus ApplicationUpdater::UpdateIdentity(const OnlineApplication& app)
 
     QStatus status = ER_FAIL;
 
-    IdentityCertificate remoteIdCert;
+    IdentityCertificateChain remoteIdCertChain;
     IdentityCertificateChain persistedIdCerts;
     SyncError* error = nullptr;
 
@@ -291,21 +258,47 @@ QStatus ApplicationUpdater::UpdateIdentity(const OnlineApplication& app)
             break;
         }
 
-        if (ER_OK != (status = proxyObjectManager->GetIdentity(app, &remoteIdCert))) {
+        if (ER_OK != (status = proxyObjectManager->GetIdentity(app, remoteIdCertChain))) {
             error = new SyncError(app, status, persistedIdCerts[0]);
             QCC_LogError(status, ("Could not fetch identity certificate"));
             break;
         }
-
-        if (remoteIdCert.GetSerialLen() == persistedIdCerts[0].GetSerialLen()) {
-            if (memcmp(persistedIdCerts[0].GetSerial(), remoteIdCert.GetSerial(), remoteIdCert.GetSerialLen()) == 0) {
-                QCC_DbgPrintf(("Identity certificate is already up to date"));
-                break;
+        bool needUpdate = false;
+        if (remoteIdCertChain.size() != persistedIdCerts.size()) {
+            needUpdate = true;
+        } else {
+            for (size_t i = 0; i < persistedIdCerts.size(); i++) {
+                if (remoteIdCertChain[i].GetSerialLen() != persistedIdCerts[i].GetSerialLen()) {
+                    needUpdate = true;
+                    break;
+                }
+                if (memcmp(persistedIdCerts[i].GetSerial(), remoteIdCertChain[i].GetSerial(),
+                           remoteIdCertChain[i].GetSerialLen())
+                    || ((remoteIdCertChain[i].GetAuthorityKeyId() != persistedIdCerts[i].GetAuthorityKeyId()))) {
+                    needUpdate = true;
+                    break;
+                }
             }
         }
-        status = proxyObjectManager->UpdateIdentity(app, &(persistedIdCerts[0]), 1, mf);
-        if (ER_OK != status) {
-            error = new SyncError(app, status, persistedIdCerts[0]);
+        if (needUpdate) {
+            status = proxyObjectManager->UpdateIdentity(app, persistedIdCerts, mf);
+            if (ER_OK != status) {
+                error = new SyncError(app, status, persistedIdCerts[0]);
+            }
+        } else {
+            QCC_DbgPrintf(("Identity certificate is already up to date"));
+        }
+
+        if (app.applicationState == PermissionConfigurator::NEED_UPDATE) {
+            Manifest remoteManifest;
+            if (ER_OK != (status = proxyObjectManager->GetManifestTemplate(app, remoteManifest))) {
+                error = new SyncError(app, status, persistedIdCerts[0]);
+                QCC_LogError(status, ("Could not fetch manifest template"));
+                break;
+            }
+
+            ManifestUpdate* mfUpdate = new ManifestUpdate(app, mf, remoteManifest);
+            securityAgentImpl->NotifyApplicationListeners(mfUpdate);
         }
     } while (0);
 
@@ -326,9 +319,13 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
     managedApp.keyInfo = secInfo.keyInfo;
     uint64_t transactionID = 0;
     status = storage->StartUpdates(managedApp, transactionID);
-    if (status != ER_OK) {
+    if (ER_OK != status) {
         QCC_DbgPrintf(("Failed to start transaction for %s (%s)",
                        secInfo.busName.c_str(),  QCC_StatusText(status)));
+        if (ER_END_OF_DATA != status) {
+            SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
+            securityAgentImpl->NotifyApplicationListeners(error);
+        }
         return status;
     }
     QCC_DbgPrintf(("Started transaction %llu for %s", transactionID,
@@ -340,13 +337,6 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
             status = ResetApplication(app);
             if (ER_OK == status) {
                 managedApp.syncState = SYNC_RESET;
-            }
-            break;
-
-        case SYNC_WILL_CLAIM:
-            status = ClaimApplication(app);
-            if (ER_OK == status) {
-                managedApp.syncState = SYNC_OK;
             }
             break;
 
@@ -440,11 +430,37 @@ void ApplicationUpdater::HandleTask(SecurityEvent* event)
     const SecurityInfo* oldSecInfo = event->oldInfo;
     const SecurityInfo* newSecInfo = event->newInfo;
 
+    // new bus name
     if ((nullptr == oldSecInfo) && (nullptr != newSecInfo)) {
-        // New security info.
         QCC_DbgPrintf(("Detected new busName %s", newSecInfo->busName.c_str()));
         UpdateApplication(*newSecInfo);
     }
+
+    // application changed to NEED_UPDATE
+    if ((nullptr != oldSecInfo) && (nullptr != newSecInfo)
+        && (oldSecInfo->applicationState != PermissionConfigurator::NEED_UPDATE)
+        && (newSecInfo->applicationState == PermissionConfigurator::NEED_UPDATE)) {
+        QCC_DbgPrintf(("Application %s changed to NEED_UPDATE", newSecInfo->busName.c_str()));
+        UpdateApplication(*newSecInfo);
+    }
+}
+
+bool ApplicationUpdater::IsSameCertificate(const MembershipSummary& summary, const MembershipCertificate& cert)
+{
+    if (summary.serial.size() != cert.GetSerialLen()) {
+        return false;
+    }
+    if (memcmp(cert.GetSerial(), summary.serial.data(), cert.GetSerialLen()) != 0) {
+        return false;
+    }
+    qcc::String aki = cert.GetAuthorityKeyId();
+    if (summary.issuer.GetKeyIdLen() != aki.size()) {
+        return false;
+    }
+    if (memcmp(summary.issuer.GetKeyId(), aki.data(), aki.size()) != 0) {
+        return false;
+    }
+    return true;
 }
 
 #undef QCC_MODULE

@@ -39,9 +39,8 @@ class SecurityEvent {
     SecurityInfo* oldInfo;
     SecurityEvent(const SecurityInfo* n,
                   const SecurityInfo* o) :
-        newInfo(n == nullptr ? nullptr :
-                new SecurityInfo(*n)), oldInfo(o == nullptr ? nullptr :
-                                               new SecurityInfo(*o))
+        newInfo(n == nullptr ? nullptr : new SecurityInfo(*n)),
+        oldInfo(o == nullptr ? nullptr : new SecurityInfo(*o))
     {
     }
 
@@ -51,6 +50,8 @@ class SecurityEvent {
         delete oldInfo;
     }
 };
+
+class SecurityAgentImpl; //needed because of cyclic dependency between Agent and Updater.
 
 class ApplicationUpdater :
     public SecurityInfoListener,
@@ -84,8 +85,8 @@ class ApplicationUpdater :
     void HandleTask(SecurityEvent* event);
 
   private:
-
-    QStatus ClaimApplication(const OnlineApplication& app);
+    static bool IsSameCertificate(const MembershipSummary& summary,
+                                  const MembershipCertificate& cert);
 
     QStatus ResetApplication(const OnlineApplication& app);
 
@@ -99,11 +100,11 @@ class ApplicationUpdater :
     QStatus UpdateIdentity(const OnlineApplication& app);
 
     QStatus InstallMissingMemberships(const OnlineApplication& app,
-                                      const vector<MembershipCertificate>& local,
+                                      const vector<MembershipCertificateChain>& local,
                                       const vector<MembershipSummary>& remote);
 
     QStatus RemoveRedundantMemberships(const OnlineApplication& app,
-                                       const vector<MembershipCertificate>& local,
+                                       const vector<MembershipCertificateChain>& local,
                                        const vector<MembershipSummary>& remote);
 
     virtual void OnSecurityStateChange(const SecurityInfo* oldSecInfo,

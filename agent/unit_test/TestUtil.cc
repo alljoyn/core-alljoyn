@@ -36,8 +36,12 @@ namespace secmgr_tests {
 TestApplicationListener::TestApplicationListener(Condition& _sem,
                                                  Mutex& _lock,
                                                  Condition& _errorSem,
-                                                 Mutex& _errorLock) :
-    sem(_sem), lock(_lock), errorSem(_errorSem), errorLock(_errorLock)
+                                                 Mutex& _errorLock,
+                                                 Condition& _manifestSem,
+                                                 Mutex& _manifestLock) :
+    sem(_sem), lock(_lock),
+    errorSem(_errorSem), errorLock(_errorLock),
+    manifestSem(_manifestSem), manifestLock(_manifestLock)
 {
 }
 
@@ -104,6 +108,24 @@ void TestApplicationListener::OnSyncError(const SyncError* er)
     errorLock.Unlock();
 }
 
+string ManifestUpdateToString(const ManifestUpdate* update)
+{
+    string result = "ManifestUpdate >> ";
+    result += update->app.busName + " requested ";
+    result += to_string(update->additionalRules.GetRulesSize());
+    result += " additional rules";
+    return result;
+}
+
+void TestApplicationListener::OnManifestUpdate(const ManifestUpdate* manifestUpdate)
+{
+    cout << ManifestUpdateToString(manifestUpdate) << endl;
+    manifestLock.Lock();
+    manifestUpdates.push_back(*manifestUpdate);
+    manifestSem.Broadcast();
+    manifestLock.Unlock();
+}
+
 BasicTest::BasicTest() :
     tal(nullptr),
     secMgr(nullptr), ba(nullptr), storage(nullptr), ca(nullptr), pg(nullptr),
@@ -120,7 +142,6 @@ void BasicTest::SetUp()
 
     remove(storage_path.c_str());
 
-    SecurityAgentFactory& secFac = SecurityAgentFactory::GetInstance();
     StorageFactory& storageFac = StorageFactory::GetInstance();
 
     ba = new BusAttachment("test", true);
@@ -136,19 +157,40 @@ void BasicTest::SetUp()
         printf("WhoImplements nullptr failed.\n");
     }
 
-    ASSERT_EQ(ER_OK, storageFac.GetStorage("test", storage));
+    ASSERT_EQ(ER_OK, storageFac.GetStorage(TEST_STORAGE_NAME, storage));
     ASSERT_EQ(ER_OK, storage->GetCaStorage(ca));
-    ASSERT_EQ(ER_OK, secFac.GetSecurityAgent(GetAgentCAStorage(), secMgr, ba));
-    ASSERT_NE(nullptr, secMgr);
 
-    secMgr->SetManifestListener(&aa);
-    tal = new TestApplicationListener(sem, lock, errorSem, errorLock);
-    secMgr->RegisterApplicationListener(tal);
     GroupInfo adminGroup;
     storage->GetAdminGroup(adminGroup);
     pg = new PolicyGenerator(adminGroup);
 
     proxyObjectManager = new ProxyObjectManager(ba);
+}
+
+void BasicTest::InitSecAgent()
+{
+    secAgentLock.Lock();
+    SecurityAgentFactory& secFac = SecurityAgentFactory::GetInstance();
+    ASSERT_EQ(ER_OK, secFac.GetSecurityAgent(GetAgentCAStorage(), secMgr, ba));
+    ASSERT_NE(nullptr, secMgr);
+
+    secMgr->SetClaimListener(&aa);
+    tal = new TestApplicationListener(sem, lock, errorSem, errorLock, manifestSem, manifestLock);
+    secMgr->RegisterApplicationListener(tal);
+    secAgentLock.Unlock();
+}
+
+void BasicTest::RemoveSecAgent()
+{
+    secAgentLock.Lock();
+    if (tal) {
+        secMgr->UnregisterApplicationListener(tal);
+        delete tal;
+        tal = nullptr;
+    }
+
+    secMgr = nullptr;
+    secAgentLock.Unlock();
 }
 
 void BasicTest::UpdateLastAppInfo()
@@ -200,6 +242,28 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
     printf("\t SyncState : expected = %s, got %s\n",
            ToString(syncState), ToString(lastAppInfo.syncState));
 
+    lock.Unlock();
+    return false;
+}
+
+bool BasicTest::WaitForEvents(size_t numOfEvents)
+{
+    lock.Lock();
+    printf("\nWaitForState: waiting for %zu event(s) ...\n", numOfEvents);
+    //Prior to entering this function, the test should have taken an action which leads to one or more events.
+    //These events are handled in a separate thread.
+    do {
+        if (tal && (tal->events.size() == numOfEvents)) { //if no event is in the queue, we will return immediately
+            break;
+        } else {
+            QStatus status = sem.TimedWait(lock, 10000);
+            if (ER_OK != status) {
+                printf("timeout- failing test - %i\n", status);
+                break;
+            }
+            assert(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
+        }
+    } while (true);
     lock.Unlock();
     return false;
 }
@@ -288,25 +352,61 @@ bool BasicTest::CheckDefaultPolicy()
     return result;
 }
 
-bool BasicTest::CheckIdentity(IdentityInfo& expected,
-                              Manifest& expectedManifest)
+bool BasicTest::CheckRemoteIdentity(IdentityInfo& expected,
+                                    Manifest& expectedManifest,
+                                    IdentityCertificate& remoteIdentity,
+                                    Manifest& remoteManifest)
 {
     printf("Checking remote identity ... ");
     QStatus status = ER_OK;
 
-    IdentityCertificate remote;
-    status = proxyObjectManager->GetIdentity(lastAppInfo, &remote);
+    IdentityCertificateChain remoteIdentityChain;
+
+    status = proxyObjectManager->GetIdentity(lastAppInfo, remoteIdentityChain);
     if (ER_OK != status) {
         printf("failed to GetIdentity\n");
         return false;
     }
 
+    remoteIdentity = remoteIdentityChain[0];
+
     string expectedAlias = expected.guid.ToString().c_str();
-    string remoteAlias = remote.GetAlias().c_str();
+    string remoteAlias = remoteIdentity.GetAlias().c_str();
     if (expectedAlias != remoteAlias) {
         printf("mismatching alias: expected %s, got %s\n", expectedAlias.c_str(), remoteAlias.c_str());
         return false;
     }
+
+    status = proxyObjectManager->GetManifest(lastAppInfo, remoteManifest);
+    if (ER_OK != status) {
+        printf("failed to GetManifest\n");
+        return false;
+    }
+
+    if (expectedManifest != remoteManifest) {
+        printf("mismatching remote manifest: expected %s, got %s\n",
+               expectedManifest.ToString().c_str(),
+               remoteManifest.ToString().c_str());
+        return false;
+    }
+
+    printf("ok\n");
+    return true;
+}
+
+bool BasicTest::CheckIdentity(IdentityInfo& expected,
+                              Manifest& expectedManifest)
+{
+    IdentityCertificate remoteIdentity;
+    Manifest remoteManifest;
+
+    if (!CheckRemoteIdentity(expected, expectedManifest,
+                             remoteIdentity, remoteManifest)) {
+        return false;
+    }
+
+    printf("Checking stored identity ... ");
+    QStatus status = ER_OK;
 
     IdentityCertificateChain storedIdCerts;
     Manifest storedManifest;
@@ -324,7 +424,7 @@ bool BasicTest::CheckIdentity(IdentityInfo& expected,
     }
 
     String remoteDer;
-    status = remote.EncodeCertificateDER(remoteDer);
+    status = remoteIdentity.EncodeCertificateDER(remoteDer);
     if (ER_OK != status) {
         printf("failed to encode remote certificate\n");
         return false;
@@ -332,20 +432,6 @@ bool BasicTest::CheckIdentity(IdentityInfo& expected,
 
     if (storedDer != remoteDer) {
         printf("mismatching encoded certificates\n");
-        return false;
-    }
-
-    Manifest remoteManifest;
-    status = proxyObjectManager->GetManifest(lastAppInfo, remoteManifest);
-    if (ER_OK != status) {
-        printf("failed to GetManifest\n");
-        return false;
-    }
-
-    if (expectedManifest != remoteManifest) {
-        printf("mismatching remote manifest: expected %s, got %s\n",
-               expectedManifest.ToString().c_str(),
-               remoteManifest.ToString().c_str());
         return false;
     }
 
@@ -379,7 +465,7 @@ bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
         return false;
     }
 
-    vector<MembershipCertificate> stored;
+    vector<MembershipCertificateChain> stored;
     status = ca->GetMembershipCertificates(lastAppInfo, stored);
     if (ER_OK != status) {
         printf("failed to GetMembershipCertificates\n");
@@ -394,9 +480,9 @@ bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
         // find serial number from storage
         string serial;
         for (s = 0; s != stored.size(); s++) {
-            if (stored[s].GetGuild() == expected[e].guid) {
-                serial = string((const char*)stored[s].GetSerial(),
-                                stored[s].GetSerialLen());
+            if (stored[s][0].GetGuild() == expected[e].guid) {
+                serial = string((const char*)stored[s][0].GetSerial(),
+                                stored[s][0].GetSerialLen());
                 break;
             }
         }
@@ -512,36 +598,73 @@ bool BasicTest::WaitForSyncError(SyncErrorType type, QStatus status)
     return false;
 }
 
+bool BasicTest::WaitForManifestUpdate(ManifestUpdate& manifestUpdate)
+{
+    printf("Waiting for manifest update ... ");
+
+    manifestLock.Lock();
+    do {
+        if (tal && tal->manifestUpdates.size()) {
+            vector<ManifestUpdate>::iterator it =
+                tal->manifestUpdates.begin();
+            manifestUpdate = *it;
+            tal->manifestUpdates.erase(it);
+            manifestLock.Unlock();
+
+            printf("ok\n");
+
+            return true;
+        } else {
+            QStatus status = manifestSem.TimedWait(manifestLock, 5000);
+            if (ER_OK != status) {
+                printf("timeout\n");
+                break;
+            }
+        }
+    } while (true);
+
+    manifestLock.Unlock();
+    return false;
+}
+
 bool BasicTest::CheckUnexpectedSyncErrors()
 {
     printf("Checking for unexpected sync errors ... ");
-    if (tal->syncErrors.size() > 0) {
+    if (tal && tal->syncErrors.size() > 0) {
         printf("%lu unexpected sync error(s)\n",
                tal->syncErrors.size());
         return false;
     }
+    printf("ok\n");
+    return true;
+}
 
+bool BasicTest::CheckUnexpectedManifestUpdates()
+{
+    printf("Checking for unexpected manifest updates ... ");
+    if (tal && tal->manifestUpdates.size() > 0) {
+        printf("%lu unexpected manifest update(s)\n",
+               tal->manifestUpdates.size());
+        return false;
+    }
     printf("ok\n");
     return true;
 }
 
 void BasicTest::TearDown()
 {
+    ASSERT_TRUE(CheckUnexpectedSyncErrors());
+    ASSERT_TRUE(CheckUnexpectedManifestUpdates());
+
     delete proxyObjectManager;
     proxyObjectManager = nullptr;
-
-    ASSERT_TRUE(CheckUnexpectedSyncErrors());
-
-    if (tal) {
-        secMgr->UnregisterApplicationListener(tal);
-        delete tal;
-        tal = nullptr;
-    }
 
     delete pg;
     pg = nullptr;
 
-    secMgr = nullptr;
+    if (secMgr) {
+        RemoveSecAgent();
+    }
 
     ba->UnregisterAboutListener(testAboutListener);
 

@@ -39,79 +39,80 @@ using namespace std;
 
 namespace ajn {
 namespace securitymgr {
-class ECDHEKeyXListener :
-    public AuthListener {
+const PermissionConfigurator::ClaimCapabilities ClaimContext::CLAIM_TYPE_NOT_SET = 0;
+
+class ClaimContextImpl :
+    public ClaimContext, public DefaultECDHEAuthListener {
   public:
-    ECDHEKeyXListener()
+    ClaimContextImpl(const OnlineApplication& application,
+                     const Manifest& manifest,
+                     const PermissionConfigurator::ClaimCapabilities _capabilities,
+                     const PermissionConfigurator::ClaimCapabilityAdditionalInfo _capInfo) :
+        ClaimContext(application, manifest, _capabilities, _capInfo)
     {
     }
 
-    bool RequestCredentials(const char* authMechanism, const char* authPeer,
-                            uint16_t authCount, const char* userId, uint16_t credMask,
-                            Credentials& creds)
+    QStatus SetPreSharedKey(const uint8_t* psk, size_t pskSize)
     {
-        QCC_UNUSED(credMask);
-        QCC_UNUSED(userId);
-        QCC_UNUSED(authCount);
-        QCC_UNUSED(authPeer);
+        return SetPSK(psk, pskSize);
+    }
 
-        QCC_DbgPrintf(("RequestCredentials %s", authMechanism));
-        if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0) {
-            creds.SetExpiration(100);             /* set the master secret expiry time to 100 seconds */
-            return true;
+    ProxyObjectManager::SessionType GetSessionType()
+    {
+        switch (GetClaimType()) {
+        case PermissionConfigurator::CAPABLE_ECDHE_NULL:
+            return ProxyObjectManager::ECDHE_NULL;
+
+        case PermissionConfigurator::CAPABLE_ECDHE_PSK:
+            return ProxyObjectManager::ECDHE_PSK;
+
+        case PermissionConfigurator::CAPABLE_ECDHE_ECDSA:
+            return ProxyObjectManager::ECDHE_DSA;
+
+        default:
+            return ProxyObjectManager::ECDHE_PSK;
         }
-        return false;
-    }
-
-    bool VerifyCredentials(const char* authMechanism, const char* authPeer,
-                           const Credentials& creds)
-    {
-        QCC_UNUSED(creds);
-        QCC_UNUSED(authPeer);
-
-        QCC_DbgPrintf(("SecMgr: VerifyCredentials %s", authMechanism));
-        if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
-            return true;
-        }
-        return false;
-    }
-
-    void AuthenticationComplete(const char* authMechanism, const char* authPeer,
-                                bool success)
-    {
-        QCC_UNUSED(authPeer);
-
-        QCC_DbgPrintf(("SecMgr: AuthenticationComplete '%s' success = %i", authMechanism, success));
     }
 };
 
 QStatus SecurityAgentImpl::ClaimSelf()
 {
     QStatus status = ER_FAIL;
+    KeyInfoNISTP256 caPublicKey;
+    status = caStorage->GetCaPublicKeyInfo(caPublicKey);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to retrieve CA public key."));
+        return status;
+    }
+
     // Manifest
-    size_t manifestRuleCount = 1;
-    PermissionPolicy::Rule manifestRules;
-    manifestRules.SetInterfaceName("*");
-    PermissionPolicy::Rule::Member* mfPrms = new PermissionPolicy::Rule::Member[1];
+    PermissionPolicy::Rule manifestRules[1];
+    manifestRules[0].SetInterfaceName("*");
+    PermissionPolicy::Rule::Member mfPrms[1];
     mfPrms[0].SetMemberName("*");
     mfPrms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                             PermissionPolicy::Rule::Member::ACTION_MODIFY |
                             PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    manifestRules.SetMembers(1, mfPrms);
+    manifestRules[0].SetMembers(1, mfPrms);
     Manifest mf;
-    mf.SetFromRules(&manifestRules, manifestRuleCount);
+    mf.SetFromRules(manifestRules, 1);
 
     // Policy
     PermissionPolicy policy;
     policy.SetVersion(1);
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
+    PermissionPolicy::Acl acls[2];
+    PermissionPolicy::Peer rot[1];
+    PermissionPolicy::Peer peers[1];
+    PermissionPolicy::Rule rules[1];
+    PermissionPolicy::Rule::Member prms[3];
+
+    rot[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+    rot[0].SetKeyInfo(&caPublicKey);
+    acls[0].SetPeers(1, rot);
 
     peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
-    acls[0].SetPeers(1, peers);
+    acls[1].SetPeers(1, peers);
     rules[0].SetInterfaceName("*");
     prms[0].SetMemberName("*");
     prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
@@ -128,9 +129,9 @@ QStatus SecurityAgentImpl::ClaimSelf()
         PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
 
     rules[0].SetMembers(3, prms);
-    acls[0].SetRules(1, rules);
+    acls[1].SetRules(1, rules);
+    policy.SetAcls(2, acls);
 
-    policy.SetAcls(1, acls);
     // Get public key, identity and membership certificates
     CredentialAccessor ca(*busAttachment);
     ECCPublicKey ownPublicKey;
@@ -140,7 +141,7 @@ QStatus SecurityAgentImpl::ClaimSelf()
         return status;
     }
 
-    vector<IdentityCertificate> idCerts;
+    IdentityCertificateChain idCerts;
     vector<MembershipCertificateChain> memberships;
 
     GroupInfo adminGroup;
@@ -165,8 +166,12 @@ QStatus SecurityAgentImpl::ClaimSelf()
     string ownBusName = busAttachment->GetUniqueName().c_str();
     OnlineApplication ownAppInfo;
     ownAppInfo.busName = ownBusName;
-    status = proxyObjectManager->Claim(ownAppInfo, publicKeyInfo,
-                                       adminGroup, &idCerts.front(), 1, mf);
+    {
+        GUID128 psk;
+        DefaultECDHEAuthListener el(psk.GetBytes(), GUID128::SIZE);
+        status = proxyObjectManager->Claim(ownAppInfo, publicKeyInfo,
+                                           adminGroup, idCerts, mf, ProxyObjectManager::ECDHE_PSK, el);
+    }
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to Claim"));
         return status;
@@ -186,27 +191,44 @@ QStatus SecurityAgentImpl::ClaimSelf()
         return status;
     }
 
-    // Store membership certificate
-    MembershipCertificateChain mcChain = *memberships.begin();
-    MembershipCertificate mCert = *(mcChain.begin());
-    GUID128 mGUID;
-    KeyStore::Key mKey(KeyStore::Key::LOCAL, mGUID);
-    KeyBlob mKeyBlob(mCert.GetEncoded(), mCert.GetEncodedLen(), KeyBlob::GENERIC);
-    mKeyBlob.SetTag(String((const char*)mCert.GetSerial(), mCert.GetSerialLen()));
-    KeyStore::Key mHead;
-    mHead.SetGUID(GUID128("42B0C7F35695A3220A46B3938771E965"));
-    KeyBlob mHeaderBlob;
-    uint8_t mNumEntries = 1;
-    mHeaderBlob.Set(&mNumEntries, 1, KeyBlob::GENERIC);
-    status = ca.StoreKey(mHead, mHeaderBlob);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to store membership header"));
-        return status;
-    }
-    status = ca.AddAssociatedKey(mHead, mKey, mKeyBlob);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to store membership certificate"));
-        return status;
+    // Store membership certificate chains
+    vector<MembershipCertificateChain>::iterator chains;
+
+    for (chains = memberships.begin(); chains != memberships.end(); ++chains) {
+        MembershipCertificate* mCert = &(*(chains->begin()));
+        GUID128 mGUID;
+        KeyStore::Key mKey(KeyStore::Key::LOCAL, mGUID);
+        qcc::String der;
+        mCert->EncodeCertificateDER(der);
+        KeyBlob mKeyBlob((const uint8_t*)der.data(), der.size(), KeyBlob::GENERIC);
+        mKeyBlob.SetTag(String((const char*)mCert->GetSerial(), mCert->GetSerialLen()));
+        KeyStore::Key mHead;
+        mHead.SetGUID(GUID128("42B0C7F35695A3220A46B3938771E965"));
+        KeyBlob mHeaderBlob;
+        uint8_t mNumEntries = 1;
+        mHeaderBlob.Set(&mNumEntries, 1, KeyBlob::GENERIC);
+        status = ca.StoreKey(mHead, mHeaderBlob);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to store membership header"));
+            return status;
+        }
+        status = ca.AddAssociatedKey(mHead, mKey, mKeyBlob);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to store membership certificate"));
+            return status;
+        }
+        for (size_t i = 1; i < chains->size(); i++) {
+            qcc::String cder;
+            (*chains)[i].EncodeCertificateDER(cder);
+            KeyBlob kb((const uint8_t*)cder.data(), cder.size(), KeyBlob::GENERIC);
+            GUID128 guid;
+            KeyStore::Key key(KeyStore::Key::LOCAL, guid);
+            status = ca.AddAssociatedKey(mKey, key, kb);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Failed to store membership certificate chain element"));
+                return status;
+            }
+        }
     }
 
     return status;
@@ -214,10 +236,10 @@ QStatus SecurityAgentImpl::ClaimSelf()
 
 SecurityAgentImpl::SecurityAgentImpl(const shared_ptr<AgentCAStorage>& _caStorage, BusAttachment* ba) :
     publicKeyInfo(),
-    appMonitor(ApplicationMonitor::GetApplicationMonitor(ba)),
+    appMonitor(nullptr),
     busAttachment(ba),
     caStorage(_caStorage),
-    queue(TaskQueue<AppListenerEvent*, SecurityAgentImpl>(this)), mfListener(nullptr)
+    queue(TaskQueue<AppListenerEvent*, SecurityAgentImpl>(this)), claimListener(nullptr)
 {
     proxyObjectManager = nullptr;
     applicationUpdater = nullptr;
@@ -251,14 +273,14 @@ QStatus SecurityAgentImpl::Init()
             QCC_LogError(status, ("Failed to initialize Util"));
         }
 
-        ProxyObjectManager::listener = new ECDHEKeyXListener();
+        ProxyObjectManager::listener = new DefaultECDHEAuthListener();
         if (ProxyObjectManager::listener == nullptr) {
             status = ER_FAIL;
             QCC_LogError(status, ("Failed to allocate ECDHEKeyXListener"));
             break;
         }
 
-        status = busAttachment->EnablePeerSecurity(KEYX_ECDHE_NULL, ProxyObjectManager::listener,
+        status = busAttachment->EnablePeerSecurity(KEYX_ECDHE_PSK, ProxyObjectManager::listener,
                                                    AJNKEY_STORE, true);
         if (ER_OK != status) {
             QCC_LogError(status,
@@ -289,6 +311,14 @@ QStatus SecurityAgentImpl::Init()
             }
         }
 
+        appMonitor = shared_ptr<ApplicationMonitor>(new ApplicationMonitor(busAttachment));
+        if (nullptr == appMonitor) {
+            QCC_LogError(status, ("nullptr Application Monitor"));
+            status = ER_FAIL;
+            break;
+        }
+        appMonitor->RegisterSecurityInfoListener(this);
+
         applicationUpdater = make_shared<ApplicationUpdater>(busAttachment,
                                                              caStorage,
                                                              proxyObjectManager,
@@ -301,13 +331,6 @@ QStatus SecurityAgentImpl::Init()
         }
 
         caStorage->RegisterStorageListener(this);
-
-        if (nullptr == appMonitor) {
-            QCC_LogError(status, ("nullptr Application Monitor"));
-            status = ER_FAIL;
-            break;
-        }
-        appMonitor->RegisterSecurityInfoListener(this);
     } while (0);
 
     if (ER_OK != status) {
@@ -340,9 +363,9 @@ SecurityAgentImpl::~SecurityAgentImpl()
     }
 }
 
-void SecurityAgentImpl::SetManifestListener(ManifestListener* mfl)
+void SecurityAgentImpl::SetClaimListener(ClaimListener* cl)
 {
-    mfListener = mfl;
+    claimListener = cl;
 }
 
 QStatus SecurityAgentImpl::SetSyncState(const OnlineApplication& app,
@@ -372,10 +395,10 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
 {
     QStatus status;
 
-    // Check ManifestListener
-    if (mfListener == nullptr) {
+    // Check ClaimListener
+    if (claimListener == nullptr) {
         status = ER_FAIL;
-        QCC_LogError(status, ("No ManifestListener set"));
+        QCC_LogError(status, ("No ClaimListener set"));
         return status;
     }
 
@@ -389,8 +412,15 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
     }
     OnlineApplication _app = appItr->second;
 
+    PendingClaim pc(_app, &pendingClaims, appsMutex);
+    status = pc.Init();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Cannot concurrent claim a single application"));
+        return status;
+    }
+
     /*===========================================================
-     * Step 1: Accept manifest
+     * Step 1: Select Session type  & Accept manifest
      */
     Manifest manifest;
     status = proxyObjectManager->GetManifestTemplate(_app, manifest);
@@ -399,22 +429,67 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
         return status;
     }
 
-    if (!mfListener->ApproveManifest(_app, manifest)) {
+    PermissionConfigurator::ClaimCapabilities claimCapabilities;
+    PermissionConfigurator::ClaimCapabilityAdditionalInfo claimCapInfo;
+
+    status = proxyObjectManager->GetClaimCapabilities(_app, claimCapabilities, claimCapInfo);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not retrieve ClaimCapabilities"));
+        return status;
+    }
+    ClaimContextImpl ctx(_app, manifest, claimCapabilities, claimCapInfo);
+
+    status = claimListener->ApproveManifestAndSelectSessionType(ctx);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    if (!ctx.IsManifestApproved()) {
         return ER_MANIFEST_REJECTED;
+    }
+
+    if (ctx.GetClaimType() == ClaimContext::CLAIM_TYPE_NOT_SET) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("No ClaimType selected by ClaimListener"));
+        return status;
     }
 
     /*===========================================================
      * Step 2: Claim
      */
 
-    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifest);
+    KeyInfoNISTP256 CAKeyInfo;
+    status = caStorage->GetCaPublicKeyInfo(CAKeyInfo);
     if (status != ER_OK) {
+        QCC_LogError(status, ("CA is not available"));
         return status;
     }
 
-    status = applicationUpdater->UpdateApplication(_app);
+    IdentityCertificateChain idCertificate;
 
-    return status;
+    GroupInfo adminGroup;
+    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifest, adminGroup, idCertificate);
+    if (status != ER_OK) {
+        return status;
+    }
+    status =
+        proxyObjectManager->Claim(_app, CAKeyInfo, adminGroup, idCertificate, manifest, ctx.GetSessionType(), ctx);
+
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not claim application"));
+    }
+    QStatus finiStatus = caStorage->FinishApplicationClaiming(_app, status);
+    if (ER_OK != finiStatus) {
+        QCC_LogError(finiStatus, ("Failed to finalize claiming attempt"));
+        if (ER_OK == status) {
+            QStatus resetStatus = proxyObjectManager->Reset(_app);
+            if (ER_OK != resetStatus) {
+                QCC_LogError(resetStatus, ("Failed to reset application after storage failure"));
+            }
+        }
+    }
+
+    return ER_OK != finiStatus ? finiStatus : status;
 }
 
 void SecurityAgentImpl::AddSecurityInfo(OnlineApplication& app, const SecurityInfo& si)
@@ -558,9 +633,14 @@ SecurityAgentImpl::OnlineApplicationMap::iterator SecurityAgentImpl::SafeAppExis
     return ret;
 }
 
+void SecurityAgentImpl::NotifyApplicationListeners(const ManifestUpdate* manifestUpdate)
+{
+    queue.AddTask(new AppListenerEvent(manifestUpdate));
+}
+
 void SecurityAgentImpl::NotifyApplicationListeners(const SyncError* error)
 {
-    queue.AddTask(new AppListenerEvent(nullptr, nullptr, error));
+    queue.AddTask(new AppListenerEvent(error));
 }
 
 void SecurityAgentImpl::OnPendingChanges(vector<Application>& apps)
@@ -579,7 +659,7 @@ void SecurityAgentImpl::OnPendingChangesCompleted(vector<Application>& apps)
             appsMutex.Lock();
             applications[app.keyInfo] = app;
             appsMutex.Unlock();
-            queue.AddTask(new AppListenerEvent(new OnlineApplication(old), new OnlineApplication(app), nullptr));
+            NotifyApplicationListeners(&old, &app);
         }
     }
 }
@@ -588,8 +668,7 @@ void SecurityAgentImpl::NotifyApplicationListeners(const OnlineApplication* oldA
                                                    const OnlineApplication* newApp)
 {
     queue.AddTask(new AppListenerEvent(oldApp ? new OnlineApplication(*oldApp) : nullptr,
-                                       newApp ? new OnlineApplication(*newApp) : nullptr,
-                                       nullptr));
+                                       newApp ? new OnlineApplication(*newApp) : nullptr));
 }
 
 void SecurityAgentImpl::HandleTask(AppListenerEvent* event)
@@ -598,6 +677,10 @@ void SecurityAgentImpl::HandleTask(AppListenerEvent* event)
     if (event->syncError) {
         for (size_t i = 0; i < listeners.size(); ++i) {
             listeners[i]->OnSyncError(event->syncError);
+        }
+    } else if (event->manifestUpdate) {
+        for (size_t i = 0; i < listeners.size(); ++i) {
+            listeners[i]->OnManifestUpdate(event->manifestUpdate);
         }
     } else {
         for (size_t i = 0; i < listeners.size(); ++i) {

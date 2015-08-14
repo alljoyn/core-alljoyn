@@ -27,38 +27,62 @@ using namespace ajn::securitymgr;
 QStatus PolicyGenerator::DefaultPolicy(const vector<GroupInfo>& groupInfos,
                                        PermissionPolicy& policy) const
 {
-    QStatus status = ER_OK;
+    vector<PermissionPolicy::Acl> acls;
 
-    size_t numGroups = groupInfos.size();
-
-    PermissionPolicy::Acl* acls = nullptr;
-    size_t numAcls = numGroups + 1;
-    acls = new PermissionPolicy::Acl[numAcls];
-
-    status = AdminAcl(acls[0]);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to set AdminAcl"));
-        goto Exit;
+    if (deniedKeys.size() > 0) {
+        PermissionPolicy::Acl denyAcl;
+        DenyAcl(deniedKeys, denyAcl);
+        acls.push_back(denyAcl);
     }
 
-    for (size_t i = 0; i < numGroups; i++) {
-        status = DefaultGroupPolicyAcl(groupInfos[i], acls[i + 1]);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to generate DefaultGroupPolicyAcl"));
-            goto Exit;
-        }
+    PermissionPolicy::Acl adminAcl;
+    AdminAcl(adminAcl);
+    acls.push_back(adminAcl);
+
+    for (size_t i = 0; i < groupInfos.size(); i++) {
+        PermissionPolicy::Acl defaultAcl;
+        DefaultGroupPolicyAcl(groupInfos[i], defaultAcl);
+        acls.push_back(defaultAcl);
     }
 
-    // Policy takes ownership of acls.
-    policy.SetAcls(numAcls, acls);
-    return status;
+    if (acls.size() > 0) {
+        policy.SetAcls(acls.size(), &acls[0]);
+        return ER_OK;
+    }
 
-Exit:
-    delete[] acls;
-    return status;
+    return ER_FAIL;
 }
 
-QStatus PolicyGenerator::AdminAcl(PermissionPolicy::Acl& acl) const
+void PolicyGenerator::DenyAcl(const vector<KeyInfoNISTP256>& keys,
+                              PermissionPolicy::Acl& acl) const
+{
+    if (keys.size() < 1) {
+        return;
+    }
+
+    vector<PermissionPolicy::Peer> peers;
+    for (vector<KeyInfoNISTP256>::const_iterator it = keys.begin(); it != keys.end(); ++it) {
+        PermissionPolicy::Peer peer;
+        peer.SetType(PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY);
+        peer.SetKeyInfo(&(*it));
+        peers.push_back(peer);
+    }
+
+    PermissionPolicy::Rule::Member members[1];
+    members[0].SetMemberName("*");
+    members[0].SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
+    members[0].SetActionMask(0); // explicit deny
+
+    PermissionPolicy::Rule rules[1];
+    rules[0].SetInterfaceName("*");
+    rules[0].SetObjPath("*");
+    rules[0].SetMembers(1, members);
+
+    acl.SetPeers(peers.size(), &peers[0]);
+    acl.SetRules(1, rules);
+}
+
+void PolicyGenerator::AdminAcl(PermissionPolicy::Acl& acl) const
 {
     PermissionPolicy::Peer peers[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
@@ -79,42 +103,29 @@ QStatus PolicyGenerator::AdminAcl(PermissionPolicy::Acl& acl) const
         );
     rules[0].SetMembers(1, prms);
     acl.SetRules(1, rules);
-
-    return ER_OK;
 }
 
-QStatus PolicyGenerator::DefaultGroupPolicyAcl(const GroupInfo& group,
-                                               PermissionPolicy::Acl& term) const
+void PolicyGenerator::DefaultGroupPolicyAcl(const GroupInfo& group,
+                                            PermissionPolicy::Acl& term) const
 {
-    QStatus status = ER_OK;
+    PermissionPolicy::Rule rules[1];
+    PermissionPolicy::Peer peers[1];
+    KeyInfoNISTP256 keyInfo;
 
-    // Will be deleted by term.
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    DefaultGroupPolicyRule(rules[0]);
 
-    if (ER_OK != (status = DefaultGroupPolicyRule(rules[0]))) {
-        delete[] rules;
-        return status;
-    }
-
-    // Will be deleted by term.
-    PermissionPolicy::Peer* peers = new PermissionPolicy::Peer[1];
     peers[0].SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
     peers[0].SetSecurityGroupId(group.guid);
 
-    // Will be deleted by peer.
-    KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(group.authority.GetPublicKey());
     peers[0].SetKeyInfo(&keyInfo);
     term.SetPeers(1, peers);
     term.SetRules(1, rules);
-
-    return status;
 }
 
-QStatus PolicyGenerator::DefaultGroupPolicyRule(PermissionPolicy::Rule& rule) const
+void PolicyGenerator::DefaultGroupPolicyRule(PermissionPolicy::Rule& rule) const
 {
-    // Will be deleted by rule.
-    PermissionPolicy::Rule::Member* members = new PermissionPolicy::Rule::Member[1];
+    PermissionPolicy::Rule::Member members[1];
     members[0].SetMemberName("*");
     members[0].SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
     members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
@@ -123,8 +134,6 @@ QStatus PolicyGenerator::DefaultGroupPolicyRule(PermissionPolicy::Rule& rule) co
 
     rule.SetInterfaceName("*");
     rule.SetMembers(1, members);
-
-    return ER_OK;
 }
 
 #undef QCC_MODULE

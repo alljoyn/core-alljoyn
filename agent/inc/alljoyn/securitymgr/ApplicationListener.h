@@ -21,6 +21,7 @@
 
 #include "Application.h"
 #include "SyncError.h"
+#include "ManifestUpdate.h"
 
 namespace ajn {
 namespace securitymgr {
@@ -48,6 +49,15 @@ class ApplicationListener {
      *                       application.
      */
     virtual void OnSyncError(const SyncError* syncError) = 0;
+
+    /**
+     * @brief Callback that is triggered when an application has a new manifest
+     *        requesting additional rights from the administrator.
+     *
+     * @param[in] manifestUpdate   The manifest update containing all information
+     *                             related to the specific manifest update.
+     */
+    virtual void OnManifestUpdate(const ManifestUpdate* manifestUpdate) = 0;
 
     /**
      * @brief Virtual destructor for derivable class.

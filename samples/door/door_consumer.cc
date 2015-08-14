@@ -17,6 +17,7 @@
 #include "door_common.h"
 
 #include <set>
+#include <memory>
 
 #include <qcc/Crypto.h>
 #include <qcc/Thread.h>
@@ -57,12 +58,18 @@ class DoorAboutListener :
                    SessionPort port, const MsgArg& objectDescriptionArg,
                    const MsgArg& aboutDataArg)
     {
-        QCC_UNUSED(aboutDataArg);
         QCC_UNUSED(objectDescriptionArg);
         QCC_UNUSED(port);
         QCC_UNUSED(version);
 
-        printf("Found door @%s\n", busName); //TODO take more data from about
+        AboutData about(aboutDataArg);
+        char* appName;
+        about.GetAppName(&appName);
+        char* deviceName;
+        about.GetDeviceName(&deviceName);
+
+        printf("Found door %s @ %s (%s)\n", appName, busName, deviceName);
+
         doors.insert(string(busName));
     }
 
@@ -78,91 +85,205 @@ class DoorAboutListener :
     }
 };
 
-QStatus PerformDoorAction(BusAttachment* ba, char cmd, string busName)
-{
-    const char* methodName = nullptr;
-    const char* displayName = nullptr;
-    switch (cmd) {
-    case 'o':
-        methodName = DOOR_OPEN;
-        break;
+class DoorSessionManager {
+  public:
 
-    case 'c':
-        methodName = DOOR_CLOSE;
-        break;
-
-    case 's':
-        methodName = DOOR_GET_STATE;
-        break;
-
-    case 'g':
-        //getting property; we don't call the method
-        break;
+    DoorSessionManager(BusAttachment* _ba, uint32_t _timeout) :
+        ba(_ba), timeout(_timeout)
+    {
     }
-    displayName = methodName == nullptr ? "GetProperty" : methodName;
 
-    printf("\nCalling %s on '%s'\n", displayName, busName.c_str());
-    SessionId sessionId;
-    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false,
-                     SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    QStatus status = ba->JoinSession(busName.c_str(), DOOR_APPLICATION_PORT,
-                                     &theListener, sessionId, opts);
-    if (status != ER_OK) {
-        printf("Failed to Join session...\n");
+    QStatus MethodCall(string busName, string methodName)
+    {
+        shared_ptr<ProxyBusObject> remoteObj;
+        QStatus status = GetProxyDoorObject(busName, remoteObj);
+        if (ER_OK != status) {
+            return status;
+        }
+
+        Message reply(*ba);
+        MsgArg arg;
+        printf("Calling %s on '%s'\n", methodName.c_str(), busName.c_str());
+        status = remoteObj->MethodCall(DOOR_INTERFACE, methodName.c_str(),
+                                       nullptr, 0, reply, timeout);
+
+        // retry on policy/identity update
+        string securityViolation = "org.alljoyn.Bus.SecurityViolation";
+        if ((ER_BUS_REPLY_IS_ERROR_MESSAGE == status) &&
+            (reply->GetErrorName() != NULL) &&
+            (string(reply->GetErrorName()) == securityViolation)) {
+            status = remoteObj->MethodCall(DOOR_INTERFACE, methodName.c_str(),
+                                           nullptr, 0, reply, timeout);
+        }
+
+        if (ER_OK != status) {
+            printf("Failed to call method %s (%s)\n", methodName.c_str(),
+                   QCC_StatusText(status));
+            if (reply->GetErrorName() != NULL) {
+                printf("ErrorName %s\n", reply->GetErrorName());
+            }
+            return status;
+        }
+
+        const MsgArg* result;
+        result = reply->GetArg(0);
+        bool value;
+        result->Get("b", &value);
+        printf("%s returned %d\n", methodName.c_str(), value);
+
         return status;
     }
 
-    /* B. Setup ProxyBusObject:
-     *     - Create a ProxyBusObject from remote application and session
-     *     - Get the interface description from the bus based on the remote interface name
-     *     - Extend the ProxyBusObject with the interface description
-     */
+    QStatus GetProperty(string busName, string propertyName)
+    {
+        shared_ptr<ProxyBusObject> remoteObj;
+        QStatus status = GetProxyDoorObject(busName, remoteObj);
+        if (ER_OK != status) {
+            return status;
+        }
 
-    const InterfaceDescription* remoteIntf = ba->GetInterface(DOOR_INTERFACE);
-    if (nullptr == remoteIntf) {
-        printf("No remote interface found of app to claim\n");
-        return ER_FAIL;
-    }
-    ProxyBusObject* remoteObj = new ProxyBusObject(*ba, busName.c_str(),
-                                                   DOOR_OBJECT_PATH, sessionId);
-    if (remoteObj == nullptr) {
-        printf("Failed create proxy bus object\n");
-        return ER_FAIL;
-    }
-    Message reply(*ba);
-    MsgArg arg;
-    uint32_t timeout = 10000;
-    const MsgArg* result;
+        MsgArg arg;
+        status = remoteObj->GetProperty(DOOR_INTERFACE, propertyName.c_str(),
+                                        arg, timeout);
 
-    status = remoteObj->AddInterface(*remoteIntf);
-    if (status != ER_OK) {
-        printf("Failed to add interface to proxy object.\n");
-        goto out;
-    }
+        // retry on policy/identity update
+        if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
+            // impossible to check specific error message (see ASACORE-1811)
+            status = remoteObj->GetProperty(DOOR_INTERFACE, propertyName.c_str(),
+                                            arg, timeout);
+        }
 
-    if (methodName) {
-        status = remoteObj->MethodCall(DOOR_INTERFACE, methodName, nullptr, 0, reply, timeout);
-    } else {
-        status = remoteObj->GetProperty(DOOR_INTERFACE, DOOR_STATE, arg, timeout);
-    }
-    if (status != ER_OK) {
-        printf("Failed to call method %s interface to proxy object\n", displayName);
-        goto out;
-    }
-    if (methodName) {
-        result = reply->GetArg(0);
-    } else {
+        if (ER_OK != status) {
+            printf("Failed to GetPropery %s (%s)\n", propertyName.c_str(),
+                   QCC_StatusText(status));
+            return status;
+        }
+
+        const MsgArg* result;
         result = &arg;
+        bool value;
+        result->Get("b", &value);
+        printf("%s returned %d\n", propertyName.c_str(), value);
+
+        return status;
     }
 
-    bool value;
-    result->Get("b", &value);
+    void Stop()
+    {
+        for (SessionMap::iterator it = sessions.begin(); it != sessions.end(); it++) {
+            it->second.doorProxy = nullptr;
+            ba->LeaveSession(it->second.id);
+        }
+    }
 
-    printf("%s called result = %d\n", displayName, value);
+  private:
 
-out:
-    delete remoteObj;
-    ba->LeaveSession(sessionId);
+    struct Session {
+        SessionId id;
+        shared_ptr<ProxyBusObject> doorProxy;
+    };
+    typedef std::map<string, Session> SessionMap;
+
+    BusAttachment* ba;
+    uint32_t timeout;
+    SessionMap sessions;
+
+    QStatus GetProxyDoorObject(string busName,
+                               shared_ptr<ProxyBusObject>& remoteObj)
+    {
+        QStatus status = ER_FAIL;
+
+        SessionMap::iterator it;
+        it = sessions.find(busName);
+        if (it != sessions.end()) {
+            remoteObj = it->second.doorProxy;
+            status = ER_OK;
+        } else {
+            Session session;
+            status = JoinSession(busName, session);
+            if (ER_OK == status) {
+                sessions[busName] = session;
+                remoteObj = session.doorProxy;
+            }
+        }
+
+        return status;
+    }
+
+    QStatus JoinSession(string busName, Session& session)
+    {
+        QStatus status = ER_FAIL;
+
+        SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false,
+                         SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+        status = ba->JoinSession(busName.c_str(), DOOR_APPLICATION_PORT,
+                                 &theListener, session.id, opts);
+        if (ER_OK != status) {
+            printf("Failed to join session\n");
+            return status;
+        }
+
+        const InterfaceDescription* remoteIntf = ba->GetInterface(DOOR_INTERFACE);
+        if (nullptr == remoteIntf) {
+            printf("Could not get door interface\n");
+            status = ER_FAIL;
+            goto exit;
+        }
+
+        session.doorProxy = make_shared<ProxyBusObject>(*ba, busName.c_str(),
+                                                        DOOR_OBJECT_PATH, session.id);
+        if (nullptr == session.doorProxy) {
+            printf("Failed to create proxy bus object\n");
+            status = ER_FAIL;
+            goto exit;
+        }
+
+        status = session.doorProxy->AddInterface(*remoteIntf);
+        if (status != ER_OK) {
+            printf("Failed to add door interface to proxy bus object\n");
+            goto exit;
+        }
+
+    exit:
+        if (status != ER_OK) {
+            session.doorProxy = nullptr;
+            ba->LeaveSession(session.id);
+        }
+
+        return status;
+    }
+};
+
+QStatus PerformDoorAction(DoorSessionManager& sm, char cmd, string busName)
+{
+    QStatus status = ER_FAIL;
+
+    string methodName;
+    string propertyName = string(DOOR_STATE);
+
+    switch (cmd) {
+    case 'o':
+        methodName = string(DOOR_OPEN);
+        break;
+
+    case 'c':
+        methodName = string(DOOR_CLOSE);
+        break;
+
+    case 's':
+        methodName = string(DOOR_GET_STATE);
+        break;
+
+    case 'g':
+        break;
+    }
+
+    if (methodName != "") {
+        status = sm.MethodCall(busName, methodName);
+    } else {
+        status = sm.GetProperty(busName, propertyName);
+    }
+
     return status;
 }
 
@@ -177,14 +298,18 @@ void printHelp()
            ">q : Quit\n");
 }
 
-int CDECL_CALL main(int arg, char** argv)
+int CDECL_CALL main(int argc, char** argv)
 {
-    QCC_UNUSED(argv);
-    QCC_UNUSED(arg);
+    string appName = "DoorConsumer";
+    if (argc > 1) {
+        appName = string(argv[1]);
+    }
+    printf("Starting door consumer %s\n", appName.c_str());
 
     if (AllJoynInit() != ER_OK) {
         return EXIT_FAILURE;
     }
+
 #ifdef ROUTER
     if (AllJoynRouterInit() != ER_OK) {
         AllJoynShutdown();
@@ -193,16 +318,23 @@ int CDECL_CALL main(int arg, char** argv)
 #endif
 
     //Do the common set-up
-    DoorCommon common("DoorConsumer");  //TODO make the name a command-line argument
-    QStatus status = common.Init("/tmp/consdb.ks", false); //TODO allow for a keystore path as a command-line argument
+    DoorCommon common(appName);
+    QStatus status = common.Init(false);
+    if (status != ER_OK) {
+        cerr << "Failed to initialize common layer" << endl;
+        exit(1);
+    }
     printf("Common layer is initialized\n");
 
+    status = common.AnnounceAbout();
     if (status != ER_OK) {
+        cerr << "Failed to announce about" << endl;
         exit(1);
     }
 
     BusAttachment* ba = common.GetBusAttachment();
-#if DOOR_INTF_SECURE == 1
+    DoorSessionManager sessionManager(ba, 10000);
+
     //Wait until we are claimed...
     PermissionConfigurator::ApplicationState appState = PermissionConfigurator::NOT_CLAIMABLE;
     ba->GetPermissionConfigurator().GetApplicationState(appState);
@@ -211,7 +343,7 @@ int CDECL_CALL main(int arg, char** argv)
         qcc::Sleep(5000);
         ba->GetPermissionConfigurator().GetApplicationState(appState);
     }
-#endif
+
     //Register signal hander
     DoorMessageReceiver dmr;
     ba->RegisterSignalHandlerWithRule(&dmr,
@@ -248,7 +380,7 @@ int CDECL_CALL main(int arg, char** argv)
                 }
                 for (set<string>::iterator it = doors.begin();
                      it != doors.end(); it++) {
-                    PerformDoorAction(ba, cmd, *it);
+                    PerformDoorAction(sessionManager, cmd, *it);
                 }
             }
             break;
@@ -271,12 +403,14 @@ int CDECL_CALL main(int arg, char** argv)
     }
 exit:
 
+    sessionManager.Stop();
     ba->UnregisterAboutListener(dal);
     common.Fini();
 
 #ifdef ROUTER
     AllJoynRouterShutdown();
 #endif
+
     AllJoynShutdown();
     return (int)status;
 }

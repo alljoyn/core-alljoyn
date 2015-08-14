@@ -116,16 +116,41 @@ class AgentCAStorage {
     /**
      * @brief Inform storage that a new application is found and it will be claimed.
      *
+     * This method must be called prior to calling the claim method to actually claim
+     * the application.
+     *
      * @param[in] app                      The application with a valid keyInfo set.
      * @param[in] idInfo                   The identity of the application.
      * @param[in] manifest                 The application's aspired manifest.
+     * @param[in,out] adminGroup           The group the application will be part of after claiming.
+     * @param[in,out] identityCertificate  The identity certificate that will be generated for
+     *                                     the application.
      *
      * @return ER_OK  On success.
      * @return others On failure.
      */
-    virtual QStatus StartApplicationClaiming(Application& app,
+    virtual QStatus StartApplicationClaiming(const Application& app,
                                              const IdentityInfo& idInfo,
-                                             const Manifest& manifest) = 0;
+                                             const Manifest& manifest,
+                                             GroupInfo& adminGroup,
+                                             IdentityCertificateChain& identityCertificate) = 0;
+
+    /**
+     * @brief Inform storage that a new application was claimed with a given success/failure
+     *  status.
+     *
+     * This method must be called after trying to claim an application with the result represented
+     * in a boolean.
+     *
+     * @param[in] app                      The application with a valid keyInfo set.
+     * @param[in] status                   The success/failure of the attempted claiming. ER_OK
+     *                                     on success, others for failures
+     *
+     * @return ER_OK  On success.
+     * @return others On failure.
+     */
+    virtual QStatus FinishApplicationClaiming(const Application& app,
+                                              QStatus status) = 0;
 
     /**
      * @brief Retrieve a managed application.
@@ -187,13 +212,14 @@ class AgentCAStorage {
      * @brief Retrieve the chain of membership certificates for a given application.
      *
      * @param[in] app                         The application with a valid keyInfo set.
-     * @param[in,out] membershipCertificates  The retrieved chain of membership certificates pertaining to the application.
+     * @param[in,out] membershipCertificates  The retrieved chains of membership certificates pertaining to the application.
+     *                                        Each chain must at least contain 1 certificate.
      *
      * @return ER_OK  On success.
      * @return others On failure.
      */
     virtual QStatus GetMembershipCertificates(const Application& app,
-                                              MembershipCertificateChain& membershipCertificates) const = 0;
+                                              vector<MembershipCertificateChain>& membershipCertificates) const = 0;
 
     /**
      * @brief Retrieve the chain of identity certificates as well as the manifest for a given application.

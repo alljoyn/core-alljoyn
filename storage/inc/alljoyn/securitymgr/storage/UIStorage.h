@@ -109,12 +109,14 @@ class UIStorage {
      *
      * @param[in] app             The application, ONLY the keyInfo is mandatory here.
      * @param[in] identityInfo    A valid identity info.
+     * @param[in] manifest        The manifest for this application.
      *
      * @return ER_OK  On success.
      * @return others On failure.
      */
     virtual QStatus UpdateIdentity(Application& app,
-                                   const IdentityInfo identityInfo) = 0;
+                                   const IdentityInfo& identityInfo,
+                                   const Manifest& manifest) = 0;
 
     /**
      * @brief Persist the meta application data relevant to the app passed in.

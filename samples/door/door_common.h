@@ -17,7 +17,7 @@
 #ifndef ALLJOYN_SECMGR_SAMPLE_DOOR_COMMON_H_
 #define ALLJOYN_SECMGR_SAMPLE_DOOR_COMMON_H_
 
-#define DOOR_INTF_SECURE 1
+#include <string>
 
 #include <qcc/GUID.h>
 
@@ -25,6 +25,8 @@
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/AboutObj.h>
+
+#include <alljoyn/securitymgr/Manifest.h>
 
 #define DOOR_INTERFACE "sample.securitymgr.door.Door"
 #define DOOR_OPEN "Open"
@@ -37,38 +39,27 @@
 #define DOOR_OBJECT_PATH "/sample/security/Door"
 
 #define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
+#define KEYX_ECDHE_PSK "ALLJOYN_ECDHE_PSK"
 #define KEYX_ECDHE_DSA "ALLJOYN_ECDHE_ECDSA"
 
 #define DOOR_APPLICATION_PORT 12345
 using namespace ajn;
+using namespace std;
+using namespace ajn::securitymgr;
 
 namespace sample {
 namespace securitymgr {
 namespace door {
-/**
- * Class to allow authentication mechanisms to interact with the user or application.
- */
+class SPListener :
+    public SessionPortListener {
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
+    {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(sessionPort);
 
-class DoorAuthListener :
-    public AuthListener {
-  public:
-
-    DoorAuthListener() { }
-
-    bool RequestCredentials(const char* authMechanism,
-                            const char* authPeer,
-                            uint16_t authCount,
-                            const char* userId,
-                            uint16_t credMask,
-                            Credentials& creds);
-
-    bool VerifyCredentials(const char* authMechanism,
-                           const char* authPeer,
-                           const Credentials& creds);
-
-    void AuthenticationComplete(const char* authMechanism,
-                                const char* authPeer,
-                                bool success);
+        return true;
+    }
 };
 
 class Door :
@@ -104,15 +95,16 @@ class Door :
 
 class DoorCommon {
   public:
-    DoorCommon(const char* appName) :
-        ba(new BusAttachment(appName, true)), appName(appName), aboutData("en"), aboutObj(new AboutObj(*ba))
+    DoorCommon(string _appName) :
+        appName(_appName),
+        ba(new BusAttachment(_appName.c_str(), true)),
+        aboutData("en"), aboutObj(new AboutObj(*ba))
     {
     }
 
     ~DoorCommon();
 
-    QStatus Init(const char* keyStoreName,
-                 bool provider);
+    QStatus Init(bool provider);
 
     QStatus Fini();
 
@@ -128,6 +120,10 @@ class DoorCommon {
 
     QStatus AnnounceAbout();
 
+    void UpdateManifest(Manifest& manifest);
+
+    void CancelManifestUpdate();
+
   private:
     QStatus CreateInterface();
 
@@ -135,10 +131,13 @@ class DoorCommon {
 
     QStatus SetAboutData();
 
+    QStatus HostSession();
+
+    string appName;
     BusAttachment* ba;
-    const char* appName;
     AboutData aboutData;
     AboutObj* aboutObj;
+    SPListener spl;
 };
 }
 }

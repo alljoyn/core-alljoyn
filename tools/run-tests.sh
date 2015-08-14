@@ -49,7 +49,7 @@ if ! nm "${TEST_ROOT}/agent/unit_test/secmgrctest" | grep BundledRouter &> /dev/
     fi
 fi
 
-LIB_PATH="${PLATFORM_ROOT}/dist/security/lib:${PLATFORM_ROOT}/dist/cpp/lib:${PLATFORM_ROOT}/dist/services_common/lib"
+LIB_PATH="${PLATFORM_ROOT}/dist/security/lib:${PLATFORM_ROOT}/dist/cpp/lib"
 
 export LD_LIBRARY_PATH="${LIB_PATH}"
 
@@ -57,6 +57,9 @@ export LD_LIBRARY_PATH="${LIB_PATH}"
 if [ ! -z "$(which lcov)" ]; then
     lcov --directory "${PLATFORM_ROOT}" --zerocounters
 fi
+
+kill $(pidof multipeer_claim) || true
+kill $(pidof secmgrctest) || true
 
 # running unit tests
 # we are doing some magic here to run each test in its own process as we still have some issues to run them in one go (AS-207)

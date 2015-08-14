@@ -39,7 +39,7 @@ using namespace ajn::securitymgr;
 using namespace std;
 
 class AutoAccepter :
-    public ManifestListener {
+    public ClaimListener {
     bool ApproveManifest(const Application& app,
                          const PermissionPolicy::Rule* manifestRules,
                          const size_t manifestRulesCount)

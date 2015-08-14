@@ -50,7 +50,6 @@ class ApplicationMonitor :
     mutable Mutex appsMutex;
 
     ApplicationMonitor();
-    ApplicationMonitor(BusAttachment* ba);
 
     void operator=(ApplicationMonitor const&) { }
 
@@ -68,10 +67,7 @@ class ApplicationMonitor :
                                      const SecurityInfo* newSecInfo);
 
   public:
-    static ApplicationMonitor* GetApplicationMonitor(BusAttachment* ba)
-    {
-        return new ApplicationMonitor(ba);
-    }
+    ApplicationMonitor(BusAttachment* ba);
 
     ~ApplicationMonitor();
 

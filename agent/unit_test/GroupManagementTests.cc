@@ -25,7 +25,7 @@ using namespace std;
 
 namespace secmgr_tests {
 class GroupManagementTests :
-    public BasicTest {
+    public SecurityAgentTest {
 };
 
 /**
@@ -110,7 +110,7 @@ TEST_F(GroupManagementTests, GroupManipManyGroups) {
 
         ASSERT_EQ(g->name, compareToGroup.name);
         ASSERT_EQ(g->desc, compareToGroup.desc);
-        ASSERT_EQ(storage->RemoveGroup(*g), ER_OK);
+        ASSERT_EQ(ER_OK, storage->RemoveGroup(*g));
     }
 
     groups.clear();
@@ -157,49 +157,47 @@ TEST_F(GroupManagementTests, DefaultAuthority) {
 
 /**
  * @test Check whether more than one group authority can be supported.
- *       -# Create a GroupInfo object.
- *       -# Store the GroupInfo object and verify the authority is set.
- *       -# Create another GroupInfo object with the same guid, but a different
- *          authority.
- *       -# Store the second GroupInfo object.
- *       -# Create another GroupInfo object and fill in the required fields to
- *          retrieve the second GroupInfo object.
- *       -# Check whether the second GroupInfo object can be retrieved.
- *       -# Create another GroupInfo object and fill in only the guid.
- *       -# Check whether the first GroupInfo object can be retrieved.
+ *       -# Create a GroupInfo (group0) object with an empty authority
+ *       -# Store it successfully and make sure it gets an authority set.
+ *       -# Create another GroupInfo (group1) and assign it group0's
+ *          GUID but a different authority.
+ *       -# Verify storing of group1 fails as it uses group0's GUID.
+ *       -# Change group1 to use the same authority as in group0.
+ *       -# Verify updating storage with group1 succeeds and
+ *          that both groups are identical.
+ *       -# Create a different group2 with a different GUID and Authority.
+ *       -# Make sure its storage and retrieval succeed and that
+ *          it is different than both previous groups.
  **/
-TEST_F(GroupManagementTests, MultipleAuthorities) {
-    GroupInfo group;
-    group.name = "Test";
-    group.desc = "This is a test group";
+TEST_F(GroupManagementTests, AuthoritiesCheck) {
+    GroupInfo group0;
+    group0.name = "Test";
+    group0.desc = "This is a test group";
 
-    ASSERT_TRUE(group.authority.empty());
-    ASSERT_EQ(ER_OK, storage->StoreGroup(group));
-    ASSERT_FALSE(group.authority.empty());
+    ASSERT_TRUE(group0.authority.empty());
+    ASSERT_EQ(ER_OK, storage->StoreGroup(group0));
+    ASSERT_FALSE(group0.authority.empty()); // StoreGroup fills-in the authority if it was empty
 
     Crypto_ECC crypto;
     crypto.GenerateDHKeyPair();
-    GroupInfo group3;
-    group3.name = "TestAuth2";
-    group3.desc = "This is a test group from another authority";
-    group3.guid = group.guid;
-    group3.authority.SetPublicKey(crypto.GetDHPublicKey());
-    ASSERT_EQ(ER_OK, storage->StoreGroup(group3));
+    GroupInfo group1;
+    group1.name = "TestAuth2";
+    group1.desc = "This is a test group from another authority";
+    group1.guid = group0.guid;
+    group1.authority.SetPublicKey(crypto.GetDHPublicKey());
 
-    GroupInfo group4;
-    group4.authority = group3.authority;
-    group4.guid = group3.guid;
-    ASSERT_EQ(ER_OK, storage->GetGroup(group4));
-    ASSERT_TRUE(group3 == group4);
-    ASSERT_TRUE(group3.name == group4.name);
-    ASSERT_TRUE(group3.desc == group4.desc);
+    ASSERT_NE(ER_OK, storage->StoreGroup(group1)); // Same GUID used but not the same authority
+    group1.authority = group0.authority;
+    ASSERT_EQ(ER_OK, storage->StoreGroup(group1)); // Update operation
+    ASSERT_EQ(ER_OK, storage->GetGroup(group0));
+    ASSERT_TRUE(group1 == group0);
 
-    GroupInfo group2;
-    group2.guid = group.guid;
+    GroupInfo group2; // Different GUID than other groups
+    group2.authority.SetPublicKey(crypto.GetDHPublicKey()); // Different authority than group1 and group0
+    ASSERT_EQ(ER_OK, storage->StoreGroup(group2));
     ASSERT_EQ(ER_OK, storage->GetGroup(group2));
-    ASSERT_TRUE(group == group2);
-    ASSERT_TRUE(group.name == group2.name);
-    ASSERT_TRUE(group.desc == group2.desc);
+    ASSERT_FALSE(group2 == group0);
+    ASSERT_FALSE(group2 == group1);
 }
 
 /**

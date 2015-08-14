@@ -22,7 +22,7 @@ using namespace ajn::securitymgr;
 
 namespace secmgr_tests {
 class UIStorageTests :
-    public BasicTest {
+    public SecurityAgentTest {
   private:
 
   protected:

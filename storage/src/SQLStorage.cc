@@ -16,7 +16,6 @@
 
 #include <SQLStorage.h>
 #include <SQLStorageSettings.h>
-#include <qcc/Crypto.h>
 #include <qcc/Debug.h>
 #include <qcc/GUID.h>
 #include <qcc/CertificateECC.h>
@@ -238,6 +237,7 @@ QStatus SQLStorage::GetAppMetaData(const Application& app, ApplicationMetaData& 
     Application tmp = app;
     if (ER_OK != (funcStatus = GetManagedApplication(tmp))) {
         QCC_LogError(funcStatus, ("Trying to get meta data for a non-existing application !"));
+        storageMutex.Unlock(__FILE__, __LINE__);
         return funcStatus;
     }
 
@@ -386,7 +386,7 @@ QStatus SQLStorage::GetPolicy(const Application& app, PermissionPolicy& policy) 
     return funcStatus;
 }
 
-QStatus SQLStorage::GetNewSerialNumber(string& serialNumber) const
+QStatus SQLStorage::GetNewSerialNumber(CertificateX509& cert) const
 {
     storageMutex.Lock(__FILE__, __LINE__);
 
@@ -411,10 +411,12 @@ QStatus SQLStorage::GetNewSerialNumber(string& serialNumber) const
         int value = sqlite3_column_int(statement, 0);
         sqlRetCode = sqlite3_finalize(statement);
         char buffer[33];
-        snprintf(buffer, 32, "%x", value);
-        buffer[32] = 0; //make sure we have a trailing 0.
-        serialNumber.clear();
-        serialNumber.append(buffer);
+        if (snprintf(buffer, 32, "%x", value) > 0) {
+            buffer[32] = 0; //make sure we have a trailing 0.
+            cert.SetSerial((const uint8_t*)buffer, strlen(buffer));
+        } else {
+            QCC_LogError(ER_FAIL, ("Failed to format the serial number"));
+        }
 
         //update the value in the database.
         sqlStmtText = "UPDATE ";
@@ -656,7 +658,7 @@ QStatus SQLStorage::StoreCertificate(const Application& app, CertificateX509& ce
             sqlStmtText.append(IDENTITY_CERTS_TABLE_NAME);
             sqlStmtText.append(" (SUBJECT_KEYINFO, ISSUER"
                                ", DER"
-                               ", ID) VALUES (?, ?, ?, ?)");
+                               ", GUID) VALUES (?, ?, ?, ?)");
         }
         break;
 
@@ -718,7 +720,9 @@ QStatus SQLStorage::GetMembershipCertificates(const Application& app, const Memb
     while (SQLITE_ROW == (sqlRetCode = sqlite3_step(statement))) {
         MembershipCertificate cert;
         size_t size = sqlite3_column_int(statement, derSizeColumn);
-        funcStatus = cert.LoadEncoded((const uint8_t*)sqlite3_column_blob(statement, derColumn), size);
+        qcc::String der((const char*)sqlite3_column_blob(statement, derColumn), size);
+
+        funcStatus = cert.DecodeCertificateDER(der);
 
         if (ER_OK != funcStatus) {
             QCC_LogError(funcStatus, ("Failed to load certificate!"));
@@ -811,7 +815,8 @@ QStatus SQLStorage::GetCertificate(const Application& app, CertificateX509& cert
         if (SQLITE_ROW == (sqlRetCode = sqlite3_step(statement))) {
             /*********************Common to all certificates*****************/
             int derSize = sqlite3_column_int(statement, 1);     // DER is never empty
-            funcStatus =  cert.LoadEncoded((const uint8_t*)sqlite3_column_blob(statement, 0), derSize);
+            qcc::String der((const char*)sqlite3_column_blob(statement, 0), derSize);
+            funcStatus =  cert.DecodeCertificateDER(der);
         } else if (SQLITE_DONE == sqlRetCode) {
             QCC_DbgHLPrintf(("No certificate was found!"));
             funcStatus = ER_END_OF_DATA;
@@ -938,7 +943,7 @@ QStatus SQLStorage::StoreGroup(const GroupInfo& groupInfo)
     return funcStatus;
 }
 
-QStatus SQLStorage::RemoveGroup(const GroupInfo& groupInfo)
+QStatus SQLStorage::RemoveGroup(const GroupInfo& groupInfo, vector<Application>& appsToSync)
 {
     QStatus funcStatus = ER_FAIL;
     storageMutex.Lock(__FILE__, __LINE__);
@@ -947,7 +952,7 @@ QStatus SQLStorage::RemoveGroup(const GroupInfo& groupInfo)
     if (ER_OK != (funcStatus = GetGroup(tmp))) {
         QCC_LogError(funcStatus, ("Group does not exist."));
     } else {
-        funcStatus = RemoveInfo(INFO_GROUP, groupInfo.authority, groupInfo.guid);
+        funcStatus = RemoveInfo(INFO_GROUP, groupInfo.authority, groupInfo.guid, appsToSync);
     }
 
     storageMutex.Unlock(__FILE__, __LINE__);
@@ -1038,18 +1043,18 @@ QStatus SQLStorage::StoreIdentity(const IdentityInfo& idInfo)
     return funcStatus;
 }
 
-QStatus SQLStorage::RemoveIdentity(const IdentityInfo& idInfo)
+QStatus SQLStorage::RemoveIdentity(const IdentityInfo& idInfo, vector<Application>& appsToSync)
 {
     QStatus funcStatus = ER_FAIL;
+
     storageMutex.Lock(__FILE__, __LINE__);
 
     IdentityInfo tmp = idInfo; // to avoid const cast
     if (ER_OK != (funcStatus = GetIdentity(tmp))) {
         QCC_LogError(funcStatus, ("Identity does not exist."));
     } else {
-        funcStatus = RemoveInfo(INFO_IDENTITY, idInfo.authority, idInfo.guid);
+        funcStatus = RemoveInfo(INFO_IDENTITY, idInfo.authority, idInfo.guid, appsToSync);
     }
-
     storageMutex.Unlock(__FILE__, __LINE__);
     return funcStatus;
 }
@@ -1174,12 +1179,12 @@ QStatus SQLStorage::BindCertForStorage(const Application& app, CertificateX509& 
                                         cert.GetAuthorityKeyId().data(),
                                         cert.GetAuthorityKeyId().size(),
                                         SQLITE_TRANSIENT);
-
-        const uint8_t* encodedCert = cert.GetEncoded();
-        if (encodedCert != nullptr) {
+        qcc::String der;
+        funcStatus = cert.EncodeCertificateDER(der);
+        if (funcStatus == ER_OK) {
             sqlRetCode |= sqlite3_bind_blob(*statement, ++column,
-                                            encodedCert,
-                                            cert.GetEncodedLen(),
+                                            (const uint8_t*)der.data(),
+                                            der.size(),
                                             SQLITE_TRANSIENT);
         } else {
             funcStatus = ER_FAIL;
@@ -1390,7 +1395,6 @@ QStatus SQLStorage::StoreInfo(InfoType type,
         }
         sqlStmtText.append(")");
     }
-
     do {
         sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
                                         -1, &statement, nullptr);
@@ -1524,13 +1528,18 @@ QStatus SQLStorage::ExportKeyInfo(const KeyInfoNISTP256& keyInfo, uint8_t** byte
 
 QStatus SQLStorage::RemoveInfo(InfoType type,
                                const KeyInfoNISTP256& auth,
-                               const GUID128& guid)
+                               const GUID128& guid,
+                               vector<Application>& appsToSync)
 {
     size_t authoritySize;
     uint8_t* authority = nullptr;
     QStatus funcStatus = ExportKeyInfo(auth, &authority, authoritySize);
     if (ER_OK != funcStatus) {
         return funcStatus;
+    }
+
+    if (ER_OK != GetApplicationsPerGuid(type, guid, appsToSync)) {
+        QCC_DbgHLPrintf(("No affected managed application(s) was/were found..."));
     }
 
     int sqlRetCode = SQLITE_OK;
@@ -1822,6 +1831,83 @@ QStatus SQLStorage::PrepareMembershipCertificateQuery(const Application& app,
         LOGSQLERROR(funcStatus);
     }
     delete[]publicKeyInfo;
+    return funcStatus;
+}
+
+QStatus SQLStorage::GetApplicationsPerGuid(const InfoType type, const GUID128& guid, vector<Application>& apps)
+{
+    int sqlRetCode = SQLITE_OK;
+    sqlite3_stmt* statement = nullptr;
+    string sqlStmtText = "";
+    QStatus funcStatus = ER_OK;
+
+    string certTableWhere;
+    switch (type) {
+    case INFO_GROUP:
+        certTableWhere = MEMBERSHIP_CERTS_TABLE_NAME;
+        break;
+
+    case INFO_IDENTITY:
+        certTableWhere = IDENTITY_CERTS_TABLE_NAME;
+        break;
+
+    default:
+        return ER_FAIL;
+    }
+
+    do {
+        sqlStmtText = "SELECT LENGTH(APPLICATION_PUBKEY), APPLICATION_PUBKEY, SYNC_STATE FROM ";
+        sqlStmtText += CLAIMED_APPS_TABLE_NAME;
+        sqlStmtText += " WHERE APPLICATION_PUBKEY IN ";
+        sqlStmtText += "( SELECT  SUBJECT_KEYINFO FROM " + certTableWhere + " WHERE GUID = ?);";
+
+        sqlRetCode = sqlite3_prepare_v2(nativeStorageDB, sqlStmtText.c_str(),
+                                        -1, &statement, nullptr);
+        if (SQLITE_OK != sqlRetCode) {
+            funcStatus = ER_FAIL;
+            LOGSQLERROR(funcStatus);
+            break;
+        }
+
+        sqlRetCode = sqlite3_bind_text(statement, 1, guid.ToString().c_str(),
+                                       -1, SQLITE_TRANSIENT);
+
+        if (SQLITE_OK != sqlRetCode) {
+            funcStatus = ER_FAIL;
+            LOGSQLERROR(funcStatus);
+            break;
+        }
+        sqlRetCode = sqlite3_step(statement);
+
+        switch (sqlRetCode) {
+        case SQLITE_DONE:
+            funcStatus = ER_END_OF_DATA;
+            break;
+
+        case SQLITE_ROW:
+            while (SQLITE_ROW == sqlRetCode) {
+                Application app;
+                size_t pubKeyInfoImportSize = (size_t)sqlite3_column_int(statement, 0);
+                funcStatus =
+                    app.keyInfo.Import((const uint8_t*)sqlite3_column_blob(statement, 1), pubKeyInfoImportSize);
+                app.syncState = static_cast<ApplicationSyncState>(sqlite3_column_int(statement, 2));
+                apps.push_back(app);
+                sqlRetCode = sqlite3_step(statement);
+            }
+            break;
+
+        default:
+            funcStatus = ER_FAIL;
+            LOGSQLERROR(funcStatus);
+            break;
+        }
+    } while (0);
+
+    sqlRetCode = sqlite3_finalize(statement);
+    if (SQLITE_OK != sqlRetCode) {
+        funcStatus = ER_FAIL;
+        LOGSQLERROR(funcStatus);
+    }
     return funcStatus;
 }
 }

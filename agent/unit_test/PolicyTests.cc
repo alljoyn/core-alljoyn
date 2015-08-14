@@ -24,7 +24,7 @@ using namespace ajn::securitymgr;
 
 namespace secmgr_tests {
 class PolicyTests :
-    public BasicTest {
+    public SecurityAgentTest {
   private:
 
   protected:
@@ -177,6 +177,8 @@ TEST_F(PolicyTests, SuccessfulResetPolicy) {
     ASSERT_TRUE(CheckDefaultPolicy());
 
     /* Install policy */
+    vector<GroupInfo> policyGroups;
+    ASSERT_EQ(ER_OK, pg->DefaultPolicy(policyGroups, policy));
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     ASSERT_TRUE(CheckPolicy(policy));
@@ -192,12 +194,34 @@ TEST_F(PolicyTests, SuccessfulResetPolicy) {
  *       -# Start the application and make sure it's claimable.
  *       -# Claim the application successfully.
  *       -# Install a policy that does NOT contain the admin group rule.
- *       -# Make sure the update has been carried out.
- *       -# Make sure that invoking any remote operation should fail.
- *       -# Update the policy to include the admin group rule again which
- *          should trigger an auto-updater.
- *       -# Make sure that at least a policy sync error is triggered.
+ *       -# Check whether the application is in SYNC_PENDING state.
+ *       -# Make sure that at least one sync error is triggered.
  */
-TEST_F(PolicyTests, DISABLED_PermissionDenied) {
+TEST_F(PolicyTests, PermissionDenied) {
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
+
+    /* Create identity */
+    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
+
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+
+    /* Claim application */
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+
+    /* Check security signal */
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+
+    /* Check default policy */
+    ASSERT_TRUE(CheckDefaultPolicy());
+
+    /* No admin group policy*/
+    PermissionPolicy emptyPolicy;
+
+    /* Install policy and check retrieved policy */
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, emptyPolicy));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_REMOTE, ER_PERMISSION_DENIED));
 }
 } // namespace

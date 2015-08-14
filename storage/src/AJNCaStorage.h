@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <map>
 
 #include <alljoyn/Status.h>
 
@@ -42,6 +43,8 @@ class StorageListenerHandler {
 
     virtual QStatus StartUpdates(Application& app,
                                  uint64_t& updateID) = 0;
+
+    virtual QStatus ApplicationUpdated(Application& app) = 0;
 
     virtual void UnRegisterStorageListener(StorageListener* listener) = 0;
 
@@ -75,20 +78,27 @@ class AJNCaStorage :
                                   IdentityCertificateChain& identityCertificates,
                                   vector<MembershipCertificateChain>& adminGroupMemberships);
 
+    virtual QStatus FinishApplicationClaiming(const Application& app,
+                                              QStatus status);
+
     virtual QStatus StartUpdates(Application& app,
                                  uint64_t& updateID);
 
     virtual QStatus UpdatesCompleted(Application& app,
                                      uint64_t& updateID);
 
-    virtual QStatus StartApplicationClaiming(Application& app,
+    virtual QStatus ApplicationUpdated(Application& app);
+
+    virtual QStatus StartApplicationClaiming(const Application& app,
                                              const IdentityInfo& idInfo,
-                                             const Manifest& mf);
+                                             const Manifest& mf,
+                                             GroupInfo& adminGroup,
+                                             IdentityCertificateChain& idCert);
 
     virtual QStatus GetCaPublicKeyInfo(KeyInfoNISTP256& CAKeyInfo) const;
 
     virtual QStatus GetMembershipCertificates(const Application& app,
-                                              MembershipCertificateChain& membershipCertificates) const;
+                                              vector<MembershipCertificateChain>& membershipCertificates) const;
 
     virtual QStatus GetIdentityCertificatesAndManifest(const Application& app,
                                                        IdentityCertificateChain& identityCertificates,
@@ -129,6 +139,14 @@ class AJNCaStorage :
     unique_ptr<AJNCa> ca;
     shared_ptr<SQLStorage> sql;
     shared_ptr<StorageListenerHandler> handler;
+    Mutex pendingLock;
+
+    struct CachedData {
+        IdentityCertificate cert;
+        Manifest mnf;
+    };
+
+    map<Application, CachedData> claimPendingApps;
 };
 }
 }

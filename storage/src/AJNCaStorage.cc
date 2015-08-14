@@ -52,9 +52,11 @@ QStatus AJNCaStorage::GetAdminGroup(GroupInfo& adminGroup) const
     return status;
 }
 
-QStatus AJNCaStorage::StartApplicationClaiming(Application& app,
+QStatus AJNCaStorage::StartApplicationClaiming(const Application& app,
                                                const IdentityInfo& idInfo,
-                                               const Manifest& mf)
+                                               const Manifest& mf,
+                                               GroupInfo& adminGroup,
+                                               IdentityCertificateChain& idCertChain)
 {
     QStatus status;
 
@@ -64,33 +66,72 @@ QStatus AJNCaStorage::StartApplicationClaiming(Application& app,
         return status;
     }
 
+    status = GetAdminGroup(adminGroup);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("No admin group found"));
+        return status;
+    }
+
     IdentityCertificate idCert;
     status = GenerateIdentityCertificate(app, idInfo, mf, idCert);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to create IdentityCertificate"));
         return status;
     }
+    idCertChain.push_back(idCert);
 
-    app.syncState = SYNC_WILL_CLAIM;
-    status =  sql->StoreApplication(app);
+    CachedData data;
+    data.cert = idCert;
+    data.mnf = mf;
+    pendingLock.Lock();
+    claimPendingApps[app] = data;
+    pendingLock.Unlock();
+    return status;
+}
+
+QStatus AJNCaStorage::FinishApplicationClaiming(const Application& app, QStatus status)
+{
+    QStatus finiStatus = ER_OK;
+    CachedData data;
+    pendingLock.Lock();
+    auto search = claimPendingApps.find(app);
+    if (search != claimPendingApps.end()) {
+        data = search->second;
+        claimPendingApps.erase(search);
+    } else {
+        pendingLock.Unlock();
+        return ER_END_OF_DATA;
+    }
+    pendingLock.Unlock();
+    Application _app = app;
+
+    if (ER_OK != status) {
+        return ER_OK;
+    }
+
+    _app.syncState = SYNC_OK;
+
+    status =  sql->StoreApplication(_app);
     if (ER_OK != status) {
         QCC_LogError(status, ("StoreApplication failed"));
         return status;
     }
 
-    status = sql->StoreCertificate(app, idCert);
-    if (ER_OK !=  status) {
-        QCC_LogError(status, ("StoreCertificate failed"));
+    finiStatus = sql->StoreCertificate(_app, data.cert);
+    if (ER_OK != finiStatus) {
+        QCC_LogError(finiStatus, ("StoreCertificate failed"));
     } else {
-        status = sql->StoreManifest(app, mf);
+        finiStatus = sql->StoreManifest(_app, data.mnf);
+        if (ER_OK != finiStatus) {
+            QCC_LogError(finiStatus, ("StoreManifest failed"));
+        }
     }
 
-    if (ER_OK != status) {
+    if (ER_OK != finiStatus) {
         sql->RemoveApplication(app);
-        app.syncState = SYNC_OK;
     }
 
-    return status;
+    return finiStatus;
 }
 
 QStatus AJNCaStorage::GetManagedApplication(Application& app) const
@@ -106,6 +147,11 @@ QStatus AJNCaStorage::StartUpdates(Application& app, uint64_t& updateID)
 QStatus AJNCaStorage::UpdatesCompleted(Application& app, uint64_t& updateID)
 {
     return handler->UpdatesCompleted(app, updateID);
+}
+
+QStatus AJNCaStorage::ApplicationUpdated(Application& app)
+{
+    return handler->ApplicationUpdated(app);
 }
 
 QStatus AJNCaStorage::RegisterAgent(const KeyInfoNISTP256& agentKey,
@@ -148,9 +194,7 @@ QStatus AJNCaStorage::RegisterAgent(const KeyInfoNISTP256& agentKey,
 QStatus AJNCaStorage::SignCertifcate(CertificateX509& certificate) const
 {
     if (certificate.GetSerialLen() == 0) {
-        string serialNr;
-        sql->GetNewSerialNumber(serialNr);
-        certificate.SetSerial((const uint8_t*)serialNr.c_str(), serialNr.size());
+        sql->GetNewSerialNumber(certificate);
     }
     KeyInfoNISTP256 caInfo;
 
@@ -216,11 +260,20 @@ QStatus AJNCaStorage::GetCaPublicKeyInfo(KeyInfoNISTP256& CAKeyInfo) const
 }
 
 QStatus AJNCaStorage::GetMembershipCertificates(const Application& app,
-                                                MembershipCertificateChain& membershipCertificates) const
+                                                vector<MembershipCertificateChain>& membershipCertificateChains) const
 {
     MembershipCertificate cert;
     cert.SetSubjectPublicKey(app.keyInfo.GetPublicKey());
-    return sql->GetMembershipCertificates(app, cert, membershipCertificates);
+    vector<MembershipCertificate> membershipCertificates;
+    QStatus status = sql->GetMembershipCertificates(app, cert, membershipCertificates);
+    if (ER_OK == status) {
+        for (size_t i = 0; i < membershipCertificates.size(); i++) {
+            MembershipCertificateChain chain;
+            chain.push_back(membershipCertificates[i]);
+            membershipCertificateChains.push_back(chain);
+        }
+    }
+    return status;
 }
 
 QStatus AJNCaStorage::GetIdentityCertificatesAndManifest(const Application& app,

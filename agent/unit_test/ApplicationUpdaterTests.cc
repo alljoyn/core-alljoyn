@@ -25,10 +25,106 @@
 #include <alljoyn/securitymgr/PolicyGenerator.h>
 
 #include "TestUtil.h"
+#include "AgentStorageWrapper.h"
 
 /** @file ApplicationUpdaterTests.cc */
 
 namespace secmgr_tests {
+class SyncErrorStorageWrapper :
+    public AgentStorageWrapper {
+  public:
+    SyncErrorStorageWrapper(shared_ptr<AgentCAStorage>& _ca,
+                            shared_ptr<UIStorage>& _storage) :
+        AgentStorageWrapper(_ca),
+        failOnStartUpdates(false),
+        returnEmptyMembershipCert(false),
+        storage(_storage),
+        returnWrappedPolicy(false),
+        returnWrappedManifest(false)
+    {
+    }
+
+    QStatus StartUpdates(Application& app, uint64_t& updateID)
+    {
+        if (failOnStartUpdates) {
+            return ER_FAIL;
+        }
+        return ca->StartUpdates(app, updateID);
+    }
+
+    QStatus GetPolicy(const Application& app,
+                      PermissionPolicy& _policy) const
+    {
+        if (returnWrappedPolicy) {
+            _policy = policy;
+            return ER_OK;
+        }
+        return ca->GetPolicy(app, _policy);
+    }
+
+    QStatus GetIdentityCertificatesAndManifest(const Application& app,
+                                               IdentityCertificateChain& identityCertificates,
+                                               Manifest& _manifest) const
+    {
+        QStatus status = ca->GetIdentityCertificatesAndManifest(app, identityCertificates, _manifest);
+
+        if (returnWrappedManifest) {
+            _manifest = manifest;
+        }
+
+        return status;
+    }
+
+    QStatus GetMembershipCertificates(const Application& app,
+                                      vector<MembershipCertificateChain>& certs) const
+    {
+        if (returnEmptyMembershipCert) {
+            MembershipCertificate emptyCert;
+            MembershipCertificateChain emptyCertChain;
+            emptyCertChain.push_back(emptyCert);
+            certs.push_back(emptyCertChain);
+            return ER_OK;
+        }
+
+        return ca->GetMembershipCertificates(app, certs);
+    }
+
+    void SetPolicy(PermissionPolicy _policy)
+    {
+        policy = _policy;
+        returnWrappedPolicy = true;
+    }
+
+    void UnsetPolicy()
+    {
+        returnWrappedPolicy = false;
+    }
+
+    void SetManifest(Manifest _manifest)
+    {
+        manifest = _manifest;
+        returnWrappedManifest = true;
+    }
+
+    void UnsetManifest()
+    {
+        returnWrappedManifest = false;
+    }
+
+  public:
+    bool failOnStartUpdates;
+    bool returnEmptyMembershipCert;
+
+  private:
+    SyncErrorStorageWrapper& operator=(const SyncErrorStorageWrapper);
+
+    shared_ptr<UIStorage>& storage;
+    PermissionPolicy policy;
+    bool returnWrappedPolicy;
+    Manifest manifest;
+    bool returnWrappedManifest;
+};
+
 class ApplicationUpdaterTests :
     public ClaimedTest {
   public:
@@ -43,10 +139,18 @@ class ApplicationUpdaterTests :
         policyGroups.push_back(groupInfo.guid);
     }
 
+    shared_ptr<AgentCAStorage>& GetAgentCAStorage()
+    {
+        wrappedCA = shared_ptr<SyncErrorStorageWrapper>(new SyncErrorStorageWrapper(ca, storage));
+        ca = wrappedCA;
+        return ca;
+    }
+
   public:
     GroupInfo groupInfo;
     PermissionPolicy policy;
     vector<GUID128> policyGroups;
+    shared_ptr<SyncErrorStorageWrapper> wrappedCA;
 };
 
 /**
@@ -143,7 +247,7 @@ TEST_F(ApplicationUpdaterTests, UpdatePolicy) {
  *       -# Wait for the updates to complete.
  *       -# Ensure the policy is correctly reset.
  **/
-TEST_F(ApplicationUpdaterTests, DISABLED_ResetPolicy) { // see ASACORE-2200
+TEST_F(ApplicationUpdaterTests, ResetPolicy) {
     // generate and install a policy
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     vector<GroupInfo> groups;
@@ -187,7 +291,7 @@ TEST_F(ApplicationUpdaterTests, InstallIdentity) {
     IdentityInfo identityInfo2;
     identityInfo2.name = "Updated test name";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(identityInfo2));
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2, aa.lastManifest));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
@@ -230,7 +334,7 @@ TEST_F(ApplicationUpdaterTests, UpdateAll) {
     IdentityInfo identityInfo2;
     identityInfo2.name = "Updated test name";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(identityInfo2));
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2, aa.lastManifest));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
@@ -259,13 +363,37 @@ TEST_F(ApplicationUpdaterTests, UpdateAll) {
  * @test Make sure resetting of an application fails, and check if a sync error
  *       of type SYNC_ER_RESET is triggered.
  *       -# Claim the remote application.
- *       -# Stop the security agent.
- *       -# Reset/remove the keystore of the remote application.
- *       -# Restart the security agent.
+ *       -# Update the policy with a different admin group.
+ *       -# Stop the remote application.
+ *       -# Remove the application from the CA.
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_RESET is triggered.
  **/
-TEST_F(ApplicationUpdaterTests, DISABLED_SyncErReset) {
+TEST_F(ApplicationUpdaterTests, SyncErReset) {
+    // install invalid policy
+    GroupInfo invalidAdminGroup;
+    PolicyGenerator invalidPolicyGenerator(invalidAdminGroup);
+    PermissionPolicy invalidPolicy;
+    vector<GroupInfo> invalidGuilds;
+    invalidPolicyGenerator.DefaultPolicy(invalidGuilds, invalidPolicy);
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, invalidPolicy));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_REMOTE, ER_AUTH_FAIL));
+
+    // stop the test application
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+
+    // reset the test application
+    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_WILL_RESET));
+
+    // restart the remote application
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_RESET, ER_AUTH_FAIL));
+
+    // check remote state
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_WILL_RESET));
 }
 
 /**
@@ -277,7 +405,33 @@ TEST_F(ApplicationUpdaterTests, DISABLED_SyncErReset) {
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_POLICY is triggered.
  **/
-TEST_F(ApplicationUpdaterTests, DISABLED_SyncErPolicy) {
+TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
+    // install a policy
+    ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
+    vector<GroupInfo> groups;
+    groups.push_back(groupInfo);
+    ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
+    policy.SetVersion(42);
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+
+    // stop the test application
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
+
+    // make sure wrapper returns an older policy
+    PermissionPolicy olderPolicy = policy;
+    olderPolicy.SetVersion(1);
+    wrappedCA->SetPolicy(olderPolicy);
+
+    // start the test application
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_POLICY, ER_POLICY_NOT_NEWER));
+
+    // check remote state
+    wrappedCA->UnsetPolicy();
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(CheckPolicy(policy));
 }
 
 /**
@@ -290,7 +444,43 @@ TEST_F(ApplicationUpdaterTests, DISABLED_SyncErPolicy) {
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_IDENTITY is triggered.
  **/
-TEST_F(ApplicationUpdaterTests, DISABLED_SyncErIdentity) {
+TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
+    // stop the test application
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
+
+    // make sure wrapper will return a different manifest
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
+    rules[0].SetInterfaceName("this.should.never.match*");
+    PermissionPolicy::Rule::Member*  prms = new PermissionPolicy::Rule::Member[1];
+    prms[0].SetMemberName("*");
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    rules[0].SetMembers(1, prms);
+    Manifest testManifest(rules, 1);
+    delete[] rules;
+    rules = nullptr;
+    delete[] prms;
+    prms = nullptr;
+    wrappedCA->SetManifest(testManifest);
+
+    // change security configuration
+    IdentityInfo identityInfo2;
+    identityInfo2.name = "Updated test name";
+    ASSERT_EQ(ER_OK, storage->StoreIdentity(identityInfo2));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2, aa.lastManifest));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
+
+    // start the test application
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_IDENTITY, ER_DIGEST_MISMATCH));
+
+    // check remote state
+    wrappedCA->UnsetManifest();
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    IdentityCertificate remoteIdCert;
+    Manifest remoteManifest;
+    ASSERT_TRUE(CheckRemoteIdentity(idInfo, aa.lastManifest, remoteIdCert, remoteManifest));
 }
 
 /**
@@ -299,22 +489,54 @@ TEST_F(ApplicationUpdaterTests, DISABLED_SyncErIdentity) {
  *       is triggered.
  *       -# Claim the remote application and stop it.
  *       -# Make sure CAStorage returns an invalid certificate (e.g.
- *          signed with a different private key).
+ *          empty guid).
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_MEMBERSHIP is triggered.
  **/
-TEST_F(ApplicationUpdaterTests, DISABLED_SyncErMembership) {
+TEST_F(ApplicationUpdaterTests, SyncErMembership) {
+    // stop the test application
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
+
+    // make sure wrapper returns empty membership certificates
+    wrappedCA->returnEmptyMembershipCert = true;
+
+    // change security configuration
+    ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
+    ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, groupInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
+
+    // restart the test application
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_MEMBERSHIP, ER_FAIL));
+
+    // check remote state
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    vector<GroupInfo> memberships;
+    ASSERT_TRUE(CheckMemberships(memberships));
 }
 
 /**
  * @test Stop the CAStorage, and make sure the application updater starts
- *       eventing some SYNC_ER_STORAGE errors when updating an application.
+ *       notifying its listeners of some SYNC_ER_STORAGE errors when updating
+ *       an application.
  *       -# Claim the remote application and stop it.
  *       -# Stop the CAStorage layer (or make sure that some basic functions
- *          like GetManagedApplication start returing errors).
+ *          like GetManagedApplication start returning errors).
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_STORAGE is triggered.
  **/
-TEST_F(ApplicationUpdaterTests, DISABLED_SyncErStorage) {
+TEST_F(ApplicationUpdaterTests, SyncErStorage) {
+    // stop the test application
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
+
+    // configure ca to fail
+    wrappedCA->failOnStartUpdates = true;
+
+    // restart the remote application
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_STORAGE, ER_FAIL));
 }
 }

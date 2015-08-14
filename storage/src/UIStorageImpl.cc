@@ -56,13 +56,29 @@ QStatus UIStorageImpl::StoreGroup(GroupInfo& groupInfo)
 
 QStatus UIStorageImpl::RemoveGroup(const GroupInfo& groupInfo)
 {
+    vector<Application> appsToSync;
+    QStatus status;
+    GroupInfo tmpGroupInfo = groupInfo;
     if (groupInfo.authority.empty()) {
-        GroupInfo tmpGroup;
-        tmpGroup.guid = groupInfo.guid;
-        ca->GetCaPublicKeyInfo(tmpGroup.authority);
-        return storage->RemoveGroup(tmpGroup);
+        if (ER_OK != (status = ca->GetCaPublicKeyInfo(tmpGroupInfo.authority))) {
+            return status;
+        }
     }
-    return storage->RemoveGroup(groupInfo);
+    status = storage->RemoveGroup(tmpGroupInfo, appsToSync);
+
+    if (ER_OK != status || appsToSync.empty()) {
+        return status;
+    }
+
+    vector<Application>::iterator appItr = appsToSync.begin();
+    for (; appItr != appsToSync.end(); appItr++) {
+        appItr->syncState = SYNC_PENDING;
+        if (ER_OK != (status = storage->StoreApplication(*appItr, true))) {
+            return status;
+        }
+    }
+
+    return ApplicationsUpdated(appsToSync);
 }
 
 QStatus UIStorageImpl::GetGroup(GroupInfo& groupInfo) const
@@ -88,13 +104,28 @@ QStatus UIStorageImpl::StoreIdentity(IdentityInfo& idInfo)
 
 QStatus UIStorageImpl::RemoveIdentity(const IdentityInfo& idInfo)
 {
+    QStatus status;
+    vector<Application> appsToSync;
+    IdentityInfo tmpInfo = idInfo;
     if (idInfo.authority.empty()) {
-        IdentityInfo tmpInfo;
-        ca->GetCaPublicKeyInfo(tmpInfo.authority);
-        tmpInfo.guid = idInfo.guid;
-        return storage->RemoveIdentity(tmpInfo);
+        if (ER_OK != (status = ca->GetCaPublicKeyInfo(tmpInfo.authority))) {
+            return status;
+        }
     }
-    return storage->RemoveIdentity(idInfo);
+    status = storage->RemoveIdentity(tmpInfo, appsToSync);
+    if (ER_OK != status || appsToSync.empty()) {
+        return status;
+    }
+
+    vector<Application>::iterator appItr = appsToSync.begin();
+    for (; appItr != appsToSync.end(); appItr++) {
+        appItr->syncState = SYNC_WILL_RESET;
+        if (ER_OK != (status = storage->StoreApplication(*appItr, true))) {
+            return status;
+        }
+    }
+
+    return ApplicationsUpdated(appsToSync);;
 }
 
 QStatus UIStorageImpl::GetIdentity(IdentityInfo& idInfo) const
@@ -143,7 +174,6 @@ QStatus UIStorageImpl::UpdatesCompleted(Application& app, uint64_t& updateID)
 
     switch (app.syncState) {
     case SYNC_RESET:
-    case SYNC_WILL_CLAIM:
         status = storage->RemoveApplication(app);
         app.syncState = SYNC_OK; // default value for CLAIMABLE application
         updateLock.Unlock();
@@ -282,7 +312,9 @@ QStatus UIStorageImpl::RemoveMembership(const Application& app, const GroupInfo&
 
 QStatus UIStorageImpl::UpdatePolicy(Application& app, PermissionPolicy& policy)
 {
-    QStatus status = GetManagedApplication(app);
+    QStatus status = ER_FAIL;
+
+    status = GetManagedApplication(app);
     if (ER_OK != status) {
         return status;
     }
@@ -323,26 +355,33 @@ QStatus UIStorageImpl::RemovePolicy(Application& app)
     return ApplicationUpdated(app);
 }
 
-QStatus UIStorageImpl::UpdateIdentity(Application& app, const IdentityInfo identityInfo)
+QStatus UIStorageImpl::UpdateIdentity(Application& app,
+                                      const IdentityInfo& identityInfo,
+                                      const Manifest& manifest)
 {
     QStatus status = storage->GetManagedApplication(app);
     if (ER_OK != status) {
         return status;
     }
-    Manifest mf;
-    status = storage->GetManifest(app, mf);
-    if (ER_OK != status) {
-        return status;
-    }
+
     IdentityCertificate cert;
-    status = ca->GenerateIdentityCertificate(app, identityInfo, mf, cert);
+    status = ca->GenerateIdentityCertificate(app, identityInfo, manifest, cert);
     if (ER_OK != status) {
         return status;
     }
+
     status = storage->StoreCertificate(app, cert, true);
     if (ER_OK != status) {
+        QCC_LogError(status, ("StoreCertificate failed"));
         return status;
+    } else {
+        status = storage->StoreManifest(app, manifest);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("StoreManifest failed"));
+            return status;
+        }
     }
+
     return ApplicationUpdated(app);
 }
 
@@ -352,15 +391,39 @@ QStatus UIStorageImpl::ApplicationUpdated(Application& app)
     QStatus status = storage->GetManagedApplication(app);
     if (status == ER_OK) {
         updateCounter++;
-        if (app.syncState == SYNC_OK) {
+
+        switch (app.syncState) {
+        case SYNC_OK:
             app.syncState = SYNC_PENDING;
             status = storage->StoreApplication(app, true);
             updateLock.Unlock();
             NotifyListeners(app);
             return status;
+
+        case SYNC_WILL_RESET: // implicit fallthrough
+        case SYNC_PENDING:
+            updateLock.Unlock();
+            NotifyListeners(app);
+            return status;
+
+        default:
+            break;
         }
     }
     updateLock.Unlock();
+    return status;
+}
+
+QStatus UIStorageImpl::ApplicationsUpdated(vector<Application>& appsToSync)
+{
+    QStatus status = ER_OK;
+    vector<Application>::iterator appItr = appsToSync.begin();
+    for (; appItr != appsToSync.end(); appItr++) {
+        if (ER_OK != (status = ApplicationUpdated(*appItr))) {
+            return status;
+        }
+    }
+
     return status;
 }
 

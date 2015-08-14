@@ -38,6 +38,7 @@
 #include <alljoyn/securitymgr/SecurityAgentFactory.h>
 #include <alljoyn/securitymgr/ApplicationListener.h>
 #include <alljoyn/securitymgr/SyncError.h>
+#include <alljoyn/securitymgr/ManifestUpdate.h>
 #include <alljoyn/securitymgr/Util.h>
 
 using namespace std;
@@ -53,6 +54,8 @@ static map<string, KeyInfoNISTP256> keys;
 static Mutex lock;
 static map<string, ApplicationMetaData> aboutCache; // Key is busname
 static Mutex aboutCachelock;
+static vector<ManifestUpdate> manifestUpdates;
+static Mutex manifestUpdatesLock;
 
 static string toKeyID(const KeyInfoNISTP256& key)
 {
@@ -120,6 +123,33 @@ const char* ToString(SyncErrorType errorType)
     }
 };
 
+static void GetAboutInfo(const OnlineApplication& app,
+                         ApplicationMetaData& data)
+{
+    aboutCachelock.Lock(__FILE__, __LINE__);
+    map<string, ApplicationMetaData>::const_iterator itr =
+        aboutCache.find(app.busName);
+    if (itr != aboutCache.end()) {
+        data.deviceName = itr->second.deviceName;
+        data.appName = itr->second.appName;
+    }
+    aboutCachelock.Unlock(__FILE__, __LINE__);
+}
+
+static bool get_default_identity(const shared_ptr<UIStorage>& uiStorage,
+                                 IdentityInfo& identity)
+{
+    vector<IdentityInfo> list;
+    uiStorage->GetIdentities(list);
+    if (list.size() == 0) {
+        cout << "No identity defined..." << endl;
+        return false;
+    }
+
+    identity = list.at(0);
+    return true;
+}
+
 // Event listener for the monitor
 class EventListener :
     public ApplicationListener {
@@ -127,16 +157,22 @@ class EventListener :
                                           const OnlineApplication* updated)
     {
         const OnlineApplication* app = old == nullptr ? updated : old;
-        cout << ">> Old application state = " << (old == nullptr ? "null" : old->ToString().c_str()) << endl;
-        cout << ">> New application state = " << (updated == nullptr ? "null" : updated->ToString().c_str()) << endl;
-        cout << ">> ApplicationId: " << addKeyID(app->keyInfo) << endl << endl;
+        cout << ">> Old application state : " << (old == nullptr ? "null" : old->ToString().c_str()) << endl;
+        cout << ">> New application state : " << (updated == nullptr ? "null" : updated->ToString().c_str()) << endl;
+        cout << ">> Application id        : " << addKeyID(app->keyInfo) << endl;
+        ApplicationMetaData data;
+        GetAboutInfo(*app, data);
+        if (data.appName != "") {
+            cout << ">> Application name      : " << data.appName << " (" << data.deviceName << ")" << endl;
+        }
+        cout << endl;
     }
 
     virtual void OnSyncError(const SyncError* er)
     {
         cout << "  Synchronization error" << endl;
         cout << "  =====================" << endl;
-        cout << "  Application bus name  : " << er->app.busName.c_str() << endl;
+        cout << "  Bus name          : " << er->app.busName.c_str() << endl;
         cout << "  Type              : " << ToString(er->type) << endl;
         cout << "  Remote status     : " << QCC_StatusText(er->status) << endl;
         switch (er->type) {
@@ -155,6 +191,17 @@ class EventListener :
         default:
             break;
         }
+    }
+
+    virtual void OnManifestUpdate(const ManifestUpdate* manifestUpdate)
+    {
+        manifestUpdatesLock.Lock();
+        manifestUpdates.push_back(*manifestUpdate);
+        manifestUpdatesLock.Unlock();
+
+        cout << " >>>>> Received ManifestUpdate for " << manifestUpdate->app.busName
+             << " (" << to_string(manifestUpdate->additionalRules.GetRulesSize())
+             << " additional rule(s))" << endl;
     }
 };
 
@@ -248,18 +295,15 @@ static void list_claimed_applications(const shared_ptr<UIStorage>& uiStorage)
     }
 }
 
-class CLIManifestListener :
-    public ManifestListener {
+class CLIClaimListener :
+    public ClaimListener {
   public:
 
-    bool ApproveManifest(const OnlineApplication& app,
-                         const Manifest& manifest)
+    QStatus ApproveManifestAndSelectSessionType(ClaimContext& ctx)
     {
-        QCC_UNUSED(app);
-
         PermissionPolicy::Rule* manifestRules;
         size_t manifestRulesCount;
-        manifest.GetRules(&manifestRules, &manifestRulesCount);
+        ctx.GetManifest().GetRules(&manifestRules, &manifestRulesCount);
 
         bool result = false;
 
@@ -267,6 +311,10 @@ class CLIManifestListener :
         for (size_t i = 0; i < manifestRulesCount; i++) {
             cout << manifestRules[i].ToString().c_str();
         }
+
+        delete[] manifestRules;
+        manifestRules = nullptr;
+
         cout << "Accept (y/n)? ";
 
         string input;
@@ -282,7 +330,128 @@ class CLIManifestListener :
             break;
         }
 
-        return result;
+        ctx.ApproveManifest(result);
+        if (result) {
+            return SelectSessionType(ctx);
+        }
+        return ER_OK;
+    }
+
+    QStatus SelectSessionType(ClaimContext& ctx)
+    {
+        PermissionConfigurator::ClaimCapabilities caps = ctx.GetClaimCapabilities()
+                                                         & (PermissionConfigurator::CAPABLE_ECDHE_NULL |
+                                                            PermissionConfigurator::CAPABLE_ECDHE_PSK);
+
+        if (0 == caps) {
+            //NULL and PSK not supported
+            cout << "Cannot claim application: claim over NULL or PSK session not supported by the application" << endl;
+            return ER_NOT_IMPLEMENTED;
+        }
+        if (PermissionConfigurator::CAPABLE_ECDHE_NULL == caps) {
+            return ClaimOverNull(ctx);
+        }
+        if (PermissionConfigurator::CAPABLE_ECDHE_PSK == caps) {
+            return ClaimOverPSK(ctx);
+        }
+
+        cout << "Select claim mechanism:" << endl;
+        cout << "  'n' to claim over a ECDHE_NULL session" << endl;
+        cout << "  'p' to claim over a ECDHE_PSK session" << endl;
+        cout << "  others to abort claiming process" << endl;
+
+        string input;
+        getline(cin, input);
+
+        char cmd;
+        cmd = input[0];
+
+        switch (cmd) {
+        case 'n':
+            return ClaimOverNull(ctx);
+
+        case 'p':
+            return ClaimOverPSK(ctx);
+
+        default:
+            return ER_FAIL;
+        }
+    }
+
+    QStatus ClaimOverNull(ClaimContext& ctx)
+    {
+        cout << "Claiming over a ECDHE_NULL session" << endl;
+        ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_NULL);
+        return ER_OK;
+    }
+
+    QStatus ClaimOverPSK(ClaimContext& ctx)
+    {
+        PermissionConfigurator::ClaimCapabilityAdditionalInfo info = ctx.GetClaimCapabilityInfo()
+                                                                     & (PermissionConfigurator::
+                                                                        PSK_GENERATED_BY_APPLICATION
+                                                                        | PermissionConfigurator::
+                                                                        PSK_GENERATED_BY_SECURITY_MANAGER);
+        if (info == 0) {
+            cout << "No supported PSK generation scheme found" << endl;
+            return ER_NOT_IMPLEMENTED;
+        }
+        ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_PSK);
+        if (PermissionConfigurator::PSK_GENERATED_BY_APPLICATION == info) {
+            return ReadPSK(ctx);
+        }
+        if (PermissionConfigurator::PSK_GENERATED_BY_SECURITY_MANAGER == info) {
+            return ProvidePSK(ctx);
+        }
+        cout << "Select PSK generation:" << endl;
+        cout << "  'a' to use a PSK provided by the application" << endl;
+        cout << "  'g' to generate a PSK" << endl;
+        cout << "  others to abort claiming process" << endl;
+
+        string input;
+        getline(cin, input);
+
+        char cmd;
+        cmd = input[0];
+
+        switch (cmd) {
+        case 'a':
+            return ReadPSK(ctx);
+
+        case 'g':
+            return ProvidePSK(ctx);
+
+        default:
+            return ER_FAIL;
+        }
+    }
+
+    QStatus ReadPSK(ClaimContext& ctx)
+    {
+        cout << "please enter the PSK provided by the application" << endl;
+        string input;
+        getline(cin, input);
+        String pskString = input.c_str();
+        if (GUID128::IsGUID(pskString, true)) {
+            GUID128 psk(pskString);
+            ctx.SetPreSharedKey(psk.GetBytes(), GUID128::SIZE);
+            cout << "Claiming application ..." << endl;
+            return ER_OK;
+        }
+        cout << "PSK is not valid. Aborting ..." << endl;
+        return ER_OK;
+    }
+
+    QStatus ProvidePSK(ClaimContext& ctx)
+    {
+        GUID128 psk;
+        cout << "please provide the PSK to application and press enter to continue " << endl;
+        cout << "PSK =  '" << psk.ToString() << "'" << endl;
+        string input;
+        ctx.SetPreSharedKey(psk.GetBytes(), GUID128::SIZE);
+        getline(cin, input);
+        cout << "Claiming application ..." << endl;
+        return ER_OK;
     }
 };
 
@@ -299,25 +468,18 @@ static void claim_application(shared_ptr<SecurityAgent>& secAgent,
 
     if (!getKey(arg, app.keyInfo) || ER_END_OF_DATA == secAgent->GetApplication(
             app)) {
-        cout
-            << "Invalid Application ..."
-            << endl;
+        cout << "Invalid Application ..." << endl;
         return;
-    } else {
-        vector<IdentityInfo> list;
-        uiStorage->GetIdentities(list);
-        if (list.size() == 0) {
-            cout
-                << "No identity defined..."
-                << endl;
-            return;
-        }
-        if (ER_OK != secAgent->Claim(app, list.at(0))) {
-            cout
-                << "Failed to claim application..."
-                << endl;
-            return;
-        }
+    }
+
+    IdentityInfo identity;
+    if (!get_default_identity(uiStorage, identity)) {
+        return;
+    }
+
+    if (ER_OK != secAgent->Claim(app, identity)) {
+        cout << "Failed to claim application ..." << endl;
+        return;
     }
 }
 
@@ -553,6 +715,9 @@ static void install_policy(const shared_ptr<UIStorage>& uiStorage,
         return;
     }
 
+    cout << "Generated the following policy:" << endl;
+    cout << policy.ToString().c_str() << endl;
+
     if (ER_OK != uiStorage->UpdatePolicy(app, policy)) {
         cerr << "Failed to install policy." << endl;
         return;
@@ -609,6 +774,88 @@ static void reset_policy(const shared_ptr<UIStorage>& uiStorage,
     cout << "Successfully reset policy for " << args[0] << endl;
 }
 
+static void handle_manifest_update(const shared_ptr<UIStorage>& uiStorage)
+{
+    manifestUpdatesLock.Lock();
+    if (!manifestUpdates.size()) {
+        cout << "No Manifest Updates in queue" << endl;
+        manifestUpdatesLock.Unlock();
+        return;
+    }
+
+    vector<ManifestUpdate>::iterator it = manifestUpdates.begin();
+    ManifestUpdate manifestUpdate = *it;
+    manifestUpdates.erase(it);
+    manifestUpdatesLock.Unlock();
+
+    cout << "  Manifest update" << endl;
+    cout << "  ===============" << endl;
+
+    cout << "  Application id   : " << addKeyID(manifestUpdate.app.keyInfo) << endl;
+    ApplicationMetaData data;
+    GetAboutInfo(manifestUpdate.app, data);
+    if (data.appName != "") {
+        cout << "  Application name : " << data.appName;
+        cout << " (" << data.deviceName << ")" << endl;
+    }
+    cout << "  Bus name         : " << manifestUpdate.app.busName.c_str() << endl;
+
+    cout << "  Additional rights: " << endl;
+    cout << manifestUpdate.additionalRules.ToString().c_str() << endl;
+
+    bool accept = false;
+    cout << "Accept (y/n)? ";
+
+    string input;
+    getline(cin, input);
+
+    char cmd;
+    cmd = input[0];
+
+    switch (cmd) {
+    case 'y':
+    case 'Y':
+        accept = true;
+        break;
+    }
+
+    IdentityInfo identity;
+    if (!get_default_identity(uiStorage, identity)) {
+        return;
+    }
+
+    OnlineApplication copy(manifestUpdate.app); // discard const for UpdateIdentity
+    QStatus status;
+    if (accept) {
+        status = uiStorage->UpdateIdentity(copy, identity, manifestUpdate.newManifest);
+        if (ER_OK != status) {
+            cout << "Failed to update identity\n" << endl;
+            return;
+        } else {
+            cout << "Successfully updated identity certificate\n" << endl;
+        }
+    }
+}
+
+static void blacklist_application(PolicyGenerator& policyGenerator,
+                                  const string& arg)
+{
+    vector<string> args = split(arg, ' ');
+    if (args.size() < 1) {
+        cerr << "Please provide an application id." << endl;
+        return;
+    }
+
+    OnlineApplication app;
+    if (!getKey(args[0], app.keyInfo)) {
+        cerr << "Could not find application." << endl;
+        return;
+    }
+
+    policyGenerator.deniedKeys.push_back(app.keyInfo);
+    cout << "Successfully added application to blacklist of policy generator." << endl;
+}
+
 static void help()
 {
     cout << endl;
@@ -628,6 +875,8 @@ static void help()
     cout << "    e   Get policy (appId)" << endl;
     cout << "    s   Reset policy (appId)" << endl;
     cout << "    u   Unclaim an application (appId)" << endl;
+    cout << "    a   Handle queued manifest update" << endl;
+    cout << "    b   Blacklist an application in future policy updates" << endl;
     cout << "    n   Set a user defined name for an application (appId appname)." << endl <<
         "        This operation will also persist relevant About meta data if they exist." << endl;
     cout << "    h   Show this help message" << endl << endl;
@@ -635,7 +884,7 @@ static void help()
 
 static bool parse(shared_ptr<SecurityAgent>& secAgent,
                   const shared_ptr<UIStorage>& uiStorage,
-                  const PolicyGenerator& policyGenerator,
+                  PolicyGenerator& policyGenerator,
                   const string& input)
 {
     char cmd;
@@ -710,6 +959,14 @@ static bool parse(shared_ptr<SecurityAgent>& secAgent,
 
     case 's':
         reset_policy(uiStorage, arg);
+        break;
+
+    case 'a':
+        handle_manifest_update(uiStorage);
+        break;
+
+    case 'b':
+        blacklist_application(policyGenerator, arg);
         break;
 
     case 'h':
@@ -798,7 +1055,7 @@ int CDECL_CALL main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    secAgent->SetManifestListener(new CLIManifestListener());
+    secAgent->SetClaimListener(new CLIClaimListener());
 
     // Create policy generator
     GroupInfo adminGroup;
@@ -808,6 +1065,8 @@ int CDECL_CALL main(int argc, char** argv)
     // Activate live monitoring
     EventListener listener;
     secAgent->RegisterApplicationListener(&listener);
+
+    // Create default identity
     vector<IdentityInfo> list;
     if (ER_OK != uiStorage->GetIdentities(list)) {
         cerr

@@ -37,6 +37,7 @@ namespace securitymgr {
 class UIStorageImpl :
     public UIStorage, public StorageListenerHandler {
   public:
+
     UIStorageImpl(shared_ptr<AJNCaStorage>& _ca, shared_ptr<SQLStorage>& localStorage) : ca(_ca),
         storage(localStorage), updateCounter(0)
     {
@@ -97,7 +98,8 @@ class UIStorageImpl :
     virtual QStatus RemovePolicy(Application& app);
 
     virtual QStatus UpdateIdentity(Application& app,
-                                   const IdentityInfo identityInfo);
+                                   const IdentityInfo& identityInfo,
+                                   const Manifest& manifest);
 
     virtual QStatus GetManifest(const Application& app,
                                 Manifest& manifest) const;
@@ -116,6 +118,8 @@ class UIStorageImpl :
                                      GroupInfo& groupInfo);
 
     QStatus ApplicationUpdated(Application& app);
+
+    QStatus ApplicationsUpdated(vector<Application>& app);
 
     void NotifyListeners(const Application& app,
                          bool completed = false);

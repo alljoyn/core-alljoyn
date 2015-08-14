@@ -45,7 +45,7 @@ struct IdentityInfo {
      */
     GUID128 guid;
     /**
-     * @brief The name of this group.
+     * @brief The name of this identity.
      */
     string name;
 

@@ -23,51 +23,13 @@
 #endif
 
 using namespace ajn;
+using namespace ajn::securitymgr;
 using namespace qcc;
 using namespace std;
 
 namespace sample {
 namespace securitymgr {
 namespace door {
-bool DoorAuthListener::RequestCredentials(const char* authMechanism,
-                                          const char* authPeer,
-                                          uint16_t authCount,
-                                          const char* userId,
-                                          uint16_t credMask,
-                                          Credentials& creds)
-{
-    QCC_UNUSED(authPeer);
-    QCC_UNUSED(authCount);
-    QCC_UNUSED(userId);
-    QCC_UNUSED(credMask);
-
-    printf("RequestCredentials %s\n", authMechanism);
-
-    // allow ECDHE_NULL and  DSA sessions
-    if (strcmp(authMechanism, KEYX_ECDHE_NULL) == 0 || strcmp(authMechanism, KEYX_ECDHE_DSA)) {
-        creds.SetExpiration(100);          /* set the master secret expiry time to 100 seconds */
-        return true;
-    }
-    return false;
-}
-
-bool DoorAuthListener::VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
-{
-    QCC_UNUSED(authPeer);
-    QCC_UNUSED(creds);
-
-    printf("VerifyCredentials %s\n", authMechanism);
-    return false;
-}
-
-void DoorAuthListener::AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
-{
-    QCC_UNUSED(authPeer);
-    QCC_UNUSED(success);
-
-    printf("AuthenticationComplete %s\n", authMechanism);
-}
-
 Door::Door(BusAttachment* ba) :
     BusObject(DOOR_OBJECT_PATH), open(false)
 {
@@ -157,13 +119,13 @@ void Door::GetState(const InterfaceDescription::Member* member,
 QStatus DoorCommon::CreateInterface()
 {
     InterfaceDescription* doorIntf = nullptr;
-    QStatus status = ba->CreateInterface(DOOR_INTERFACE, doorIntf, DOOR_INTF_SECURE ? AJ_IFC_SECURITY_REQUIRED : 0);
+    QStatus status = ba->CreateInterface(DOOR_INTERFACE, doorIntf, AJ_IFC_SECURITY_REQUIRED);
     if (ER_OK == status) {
         printf("Interface created.\n");
         doorIntf->AddMethod(DOOR_OPEN, nullptr, "b", "success");
         doorIntf->AddMethod(DOOR_CLOSE, nullptr, "b", "success");
         doorIntf->AddMethod(DOOR_GET_STATE, nullptr, "b", "state");
-        doorIntf->AddSignal(DOOR_STATE_CHANGED, "b", "state");
+        doorIntf->AddSignal(DOOR_STATE_CHANGED, "b", "state", 0);
         doorIntf->AddProperty(DOOR_STATE, "b", PROP_ACCESS_RW);
         doorIntf->Activate();
     } else {
@@ -185,10 +147,10 @@ QStatus DoorCommon::SetAboutData()
     GUID128 deviceId;
     aboutData.SetDeviceId(deviceId.ToString().c_str());
 
-    aboutData.SetAppName(appName);
+    aboutData.SetAppName(appName.c_str());
     aboutData.SetManufacturer("QEO LLC");
     aboutData.SetModelNumber("1");
-    aboutData.SetDescription(appName);
+    aboutData.SetDescription(appName.c_str());
     aboutData.SetDateOfManufacture("2015-04-14");
     aboutData.SetSoftwareVersion("0.1");
     aboutData.SetHardwareVersion("0.0.1");
@@ -199,6 +161,20 @@ QStatus DoorCommon::SetAboutData()
         return ER_FAIL;
     }
     return ER_OK;
+}
+
+QStatus DoorCommon::HostSession()
+{
+    SessionOpts opts;
+    SessionPort port = DOOR_APPLICATION_PORT;
+
+    QStatus status = ba->BindSessionPort(port, opts, spl);
+
+    if (ER_OK != status) {
+        printf("Failed to BindSesssionPort\n");
+    }
+
+    return status;
 }
 
 QStatus DoorCommon::AnnounceAbout()
@@ -215,7 +191,7 @@ QStatus DoorCommon::AnnounceAbout()
     return status;
 }
 
-QStatus DoorCommon::Init(const char* keyStoreName, bool provider)
+QStatus DoorCommon::Init(bool provider)
 {
     QStatus status = CreateInterface();
 
@@ -233,9 +209,34 @@ QStatus DoorCommon::Init(const char* keyStoreName, bool provider)
         return status;
     }
 
-    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL, new DoorAuthListener(), keyStoreName);
+    GUID128 psk;
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK,
+                                    provider ? new DefaultECDHEAuthListener(
+                                        psk.GetBytes(), GUID128::SIZE) : new DefaultECDHEAuthListener());
     if (status != ER_OK) {
         return status;
+    }
+
+    if (provider) {
+        cout << "Allow doors to be claimable over psk." << endl;
+        status = ba->GetPermissionConfigurator().SetClaimCapabilities(
+            PermissionConfigurator::CAPABLE_ECDHE_PSK | PermissionConfigurator::CAPABLE_ECDHE_NULL);
+        if (status != ER_OK) {
+            cout << "Failed to SetClaimCapabilities: " << status << endl;
+        }
+        status = ba->GetPermissionConfigurator().SetClaimCapabilityAdditionalInfo(
+            PermissionConfigurator::PSK_GENERATED_BY_APPLICATION);
+        if (status != ER_OK) {
+            cout << "Failed to SetClaimCapabilityAdditionalInfo: " << status << endl;
+        }
+        PermissionConfigurator::ApplicationState state;
+        if (ER_OK == ba->GetPermissionConfigurator().GetApplicationState(state)) {
+            if (PermissionConfigurator::CLAIMABLE == state) {
+                cout << "Door provider is not claimed." << endl;
+                cout << "The provider is Claimable by using" << " PSK with application generated secret." << endl;
+                cout << "PSK = '" << psk.ToString()  << "'" << endl;
+            }
+        }
     }
 
     PermissionPolicy::Rule::Member* member = new  PermissionPolicy::Rule::Member[1];
@@ -253,7 +254,33 @@ QStatus DoorCommon::Init(const char* keyStoreName, bool provider)
         return status;
     }
 
+    delete[] manifestRule;
+    manifestRule = nullptr;
+
+    status = HostSession();
+    if (status != ER_OK) {
+        return status;
+    }
+
     return status;
+}
+
+void DoorCommon::UpdateManifest(Manifest& manifest)
+{
+    PermissionPolicy::Rule* manifestRules;
+    size_t manifestRulesSize;
+
+    manifest.GetRules(&manifestRules, &manifestRulesSize);
+
+    ba->GetPermissionConfigurator().SetPermissionManifest(manifestRules, manifestRulesSize);
+    ba->GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::NEED_UPDATE);
+
+    delete[] manifestRules;
+}
+
+void DoorCommon::CancelManifestUpdate()
+{
+    ba->GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMED);
 }
 
 QStatus DoorCommon::Fini()

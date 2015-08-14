@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include "TestUtil.h"
+#include <qcc/Thread.h>
 
 using namespace ajn::securitymgr;
 
@@ -22,92 +23,107 @@ using namespace ajn::securitymgr;
 
 namespace secmgr_tests {
 class ManifestTests :
-    public BasicTest {
-  private:
-
-  protected:
-
+    public SecurityAgentTest {
   public:
+    IdentityInfo idInfo;
+
     ManifestTests()
     {
+        idInfo.guid = GUID128();
+        idInfo.name = "testName";
+    }
+
+    void GetManifest(Manifest& mf)
+    {
+        PermissionPolicy::Rule rules[1];
+
+        rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+        PermissionPolicy::Rule::Member prms[3];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("Channel");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        rules[0].SetMembers(3, prms);
+
+        mf.SetFromRules(rules, 1);
+    }
+
+    void GetExtendedManifest(Manifest& mf)
+    {
+        PermissionPolicy::Rule rules[2];
+
+        rules[0].SetInterfaceName("org.allseenalliance.control.TV");
+        PermissionPolicy::Rule::Member prms[3];
+        prms[0].SetMemberName("Up");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[1].SetMemberName("Down");
+        prms[1].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        prms[2].SetMemberName("Channel");
+        prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE |
+                              PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(3, prms);
+
+        rules[1].SetInterfaceName("org.allseenalliance.control.Mouse*");
+        PermissionPolicy::Rule::Member mprms[1];
+        mprms[0].SetMemberName("*");
+        mprms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[1].SetMembers(1, mprms);
+
+        mf.SetFromRules(rules, 2);
     }
 };
 
 /**
- * @test Verify that the manifest received and used for
- *       claiming is consistent with the persisted one.
- *       -# Create an application and make sure its claimable as well as
- *          some test IdentityInfo and store it.
- *       -# Set a generated manifest on the application.
- *       -# Make sure the application is claimed successfully using the test
- *          identity.
- *       -# Make sure the application has declared itself as claimed and that
- *          the remote identity and the manifest match the persisted ones.
- *       -# Make sure rule-by-rule that the persisted manifest is identical to
- *          the one received originally.
+ * @test Update the manifest of an application and check whether a ManifestUpdate event is
+ *       triggered if the manifest contains additional rules.
+ *       -# Set the manifest of the application to manifest1.
+ *       -# Claim the application and check whether the manifest during claiming matches the
+ *          remote manifest.
+ *       -# Set the manifest of the application to manifest2 which extends manifest1.
+ *       -# Check whether a ManifestUpdate event is triggered.
+ *       -# Update the identity certificate based on the newly requested manifest.
+ *       -# Check that no additional ManifestUpdate events are triggered.
+ *       -# Set the manifest of the application to manifest1.
+ *       -# Make sure no additional ManifestUpdate events are triggered.
  **/
-TEST_F(ManifestTests, SuccessfulGetManifest) {
-    /* Start the test application */
+TEST_F(ManifestTests, UpdateManifest) {
+    Manifest manifest;
+    GetManifest(manifest);
     TestApplication testApp;
+    testApp.SetManifest(manifest);
     ASSERT_EQ(ER_OK, testApp.Start());
-
-    /* Wait for signals */
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
-
-    IdentityInfo idInfo;
-    idInfo.guid = GUID128("abcdef123456789");
-    idInfo.name = "TestIdentity";
-    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
-
-    /* Set manifest */
-    PermissionPolicy::Rule* rules;
-    size_t count;
-    testApp.GetManifest(&rules, count);
-
-    /* Claim! */
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-
-    /* Check security signal */
+    ASSERT_EQ(ER_OK, storage->StoreIdentity(idInfo));
+    secMgr->Claim(lastAppInfo, idInfo);
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
-    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(idInfo, manifest));
 
-    /* Retrieve manifest */
-    PermissionPolicy::Rule* retrievedRules = nullptr;
-    size_t retrievedCount = 0;
-    Manifest mf;
-    ASSERT_EQ(ER_OK, storage->GetManifest(lastAppInfo, mf));
-    ASSERT_EQ(ER_OK, mf.GetRules(&retrievedRules, &retrievedCount));
+    Manifest extendedManifest;
+    GetExtendedManifest(extendedManifest);
+    testApp.UpdateManifest(extendedManifest);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true));
 
-    /* Compare set and retrieved manifest */
-    ASSERT_EQ(count, retrievedCount);
-    for (int i = 0; i < static_cast<int>(count); i++) {
-        ASSERT_EQ(rules[i], retrievedRules[i]);
-    }
+    ManifestUpdate update;
+    ASSERT_TRUE(WaitForManifestUpdate(update));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(update.app, idInfo, update.newManifest));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true, SYNC_OK));
+    ASSERT_TRUE(CheckIdentity(idInfo, extendedManifest));
 
-    delete[] rules;
-    rules = nullptr;
-}
+    testApp.SetApplicationState(PermissionConfigurator::CLAIMED);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
 
-/**
- * @test Verify that if a new manifest is presented by a claimed application
- *       then the security agent is able to update CAStorage and
- *       accept/reject the new manifest.
- *       -# Start an application and make sure it's in a CLAMAIBLE state.
- *       -# Assign a generated manifest1.
- *       -# Create an identitInfo, claim the application and
- *          make sure that it's in CLAIMED state after accepting manifest1.
- *       -# Create a newly generated manifest2 (different than manifest1) and
- *          assign it to the application and make sure that it's
- *          now in the NEED_UPDATE application state.
- *       -# Internally the security agent should have handled the new
- *          application state accordingly and the application's new state
- *          must be now back (and verified to be) CLAIMED after the
- *          new manifest2 is accepted.
- *       -# Verify that the new manifest2 is identical to the one in storage.
- *       -# Repeat the scenario but make sure to reject manifest2 and make
- *          sure that the application's state remain at NEED_UPDATE and that
- *          manifest1 is identical to the one in storage.
- */
-TEST_F(ManifestTests, DISABLED_UpdateManifest) {
+    testApp.UpdateManifest(manifest);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true));
+
+    RemoveSecAgent(); // wait for all updates to complete
 }
 } // namespace

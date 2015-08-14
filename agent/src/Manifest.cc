@@ -123,6 +123,15 @@ QStatus Manifest::GetRules(PermissionPolicy::Rule** manifestRules,
     return status;
 }
 
+const size_t Manifest::GetRulesSize() const
+{
+    if (manifest.GetAclsSize() <= 0) {
+        return 0;
+    }
+
+    return manifest.GetAcls()[0].GetRulesSize();
+}
+
 QStatus Manifest::GetDigest(uint8_t* digest) const
 {
     if (!digest) {
@@ -196,13 +205,19 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
 
     QStatus status = ER_FAIL;
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1]; // Acls are deleted by PermissionPolicy destructor
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[manifestRulesNumber]; // Rules are deleted by Terms destructor
+    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[manifestRulesNumber];
+
     for (size_t i = 0; i < manifestRulesNumber; i++) {
         rules[i] = manifestRules[i]; //copies members
     }
     acls[0].SetRules(manifestRulesNumber, rules);
     manifest.SetAcls(1, acls);
+
+    delete[] acls;
+    acls = nullptr;
+    delete[] rules;
+    rules = nullptr;
 
     // Serialize wrapped manifest to a byte array
     uint8_t* buf = nullptr;
@@ -215,24 +230,20 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
 
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to serialize manifest"));
-            delete[]buf;
-            buf = nullptr;
-            delete[]acls;  // Also deletes rules
-            acls = nullptr;
-            delete msg;
-            delete marshaller;
-            return status;
+            goto Exit;
         }
 
         size = _size;
         byteArray = new uint8_t[size];
         memcpy(byteArray, buf, size);
-
-        delete[] buf;
-        buf = nullptr;
-        delete msg;
-        delete marshaller;
     }
+
+Exit:
+    delete[]buf;
+    buf = nullptr;
+    delete msg;
+    delete marshaller;
+
     return status;
 }
 
@@ -268,6 +279,81 @@ bool Manifest::operator==(const Manifest& other) const
 bool Manifest::operator!=(const Manifest& other) const
 {
     return (manifest != other.manifest);
+}
+
+QStatus Manifest::Difference(const Manifest& rhs,
+                             Manifest& result) const
+{
+    QStatus status = ER_FAIL;
+
+    PermissionPolicy::Rule* lhsRules = nullptr;
+    size_t lhsSize;
+    status = GetRules(&lhsRules, &lhsSize);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    PermissionPolicy::Rule* rhsRules = nullptr;
+    size_t rhsSize;
+    status = rhs.GetRules(&rhsRules, &rhsSize);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    vector<PermissionPolicy::Rule> lRules(lhsRules, lhsRules + lhsSize);
+    vector<PermissionPolicy::Rule> rRules(rhsRules, rhsRules + rhsSize);
+
+    // iterate over lhs rules and remove rules that can be matched on rhs
+    vector<PermissionPolicy::Rule>::iterator lr;
+    for (lr = lRules.begin(); lr != lRules.end();) {
+        vector<PermissionPolicy::Rule::Member> lMembers(lr->GetMembers(),
+                                                        lr->GetMembers() + lr->GetMembersSize());
+        vector<PermissionPolicy::Rule>::iterator rr;
+        for (rr = rRules.begin(); rr != rRules.end(); ++rr) {
+            if ((lr->GetInterfaceName() != rr->GetInterfaceName()) ||
+                (lr->GetObjPath() != rr->GetObjPath())) {
+                continue;
+            }
+
+            // found a matching rhs rule
+            vector<PermissionPolicy::Rule::Member>::iterator lm;
+            for (lm = lMembers.begin(); lm != lMembers.end();) {
+                vector<PermissionPolicy::Rule::Member> rMembers(rr->GetMembers(),
+                                                                rr->GetMembers() + rr->GetMembersSize());
+                vector<PermissionPolicy::Rule::Member>::iterator rm;
+                for (rm = rMembers.begin(); rm != rMembers.end(); ++rm) {
+                    if ((lm->GetMemberName() != rm->GetMemberName()) ||
+                        (lm->GetMemberType() != rm->GetMemberType())) {
+                        continue;
+                    }
+
+                    // found a matching rhs member
+                    uint8_t actionMask = (~rm->GetActionMask()) & lm->GetActionMask();
+                    lm->SetActionMask(actionMask); // update action mask
+                }
+
+                // remove member with empty action masks
+                if (lm->GetActionMask() == 0) {
+                    lm = lMembers.erase(lm);
+                } else {
+                    ++lm;
+                }
+            }
+        }
+
+        // remove rule without remaining members
+        if (lMembers.size() == 0) {
+            lr = lRules.erase(lr);
+        } else {
+            ++lr;
+        }
+    }
+
+    if (lRules.size() > 0) {
+        status = result.SetFromRules(&lRules[0], lRules.size());
+    }
+
+    return status;
 }
 }
 }

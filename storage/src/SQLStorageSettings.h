@@ -31,7 +31,7 @@
         ID         TEXT NOT NULL,\
         NAME       TEXT,\
         DESC       TEXT,\
-        PRIMARY KEY(AUTHORITY, ID)\
+        PRIMARY KEY(ID)\
 ); "
 
 #define IDENTITY_TABLE_SCHEMA \
@@ -40,7 +40,7 @@
         AUTHORITY BLOB NOT NULL,\
         ID        TEXT NOT NULL,\
         NAME      TEXT,\
-        PRIMARY KEY(AUTHORITY, ID)\
+        PRIMARY KEY(ID)\
 ); "
 
 #define CLAIMED_APPLICATIONS_TABLE_SCHEMA \
@@ -61,11 +61,11 @@
         SUBJECT_KEYINFO  BLOB NOT NULL,\
         ISSUER BLOB NOT NULL,\
         DER BLOB NOT NULL,\
-        ID TEXT NOT NULL,\
+        GUID TEXT NOT NULL,\
         PRIMARY KEY(SUBJECT_KEYINFO),\
-        FOREIGN KEY(SUBJECT_KEYINFO) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
-    " (APPLICATION_PUBKEY) ON DELETE CASCADE\
-); "
+        FOREIGN KEY(SUBJECT_KEYINFO) REFERENCES " CLAIMED_APPS_TABLE_NAME \
+    " (APPLICATION_PUBKEY) ON DELETE CASCADE,\
+        FOREIGN KEY(GUID) REFERENCES " IDENTITY_TABLE_NAME " (ID) ON DELETE CASCADE ); "
 
 #define MEMBERSHIP_CERTS_TABLE_SCHEMA \
     "CREATE TABLE IF NOT EXISTS " MEMBERSHIP_CERTS_TABLE_NAME \
@@ -75,9 +75,9 @@
         DER BLOB NOT NULL,\
         GUID TEXT NOT NULL,\
         PRIMARY KEY(SUBJECT_KEYINFO, GUID),\
-        FOREIGN KEY(SUBJECT_KEYINFO) REFERENCES " CLAIMED_APPS_TABLE_NAME                                                                                                                                                                                                                                                                                                                                                                                    \
+        FOREIGN KEY(SUBJECT_KEYINFO) REFERENCES " CLAIMED_APPS_TABLE_NAME \
     " (APPLICATION_PUBKEY) ON DELETE CASCADE\
-); "
+        FOREIGN KEY(GUID) REFERENCES " GROUPS_TABLE_NAME " (ID) ON DELETE CASCADE ); "
 
 #define SERIALNUMBER_TABLE_SCHEMA \
     "CREATE TABLE IF NOT EXISTS " SERIALNUMBER_TABLE_NAME \
