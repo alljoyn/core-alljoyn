@@ -327,9 +327,6 @@ QStatus ThreadPool::WaitForAvailableThread(void)
         QCC_DbgPrintf(("ThreadPool::WaitForAvailableThread(): Taking lock"));
         m_lock.Lock();
     }
-
-    assert(false && "ThreadPool::WaitForAvailableThread(): Can't happen");
-    return ER_FAIL;
 }
 
 } // namespace qcc
