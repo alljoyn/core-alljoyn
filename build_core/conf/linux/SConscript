@@ -13,7 +13,7 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('env')
+Import('env', 'CheckCXXFlag')
 import os
 
 # Linux specific vars
@@ -23,6 +23,13 @@ vars.Add(BoolVariable('ASAN', 'Enable Address Sanitizer runtime checks', 'no'))
 vars.Update(env)
 
 Help(vars.GenerateHelpText(env))
+
+config = Configure(env, custom_tests = { 'CheckCXXFlag' : CheckCXXFlag })
+if not config.CheckCXXFlag('-std=c++11'):
+   if not config.CheckCXXFlag('-std=c++0x'):
+      print '*** Compiler too old to build AllJoyn.  Aborting.'
+      Exit(1)
+env = config.Finish()
 
 # Linux specific flags
 env.Append(CPPDEFINES = ['QCC_OS_LINUX'])
@@ -43,7 +50,6 @@ env.Append(CFLAGS = ['-Wall',
 env.Append(CXXFLAGS = ['-Wall',
                        '-Werror',
                        '-pipe',
-                       '-std=gnu++0x',
                        '-fno-exceptions',
                        '-fno-strict-aliasing',
                        '-fno-asynchronous-unwind-tables',

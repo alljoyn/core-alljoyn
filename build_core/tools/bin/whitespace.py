@@ -25,7 +25,7 @@ from subprocess import Popen, STDOUT, PIPE
 
 def main(argv=None):
     start_time = time.clock()
-    dir_ignore = ["stlport", "build", ".git", ".repo", "alljoyn_objc", "ios", "external" ]
+    dir_ignore = ["stlport", "build", ".git", ".repo", "alljoyn_objc", "ios", "external", ".sconf_temp" ]
     file_ignore_patterns = ['\.#.*', 'alljoyn_java\.h', 'Status\.h', 'Internal\.h',
                             'ManagedObj.h', #uncrustify has a problem with its private constructor
                             'org_alljoyn_jni_AllJoynAndroidExt\.h',

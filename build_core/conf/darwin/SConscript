@@ -13,11 +13,18 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 # 
 
-Import('env')
+Import('env', 'CheckCXXFlag')
 import os
 
 # Darwin specific flags
 env.Append(CPPDEFINES=['QCC_OS_DARWIN'])
+
+config = Configure(env, custom_tests = { 'CheckCXXFlag' : CheckCXXFlag })
+if not config.CheckCXXFlag('-std=c++11'):
+   if not config.CheckCXXFlag('-std=c++0x'):
+      print '*** Compiler too old to build AllJoyn.  Aborting.'
+      Exit(1)
+env = config.Finish()
 
 env.Append(CFLAGS=['-Wall',
                    '-pipe',
@@ -28,7 +35,6 @@ env.Append(CFLAGS=['-Wall',
 env.Append(CXXFLAGS=['-Wall',
                      '-Werror=non-virtual-dtor',
                      '-pipe',
-                     '-std=gnu++11',
                      '-fno-exceptions',
                      '-fno-strict-aliasing',
                      '-Wno-deprecated'])
