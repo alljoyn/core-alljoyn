@@ -33,91 +33,51 @@
 /** @internal */
 #define QCC_MODULE "MUTEX"
 
-#ifdef NDEBUG
-#define NO_LOCK_TRACE 1
-#else
-#define NO_LOCK_TRACE 1 // disabled
-#endif
-
 using namespace qcc;
 
 void Mutex::Init()
 {
-    if (!initialized) {
-        // On all supported versions of Windows, this always returns non-zero
-        // (http://msdn.microsoft.com/en-us/library/windows/desktop/ms683476.aspx).
-        InitializeCriticalSectionAndSpinCount(&mutex, 100);
-        initialized = true;
-    }
+    assert(!isInitialized);
+#ifndef NDEBUG
+    file = NULL;
+    line = static_cast<uint32_t>(-1);
+#endif
+    InitializeCriticalSection(&mutex);
+    isInitialized = true;
 }
 
-Mutex::~Mutex()
+void Mutex::Destroy()
 {
-    if (initialized) {
-        initialized = false;
+    if (isInitialized) {
+        isInitialized = false;
         DeleteCriticalSection(&mutex);
     }
 }
 
-QStatus Mutex::Lock(void)
+QStatus Mutex::Lock()
 {
-    if (!initialized) {
+    assert(isInitialized);
+    if (!isInitialized) {
         return ER_INIT_FAILED;
     }
     EnterCriticalSection(&mutex);
     return ER_OK;
 }
 
-QStatus Mutex::Lock(const char* file, uint32_t line)
+QStatus Mutex::Unlock()
 {
-#if NO_LOCK_TRACE
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Lock();
-#else
-    QStatus status;
-    if (TryLock()) {
-        status = ER_OK;
-    } else {
-        Thread::GetThread()->lockTrace.Waiting(this, file, line);
-        status = Lock();
-    }
-    if (status == ER_OK) {
-        Thread::GetThread()->lockTrace.Acquired(this, file, line);
-    } else {
-        QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
-    }
-    return status;
-#endif
-}
-
-QStatus Mutex::Unlock(void)
-{
-    if (!initialized) {
+    assert(isInitialized);
+    if (!isInitialized) {
         return ER_INIT_FAILED;
     }
     LeaveCriticalSection(&mutex);
     return ER_OK;
 }
 
-QStatus Mutex::Unlock(const char* file, uint32_t line)
+bool Mutex::TryLock()
 {
-#if NO_LOCK_TRACE
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Unlock();
-#else
-    if (!initialized) {
-        return ER_INIT_FAILED;
-    }
-    Thread::GetThread()->lockTrace.Releasing(this, file, line);
-    return Unlock();
-#endif
-}
-
-bool Mutex::TryLock(void)
-{
-    if (!initialized) {
+    assert(isInitialized);
+    if (!isInitialized) {
         return false;
     }
     return TryEnterCriticalSection(&mutex);

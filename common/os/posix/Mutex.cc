@@ -39,140 +39,74 @@ using namespace qcc;
 
 void Mutex::Init()
 {
-    isInitialized = false;
-    int ret;
+    assert(!isInitialized);
+#ifndef NDEBUG
+    file = NULL;
+    line = static_cast<uint32_t>(-1);
+#endif
+
     pthread_mutexattr_t attr;
-    ret = pthread_mutexattr_init(&attr);
+    int ret = pthread_mutexattr_init(&attr);
+    // Can't use QCC_LogError() since it uses mutexes under the hood.
+    assert(ret == 0);
     if (ret != 0) {
-        fflush(stdout);
-        // Can't use ER_LogError() since it uses mutexs under the hood.
-        printf("***** Mutex attribute initialization failure: %d - %s\n", ret, strerror(ret));
-        goto cleanup;
+        return;
     }
+
     // We want entities to be able to lock a mutex multiple times without deadlocking or reporting an error.
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    isInitialized = (pthread_mutex_init(&mutex, &attr) == 0);
+    // Can't use QCC_LogError() since it uses mutexes under the hood.
+    assert(isInitialized);
 
-    ret = pthread_mutex_init(&mutex, &attr);
-    if (ret != 0) {
-        fflush(stdout);
-        // Can't use ER_LogError() since it uses mutexs under the hood.
-        printf("***** Mutex initialization failure: %d - %s\n", ret, strerror(ret));
-        goto cleanup;
-    }
-
-    isInitialized = true;
-    file = NULL;
-    line = -1;
-
-cleanup:
     // Don't need the attribute once it has been assigned to a mutex.
     pthread_mutexattr_destroy(&attr);
 }
 
-Mutex::~Mutex()
+void Mutex::Destroy()
 {
-    if (!isInitialized) {
-        return;
-    }
-
-    int ret;
-    ret = pthread_mutex_destroy(&mutex);
-    if (ret != 0) {
-        fflush(stdout);
-        // Can't use ER_LogError() since it uses mutexs under the hood.
-        printf("***** Mutex destruction failure: %d - %s\n", ret, strerror(ret));
-        assert(false);
+    if (isInitialized) {
+        isInitialized = false;
+        // Can't use QCC_LogError() since it uses mutexes under the hood.
+        QCC_VERIFY(pthread_mutex_destroy(&mutex) == 0);
     }
 }
 
 QStatus Mutex::Lock()
 {
+    assert(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
 
     int ret = pthread_mutex_lock(&mutex);
+    // Can't use QCC_LogError() since it uses mutexes under the hood.
+    assert(ret == 0);
     if (ret != 0) {
-        fflush(stdout);
-        // Can't use ER_LogError() since it uses mutexes under the hood.
-        printf("***** Mutex lock failure: %d - %s\n", ret, strerror(ret));
-        assert(false);
         return ER_OS_ERROR;
     }
     return ER_OK;
-}
-
-QStatus Mutex::Lock(const char* file, uint32_t line)
-{
-#ifdef NDEBUG
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Lock();
-#else
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-
-    QStatus status;
-    if (TryLock()) {
-        status = ER_OK;
-    } else {
-        status = Lock();
-    }
-    if (status == ER_OK) {
-        QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
-        this->file = reinterpret_cast<const char*>(file);
-        this->line = line;
-    } else {
-        QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
-    }
-    return status;
-#endif
 }
 
 QStatus Mutex::Unlock()
 {
+    assert(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
 
     int ret = pthread_mutex_unlock(&mutex);
+    // Can't use QCC_LogError() since it uses mutexes under the hood.
+    assert(ret == 0);
     if (ret != 0) {
-        fflush(stdout);
-        // Can't use ER_LogError() since it uses mutexes under the hood.
-        printf("***** Mutex unlock failure: %d - %s\n", ret, strerror(ret));
-        assert(false);
         return ER_OS_ERROR;
     }
     return ER_OK;
-}
-
-QStatus Mutex::Unlock(const char* file, uint32_t line)
-{
-#ifdef NDEBUG
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Unlock();
-#else
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
-    this->file = NULL;
-    this->line = -1;
-    int ret = pthread_mutex_unlock(&mutex);
-    if (ret != 0) {
-        fflush(stdout);
-        printf("***** Mutex unlock failure: %s:%d %d - %s\n", file, line, ret, strerror(ret));
-        assert(false);
-        return ER_OS_ERROR;
-    }
-    return ER_OK;
-#endif
 }
 
 bool Mutex::TryLock(void)
 {
+    assert(isInitialized);
     if (!isInitialized) {
         return false;
     }
