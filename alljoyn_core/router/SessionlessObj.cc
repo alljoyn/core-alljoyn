@@ -1319,7 +1319,13 @@ void SessionlessObj::FindAdvertisedNames()
     set<String> names;
     for (RuleIterator rit = rules.begin(); rit != rules.end(); ++rit) {
         String name;
-        if (rit->second.implements.empty()) {
+        String epName = rit->first;
+        BusEndpoint ep = router.FindEndpoint(epName);
+        assert(!ep->IsValid() || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL || ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE));
+        bool epCanReceive = ep->IsValid() && ep->AllowRemoteMessages();
+        if (!epCanReceive) {
+            /* Don't waste network traffic finding names for messages we can't receive. */
+        } else if (rit->second.implements.empty()) {
             name = "name='" + (rit->second.iface.empty() ? WildcardInterfaceName : rit->second.iface) + ".sl.*'";
         } else {
             for (set<String>::const_iterator iit = rit->second.implements.begin(); iit != rit->second.implements.end(); ++iit) {
