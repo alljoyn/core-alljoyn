@@ -112,9 +112,9 @@ QStatus Crypto_DRBG::Generate(uint8_t* rand, size_t size)
     size_t copy;
     Crypto_AES::Block block;
 
-    if (0x80000000 & ctx->c) {
+    if (RESEED_COUNT < ctx->c) {
         /*
-         * If counter is at least (2^31 calls),
+         * If counter is at least RESEED_COUNT,
          * attempt seeding. Pass on error, try next call.
          */
         copy = PlatformEntropy(data, sizeof (data));
@@ -198,6 +198,7 @@ QStatus Crypto::Init()
         return ER_CRYPTO_ERROR;
     }
 
+    ClearMemory(seed, sizeof (seed));
     return ER_OK;
 }
 
