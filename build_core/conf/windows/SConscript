@@ -81,7 +81,18 @@ else:
 #       The warning is triggered by the monty_rho() function in BigNum.cc when it
 #       negates an unsigned value before truncating it to uint32_t. This is an
 #       intentional part of the algorithm so the warning can be suppressed.
-env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4351', '/wd4146'])
+# C4456 "declaration of 'foo' hides previous local declaration"
+#       This warning (treated as an error) is produced when a local variable
+#       is redefined multiple times under the same parent scope.
+# C4457 "declaration of 'foo' hides function parameter"
+#       This warning (treated as an error) is produced when a function parameter
+#       name is duplicated in the function body by a local variable named the same.
+# C4458 "declaration of 'foo' hides class member"
+#       This warning (treated as an error) is produced when a class data member
+#       name is duplicated in a class member method via an argument with the
+#       same type and name and/or a local variable of the same. To avoid this
+#       warning it is best to prefix data member names with "m_".
+env.Append(CXXFLAGS=['/wd4244', '/wd4267','/wd4345', '/wd4355', '/wd4800', '/wd4351', '/wd4146', '/wd4456', '/wd4457', '/wd4458'])
 
 env.Append(CFLAGS=['/nologo'])
 env.Append(CXXFLAGS=['/nologo'])

@@ -26,6 +26,8 @@
 #include <float.h>
 /// @cond ALLJOYN_DEV
 
+#if ((_MSC_VER <= 1800) || defined(DO_SNPRINTF_MAPPING))
+
 /**
  * Map snprintf to _snprintf
  *
@@ -34,6 +36,9 @@
  * Windows.
  */
 #define snprintf _snprintf
+
+#endif
+/// @endcond
 
 /**
  * Map stroll to _strtoi64
@@ -67,6 +72,7 @@
 #define strdup _strdup
 
 #if _MSC_VER < 1800   /* Versions prior to MSVC 2013 */
+
 /**
  * Map fpclassify to _fpclass
  *
@@ -112,6 +118,7 @@
 #define _WIN32_WINNT_WIN7     0x0601
 #define _WIN32_WINNT_WIN8     0x0602
 #define _WIN32_WINNT_WINBLUE  0x0603
+#define _WIN32_WINNT_WIN10    0x0A00
 
 /// @}
 #endif

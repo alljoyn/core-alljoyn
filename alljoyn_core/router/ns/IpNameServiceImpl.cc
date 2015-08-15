@@ -288,7 +288,6 @@ volatile int32_t INCREMENTAL_PACKET_ID;
 // service will use for discovery.
 //
 //   <busconfig>
-//       <property name="ns_interfaces">*</property>
 //       <flag name="ns_disable_directed_broadcast">false</flag>
 //       <flag name="ns_disable_ipv4">false</flag>
 //       <flag name="ns_disable_ipv6">false</flag>
