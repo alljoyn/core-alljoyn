@@ -35,6 +35,7 @@
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/PermissionConfigurator.h>
 
 #include "AuthManager.h"
 #include "ObserverManager.h"
@@ -44,7 +45,6 @@
 #include "Transport.h"
 #include "TransportList.h"
 #include "PermissionManager.h"
-#include "PermissionConfiguratorImpl.h"
 
 #include <alljoyn/Status.h>
 #include <set>
@@ -533,7 +533,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
     PermissionManager permissionManager;
-    PermissionConfiguratorImpl permissionConfigurator;
+    PermissionConfigurator permissionConfigurator;
 
     std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
     qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */

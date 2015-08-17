@@ -22,7 +22,7 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/KeyInfoECC.h>
 #include <qcc/StringUtil.h>
-#include "PermissionConfiguratorImpl.h"
+#include <alljoyn/PermissionConfigurator.h>
 #include "PermissionMgmtObj.h"
 #include "BusInternal.h"
 #include "CredentialAccessor.h"
@@ -35,19 +35,57 @@ using namespace qcc;
 
 namespace ajn {
 
-QStatus PermissionConfiguratorImpl::SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count)
+/**
+ * Class for internal state of a PermissionConfigurator object.
+ */
+class PermissionConfigurator::Internal {
+
+  public:
+    /**
+     * Constructor.
+     */
+    Internal(BusAttachment& bus) : m_bus(bus)
+    {
+    }
+
+    /* Reference to the relevant bus attachment */
+    BusAttachment& m_bus;
+
+  private:
+    /**
+     * Assignment operator is private.
+     */
+    Internal& operator=(const Internal& other);
+
+    /**
+     * Copy constructor is private.
+     */
+    Internal(const Internal& other);
+};
+
+PermissionConfigurator::PermissionConfigurator(BusAttachment& bus) : m_internal(new PermissionConfigurator::Internal(bus))
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+}
+
+PermissionConfigurator::~PermissionConfigurator()
+{
+    delete m_internal;
+    m_internal = nullptr;
+}
+
+QStatus PermissionConfigurator::SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
-        QCC_DbgPrintf(("PermissionConfiguratorImpl::SetPermissionManifest does not have PermissionMgmtObj initialized"));
+        QCC_DbgPrintf(("PermissionConfigurator::SetPermissionManifest does not have PermissionMgmtObj initialized"));
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetManifestTemplate(rules, count);
 }
 
-QStatus PermissionConfiguratorImpl::GetApplicationState(ApplicationState& applicationState)
+QStatus PermissionConfigurator::GetApplicationState(ApplicationState& applicationState)
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
@@ -55,30 +93,30 @@ QStatus PermissionConfiguratorImpl::GetApplicationState(ApplicationState& applic
     return ER_OK;
 }
 
-QStatus PermissionConfiguratorImpl::SetApplicationState(ApplicationState newState)
+QStatus PermissionConfigurator::SetApplicationState(ApplicationState newState)
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetApplicationState(newState);
 }
 
-QStatus PermissionConfiguratorImpl::Reset()
+QStatus PermissionConfigurator::Reset()
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->Reset();
 }
 
-QStatus PermissionConfiguratorImpl::GetSigningPublicKey(KeyInfoECC& keyInfo)
+QStatus PermissionConfigurator::GetSigningPublicKey(KeyInfoECC& keyInfo)
 {
     if (keyInfo.GetCurve() != Crypto_ECC::ECC_NIST_P256) {
         return ER_NOT_IMPLEMENTED;  /* currently only support NIST P256 curve */
     }
-    CredentialAccessor ca(bus);
+    CredentialAccessor ca(m_internal->m_bus);
     ECCPublicKey publicKey;
     QStatus status = ca.GetDSAPublicKey(publicKey);
     if (status != ER_OK) {
@@ -90,9 +128,9 @@ QStatus PermissionConfiguratorImpl::GetSigningPublicKey(KeyInfoECC& keyInfo)
     return ER_OK;
 }
 
-QStatus PermissionConfiguratorImpl::SignCertificate(CertificateX509& cert)
+QStatus PermissionConfigurator::SignCertificate(CertificateX509& cert)
 {
-    CredentialAccessor ca(bus);
+    CredentialAccessor ca(m_internal->m_bus);
     ECCPrivateKey privateKey;
     QStatus status = ca.GetDSAPrivateKey(privateKey);
     if (status != ER_OK) {
@@ -106,45 +144,45 @@ QStatus PermissionConfiguratorImpl::SignCertificate(CertificateX509& cert)
     return cert.SignAndGenerateAuthorityKeyId(&privateKey, &publicKey);
 }
 
-QStatus PermissionConfiguratorImpl::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
+QStatus PermissionConfigurator::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->GetConnectedPeerPublicKey(guid, publicKey);
 }
 
-QStatus PermissionConfiguratorImpl::SetClaimCapabilities(PermissionConfigurator::ClaimCapabilities claimCapabilities)
+QStatus PermissionConfigurator::SetClaimCapabilities(PermissionConfigurator::ClaimCapabilities claimCapabilities)
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetClaimCapabilities(claimCapabilities);
 }
 
-QStatus PermissionConfiguratorImpl::SetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo)
+QStatus PermissionConfigurator::SetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo)
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetClaimCapabilityAdditionalInfo(additionalInfo);
 }
 
-QStatus PermissionConfiguratorImpl::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
+QStatus PermissionConfigurator::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->GetClaimCapabilities(claimCapabilities);
 }
 
-QStatus PermissionConfiguratorImpl::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
+QStatus PermissionConfigurator::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
 {
-    PermissionMgmtObj* permissionMgmtObj = bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
