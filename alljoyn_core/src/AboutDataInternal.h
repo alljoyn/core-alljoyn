@@ -26,6 +26,79 @@
 namespace ajn {
 
 /**
+ * Class that provides translations of text using a lookup table where
+ * each translated string is stored as a MsgArg as currently required
+ * by AboutData.
+ */
+class MsgArgTableTranslator : public LookupTableTranslator {
+  public:
+    /**
+     * @see LookupTableTranslator::NumFields
+     */
+    virtual size_t NumFields()
+    {
+        return localizedStore.size();
+    }
+
+    /**
+     * @see LookupTableTranslator::GetFieldId
+     */
+    virtual const char* GetFieldId(size_t index)
+    {
+        localizedStoreIterator it = localizedStore.begin();
+        for (size_t count = 0; count < index; it++, count++);
+        return it->first.c_str();
+    }
+
+    /**
+     * @see Translator::Translate
+     */
+    virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* sourceText)
+    {
+        QCC_UNUSED(sourceLanguage);
+        char* result;
+        QStatus status = localizedStore[sourceText][targetLanguage].Get("s", &result);
+        return (status == ER_OK) ? result : nullptr;
+    }
+
+    /**
+     * @see Translator::TranslateToMsgArg
+     */
+    virtual QStatus TranslateToMsgArg(const char* sourceLanguage,
+                                      const char* targetLanguage, const char* sourceText, MsgArg*& value)
+    {
+        QCC_UNUSED(sourceLanguage);
+        value = &localizedStore[sourceText][targetLanguage];
+        return (value->typeId == ALLJOYN_INVALID) ? ER_ABOUT_INVALID_ABOUTDATA_FIELD_VALUE : ER_OK;
+    }
+
+    /**
+     * @see Translator::AddMsgArgTranslation
+     */
+    virtual QStatus AddMsgArgTranslation(const char* id, const MsgArg* value, const char* language)
+    {
+        if (supportedLanguages.find(language) == supportedLanguages.end()) {
+            supportedLanguages.insert(language);
+        }
+        localizedStore[id][language] = *value;
+        return ER_OK;
+    }
+
+  protected:
+    /**
+     * Local member variable mapping a field id to a set of translations
+     * in various languages.
+     */
+    std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare>
+> localizedStore;
+
+    /**
+     * typedef localized store iterator
+     */
+    typedef std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> >::iterator localizedStoreIterator;
+};
+
+/**
  * Class used to hold internal values for the AboutData class
  */
 class AboutData::Internal {
@@ -59,31 +132,22 @@ class AboutData::Internal {
         }
     };
 
-    /**
-     * key: Field Name
-     * value: map of language / Data
-     */
-    std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> > localizedPropertyStore;
+    MsgArgTableTranslator defaultTranslator;
+    Translator* translator;
 
     /**
-     * typedef const iterator
+     * The pseudo-language of a Field Name.  Currently this is always the
+     * empty string, and is used to allow a translator to "translate"
+     * a field name into its description by identifying the source text
+     * as field name.
      */
-    typedef std::map<qcc::String, std::map<qcc::String, MsgArg, CaseInsensitiveCompare> >::const_iterator localizedPropertyStoreConstIterator;
-
-    /**
-     * local member variable for supported languages
-     */
-    std::set<qcc::String, CaseInsensitiveCompare> supportedLanguages;
-
-    /**
-     * typedef supported languages iterator
-     */
-    typedef std::set<qcc::String, CaseInsensitiveCompare>::iterator supportedLanguagesIterator;
+    qcc::String keyLanguage;
 
     /**
      * mutex lock to protect the property store.
      */
     qcc::Mutex propertyStoreLock;
 };
+
 }
 #endif //_ALLJOYN_ABOUTDATAINTERNAL_H
