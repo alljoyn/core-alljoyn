@@ -174,9 +174,18 @@ class ECCPublicKey {
 
   public:
 
-    ECCPublicKey() {
+    /**
+     * Clear the key to make it empty.
+     */
+    void Clear()
+    {
         memset(x, 0, GetCoordinateSize());
         memset(y, 0, GetCoordinateSize());
+    }
+
+    ECCPublicKey()
+    {
+        Clear();
     }
 
     /**
