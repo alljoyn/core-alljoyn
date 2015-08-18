@@ -28,6 +28,7 @@
 #include <qcc/Crypto.h>
 #include <qcc/time.h>
 #include <qcc/Util.h>
+#include <qcc/LockCheckerLevel.h>
 
 #include "PeerState.h"
 #include "AllJoynCrypto.h"
@@ -222,6 +223,7 @@ _PeerState::~_PeerState()
 }
 
 PeerStateTable::PeerStateTable()
+    : lock(LOCK_LEVEL_PEERSTATE_LOCK)
 {
     Clear();
 }
