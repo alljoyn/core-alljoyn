@@ -16,7 +16,7 @@
 import os
 import platform
 
-Import('env')
+Import('env', 'CheckCXXFlag')
 
 if platform.system() == 'Darwin':
     # De-Mac-ify a couple of the envrionment variables.
