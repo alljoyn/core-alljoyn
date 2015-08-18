@@ -168,7 +168,7 @@ class PermissionPolicy {
          * Constructor
          *
          */
-        Rule() : objPath(), interfaceName(), members(NULL), membersSize(0)
+        Rule() : objPath("*"), interfaceName(), members(NULL), membersSize(0)
         {
         }
 
