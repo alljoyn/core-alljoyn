@@ -79,12 +79,29 @@ QStatus Mutex::Lock()
         return ER_INIT_FAILED;
     }
 
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED lock internally.
+     */
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
     int ret = pthread_mutex_lock(&mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
     assert(ret == 0);
     if (ret != 0) {
         return ER_OS_ERROR;
     }
+
+#ifndef NDEBUG
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.LockAcquired(this);
+    }
+#endif
+
     return ER_OK;
 }
 
@@ -101,6 +118,17 @@ QStatus Mutex::Unlock()
     if (ret != 0) {
         return ER_OS_ERROR;
     }
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED lock internally.
+     */
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.ReleasingLock(this);
+    }
+#endif
+
     return ER_OK;
 }
 
@@ -110,5 +138,26 @@ bool Mutex::TryLock(void)
     if (!isInitialized) {
         return false;
     }
-    return pthread_mutex_trylock(&mutex) == 0;
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED lock internally.
+     */
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
+    bool acquired = (pthread_mutex_trylock(&mutex) == 0);
+
+#ifndef NDEBUG
+    if (acquired) {
+        if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+            Thread::GetThread()->lockChecker.LockAcquired(this);
+        }
+    }
+#endif
+
+    return acquired;
 }
