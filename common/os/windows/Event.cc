@@ -37,6 +37,7 @@
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 #include <qcc/Util.h>
+#include <qcc/LockCheckerLevel.h>
 #include <qcc/windows/NamedPipeWrapper.h>
 
 using namespace std;
@@ -247,6 +248,9 @@ class SuperWaiter {
 
 class IoEventMonitor {
   public:
+
+    /* Constructor */
+    IoEventMonitor() : lock(LOCK_LEVEL_EVENT_IOEVENTMONITOR_LOCK) { }
 
     struct EventList {
         std::list<Event*> events;
