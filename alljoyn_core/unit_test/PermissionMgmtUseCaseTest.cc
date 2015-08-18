@@ -3135,6 +3135,14 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesAllowed)
     ConsumerCanGetTVCaption();
 }
 
+TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesPriorToClaim)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    MsgArg props;
+    EXPECT_EQ(ER_OK, saProxy.GetAllProperties(org::alljoyn::Bus::Security::Application::InterfaceName, props));
+}
+
 TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesWithAtLeastOnePropertyAllowedByProviderPolicy)
 {
     Claims(false);
