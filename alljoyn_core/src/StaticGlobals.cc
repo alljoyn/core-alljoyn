@@ -21,6 +21,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/StaticGlobals.h>
+#include <qcc/LockCheckerLevel.h>
 #include <alljoyn/Init.h>
 #include <alljoyn/PasswordManager.h>
 #include "AutoPingerInternal.h"
@@ -53,7 +54,8 @@ class StaticGlobals {
 extern "C" {
 
 static uint32_t allJoynInitCount = 0;
-static qcc::Mutex allJoynInitLock;
+/* Disable LockChecker for the Init lock, because this lock is being used before LockChecker & Thread modules have been initialized */
+static qcc::Mutex allJoynInitLock(qcc::LOCK_LEVEL_CHECKING_DISABLED);
 
 QStatus AJ_CALL AllJoynInit(void)
 {

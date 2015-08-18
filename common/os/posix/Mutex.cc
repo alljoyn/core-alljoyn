@@ -28,6 +28,7 @@
 
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
 #include <Status.h>
@@ -40,11 +41,6 @@ using namespace qcc;
 void Mutex::Init()
 {
     assert(!isInitialized);
-#ifndef NDEBUG
-    file = NULL;
-    line = static_cast<uint32_t>(-1);
-#endif
-
     pthread_mutexattr_t attr;
     int ret = pthread_mutexattr_init(&attr);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
@@ -79,12 +75,29 @@ QStatus Mutex::Lock()
         return ER_INIT_FAILED;
     }
 
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED lock internally.
+     */
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
     int ret = pthread_mutex_lock(&mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
     assert(ret == 0);
     if (ret != 0) {
         return ER_OS_ERROR;
     }
+
+#ifndef NDEBUG
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.LockAcquired(this);
+    }
+#endif
+
     return ER_OK;
 }
 
@@ -101,6 +114,17 @@ QStatus Mutex::Unlock()
     if (ret != 0) {
         return ER_OS_ERROR;
     }
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED lock internally.
+     */
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.ReleasingLock(this);
+    }
+#endif
+
     return ER_OK;
 }
 
@@ -110,5 +134,26 @@ bool Mutex::TryLock(void)
     if (!isInitialized) {
         return false;
     }
-    return pthread_mutex_trylock(&mutex) == 0;
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED lock internally.
+     */
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
+    bool acquired = (pthread_mutex_trylock(&mutex) == 0);
+
+#ifndef NDEBUG
+    if (acquired) {
+        if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+            Thread::GetThread()->lockChecker.LockAcquired(this);
+        }
+    }
+#endif
+
+    return acquired;
 }

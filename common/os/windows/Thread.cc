@@ -32,6 +32,7 @@
 #include <qcc/Debug.h>
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/LockCheckerLevel.h>
 
 #include <Status.h>
 
@@ -56,7 +57,7 @@ Mutex* Thread::threadListLock = NULL;
 map<ThreadId, Thread*>* Thread::threadList = NULL;
 
 static DWORD cleanExternalThreadKey;
-static bool initialized = false;
+bool Thread::initialized = false;
 
 void Thread::CleanExternalThread(void* t)
 {
@@ -79,7 +80,8 @@ void Thread::CleanExternalThread(void* t)
 QStatus Thread::Init()
 {
     if (!initialized) {
-        Thread::threadListLock = new Mutex();
+        /* Disable LockChecker for the threadListLock, thus allowing LockChecker to call GetThread() */
+        Thread::threadListLock = new Mutex(LOCK_LEVEL_CHECKING_DISABLED);
         Thread::threadList = new map<ThreadId, Thread*>();
         cleanExternalThreadKey = FlsAlloc(Thread::CleanExternalThread);
         if (cleanExternalThreadKey == FLS_OUT_OF_INDEXES) {
