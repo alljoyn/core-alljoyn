@@ -23,20 +23,34 @@
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
 #include <qcc/Debug.h>
+#include <qcc/LockCheckerLevel.h>
 
 /** @internal */
 #define QCC_MODULE "MUTEX"
 
-using namespace qcc;
+namespace qcc {
 
-Mutex::Mutex() : isInitialized(false)
+Mutex::Mutex(int _level) : isInitialized(false)
 {
+#ifndef NDEBUG
+    SetLevel(_level);
+    maximumRecursionCount = 0;
+#else
+    QCC_UNUSED(_level);
+#endif
+
     Init();
 }
 
 Mutex::Mutex(const Mutex& other) : isInitialized(false)
 {
+#ifndef NDEBUG
+    level = other.level;
+    maximumRecursionCount = 0;
+#else
     QCC_UNUSED(other);
+#endif
+
     Init();
 }
 
@@ -47,7 +61,13 @@ Mutex::~Mutex()
 
 Mutex& Mutex::operator=(const Mutex& other)
 {
+#ifndef NDEBUG
+    level = other.level;
+    maximumRecursionCount = 0;
+#else
     QCC_UNUSED(other);
+#endif
+
     Destroy();
     Init();
     return *this;
@@ -86,10 +106,18 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
     return Unlock();
 #else
     assert(isInitialized);
-    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
-    this->file = NULL;
-    this->line = static_cast<uint32_t>(-1);
+    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%d)", file, line, this->file, this->line));
+    this->file = file;
+    this->line = line;
     return Unlock();
 #endif
 }
 
+#ifndef NDEBUG
+void Mutex::SetLevel(int _level)
+{
+    level = _level;
+}
+#endif
+
+} /* namespace */

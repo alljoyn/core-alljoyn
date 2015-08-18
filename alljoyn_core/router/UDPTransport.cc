@@ -28,6 +28,7 @@
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
 #include <qcc/IfConfig.h>
+#include <qcc/LockCheckerLevel.h>
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
@@ -585,7 +586,7 @@ class ArdpStream : public qcc::Stream {
         m_handle(NULL),
         m_conn(NULL),
         m_connId(0),
-        m_lock(),
+        m_lock(LOCK_LEVEL_UDPTRANSPORT_ARDPSTREAM_LOCK),
         m_disc(false),
         m_discSent(false),
         m_discStatus(ER_OK),
@@ -1596,7 +1597,8 @@ bool operator<(const ArdpStream::ThreadEntry& lhs, const ArdpStream::ThreadEntry
 class MessagePump {
   public:
     MessagePump(UDPTransport* transport)
-        : m_transport(transport), m_lock(), m_activeThread(NULL), m_pastThreads(), m_queue(), m_condition(), m_spawnedThreads(0), m_stopping(false)
+        : m_transport(transport), m_lock(LOCK_LEVEL_UDPTRANSPORT_MESSAGEPUMP_LOCK),
+        m_activeThread(NULL), m_pastThreads(), m_queue(), m_condition(), m_spawnedThreads(0), m_stopping(false)
     {
         QCC_DbgTrace(("MessagePump::MessagePump()"));
     }
@@ -2162,7 +2164,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_disconnected(false),
         m_refCount(0),
         m_pushCount(0),
-        m_stateLock(),
+        m_stateLock(LOCK_LEVEL_UDPTRANSPORT_UDPENDPOINT_STATELOCK),
         m_wait(true)
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d., connectSpec=\"%s\")",
@@ -4406,7 +4408,9 @@ static bool IsUdpEpStarted(_UDPEndpoint* ep)
  */
 UDPTransport::UDPTransport(BusAttachment& bus) :
     Thread("UDPTransport"),
-    m_bus(bus), m_stopping(false), m_routerNameAdvertised(false), m_listener(0), m_foundCallback(m_listener), m_networkEventCallback(*this),
+    m_bus(bus), m_stopping(false), m_routerNameAdvertised(false), m_listener(nullptr),
+    m_preListLock(LOCK_LEVEL_UDPTRANSPORT_PRELISTLOCK), m_endpointListLock(LOCK_LEVEL_UDPTRANSPORT_ENDPOINTLISTLOCK), m_listenFdsLock(LOCK_LEVEL_UDPTRANSPORT_LISTENFDSLOCK),
+    m_foundCallback(m_listener), m_networkEventCallback(*this),
     m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false),
     m_connecting(0),
@@ -4415,10 +4419,13 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
     m_routerName(), m_maxRemoteClientsUdp(0), m_numUntrustedClients(0),
     m_authTimeout(0), m_sessionSetupTimeout(0),
-    m_maxAuth(0), m_maxConn(0), m_currAuth(0), m_currConn(0), m_connLock(), m_dynamicScoreUpdater(*this),
-    m_ardpLock(), m_cbLock(), m_handle(NULL),
+    m_maxAuth(0), m_maxConn(0), m_currAuth(0), m_currConn(0),
+    m_connLock(LOCK_LEVEL_UDPTRANSPORT_CONNLOCK), m_dynamicScoreUpdater(*this), m_ardpLock(LOCK_LEVEL_UDPTRANSPORT_ARDPLOCK),
+    m_cbLock(LOCK_LEVEL_CHECKING_DISABLED), // Try replacing LOCK_LEVEL_CHECKING_DISABLED with LOCK_LEVEL_UDPTRANSPORT_CBLOCK or similar value after ASACORE-2094 gets fixed.
+    m_handle(NULL),
     m_dispatcher(NULL), m_exitDispatcher(NULL),
-    m_workerCommandQueue(), m_workerCommandQueueLock(), m_exitWorkerCommandQueue(), m_exitWorkerCommandQueueLock()
+    m_workerCommandQueue(), m_workerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_WORKERCOMMANDQUEUELOCK),
+    m_exitWorkerCommandQueue(), m_exitWorkerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_EXITWORKERCOMMANDQUEUELOCK)
 #if WORKAROUND_1298
     , m_done1298(false)
 #endif

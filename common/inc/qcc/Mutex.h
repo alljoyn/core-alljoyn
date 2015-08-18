@@ -52,8 +52,10 @@ class Mutex {
   public:
     /**
      * The constructor initializes the underlying mutex implementation.
+     *
+     * @param _level Lock level used on Debug builds to detect out-of-order lock acquires.
      */
-    Mutex();
+    Mutex(int _level = 0);
 
     /**
      * The destructor will destroy the underlying mutex.
@@ -140,6 +142,15 @@ class Mutex {
      */
     Mutex& operator=(const Mutex& other);
 
+#ifndef NDEBUG
+    /**
+     * Set the LockChecker level value after the Mutex has been constructed.
+     *
+     * @param _level Lock level used on Debug builds to detect out-of-order lock acquires.
+     */
+    void SetLevel(int _level);
+#endif
+
   private:
 
 #if defined(QCC_OS_GROUP_POSIX)
@@ -155,8 +166,17 @@ class Mutex {
     void Destroy();         ///< Destroy the underlying OS mutex.
 
 #ifndef NDEBUG
-    const char* file;
-    uint32_t line;
+    const char* file;       ///< Source code file where this lock has been acquired.
+    uint32_t line;          ///< Source code line where this lock has been acquired.
+
+    /* If the level value is not 0 or -1, LockChecker verification is enabled for this lock */
+    int level;
+
+    /* Maximum number of recursive acquires, from any thread using this lock */
+    uint32_t maximumRecursionCount;
+
+    /* Allow the LockChecker class to access Mutex private members */
+    friend class LockChecker;
 #endif
 
     /* The condition variable class needs access to the underlying private mutex */
