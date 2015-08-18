@@ -35,7 +35,7 @@
 
 /**
  * Some products using AllJoyn source code(e.g.Microsoft Windows) can override
- * this macro to direct the log output to their product - specific log.
+ * this macro to direct the log output to their product-specific log.
  */
 #ifndef QCC_LogError
 /**
@@ -63,6 +63,11 @@
 #endif
 
 /**
+ * Some products using AllJoyn source code(e.g.Microsoft Windows) can override
+ * this macro to direct the log output to their product-specific log.
+ */
+#ifndef QCC_LogMsg
+/**
  * Macro for printing a log message. This will print its message even when
  * NDEBUG is defined (depending on the log level setting).
  * This macro is only intended for use in test applications where the
@@ -79,6 +84,7 @@
             _QCC_DbgPrintProcess(_ctx, DBG_HIGH_LEVEL, QCC_MODULE, __FILE__, __LINE__); \
         } \
     } while (0)
+#endif
 
 /**
  * Macro for high level debug prints.  This is intended for high level summary
