@@ -394,7 +394,7 @@ inline void ThreadClass::ClientRun() {
             QCC_LogError(status, ("CancelWhoImplements failed "));
         }
     } else {
-        status = bus->CancelFindAdvertisedName(s_wellKnownName.c_str());
+        status = bus->CancelFindAdvertisedNameByTransport(s_wellKnownName.c_str(), s_transports);
         if (status != ER_OK) {
             QCC_LogError(status, ("CancelFindAdvertisedName failed "));
         }

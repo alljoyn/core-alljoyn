@@ -486,7 +486,7 @@ int CDECL_CALL main(int argc, char** argv)
             return status;
         }
 
-        status = g_msgBus->FindAdvertisedName(g_findPrefix.c_str());
+        status = g_msgBus->FindAdvertisedNameByTransport(g_findPrefix.c_str(), transportOpts);
         if (status != ER_OK) {
             status = (status == ER_OK) ? ER_FAIL : status;
             QCC_LogError(status, ("FindAdvertisedName failed "));
