@@ -97,16 +97,12 @@ class PermissionConfigurator {
      * Constructor
      *
      */
-    PermissionConfigurator()
-    {
-    }
+    PermissionConfigurator(BusAttachment& bus);
 
     /**
      * virtual destructor
      */
-    virtual ~PermissionConfigurator()
-    {
-    }
+    virtual ~PermissionConfigurator();
 
     /**
      * Set the permission manifest for the application.
@@ -114,7 +110,7 @@ class PermissionConfigurator {
      * @params count the number of permission rules
      * @return ER_OK if successful; otherwise, an error code.
      */
-    virtual QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count) = 0;
+    QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count);
 
     /**
      * Retrieve the state of the application.
@@ -124,11 +120,7 @@ class PermissionConfigurator {
      *      - #ER_NOT_IMPLEMENTED if the method is not implemented
      *      - #ER_FEATURE_NOT_AVAILABLE if the value is not known
      */
-    virtual QStatus GetApplicationState(ApplicationState& applicationState)
-    {
-        QCC_UNUSED(applicationState);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus GetApplicationState(ApplicationState& applicationState);
 
     /**
      * Set the application state.  The state can't be changed from CLAIMED to
@@ -139,33 +131,21 @@ class PermissionConfigurator {
      *      - #ER_INVALID_APPLICATION_STATE if the state can't be changed
      *      - #ER_NOT_IMPLEMENTED if the method is not implemented
      */
-    virtual QStatus SetApplicationState(ApplicationState newState)
-    {
-        QCC_UNUSED(newState);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus SetApplicationState(ApplicationState newState);
 
     /**
      * Retrieve the public key info fo the signing key.
      * @param[out] the public key info
      * @return ER_OK if successful; otherwise, an error code.
      */
-    virtual QStatus GetSigningPublicKey(qcc::KeyInfoECC& keyInfo)
-    {
-        QCC_UNUSED(keyInfo);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus GetSigningPublicKey(qcc::KeyInfoECC& keyInfo);
 
     /**
      * Sign the X509 certificate using the signing key
      * @param[out] the certificate to be signed
      * @return ER_OK if successful; otherwise, an error code.
      */
-    virtual QStatus SignCertificate(qcc::CertificateX509& cert)
-    {
-        QCC_UNUSED(cert);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus SignCertificate(qcc::CertificateX509& cert);
 
     /**
      * Reset the Permission module by removing all the trust anchors, DSA keys,
@@ -174,10 +154,7 @@ class PermissionConfigurator {
      * @return ER_OK if successful; otherwise, an error code.
      * @see BusAttachment::EnablePeerSecurity
      */
-    virtual QStatus Reset()
-    {
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus Reset();
 
     /**
      * Get the connected peer ECC public key if the connection uses the
@@ -186,12 +163,7 @@ class PermissionConfigurator {
      * @param[out] the buffer to hold the ECC public key.
      * @return ER_OK if successful; otherwise, error code.
      */
-    virtual QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey)
-    {
-        QCC_UNUSED(guid);
-        QCC_UNUSED(publicKey);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey);
 
     /**
      * Set the authentication mechanisms the application supports for the
@@ -209,11 +181,7 @@ class PermissionConfigurator {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    virtual QStatus SetClaimCapabilities(PermissionConfigurator::ClaimCapabilities claimCapabilities)
-    {
-        QCC_UNUSED(claimCapabilities);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus SetClaimCapabilities(PermissionConfigurator::ClaimCapabilities claimCapabilities);
 
     /**
      * Get the authentication mechanisms the application supports for the
@@ -225,11 +193,7 @@ class PermissionConfigurator {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    virtual QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
-    {
-        QCC_UNUSED(claimCapabilities);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities);
 
     /**
      * Set the additional information on the claim capabilities.
@@ -246,11 +210,7 @@ class PermissionConfigurator {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    virtual QStatus SetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo)
-    {
-        QCC_UNUSED(additionalInfo);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus SetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo additionalInfo);
 
     /**
      * Get the additional information on the claim capabilities.
@@ -260,11 +220,30 @@ class PermissionConfigurator {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    virtual QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
-    {
-        QCC_UNUSED(additionalInfo);
-        return ER_NOT_IMPLEMENTED;
-    }
+    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo);
+
+  private:
+    /**
+     * @internal
+     * Class for internal state of a PermissionConfigurator object.
+     */
+    class Internal;
+
+    /**
+     * @internal
+     * Contains internal state of a PermissionConfigurator object.
+     */
+    PermissionConfigurator::Internal* m_internal;
+
+    /**
+     * Assignment operator is private.
+     */
+    PermissionConfigurator& operator=(const PermissionConfigurator& other);
+
+    /**
+     * Copy constructor is private.
+     */
+    PermissionConfigurator(const PermissionConfigurator& other);
 };
 
 }
