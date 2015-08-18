@@ -3231,3 +3231,31 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByConsumerManifest)
     ConsumerCannotGetTVCaption();
 }
 
+TEST_F(PermissionMgmtUseCaseTest, GetEmptyManifestTemplateBeforeClaim)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    MsgArg arg;
+    EXPECT_EQ(ER_OK, saProxy.GetManifestTemplate(arg)) << "GetManifestTemplate failed.";
+    ASSERT_EQ(static_cast<size_t>(0), arg.v_array.GetNumElements()) << "the manifest template is supposed to be empty.";
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetEmptyManifestTemplateDigestBeforeClaim)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    /* retrieve the manifest template digest and expect to be empty */
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, 0)) << "SetPermissionManifest GetManifestTemplateDigest failed.";
+}
+
+TEST_F(PermissionMgmtUseCaseTest, GetEmptyCertificateIdBeforeClaim)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    qcc::String serialNum;
+    KeyInfoNISTP256 keyInfo;
+    EXPECT_EQ(ER_OK, saProxy.GetIdentityCertificateId(serialNum, keyInfo));
+    EXPECT_TRUE(keyInfo.GetPublicKey()->empty());
+}
+

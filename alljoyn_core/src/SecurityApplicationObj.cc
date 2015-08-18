@@ -215,7 +215,7 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("ManifestTemplateDigest", propName)) {
             status = GetManifestTemplateDigest(val);
             if (ER_MANIFEST_NOT_FOUND == status) {
-                status = ER_BUS_NO_SUCH_PROPERTY;
+                status = val.Set("(yay)", qcc::SigInfo::ALGORITHM_ECDSA_SHA_256, 0, NULL);
             }
         } else if (0 == strcmp("EccPublicKey", propName)) {
             KeyInfoNISTP256 keyInfo;
@@ -229,7 +229,7 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("ManifestTemplate", propName)) {
             status = GetManifestTemplate(val);
             if (ER_MANIFEST_NOT_FOUND == status) {
-                status = ER_BUS_NO_SUCH_PROPERTY;
+                status = val.Set("a(ssa(syy))", 0, NULL);
             }
         } else if (0 == strcmp("ClaimCapabilities", propName)) {
             status = val.Set("q", claimCapabilities);
@@ -244,33 +244,32 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("Manifest", propName)) {
             PermissionPolicy::Rule* manifest = NULL;
             size_t manifestSize = 0;
+            /* retrieve the size of the manifest */
             status = RetrieveManifest(NULL, &manifestSize);
             if (ER_OK != status) {
                 if (ER_MANIFEST_NOT_FOUND == status) {
-                    status = ER_BUS_NO_SUCH_PROPERTY;
-                }
-            }
-            if (manifestSize > 0) {
-                manifest = new PermissionPolicy::Rule[manifestSize];
-            }
-            status = RetrieveManifest(manifest, &manifestSize);
-            if (ER_OK != status) {
-                delete [] manifest;
-                if (ER_MANIFEST_NOT_FOUND == status) {
-                    status = ER_BUS_NO_SUCH_PROPERTY;
+                    status = val.Set("a(ssa(syy))", 0, NULL);
                 }
             } else {
-                status = PermissionPolicy::GenerateRules(manifest, manifestSize, val);
-                delete [] manifest;
+                if (manifestSize > 0) {
+                    manifest = new PermissionPolicy::Rule[manifestSize];
+                }
+                status = RetrieveManifest(manifest, &manifestSize);
+                if (ER_OK != status) {
+                    delete [] manifest;
+                    if (ER_MANIFEST_NOT_FOUND == status) {
+                        status = val.Set("a(ssa(syy))", 0, NULL);
+                    }
+                } else {
+                    status = PermissionPolicy::GenerateRules(manifest, manifestSize, val);
+                    delete [] manifest;
+                }
             }
         } else if (0 == strcmp("IdentityCertificateId", propName)) {
             qcc::String serial;
             KeyInfoNISTP256 keyInfo;
             status = RetrieveIdentityCertificateId(serial, keyInfo);
-            if (ER_CERTIFICATE_NOT_FOUND == status) {
-                status = ER_BUS_NO_SUCH_PROPERTY;
-            }
-            if (ER_OK == status) {
+            if ((ER_OK == status) || (ER_CERTIFICATE_NOT_FOUND == status)) {
                 size_t coordSize = keyInfo.GetPublicKey()->GetCoordinateSize();
                 uint8_t* xData = new uint8_t[coordSize];
                 uint8_t* yData = new uint8_t[coordSize];
