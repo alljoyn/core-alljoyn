@@ -594,6 +594,9 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
         authorized = true; /* always allow send action */
         return true;  /* handled */
     }
+    if (!mbrName) {
+        return false;  /* not handled */
+    }
     if (strncmp(mbrName, "Version", 7) == 0) {
         authorized = true;
         return true;  /* handled */
@@ -674,10 +677,10 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
             }
         }
     }
-    /* Is the app claimed? If not claimed, no enforcement unless it's one of
-       the permission management interfaces */
+    /* Is the app claimed? If not claimed, no enforcement unless it's a
+        method call of one of the permission management interfaces */
     if (!permissionMgmtObj->HasTrustAnchors()) {
-        if (isPermissionMgmt) {
+        if (isPermissionMgmt && (request.mbrType == PermissionPolicy::Rule::Member::METHOD_CALL)) {
             return ER_PERMISSION_DENIED;
         }
         return ER_OK;
