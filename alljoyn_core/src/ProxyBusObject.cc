@@ -409,6 +409,28 @@ static void GetReplyErrorStatus(Message& reply, QStatus& status)
     }
 }
 
+/**
+ * Figure out whether the reply message is a permission denied error message.
+ * If so, the status code will be replaced with ER_PERMISSION_DENIED.
+ * @param reply the reply message
+ * @param[in,out] status the status code
+ */
+static void AdjustErrorForPermissionDenied(Message& reply, QStatus& status)
+{
+    if (ER_PERMISSION_DENIED == status) {
+        return;
+    }
+    if (ER_BUS_REPLY_IS_ERROR_MESSAGE != status) {
+        return;
+    }
+    QStatus tmpStatus = status;
+    GetReplyErrorStatus(reply, tmpStatus);
+    if (ER_PERMISSION_DENIED == tmpStatus) {
+        status = tmpStatus;
+        return;
+    }
+}
+
 static inline bool SecurityApplies(const ProxyBusObject* obj, const InterfaceDescription* ifc)
 {
     InterfaceSecurityPolicy ifcSec = ifc->GetSecurityPolicy();
@@ -1725,6 +1747,9 @@ MethodCallExit:
 
     if ((status == ER_OK) && internal->uniqueName.empty()) {
         internal->uniqueName = replyMsg->GetSender();
+    }
+    if (ER_OK != status) {
+        AdjustErrorForPermissionDenied(replyMsg, status);
     }
     return status;
 }
