@@ -28,6 +28,8 @@
 
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
+#include <qcc/LockCheckerLevel.h>
 #include <qcc/windows/utility.h>
 
 /** @internal */
@@ -38,10 +40,6 @@ using namespace qcc;
 void Mutex::Init()
 {
     assert(!isInitialized);
-#ifndef NDEBUG
-    file = NULL;
-    line = static_cast<uint32_t>(-1);
-#endif
     InitializeCriticalSection(&mutex);
     isInitialized = true;
 }
@@ -60,7 +58,25 @@ QStatus Mutex::Lock()
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED internally.
+     */
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
     EnterCriticalSection(&mutex);
+
+#ifndef NDEBUG
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.LockAcquired(this);
+    }
+#endif
+
     return ER_OK;
 }
 
@@ -70,6 +86,17 @@ QStatus Mutex::Unlock()
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED internally.
+     */
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.ReleasingLock(this);
+    }
+#endif
+
     LeaveCriticalSection(&mutex);
     return ER_OK;
 }
@@ -80,5 +107,27 @@ bool Mutex::TryLock()
     if (!isInitialized) {
         return false;
     }
-    return TryEnterCriticalSection(&mutex);
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED internally.
+     */
+    if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
+    BOOL acquired = TryEnterCriticalSection(&mutex);
+
+    if (acquired) {
+#ifndef NDEBUG
+        if (Thread::initialized && internal->m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+            Thread::GetThread()->lockChecker.LockAcquired(this);
+        }
+#endif
+        return true;
+    }
+
+    return false;
 }

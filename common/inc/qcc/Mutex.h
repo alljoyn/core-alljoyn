@@ -52,8 +52,10 @@ class Mutex {
   public:
     /**
      * The constructor initializes the underlying mutex implementation.
+     *
+     * @param _level Lock level used on Debug builds to detect out-of-order lock acquires.
      */
-    Mutex();
+    Mutex(int _level = 0);
 
     /**
      * The destructor will destroy the underlying mutex.
@@ -140,6 +142,20 @@ class Mutex {
      */
     Mutex& operator=(const Mutex& other);
 
+#ifndef NDEBUG
+    /**
+     * @internal
+     * Class for internal state of a Mutex object.
+     */
+    class Internal;
+
+    /**
+     * @internal
+     * Contains internal state of a Mutex object.
+     */
+    Internal* internal;
+#endif
+
   private:
 
 #if defined(QCC_OS_GROUP_POSIX)
@@ -153,11 +169,6 @@ class Mutex {
     bool isInitialized;     ///< true if mutex was successfully initialized.
     void Init();            ///< Initialize the underlying OS mutex.
     void Destroy();         ///< Destroy the underlying OS mutex.
-
-#ifndef NDEBUG
-    const char* file;
-    uint32_t line;
-#endif
 
     /* The condition variable class needs access to the underlying private mutex */
     friend class Condition;

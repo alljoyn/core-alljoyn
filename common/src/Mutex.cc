@@ -22,32 +22,67 @@
 #include <assert.h>
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
+#include <qcc/LockCheckerLevel.h>
 
 /** @internal */
 #define QCC_MODULE "MUTEX"
 
-using namespace qcc;
+namespace qcc {
 
-Mutex::Mutex() : isInitialized(false)
+#ifndef NDEBUG
+Mutex::Internal::Internal(int level)
+    : m_file(nullptr), m_line(-1), m_level(static_cast<LockCheckerLevel>(level)), m_maximumRecursionCount(0)
 {
+}
+
+void Mutex::Internal::SetLevel(LockCheckerLevel level)
+{
+    m_level = level;
+}
+#endif /* NDEBUG */
+
+Mutex::Mutex(int level) : isInitialized(false)
+{
+#ifndef NDEBUG
+    internal = new Internal(level);
+#else
+    QCC_UNUSED(level);
+#endif
+
     Init();
 }
 
 Mutex::Mutex(const Mutex& other) : isInitialized(false)
 {
+#ifndef NDEBUG
+    internal = new Internal(other.internal->m_level);
+#else
     QCC_UNUSED(other);
+#endif
+
     Init();
 }
 
 Mutex::~Mutex()
 {
+#ifndef NDEBUG
+    delete internal;
+    internal = nullptr;
+#endif
+
     Destroy();
 }
 
 Mutex& Mutex::operator=(const Mutex& other)
 {
+#ifndef NDEBUG
+    internal = new Internal(other.internal->m_level);
+#else
     QCC_UNUSED(other);
+#endif
+
     Destroy();
     Init();
     return *this;
@@ -69,8 +104,8 @@ QStatus Mutex::Lock(const char* file, uint32_t line)
     }
     if (status == ER_OK) {
         QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
-        this->file = file;
-        this->line = line;
+        this->internal->m_file = file;
+        this->internal->m_line = line;
     } else {
         QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
     }
@@ -86,10 +121,12 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
     return Unlock();
 #else
     assert(isInitialized);
-    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
-    this->file = NULL;
-    this->line = static_cast<uint32_t>(-1);
+    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%d)", file, line, this->internal->m_file, this->internal->m_line));
+    this->internal->m_file = file;
+    this->internal->m_line = line;
     return Unlock();
 #endif
 }
+
+} /* namespace */
 
