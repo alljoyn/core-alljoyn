@@ -28,6 +28,7 @@
 
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/LockCheckerLevel.h>
 #include <qcc/windows/utility.h>
 
 /** @internal */
@@ -60,7 +61,25 @@ QStatus Mutex::Lock()
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED internally.
+     */
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
     EnterCriticalSection(&mutex);
+
+#ifndef NDEBUG
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.LockAcquired(this);
+    }
+#endif
+
     return ER_OK;
 }
 
@@ -70,6 +89,17 @@ QStatus Mutex::Unlock()
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED internally.
+     */
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.ReleasingLock(this);
+    }
+#endif
+
     LeaveCriticalSection(&mutex);
     return ER_OK;
 }
@@ -80,5 +110,27 @@ bool Mutex::TryLock()
     if (!isInitialized) {
         return false;
     }
-    return TryEnterCriticalSection(&mutex);
+
+#ifndef NDEBUG
+    /*
+     * Check for LOCK_LEVEL_CHECKING_DISABLED before calling GetThread,
+     * because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED internally.
+     */
+    if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(this);
+    }
+#endif
+
+    BOOL acquired = TryEnterCriticalSection(&mutex);
+
+    if (acquired) {
+#ifndef NDEBUG
+        if (Thread::initialized && level != LOCK_LEVEL_CHECKING_DISABLED) {
+            Thread::GetThread()->lockChecker.LockAcquired(this);
+        }
+#endif
+        return true;
+    }
+
+    return false;
 }

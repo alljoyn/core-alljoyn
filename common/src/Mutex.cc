@@ -23,20 +23,32 @@
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
 #include <qcc/Debug.h>
+#include <qcc/LockCheckerLevel.h>
 
 /** @internal */
 #define QCC_MODULE "MUTEX"
 
 using namespace qcc;
 
-Mutex::Mutex() : isInitialized(false)
+Mutex::Mutex(int _level) : isInitialized(false)
 {
+#ifndef NDEBUG
+    level = _level;
+#else
+    QCC_UNUSED(_level);
+#endif
+
     Init();
 }
 
 Mutex::Mutex(const Mutex& other) : isInitialized(false)
 {
+#ifndef NDEBUG
+    level = other.level;
+#else
     QCC_UNUSED(other);
+#endif
+
     Init();
 }
 
@@ -47,7 +59,12 @@ Mutex::~Mutex()
 
 Mutex& Mutex::operator=(const Mutex& other)
 {
+#ifndef NDEBUG
+    level = other.level;
+#else
     QCC_UNUSED(other);
+#endif
+
     Destroy();
     Init();
     return *this;
