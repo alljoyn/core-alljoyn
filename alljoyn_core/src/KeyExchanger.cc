@@ -1172,9 +1172,15 @@ bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* c
             return false;
         }
     }
-    /* Leaf certificate must have exactly one EKU. */
+    /* Leaf certificate must have an AllJoyn EKU or be unrestricted.
+     * The reason to allow unrestricted here is for backwards compatibility
+     * with pre 1509 peers that use certificates without EKUs in Security 1.0
+     * contexts. Certificates created by AllJoyn in 1509 and above will always
+     * have an EKU indicating the type.
+     */
     if ((certs[0].GetType() != CertificateX509::IDENTITY_CERTIFICATE) &&
-        (certs[0].GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+        (certs[0].GetType() != CertificateX509::MEMBERSHIP_CERTIFICATE) &&
+        (certs[0].GetType() != CertificateX509::UNRESTRICTED_CERTIFICATE)) {
         QCC_DbgPrintf(("Invalid EKU"));
         return false;
     }
