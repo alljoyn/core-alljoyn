@@ -1,7 +1,7 @@
 /**
  * @file
  *
- * This file implements a FactoryResetListener subclass for use by the C API
+ * This file implements a PermissionConfigurationListener subclass for use by the C API
  */
 
 /******************************************************************************
@@ -20,8 +20,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <alljoyn/FactoryResetListener.h>
-#include <alljoyn_c/FactoryResetListener.h>
+#include <alljoyn/PermissionConfigurationListener.h>
+#include <alljoyn_c/PermissionConfigurationListener.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
@@ -37,12 +37,12 @@ namespace ajn {
  * Abstract base class implemented by AllJoyn users and called by AllJoyn to inform
  * users of bus related events.
  */
-class FactoryResetListenerCallbackC : public FactoryResetListener {
+class PermissionConfigurationListenerCallbackC : public PermissionConfigurationListener {
   public:
-    FactoryResetListenerCallbackC(const alljoyn_factoryresetlistener_callbacks* callbacks_in, const void* context_in)
+    PermissionConfigurationListenerCallbackC(const alljoyn_permissionconfigurationlistener_callbacks* callbacks_in, const void* context_in)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        memcpy(&callbacks, callbacks_in, sizeof(alljoyn_factoryresetlistener_callbacks));
+        memcpy(&callbacks, callbacks_in, sizeof(alljoyn_permissionconfigurationlistener_callbacks));
         context = context_in;
     }
 
@@ -55,26 +55,34 @@ class FactoryResetListenerCallbackC : public FactoryResetListener {
         return ER_OK;
     }
 
+    virtual void PolicyChanged()
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        if (callbacks.policy_changed != NULL) {
+            return callbacks.policy_changed(context);
+        }
+    }
+
   private:
-    alljoyn_factoryresetlistener_callbacks callbacks;
+    alljoyn_permissionconfigurationlistener_callbacks callbacks;
     const void* context;
 };
 
 }
 
-struct _alljoyn_factoryresetlistener_handle {
+struct _alljoyn_permissionconfigurationlistener_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_factoryresetlistener AJ_CALL alljoyn_factoryresetlistener_create(const alljoyn_factoryresetlistener_callbacks* callbacks, const void* context)
+alljoyn_permissionconfigurationlistener AJ_CALL alljoyn_permissionconfigurationlistener_create(const alljoyn_permissionconfigurationlistener_callbacks* callbacks, const void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return (alljoyn_factoryresetlistener) new ajn::FactoryResetListenerCallbackC(callbacks, context);
+    return (alljoyn_permissionconfigurationlistener) new ajn::PermissionConfigurationListenerCallbackC(callbacks, context);
 }
 
-void AJ_CALL alljoyn_factoryresetlistener_destroy(alljoyn_factoryresetlistener listener)
+void AJ_CALL alljoyn_permissionconfigurationlistener_destroy(alljoyn_permissionconfigurationlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     assert(listener != NULL && "listener parameter must not be NULL");
-    delete (ajn::FactoryResetListenerCallbackC*)listener;
+    delete (ajn::PermissionConfigurationListenerCallbackC*)listener;
 }

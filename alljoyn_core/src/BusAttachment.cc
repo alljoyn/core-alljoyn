@@ -181,7 +181,7 @@ BusAttachment::Internal::Internal(const char* appName,
     hostedSessions(),
     hostedSessionsLock(),
     observerManager(NULL),
-    factoryResetListener(NULL)
+    permissionConfigurationListener(NULL)
 {
     /*
      * Bus needs a pointer to this internal object.
@@ -213,9 +213,9 @@ BusAttachment::Internal::~Internal()
         delete observerManager;
         observerManager = NULL;
     }
-    if (factoryResetListener) {
-        delete factoryResetListener;
-        factoryResetListener = NULL;
+    if (permissionConfigurationListener) {
+        delete permissionConfigurationListener;
+        permissionConfigurationListener = NULL;
     }
     /*
      * Make sure that all threads that might possibly access this object have been joined.
@@ -1035,11 +1035,11 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
                                           AuthListener* authListener,
                                           const char* keyStoreFileName,
                                           bool isShared,
-                                          FactoryResetListener* factoryResetListener)
+                                          PermissionConfigurationListener* permissionConfigurationListener)
 {
     QStatus status = ER_OK;
 
-    busInternal->SetFactoryResetListener(factoryResetListener);
+    busInternal->SetPermissionConfigurationListener(permissionConfigurationListener);
 
     /* If there are no auth mechanisms peer security is being disabled. */
     if (authMechanisms) {
@@ -3315,27 +3315,43 @@ void BusAttachment::Internal::Shutdown()
     clientTransportsContainer = NULL;
 }
 
-QStatus BusAttachment::Internal::CallFactoryResetListener()
+QStatus BusAttachment::Internal::CallFactoryResetCallback()
 {
     QStatus status = ER_OK;
 
-    factoryResetListenerLock.Lock(MUTEX_CONTEXT);
-    if (factoryResetListener) {
-        FactoryResetListener* listener = (**factoryResetListener);
+    permissionConfigurationListenerLock.Lock(MUTEX_CONTEXT);
+    if (permissionConfigurationListener) {
+        PermissionConfigurationListener* listener = (**permissionConfigurationListener);
         if (listener) {
             status = listener->FactoryReset();
+            if (status == ER_NOT_IMPLEMENTED) {
+                // Treat not implemented the same as no listener registered.
+                status = ER_OK;
+            }
         }
     }
-    factoryResetListenerLock.Unlock(MUTEX_CONTEXT);
+    permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
-QStatus BusAttachment::Internal::SetFactoryResetListener(FactoryResetListener* listener)
+void BusAttachment::Internal::CallPolicyChangedCallback()
 {
-    factoryResetListenerLock.Lock(MUTEX_CONTEXT);
-    delete factoryResetListener;
-    factoryResetListener = new ProtectedFactoryResetListener(listener);
-    factoryResetListenerLock.Unlock(MUTEX_CONTEXT);
+    permissionConfigurationListenerLock.Lock(MUTEX_CONTEXT);
+    if (permissionConfigurationListener) {
+        PermissionConfigurationListener* listener = (**permissionConfigurationListener);
+        if (listener) {
+            listener->PolicyChanged();
+        }
+    }
+    permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);
+}
+
+QStatus BusAttachment::Internal::SetPermissionConfigurationListener(PermissionConfigurationListener* listener)
+{
+    permissionConfigurationListenerLock.Lock(MUTEX_CONTEXT);
+    delete permissionConfigurationListener;
+    permissionConfigurationListener = new ProtectedPermissionConfigurationListener(listener);
+    permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);
     return ER_OK;
 }
 

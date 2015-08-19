@@ -177,6 +177,9 @@ void PermissionMgmtObj::PolicyChanged(PermissionPolicy* policy)
     ca->GetGuid(localGUID);
     bus.GetInternal().GetPermissionManager().SetPolicy(policy);
     ManageTrustAnchors(policy);
+
+    /* Finally, inform the application that it's security policy has changed. */
+    bus.GetInternal().CallPolicyChangedCallback();
 }
 
 static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo)
@@ -2163,7 +2166,7 @@ QStatus PermissionMgmtObj::Reset()
     /* First call out to the application to give it a chance to reset
      * any of its own persisted state, to avoid it leaking out to others.
      */
-    QStatus status = bus.GetInternal().CallFactoryResetListener();
+    QStatus status = bus.GetInternal().CallFactoryResetCallback();
     if (ER_OK != status) {
         return status;
     }
