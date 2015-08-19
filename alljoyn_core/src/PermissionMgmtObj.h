@@ -608,6 +608,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus LoadManifestTemplate(PermissionPolicy& policy);
     bool HasDefaultPolicy();
     bool IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
+    QStatus LookForManifestTemplate(bool& exist);
 
     /**
      * Bind to an exclusive port for PermissionMgmt object.
