@@ -2331,6 +2331,22 @@ TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithBadManifestDigest)
     ReplaceIdentityCertWithBadManifestDigest(adminBus, serviceBus);
 }
 
+TEST_F(PermissionMgmtUseCaseTest, TurnStateFromNeedUpdateToClaimed)
+{
+    Claims(false);
+    SetApplicationStateSignalReceived(false);
+    EXPECT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::NEED_UPDATE));
+    TestStateSignalReception();
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::NEED_UPDATE, applicationState);
+    SetApplicationStateSignalReceived(false);
+    ReplaceIdentityCert(adminBus, serviceBus);
+    TestStateSignalReception();
+    EXPECT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+}
+
 /*
  *  Case: claiming, install policy, install wrong membership
  */

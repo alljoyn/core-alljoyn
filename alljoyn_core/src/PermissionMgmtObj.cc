@@ -1153,6 +1153,12 @@ Exit:
         msg->SetMessageEncryptionNotification(callbackToClearSecrets);
     }
     MethodReply(msg, status);
+    if (ER_OK == status) {
+        /* now that there is a new identity and manifest */
+        if (applicationState == PermissionConfigurator::NEED_UPDATE) {
+            SetApplicationState(PermissionConfigurator::CLAIMED);
+        }
+    }
 }
 
 QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
