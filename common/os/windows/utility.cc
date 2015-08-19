@@ -84,3 +84,9 @@ wchar_t* MultibyteToWideString(const char* str)
     }
     return buffer;
 }
+
+char* aj_strncpy(char* destination, const char* source, size_t elementCount)
+{
+    strncpy_s(destination, elementCount, source, _TRUNCATE);
+    return destination;
+}

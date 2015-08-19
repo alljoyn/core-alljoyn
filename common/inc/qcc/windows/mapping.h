@@ -29,16 +29,25 @@
 #if ((_MSC_VER <= 1800) || defined(DO_SNPRINTF_MAPPING))
 
 /**
- * Map snprintf to _snprintf
+ * Map snprintf to _snprintf_s
  *
  * snprintf does not properly map in Windows; this is needed to ensure calls to
  * snprintf(char *str, size_t size, const char *format, ...) will compile in
  * Windows.
  */
-#define snprintf _snprintf
+#define snprintf(buffer, sizeOfBuffer, format, ...) \
+    _snprintf_s(buffer, sizeOfBuffer, format, _TRUNCATE, __VA_ARGS__)
 
 #endif
 /// @endcond
+
+/**
+ * Map strncpy to strncpy_s (indirectly since we need to return char* and not errno_t)
+ *
+ * strncpy is deemed unsafe and is banned on Windows.
+ */
+char* aj_strncpy(char* destination, const char* source, size_t elementCount);
+#define strncpy aj_strncpy
 
 /**
  * Map stroll to _strtoi64
