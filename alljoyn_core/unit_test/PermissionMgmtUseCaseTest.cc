@@ -1210,9 +1210,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* factory reset */
         PermissionConfigurator& pc = serviceBus.GetPermissionConfigurator();
         SetFactoryResetReceived(false);
+        SetPolicyChangedReceived(false);
         status = pc.Reset();
-        EXPECT_EQ(true, GetFactoryResetReceived());
+        EXPECT_TRUE(GetFactoryResetReceived());
+        EXPECT_TRUE(GetPolicyChangedReceived());
         EXPECT_EQ(ER_OK, status) << "  Reset failed.  Actual Status: " << QCC_StatusText(status);
+
         SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         status = PermissionMgmtTestHelper::JoinPeerSession(adminBus, serviceBus, sessionId);
@@ -1244,10 +1247,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState) << "  ApplicationState is not CLAIMABLE";
 
         /* try claiming with state claimable.  Expect to succeed */
+        SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", false)) << " InvokeClaim failed.";
+        EXPECT_TRUE(GetPolicyChangedReceived());
 
         /* try to claim one more time */
+        SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", true)) << " InvokeClaim is not supposed to succeed.";
+        EXPECT_FALSE(GetPolicyChangedReceived());
 
         ECCPublicKey claimedPubKey2;
         /* retrieve public key from claimed app to validate that it is not changed */
@@ -1266,19 +1273,26 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* factory reset */
         PermissionConfigurator& pc = consumerBus.GetPermissionConfigurator();
         SetFactoryResetReceived(false);
+        SetPolicyChangedReceived(false);
         status = pc.Reset();
-        EXPECT_EQ(true, GetFactoryResetReceived());
+        EXPECT_TRUE(GetFactoryResetReceived());
+        EXPECT_TRUE(GetPolicyChangedReceived());
         EXPECT_EQ(ER_OK, status) << "  Reset failed.  Actual Status: " << QCC_StatusText(status);
+
         SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         status = PermissionMgmtTestHelper::JoinPeerSession(adminBus, consumerBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
 
         SetApplicationStateSignalReceived(false);
+        SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(false, adminBus, consumerBus, "3030303", "Consumer", false, &adminBus)) << " InvokeClaim failed.";
+        EXPECT_TRUE(GetPolicyChangedReceived());
 
         /* try to claim a second time */
+        SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(false, adminBus, consumerBus, "3030303", "Consumer", true, &adminBus)) << "Claim is not supposed to succeed.";
+        EXPECT_FALSE(GetPolicyChangedReceived());
 
         TestStateSignalReception();
         /* add the consumer admin security group membership cert to consumer */
@@ -1297,15 +1311,20 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* factory reset */
         PermissionConfigurator& pc = remoteControlBus.GetPermissionConfigurator();
         SetFactoryResetReceived(false);
+        SetPolicyChangedReceived(false);
         status = pc.Reset();
-        EXPECT_EQ(true, GetFactoryResetReceived());
+        EXPECT_TRUE(GetFactoryResetReceived());
+        EXPECT_TRUE(GetPolicyChangedReceived());
         EXPECT_EQ(ER_OK, status) << "  Reset failed.  Actual Status: " << QCC_StatusText(status);
+
         SessionId sessionId;
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
         status = PermissionMgmtTestHelper::JoinPeerSession(consumerBus, remoteControlBus, sessionId);
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
         SetApplicationStateSignalReceived(false);
+        SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus)) << " InvokeClaim failed.";
+        EXPECT_TRUE(GetPolicyChangedReceived());
 
         TestStateSignalReception();
     }

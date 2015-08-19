@@ -29,7 +29,7 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_PATH = "/org/alljoyn/test";
-static const void* FACTORY_RESET_CONTEXT = ((const void*) 0x12345678);
+static const void* PERMISSION_LISTENER_CONTEXT = ((const void*) 0x12345678);
 
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
@@ -63,6 +63,7 @@ static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacede
 static QCC_BOOL requestcredentials_service_flag = QCC_FALSE;
 static QCC_BOOL authenticationcomplete_service_flag = QCC_FALSE;
 static QCC_BOOL factoryreset_service_flag = QCC_FALSE;
+static QCC_BOOL policychanged_service_flag = QCC_FALSE;
 
 static QCC_BOOL requestcredentials_client_flag = QCC_FALSE;
 static QCC_BOOL authenticationcomplete_client_flag = QCC_FALSE;
@@ -207,6 +208,7 @@ class ObjectSecurityTest : public testing::Test {
         requestcredentials_service_flag = QCC_FALSE;
         authenticationcomplete_service_flag = QCC_FALSE;
         factoryreset_service_flag = QCC_FALSE;
+        policychanged_service_flag = QCC_FALSE;
 
         requestcredentials_client_flag = QCC_FALSE;
         authenticationcomplete_client_flag = QCC_FALSE;
@@ -276,10 +278,15 @@ static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(
     authenticationcomplete_client_flag = QCC_TRUE;
 }
 
-static QStatus AJ_CALL factoryresetlistener_factoryreset(const void* context) {
-    EXPECT_EQ(context, FACTORY_RESET_CONTEXT);
+static QStatus AJ_CALL permissionconfigurationlistener_factoryreset(const void* context) {
+    EXPECT_EQ(context, PERMISSION_LISTENER_CONTEXT);
     factoryreset_service_flag = QCC_TRUE;
     return ER_OK;
+}
+
+static void AJ_CALL permissionconfigurationlistener_policychanged(const void* context) {
+    EXPECT_EQ(context, PERMISSION_LISTENER_CONTEXT);
+    policychanged_service_flag = QCC_TRUE;
 }
 
 TEST_F(ObjectSecurityTest, insecure_interface_secure_object) {
@@ -433,7 +440,7 @@ TEST_F(ObjectSecurityTest, factory_reset) {
     ResetAuthFlags();
 
     /*
-     * If an interface is created without security it should default to an
+     * If an interface is created without security, it should default to an
      * inherit security policy.
      */
     EXPECT_EQ(AJ_IFC_SECURITY_INHERIT, alljoyn_interfacedescription_getsecuritypolicy(service_intf));
@@ -450,14 +457,22 @@ TEST_F(ObjectSecurityTest, factory_reset) {
         NULL,     //securityviolation
         alljoyn_authlistener_authenticationcomplete_service_srp_keyx     //authenticationcomplete
     };
-    alljoyn_factoryresetlistener_callbacks factoryresetlistener_cb_service = {
-        factoryresetlistener_factoryreset
+    alljoyn_permissionconfigurationlistener_callbacks permissionconfigurationlistener_cb_service = {
+        permissionconfigurationlistener_factoryreset,
+        permissionconfigurationlistener_policychanged
     };
 
     alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, NULL);
-    alljoyn_factoryresetlistener servicefactoryresetlistener = alljoyn_factoryresetlistener_create(&factoryresetlistener_cb_service, FACTORY_RESET_CONTEXT);
+    alljoyn_permissionconfigurationlistener servicepermissionconfigurationlistener =
+        alljoyn_permissionconfigurationlistener_create(&permissionconfigurationlistener_cb_service, PERMISSION_LISTENER_CONTEXT);
 
-    status = alljoyn_busattachment_enablepeersecuritywithfactoryresetlistener(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE, servicefactoryresetlistener);
+    status = alljoyn_busattachment_enablepeersecuritywithpermissionconfigurationlistener(
+        servicebus,
+        "ALLJOYN_SRP_KEYX",
+        serviceauthlistener,
+        NULL,
+        QCC_FALSE,
+        servicepermissionconfigurationlistener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     /* Clear the key store between runs. */
@@ -485,13 +500,14 @@ TEST_F(ObjectSecurityTest, factory_reset) {
 
     EXPECT_TRUE(requestcredentials_service_flag);
     EXPECT_TRUE(authenticationcomplete_service_flag);
+    EXPECT_TRUE(policychanged_service_flag);
     /* Reset is not allowed before the application is claimed */
     EXPECT_FALSE(factoryreset_service_flag);
 
     EXPECT_TRUE(requestcredentials_client_flag);
     EXPECT_TRUE(authenticationcomplete_client_flag);
 
-    alljoyn_factoryresetlistener_destroy(servicefactoryresetlistener);
+    alljoyn_permissionconfigurationlistener_destroy(servicepermissionconfigurationlistener);
     alljoyn_authlistener_destroy(serviceauthlistener);
     alljoyn_authlistener_destroy(clientauthlistener);
 }
