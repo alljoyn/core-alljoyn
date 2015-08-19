@@ -176,26 +176,6 @@ QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultP
     return ER_OK;
 }
 
-static const char ecdsaPrivateKeyPEM[] = {
-    "-----BEGIN EC PRIVATE KEY-----\n"
-    "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n"
-    "AwEH\n"
-    "-----END EC PRIVATE KEY-----"
-};
-
-static const char ecdsaCertChainX509PEM[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n"
-    "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n"
-    "Fw0xNjAyMjYyMTU1MjVaMCsxKTAnBgNVBAMMIDZhYWM5MjQwNDNjYjc5NmQ2ZGIy\n"
-    "NmRlYmRkMGM5OWJkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEP/HbYga30Afm\n"
-    "0fB6g7KaB5Vr5CDyEkgmlif/PTsgwM2KKCMiAfcfto0+L1N0kvyAUgff6sLtTHU3\n"
-    "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n"
-    "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n"
-    "0GOQizWlQm8mpKaQ3uE=\n"
-    "-----END CERTIFICATE-----"
-};
-
 class SecurityOtherECDHE_ECDSAAuthListener : public AuthListener {
   public:
     SecurityOtherECDHE_ECDSAAuthListener() :
@@ -204,6 +184,20 @@ class SecurityOtherECDHE_ECDSAAuthListener : public AuthListener {
         authenticationSuccessfull(false),
         securityViolationCalled(false)
     {
+        cryptoECC.GenerateDSAKeyPair();
+        CertificateX509::ValidPeriod validity;
+        validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+        validity.validTo = validity.validFrom + 24 * 3600;
+        CreateCert("1000",
+                   "self",
+                   "organization",
+                   cryptoECC.GetDSAPrivateKey(),
+                   cryptoECC.GetDSAPublicKey(),
+                   "self",
+                   cryptoECC.GetDSAPublicKey(),
+                   validity,
+                   false,
+                   identityCert);
     }
 
     QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
@@ -216,12 +210,12 @@ class SecurityOtherECDHE_ECDSAAuthListener : public AuthListener {
         Credentials creds;
         if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
             if ((credMask& AuthListener::CRED_PRIVATE_KEY) == AuthListener::CRED_PRIVATE_KEY) {
-                String pk(ecdsaPrivateKeyPEM, strlen(ecdsaPrivateKeyPEM));
+                String pk;
+                CertificateX509::EncodePrivateKeyPEM(cryptoECC.GetDSAPrivateKey(), pk);
                 creds.SetPrivateKey(pk);
             }
             if ((credMask& AuthListener::CRED_CERT_CHAIN) == AuthListener::CRED_CERT_CHAIN) {
-                String cert(ecdsaCertChainX509PEM, strlen(ecdsaCertChainX509PEM));
-                creds.SetCertChain(cert);
+                creds.SetCertChain(identityCert.GetPEM());
             }
             return RequestCredentialsResponse(context, true, creds);
         }
@@ -254,10 +248,41 @@ class SecurityOtherECDHE_ECDSAAuthListener : public AuthListener {
         QCC_UNUSED(msg);
         securityViolationCalled = true;
     }
+
+    QStatus CreateCert(const qcc::String& serial,
+                       const qcc::String& issuer,
+                       const qcc::String& organization,
+                       const ECCPrivateKey* issuerPrivateKey,
+                       const ECCPublicKey* issuerPublicKey,
+                       const qcc::String& subject,
+                       const ECCPublicKey* subjectPubKey,
+                       CertificateX509::ValidPeriod& validity,
+                       bool isCA,
+                       CertificateX509& cert)
+    {
+        QStatus status = ER_CRYPTO_ERROR;
+
+        cert.SetSerial((const uint8_t*)serial.data(), serial.size());
+        cert.SetIssuerCN((const uint8_t*) issuer.c_str(), issuer.length());
+        cert.SetSubjectCN((const uint8_t*) subject.c_str(), subject.length());
+        if (!organization.empty()) {
+            cert.SetIssuerOU((const uint8_t*) organization.c_str(), organization.length());
+            cert.SetSubjectOU((const uint8_t*) organization.c_str(), organization.length());
+        }
+        cert.SetSubjectPublicKey(subjectPubKey);
+        cert.SetCA(isCA);
+        cert.SetValidity(&validity);
+        status = cert.SignAndGenerateAuthorityKeyId(issuerPrivateKey, issuerPublicKey);
+        return status;
+    }
+
     bool requestCredentialsCalled;
     bool verifyCredentialsCalled;
     bool authenticationSuccessfull;
     bool securityViolationCalled;
+
+    Crypto_ECC cryptoECC;
+    IdentityCertificate identityCert;
 
 };
 
@@ -727,4 +752,443 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
 
         EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
     }
+}
+
+class SecurityOtherECDHE_NULLAuthListener : public AuthListener {
+  public:
+    SecurityOtherECDHE_NULLAuthListener() :
+        requestCredentialsCalled(false),
+        verifyCredentialsCalled(false),
+        authenticationSuccessfull(false),
+        securityViolationCalled(false)
+    {
+    }
+
+    QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
+    {
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(userId);
+        QCC_UNUSED(credMask);
+        requestCredentialsCalled = true;
+        Credentials creds;
+        if (strcmp(authMechanism, "ALLJOYN_ECDHE_NULL") == 0) {
+            return RequestCredentialsResponse(context, true, creds);
+        }
+        return RequestCredentialsResponse(context, false, creds);
+    }
+    QStatus VerifyCredentialsAsync(const char* authMechanism, const char* authPeer, const Credentials& creds, void* context) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(creds);
+        verifyCredentialsCalled = true;
+        return VerifyCredentialsResponse(context, false);
+    }
+
+    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(success);
+        if (success) {
+            authenticationSuccessfull = true;
+        }
+    }
+
+    void SecurityViolation(QStatus status, const Message& msg) {
+        QCC_UNUSED(status);
+        QCC_UNUSED(msg);
+        securityViolationCalled = true;
+    }
+    bool requestCredentialsCalled;
+    bool verifyCredentialsCalled;
+    bool authenticationSuccessfull;
+    bool securityViolationCalled;
+
+};
+
+/*
+ * Purpose:
+ * Before Claiming, properties on org.alljoyn.Bus.Security.Application should be
+ * accessible via ECDHE_NULL auth .mechanism.
+ *
+ * Setup:
+ * DUT is not claimed.
+ *
+ * DUT and a peer bus establish an ECDHE_NULL based session.
+ * A bus calls GetAll properties on org.alljoyn.Bus.Security.Application interface.
+ *
+ * Verification:
+ * The following properties should be fetched:
+ * "Version"  Expected value=1
+ * "ApplicationState"  Expected value="Claimable"
+ * "ManifestTemplateDigest"  Expected value=Unknown
+ * "EccPublicKey"  Expected value=Public key of DUT
+ * "ManufacturerCertificate"  Expected value=empty array
+ * "ManifestTemplate"  Expected value=Unknown
+ * "ClaimCapabilities"  Expected value=Unknown
+ */
+TEST(SecurityOtherTest, call_security_application_over_ECDHE_NULL) {
+    BusAttachment peer1Bus("SecurityOtherPeer1", true);
+    BusAttachment peer2Bus("SecurityOtherPeer2", true);
+
+    EXPECT_EQ(ER_OK, peer1Bus.Start());
+    EXPECT_EQ(ER_OK, peer1Bus.Connect());
+    EXPECT_EQ(ER_OK, peer2Bus.Start());
+    EXPECT_EQ(ER_OK, peer2Bus.Connect());
+
+    InMemoryKeyStoreListener peer1KeyStoreListener;
+    InMemoryKeyStoreListener peer2KeyStoreListener;
+
+    // Register in memory keystore listeners
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+
+    SecurityOtherECDHE_NULLAuthListener peer1AuthListener;
+    SecurityOtherECDHE_NULLAuthListener peer2AuthListener;
+
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &peer2AuthListener));
+
+    SessionOpts opts;
+    SessionPort sessionPort = 42;
+    SecurityOtherTestSessionPortListener sessionPortListener;
+    EXPECT_EQ(ER_OK, peer2Bus.BindSessionPort(sessionPort, opts, sessionPortListener));
+
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), sessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
+
+    // "Version"  Expected value=1
+    uint16_t secuirtyApplicaitonVersion = 0;
+    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
+    EXPECT_EQ(1, secuirtyApplicaitonVersion);
+
+    // "ApplicationState"  Expected value="Claimable"
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, proxy.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+
+    // "ManifestTemplateDigest"  Expected value=Unknown
+    uint8_t manifestTemplateDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_BAD_ARG_2, proxy.GetManifestTemplateDigest(manifestTemplateDigest, qcc::Crypto_SHA256::DIGEST_SIZE));
+
+    // "EccPublicKey"  Expected value=Public key of DUT
+    qcc::ECCPublicKey eccPublicKey;
+    EXPECT_EQ(ER_OK, proxy.GetEccPublicKey(eccPublicKey));
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    KeyInfoNISTP256 peer2KeyInfo;
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2KeyInfo));
+    EXPECT_EQ(*peer2KeyInfo.GetPublicKey(), eccPublicKey);
+
+    // "ManufacturerCertificate"  Expected value=empty array
+    MsgArg manufacturerCertificate;
+    EXPECT_EQ(ER_OK, proxy.GetManufacturerCertificate(manufacturerCertificate));
+    EXPECT_EQ((size_t)0, manufacturerCertificate.v_array.GetNumElements());
+
+    // "ManifestTemplate"  Expected value=Unknown
+    MsgArg manifestTemplate;
+    EXPECT_EQ(ER_OK, proxy.GetManifestTemplate(manifestTemplate));
+    // manifestTemplate should be empty
+    EXPECT_EQ((size_t)0, manifestTemplate.v_array.GetNumElements());
+
+    // "ClaimCapabilities"  Expected value=Unknown
+    PermissionConfigurator::ClaimCapabilities claimCapabilities;
+    EXPECT_EQ(ER_OK, proxy.GetClaimCapabilities(claimCapabilities));
+    EXPECT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCapabilities);
+
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(org::alljoyn::Bus::Security::Application::InterfaceName, props));
+    // check GetAllProperties contains the values from org.alljoyn.Bus.Security.Application interface
+    // The value of each element was already checked above. Just check the GetAllProperties
+    // have an entry for each property we are interested in.
+    MsgArg* propArg;
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Version", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ApplicationState", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManifestTemplateDigest", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "EccPublicKey", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManufacturerCertificate", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManifestTemplate", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ClaimCapabilities", &propArg)) << props.ToString().c_str();
+
+    peer1Bus.Stop();
+    peer1Bus.Join();
+    peer2Bus.Stop();
+    peer2Bus.Join();
+}
+
+class SecurityOtherSRPAuthListener : public AuthListener {
+  public:
+    SecurityOtherSRPAuthListener() :
+        requestCredentialsCalled(false),
+        verifyCredentialsCalled(false),
+        authenticationSuccessfull(false),
+        securityViolationCalled(false)
+    {
+    }
+
+    QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
+    {
+        QCC_UNUSED(userId);
+        QCC_UNUSED(authCount);
+        QCC_UNUSED(authPeer);
+        requestCredentialsCalled = true;
+        Credentials creds;
+        if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
+            if (credMask & AuthListener::CRED_PASSWORD) {
+                creds.SetPassword("123456");
+            }
+            return RequestCredentialsResponse(context, true, creds);
+        }
+        return RequestCredentialsResponse(context, false, creds);
+    }
+    QStatus VerifyCredentialsAsync(const char* authMechanism, const char* authPeer, const Credentials& creds, void* context) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(creds);
+        verifyCredentialsCalled = true;
+        return VerifyCredentialsResponse(context, false);
+    }
+
+    void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
+        QCC_UNUSED(authMechanism);
+        QCC_UNUSED(authPeer);
+        QCC_UNUSED(success);
+        if (success) {
+            authenticationSuccessfull = true;
+        }
+    }
+
+    void SecurityViolation(QStatus status, const Message& msg) {
+        QCC_UNUSED(status);
+        QCC_UNUSED(msg);
+        securityViolationCalled = true;
+    }
+    bool requestCredentialsCalled;
+    bool verifyCredentialsCalled;
+    bool authenticationSuccessfull;
+    bool securityViolationCalled;
+
+};
+
+/*
+ * Purpose:
+ * Before Claiming, properties on org.alljoyn.Bus.Security.Application should be
+ * accessible via SRP auth .mechanism.
+ *
+ * Setup:
+ * DUT is not claimed.
+ *
+ * DUT and a peer bus establish an SRP based session.
+ * A bus calls GetAll properties on org.alljoyn.Bus.Security.Application interface.
+ *
+ * Verification:
+ * The following properties should be fetched:
+ * "Version"  Expected value=1
+ * "ApplicationState"  Expected value="Claimable"
+ * "ManifestTemplateDigest"  Expected value=Unknown
+ * "EccPublicKey"  Expected value=Public key of DUT
+ * "ManufacturerCertificate"  Expected value=empty array
+ * "ManifestTemplate"  Expected value=Unknown
+ * "ClaimCapabilities"  Expected value=Unknown
+ */
+TEST(SecurityOtherTest, call_security_application_over_SRP) {
+    BusAttachment peer1Bus("SecurityOtherPeer1", true);
+    BusAttachment peer2Bus("SecurityOtherPeer2", true);
+
+    EXPECT_EQ(ER_OK, peer1Bus.Start());
+    EXPECT_EQ(ER_OK, peer1Bus.Connect());
+    EXPECT_EQ(ER_OK, peer2Bus.Start());
+    EXPECT_EQ(ER_OK, peer2Bus.Connect());
+
+    InMemoryKeyStoreListener peer1KeyStoreListener;
+    InMemoryKeyStoreListener peer2KeyStoreListener;
+
+    // Register in memory keystore listeners
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+
+    SecurityOtherSRPAuthListener peer1AuthListener;
+    SecurityOtherSRPAuthListener peer2AuthListener;
+
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", &peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", &peer2AuthListener));
+
+    SessionOpts opts;
+    SessionPort sessionPort = 42;
+    SecurityOtherTestSessionPortListener sessionPortListener;
+    EXPECT_EQ(ER_OK, peer2Bus.BindSessionPort(sessionPort, opts, sessionPortListener));
+
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), sessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
+
+    // "Version"  Expected value=1
+    uint16_t secuirtyApplicaitonVersion = 0;
+    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
+    EXPECT_EQ(1, secuirtyApplicaitonVersion);
+
+    // "ApplicationState"  Expected value="Claimable"
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, proxy.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+
+    // "ManifestTemplateDigest"  Expected value=Unknown
+    uint8_t manifestTemplateDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_BAD_ARG_2, proxy.GetManifestTemplateDigest(manifestTemplateDigest, qcc::Crypto_SHA256::DIGEST_SIZE));
+
+    // "EccPublicKey"  Expected value=Public key of DUT
+    qcc::ECCPublicKey eccPublicKey;
+    EXPECT_EQ(ER_OK, proxy.GetEccPublicKey(eccPublicKey));
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    KeyInfoNISTP256 peer2KeyInfo;
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2KeyInfo));
+    EXPECT_EQ(*peer2KeyInfo.GetPublicKey(), eccPublicKey);
+
+    // "ManufacturerCertificate"  Expected value=empty array
+    MsgArg manufacturerCertificate;
+    EXPECT_EQ(ER_OK, proxy.GetManufacturerCertificate(manufacturerCertificate));
+    EXPECT_EQ((size_t)0, manufacturerCertificate.v_array.GetNumElements());
+
+    // "ManifestTemplate"  Expected value=Unknown
+    MsgArg manifestTemplate;
+    EXPECT_EQ(ER_OK, proxy.GetManifestTemplate(manifestTemplate));
+    // manifestTemplate should be empty
+    EXPECT_EQ((size_t)0, manifestTemplate.v_array.GetNumElements());
+
+    // "ClaimCapabilities"  Expected value=Unknown
+    PermissionConfigurator::ClaimCapabilities claimCapabilities;
+    EXPECT_EQ(ER_OK, proxy.GetClaimCapabilities(claimCapabilities));
+    EXPECT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCapabilities);
+
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(org::alljoyn::Bus::Security::Application::InterfaceName, props));
+    // check GetAllProperties contains the values from org.alljoyn.Bus.Security.Application interface
+    // The value of each element was already checked above. Just check the GetAllProperties
+    // have an entry for each property we are interested in.
+    MsgArg* propArg;
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Version", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ApplicationState", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManifestTemplateDigest", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "EccPublicKey", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManufacturerCertificate", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManifestTemplate", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ClaimCapabilities", &propArg)) << props.ToString().c_str();
+
+    peer1Bus.Stop();
+    peer1Bus.Join();
+    peer2Bus.Stop();
+    peer2Bus.Join();
+}
+
+/*
+ * Purpose:
+ * Before Claiming, properties on org.alljoyn.Bus.Security.Application should be
+ * accessible via ECDHE_ECDSA auth .mechanism.
+ *
+ * Setup:
+ * DUT is not claimed.
+ *
+ * DUT and a peer bus establish an ECDHE_ECDSA based session.
+ * A bus calls GetAll properties on org.alljoyn.Bus.Security.Application interface.
+ *
+ * Verification:
+ * The following properties should be fetched:
+ * "Version"  Expected value=1
+ * "ApplicationState"  Expected value="Claimable"
+ * "ManifestTemplateDigest"  Expected value=Unknown
+ * "EccPublicKey"  Expected value=Public key of DUT
+ * "ManufacturerCertificate"  Expected value=empty array
+ * "ManifestTemplate"  Expected value=Unknown
+ * "ClaimCapabilities"  Expected value=Unknown
+ */
+TEST(SecurityOtherTest, call_security_application_over_ECDHE_ECDSA) {
+    BusAttachment peer1Bus("SecurityOtherPeer1", true);
+    BusAttachment peer2Bus("SecurityOtherPeer2", true);
+
+    EXPECT_EQ(ER_OK, peer1Bus.Start());
+    EXPECT_EQ(ER_OK, peer1Bus.Connect());
+    EXPECT_EQ(ER_OK, peer2Bus.Start());
+    EXPECT_EQ(ER_OK, peer2Bus.Connect());
+
+    InMemoryKeyStoreListener peer1KeyStoreListener;
+    InMemoryKeyStoreListener peer2KeyStoreListener;
+
+    // Register in memory keystore listeners
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+
+    SecurityOtherECDHE_ECDSAAuthListener peer1AuthListener;
+    SecurityOtherECDHE_ECDSAAuthListener peer2AuthListener;
+
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer2AuthListener));
+
+    SessionOpts opts;
+    SessionPort sessionPort = 42;
+    SecurityOtherTestSessionPortListener sessionPortListener;
+    EXPECT_EQ(ER_OK, peer2Bus.BindSessionPort(sessionPort, opts, sessionPortListener));
+
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), sessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
+
+    // "Version"  Expected value=1
+    uint16_t secuirtyApplicaitonVersion = 0;
+    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
+    EXPECT_EQ(1, secuirtyApplicaitonVersion);
+
+    // "ApplicationState"  Expected value="Claimable"
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, proxy.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+
+    // "ManifestTemplateDigest"  Expected value=Unknown
+    uint8_t manifestTemplateDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_BAD_ARG_2, proxy.GetManifestTemplateDigest(manifestTemplateDigest, qcc::Crypto_SHA256::DIGEST_SIZE));
+
+    // "EccPublicKey"  Expected value=Public key of DUT
+    qcc::ECCPublicKey eccPublicKey;
+    EXPECT_EQ(ER_OK, proxy.GetEccPublicKey(eccPublicKey));
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    KeyInfoNISTP256 peer2KeyInfo;
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2KeyInfo));
+    EXPECT_EQ(*peer2KeyInfo.GetPublicKey(), eccPublicKey);
+
+    // "ManufacturerCertificate"  Expected value=empty array
+    MsgArg manufacturerCertificate;
+    EXPECT_EQ(ER_OK, proxy.GetManufacturerCertificate(manufacturerCertificate));
+    EXPECT_EQ((size_t)0, manufacturerCertificate.v_array.GetNumElements());
+
+    // "ManifestTemplate"  Expected value=Unknown
+    MsgArg manifestTemplate;
+    EXPECT_EQ(ER_OK, proxy.GetManifestTemplate(manifestTemplate));
+    // manifestTemplate should be empty
+    EXPECT_EQ((size_t)0, manifestTemplate.v_array.GetNumElements());
+
+    // "ClaimCapabilities"  Expected value=Unknown
+    PermissionConfigurator::ClaimCapabilities claimCapabilities;
+    EXPECT_EQ(ER_OK, proxy.GetClaimCapabilities(claimCapabilities));
+    EXPECT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCapabilities);
+
+    MsgArg props;
+    EXPECT_EQ(ER_OK, proxy.GetAllProperties(org::alljoyn::Bus::Security::Application::InterfaceName, props));
+    // check GetAllProperties contains the values from org.alljoyn.Bus.Security.Application interface
+    // The value of each element was already checked above. Just check the GetAllProperties
+    // have an entry for each property we are interested in.
+    MsgArg* propArg;
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Version", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ApplicationState", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManifestTemplateDigest", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "EccPublicKey", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManufacturerCertificate", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ManifestTemplate", &propArg)) << props.ToString().c_str();
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "ClaimCapabilities", &propArg)) << props.ToString().c_str();
+
+    peer1Bus.Stop();
+    peer1Bus.Join();
+    peer2Bus.Stop();
+    peer2Bus.Join();
 }
