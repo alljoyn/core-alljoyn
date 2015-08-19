@@ -1689,7 +1689,7 @@ class IpNameServiceImpl : public qcc::Thread {
         uint32_t maximumTransportRemoteClients;
     };
     DynamicParams m_dynamicParams[N_TRANSPORTS];
-    bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid, bool checkQuietNames = false);
+    bool PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateSid);
     void PurgeMDNSPacketTracker();
     bool IsMDNSPacketTrackerEmpty();
 };
