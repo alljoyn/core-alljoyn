@@ -27,7 +27,7 @@
 #include <alljoyn_c/BusListener.h>
 #include <alljoyn_c/BusObject.h>
 #include <alljoyn_c/ProxyBusObject.h>
-#include <alljoyn_c/FactoryResetListener.h>
+#include <alljoyn_c/PermissionConfigurationListener.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/Session.h>
 #include <alljoyn_c/SessionListener.h>
@@ -723,18 +723,18 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecurity(alljoyn_b
  *                              key store is not shared but it adds some unnecessary calls to the key store
  *                              listener to load and store the key store in this case.
  *
- * @param factoryResetLlistener Passes factory reset requests to the application.
+ * @param permissionConfigurationListener    Passes security 2.0 callbacks to the application.
  *
  * @return
  *      - #ER_OK if peer security was enabled.
  *      - #ER_BUS_BUS_NOT_STARTED alljoyn_busattachment_start has not been called
  */
-extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecuritywithfactoryresetlistener(alljoyn_busattachment bus,
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecuritywithpermissionconfigurationlistener(alljoyn_busattachment bus,
                                                                                                const char* authMechanisms,
                                                                                                alljoyn_authlistener authListener,
                                                                                                const char* keyStoreFileName,
                                                                                                QCC_BOOL isShared,
-                                                                                               alljoyn_factoryresetlistener factoryResetListener);
+                                                                                               alljoyn_permissionconfigurationlistener permissionConfigurationListener);
 
 /**
  * Check is peer security has been enabled for this bus attachment.

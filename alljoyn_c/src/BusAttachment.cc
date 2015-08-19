@@ -257,19 +257,19 @@ QStatus AJ_CALL alljoyn_busattachment_enablepeersecurity(alljoyn_busattachment b
                                                            (isShared == QCC_TRUE ? true : false));
 }
 
-QStatus AJ_CALL alljoyn_busattachment_enablepeersecuritywithfactoryresetlistener(alljoyn_busattachment bus,
+QStatus AJ_CALL alljoyn_busattachment_enablepeersecuritywithpermissionconfigurationlistener(alljoyn_busattachment bus,
                                                                                  const char* authMechanisms,
                                                                                  alljoyn_authlistener authListener,
                                                                                  const char* keyStoreFileName,
                                                                                  QCC_BOOL isShared,
-                                                                                 alljoyn_factoryresetlistener factoryResetListener)
+                                                                                 alljoyn_permissionconfigurationlistener permissionConfigurationListener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusAttachmentC*)bus)->EnablePeerSecurity(authMechanisms,
                                                            (ajn::AuthListener*)authListener,
                                                            keyStoreFileName,
                                                            (isShared == QCC_TRUE ? true : false),
-                                                           (ajn::FactoryResetListener*)factoryResetListener);
+                                                           (ajn::PermissionConfigurationListener*)permissionConfigurationListener);
 }
 
 QCC_BOOL AJ_CALL alljoyn_busattachment_ispeersecurityenabled(alljoyn_busattachment bus)

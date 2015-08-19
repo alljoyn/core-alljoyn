@@ -1,6 +1,6 @@
 /**
  * @file
- * Contains the FactoryResetListener class
+ * Contains the PermissionConfigurationListener class
  */
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
@@ -17,31 +17,42 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef _ALLJOYN_FACTORYRESETLISTENER_H
-#define _ALLJOYN_FACTORYRESETLISTENER_H
+#ifndef _ALLJOYN_PERMISSIONCONFIGURATIONLISTENER_H
+#define _ALLJOYN_PERMISSIONCONFIGURATIONLISTENER_H
 
 #include <alljoyn/Status.h>
 
 namespace ajn {
 
-class FactoryResetListener {
+class PermissionConfigurationListener {
   public:
     /**
-     * FactoryResetListener constructor.
+     * PermissionConfigurationListener constructor.
      */
-    FactoryResetListener() { }
+    PermissionConfigurationListener() { }
 
     /**
-     * FactoryResetListener destructor.
+     * PermissionConfigurationListener destructor.
      */
-    virtual ~FactoryResetListener() { }
+    virtual ~PermissionConfigurationListener() { }
 
     /**
      * Handler for doing a factory reset of application state.
      *
      * @return  Return ER_OK if the application state reset was successful.
      */
-    virtual QStatus FactoryReset() = 0;
+    virtual QStatus FactoryReset()
+    {
+        return ER_NOT_IMPLEMENTED;
+    }
+
+    /**
+     * Notification that the security manager has updated the security policy
+     * for the application.
+     */
+    virtual void PolicyChanged()
+    {
+    }
 };
 }
-#endif //_ALLJOYN_FACTORYRESETLISTENER_H
+#endif //_ALLJOYN_PERMISSIONCONFIGURATIONLISTENER_H

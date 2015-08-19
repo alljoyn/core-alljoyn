@@ -44,7 +44,7 @@
 #include <alljoyn/ApplicationStateListener.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/PermissionConfigurator.h>
-#include <alljoyn/FactoryResetListener.h>
+#include <alljoyn/PermissionConfigurationListener.h>
 
 namespace ajn {
 
@@ -786,7 +786,7 @@ class BusAttachment : public MessageReceiver {
      *                             applications. It is generally harmless to set this to true even when the
      *                             key store is not shared but it adds some unnecessary calls to the key store
      *                             listener to load and store the key store in this case.
-     * @param factoryResetListener Passes factory reset requests to the application.
+     * @param permissionConfigurationListener   Passes security 2.0 callbacks to the application.
      *
      * @return
      *      - #ER_OK if peer security was enabled.
@@ -796,7 +796,7 @@ class BusAttachment : public MessageReceiver {
                                AuthListener* authListener,
                                const char* keyStoreFileName = NULL,
                                bool isShared = false,
-                               FactoryResetListener* factoryResetListener = NULL);
+                               PermissionConfigurationListener* permissionConfigurationListener = NULL);
 
     /**
      * Check is peer security has been enabled for this bus attachment.

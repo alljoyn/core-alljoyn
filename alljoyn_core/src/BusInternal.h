@@ -204,19 +204,25 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     const qcc::String& GetListenAddresses() const { return listenAddresses; }
 
     /**
-     * Inform FactoryResetListener of incoming request to reset application state.
+     * Inform PermissionConfigurationListener of incoming request to reset
+     * application state.
      *
      * @return  ER_OK if successful.
      */
-    QStatus CallFactoryResetListener();
+    QStatus CallFactoryResetCallback();
 
     /**
-     * Set the FactoryResetListener.
+     * Inform PermissionConfigurationListener of a security policy change.
+     */
+    void CallPolicyChangedCallback();
+
+    /**
+     * Set the PermissionConfigurationListener.
      *
-     * @param listener   FactoryResetListener to use.
+     * @param listener   PermissionConfigurationListener to use.
      * @return  ER_OK if successful.
      */
-    QStatus SetFactoryResetListener(FactoryResetListener* listener);
+    QStatus SetPermissionConfigurationListener(PermissionConfigurationListener* listener);
 
     /**
      * Inform BusListeners of incoming JoinSession attempt.
@@ -545,9 +551,9 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     qcc::Mutex applicationStateListenersLock;   /* Lock protecting the applicationStateListeners set */
     ObserverManager* observerManager;      /* The observer manager for the bus attachment */
 
-    typedef qcc::ManagedObj<FactoryResetListener*> ProtectedFactoryResetListener;
-    ProtectedFactoryResetListener* factoryResetListener;
-    qcc::Mutex factoryResetListenerLock;   /* Lock protecting factoryResetListener */
+    typedef qcc::ManagedObj<PermissionConfigurationListener*> ProtectedPermissionConfigurationListener;
+    ProtectedPermissionConfigurationListener* permissionConfigurationListener;
+    qcc::Mutex permissionConfigurationListenerLock;   /* Lock protecting permissionConfigurationListener */
 };
 
 }
