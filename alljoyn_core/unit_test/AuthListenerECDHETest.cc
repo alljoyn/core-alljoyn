@@ -62,7 +62,6 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
             psk("faaa0af3dd3f1e0379da046a3ab6ca44"),
             server(server)
         {
-            QCC_UseOSLogging(true);
         }
 
         bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
