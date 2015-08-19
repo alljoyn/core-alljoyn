@@ -152,7 +152,11 @@ void PermissionMgmtObj::Load()
         policy = NULL;
     }
     PolicyChanged(policy);
-    StateChanged();
+    bool hasManifestTemplate;
+    status = LookForManifestTemplate(hasManifestTemplate);
+    if ((ER_OK == status) && hasManifestTemplate) {
+        StateChanged();
+    }
 }
 
 
@@ -2262,7 +2266,11 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
     KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
     delete [] buf;
 
-    return status = ca->StoreKey(key, kb);
+    status = ca->StoreKey(key, kb);
+    if (ER_OK == status) {
+        StateChanged();
+    }
+    return status;
 }
 
 QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule* manifest, size_t* count)
@@ -2325,6 +2333,21 @@ QStatus PermissionMgmtObj::LoadManifestTemplate(PermissionPolicy& policy)
         return ER_MANIFEST_NOT_FOUND;
     }
     return ER_OK;
+}
+
+QStatus PermissionMgmtObj::LookForManifestTemplate(bool& exist)
+{
+    exist = false;
+    KeyBlob kb;
+    KeyStore::Key key;
+    GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
+    QStatus status = ca->GetKey(key, kb);
+    if (ER_OK == status) {
+        exist = true;
+    } else if (ER_BUS_KEY_UNAVAILABLE == status) {
+        status = ER_OK;
+    }
+    return status;
 }
 
 QStatus PermissionMgmtObj::GetManifestTemplate(MsgArg& arg)

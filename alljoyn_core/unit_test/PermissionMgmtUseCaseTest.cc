@@ -1136,6 +1136,18 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         }
     }
 
+    /*
+     *  Set the manifest template
+     */
+    void SetManifestTemplate(BusAttachment& bus)
+    {
+        PermissionPolicy::Rule* rules = NULL;
+        size_t count = 0;
+        EXPECT_EQ(ER_OK, GenerateManifestTemplate(&rules, &count));
+        PermissionConfigurator& pc = bus.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pc.SetPermissionManifest(rules, count));
+    }
+
     QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
     {
         SecurityApplicationProxy saProxy(claimerBus, claimedBus.GetUniqueName().c_str());
@@ -1317,6 +1329,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         } else {
             EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
         }
+        SetManifestTemplate(adminBus);
+        SetManifestTemplate(serviceBus);
+        SetManifestTemplate(consumerBus);
+        SetManifestTemplate(remoteControlBus);
         DetermineStateSignalReachable();
         ClaimAdmin();
         ClaimService();
