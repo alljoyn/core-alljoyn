@@ -1245,6 +1245,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, object_path_not_specified_rule_not_consi
         {
             PermissionPolicy::Rule rules[1];
             rules[0].SetInterfaceName("*");
+            rules[0].SetObjPath("");
             {
                 PermissionPolicy::Rule::Member members[1];
                 members[0].SetMemberName("*");

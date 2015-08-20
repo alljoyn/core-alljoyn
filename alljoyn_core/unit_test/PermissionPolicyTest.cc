@@ -210,7 +210,7 @@ TEST(PermissionPolicyTest, rule_member_default_assignment_copy)
 
 TEST(PermissionPolicyTest, rule_constructor) {
     PermissionPolicy::Rule rule;
-    EXPECT_STREQ("", rule.GetObjPath().c_str());
+    EXPECT_STREQ("*", rule.GetObjPath().c_str());
     EXPECT_STREQ("", rule.GetInterfaceName().c_str());
     EXPECT_TRUE(NULL == rule.GetMembers());
 }
