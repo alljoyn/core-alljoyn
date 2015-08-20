@@ -31,7 +31,7 @@
 #include <qcc/StringUtil.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/ApplicationStateListener.h>
-#include <alljoyn/FactoryResetListener.h>
+#include <alljoyn/PermissionConfigurationListener.h>
 #include "ajTestCommon.h"
 #include "KeyInfoHelper.h"
 #include "CredentialAccessor.h"
@@ -60,10 +60,15 @@ void TestApplicationStateListener::State(const char* busName, const qcc::KeyInfo
     signalApplicationStateReceived = true;
 }
 
-QStatus TestFactoryResetListener::FactoryReset()
+QStatus TestPermissionConfigurationListener::FactoryReset()
 {
     factoryResetReceived = true;
     return ER_OK;
+}
+
+void TestPermissionConfigurationListener::PolicyChanged()
+{
+    policyChangedReceived = true;
 }
 
 QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount, uint8_t* digest, size_t digestSize)
@@ -327,13 +332,13 @@ void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
     adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
     delete serviceKeyListener;
     serviceKeyListener = GenAuthListener(keyExchange);
-    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false, &testFRL);
+    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false, &testPCL);
     delete consumerKeyListener;
     consumerKeyListener = GenAuthListener(keyExchange);
-    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false, &testFRL);
+    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false, &testPCL);
     delete remoteControlKeyListener;
     remoteControlKeyListener = GenAuthListener(keyExchange);
-    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false, &testFRL);
+    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false, &testPCL);
     authMechanisms = keyExchange;
 }
 
@@ -454,12 +459,22 @@ const bool BasePermissionMgmtTest::GetApplicationStateSignalReceived()
 
 void BasePermissionMgmtTest::SetFactoryResetReceived(bool flag)
 {
-    testFRL.factoryResetReceived = flag;
+    testPCL.factoryResetReceived = flag;
 }
 
 const bool BasePermissionMgmtTest::GetFactoryResetReceived()
 {
-    return testFRL.factoryResetReceived;
+    return testPCL.factoryResetReceived;
+}
+
+void BasePermissionMgmtTest::SetPolicyChangedReceived(bool flag)
+{
+    testPCL.policyChangedReceived = flag;
+}
+
+const bool BasePermissionMgmtTest::GetPolicyChangedReceived()
+{
+    return testPCL.policyChangedReceived;
 }
 
 void BasePermissionMgmtTest::SetChannelChangedSignalReceived(bool flag)

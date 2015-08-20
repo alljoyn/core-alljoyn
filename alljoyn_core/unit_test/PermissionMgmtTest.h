@@ -51,11 +51,13 @@ class TestApplicationStateListener : public ApplicationStateListener {
     bool signalApplicationStateReceived;
 };
 
-class TestFactoryResetListener : public FactoryResetListener {
+class TestPermissionConfigurationListener : public PermissionConfigurationListener {
   public:
-    TestFactoryResetListener() : factoryResetReceived(false) { }
+    TestPermissionConfigurationListener() : factoryResetReceived(false), policyChangedReceived(false) { }
     QStatus FactoryReset();
+    void PolicyChanged();
     bool factoryResetReceived;
+    bool policyChangedReceived;
 };
 
 class BasePermissionMgmtTest : public testing::Test, public BusObject {
@@ -178,7 +180,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         volume(1),
         channelChangedSignalReceived(false),
         testASL(),
-        testFRL()
+        testPCL()
     {
     }
 
@@ -189,6 +191,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     void EnableSecurity(const char* keyExchange);
     const bool GetFactoryResetReceived();
     void SetFactoryResetReceived(bool flag);
+    const bool GetPolicyChangedReceived();
+    void SetPolicyChangedReceived(bool flag);
     void CreateOnOffAppInterface(BusAttachment& bus, bool addService);
     void CreateTVAppInterface(BusAttachment& bus, bool addService);
     void CreateAppInterfaces(BusAttachment& bus, bool addService);
@@ -249,7 +253,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     bool channelChangedSignalReceived;
     qcc::String authMechanisms;
     TestApplicationStateListener testASL;
-    TestFactoryResetListener testFRL;
+    TestPermissionConfigurationListener testPCL;
 };
 
 class PermissionMgmtTestHelper {
