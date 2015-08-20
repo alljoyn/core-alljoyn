@@ -478,6 +478,33 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObject) {
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
 }
 
+TEST_F(DescriptionTest, IntrospectableDescriptionObjectGlobalTranslator)
+{
+    // Service part
+    InterfaceDescription* intf = NULL;
+    MyTranslator translator;
+    EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
+    ASSERT_TRUE(intf != NULL);
+
+    intf->AddProperty("name", "s", PROP_ACCESS_RW);
+    intf->SetDescriptionLanguage("");
+    intf->SetDescription(ifcId);
+    intf->SetPropertyDescription("name", propId);
+    intf->Activate();
+
+    ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
+    s_msgBusServer->SetDescriptionTranslator(&translator);
+    ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
+    ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
+
+    ASSERT_TRUE((m_remoteObj = new ProxyBusObject(*s_msgBusClient, s_msgBusServer->GetUniqueName().c_str(), SERVICE_PATH, 0)) != NULL);
+    EXPECT_EQ(ER_OK, m_remoteObj->IntrospectRemoteObject());
+
+    IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString1[0]);
+    IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString1[0]);
+    IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
+}
+
 TEST_F(DescriptionTest, IntrospectableDescriptionObjectDefaultTranslator)
 {
     // Service part
