@@ -780,9 +780,11 @@ QStatus KeyStore::DelKey(const Key& key)
         return ER_BUS_KEYSTORE_NOT_LOADED;
     }
     QCC_DbgPrintf(("KeyStore::DelKey %s", key.ToString().c_str()));
+    /* Use a local copy because erase might destroy the key */
+    Key keyCopy(key);
     keys->erase(key);
     storeState = MODIFIED;
-    deletions.insert(key);
+    deletions.insert(keyCopy);
     lock.Unlock(MUTEX_CONTEXT);
     listener->StoreRequest(*this);
     return ER_OK;

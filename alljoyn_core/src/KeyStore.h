@@ -83,6 +83,11 @@ class KeyStore {
         {
         }
 
+        /* copy constructor */
+        Key(const Key& other) : type(other.type), guid(other.guid)
+        {
+        }
+
         /**
          * Equals operator for the key
          *
