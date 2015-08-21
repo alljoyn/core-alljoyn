@@ -1469,6 +1469,7 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
             status = certChain[cnt].EncodeCertificateDER(der);
             if (status != ER_OK) {
                 QCC_LogError(status, ("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to generate DER encoding for certificate"));
+                delete [] certArgs;
                 return status;
             }
             certArgs[cnt].Set("(ay)", der.size(), (const uint8_t*) der.data());

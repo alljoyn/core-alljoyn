@@ -354,7 +354,7 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::IdentityCertificate*
         qcc::String der;
         status = identityCertificateChain[cnt].EncodeCertificateDER(der);
         if (ER_OK != status) {
-            return status;
+            goto Exit;
         }
         status = certArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, der.size(), der.data());
         if (ER_OK != status) {

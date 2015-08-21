@@ -430,6 +430,16 @@ class DefaultECDHEAuthListener : public AuthListener {
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success);
 
   private:
+    /**
+     * Assignment operator is private.
+     */
+    DefaultECDHEAuthListener& operator=(const DefaultECDHEAuthListener& other);
+
+    /**
+     * Copy constructor is private.
+     */
+    DefaultECDHEAuthListener(const DefaultECDHEAuthListener& other);
+
     uint8_t* psk;
     size_t pskSize;
 };
