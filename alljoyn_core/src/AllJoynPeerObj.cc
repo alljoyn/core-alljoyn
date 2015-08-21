@@ -1846,6 +1846,7 @@ QStatus AllJoynPeerObj::SendManifest(ProxyBusObject& remotePeerObj, const Interf
     }
     status = securityApplicationObj.RetrieveManifest(manifest, &count);
     if (ER_OK != status) {
+        delete [] manifest;
         if (ER_MANIFEST_NOT_FOUND == status) {
             return ER_OK;  /* nothing to send */
         }
@@ -1889,6 +1890,7 @@ void AllJoynPeerObj::HandleSendManifest(const InterfaceDescription::Member* memb
     }
     status = securityApplicationObj.RetrieveManifest(manifest, &count);
     if ((ER_OK != status) && (ER_MANIFEST_NOT_FOUND != status)) {
+        delete [] manifest;
         MethodReply(msg, status);
         return;
     }

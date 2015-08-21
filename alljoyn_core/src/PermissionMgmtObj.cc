@@ -353,6 +353,8 @@ static void LoadSGAuthoritiesAndCAs(const PermissionPolicy& policy, PermissionMg
                     }
                     if (!HasDuplicateTrustAnchor(*ta, taList)) {
                         taList.push_back(ta);
+                    } else {
+                        delete ta;
                     }
                 }
             }
