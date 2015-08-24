@@ -408,7 +408,12 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
     qcc::String in(indent, ' ');
     const qcc::String close = "\">\n";
 
-    Translator* myTranslator = defs->translator ? defs->translator : translator;
+    Translator* myTranslator = defs->translator;
+    if (!defs->translator ||
+        ((defs->translator == &defs->stringTableTranslator) &&
+         defs->stringTableTranslator.IsEmpty())) {
+        myTranslator = translator;
+    }
 
     bool withDescriptions = languageTag && defs->hasDescription;
 

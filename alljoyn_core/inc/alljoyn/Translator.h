@@ -285,6 +285,13 @@ class StringTableTranslator : public LookupTableTranslator {
      */
     virtual QStatus AddStringTranslation(const char* id, const char* value, const char* language);
 
+    /**
+     * Determine if the table is empty.
+     *
+     * @return  Returns true if the table is empty.
+     */
+    bool IsEmpty() const { return localizedStore.empty(); }
+
   protected:
     /**
      * Local member variable mapping a field id to a set of translations
