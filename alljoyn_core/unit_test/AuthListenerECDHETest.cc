@@ -130,27 +130,39 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                         "aFFhPrtFbwHn\n"
                         "-----END CERTIFICATE-----";
 
-                    /* the client key and certificate are generated using openssl */
+                    /* the client key and certificate are generated using the
+                     * alljoyn_core\test\scripts\test_cert_generation.sh script */
 
+                    /* clieckey.pem (just the private key part, not the parameters part) */
                     clientPrivateKeyPEM =
                         "-----BEGIN EC PRIVATE KEY-----\n"
-                        "MDECAQEEIODvgKxWCGICBr+8EuqjdJ6km+u/6bU5dGSbJYUkZUPyoAoGCCqGSM49\n"
-                        "AwEH\n"
+                        "MHcCAQEEIBiLw29bf669g7MxMbXK2u8Lp5//w7o4OiVGidJdKAezoAoGCCqGSM49\n"
+                        "AwEHoUQDQgAE+A0C9YTghZ1vG7198SrUHxFlhtbSsmhbwZ3N5aQRwzFXWcCCm38k\n"
+                        "OzJEmS+venmF1o/FV0W80Mcok9CWlV2T6A==\n"
                         "-----END EC PRIVATE KEY-----";
 
+                    /* clicert.pem and cacert.pem concatenated in that order */
                     clientCertChainX509PEM =
                         "-----BEGIN CERTIFICATE-----\n"
-                        "MIIBtDCCAVugAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjBCMRUwEwYDVQQLDAxv\n"
-                        "cmdhbml6YXRpb24xKTAnBgNVBAMMIGRiODc2NjFiMDdmYTk5MTZkMmVmZjQ2OGQ0\n"
-                        "ZmM2YjQ3MB4XDTE1MDgyMTIyMjMwOVoXDTI1MDgxODIyMjMwOVowQjEVMBMGA1UE\n"
-                        "CwwMb3JnYW5pemF0aW9uMSkwJwYDVQQDDCBkZmY5ZWYxNDAxM2Y5MWI4ZmY1NDkw\n"
-                        "MGY2YjkxZDM5NzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABLS7W0+/OSGsyHdd\n"
-                        "ygOH3Fa314dGWBptURbTCdHEULD//h2v3OqNNtD4a3A1KO73w9rTaWiAdqgqR/Pd\n"
-                        "DYtG3WmjPDA6MAwGA1UdEwQFMAMBAf8wFQYDVR0lBA4wDAYKKwYBBAGC3nwBATAT\n"
-                        "BgNVHSMEDDAKoAhErIVAya6ktjAKBggqhkjOPQQDAgNHADBEAiBZTJY2LEH4QuXU\n"
-                        "Nxr6T1O/HHfFvrnZVaQsXoYUD+TH4QIgbHowpPfcf6tXGfgO6G7I3zRTJKpVVpGI\n"
-                        "8AJMTO7lccs=\n"
-                        "-----END CERTIFICATE-----\n";
+                        "MIIBYTCCAQigAwIBAgIJAOVrhhJOre/7MAoGCCqGSM49BAMCMCQxIjAgBgNVBAoM\n"
+                        "GUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwODI0MjAxODQ1WhcNMjkw\n"
+                        "NTAyMjAxODQ1WjAgMR4wHAYDVQQKDBVBbGxKb3luVGVzdENsaWVudE5hbWUwWTAT\n"
+                        "BgcqhkjOPQIBBggqhkjOPQMBBwNCAAT4DQL1hOCFnW8bvX3xKtQfEWWG1tKyaFvB\n"
+                        "nc3lpBHDMVdZwIKbfyQ7MkSZL696eYXWj8VXRbzQxyiT0JaVXZPooycwJTAVBgNV\n"
+                        "HSUEDjAMBgorBgEEAYLefAEBMAwGA1UdEwEB/wQCMAAwCgYIKoZIzj0EAwIDRwAw\n"
+                        "RAIgevLUXoJBgUr6nVepBHQiv85CGuxu00V4uoARbH6qu1wCIA54iDRh6wit1zbP\n"
+                        "kqkBC015LjxucTf3Y7lNGhXuZRsL\n"
+                        "-----END CERTIFICATE-----\n"
+                        "-----BEGIN CERTIFICATE-----\n"
+                        "MIIBdTCCARugAwIBAgIJAJTFhmdwDWsvMAoGCCqGSM49BAMCMCQxIjAgBgNVBAoM\n"
+                        "GUFsbEpveW5UZXN0U2VsZlNpZ25lZE5hbWUwHhcNMTUwODI0MjAxODQ1WhcNMjkw\n"
+                        "NTAyMjAxODQ1WjAkMSIwIAYDVQQKDBlBbGxKb3luVGVzdFNlbGZTaWduZWROYW1l\n"
+                        "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEF0nZmkzuK/2CVf7udexLZnlEB5D+\n"
+                        "DBsx3POtsRyZWm2QiI1untDTp0uYp51tkP6wI6Gi5gWxB+86lEIPg4ZpTaM2MDQw\n"
+                        "IQYDVR0lBBowGAYKKwYBBAGC3nwBAQYKKwYBBAGC3nwBBTAPBgNVHRMBAf8EBTAD\n"
+                        "AQH/MAoGCCqGSM49BAMCA0gAMEUCIQDPQ1VRvdBhhneU5e7OvIFHK3d9XPZA7Fw6\n"
+                        "VyeW/P5wIAIgD969ks/z9vQ1yCaVaxmVz63toC1ggp4AnBXqbDy8O+4=\n"
+                        "-----END CERTIFICATE-----";
                 } else {
                     /*
                      * Use server and client certificates generated with the Windows
