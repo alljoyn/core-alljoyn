@@ -535,6 +535,7 @@ QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
         return ER_BUS_KEYSTORE_NOT_LOADED;
     }
     bool dirty = true;
+    QStatus status = ER_OK;
     while (dirty) {
         dirty = false;
         for (KeyMap::iterator it = keys->begin(); it != keys->end(); it++) {
@@ -542,14 +543,23 @@ QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
                 continue;  /* skip the untag */
             }
             if (MatchesPrefix(it->second.keyBlob.GetTag(), tagPrefixPattern)) {
-                DelKey(it->first);
+                status = DeleteKey(it->first);
+                if (ER_OK != status) {
+                    break;
+                }
                 dirty = true;
                 break;  /* redo the loop since the iterator is out-of-sync */
             }
         }
+        if (ER_OK != status) {
+            break;
+        }
     }
     lock.Unlock(MUTEX_CONTEXT);
-    return ER_OK;
+    if (ER_OK == status) {
+        listener->StoreRequest(*this);
+    }
+    return status;
 }
 
 QStatus KeyStore::Reload()
@@ -772,20 +782,31 @@ QStatus KeyStore::AddKey(const Key& key, const KeyBlob& keyBlob, const uint8_t a
     return ER_OK;
 }
 
-QStatus KeyStore::DelKey(const Key& key)
+/**
+ * This internal method deletes the key assuming the lock is already acquired.
+ */
+QStatus KeyStore::DeleteKey(const Key& key)
 {
-    lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
-        lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_KEYSTORE_NOT_LOADED;
     }
-    QCC_DbgPrintf(("KeyStore::DelKey %s", key.ToString().c_str()));
+    QCC_DbgPrintf(("KeyStore::DeleleKey %s", key.ToString().c_str()));
     /* Use a local copy because erase might destroy the key */
     Key keyCopy(key);
     keys->erase(key);
     storeState = MODIFIED;
     deletions.insert(keyCopy);
+    return ER_OK;
+}
+
+QStatus KeyStore::DelKey(const Key& key)
+{
+    lock.Lock(MUTEX_CONTEXT);
+    QStatus status = DeleteKey(key);
     lock.Unlock(MUTEX_CONTEXT);
+    if (ER_OK != status) {
+        return status;
+    }
     listener->StoreRequest(*this);
     return ER_OK;
 }

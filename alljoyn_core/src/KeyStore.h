@@ -499,6 +499,14 @@ class KeyStore {
     QStatus SendLoadRequest(bool waitFor);
 
     /**
+     * Delete the key from the internal structure.  The lock must be acquired prior to calling this method.
+     *
+     * @param key  The unique identifier for the key
+     * return ER_OK
+     */
+    QStatus DeleteKey(const Key& key);
+
+    /**
      * synchronized method to invoke the listener store request
      */
     QStatus SendStoreRequest(bool waitFor);
