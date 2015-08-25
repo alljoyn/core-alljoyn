@@ -702,6 +702,129 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDSA_everything_passes)
 
 /*
  * Purpose:
+ * ASGA cannot access the app. bus if it does not have a membership certificate
+ * belonging to the ASG. (Membership certificate is must even if the bus is the ASGA.)
+ *
+ * Setup:
+ * app bus  implements the following message types: method call, signal, property 1, property 2.
+ * ASGA bus implements the following message types: method call, signal, property 1, property 2.
+ *
+ * app. bus is claimed by the ASGA.
+ * ASGA does not have a  MC belonging to the ASG.
+ * app. bus has default policy.
+ *
+ * ASG bus and app. bus have enabled ECDHE_ECDSA auth. mechanism.
+ *
+ * 1. ASGA bus makes a method call, get property call, set property call, getall properties call on the app. bus.
+ * 2. ASGA bus sends a signal to the app. bus.
+ * 3. ASGA bus calls Reset on the app. bus.
+ *
+ * Verification:
+ * 1. Method call, get property, set property, getall properties are not received by the app. bus.
+ * 2. The signal is not received by the app. bus.
+ * 3. Reset method call should fail.
+ *
+ * In this test managerBus == ASGA
+ *              peer1Bus == app. bus
+ */
+TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_manager_must_have_certificate_to_interact_with_peers)
+{
+    DefaultRulesTestBusObject managerBusObject(managerBus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, managerBus.RegisterBusObject(managerBusObject, true));
+    DefaultRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject, true));
+
+    SessionOpts opts;
+    SessionId managerToPeer1SessionId;
+    EXPECT_EQ(ER_OK, managerBus.JoinSession(peer1Bus.GetUniqueName().c_str(), peer1SessionPort, NULL, managerToPeer1SessionId, opts));
+
+    ProxyBusObject managerToPeer1Proxy = ProxyBusObject(managerBus, peer1Bus.GetUniqueName().c_str(), "/test", managerToPeer1SessionId, true);
+    {
+        EXPECT_EQ(ER_OK, managerToPeer1Proxy.ParseXml(interface.c_str()));
+        EXPECT_TRUE(managerToPeer1Proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+
+        // Verify Method call
+        MsgArg arg("s", "String that should be Echoed back.");
+        Message replyMsg(peer1Bus);
+        EXPECT_EQ(ER_PERMISSION_DENIED, managerToPeer1Proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+        EXPECT_STREQ("org.alljoyn.Bus.Security.Error.PermissionDenied", replyMsg->GetErrorName());
+
+        // Verify Set/Get Property and GetAll Properties
+        MsgArg prop1Arg;
+        EXPECT_EQ(ER_OK, prop1Arg.Set("i", 513));
+        EXPECT_EQ(ER_PERMISSION_DENIED, managerToPeer1Proxy.SetProperty(interfaceName, "Prop1", prop1Arg)) << "Peer failed SetProperty call";
+
+        MsgArg prop1ArgOut;
+        EXPECT_EQ(ER_PERMISSION_DENIED, managerToPeer1Proxy.GetProperty(interfaceName, "Prop1", prop1Arg)) << "Peer failed GetProperty call";;
+
+        MsgArg props;
+        EXPECT_EQ(ER_PERMISSION_DENIED, managerToPeer1Proxy.GetAllProperties(interfaceName, props)) << "Peer failed GetAllProperties call";;
+    }
+    {
+        // manager can Send Signal peer1 will not get signal it is blocked by default policy.
+        ChirpSignalReceiver chirpSignalReceiver;
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterSignalHandler(&chirpSignalReceiver,
+                                                        static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler),
+                                                        managerBus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+        MsgArg arg;
+        arg.Set("s", "Chirp this String out in the signal.");
+        // Signals are send and forget.  They will always return ER_OK.
+        EXPECT_EQ(ER_OK, managerBusObject.Signal(peer1Bus.GetUniqueName().c_str(),
+                                                 managerToPeer1SessionId,
+                                                 *managerBus.GetInterface(interfaceName)->GetMember("Chirp"),
+                                                 &arg, 1, 0, 0));
+
+        //Wait for a maximum of 2 sec for the Chirp Signal.
+        for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+            if (chirpSignalReceiver.signalReceivedFlag) {
+                break;
+            }
+            qcc::Sleep(WAIT_MSECS);
+        }
+        EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag) << "managerBus failed to receive the Signal from Peer1";
+        EXPECT_EQ(ER_OK, peer1Bus.UnregisterSignalHandler(&chirpSignalReceiver,
+                                                          static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler),
+                                                          peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+    }
+    {
+        // Peer1 can Send Signal manager will not get signal it is blocked
+        // by default policy.
+        ChirpSignalReceiver chirpSignalReceiver;
+        EXPECT_EQ(ER_OK, managerBus.RegisterSignalHandler(&chirpSignalReceiver,
+                                                          static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler),
+                                                          peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+
+        MsgArg arg;
+        arg.Set("s", "Chirp this String out in the signal.");
+        EXPECT_EQ(ER_OK, peer1BusObject.Signal(managerBus.GetUniqueName().c_str(),
+                                               managerToPeer1SessionId,
+                                               *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"),
+                                               &arg, 1, 0, 0));
+
+        //Wait for a maximum of 2 sec for the Chirp Signal.
+        for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+            if (chirpSignalReceiver.signalReceivedFlag) {
+                break;
+            }
+            qcc::Sleep(WAIT_MSECS);
+        }
+        EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag) << "managerBus recieved a signal it when permissioins should have stopped signal.";
+        EXPECT_EQ(ER_OK, managerBus.UnregisterSignalHandler(&chirpSignalReceiver,
+                                                            static_cast<MessageReceiver::SignalHandler>(&ChirpSignalReceiver::ChirpSignalHandler),
+                                                            peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), NULL));
+    }
+    {
+        SecurityApplicationProxy sapManagertoPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapManagertoPeer1.Reset());
+    }
+    /* clean up */
+    managerBus.UnregisterBusObject(managerBusObject);
+    peer1Bus.UnregisterBusObject(peer1BusObject);
+}
+
+/*
+ * Purpose:
  * Only Trusted peers are allowed to interact with the application under default
  * policy.
  *
@@ -895,7 +1018,6 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDHE_NULL_everything_fails)
     peer1Bus.UnregisterBusObject(peer1BusObject);
     peer2Bus.UnregisterBusObject(peer2BusObject);
 }
-
 
 /*
  * Purpose:
@@ -1312,6 +1434,74 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_unsecure_method_signal_propertie
     /* clean up */
     peer1Bus.UnregisterBusObject(peer1BusObject);
     peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+/*
+ * Purpose:
+ * After Claiming, application bus can self install membership certificates on itself.
+ *
+ * Setup:
+ * app. bus is claimed by the ASGA.
+ * app. bus has default policy.
+ *
+ * app. bus calls InstallMembership on itself.
+ * ASGA bus calls get property ("MembershipSummaries")
+ *
+ * Verification:
+ * Verify that InstallMembership is successful.
+ * Verify that when ASGA bus calls get property ("MembershipSummaries"), it
+ * returns the same membership certificate details as the one installed above.
+ *      ASGA =     managerBus
+ *      app. bus = Peer1
+ */
+TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_self_install_membership_certificates)
+{
+    InstallMemberShipOnManager();
+
+    KeyInfoNISTP256 peer1Key;
+    PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+    String membershipSerial = "1";
+    qcc::GUID128 peer1Guid;
+
+    qcc::MembershipCertificate peer1MembershipCertificate[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+                                                                    managerBus,
+                                                                    peer1Bus.GetUniqueName(),
+                                                                    peer1Key.GetPublicKey(),
+                                                                    peer1Guid,
+                                                                    false,
+                                                                    3600,
+                                                                    peer1MembershipCertificate[0]
+                                                                    ));
+    SecurityApplicationProxy sapPeer1WithSelf(peer1Bus, peer1Bus.GetUniqueName().c_str());
+
+    // app. bus calls InstallMembership on itself.
+    // verify: Verify that InstallMembership is successful.
+    EXPECT_EQ(ER_OK, sapPeer1WithSelf.InstallMembership(peer1MembershipCertificate, 1));
+
+    SecurityApplicationProxy sapManagerWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+
+    /* retrieve the membership summaries */
+    MsgArg arg;
+    EXPECT_EQ(ER_OK, sapManagerWithPeer1.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+    size_t count = arg.v_array.GetNumElements();
+
+    ASSERT_GT(count, (size_t) 0) << "No membership cert found.";
+
+    KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+    String* serials = new String[count];
+    EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToCertificateIds(arg, serials, keyInfos, count)) << " MsgArgToCertificateIds failed.";
+
+    KeyInfoNISTP256 managerKey;
+    PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+
+    EXPECT_EQ(*managerKey.GetPublicKey(), *keyInfos[0].GetPublicKey());
+    EXPECT_EQ(membershipSerial, serials[0]);
+
+    delete [] keyInfos;
+    delete [] serials;
 }
 
 /*
