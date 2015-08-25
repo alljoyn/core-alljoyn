@@ -62,8 +62,13 @@ size_t LookupTableTranslator::NumTargetLanguages()
 void LookupTableTranslator::GetTargetLanguage(size_t index, qcc::String& ret)
 {
     supportedLanguagesIterator it = supportedLanguages.begin();
-    for (size_t count = 0; count < index; it++, count++);
-    ret = *it;
+    for (size_t count = 0; (count < index) && (it != supportedLanguages.end()); it++, count++)
+        ; //empty for loop to advance the iterator to the element indicated by the index
+    if (it == supportedLanguages.end()) {
+        ret = "";
+    } else {
+        ret = *it;
+    }
 }
 
 QStatus LookupTableTranslator::AddTargetLanguage(const char* language, bool* added)
@@ -93,7 +98,11 @@ QStatus StringTableTranslator::AddStringTranslation(const char* id, const char* 
 const char* StringTableTranslator::GetFieldId(size_t index)
 {
     localizedStoreIterator it = localizedStore.begin();
-    for (size_t count = 0; count < index; it++, count++);
+    for (size_t count = 0; (count < index) && (it != localizedStore.end()); it++, count++)
+        ; //empty for loop to advance the iterator to the element indicated by the index
+    if (it == localizedStore.end()) {
+        return nullptr;
+    }
     return it->first.c_str();
 }
 
