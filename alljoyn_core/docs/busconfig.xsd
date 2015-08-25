@@ -167,8 +167,8 @@
     </xs:simpleType>
 
     <xs:simpleType name="listen_type">
-        <xs:restriction base="xs:anyURI">
-            <xs:pattern value="(tcp|udp|launchd|unix|slap):.*"/>
+        <xs:restriction base="xs:string">
+            <xs:pattern value="(tcp|udp|launchd|unix|slap|npipe):.*"/>
         </xs:restriction>
     </xs:simpleType>
 
