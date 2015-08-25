@@ -64,6 +64,7 @@ class SecurityClaimApplicationTest : public testing::Test {
         EXPECT_EQ(ER_OK, securityManagerBus.RegisterKeyStoreListener(securityManagerKeyStoreListener));
         EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
         EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+
     }
 
     virtual void TearDown() {
@@ -81,6 +82,19 @@ class SecurityClaimApplicationTest : public testing::Test {
         delete peer2KeyListener;
     }
 
+    void SetManifestTemplate(BusAttachment& bus)
+    {
+        // All Inclusive manifest template
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        const size_t manifestSize = 1;
+        PermissionPolicy::Rule manifestTemplate[manifestSize];
+        manifestTemplate[0].SetObjPath("*");
+        manifestTemplate[0].SetInterfaceName("*");
+        manifestTemplate[0].SetMembers(1, member);
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifest(manifestTemplate, manifestSize));
+    }
+
     BusAttachment securityManagerBus;
     BusAttachment peer1Bus;
     BusAttachment peer2Bus;
@@ -95,6 +109,7 @@ class SecurityClaimApplicationTest : public testing::Test {
     DefaultECDHEAuthListener* securityManagerKeyListener;
     DefaultECDHEAuthListener* peer1KeyListener;
     DefaultECDHEAuthListener* peer2KeyListener;
+
 };
 
 TEST_F(SecurityClaimApplicationTest, IsClaimable)
@@ -162,6 +177,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -174,6 +192,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -464,6 +485,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -477,6 +501,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -489,6 +516,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
 
     peer2KeyListener = new DefaultECDHEAuthListener();
     peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer2KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer2Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -605,6 +635,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     securityManagerKeyListener = new DefaultECDHEAuthListener(psk, 16);
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -617,6 +650,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
 
     peer1KeyListener = new DefaultECDHEAuthListener(psk, 16);
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -716,6 +752,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_fails_if_identity_cert_digest_not_equ
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -728,6 +767,9 @@ TEST_F(SecurityClaimApplicationTest, Claim_fails_if_identity_cert_digest_not_equ
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -832,6 +874,9 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -844,6 +889,9 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -953,6 +1001,9 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -965,6 +1016,9 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -1096,6 +1150,9 @@ TEST_F(SecurityClaimApplicationTest, fail_when_claiming_non_claimable)
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1108,6 +1165,9 @@ TEST_F(SecurityClaimApplicationTest, fail_when_claiming_non_claimable)
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -1201,6 +1261,9 @@ TEST_F(SecurityClaimApplicationTest, fail_claimer_security_not_enabled)
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1213,6 +1276,9 @@ TEST_F(SecurityClaimApplicationTest, fail_claimer_security_not_enabled)
 
     peer2KeyListener = new DefaultECDHEAuthListener();
     peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer2KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer2Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -1287,6 +1353,9 @@ TEST_F(SecurityClaimApplicationTest, fail_when_peer_being_claimed_is_not_securit
     //EnablePeerSecurity
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -1481,6 +1550,9 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1494,6 +1566,9 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1506,6 +1581,9 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
 
     peer2KeyListener = new DefaultECDHEAuthListener();
     peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer2Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -1573,6 +1651,9 @@ TEST_F(SecurityClaimApplicationTest, fail_when_admin_and_peer_use_different_secu
     securityManagerKeyListener = new DefaultECDHEAuthListener(psk, 16);
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1585,6 +1666,9 @@ TEST_F(SecurityClaimApplicationTest, fail_when_admin_and_peer_use_different_secu
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -1662,6 +1746,9 @@ TEST_F(SecurityClaimApplicationTest, fail_if_incorrect_publickey_used_in_identit
     securityManagerKeyListener = new DefaultECDHEAuthListener();
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1674,6 +1761,9 @@ TEST_F(SecurityClaimApplicationTest, fail_if_incorrect_publickey_used_in_identit
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -1788,6 +1878,9 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal)
     EXPECT_FALSE(appStateListener.stateChanged);
     securityManagerBus.AddApplicationStateRule();
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1846,6 +1939,9 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
     EXPECT_FALSE(appStateListener.stateChanged);
     securityManagerBus.AddApplicationStateRule();
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -1873,6 +1969,9 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
@@ -2002,6 +2101,9 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
     EXPECT_FALSE(appStateListener.stateChanged);
     securityManagerBus.AddApplicationStateRule();
 
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(securityManagerBus);
+
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.stateChanged) {
@@ -2029,6 +2131,9 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
 
     //Wait for a maximum of 10 sec for the Application.State Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
