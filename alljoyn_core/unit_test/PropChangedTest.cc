@@ -18,6 +18,7 @@
 #include <sstream>
 #include <utility>
 #include <vector>
+#include <memory>
 
 #include <gtest/gtest.h>
 
@@ -34,6 +35,8 @@
 #include <alljoyn/ProxyBusObject.h>
 
 #include "ajTestCommon.h"
+#include "TestSecurityManager.h"
+#include "TestSecureApplication.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -2359,4 +2362,171 @@ TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallbackMultiProxy
     proxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "1", *l);
     delete anotherProxy;
     delete l;
+}
+
+class SecPropChangedTest :
+    public::testing::Test,
+    public ProxyBusObject::PropertiesChangedListener {
+  public:
+    SecPropChangedTest() : prov("provider"), cons("consumer"), proxy(NULL), evented(false) { }
+    ~SecPropChangedTest() { }
+
+    TestSecurityManager tsm;
+    TestSecureApplication prov;
+    TestSecureApplication cons;
+    shared_ptr<ProxyBusObject> proxy;
+    Mutex lock;
+    Condition condition;
+    bool evented;
+
+    virtual void SetUp() {
+        ASSERT_EQ(ER_OK, tsm.Init());
+        ASSERT_EQ(ER_OK, prov.Init(tsm));
+        ASSERT_EQ(ER_OK, cons.Init(tsm));
+
+        ASSERT_EQ(ER_OK, prov.HostSession());
+        SessionId sid = 0;
+        ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
+
+        proxy = shared_ptr<ProxyBusObject>(cons.GetProxyObject(prov, sid));
+        ASSERT_TRUE(proxy != NULL);
+        proxy->EnablePropertyCaching();
+        qcc::Sleep(WAIT_CACHE_ENABLED_MS);
+        const char* props[1];
+        props[0] = TEST_PROP_NAME;
+        proxy->RegisterPropertiesChangedListener(TEST_INTERFACE, props, 1, *this, NULL);
+    }
+
+    void PropertiesChanged(ProxyBusObject& obj,
+                           const char* ifaceName,
+                           const MsgArg& changed,
+                           const MsgArg& invalidated,
+                           void* context)
+    {
+        QCC_UNUSED(obj);
+        QCC_UNUSED(ifaceName);
+        QCC_UNUSED(changed);
+        QCC_UNUSED(changed);
+        QCC_UNUSED(invalidated);
+        QCC_UNUSED(context);
+        lock.Lock();
+        evented = true;
+        condition.Signal();
+        lock.Unlock();
+    }
+
+    QStatus SendAndWaitForEvent(TestSecureApplication& prov, bool newValue = true)
+    {
+        lock.Lock();
+        evented = false;
+        QStatus status = prov.UpdateTestProperty(newValue);
+        if (ER_OK != status) {
+            cout << "Failed to send event" << __FILE__ << "@" << __LINE__ << endl;
+        } else {
+            condition.TimedWait(lock, 5000);
+            status = evented ? ER_OK : ER_FAIL;
+            evented = false;
+        }
+        lock.Unlock();
+        return status;
+    }
+
+    QStatus GetProperty()
+    {
+        MsgArg arg;
+        return proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+    }
+
+    QStatus CheckProperty(bool expected)
+    {
+        MsgArg arg;
+        QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+        EXPECT_EQ(ER_OK, status) << "Failed to GetProperty";
+        if (ER_OK != status) {
+            return status;
+        }
+        bool prop = !expected;
+        status = arg.Get("b", &prop);
+        EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
+        return prop == expected ? ER_OK : ER_FAIL;
+    }
+
+};
+
+TEST_F(SecPropChangedTest, PropertyCache_SecurityEnabled)
+{
+    //No policy set. So GetProperty should be denied by remote policy.
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+
+    //Set Policy on provider & consumer.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, CheckProperty(false));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov));
+    ASSERT_EQ(ER_OK, CheckProperty(true));
+    ASSERT_EQ(1, prov.GetCurrentGetPropertyCount());
+}
+
+TEST_F(SecPropChangedTest, DISABLED_PropertyCache_NotAllowedByProviderPolicy) //See ASACORE-2411
+{
+    //Set Policy on consumer.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    //We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
+}
+
+TEST_F(SecPropChangedTest, PropertyCache_DefaultProviderPolicy)
+{
+    //Set Policy on consumer.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov));
+    ASSERT_EQ(ER_OK, CheckProperty(true));
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
+}
+TEST_F(SecPropChangedTest, DISABLED_PropertyCache_DefaultConsumerPolicy) //See ASACORE-2411
+{
+    //Set Policy on provider.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    //We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    //Default policy of consumer should allow the outgoing message
+    ASSERT_EQ(ER_OK, CheckProperty(true));
+    ASSERT_EQ(1, prov.GetCurrentGetPropertyCount());
+}
+
+TEST_F(SecPropChangedTest, DISABLED_PropertyCache_NotAllowedByConsumerPolicy) //See ASACORE-2411
+{
+    //Set Policy on provider & consumer.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    //No matching policy set. So GetProperty should be denied.
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    //We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
+}
+
+TEST_F(SecPropChangedTest, DISABLED_PropertyCache_WrongInterfaceName) //See ASACORE-2411
+{
+    //Set Policy on consumer.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    //We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
 }
