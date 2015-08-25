@@ -821,11 +821,12 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
         object.InUseDecrement();
     }
     /* Delete the object if it was a default object */
+    bool deleteObj = false;
     vector<BusObject*>::iterator dit = defaultObjects.begin();
     while (dit != defaultObjects.end()) {
         if (*dit == &object) {
             defaultObjects.erase(dit);
-            delete &object;
+            deleteObj = true;
             break;
         } else {
             ++dit;
@@ -834,6 +835,9 @@ void _LocalEndpoint::UnregisterBusObject(BusObject& object)
     objectsLock.Unlock(MUTEX_CONTEXT);
 
     UnregisterComplete(&object);
+    if (deleteObj) {
+        delete &object;
+    }
 }
 
 BusObject* _LocalEndpoint::FindLocalObject(const char* objectPath) {
