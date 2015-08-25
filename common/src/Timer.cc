@@ -383,9 +383,9 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
             Thread* thread = Thread::GetThread();
             assert(thread);
             addWaitQueue.push_front(thread);
-            lock.Unlock(MUTEX_CONTEXT);
+            lock.Unlock();
             QStatus status1 = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);
-            lock.Lock(MUTEX_CONTEXT);
+            lock.Lock();
             deque<Thread*>::iterator eit = find(addWaitQueue.begin(), addWaitQueue.end(), thread);
             if (eit != addWaitQueue.end()) {
                 addWaitQueue.erase(eit);
@@ -396,7 +396,7 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
                 thread->ResetAlertCode();
                 thread->GetStopEvent().ResetEvent();
                 if (alertCode == FORCEREMOVEALARM_ALERTCODE) {
-                    lock.Unlock(MUTEX_CONTEXT);
+                    lock.Unlock();
                     return ER_TIMER_EXITING;
                 }
             }
