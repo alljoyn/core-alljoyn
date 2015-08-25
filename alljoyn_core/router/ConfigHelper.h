@@ -126,9 +126,12 @@ class ConfigHelper {
          * Otherwise we overwrite same kind and name entries.
          */
         if (kind != "listen") {
-            for (std::list<ConfigEntry>::iterator it = m_entries.begin(); it != m_entries.end(); ++it) {
+            std::list<ConfigEntry>::iterator it = m_entries.begin();
+            while (it != m_entries.end()) {
                 if (it->m_kind == kind && it->m_name == name) {
                     it = m_entries.erase(it);
+                } else {
+                    ++it;
                 }
             }
         }
@@ -143,9 +146,12 @@ class ConfigHelper {
      */
     void Unset(qcc::String kind, qcc::String name)
     {
-        for (std::list<ConfigEntry>::iterator it = m_entries.begin(); it != m_entries.end(); ++it) {
+        std::list<ConfigEntry>::iterator it = m_entries.begin();
+        while (it != m_entries.end()) {
             if (it->m_kind == kind && it->m_name == name) {
                 it = m_entries.erase(it);
+            } else {
+                ++it;
             }
         }
     }
