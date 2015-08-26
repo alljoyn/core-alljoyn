@@ -35,6 +35,8 @@
 
 #include <alljoyn/Status.h>
 
+#include "TestSecurityManager.h"
+
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
@@ -106,13 +108,18 @@ class Participant : public SessionPortListener, public SessionListener {
     qcc::Mutex hsmLock;
     SessionPort port;
     bool acceptSessions;
+    bool secure;
+    DefaultECDHEAuthListener authListener;
 
+    string appName;
     AboutData aboutData;
     AboutObj aboutObj;
 
-    Participant() : bus("Participant"),
+    Participant(string _appName = "Participant", bool _secure = false) :
+        bus(_appName.c_str()),
         opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
-        port(42), acceptSessions(true), aboutData("en"), aboutObj(bus)
+        port(42), acceptSessions(true), secure(_secure), authListener(), appName(_appName),
+        aboutData("en"), aboutObj(bus)
     {
         Init();
     }
@@ -133,9 +140,14 @@ class Participant : public SessionPortListener, public SessionListener {
 
         StartBus();
 
+        if (secure) {
+            EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+        }
+
         /* create interfaces */
         InterfaceDescription* intf = NULL;
-        status = bus.CreateInterface(INTF_A, intf);
+        status = bus.CreateInterface(INTF_A, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
+                                     AJ_IFC_SECURITY_INHERIT);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -143,7 +155,8 @@ class Participant : public SessionPortListener, public SessionListener {
         intf->Activate();
 
         intf = NULL;
-        status = bus.CreateInterface(INTF_B, intf);
+        status = bus.CreateInterface(INTF_B, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
+                                     AJ_IFC_SECURITY_INHERIT);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -160,7 +173,7 @@ class Participant : public SessionPortListener, public SessionListener {
         aboutData.SetDeviceName("My Device Name");
         //DeviceId is a string encoded 128bit UUID
         aboutData.SetDeviceId("93c06771-c725-48c2-b1ff-6a2a59d445b8");
-        aboutData.SetAppName("Application");
+        aboutData.SetAppName(appName.c_str());
         aboutData.SetManufacturer("Manufacturer");
         aboutData.SetModelNumber("123456");
         aboutData.SetDescription("A poetic description of this application");
@@ -184,6 +197,11 @@ class Participant : public SessionPortListener, public SessionListener {
             }
             delete it->second.first;
         }
+
+        if (secure) {
+            bus.ClearKeyStore();
+        }
+
         StopBus();
     }
 
@@ -264,6 +282,10 @@ class Participant : public SessionPortListener, public SessionListener {
         bus.LeaveHostedSession(sessionId);
     }
 
+    void EnableSecurity(string authMechanisms) {
+        bus.EnablePeerSecurity(authMechanisms.c_str(), &authListener);
+    }
+
   private:
     //Private copy constructor to prevent copying the class and double freeing of memory
     Participant(const Participant& rhs);
@@ -332,6 +354,9 @@ class ObserverTest : public testing::Test {
     const char** cintfA;
     const char** cintfB;
 
+    PermissionPolicy::Acl manifest;
+    PermissionPolicy policyAB;
+
     virtual void SetUp() {
         intfA.push_back(INTF_A);
         intfB.push_back(INTF_B);
@@ -342,10 +367,53 @@ class ObserverTest : public testing::Test {
         cintfA = &(cintfAB[0]);
         cintfB = &(cintfAB[1]);
 
+        GenerateManifest(intfAB, manifest);
+        GeneratePolicy(intfAB, policyAB);
     }
+
     virtual void TearDown() { }
 
     void SimpleScenario(Participant& provider, Participant& consumer);
+
+    void GenerateManifest(vector<String> interfaces, PermissionPolicy::Acl& manifest) {
+        if (interfaces.empty()) {
+            return;
+        }
+
+        PermissionPolicy::Rule::Member members[1];
+        members[0].SetMemberName("*");
+        members[0].SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
+        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                                 PermissionPolicy::Rule::Member::ACTION_OBSERVE |
+                                 PermissionPolicy::Rule::Member::ACTION_MODIFY);
+
+        vector<PermissionPolicy::Rule> rules;
+
+        for (size_t i = 0; i < interfaces.size(); i++) {
+            PermissionPolicy::Rule rule;
+            rule.SetInterfaceName(interfaces[i]);
+            rule.SetMembers(1, members);
+            rules.push_back(rule);
+        }
+
+        manifest.SetRules(rules.size(), &rules[0]);
+    }
+
+    void GeneratePolicy(vector<String> interfaces, PermissionPolicy& policy) {
+        if (interfaces.empty()) {
+            return;
+        }
+
+        PermissionPolicy::Acl manifest;
+        GenerateManifest(interfaces, manifest);
+
+        PermissionPolicy::Peer peers[1];
+        peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        manifest.SetPeers(1, peers);
+
+        policy.SetAcls(1, &manifest);
+    }
+
 };
 
 class ObserverListener : public Observer::Listener {
@@ -391,11 +459,12 @@ class ObserverListener : public Observer::Listener {
         }
 
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED));
+        EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
+                    (status == ER_PERMISSION_DENIED));
 
         bus.EnableConcurrentCallbacks();
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_EQ(ER_OK, status);
+        EXPECT_TRUE((status == ER_OK) || (status == ER_PERMISSION_DENIED));
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
             if (strict) {
@@ -1366,6 +1435,173 @@ TEST_F(ObserverTest, PendingStateNewObjectAnnounced) {
     EXPECT_TRUE(WaitForAll(events));
 
     obs.UnregisterAllListeners();
+}
+
+TEST_F(ObserverTest, SecuritySimple) {
+    TestSecurityManager secMgr;
+    ASSERT_EQ(ER_OK, secMgr.Init());
+
+    Participant provider("provider", true);
+    Participant consumer("consumer", true);
+
+    ASSERT_EQ(ER_OK, secMgr.Claim(provider.bus, manifest));
+    ASSERT_EQ(ER_OK, secMgr.Claim(consumer.bus, manifest));
+
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(provider.bus, policyAB));
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(consumer.bus, policyAB));
+
+    SimpleScenario(provider, consumer);
+}
+
+TEST_F(ObserverTest, SecurityDifferentToSameRoT) {
+    TestSecurityManager secMgrA("secMgrA");
+    ASSERT_EQ(ER_OK, secMgrA.Init());
+    TestSecurityManager secMgrB("secMgrB");
+    ASSERT_EQ(ER_OK, secMgrB.Init());
+
+    Participant provider("provider", true);
+    Participant consumer("consumer", true);
+
+    ASSERT_EQ(ER_OK, secMgrA.Claim(provider.bus, manifest));
+    ASSERT_EQ(ER_OK, secMgrB.Claim(consumer.bus, manifest));
+
+    ASSERT_EQ(ER_OK, secMgrA.UpdatePolicy(provider.bus, policyAB));
+    ASSERT_EQ(ER_OK, secMgrB.UpdatePolicy(consumer.bus, policyAB));
+
+    Observer observer(consumer.bus, cintfA, 1);
+    ObserverListener listener(consumer.bus);
+    observer.RegisterListener(listener);
+
+    vector<Event*> events;
+    events.push_back(&(listener.event));
+
+    listener.ExpectInvocations(1);
+    provider.CreateObject("a", intfA);
+    provider.RegisterObject("a");
+    EXPECT_TRUE(WaitForAll(events));
+
+    ProxyBusObject proxy;
+    ObjectId oid(provider.uniqueBusName, PATH_PREFIX "a");
+    proxy = observer.Get(oid);
+    EXPECT_TRUE(proxy.IsValid());
+    Message reply(consumer.bus);
+
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+
+    provider.EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    consumer.EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_STREQ(reply->GetErrorName(), org::alljoyn::Bus::ErrorName);
+    EXPECT_TRUE(reply->GetArg(1));
+    QStatus status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
+    EXPECT_EQ(ER_AUTH_FAIL, status);
+
+    ASSERT_EQ(ER_OK, secMgrA.Reset(provider.bus));
+    provider.EnableSecurity("ALLJOYN_ECDHE_NULL");
+    ASSERT_EQ(ER_OK, secMgrB.Claim(provider.bus, manifest));
+    provider.EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    ASSERT_EQ(ER_OK, secMgrB.UpdatePolicy(provider.bus, policyAB));
+
+    EXPECT_EQ(ER_OK, proxy.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+}
+
+TEST_F(ObserverTest, SecurityPolicyManifestUpdates) {
+    TestSecurityManager secMgr("secMgr");
+    ASSERT_EQ(ER_OK, secMgr.Init());
+
+    Participant provider("provider", true);
+    Participant consumer("consumer", true);
+
+    ASSERT_EQ(ER_OK, secMgr.Claim(provider.bus, manifest));
+    ASSERT_EQ(ER_OK, secMgr.Claim(consumer.bus, manifest));
+
+    Observer observerA(consumer.bus, cintfA, 1);
+    ObserverListener listenerA(consumer.bus);
+    observerA.RegisterListener(listenerA);
+
+    Observer observerAB(consumer.bus, cintfAB, 2);
+    ObserverListener listenerAB(consumer.bus);
+    observerAB.RegisterListener(listenerAB);
+
+    vector<Event*> listenersAll;
+    listenersAll.push_back(&(listenerA.event));
+    listenersAll.push_back(&(listenerAB.event));
+
+    listenerA.ExpectInvocations(1);
+    listenerAB.ExpectInvocations(1);
+    provider.CreateObject("ab", intfAB);
+    provider.RegisterObject("ab");
+    EXPECT_TRUE(WaitForAll(listenersAll));
+
+    ProxyBusObject proxyA;
+    ObjectId oidA(provider.uniqueBusName, PATH_PREFIX "ab");
+    proxyA = observerA.Get(oidA);
+    EXPECT_TRUE(proxyA.IsValid());
+
+    ProxyBusObject proxyAB;
+    ObjectId oidAB(provider.uniqueBusName, PATH_PREFIX "ab");
+    proxyAB = observerAB.Get(oidAB);
+    EXPECT_TRUE(proxyAB.IsValid());
+
+    // default policy
+    Message reply(consumer.bus);
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
+
+    // empty policy
+    PermissionPolicy policyNone;
+    vector<String> empty;
+    GeneratePolicy(empty, policyNone);
+
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(provider.bus, policyNone));
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(consumer.bus, policyNone));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
+
+    // policy for intfA
+    PermissionPolicy policyA;
+    GeneratePolicy(intfA, policyA);
+
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(provider.bus, policyA));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
+
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(consumer.bus, policyA));
+    EXPECT_EQ(ER_OK, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
+
+    // policy for intfA and intfB
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(consumer.bus, policyAB));
+    EXPECT_EQ(ER_OK, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
+
+    ASSERT_EQ(ER_OK, secMgr.UpdatePolicy(provider.bus, policyAB));
+    // re-establish session key
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
+
+    // manifest update
+    PermissionPolicy::Acl manifestA;
+    GenerateManifest(intfA, manifestA);
+    ASSERT_EQ(ER_OK, secMgr.UpdateIdentity(provider.bus, manifestA));
+    // re-establish session key
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
+
+    ASSERT_EQ(ER_OK, secMgr.UpdateIdentity(consumer.bus, manifestA));
+    EXPECT_EQ(ER_OK, proxyA.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_OK, proxyAB.MethodCall(INTF_A, METHOD, NULL, 0, reply));
+    EXPECT_EQ(ER_PERMISSION_DENIED, proxyAB.MethodCall(INTF_B, METHOD, NULL, 0, reply));
 }
 
 }
