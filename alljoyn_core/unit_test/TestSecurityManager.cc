@@ -40,6 +40,7 @@ TestSecurityManager::TestSecurityManager(string appName) :
     String aki;
     CertificateX509::GenerateAuthorityKeyId(caKeyPair.GetDSAPublicKey(), aki);
     caPublicKeyInfo.SetKeyId((uint8_t*)aki.data(), aki.size());
+    bus.RegisterKeyStoreListener(keyStoreListener);
 }
 
 QStatus TestSecurityManager::Init() {

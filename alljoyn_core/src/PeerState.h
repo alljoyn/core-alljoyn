@@ -356,6 +356,8 @@ class _PeerState {
     /**
      * Update the conversation hash with a single byte
      * InitializeConversationHash must first be called before calling this method.
+     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] byte Byte with which to update the hash.
      */
@@ -364,6 +366,8 @@ class _PeerState {
     /**
      * Update the conversation hash with a byte array.
      * InitializeConversationHash must first be called before calling this method.
+     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] buf Data with which to update the hash.
      * @param[in] bufSize Size of buf.
@@ -374,6 +378,8 @@ class _PeerState {
      * Update the conversation hash with a string. String will be converted to its
      * underlying byte array and used to update.
      * InitializeConversationHash must first be called before calling this method.
+     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] str String with data with which to update the hash.
      */
@@ -383,6 +389,8 @@ class _PeerState {
      * Update the conversation hash with a Message. This extracts the raw message buffer
      * from the Message and updates the hash with that.
      * InitializeConversationHash must first be called before calling this method.
+     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] msg A Message object whose arguments will be added to the hash.
      */
@@ -391,12 +399,16 @@ class _PeerState {
     /**
      * Initialize the conversation hash to start a new conversation. Any previous
      * conversation hash is lost. This must be called before any calls to UpdateHash or GetDigest.
+     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
      */
     void InitializeConversationHash();
 
     /**
      * Free the conversation hash when it's no longer needed. After this, any new calls
      * to UpdateHash or GetDigest must be preceded by a call to InitializeConversationHash.
+     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
      * @see void InitializeConversationHash()
      */
     void FreeConversationHash();
@@ -404,11 +416,31 @@ class _PeerState {
     /**
      * Get the current conversation hash digest.
      * InitializeConversationHash must first be called before calling this method.
+     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
      * @param[out] digest A buffer of appropriate size to receive the digest. Currently
      *                    only SHA-256 is used, and so 32 bytes will be returned.
      * @param[in] keepAlive Whether or not to keep the hash alive for continuing hash.
      */
     void GetDigest(uint8_t* digest, bool keepAlive = false);
+
+    /**
+     * Acquire the lock to conversation hash with the intention to call
+     * UpdateHash, GetDigest, InitializeConversationHash, or
+     * FreeConversationHash.
+     * In some cases like in MethodReply() with a reply message, the issuer of
+     * ReplyMethod wishes to aquire an early lock to the conversation hash to
+     * prevent any other thread from updating the conversation hash while it
+     * is waiting for the MethodRely() to return.
+     */
+
+    void AcquireConversationHashLock();
+
+    /**
+     * release the conversation hash lock.
+     */
+
+    void ReleaseConversationHashLock();
 
     /*
      * Destructor
@@ -492,6 +524,11 @@ class _PeerState {
      * The conversation hash.
      */
     qcc::Crypto_Hash* hashUtil;
+
+    /**
+     * Mutex to protect the conversation hash
+     */
+    qcc::Mutex hashLock;
 };
 
 
