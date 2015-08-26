@@ -32,6 +32,8 @@
 
 #include <qcc/CryptoECCMath.h>
 
+#include <qcc/CryptoECCp256.h>
+
 #include <Status.h>
 
 using namespace std;
@@ -45,7 +47,7 @@ namespace qcc {
 /* These values describe why the verify failed.  This simplifies testing. */
 typedef enum {
     V_SUCCESS = 0, V_R_ZERO, V_R_BIG, V_S_ZERO, V_S_BIG,
-    V_INFINITY, V_UNEQUAL
+    V_INFINITY, V_UNEQUAL, V_INTERNAL
 } verify_res_t;
 
 struct ECDSASig {
@@ -96,10 +98,10 @@ struct ECCSecret::ECCSecretState {
  * The ECDH_derive functionality is split in two so that the test
  * program can get the entire point.
  */
-boolean_t ECDH_derive(bigval_t* tgt, bigval_t const* k, affine_point_t const* Q)
+bool ECDH_derive(bigval_t* tgt, bigval_t const* k, affine_point_t const* Q)
 {
     affine_point_t Q2;
-    boolean_t rv;
+    bool rv;
 
     rv = ECDH_derive_pt(&Q2, k, Q);
     if (rv) {
@@ -170,11 +172,31 @@ static verify_res_t ECDSA_verify_inner(bigval_t const* msgdgst,
     bigval_t w;
     bigval_t u1;
     bigval_t u2;
-    affine_point_t P1;
-    affine_point_t P2;
-    affine_point_t X;
-    jacobian_point_t P2Jacobian;
-    jacobian_point_t XJacobian;
+    digit256_t digU1;
+    digit256_t digU2;
+    ecpoint_t Q;
+    ecpoint_t P1;
+    ecpoint_t P2;
+    ecpoint_t G;
+    ecpoint_t X;
+    ec_t curve;
+
+    bool status;
+    QStatus ajstatus;
+
+    ajstatus = ec_getcurve(&curve, NISTP256r1);
+    if (ajstatus != ER_OK) {
+        return (V_INTERNAL);
+    }
+
+    ec_get_generator(&G, &curve);
+
+    status = bigval_to_digit256(&(pubkey->x), Q.x);
+    status = status && bigval_to_digit256(&(pubkey->y), Q.y);
+    status = status && ecpoint_validation(&Q, &curve);
+    if (!status) {
+        return (V_INTERNAL);
+    }
 
     if (big_cmp(&sig->r, &big_one) < 0) {
         return (V_R_ZERO);
@@ -194,15 +216,27 @@ static verify_res_t ECDSA_verify_inner(bigval_t const* msgdgst,
     big_precise_reduce(&u1, &u1, &orderP);
     big_mpyP(&u2, &sig->r, &w, MOD_ORDER);
     big_precise_reduce(&u2, &u2, &orderP);
-    pointMpyP(&P1, &u1, &base_point);
-    pointMpyP(&P2, &u2, pubkey);
-    toJacobian(&P2Jacobian, &P2);
-    pointAdd(&XJacobian, &P2Jacobian, &P1);
-    toAffine(&X, &XJacobian);
-    if (X.infinity) {
+
+    status = bigval_to_digit256(&u1, digU1);
+    status = status && bigval_to_digit256(&u2, digU2);
+    if (!status) {
+        return (V_INTERNAL);
+    }
+
+    ec_scalarmul(&(curve.generator), digU1, &P1, &curve);
+    ec_scalarmul(&Q, digU2, &P2, &curve);
+
+    // copy P1 to X
+    fpcopy_p256(P1.x, X.x);
+    fpcopy_p256(P1.y, X.y);
+
+    ec_add(&X, &P2, &curve);
+
+    if (ec_is_infinity(&X, &curve)) {
         return (V_INFINITY);
     }
-    big_precise_reduce(&v, &X.x, &orderP);
+
+    digit256_to_bigval(X.x, &v);
     if (big_cmp(&v, &sig->r) != 0) {
         return (V_UNEQUAL);
     }
