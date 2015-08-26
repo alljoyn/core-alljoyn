@@ -10784,6 +10784,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
 #pragma warning(push)
 #pragma warning(disable: 4996)
 #endif
+    /*
+     * This call to a deprecated C++ function is required to support the
+     * deprecated Java API.  This should be removed for the 17.10 release.
+     */
     QStatus status = intf->SetMemberDescription(member.c_str(), desc.c_str(), isSessionless);
 #if defined(QCC_OS_GROUP_WINDOWS)
 #pragma warning(pop)
