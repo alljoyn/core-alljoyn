@@ -20,6 +20,7 @@
 #include <string>
 
 #include <alljoyn/BusAttachment.h>
+#include "InMemoryKeyStore.h"
 
 using namespace std;
 using namespace ajn;
@@ -56,6 +57,7 @@ class TestSecurityManager :
     string identityName;
     int certSerialNumber;
     int policyVersion;
+    InMemoryKeyStoreListener keyStoreListener;
 
     /* SessionListener */
     virtual void SessionLost(SessionId sessionId,

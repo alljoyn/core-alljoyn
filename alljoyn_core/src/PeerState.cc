@@ -153,6 +153,16 @@ static inline bool ConversationVersionDoesNotApply(uint32_t conversationVersion,
     }
 }
 
+void _PeerState::AcquireConversationHashLock()
+{
+    hashLock.Lock(MUTEX_CONTEXT);
+}
+
+void _PeerState::ReleaseConversationHashLock()
+{
+    hashLock.Unlock(MUTEX_CONTEXT);
+}
+
 void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
 {
     /* In debug builds, a NULL hashUtil is probably a caller bug, so assert.

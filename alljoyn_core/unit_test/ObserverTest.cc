@@ -36,6 +36,7 @@
 #include <alljoyn/Status.h>
 
 #include "TestSecurityManager.h"
+#include "InMemoryKeyStore.h"
 
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
@@ -283,6 +284,7 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     void EnableSecurity(string authMechanisms) {
+        bus.RegisterKeyStoreListener(keyStoreListener);
         bus.EnablePeerSecurity(authMechanisms.c_str(), &authListener);
     }
 
@@ -291,6 +293,7 @@ class Participant : public SessionPortListener, public SessionListener {
     Participant(const Participant& rhs);
     //Private assignment operator to prevent copying the class and double freeing of memory
     Participant& operator=(const Participant& rhs);
+    InMemoryKeyStoreListener keyStoreListener;
 };
 
 class PendingParticipant1 : public Participant {
