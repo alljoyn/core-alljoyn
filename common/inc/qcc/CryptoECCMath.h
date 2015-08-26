@@ -26,9 +26,9 @@
 #include <qcc/platform.h>
 #include <qcc/CryptoECCOldEncoding.h>
 
-namespace qcc {
+#include <qcc/CryptoECCfp.h>
 
-typedef enum { B_FALSE, B_TRUE } boolean_t;
+namespace qcc {
 
 typedef enum { MOD_MODULUS = 0, MOD_ORDER } modulus_val_t;
 
@@ -126,9 +126,13 @@ void binary_to_bigval(const void* src, bigval_t* tgt, size_t srclen);
 
 void bigval_to_binary(bigval_t const* src, void* tgt, size_t tgtlen);
 
-boolean_t ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q);
+void digit256_to_bigval(digit256_tc src, bigval_t* dst);
 
-int ECDH_generate(affine_point_t* P1, bigval_t* k);
+bool bigval_to_digit256(const bigval_t* src, digit256_t dst);
+
+bool ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q);
+
+QStatus ECDH_generate(affine_point_t* P1, bigval_t* k);
 
 QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const ECCPrivateKey* privateKey, ECCSecretOldEncoding* secret);
 
