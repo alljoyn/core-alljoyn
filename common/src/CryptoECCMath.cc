@@ -31,6 +31,8 @@
 #include <qcc/Crypto.h>
 
 #include <qcc/CryptoECCMath.h>
+#include <qcc/CryptoECCfp.h>
+#include <qcc/CryptoECCp256.h>
 
 #include <Status.h>
 
@@ -1322,39 +1324,93 @@ boolean_t in_curveP(affine_point_t const* P)
 
 }
 
-/* returns a bigval between 0 or 1 (depending on allow_zero)
-   and order-1, inclusive.  Returns 0 on success, -1 otherwise */
-COND_STATIC int big_get_random_n(bigval_t* tgt, boolean_t allow_zero)
+/*
+ * Convert a digit256_t (internal representation of field elements) to a
+ * bigval_t. Note: dst must have space for sizeof(digit256_t) + 4 bytes.
+ */
+void digit256_to_bigval(digit256_tc src, bigval_t* dst)
 {
-    int rv;
+    assert((BIGLEN - 1) * sizeof(uint32_t) == sizeof(digit256_t));
 
-    tgt->data[BIGLEN - 1] = 0;
-    do {
-        rv = get_random_bytes(tgt, sizeof (uint32_t) * (BIGLEN - 1));
-        if (rv < 0) {
-            return (-1);
-        }
-    } while ((!allow_zero && big_is_zero(tgt)) ||
-             (big_cmp(tgt, &orderP) >= 0));
+    memcpy(dst->data, src, sizeof(digit256_t));
+    dst->data[BIGLEN - 1] = 0;
 
-    return (0);
+#if HOST_IS_BIG_ENDIAN
+    int i;
+    for (i = 0; i < (BIGLEN - 1); i += 2) {    /* Swap adjacent 32-bit words */
+        SWAP(dst->data[i], dst->data[i + 1]);
+    }
+#endif
+
+}
+
+/*
+ * Convert a bigval_t to a digit256_t.  Return TRUE if src was
+ * successfully converted, FALSE otherwise.
+ */
+bool bigval_to_digit256(const bigval_t* src, digit256_t dst)
+{
+    assert((BIGLEN - 1) * sizeof(uint32_t) == sizeof(digit256_t));
+
+    /* Fail on negative inputs, since any negative value received in the
+     * bigval_t format is invalid.
+     */
+    if (big_is_negative(src)) {
+        return false;
+    }
+
+    memcpy(dst, src->data, sizeof(digit256_t));
+
+#if HOST_IS_BIG_ENDIAN
+    int i;
+    uint32_t* data = (uint32_t*)dst;
+    for (i = 0; i < (BIGLEN - 1); i += 2) {    /* Swap adjacent 32-bit words */
+        SWAP(data[i], data[i + 1]);
+    }
+#endif
+
+    return true;
 }
 
 /*
  * computes a secret value, k, and a point, P1, to send to the other
  * party.  Returns 0 on success, -1 on failure (of the RNG).
  */
-int ECDH_generate(affine_point_t* P1, bigval_t* k)
+QStatus ECDH_generate(affine_point_t* P1, bigval_t* k)
 {
-    int rv;
+    /* Compute a key pair (r, Q) then re-encode and output as (k, P1). */
+    digit256_t r;
+    ecpoint_t g, Q;
+    ec_t curve;
+    QStatus status;
 
-    rv = big_get_random_n(k, B_FALSE);
-    if (rv < 0) {
-        return (-1);
+    status = ec_getcurve(&curve, NISTP256r1);
+    if (status != ER_OK) {
+        goto Exit;
     }
-    pointMpyP(P1, k, &base_point);
 
-    return (0);
+    /* Choose random r in [0, curve order - 1]*/
+    do {
+        status = Crypto_GetRandomBytes((uint8_t*)r, sizeof(digit256_t));
+        if (status != ER_OK) {
+            goto Exit;
+        }
+    } while (!validate_256(r, curve.order));
+
+    ec_get_generator(&g, &curve);
+    status = ec_scalarmul(&g, r, &Q, &curve);        /* Q = g^r */
+
+    /* Convert out of internal representation. */
+    digit256_to_bigval(r, k);
+    digit256_to_bigval(Q.x, &(P1->x));
+    digit256_to_bigval(Q.y, &(P1->y));
+    P1->infinity = false;
+
+Exit:
+    fpzero_p256(r);
+    fpzero_p256(Q.x);
+    fpzero_p256(Q.y);
+    return status;
 }
 
 /*
@@ -1410,39 +1466,52 @@ void binary_to_bigval(const void* src, bigval_t* tgt, size_t srclen)
    return B_FALSE.  The behavior with k out of range is unspecified,
    but safe. */
 
-boolean_t ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q)
+bool ECDH_derive_pt(affine_point_t* tgt, bigval_t const* k, affine_point_t const* Q)
 {
-    if (Q->infinity) {
-        return (B_FALSE);
-    }
-    if (big_is_negative(&Q->x)) {
-        return (B_FALSE);
-    }
-    if (big_cmp(&Q->x, &modulusP) >= 0) {
-        return (B_FALSE);
-    }
-    if (big_is_negative(&Q->y)) {
-        return (B_FALSE);
-    }
-    if (big_cmp(&Q->y, &modulusP) >= 0) {
-        return (B_FALSE);
-    }
-    if (!in_curveP(Q)) {
-        return (B_FALSE);
+    bool status;
+    QStatus ajstatus;
+    ecpoint_t theirPublic;      /* internal representation of Q */
+    ecpoint_t sharedSecret;
+    digit256_t ourPrivate;      /* internal representation of k */
+    ec_t curve;
+
+    ajstatus = ec_getcurve(&curve, NISTP256r1);
+    if (ajstatus != ER_OK) {
+        status = false;
+        goto Exit;
     }
 
-    /* [HMV] Section 4.3 states that the above steps, combined with the
-     * fact the h=1 for the curves used here, implies that order*Q =
-     * Infinity, which is required by ANSI X9.63.
-     */
-
-    pointMpyP(tgt, k, Q);
-    /* Q2 can't be infinity if 1 <= k < orderP, which is supposed to be
-       the case, but the test is so cheap, we just do it. */
-    if (tgt->infinity) {
-        return (B_FALSE);
+    /* Convert to internal representation */
+    status = bigval_to_digit256(k, ourPrivate);
+    status = status && bigval_to_digit256(&(Q->x), theirPublic.x);
+    status = status && bigval_to_digit256(&(Q->y), theirPublic.y);
+    if (!status) {
+        goto Exit;
     }
-    return (B_TRUE);
+
+    if (!ecpoint_validation(&theirPublic, &curve)) {
+        status = false;
+        goto Exit;
+    }
+
+    /* Compute sharedSecret = theirPublic^ourPrivate */
+    ajstatus = ec_scalarmul(&theirPublic, ourPrivate, &sharedSecret, &curve);
+
+    status = ec_oncurve(&sharedSecret, &curve);
+
+    status &= (ER_OK == ajstatus);
+
+    /* Copy sharedSecret to tgt */
+    digit256_to_bigval(sharedSecret.x, &(tgt->x));
+    digit256_to_bigval(sharedSecret.y, &(tgt->y));
+    tgt->infinity = ec_is_infinity(&sharedSecret, &curve);
+
+Exit:
+    /* Clean up local copies. */
+    fpzero_p256(sharedSecret.x);
+    fpzero_p256(sharedSecret.y);
+    fpzero_p256(ourPrivate);
+    return status;
 }
 
 #ifdef ECC_TEST
@@ -1513,7 +1582,7 @@ void U8BeArrayToU32Array(const uint8_t* src, size_t len, uint32_t* dest)
 QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const ECCPrivateKey* privateKey, ECCSecretOldEncoding* secret)
 {
 
-    boolean_t derive_rv;
+    bool derive_rv;
     affine_point_t localSecret;
     affine_point_t pub;
     bigval_t pk;
@@ -1525,11 +1594,6 @@ QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const
     derive_rv = ECDH_derive_pt(&localSecret, &pk, &pub);
     if (!derive_rv) {
         return ER_FAIL;  /* bad */
-    }
-    if (derive_rv) {
-        if (!in_curveP(&localSecret)) {
-            return ER_FAIL;  /* bad */
-        }
     }
     U32ArrayToU8BeArray((const uint32_t*)&localSecret, U32_AFFINEPOINT_SZ, (uint8_t*)secret);
     return ER_OK;
