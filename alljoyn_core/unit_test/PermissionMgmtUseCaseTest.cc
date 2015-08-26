@@ -1383,16 +1383,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
         SecurityApplicationProxy saProxy(adminBus, adminBus.GetUniqueName().c_str());
         EXPECT_EQ(ER_OK, saProxy.UpdatePolicy(policy)) << "  UpdatePolicy failed.";
-
-        /* After having a new policy installed, the target bus
-           clears out all of its peer's secret and session keys, so the
-           next call will get security violation.  So just make the call and ignore
-           the outcome.
-         */
-        PermissionPolicy retPolicy;
-        saProxy.GetPolicy(retPolicy);
+        EXPECT_EQ(ER_OK, saProxy.SecureConnection(true));
 
         /* retrieve back the policy to compare */
+        PermissionPolicy retPolicy;
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
 
         EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
@@ -1408,15 +1402,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         SetApplicationStateSignalReceived(false);
         EXPECT_EQ(ER_OK, saProxy.UpdatePolicy(policy)) << "UpdatePolicy failed.";
+        EXPECT_EQ(ER_OK, saProxy.SecureConnection(true));
 
-        /* After having a new policy installed, the target bus
-           clears out all of its peer's secret and session keys, so the
-           next call will get security violation.  So just make the call and ignore
-           the outcome.
-         */
-        PermissionPolicy retPolicy;
-        saProxy.GetPolicy(retPolicy);
         /* retrieve back the policy to compare */
+        PermissionPolicy retPolicy;
         EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
 
         EXPECT_EQ(policy.GetVersion(), retPolicy.GetVersion()) << " GetPolicy failed. Different policy version number.";
@@ -1503,13 +1492,10 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             EXPECT_NE(ER_OK, status) << "InstallIdentity did not fail.";
         } else {
             EXPECT_EQ(ER_OK, status) << "InstallIdentity failed.";
-            /* After having a new identity cert installed, the target bus
-               clears out all of its peer's secret and session keys, so the
-               next call will get security violation.
-             */
+            EXPECT_EQ(ER_OK, saProxy.SecureConnection(true)) << "Fail to refresh peer's secret and session keys.";
+
+            /* Try GetPolicy call, it should succeed. */
             PermissionPolicy retPolicy;
-            EXPECT_NE(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy did not fail.";
-            /* Try the same call again, it will succeed. */
             EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
         }
         delete [] certs;

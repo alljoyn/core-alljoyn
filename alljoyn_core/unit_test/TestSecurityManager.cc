@@ -267,7 +267,10 @@ QStatus TestSecurityManager::UpdateIdentity(const BusAttachment& peerBus,
     if (ER_OK != status) {
         return status;
     }
-
+    status = peerProxy.SecureConnection(true);
+    if (ER_OK != status) {
+        return status;
+    }
     return bus.LeaveSession(sessionId);
 }
 
@@ -339,6 +342,10 @@ QStatus TestSecurityManager::UpdatePolicy(const BusAttachment& peerBus, const Pe
     AddAdminAcl(policy, copy);
 
     status = peerProxy.UpdatePolicy(copy);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = peerProxy.SecureConnection(true);
     if (ER_OK != status) {
         return status;
     }

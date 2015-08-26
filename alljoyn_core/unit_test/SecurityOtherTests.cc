@@ -646,6 +646,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
         UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     }
     {
         PermissionPolicy policy;
@@ -654,6 +655,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
         UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, policy);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
     }
 
     uint32_t sessionId;
