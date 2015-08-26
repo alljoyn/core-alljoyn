@@ -62,17 +62,17 @@ static void ECDHFullPointTest(int iteration, bool injectError)
     bigval_t alicePrivate, bobPrivate;
     affine_point_t alicePublic, bobPublic, aliceFinal, bobFinal;
 
-    EXPECT_EQ(0, ECDH_generate(&alicePublic, &alicePrivate)) << "ECDHFullPointTest [" << iteration << "]: Fail to generate Alice's key";
+    EXPECT_EQ(ER_OK, ECDH_generate(&alicePublic, &alicePrivate)) << "ECDHFullPointTest [" << iteration << "]: Fail to generate Alice's key";
     ECCPublicKey aliceECCPublicKey;
     AffinePoint2PublicKey(alicePublic, aliceECCPublicKey);
-    EXPECT_EQ(0, ECDH_generate(&bobPublic, &bobPrivate)) << "ECDHFullPointTest [" << iteration << "]: Fail to generate Bob's key";
+    EXPECT_EQ(ER_OK, ECDH_generate(&bobPublic, &bobPrivate)) << "ECDHFullPointTest [" << iteration << "]: Fail to generate Bob's key";
     ECCPublicKey bobECCPublicKey;
     AffinePoint2PublicKey(bobPublic, bobECCPublicKey);
-    EXPECT_EQ(B_TRUE, ECDH_derive_pt(&aliceFinal, &alicePrivate, &bobPublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Alice's point";
+    EXPECT_TRUE(ECDH_derive_pt(&aliceFinal, &alicePrivate, &bobPublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Alice's point";
     if (injectError) {
         EXPECT_EQ(0, ToggleRandomBit(&bobPrivate, sizeof(bobPrivate) - sizeof(int))) << "ECDHFullPointTest [" << iteration << "]: Fail to toggle random bits";
     }
-    EXPECT_EQ(B_TRUE, ECDH_derive_pt(&bobFinal, &bobPrivate, &alicePublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Bob's point";
+    EXPECT_TRUE(ECDH_derive_pt(&bobFinal, &bobPrivate, &alicePublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Bob's point";
 
     EXPECT_EQ(B_TRUE, in_curveP(&aliceFinal)) << "ECDHFullPointTest [" << iteration << "]: Alice's point is not on the curve";
     EXPECT_EQ(B_TRUE, in_curveP(&bobFinal)) << "ECDHFullPointTest [" << iteration << "]: Bob's point is not on the curve";
