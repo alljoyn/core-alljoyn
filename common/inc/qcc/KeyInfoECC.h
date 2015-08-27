@@ -28,6 +28,9 @@
 
 namespace qcc {
 
+/**
+ * Information about the signature algorithm.
+ */
 class SigInfo {
 
   public:
@@ -100,6 +103,9 @@ class SigInfo {
     uint8_t algorithm;
 };
 
+/**
+ * Information about the ECC signature algorithm
+ */
 class SigInfoECC : public SigInfo {
 
   public:
@@ -118,7 +124,7 @@ class SigInfoECC : public SigInfo {
     }
 
     /**
-     * desstructor.
+     * destructor.
      */
     virtual ~SigInfoECC()
     {

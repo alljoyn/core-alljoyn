@@ -24,6 +24,9 @@
 
 namespace ajn {
 
+/**
+ * Listener used to handle the security State signal.
+ */
 class ApplicationStateListener {
   public:
     /**

@@ -200,16 +200,19 @@ class Translator {
 class LookupTableTranslator : public Translator {
   public:
     /**
+     * @copydoc Translator::NumTargetLanguages
      * @see Translator::NumTargetLanguages
      */
     virtual size_t NumTargetLanguages();
 
     /**
+     * @copydoc Translator::GetTargetLanguage
      * @see Translator::GetTargetLanguage
      */
     virtual void GetTargetLanguage(size_t index, qcc::String& ret);
 
     /**
+     * @copydoc Translator::AddTargetLanguage
      * @see Translator::AddTargetLanguage
      */
     virtual QStatus AddTargetLanguage(const char* language, bool* added);
@@ -228,14 +231,34 @@ class LookupTableTranslator : public Translator {
     virtual const char* GetFieldId(size_t index) = 0;
 
   protected:
+    /**
+     * Struct to handle case insensitive comparison operator used to make sure
+     * the case of language tags are ignored when adding, sorting and reading them.
+     */
     struct CaseInsensitiveCompare {
+        /**
+         * inner case insensitive comparison struct used by the
+         * std::lexicographical_compare function.
+         */
         struct CaseInsensitiveCharCompare {
+            /**
+             * CaseInsensitive comparison parentheses operator for individual chars
+             * @param lhs char value to compare
+             * @param rhs char value to compare
+             * @return true if the case insensitive comparison of lhs < rhs
+             */
             bool operator()(const char& lhs, const char& rhs)
             {
                 return std::tolower(lhs) < std::tolower(rhs);
             }
         };
 
+        /**
+         * CaseInsensitive comparison parentheses operator for Strings
+         * @param lhs String to compare
+         * @param rhs String to to compare
+         * @return true if the case insensitive comparison of lhs < rhs
+         */
         bool operator()(const qcc::String& lhs, const qcc::String& rhs) const
         {
             return std::lexicographical_compare(lhs.begin(), lhs.end(),
