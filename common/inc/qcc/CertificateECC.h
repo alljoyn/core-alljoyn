@@ -781,6 +781,9 @@ class CertificateX509 {
     qcc::String aki;
 };
 
+/**
+ * An X.509 certificate that represents a membership certificate
+ */
 class MembershipCertificate : public CertificateX509 {
 
   public:
@@ -834,6 +837,9 @@ class MembershipCertificate : public CertificateX509 {
     }
 };
 
+/**
+ * An X.509 certificate that represents an identity certificate
+ */
 class IdentityCertificate : public CertificateX509 {
 
   public:
