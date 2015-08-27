@@ -132,7 +132,7 @@ class CertificateX509 {
     /**
      * Default Constructor
      */
-    CertificateX509() : type(UNRESTRICTED_CERTIFICATE), serialLen(0), serial(NULL), ca(0)
+    CertificateX509() : type(UNRESTRICTED_CERTIFICATE), serialLen(0), serial(NULL), ca(false)
     {
     }
 
@@ -140,7 +140,7 @@ class CertificateX509 {
      * Constructor
      * @param type the certificate type.
      */
-    CertificateX509(CertificateType type) : type(type), serialLen(0), serial(NULL), ca(0)
+    CertificateX509(CertificateType type) : type(type), serialLen(0), serial(NULL), ca(false)
     {
     }
 
@@ -775,7 +775,7 @@ class CertificateX509 {
     /*
      * Extensions
      */
-    uint32_t ca;
+    bool ca;
     qcc::String digest;
     qcc::String subjectAltName;
     qcc::String aki;
