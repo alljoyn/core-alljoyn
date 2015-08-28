@@ -31,7 +31,9 @@ class _ProxyBusObjectHost : public ScriptableObject {
   private:
     BusAttachment busAttachment;
     ProxyBusObject proxyBusObject;
-    _ProxyBusObjectHostImpl* impl; /* Hide declaration of ProxyChildrenHost to get around recursive include. */
+    _ProxyBusObjectHostImpl* impl; /* Hide declaration of ProxyChildrenHost to get around recursive include. */    
+    _ProxyBusObjectHost& operator=(const _ProxyBusObjectHost&);
+    _ProxyBusObjectHost(const _ProxyBusObjectHost&);
 
     void Initialize();
 
