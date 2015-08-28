@@ -460,11 +460,11 @@ class ObserverListener : public Observer::Listener {
 
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
         EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
-                    (status == ER_PERMISSION_DENIED));
+                    (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
 
         bus.EnableConcurrentCallbacks();
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_PERMISSION_DENIED));
+        EXPECT_TRUE((status == ER_OK) || (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
             if (strict) {

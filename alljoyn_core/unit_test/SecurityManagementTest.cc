@@ -647,16 +647,10 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_fails_if_version_not_newer)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy1));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     PermissionPolicy fetchedPolicy;
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    sapWithPeer1.GetPolicy(fetchedPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy));
-
     EXPECT_EQ(static_cast<uint32_t>(1234), fetchedPolicy.GetVersion());
     EXPECT_EQ(policy1.GetVersion(), fetchedPolicy.GetVersion());
     EXPECT_EQ(policy1, fetchedPolicy);
@@ -782,15 +776,9 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_old
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy1));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     PermissionPolicy fetchedPolicy;
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    sapWithPeer1.GetPolicy(fetchedPolicy);
-
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy));
 
     EXPECT_EQ(policy1.GetVersion(), fetchedPolicy.GetVersion());
@@ -834,15 +822,9 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_old
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy2));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     PermissionPolicy fetchedPolicy2;
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    sapWithPeer1.GetPolicy(fetchedPolicy2);
-
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy2));
     EXPECT_NE(policy1, fetchedPolicy2);
     EXPECT_EQ(policy2.GetVersion(), fetchedPolicy2.GetVersion());
@@ -1043,6 +1025,7 @@ TEST(SecurityManagementPolicy2Test, DISABLED_ManagedApplication_method_calls_sho
                                                                       digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+        EXPECT_EQ(ER_OK, sapBus1toBus2.SecureConnection(true));
 
         // Call UpdatePolicy
         PermissionPolicy policy;
@@ -1071,7 +1054,7 @@ TEST(SecurityManagementPolicy2Test, DISABLED_ManagedApplication_method_calls_sho
 
     {
         SecurityApplicationProxy sapBus1toBus2(peer1, peer2.GetUniqueName().c_str(), sessionId);
-        sapBus1toBus2.SecureConnection();
+        sapBus1toBus2.SecureConnection(true);
         // If ECDHE_ECDSA security is not established none of the method calls
         // will succeed.
         ASSERT_TRUE(bus2AuthListener.authenticationSuccessfull);

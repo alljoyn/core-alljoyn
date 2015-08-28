@@ -596,6 +596,7 @@ void SecurityPolicyRulesTest::UpdatePeer1Manifest(PermissionPolicy::Rule* manife
 
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 }
 
 void SecurityPolicyRulesTest::UpdatePeer2Manifest(PermissionPolicy::Rule* manifest, size_t manifestSize) {
@@ -625,6 +626,7 @@ void SecurityPolicyRulesTest::UpdatePeer2Manifest(PermissionPolicy::Rule* manife
 
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 }
 
 class MethodRulesTestValue {
@@ -734,7 +736,9 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -896,15 +900,10 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     SCOPED_TRACE(p2policyStr.c_str());
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
+
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     const size_t manifestSize = 1;
     const size_t certChainSize = 1;
@@ -942,6 +941,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
                                                                   peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     /*************Update peer2 Manifest *************/
     //peer2 key
@@ -977,6 +977,7 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
                                                                   peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1155,7 +1156,9 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1308,15 +1311,10 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
+
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     const size_t manifestSize = 1;
     const size_t certChainSize = 1;
@@ -1354,6 +1352,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
                                                                   peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     /*************Update peer2 Manifest *************/
     //peer2 key
@@ -1389,6 +1388,7 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
                                                                   peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1566,7 +1566,9 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1729,15 +1731,10 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
+
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     const size_t manifestSize = 1;
     const size_t certChainSize = 1;
@@ -1775,6 +1772,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
                                                                   peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     /*************Update peer2 Manifest *************/
     //peer2 key
@@ -1810,6 +1808,7 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
                                                                   peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1995,7 +1994,9 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -2163,15 +2164,10 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
-    /* After having a new policy installed, the target bus
-       clears out all of its peer's secret and session keys, so the
-       next call will get security violation.  So just make the call and ignore
-       the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
+
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     const size_t manifestSize = 1;
     const size_t certChainSize = 1;
@@ -2210,6 +2206,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
                                                                   peer1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     /*************Update peer2 Manifest *************/
     //peer2 key
@@ -2246,6 +2243,7 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
                                                                   peer2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -2428,16 +2426,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test1_properties_succesfully_se
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -2571,16 +2563,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test2_only_prop1_successfully_f
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -2709,16 +2695,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test3_only_prop1_successfully_f
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -2850,16 +2830,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test4_no_properties_fetched)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -2979,16 +2953,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test5_no_properties_fetched)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -3105,16 +3073,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test6_properties_successfully_f
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -3248,16 +3210,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test7_properties_successfully_f
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -3392,16 +3348,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test8_no_properties_fetched)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -3520,16 +3470,10 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test9_no_properties_fetched)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
-    /*
-     * After having a new policy installed, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy retPolicy;
-    sapWithPeer1.GetPolicy(retPolicy);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
-    sapWithPeer2.GetPolicy(retPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     UpdatePeer1Manifest(peer1Manifest, manifestSize);
     UpdatePeer2Manifest(peer2Manifest, manifestSize);
@@ -3682,7 +3626,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_1)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     /* We should be using a ECDHE_NULL based session */
     EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
@@ -3872,7 +3818,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_2)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     /* We should be using a ECDHE_NULL based session */
     EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", managerAuthListener, NULL, false));
@@ -4060,7 +4008,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_3)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -4247,7 +4197,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_4)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -4406,14 +4358,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     // Call UpdateIdentity to install the cert chain
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
         << "Failed to update Identity cert or manifest ";
-
-    /*
-     * After updating the identity, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy dummyPolicy;
-    sapWithPeer2.GetPolicy(dummyPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
@@ -4511,7 +4456,9 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -4670,14 +4617,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     // Call UpdateIdentity to install the cert chain
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
         << "Failed to update Identity cert or manifest ";
-
-    /*
-     * After updating the identity, the target bus clears out all of
-     * its peer's secret and session keys, so the next call will get security
-     * violation.  So just make the call and ignore the outcome.
-     */
-    PermissionPolicy dummyPolicy;
-    sapWithPeer2.GetPolicy(dummyPolicy);
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     PolicyRulesTestBusObject peer1BusObject(peer1Bus, "/test", interfaceName);
     EXPECT_EQ(ER_OK, peer1Bus.RegisterBusObject(peer1BusObject));
@@ -4776,7 +4716,9 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -4967,7 +4909,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_7)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -5159,7 +5103,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -5351,7 +5297,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_9)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -5525,7 +5473,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_10)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -5787,7 +5737,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -6055,7 +6007,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -6280,9 +6234,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_13)
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize))
         << "Failed to update Identity cert or manifest ";
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     //Peer2 already has a manifest installed that allows everything from the SetUp
-
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
     EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
@@ -6509,6 +6463,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_14)
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize))
         << "Failed to update Identity cert or manifest ";
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -6654,9 +6609,9 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_15)
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifest, manifestSize))
         << "Failed to update Identity cert or manifest ";
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     //Peer2 already has a manifest installed that allows everything from the SetUp
-
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
     EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
@@ -6806,6 +6761,7 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_16)
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifest, manifestSize))
         << "Failed to update Identity cert or manifest ";
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;

@@ -537,12 +537,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test1_case1_ECDHE_NULL) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;
@@ -575,12 +577,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test1_case2_ECDHE_PSK) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;
@@ -613,12 +617,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test1_case3_SRP) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;
@@ -651,12 +657,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test1_case4_ECDHE_ECDSA) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAll(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;
@@ -715,12 +723,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test2_case1_ECDHE_NULL) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;
@@ -753,12 +763,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test2_case2_ECDHE_PSK) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;
@@ -791,12 +803,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test2_case3_SRP) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;
@@ -829,12 +843,14 @@ TEST_F(SecurityAuthenticationTest, authenticate_test2_case4_ECDHE_ECDSA) {
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
     {
         PermissionPolicy policy;
         SecurityAuthTestHelper::GeneratePermissivePolicyAnyTrusted(policy, 1);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+        // Don't instantly call SecureConnection we want to control when SecureConnection is called.
     }
 
     uint32_t sessionId;

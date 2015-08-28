@@ -242,6 +242,14 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * This method allows an admin to update the application's identity certificate
      * chain and its manifest.
      *
+     * After having a new identity certificate installed, the target bus clears
+     * out all of its peer's secret and session keys, so the next call will get
+     * security violation. After calling UpdateIdentity, SecureConnection(true)
+     * should be called to force the peers to create a new set of secret and
+     * session keys.
+     *
+     * @see ProxyBusObject.SecureConnection(bool)
+     *
      * @param[in] identityCertificateChain             the identity certificate
      * @param[in] identityCertificateChainSize         the number of identity certificates
      * @param[in] manifest                             the manifest
@@ -262,6 +270,13 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * This method allows an admin to install the permission policy to the
      * application.  Any existing policy will be replaced if the new policy version
      * number is greater than the existing policy's version number.
+     *
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation. After calling UpdatePolicy, SecureConnection(true) should be
+     * called to force the peers to create a new set of secret and session keys.
+     *
+     * @see ProxyBusObject.SecureConnection(bool)
      *
      * @param[in] policy the new policy.
      *

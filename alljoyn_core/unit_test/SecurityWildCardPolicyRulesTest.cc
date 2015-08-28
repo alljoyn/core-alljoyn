@@ -677,6 +677,7 @@ void SecurityWildCardPolicyRulesTest::SetUp()
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 }
 
 void SecurityWildCardPolicyRulesTest::TearDown()
@@ -800,6 +801,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_object_path) {
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -888,6 +890,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_interface_names) {
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -979,6 +982,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_member_names) {
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1071,6 +1075,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, Wildcard_message_type_matched_properly_i
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1176,6 +1181,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, unspecified_action_mask_is_explicitly_DE
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1266,6 +1272,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, object_path_not_specified_rule_not_consi
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1342,6 +1349,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, interface_name_not_specified_rule_not_co
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
@@ -1419,6 +1427,7 @@ TEST_F(SecurityWildCardPolicyRulesTest, empty_string_not_considered_as_match) {
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     SessionOpts opts;
     SessionId peer1ToPeer2SessionId;
