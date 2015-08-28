@@ -775,7 +775,7 @@ class CertificateX509 {
     /*
      * Extensions
      */
-    uint32_t ca;
+    bool ca;
     qcc::String digest;
     qcc::String subjectAltName;
     qcc::String aki;
