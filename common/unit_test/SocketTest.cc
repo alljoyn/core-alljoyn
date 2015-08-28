@@ -359,6 +359,23 @@ class SocketTestWithFdsErrors : public testing::Test {
     SocketFd clientFd;
     SocketFd acceptedFd;
     uint8_t buf[2048];
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+    /*
+     * The Windows implementation of SendWithFds is using MSG_OOB sends.
+     * Recent Windows versions allow a maximum of 16 OOB packets to be
+     * buffered on the receiver side. The connection gets reset if that
+     * limit is exceeded. Therefore use a larger buffer for the ER_WOULDBLOCK
+     * test on Windows, thus forcing the ER_WOULDBLOCK error to occur before
+     * the OOB limit is reached.
+     *
+     * Note that AllJoyn product code doesn't use SendWithFds on Windows.
+     */
+    uint8_t wouldBlockBuf[8 * 1024];
+#else
+    uint8_t wouldBlockBuf[2 * 1024];
+#endif
+
     size_t numRecvd;
     size_t numSent;
     SocketFd fds[SOCKET_MAX_FILE_DESCRIPTORS + 1];
@@ -482,7 +499,7 @@ TEST_F(SocketTestWithFdsErrors, SendWouldBlock)
      * (either would block or connection reset).
      */
     EXPECT_EQ(ER_OK, SetSndBuf(acceptedFd, 8192));
-    while ((status = SendWithFds(acceptedFd, buf, ArraySize(buf), numSent, fds, 1, GetPid())) == ER_OK)
+    while ((status = SendWithFds(acceptedFd, wouldBlockBuf, ArraySize(wouldBlockBuf), numSent, fds, 1, GetPid())) == ER_OK)
         ;
     EXPECT_EQ(ER_WOULDBLOCK, status);
 }
