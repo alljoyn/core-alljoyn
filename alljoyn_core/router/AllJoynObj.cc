@@ -646,7 +646,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             bool foundSessionMapEntry = false;
             SessionMapType::iterator sit = ajObj.SessionMapLowerBound(creatorName, 0);
             while ((sit != ajObj.sessionMap.end()) && (creatorName == sit->first.first)) {
-                if ((sit->second.sessionHost == creatorName) && (sit->second.sessionPort == sessionPort)) {
+                if ((sit->second.isActive) && (sit->second.sessionHost == creatorName) && (sit->second.sessionPort == sessionPort)) {
                     QCC_DbgPrintf(("JoinSessionThread::RunJoin(): found \"%s\" in sessionMap with expected port %d.",
                                    creatorName.c_str(), sessionPort));
                     if (sit->first.second == 0) {
