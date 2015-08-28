@@ -521,7 +521,7 @@ class CertificateX509 {
      */
     void SetCA(bool flag)
     {
-        ca = flag;
+        ca = flag ? 1 : 0;
     }
 
     /**
@@ -530,7 +530,7 @@ class CertificateX509 {
      */
     const bool IsCA() const
     {
-        return ca;
+        return ca ? true : false;
     }
 
     /**
