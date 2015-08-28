@@ -577,6 +577,9 @@ class GetInterfacesCallbackContext : public CallbackContext {
         }
         delete[] interfaceDescriptions;
     }
+  private:
+    GetInterfacesCallbackContext& operator=(const GetInterfacesCallbackContext&);
+    GetInterfacesCallbackContext(const GetInterfacesCallbackContext&);
 };
 
 void CallbackNative::DispatchCallback(Plugin& plugin, CallbackNative* callbackNative, QStatus status, InterfaceDescriptionNative** interfaceDescriptions, size_t numInterfaces)

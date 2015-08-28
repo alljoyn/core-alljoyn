@@ -528,7 +528,7 @@ void ToAny(Plugin& plugin, const NPVariant& value, const qcc::String signature, 
                 size_t numElements = propertiesCount;
                 ajn::MsgArg* elements = new ajn::MsgArg[numElements];
 
-                arg.v_array.SetElements(elemSignature.c_str(), numElements, elements);
+                status = arg.v_array.SetElements(elemSignature.c_str(), numElements, elements);
                 if (ER_OK != status) {
                     NPN_MemFree(properties);
                     delete[] elements;

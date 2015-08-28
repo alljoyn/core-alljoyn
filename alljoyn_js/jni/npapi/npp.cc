@@ -202,10 +202,9 @@ void NPP_Print(NPP npp, NPPrint* platformPrint)
 int16_t NPP_HandleEvent(NPP npp, void* evt)
 {
     QCC_UNUSED(evt);
+    QCC_UNUSED(npp);
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (!npp) {
-        return 0;
-    }
+
     return 0;
 }
 
