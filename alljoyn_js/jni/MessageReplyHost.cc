@@ -144,15 +144,15 @@ bool _MessageReplyHost::replyError(const NPVariant* npargs, uint32_t npargCount,
             goto exit;
         }
         qcc::String errorMessage;
-        if (npargCount > 1 && NPVARIANT_IS_STRING(npargs[1])) {
+        if (NPVARIANT_IS_STRING(npargs[1])) {
             errorMessage = ToDOMString(plugin, npargs[1], typeError);
             if (typeError) {
                 plugin->RaiseTypeError("argument 1 is not a string");
                 goto exit;
             }
         }
-        status = busObject->MethodReply(message, errorName.c_str(), (npargCount > 1) ? errorMessage.c_str() : 0);
-        if (npargCount > 1 && NPVARIANT_IS_OBJECT(npargs[npargCount - 1])) {
+        status = busObject->MethodReply(message, errorName.c_str(), errorMessage.c_str());
+        if (NPVARIANT_IS_OBJECT(npargs[npargCount - 1])) {
             callbackNative = ToNativeObject<CallbackNative>(plugin, npargs[npargCount - 1], typeError);
             if (typeError) {
                 typeError = true;

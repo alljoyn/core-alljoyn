@@ -137,7 +137,6 @@ exit:
         callbackNative = NULL;
     }
     delete callbackNative;
-    delete httpListener;
     VOID_TO_NPVARIANT(*result);
     return !typeError;
 }

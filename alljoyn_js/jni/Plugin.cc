@@ -24,13 +24,13 @@
 #define QCC_MODULE "ALLJOYN_JS"
 
 _Plugin::_Plugin(NPP npp) :
-    npp(npp)
+    npp(npp), params(0)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 }
 
 _Plugin::_Plugin() :
-    npp(0)
+    npp(0), params(0)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 }

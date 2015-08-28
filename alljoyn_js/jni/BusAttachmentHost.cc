@@ -736,6 +736,7 @@ class SessionPortListener : public ajn::SessionPortListener {
             if (status != ER_OK) {
                 QCC_LogError(status, ("SetSessionListener failed"));
                 delete sessionListener;
+                return;
             }
         }
 
@@ -785,7 +786,8 @@ class JoinSessionAsyncCB : public ajn::BusAttachment::JoinSessionAsyncCB {
             busAttachmentHost(busAttachmentHost),
             busAttachment(busAttachment),
             callbackNative(callbackNative),
-            sessionListener(sessionListener) { }
+            sessionListener(sessionListener),
+            status(ER_OK) { }
 
         ~_Env() {
             delete sessionListener;
@@ -4164,13 +4166,13 @@ bool _BusAttachmentHost::getInterfaces(const NPVariant* args, uint32_t argCount,
     }
 
     CallbackNative::DispatchCallback(plugin, callbackNative, status, descs, numIfaces);
-    descs = NULL;
     callbackNative = NULL;
 
 exit:
     delete callbackNative;
     delete[] descs;
     delete[] ifaces;
+    descs = NULL;
     VOID_TO_NPVARIANT(*result);
     return !typeError;
 }
