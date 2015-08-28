@@ -37,14 +37,18 @@ class DoorSessionListener :
 class DoorMessageReceiver :
     public MessageReceiver {
   public:
-    void DoorEventHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
+    void DoorEventHandler(const InterfaceDescription::Member* member,
+                          const char* srcPath,
+                          Message& msg)
     {
-        QCC_UNUSED(msg);
         QCC_UNUSED(srcPath);
         QCC_UNUSED(member);
 
-        printf("received message ...\n");
-        //TODO: parse message
+        const MsgArg* result;
+        result = msg->GetArg(0);
+        bool value;
+        result->Get("b", &value);
+        printf("Received door %s event ...\n", value ? "opened" : "closed");
     }
 };
 

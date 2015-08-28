@@ -39,12 +39,10 @@ using namespace qcc;
 namespace ajn {
 namespace securitymgr {
 class ApplicationMonitor :
-    public PingListener,
     public ApplicationStateListener {
   private:
     map<string, SecurityInfo> applications; /* key = busName */
     vector<SecurityInfoListener*> listeners; /* no ownership */
-    AutoPinger* pinger;
     BusAttachment* busAttachment;
     mutable Mutex securityListenersMutex;
     mutable Mutex appsMutex;
@@ -56,12 +54,6 @@ class ApplicationMonitor :
     void State(const char* busName,
                const KeyInfoNISTP256& publicKeyInfo,
                PermissionConfigurator::ApplicationState state);
-
-    void DestinationLost(const String& group,
-                         const String& destination);
-
-    void DestinationFound(const String& group,
-                          const String& destination);
 
     void NotifySecurityInfoListeners(const SecurityInfo* oldSecInfo,
                                      const SecurityInfo* newSecInfo);

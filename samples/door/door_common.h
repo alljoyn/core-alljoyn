@@ -69,6 +69,10 @@ class Door :
 
     ~Door() { }
 
+    void SendDoorEvent();
+
+    bool autoSignal; // automatically sends signals on door state change
+
   protected:
     QStatus Get(const char* ifcName,
                 const char* propName,
@@ -86,8 +90,6 @@ class Door :
 
     void GetState(const InterfaceDescription::Member* member,
                   Message& msg);
-
-    void SendDoorEvent(bool newState);
 
     void ReplyWithBoolean(bool answer,
                           Message& msg);
@@ -121,8 +123,6 @@ class DoorCommon {
     QStatus AnnounceAbout();
 
     void UpdateManifest(Manifest& manifest);
-
-    void CancelManifestUpdate();
 
   private:
     QStatus CreateInterface();

@@ -57,43 +57,11 @@ void TestApplicationListener::OnApplicationStateChange(const OnlineApplication* 
     lock.Unlock();
 }
 
-string ToString(SyncErrorType errorType)
-{
-    switch (errorType) {
-    case SYNC_ER_UNKNOWN:
-        return "SYNC_ER_UNKNOWN";
-
-    case SYNC_ER_STORAGE:
-        return "SYNC_ER_STORAGE";
-
-    case SYNC_ER_REMOTE:
-        return "SYNC_ER_REMOTE";
-
-    case SYNC_ER_CLAIM:
-        return "SYNC_ER_CLAIM";
-
-    case SYNC_ER_RESET:
-        return "SYNC_ER_RESET";
-
-    case SYNC_ER_IDENTITY:
-        return "SYNC_ER_IDENTITY";
-
-    case SYNC_ER_MEMBERSHIP:
-        return "SYNC_ER_MEMBERSHIP";
-
-    case SYNC_ER_POLICY:
-        return "SYNC_ER_POLICY";
-
-    default:
-        return "SYNC_ER_UNEXPECTED";
-    }
-}
-
 string ToString(const SyncError* er)
 {
     string result = "SyncError >>";
     result += " busName: " + er->app.busName;
-    result += " type: " + ToString(er->type);
+    result += " type: " + string(SyncError::SyncErrorTypeToString(er->type));
     result += " status: " + string(QCC_StatusText(er->status));
 
     return result;
@@ -205,9 +173,22 @@ void BasicTest::UpdateLastAppInfo()
 }
 
 bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
-                             const bool hasBusName,
                              ApplicationSyncState syncState)
 {
+    if (SYNC_UNKNOWN == syncState) {
+        switch (newState) {
+        case PermissionConfigurator::NOT_CLAIMABLE:
+        case PermissionConfigurator::CLAIMABLE:
+            syncState = SYNC_UNMANAGED;
+            break;
+
+        case PermissionConfigurator::CLAIMED:
+        case PermissionConfigurator::NEED_UPDATE:
+            syncState = SYNC_OK;
+            break;
+        }
+    }
+
     lock.Lock();
     printf("\nWaitForState: waiting for event(s) ...\n");
     //Prior to entering this function, the test should have taken an action which leads to one or more events.
@@ -217,7 +198,6 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
             UpdateLastAppInfo(); //update latest value.
             printf("WaitForState: Checking event ... ");
             if ((newState == lastAppInfo.applicationState)
-                && (hasBusName == !lastAppInfo.busName.empty())
                 && (syncState == lastAppInfo.syncState)) {
                 printf("ok\n");
                 lock.Unlock();
@@ -236,8 +216,6 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
     printf("WaitForState failed.\n");
     printf("\tClaimableState: expected = %s, got %s\n", PermissionConfigurator::ToString(
                newState), PermissionConfigurator::ToString(lastAppInfo.applicationState));
-    printf("\tHas BusName: expected = %s, got %s\n", (hasBusName ? "YES" : "NO"),
-           (lastAppInfo.busName.empty() ? "NO" : "YES"));
     printf("\t Busname lastAppInfo.busName (%s)\n", lastAppInfo.busName.c_str());
     printf("\t SyncState : expected = %s, got %s\n",
            ToString(syncState), ToString(lastAppInfo.syncState));
@@ -544,12 +522,12 @@ bool BasicTest::WaitForUpdatesCompleted()
     printf("Waiting for updates completed ... ");
     bool result = true;
 
-    result = WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING);
+    result = WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING);
     if (!result) {
         return result;
     }
 
-    result = WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK);
+    result = WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK);
     if (!result) {
         return result;
     }
@@ -578,7 +556,8 @@ bool BasicTest::WaitForSyncError(SyncErrorType type, QStatus status)
                 printf("ok\n");
             } else if (errorType != type) {
                 printf("unexpected SyncErrorType: expected %s, got %s\n",
-                       ToString(type).c_str(), ToString(errorType).c_str());
+                       SyncError::SyncErrorTypeToString(type),
+                       SyncError::SyncErrorTypeToString(errorType));
             } else if (errorStatus != status) {
                 printf("unexpected Status: expected %s, got %s\n",
                        QCC_StatusText(status), QCC_StatusText(errorStatus));

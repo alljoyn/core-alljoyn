@@ -61,14 +61,14 @@ TEST_F(RestartAgentTests, SuccessfulAgentRestart) {
 
     for (size_t i = numOfApps / 2; i < numOfApps; i++) {
         ASSERT_EQ(ER_OK, apps[i]->Start());
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     }
 
     for (size_t i = 0; i < numOfApps / 2; i++) {
         ASSERT_EQ(ER_OK, apps[i]->Start());
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
         ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, identities[i]));
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     }
 
     RemoveSecAgent();

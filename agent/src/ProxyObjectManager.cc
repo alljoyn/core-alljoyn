@@ -389,11 +389,17 @@ QStatus ProxyObjectManager::GetManifestTemplate(const OnlineApplication& app,
         return status;
     }
 
-    PermissionPolicy::Rule* manifestRules;
+    PermissionPolicy::Rule* manifestRules = nullptr;
     size_t manifestRulesCount;
     status = PermissionPolicy::ParseRules(rulesMsgArg, &manifestRules, &manifestRulesCount);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to ParseRules"));
+        goto Exit;
+    }
+
+    if (0 == manifestRulesCount) {
+        status = ER_MANIFEST_NOT_FOUND;
+        QCC_LogError(status, ("Manifest does not contain rules"));
         goto Exit;
     }
 

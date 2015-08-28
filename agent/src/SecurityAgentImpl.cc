@@ -368,7 +368,7 @@ void SecurityAgentImpl::SetClaimListener(ClaimListener* cl)
     claimListener = cl;
 }
 
-QStatus SecurityAgentImpl::SetSyncState(const OnlineApplication& app,
+QStatus SecurityAgentImpl::SetSyncState(const Application& app,
                                         const ApplicationSyncState syncState)
 {
     appsMutex.Lock(__FILE__, __LINE__);
@@ -412,7 +412,7 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
     }
     OnlineApplication _app = appItr->second;
 
-    PendingClaim pc(_app, &pendingClaims, appsMutex);
+    PendingClaim pc(_app, &pendingClaims, &appsMutex);
     status = pc.Init();
     if (ER_OK != status) {
         QCC_LogError(status, ("Cannot concurrent claim a single application"));
@@ -503,7 +503,7 @@ void SecurityAgentImpl::RemoveSecurityInfo(OnlineApplication& app, const Securit
 {
     // Update online app if the busName is still relevant.
     if (app.busName == si.busName) {
-        app.busName = "";
+        //app.busName = "";
     }
 }
 
@@ -540,12 +540,14 @@ void SecurityAgentImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
         OnlineApplication app;
         AddSecurityInfo(app, *newSecInfo);
 
-        QStatus status = caStorage->GetManagedApplication(app); //Ignore the status
-        if (status != ER_OK && status != ER_END_OF_DATA) {
-            //We expect ER_OK for known apps and ER_END_OF_DATA for new ones.
-            //All other codes mean an error: we print a log statement and continue.
-            QCC_LogError(status, ("Failed to retrieve info from storage; continuing"));
+        // retrieve syncStatus from storage
+        QStatus status = caStorage->GetManagedApplication(app);
+        if (ER_END_OF_DATA == status) {
+            app.syncState = SYNC_UNMANAGED;
+        } else if (ER_OK != status) {
+            QCC_LogError(status, ("Error retrieving application from storage"));
         }
+
         appsMutex.Lock(__FILE__, __LINE__);
         applications[app.keyInfo] = app;
         appsMutex.Unlock(__FILE__, __LINE__);
@@ -645,23 +647,42 @@ void SecurityAgentImpl::NotifyApplicationListeners(const SyncError* error)
 
 void SecurityAgentImpl::OnPendingChanges(vector<Application>& apps)
 {
-    OnPendingChangesCompleted(apps);
+    for (size_t i = 0; i < apps.size(); i++) {
+        SetSyncState(apps[i], apps[i].syncState);
+    }
 }
 
 void SecurityAgentImpl::OnPendingChangesCompleted(vector<Application>& apps)
 {
     for (size_t i = 0; i < apps.size(); i++) {
-        OnlineApplication old;
-        old.keyInfo = apps[i].keyInfo;
-        if (ER_OK == GetApplication(old)) {
-            OnlineApplication app = old;
-            app.syncState = apps[i].syncState;
-            appsMutex.Lock();
-            applications[app.keyInfo] = app;
-            appsMutex.Unlock();
-            NotifyApplicationListeners(&old, &app);
-        }
+        SetSyncState(apps[i], SYNC_OK);
     }
+}
+
+void SecurityAgentImpl::OnApplicationsAdded(vector<Application>& apps)
+{
+    for (size_t i = 0; i < apps.size(); i++) {
+        SetSyncState(apps[i], SYNC_OK);
+    }
+}
+
+void SecurityAgentImpl::OnApplicationsRemoved(vector<Application>& apps)
+{
+    for (size_t i = 0; i < apps.size(); i++) {
+        SetSyncState(apps[i], SYNC_UNMANAGED);
+    }
+}
+
+void SecurityAgentImpl::OnStorageReset()
+{
+    appsMutex.Lock(__FILE__, __LINE__);
+
+    OnlineApplicationMap::iterator it;
+    for (it = applications.begin(); it != applications.end(); ++it) {
+        SetSyncState(it->second, SYNC_UNMANAGED);
+    }
+
+    appsMutex.Unlock(__FILE__, __LINE__);
 }
 
 void SecurityAgentImpl::NotifyApplicationListeners(const OnlineApplication* oldApp,

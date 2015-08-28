@@ -34,11 +34,12 @@ using namespace qcc;
 namespace ajn {
 namespace securitymgr {
 enum ApplicationSyncState {
-    SYNC_UNKNOWN = 0,  ///< The application is not known.
-    SYNC_OK = 1,         ///< The application is claimed and there are no pending changes to its security configuration.
-    SYNC_PENDING = 2,    ///< The security configuration of the application will be updated when it comes online.
-    SYNC_WILL_RESET = 3, ///< The application will be reset when it comes online.
-    SYNC_RESET = 4       ///< The application is successfully reset.
+    SYNC_UNKNOWN = 0,    ///< Unknown whether the application is managed by this security manager..
+    SYNC_UNMANAGED = 1,  ///< The application is not managed by this security manager.
+    SYNC_OK = 2,         ///< The application is claimed and there are no pending changes to its security configuration.
+    SYNC_PENDING = 3,    ///< The security configuration of the application will be updated when it comes online.
+    SYNC_WILL_RESET = 4, ///< The application will be reset when it comes online.
+    SYNC_RESET = 5       ///< The application is successfully reset.
 };
 
 /**
@@ -53,6 +54,9 @@ static const char* ToString(const ApplicationSyncState state)
     switch (state) {
     case SYNC_UNKNOWN:
         return "SYNC_UNKNOWN";
+
+    case SYNC_UNMANAGED:
+        return "SYNC_UNMANAGED";
 
     case SYNC_OK:
         return "SYNC_OK";
@@ -76,7 +80,7 @@ static const char* ToString(const ApplicationSyncState state)
 struct Application {
   public:
 
-    Application() : syncState(SYNC_OK) { }
+    Application() : syncState(SYNC_UNKNOWN) { }
 
     /**
      * @brief NIST P-256 ECC KeyInfo.

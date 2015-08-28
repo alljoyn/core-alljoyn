@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include <string>
+#include <memory>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/securitymgr/Manifest.h>
 
@@ -106,7 +107,7 @@ class TestApplication {
     ~TestApplication();
 
   private:
-    BusAttachment* busAttachment;
+    shared_ptr<BusAttachment> busAttachment;
     string appName;
     PermissionPolicy::Rule* manifestRules;
     size_t manifestRulesCount;

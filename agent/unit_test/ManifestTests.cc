@@ -100,29 +100,26 @@ TEST_F(ManifestTests, UpdateManifest) {
     TestApplication testApp;
     testApp.SetManifest(manifest);
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, storage->StoreIdentity(idInfo));
     secMgr->Claim(lastAppInfo, idInfo);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(idInfo, manifest));
 
     Manifest extendedManifest;
     GetExtendedManifest(extendedManifest);
     testApp.UpdateManifest(extendedManifest);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE));
 
     ManifestUpdate update;
     ASSERT_TRUE(WaitForManifestUpdate(update));
     ASSERT_EQ(ER_OK, storage->UpdateIdentity(update.app, idInfo, update.newManifest));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true, SYNC_PENDING));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(idInfo, extendedManifest));
 
-    testApp.SetApplicationState(PermissionConfigurator::CLAIMED);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
-
     testApp.UpdateManifest(manifest);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE));
 
     RemoveSecAgent(); // wait for all updates to complete
 }

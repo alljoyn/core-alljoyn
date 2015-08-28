@@ -249,18 +249,18 @@ class CertChainHandlingTests :
  *       -# Check if the application returns the full identity certificate chain
  **/
 
-TEST_F(CertChainHandlingTests, DISABLED_ClaimChain) { //Requires solution for ASACORE-2342
+TEST_F(CertChainHandlingTests, ClaimChain) {
     IdentityCertificateChain singleIdCertChain;
     ASSERT_EQ(ER_OK, proxyObjectManager->GetIdentity(lastAppInfo, singleIdCertChain));
     CHECK_IDENTITY_CHAIN(singleIdCertChain);
     //Reset the application as it is already claimed.
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     wrappedCa->addIdRootCert = true;
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     IdentityCertificateChain idCertChain;
     ASSERT_EQ(ER_OK, proxyObjectManager->GetIdentity(lastAppInfo, idCertChain));
     ASSERT_EQ((size_t)2, idCertChain.size());

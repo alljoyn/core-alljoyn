@@ -31,7 +31,7 @@ namespace sample {
 namespace securitymgr {
 namespace door {
 Door::Door(BusAttachment* ba) :
-    BusObject(DOOR_OBJECT_PATH), open(false)
+    BusObject(DOOR_OBJECT_PATH), autoSignal(false), open(false)
 {
     const InterfaceDescription* secPermIntf = ba->GetInterface(DOOR_INTERFACE);
     assert(secPermIntf);
@@ -51,14 +51,12 @@ Door::Door(BusAttachment* ba) :
     stateSignal = secPermIntf->GetMember(DOOR_STATE_CHANGED);
 }
 
-void Door::SendDoorEvent(bool newState)
+void Door::SendDoorEvent()
 {
-    QCC_UNUSED(newState);
-/*
+    printf("Sending door event ...\n");
     MsgArg outArg;
-    outArg.Set("b", &newState);
+    outArg.Set("b", open);
     Signal(nullptr, SESSION_ID_ALL_HOSTED, *stateSignal, &outArg, 1, 0, 0,  nullptr);
- */
 }
 
 void Door::ReplyWithBoolean(bool answer, Message& msg)
@@ -78,7 +76,9 @@ void Door::Open(const InterfaceDescription::Member* member, Message& msg)
     printf("Door Open called\n");
     if (open == false) {
         open = true;
-        SendDoorEvent(true);
+        if (autoSignal) {
+            SendDoorEvent();
+        }
     }
     ReplyWithBoolean(true, msg);
 }
@@ -91,7 +91,9 @@ void Door::Close(const InterfaceDescription::Member* member,
     printf("Door Close called\n");
     if (open) {
         open = false;
-        SendDoorEvent(true);
+        if (autoSignal) {
+            SendDoorEvent();
+        }
     }
     ReplyWithBoolean(true, msg);
 }
@@ -239,23 +241,31 @@ QStatus DoorCommon::Init(bool provider)
         }
     }
 
-    PermissionPolicy::Rule::Member* member = new  PermissionPolicy::Rule::Member[1];
-    member->SetMemberName("*");
-    uint8_t mask = (provider ? PermissionPolicy::Rule::Member::ACTION_PROVIDE | 0 // | 0 was added to avoid an undefined reference at link time
-                    : PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    member->SetActionMask(mask);
-    member->SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
+    PermissionPolicy::Rule manifestRule;
+    manifestRule.SetInterfaceName(DOOR_INTERFACE);
 
-    PermissionPolicy::Rule* manifestRule = new PermissionPolicy::Rule[1];
-    manifestRule->SetInterfaceName(DOOR_INTERFACE);
-    manifestRule->SetMembers(1, member);
-    status = ba->GetPermissionConfigurator().SetPermissionManifest(manifestRule, 1);
+    if (provider) {
+        PermissionPolicy::Rule::Member members[2];
+        members[0].SetMemberName("*");
+        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        members[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+        members[1].SetMemberName("*");
+        members[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        members[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        manifestRule.SetMembers(2, members);
+    } else {
+        PermissionPolicy::Rule::Member member;
+        member.SetMemberName("*");
+        member.SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                             PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        member.SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
+        manifestRule.SetMembers(1, &member);
+    }
+
+    status = ba->GetPermissionConfigurator().SetPermissionManifest(&manifestRule, 1);
     if (status != ER_OK) {
         return status;
     }
-
-    delete[] manifestRule;
-    manifestRule = nullptr;
 
     status = HostSession();
     if (status != ER_OK) {
@@ -276,11 +286,6 @@ void DoorCommon::UpdateManifest(Manifest& manifest)
     ba->GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::NEED_UPDATE);
 
     delete[] manifestRules;
-}
-
-void DoorCommon::CancelManifestUpdate()
-{
-    ba->GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMED);
 }
 
 QStatus DoorCommon::Fini()

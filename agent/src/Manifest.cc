@@ -345,6 +345,7 @@ QStatus Manifest::Difference(const Manifest& rhs,
         if (lMembers.size() == 0) {
             lr = lRules.erase(lr);
         } else {
+            lr->SetMembers(lMembers.size(), &lMembers[0]);
             ++lr;
         }
     }

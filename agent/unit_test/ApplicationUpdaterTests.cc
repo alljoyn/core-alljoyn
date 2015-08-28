@@ -166,16 +166,14 @@ class ApplicationUpdaterTests :
 TEST_F(ApplicationUpdaterTests, Reset) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // reset the test application
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_WILL_RESET));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_WILL_RESET));
 
     // restart the test application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
-    ASSERT_TRUE(CheckSyncState(SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 }
 
 /**
@@ -190,17 +188,16 @@ TEST_F(ApplicationUpdaterTests, Reset) {
 TEST_F(ApplicationUpdaterTests, InstallMembership) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // change security configuration
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, groupInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
     // restart the test application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckSyncState(SYNC_OK));
     vector<GroupInfo> memberships;
     memberships.push_back(groupInfo);
@@ -219,7 +216,6 @@ TEST_F(ApplicationUpdaterTests, InstallMembership) {
 TEST_F(ApplicationUpdaterTests, UpdatePolicy) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // change security configuration
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
@@ -227,12 +223,12 @@ TEST_F(ApplicationUpdaterTests, UpdatePolicy) {
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
     // restart the test application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckSyncState(SYNC_OK));
     ASSERT_TRUE(CheckPolicy(policy));
 }
@@ -259,16 +255,15 @@ TEST_F(ApplicationUpdaterTests, ResetPolicy) {
 
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // reset the policy
     ASSERT_EQ(ER_OK, storage->RemovePolicy(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
     // restart the test application and check for default policy
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckSyncState(SYNC_OK));
     ASSERT_TRUE(CheckDefaultPolicy());
 }
@@ -285,19 +280,18 @@ TEST_F(ApplicationUpdaterTests, ResetPolicy) {
 TEST_F(ApplicationUpdaterTests, InstallIdentity) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());;
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // change security configuration
     IdentityInfo identityInfo2;
     identityInfo2.name = "Updated test name";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(identityInfo2));
     ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2, aa.lastManifest));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
     // restart the test application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckSyncState(SYNC_OK));
 }
 
@@ -322,11 +316,11 @@ TEST_F(ApplicationUpdaterTests, InstallIdentity) {
 TEST_F(ApplicationUpdaterTests, UpdateAll) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // change security configuration
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, groupInfo));
+
     vector<GroupInfo> groups;
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
@@ -335,12 +329,12 @@ TEST_F(ApplicationUpdaterTests, UpdateAll) {
     identityInfo2.name = "Updated test name";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(identityInfo2));
     ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2, aa.lastManifest));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
     // restart the test application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckSyncState(SYNC_OK));
     ASSERT_TRUE(CheckPolicy(policy));
     vector<GroupInfo> memberships;
@@ -349,14 +343,13 @@ TEST_F(ApplicationUpdaterTests, UpdateAll) {
 
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // reset the test application
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
 
     // restart the test application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 }
 
 /**
@@ -377,23 +370,22 @@ TEST_F(ApplicationUpdaterTests, SyncErReset) {
     vector<GroupInfo> invalidGuilds;
     invalidPolicyGenerator.DefaultPolicy(invalidGuilds, invalidPolicy);
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, invalidPolicy));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(WaitForSyncError(SYNC_ER_REMOTE, ER_AUTH_FAIL));
 
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
 
     // reset the test application
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_WILL_RESET));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_WILL_RESET));
 
     // restart the remote application
     ASSERT_EQ(ER_OK, testApp.Start());
     ASSERT_TRUE(WaitForSyncError(SYNC_ER_RESET, ER_AUTH_FAIL));
 
     // check remote state
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_WILL_RESET));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_WILL_RESET));
 }
 
 /**
@@ -417,7 +409,6 @@ TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
 
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // make sure wrapper returns an older policy
     PermissionPolicy olderPolicy = policy;
@@ -430,7 +421,7 @@ TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
 
     // check remote state
     wrappedCA->UnsetPolicy();
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckPolicy(policy));
 }
 
@@ -447,7 +438,6 @@ TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
 TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // make sure wrapper will return a different manifest
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
@@ -468,7 +458,7 @@ TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
     identityInfo2.name = "Updated test name";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(identityInfo2));
     ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, identityInfo2, aa.lastManifest));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
     // start the test application
@@ -477,7 +467,7 @@ TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
 
     // check remote state
     wrappedCA->UnsetManifest();
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     IdentityCertificate remoteIdCert;
     Manifest remoteManifest;
     ASSERT_TRUE(CheckRemoteIdentity(idInfo, aa.lastManifest, remoteIdCert, remoteManifest));
@@ -496,7 +486,6 @@ TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
 TEST_F(ApplicationUpdaterTests, SyncErMembership) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // make sure wrapper returns empty membership certificates
     wrappedCA->returnEmptyMembershipCert = true;
@@ -504,7 +493,7 @@ TEST_F(ApplicationUpdaterTests, SyncErMembership) {
     // change security configuration
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, groupInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(CheckSyncState(SYNC_PENDING)); // app was offline
 
     // restart the test application
@@ -512,7 +501,7 @@ TEST_F(ApplicationUpdaterTests, SyncErMembership) {
     ASSERT_TRUE(WaitForSyncError(SYNC_ER_MEMBERSHIP, ER_FAIL));
 
     // check remote state
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     vector<GroupInfo> memberships;
     ASSERT_TRUE(CheckMemberships(memberships));
 }
@@ -530,7 +519,6 @@ TEST_F(ApplicationUpdaterTests, SyncErMembership) {
 TEST_F(ApplicationUpdaterTests, SyncErStorage) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false));
 
     // configure ca to fail
     wrappedCA->failOnStartUpdates = true;

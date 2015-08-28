@@ -14,25 +14,46 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "TestUtil.h"
+#ifndef ALLJOYN_SECMGR_MPAPPLICATION_H_
+#define ALLJOYN_SECMGR_MPAPPLICATION_H_
 
+#include <string>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/securitymgr/Manifest.h>
+
+using namespace std;
+using namespace ajn;
 using namespace ajn::securitymgr;
+using namespace qcc;
 
-/** @file DiscoveryTests.cc */
 namespace secmgr_tests {
-class DiscoveryTests :
-    public BasicTest {
+class MPApplication {
+  public:
+    /**
+     * Creates a new MPApplication.
+     */
+    MPApplication(pid_t ownPid);
+
+    /**
+     * Starts this MPApplication.
+     */
+    QStatus Start();
+
+    QStatus WaitUntilFinished();
+
+    /*
+     * Stops this MPApplication.
+     */
+    QStatus Stop();
+
+    ~MPApplication();
+
+  private:
+    void Reset();
+
+    BusAttachment* busAttachment;
+    DefaultECDHEAuthListener authListener;
+    string appName;
 };
-
-TEST_F(DiscoveryTests, LateJoiningSecurityAgent) {
-    // start test app
-    TestApplication testApp;
-    ASSERT_EQ(ER_OK, testApp.Start());
-
-    // start security agent
-    InitSecAgent();
-
-    // wait for signal
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
-}
 } // namespace
+#endif //ALLJOYN_SECMGR_MPAPPLICATION_H_

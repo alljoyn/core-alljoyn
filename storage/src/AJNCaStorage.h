@@ -38,6 +38,8 @@ class StorageListenerHandler {
   public:
     virtual void RegisterStorageListener(StorageListener* listener) = 0;
 
+    virtual void UnRegisterStorageListener(StorageListener* listener) = 0;
+
     virtual QStatus UpdatesCompleted(Application& app,
                                      uint64_t& updateID) = 0;
 
@@ -46,7 +48,9 @@ class StorageListenerHandler {
 
     virtual QStatus ApplicationUpdated(Application& app) = 0;
 
-    virtual void UnRegisterStorageListener(StorageListener* listener) = 0;
+    virtual QStatus ApplicationClaimed(Application& app,
+                                       IdentityCertificate& cert,
+                                       Manifest& mnf) = 0;
 
     virtual ~StorageListenerHandler() { }
 };

@@ -34,6 +34,14 @@ using namespace std;
 
 namespace ajn {
 namespace securitymgr {
+enum StorageEvent {
+    PENDING_CHANGES = 0,           ///< Applications have pending changes.
+    PENDING_CHANGES_COMPLETED = 1, ///< Application updates have been completed.
+    APPLICATIONS_ADDED = 2,        ///< Applications were added to storage.
+    APPLICATIONS_REMOVED = 3,      ///< Applications were removed from storage.
+    STORAGE_RESET = 4              ///< Storage has been reset completely.
+};
+
 class UIStorageImpl :
     public UIStorage, public StorageListenerHandler {
   public:
@@ -42,6 +50,8 @@ class UIStorageImpl :
         storage(localStorage), updateCounter(0)
     {
     }
+
+    QStatus ResetApplication(Application& app);
 
     QStatus RemoveApplication(Application& app);
 
@@ -83,6 +93,10 @@ class UIStorageImpl :
     QStatus UpdatesCompleted(Application& app,
                              uint64_t& updateID);
 
+    QStatus ApplicationClaimed(Application& app,
+                               IdentityCertificate& cert,
+                               Manifest& mnf);
+
     virtual QStatus InstallMembership(const Application& app,
                                       const GroupInfo& groupInfo);
 
@@ -121,8 +135,13 @@ class UIStorageImpl :
 
     QStatus ApplicationsUpdated(vector<Application>& app);
 
+    void NotifyListeners(const StorageEvent event);
+
     void NotifyListeners(const Application& app,
-                         bool completed = false);
+                         const StorageEvent event = PENDING_CHANGES);
+
+    void NotifyListeners(vector<Application>& apps,
+                         const StorageEvent event);
 
     Mutex listenerLock;
     Mutex updateLock;

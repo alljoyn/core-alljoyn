@@ -37,7 +37,7 @@ void UpdateManifest(DoorCommon& common)
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
     prms[1].SetMemberName("*");
     prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
     prms[2].SetMemberName("*");
     prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
     prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
@@ -93,7 +93,7 @@ int CDECL_CALL main(int argc, char** argv)
             break;
         }
 
-        printf("Door provider initialized; Waiting for consumers ...");
+        printf("Door provider initialized; Waiting for consumers ...\n");
         printf("Type 'q' to quit\n");
         printf(">");
 
@@ -103,13 +103,13 @@ int CDECL_CALL main(int argc, char** argv)
 
             switch (cmd) {
             case 'u':
-                printf("Updating manifest ...\n");
+                printf("Enabling automatic signaling of door events ...\n");
                 UpdateManifest(common);
+                door.autoSignal = true;
                 break;
 
-            case 'c':
-                printf("Canceling manifest update request ...\n");
-                common.CancelManifestUpdate();
+            case 's':
+                door.SendDoorEvent();
                 break;
 
             case '\n':

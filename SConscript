@@ -100,10 +100,9 @@ if secenv['OS_CONF'] != 'android':
      secenv.SConscript('agent/unit_test/SConscript', variant_dir=buildroot+'/test/agent/unit_test', duplicate=0, exports = {'env':secenv})
 
 # Multipeer test
-#if secenv['OS_CONF'] == 'linux':
-#   for test in Glob('core/test/*', strings=True):
-#          testdir = buildroot+'/test/'+'sec'+test
-#          secenv.SConscript(test + '/SConscript', exports=['secenv'], variant_dir=testdir, duplicate=0)
+if secenv['OS_CONF'] == 'linux':
+     secenv.SConscript('agent/test/multipeer_claim/SConscript', variant_dir=buildroot+'/test/agent/multipeer_claim', duplicate=0, exports = {'env':secenv})
+
 
 # Security storage tests building (are not installed)
 #secenv.SConscript('storage/unit_test/SConscript', exports=['secenv'], variant_dir=buildroot+'/test/storage/unit_test', duplicate=0)

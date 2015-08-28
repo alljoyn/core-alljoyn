@@ -91,38 +91,6 @@ static bool getKey(string appId, KeyInfoNISTP256& key)
     return found;
 }
 
-const char* ToString(SyncErrorType errorType)
-{
-    switch (errorType) {
-    case SYNC_ER_UNKNOWN:
-        return "SYNC_ER_UNKNOWN";
-
-    case SYNC_ER_STORAGE:
-        return "SYNC_ER_STORAGE";
-
-    case SYNC_ER_REMOTE:
-        return "SYNC_ER_REMOTE";
-
-    case SYNC_ER_CLAIM:
-        return "SYNC_ER_CLAIM";
-
-    case SYNC_ER_RESET:
-        return "SYNC_ER_RESET";
-
-    case SYNC_ER_IDENTITY:
-        return "SYNC_ER_IDENTITY";
-
-    case SYNC_ER_MEMBERSHIP:
-        return "SYNC_ER_MEMBERSHIP";
-
-    case SYNC_ER_POLICY:
-        return "SYNC_ER_POLICY";
-
-    default:
-        return "SYNC_ER_UNEXPECTED";
-    }
-};
-
 static void GetAboutInfo(const OnlineApplication& app,
                          ApplicationMetaData& data)
 {
@@ -173,7 +141,7 @@ class EventListener :
         cout << "  Synchronization error" << endl;
         cout << "  =====================" << endl;
         cout << "  Bus name          : " << er->app.busName.c_str() << endl;
-        cout << "  Type              : " << ToString(er->type) << endl;
+        cout << "  Type              : " << SyncError::SyncErrorTypeToString(er->type) << endl;
         cout << "  Remote status     : " << QCC_StatusText(er->status) << endl;
         switch (er->type) {
         case SYNC_ER_IDENTITY:
@@ -217,18 +185,22 @@ class CliAboutListner :
 
         AboutData aboutData(aboutDataArg);
         char* appName;
-        aboutData.GetAppName(&appName);
         char* deviceName;
-        aboutData.GetDeviceName(&deviceName);
+        ApplicationMetaData appMetaData;
 
         cout << "\nReceived About signal:";
-        cout << "\n BusName          : " << busName;
-        cout << "\n Application Name : " << appName;
-        cout << "\n Device Name      : " << deviceName << endl << endl;
+        cout << "\n BusName          : " << busName << endl;
 
-        ApplicationMetaData appMetaData;
-        appMetaData.deviceName = deviceName;
-        appMetaData.appName = appName;
+        if (ER_OK == aboutData.GetAppName(&appName)) {
+            cout << " Application Name : " << appName << endl;
+            appMetaData.appName = appName;
+        }
+        if (ER_OK == aboutData.GetDeviceName(&deviceName)) {
+            cout << " Device Name      : " << deviceName << endl;
+            appMetaData.deviceName = deviceName;
+        }
+
+        cout << endl;
 
         aboutCachelock.Lock(__FILE__, __LINE__);
         aboutCache[busName] = appMetaData;
@@ -498,7 +470,7 @@ static void unclaim_application(const shared_ptr<UIStorage>& uiStorage,
         return;
     }
 
-    if (ER_OK != uiStorage->RemoveApplication(app)) {
+    if (ER_OK != uiStorage->ResetApplication(app)) {
         cout << "Failed to unclaim application" << endl;
         return;
     }
@@ -714,9 +686,6 @@ static void install_policy(const shared_ptr<UIStorage>& uiStorage,
         cerr << "Failed to generate default policy." << endl;
         return;
     }
-
-    cout << "Generated the following policy:" << endl;
-    cout << policy.ToString().c_str() << endl;
 
     if (ER_OK != uiStorage->UpdatePolicy(app, policy)) {
         cerr << "Failed to install policy." << endl;

@@ -45,7 +45,7 @@ TestApplication::TestApplication(string _appName) :
     mprms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     manifestRules[1].SetMembers(1, mprms);
 
-    busAttachment = new BusAttachment(appName.c_str(), true);
+    busAttachment = shared_ptr<BusAttachment>(new BusAttachment(appName.c_str(), true));
 }
 
 const string TestApplication::GetBusName() const

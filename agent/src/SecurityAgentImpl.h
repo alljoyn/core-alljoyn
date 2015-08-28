@@ -110,7 +110,7 @@ class SecurityAgentImpl :
 
     QStatus GetApplication(OnlineApplication& _application) const;
 
-    QStatus SetSyncState(const OnlineApplication& app,
+    QStatus SetSyncState(const Application& app,
                          const ApplicationSyncState syncState);
 
     void UpdateApplications(const vector<OnlineApplication>* apps = nullptr);
@@ -144,6 +144,12 @@ class SecurityAgentImpl :
 
     virtual void OnPendingChangesCompleted(vector<Application>& apps);
 
+    virtual void OnApplicationsAdded(vector<Application>& apps);
+
+    virtual void OnApplicationsRemoved(vector<Application>& apps);
+
+    virtual void OnStorageReset();
+
     OnlineApplicationMap::iterator SafeAppExist(const KeyInfoNISTP256 key,
                                                 bool& exist);
 
@@ -163,7 +169,7 @@ class SecurityAgentImpl :
 
     class PendingClaim {
       public:
-        PendingClaim(const OnlineApplication& _app, vector<OnlineApplication>* _list, Mutex& _lock)
+        PendingClaim(const OnlineApplication& _app, vector<OnlineApplication>* _list, Mutex* _lock)
             : remove(false), app(_app), list(_list), lock(_lock)
         {
         }
@@ -171,7 +177,7 @@ class SecurityAgentImpl :
         QStatus Init()
         {
             QStatus status = ER_BAD_ARG_1;
-            lock.Lock();
+            lock->Lock();
             for (size_t i = 0; i < list->size(); i++) {
                 if (app == (*list)[i]) {
                     goto out;
@@ -181,14 +187,14 @@ class SecurityAgentImpl :
             list->push_back(app);
             status = ER_OK;
         out:
-            lock.Unlock();
+            lock->Unlock();
             return status;
         }
 
         ~PendingClaim()
         {
             if (remove) {
-                lock.Lock();
+                lock->Lock();
                 vector<OnlineApplication>::iterator it = list->begin();
                 for (; it != list->end(); it++) {
                     if (app == *it) {
@@ -196,7 +202,7 @@ class SecurityAgentImpl :
                         break;
                     }
                 }
-                lock.Unlock();
+                lock->Unlock();
             }
         }
 
@@ -204,7 +210,7 @@ class SecurityAgentImpl :
         bool remove;
         OnlineApplication app;
         vector<OnlineApplication>* list;
-        Mutex lock;
+        Mutex* lock;
     };
 
     KeyInfoNISTP256 publicKeyInfo;

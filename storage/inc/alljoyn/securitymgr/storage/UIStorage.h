@@ -143,8 +143,21 @@ class UIStorage {
                                    ApplicationMetaData& appMetaData) const = 0;
 
     /**
-     * @brief Remove a previously managed application, including
-     *        its certificates.
+     * @brief Resets a previously managed application. If the application is online, it will be
+     *        reset immediately. If it is off-line, it will be reset when it comes back online.
+     *        After resetting the application, it will be removed from storage. Any security
+     *        configuration related to this application will be removed as well.
+     *
+     * @param[in] application the application, ONLY the publicKey is mandatory here
+     *
+     * @return ER_OK  On success.
+     * @return others On failure.
+     */
+    virtual QStatus ResetApplication(Application& app) = 0;
+
+    /**
+     * @brief Remove a previously managed application, including its security configuration,
+     *        from storage. The application will not be reset.
      *
      * @param[in] application the application, ONLY the publicKey is mandatory here
      *

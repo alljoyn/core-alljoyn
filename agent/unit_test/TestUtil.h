@@ -148,12 +148,8 @@ class BasicTest :
 
     BasicTest();
 
-    /**
-     * hasBusName is true if the application is expected to have a busname, i.e., online.
-     * */
     bool WaitForState(PermissionConfigurator::ApplicationState newApplicationState,
-                      const bool hasBusName,
-                      ApplicationSyncState updateState = SYNC_OK);
+                      ApplicationSyncState updateState = SYNC_UNKNOWN);
 
     bool CheckRemotePolicy(PermissionPolicy& expectedPolicy);
 
@@ -225,9 +221,9 @@ class ClaimedTest :
         storage->StoreIdentity(idInfo);
 
         ASSERT_EQ(ER_OK, testApp.Start());
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
         secMgr->Claim(lastAppInfo, idInfo);
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
         ASSERT_EQ(ER_OK, secMgr->GetApplication(lastAppInfo));
         ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
     }

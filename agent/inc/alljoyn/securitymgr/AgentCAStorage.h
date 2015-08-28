@@ -47,8 +47,8 @@ typedef vector<IdentityCertificate> IdentityCertificateChain;
 /**
  * @brief StorageListener abstract class.
  *
- * This allows the agent to register itself to the storage in order to receive events for pending
- * changes. This callback can be triggered when a commit is done locally or if the storage receives
+ * This allows the agent to register itself to receive events of changes to the storage.
+ * This callback can be triggered when a commit is done locally or if the storage receives
  * configuration changes via alternative paths (directly accessed by UI, multiple agents, ...).
  */
 class StorageListener {
@@ -67,6 +67,25 @@ class StorageListener {
      * @param apps         A vector of applications that have been updated.
      */
     virtual void OnPendingChangesCompleted(vector<Application>& apps) = 0;
+
+    /**
+     * Called by storage whenever new applications are added to storage.
+     *
+     * @param apps         A vector of applications that have been updated.
+     */
+    virtual void OnApplicationsAdded(vector<Application>& apps) { QCC_UNUSED(apps); }
+
+    /**
+     * Called by storage whenever applications are removed from storage.
+     *
+     * @param apps         A vector of applications that have been updated.
+     */
+    virtual void OnApplicationsRemoved(vector<Application>& apps) { QCC_UNUSED(apps); }
+
+    /**
+     * Called by storage whenever the storage was fully reset.
+     */
+    virtual void OnStorageReset() { }
 
     /**
      * Virtual destructor for derivable class.

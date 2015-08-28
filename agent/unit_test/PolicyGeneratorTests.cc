@@ -20,6 +20,7 @@
 
 #include <qcc/StringUtil.h>
 
+#include <alljoyn/PermissionPolicyUtil.h>
 #include <alljoyn/securitymgr/PolicyGenerator.h>
 #include <alljoyn/securitymgr/GroupInfo.h>
 
@@ -66,6 +67,7 @@ TEST_F(PolicyGeneratorTest, BasicTest) {
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
 
     ASSERT_EQ((size_t)3, pol.GetAclsSize());
+    ASSERT_TRUE(PermissionPolicyUtil::HasValidDenyRules(pol));
 }
 
 /**
@@ -81,6 +83,7 @@ TEST_F(PolicyGeneratorTest, BasicIllegalArgTest) {
     PermissionPolicy pol;
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
     ASSERT_EQ((size_t)1, pol.GetAclsSize()) << "Policy is: " << pol.ToString().c_str();
+    ASSERT_TRUE(PermissionPolicyUtil::HasValidDenyRules(pol));
 }
 
 /**
@@ -97,5 +100,6 @@ TEST_F(PolicyGeneratorTest, DenyRules) {
     PermissionPolicy pol;
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, pol));
     ASSERT_EQ((size_t)2, pol.GetAclsSize());
+    ASSERT_TRUE(PermissionPolicyUtil::HasValidDenyRules(pol));
 }
 }

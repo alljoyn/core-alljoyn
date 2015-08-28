@@ -51,20 +51,20 @@ class IdentityTests :
  *          are removed and they are claimable again.
  *       -# Get all managed applications and verify that none exists.
  **/
-TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {//Requires solution for ASACORE-2342
+TEST_F(IdentityTests, SuccessfulInstallIdentity) {
     /* Start the application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     IdentityInfo info;
     info.name = "MyName";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(info));
 
     /* Claim! */
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckIdentity(info, aa.lastManifest));
 
     /* Try to install another identity */
@@ -77,7 +77,7 @@ TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {//Requires solution f
 
     /* Remove the identity info and make sure the app is claimable again*/
     ASSERT_EQ(ER_OK, storage->RemoveIdentity(info2));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
 
     /*
@@ -85,29 +85,22 @@ TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {//Requires solution f
      * identity is removed those apps are also removed
      * */
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckIdentity(info, aa.lastManifest));
 
     TestApplication testApp1("NewApp");
     ASSERT_EQ(ER_OK, testApp1.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckIdentity(info, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->RemoveIdentity(info)); // Should remove testApp and testApp1
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK)); //First app is claimable again
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK)); //Second app is claimable again
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE)); //First app is claimable again
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE)); //Second app is claimable again
 
     vector<Application> apps;
     ASSERT_EQ(ER_OK, storage->GetManagedApplications(apps));
     ASSERT_TRUE(apps.empty());
-}
-
-/**
- * @test Update the identity certificate chain.
- *       -# Pending AS-1573 (and implementation in core?)
- **/
-TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentityChain) {
 }
 } // namespace

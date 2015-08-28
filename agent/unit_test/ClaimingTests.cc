@@ -107,7 +107,7 @@ TEST_F(ClaimingTests, SuccessfulClaim) {
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Create identity */
     IdentityInfo idInfo;
@@ -119,7 +119,7 @@ TEST_F(ClaimingTests, SuccessfulClaim) {
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->GetManagedApplication(lastAppInfo));
@@ -141,7 +141,7 @@ TEST_F(ClaimingTests, RejectManifest) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
 
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128();
@@ -165,7 +165,6 @@ TEST_F(ClaimingTests, RejectManifest) {
  *      -# Claiming an application that NEED_UPDATE should fail.
  *
  *      -# Claiming when no ClaimListener is set should fail.
- *      -# Claiming when application did not specify any manifest should fail.
  */
 TEST_F(ClaimingTests, BasicRobustness) {
     IdentityInfo idInfo;
@@ -179,52 +178,30 @@ TEST_F(ClaimingTests, BasicRobustness) {
     inexistentIdInfo.guid = GUID128();
     inexistentIdInfo.name = "InexistentTestIdentity";
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, inexistentIdInfo)); // Claim a claimable app with inexistent ID
 
     testApp.SetApplicationState(PermissionConfigurator::NOT_CLAIMABLE);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::NOT_CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NOT_CLAIMABLE));
     ASSERT_NE(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     testApp.SetApplicationState(PermissionConfigurator::CLAIMED);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_UNMANAGED));
     ASSERT_NE(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     testApp.SetApplicationState(PermissionConfigurator::NEED_UPDATE);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::NEED_UPDATE, SYNC_UNMANAGED));
     ASSERT_NE(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     secMgr->SetClaimListener(nullptr);
     testApp.SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, idInfo)); // Secmgr has no mft listener
 
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, false));
     testApp.Reset();
-
-    TestApplication testApp2("Test2");
-    Manifest emptyManifest;
-    testApp2.SetManifest(emptyManifest);
-    testApp2.Start();
-    AutoAccepter aa;
-    secMgr->SetClaimListener(&aa);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
-    ASSERT_EQ(ER_BUS_NO_SUCH_PROPERTY, secMgr->Claim(lastAppInfo, idInfo));  // app has no manifest
 }
 
-/**
- * @test Basic robustness test with a faulty CA.
- *       //TODO Wouldn't AS-1616 suffice?
- *      -# Claiming when the CA does not return its public key should fail.
- *      -# Claiming when the CA does not return an identity certificate should
- *         fail.
- *      -# Claiming when the CA does not persisted claim result should succeed,
- *         as to line up with the state persisted in the database.
- *      -# Restarting the application should not be reset.
- */
-TEST_F(ClaimingTests, DISABLED_BasicRobustnessCAToAgent) {
-}
 /**
  * @test Recovery from failure of notifying the CA of failure of claiming an
  *       application should be graceful.
@@ -247,12 +224,12 @@ TEST_F(ClaimingTests, RecoveryFromClaimingFailure) {
 
     // start and claim test app
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_NE(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     // check whether the app now gets claimed successfully
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 }
 
 /**
@@ -271,7 +248,7 @@ TEST_F(ClaimingTests, ConcurrentClaimListenerUpdate) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
 
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128();
@@ -282,16 +259,16 @@ TEST_F(ClaimingTests, ConcurrentClaimListenerUpdate) {
     secMgr->SetClaimListener(&rejectAfterAccept);
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 
     TestApplication testApp2("NewTestApp");
     ASSERT_EQ(ER_OK, testApp2.Start());
 
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_MANIFEST_REJECTED, secMgr->Claim(lastAppInfo, idInfo));
 
     testApp2.SetApplicationState(PermissionConfigurator::CLAIMABLE); // Trigger another event
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 }
 
 class PSKClaimListener :
@@ -326,10 +303,10 @@ class PSKClaimListener :
  *          CLAIMED state and online.
  *
  */
-TEST_F(ClaimingTests, DISABLED_OOBSuccessfulClaiming) { //Requires solution for ASACORE-2342
+TEST_F(ClaimingTests, OOBSuccessfulClaiming) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     //Sanity checks. Make sure that the claim caps are as expected.
     PermissionConfigurator::ClaimCapabilities claimCaps;
@@ -351,17 +328,14 @@ TEST_F(ClaimingTests, DISABLED_OOBSuccessfulClaiming) { //Requires solution for 
     ASSERT_EQ(ER_OK, storage->StoreIdentity(idInfo));
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_EQ(string("ALLJOYN_ECDHE_PSK"), testApp.GetLastAuthMechanism());
 
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_OK));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_EQ(string("ALLJOYN_ECDHE_PSK"), testApp.GetLastAuthMechanism());
-
-    testApp.Stop();
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, false, SYNC_OK));
 }
 
 class BadPSKClaimListener :
@@ -396,7 +370,7 @@ class BadPSKClaimListener :
 TEST_F(ClaimingTests, OOBFailedClaiming) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     ASSERT_EQ(ER_OK, testApp.SetClaimByPSK());
     BadPSKClaimListener bcl;
@@ -407,9 +381,6 @@ TEST_F(ClaimingTests, OOBFailedClaiming) {
     ASSERT_EQ(ER_OK, storage->StoreIdentity(idInfo));
 
     ASSERT_NE(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-
-    testApp.Stop();
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, false, SYNC_OK));
 }
 
 class BadClaimListener :
@@ -450,7 +421,7 @@ class BadClaimListener :
 TEST_F(ClaimingTests, ClaimListenerErrors) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     testApp.SetClaimByPSK();
     BadClaimListener bcl(testApp.GetPsk());
@@ -471,13 +442,12 @@ TEST_F(ClaimingTests, ClaimListenerErrors) {
     ASSERT_NE(ER_OK, secMgr->Claim(lastAppInfo, idInfo)); //No psk set.
 
     testApp.Stop();
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, false, SYNC_OK));
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     bcl.setPsk = true;
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 }
 
 class NestedPSKClaimListener :
@@ -532,7 +502,7 @@ TEST_F(ClaimingTests, NestedPSKClaims) {
                                                                            std::to_string(i))));
         testapps[i]->Start();
         testapps[i]->SetClaimByPSK();
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
         apps.push_back(lastAppInfo);
     }
     IdentityInfo idInfo;
@@ -544,7 +514,7 @@ TEST_F(ClaimingTests, NestedPSKClaims) {
     ASSERT_EQ(ER_OK, secMgr->Claim(apps[0], idInfo));
 
     for (size_t i = 0; i < nr_off_apps; i++) {
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     }
 }
 
@@ -613,7 +583,7 @@ TEST_F(ClaimingTests, ConcurrentPSKClaims) {
                                                                            std::to_string(i))));
         testapps[i]->Start();
         testapps[i]->SetClaimByPSK();
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
         apps.push_back(lastAppInfo);
     }
     IdentityInfo idInfo;
@@ -629,7 +599,7 @@ TEST_F(ClaimingTests, ConcurrentPSKClaims) {
     }
 
     for (size_t i = 0; i < nr_off_apps; i++) {
-        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+        ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     }
 
     for (size_t i = 0; i < nr_off_apps; i++) {
@@ -644,12 +614,12 @@ TEST_F(ClaimingTests, ConcurrentPSKClaims) {
  *       -# Claim it, but make sure that the storage FinishApplicationClaiming fails
  *       -# Verify that the application becomes claimed for a short while and then claimable again
  */
-TEST_F(ClaimingTests, DISABLED_ResetAfterReportClaimFails) {//Requires solution for ASACORE-2342
+TEST_F(ClaimingTests, ResetAfterReportClaimFails) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Create identity */
     IdentityInfo idInfo;
@@ -662,15 +632,15 @@ TEST_F(ClaimingTests, DISABLED_ResetAfterReportClaimFails) {//Requires solution 
     ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_UNMANAGED));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Claim application again*/
     wrappedCA->failOnFinishApplicationClaiming = false;
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 }
 
 class ConcurrentSameClaimListener :
@@ -716,7 +686,7 @@ TEST_F(ClaimingTests, ConcurrentClaimOfSameApp) {
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Create identity */
     IdentityInfo idInfo;
@@ -729,6 +699,6 @@ TEST_F(ClaimingTests, ConcurrentClaimOfSameApp) {
     ASSERT_TRUE(cl.checked);
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 }
 } // namespace

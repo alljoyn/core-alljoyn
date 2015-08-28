@@ -33,13 +33,13 @@ namespace securitymgr {
  */
 typedef enum {
     SYNC_ER_UNKNOWN, /**< Unknown */
-    SYNC_ER_STORAGE, /**< Storage */
-    SYNC_ER_REMOTE, /**< Remote */
-    SYNC_ER_CLAIM, /**< Claim */
-    SYNC_ER_RESET, /**< Reset */
-    SYNC_ER_IDENTITY, /**< UpdateIdentity */
-    SYNC_ER_MEMBERSHIP, /**< InstallMembership */
-    SYNC_ER_POLICY /**< UpdatePolicy */
+    SYNC_ER_STORAGE, /**< Failure to access storage */
+    SYNC_ER_REMOTE, /**< Generic failure while making a remote call */
+    SYNC_ER_RESET, /**< Failure while making a remote Reset call */
+    SYNC_ER_IDENTITY, /**< Failure while making a remote UpdateIdentity call */
+    SYNC_ER_MEMBERSHIP, /**< Failure while making a remote InstallMembership call */
+    SYNC_ER_POLICY, /**< Failure while making a remote UpdatePolicy call */
+    SYNC_ER_UNEXPECTED_STATE /**< Remote application is NOT_CLAIMABLE/CLAIMABLE although it is still managed */
 } SyncErrorType;
 
 /**
@@ -172,6 +172,45 @@ class SyncError {
     const PermissionPolicy* GetPolicy() const
     {
         return policy;
+    }
+
+    /**
+     * @brief Returns a string representation of a SyncErrorType
+     *
+     * @param[in] error type  sync error type
+     *
+     * @return string    a string representation of the sync error type
+     */
+    static const char* SyncErrorTypeToString(const SyncErrorType errorType)
+    {
+        switch (errorType) {
+        case SYNC_ER_UNKNOWN:
+            return "SYNC_ER_UNKNOWN";
+
+        case SYNC_ER_STORAGE:
+            return "SYNC_ER_STORAGE";
+
+        case SYNC_ER_REMOTE:
+            return "SYNC_ER_REMOTE";
+
+        case SYNC_ER_RESET:
+            return "SYNC_ER_RESET";
+
+        case SYNC_ER_IDENTITY:
+            return "SYNC_ER_IDENTITY";
+
+        case SYNC_ER_MEMBERSHIP:
+            return "SYNC_ER_MEMBERSHIP";
+
+        case SYNC_ER_POLICY:
+            return "SYNC_ER_POLICY";
+
+        case SYNC_ER_UNEXPECTED_STATE:
+            return "SYNC_ER_UNEXPECTED_STATE";
+
+        default:
+            return "SYNC_ER_UNEXPECTED";
+        }
     }
 
     /*@{*/

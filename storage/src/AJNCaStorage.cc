@@ -91,7 +91,6 @@ QStatus AJNCaStorage::StartApplicationClaiming(const Application& app,
 
 QStatus AJNCaStorage::FinishApplicationClaiming(const Application& app, QStatus status)
 {
-    QStatus finiStatus = ER_OK;
     CachedData data;
     pendingLock.Lock();
     auto search = claimPendingApps.find(app);
@@ -111,27 +110,7 @@ QStatus AJNCaStorage::FinishApplicationClaiming(const Application& app, QStatus 
 
     _app.syncState = SYNC_OK;
 
-    status =  sql->StoreApplication(_app);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("StoreApplication failed"));
-        return status;
-    }
-
-    finiStatus = sql->StoreCertificate(_app, data.cert);
-    if (ER_OK != finiStatus) {
-        QCC_LogError(finiStatus, ("StoreCertificate failed"));
-    } else {
-        finiStatus = sql->StoreManifest(_app, data.mnf);
-        if (ER_OK != finiStatus) {
-            QCC_LogError(finiStatus, ("StoreManifest failed"));
-        }
-    }
-
-    if (ER_OK != finiStatus) {
-        sql->RemoveApplication(app);
-    }
-
-    return finiStatus;
+    return handler->ApplicationClaimed(_app, data.cert, data.mnf);
 }
 
 QStatus AJNCaStorage::GetManagedApplication(Application& app) const

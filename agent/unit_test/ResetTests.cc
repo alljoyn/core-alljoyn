@@ -50,10 +50,10 @@ class ResetTests :
  *       -# Claim the application again.
  *       -# Check whether it becomes CLAIMED again.
  **/
-TEST_F(ResetTests, DISABLED_SuccessfulReset) { //Requires solution for ASACORE-2342
+TEST_F(ResetTests, SuccessfulReset) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128();
@@ -61,17 +61,14 @@ TEST_F(ResetTests, DISABLED_SuccessfulReset) { //Requires solution for ASACORE-2
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true,
-                             SYNC_OK));
-
-    ASSERT_TRUE(CheckSyncState(SYNC_OK));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 }
 
 /**
@@ -85,7 +82,7 @@ TEST_F(ResetTests, DISABLED_SuccessfulReset) { //Requires solution for ASACORE-2
  *       -# Restart the test application and make sure it is removed from
  *          storage.
  */
-TEST_F(ResetTests, DISABLED_RecoveryFromResetFailure) { // see ASACORE-2262
+TEST_F(ResetTests, RecoveryFromResetFailure) {
     // create and store identity
     IdentityInfo idInfo;
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
@@ -93,20 +90,20 @@ TEST_F(ResetTests, DISABLED_RecoveryFromResetFailure) { // see ASACORE-2262
     // start and claim test app
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 
     // make sure remote reset will fail
     proxyObjectManager->Reset(lastAppInfo);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_OK));
 
     // make sure storage will fail on UpdatesCompleted
     wrappedCA->failOnUpdatesCompleted = true;
 
     // reset the test application
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_WILL_RESET));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
 
     // stop agent to make sure update is completed
     RemoveSecAgent();
@@ -122,11 +119,11 @@ TEST_F(ResetTests, DISABLED_RecoveryFromResetFailure) { // see ASACORE-2262
 
     // start the remote application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     // check storage
     ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
-    ASSERT_EQ(ER_FAIL, storage->RemoveApplication(lastAppInfo));
+    ASSERT_EQ(ER_FAIL, storage->ResetApplication(lastAppInfo));
 }
 
 /**
@@ -138,7 +135,7 @@ TEST_F(ResetTests, DISABLED_RecoveryFromResetFailure) { // see ASACORE-2262
  *       -# Restart the test application and make sure it is removed from
  *          storage.
  */
-TEST_F(ResetTests, DISABLED_RecoveryFromResetSuccess) { // see ASACORE-2262
+TEST_F(ResetTests, RecoveryFromResetSuccess) {
     // create and store identity
     IdentityInfo idInfo;
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
@@ -146,28 +143,66 @@ TEST_F(ResetTests, DISABLED_RecoveryFromResetSuccess) { // see ASACORE-2262
     // start and claim test app
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 
     // make sure storage will fail on UpdatesCompleted
     wrappedCA->failOnUpdatesCompleted = true;
 
     // reset the application
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true, SYNC_WILL_RESET));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
     ASSERT_NE(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
 
     // stop the test app
     ASSERT_EQ(ER_OK, testApp.Stop());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, false, SYNC_WILL_RESET));
 
     // restore connectivity to storage
     wrappedCA->failOnUpdatesCompleted = false;
 
     // restart the app and check whether it is removed from storage
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
+}
+
+/**
+ * @test Discovery of an application that has been remotely reset, should result in a sync error and
+ *       should be reclaimable after removing it from storage.
+ *       -# Start a test application and claim it.
+ *       -# Reset the application behind the back of the security manager.
+ *       -# Check that the security manager reports a SYNC_ER_UNEXPECTED_STATE.
+ *       -# Check that reclaiming the application would fail.
+ *       -# Forcibly remove the application from storage.
+ *       -# Check that reclaiming the application now succeeds.
+ */
+TEST_F(ResetTests, RecoveryFromRemoteReset) {
+    // create and store identity
+    IdentityInfo idInfo;
+    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
+
+    // start and claim test app
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
+
+    // reset the application behind the back of the security manager
+    proxyObjectManager->Reset(lastAppInfo);
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_OK));
+
+    // restart test application and wait for sync error
+    ASSERT_EQ(ER_OK, testApp.Stop());
+    ASSERT_EQ(ER_OK, testApp.Start());
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_UNEXPECTED_STATE, ER_FAIL));
+
+    // check that claim fails
+    ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, idInfo));
+
+    // claim should succeed after removing application from storage
+    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 }
 } // namespace

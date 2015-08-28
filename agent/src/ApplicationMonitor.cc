@@ -26,7 +26,7 @@
 
 #include <alljoyn/securitymgr/Util.h>
 
-#define QCC_MODULE "SECMGR_AGENT"
+#define QCC_MODULE "SECMGR_APPMON"
 
 #define PM_NOTIF_MEMBER "NotifyConfig"
 #define AUTOPING_GROUPNAME "AMPingGroup"
@@ -37,7 +37,7 @@ using namespace ajn;
 using namespace ajn::securitymgr;
 
 ApplicationMonitor::ApplicationMonitor(BusAttachment* ba) :
-    pinger(new AutoPinger(*ba)), busAttachment(ba)
+    busAttachment(ba)
 {
     QStatus status = ER_FAIL;
 
@@ -45,12 +45,6 @@ ApplicationMonitor::ApplicationMonitor(BusAttachment* ba) :
         QCC_LogError(status, ("nullptr busAttachment !"));
         return;
     }
-
-    if (nullptr == pinger) {
-        QCC_LogError(status, ("nullptr pinger !"));
-        return;
-    }
-    pinger->AddPingGroup(AUTOPING_GROUPNAME, *this, 5);
 
     busAttachment->RegisterApplicationStateListener(*this);
     busAttachment->AddApplicationStateRule();
@@ -60,7 +54,6 @@ ApplicationMonitor::~ApplicationMonitor()
 {
     busAttachment->RemoveApplicationStateRule();
     busAttachment->UnregisterApplicationStateListener(*this);
-    delete pinger;
 }
 
 void ApplicationMonitor::State(const char* busName,
@@ -95,15 +88,6 @@ void ApplicationMonitor::State(const char* busName,
         // new bus name
         applications[info.busName] = info;
         appsMutex.Unlock(__FILE__, __LINE__);
-
-        //Intentional sleep, see: ASACORE-1493
-        qcc::Sleep(1500);
-
-        QStatus status = pinger->AddDestination(AUTOPING_GROUPNAME, info.busName.c_str());
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to add destination to AutoPinger."));
-        }
-
         NotifySecurityInfoListeners(nullptr, &info);
     }
 }
@@ -172,34 +156,6 @@ void ApplicationMonitor::NotifySecurityInfoListeners(const SecurityInfo* oldSecI
         listeners[i]->OnSecurityStateChange(oldSecInfo, newSecInfo);
     }
     securityListenersMutex.Unlock(__FILE__, __LINE__);
-}
-
-void ApplicationMonitor::DestinationLost(const String& group, const String& destination)
-{
-    QCC_UNUSED(group);
-
-    QCC_DbgPrintf(("DestinationLost %s\n", destination.c_str()));
-    appsMutex.Lock(__FILE__, __LINE__);
-
-    map<string, SecurityInfo>::iterator it = applications.find(destination.c_str());
-
-    if (it != applications.end()) {
-        /* We already know this application */
-        SecurityInfo secInfo = it->second;
-        applications.erase(it);
-        appsMutex.Unlock(__FILE__, __LINE__);
-        NotifySecurityInfoListeners(&secInfo, nullptr);
-    } else {
-        appsMutex.Unlock(__FILE__, __LINE__);
-        /* We are monitoring an app not in the list. Remove it. */
-        pinger->RemoveDestination(AUTOPING_GROUPNAME, destination);
-    }
-}
-
-void ApplicationMonitor::DestinationFound(const String& group, const String& destination)
-{
-    QCC_UNUSED(group);
-    QCC_UNUSED(destination);
 }
 
 #undef QCC_MODULE

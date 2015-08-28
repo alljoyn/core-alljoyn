@@ -45,7 +45,7 @@ TEST_F(UIStorageTests, SetMetaData) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
 
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128();
@@ -57,7 +57,7 @@ TEST_F(UIStorageTests, SetMetaData) {
     ASSERT_EQ(ER_END_OF_DATA, storage->GetAppMetaData(lastAppInfo, appMetaData));
 
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     string userDefinedName = "User-defined test name";

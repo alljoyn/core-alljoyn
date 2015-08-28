@@ -44,7 +44,7 @@ QStatus ApplicationUpdater::ResetApplication(const OnlineApplication& app)
     case PermissionConfigurator::CLAIMED: // implicit fallthrough
     case PermissionConfigurator::NEED_UPDATE:
         status = proxyObjectManager->Reset(app);
-        if (ER_OK != status) {
+        if (ER_OK != status && ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
             SyncError* error = new SyncError(app, status, SYNC_ER_RESET);
             securityAgentImpl->NotifyApplicationListeners(error);
         }
@@ -67,9 +67,11 @@ QStatus ApplicationUpdater::UpdatePolicy(const OnlineApplication& app)
     uint32_t remoteVersion;
     status = proxyObjectManager->GetPolicyVersion(app, remoteVersion);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("Failed to get remote policy version"));
-        SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
-        securityAgentImpl->NotifyApplicationListeners(error);
+        if (ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
+            QCC_DbgPrintf(("Failed to get remote policy version"));
+            SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
+            securityAgentImpl->NotifyApplicationListeners(error);
+        }
         return status;
     }
     QCC_DbgPrintf(("Remote policy version is %i", remoteVersion));
@@ -285,6 +287,7 @@ QStatus ApplicationUpdater::UpdateIdentity(const OnlineApplication& app)
             if (ER_OK != status) {
                 error = new SyncError(app, status, persistedIdCerts[0]);
             }
+            break;
         } else {
             QCC_DbgPrintf(("Identity certificate is already up to date"));
         }
@@ -328,6 +331,7 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
         }
         return status;
     }
+
     QCC_DbgPrintf(("Started transaction %llu for %s", transactionID,
                    secInfo.busName.c_str()));
 
@@ -342,6 +346,16 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
 
         default:
             do {
+                if (PermissionConfigurator::NOT_CLAIMABLE == app.applicationState ||
+                    PermissionConfigurator::CLAIMABLE == app.applicationState) {
+                    QCC_DbgPrintf(("Unexpected applicationState %s",
+                                   PermissionConfigurator::ToString(app.applicationState)));
+                    status = ER_FAIL;
+                    SyncError* error = new SyncError(app, status, SYNC_ER_UNEXPECTED_STATE);
+                    securityAgentImpl->NotifyApplicationListeners(error);
+                    return status;
+                }
+
                 if (ER_OK != (status = UpdatePolicy(app))) {
                     break;
                 }

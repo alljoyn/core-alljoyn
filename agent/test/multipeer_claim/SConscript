@@ -12,14 +12,14 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Import('secenv')
+Import('env')
 
-app_env = secenv.Clone()
+app_env = env.Clone()
 app_env.Append(CPPPATH = ['#../securitymgr/agent/inc'])
+app_env.Append(CPPPATH = ['#../securitymgr/agent/src'])
 app_env.Append(CPPPATH = ['#../securitymgr/storage/inc'])
-app_env.Append(CPPPATH = ['#../securitymgr/stub/inc'])
 app_env.Append(LIBPATH =  '$SEC_DISTDIR/lib')
-app_env.Prepend(LIBS = ['ajsecmgr', 'ajsecstorage', 'stub'])
+app_env.Prepend(LIBS = ['ajsecmgr', 'ajsecstorage'])
 
 if app_env['BR'] == 'on':
         # Build apps with bundled daemon support

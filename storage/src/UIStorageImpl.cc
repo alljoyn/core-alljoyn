@@ -16,6 +16,7 @@
 
 #include "UIStorageImpl.h"
 
+#include <alljoyn/PermissionPolicyUtil.h>
 #define QCC_MODULE "SECMGR_STORAGE"
 
 using namespace qcc;
@@ -23,7 +24,7 @@ using namespace std;
 
 namespace ajn {
 namespace securitymgr {
-QStatus UIStorageImpl::RemoveApplication(Application& app)
+QStatus UIStorageImpl::ResetApplication(Application& app)
 {
     updateLock.Lock();
     app.syncState = SYNC_WILL_RESET;
@@ -33,6 +34,13 @@ QStatus UIStorageImpl::RemoveApplication(Application& app)
     if (status == ER_OK) {
         NotifyListeners(app);
     }
+    return status;
+}
+
+QStatus UIStorageImpl::RemoveApplication(Application& app)
+{
+    QStatus status = storage->RemoveApplication(app);
+    NotifyListeners(app, APPLICATIONS_REMOVED);
     return status;
 }
 
@@ -154,6 +162,7 @@ QStatus UIStorageImpl::GetAppMetaData(const Application& app, ApplicationMetaDat
 void UIStorageImpl::Reset()
 {
     storage->Reset();
+    NotifyListeners(STORAGE_RESET);
 }
 
 QStatus UIStorageImpl::StartUpdates(Application& app, uint64_t& updateID)
@@ -173,14 +182,13 @@ QStatus UIStorageImpl::UpdatesCompleted(Application& app, uint64_t& updateID)
     updateLock.Lock();
 
     switch (app.syncState) {
-    case SYNC_RESET:
+    case SYNC_RESET: // application was successfully reset by agent
         status = storage->RemoveApplication(app);
-        app.syncState = SYNC_OK; // default value for CLAIMABLE application
         updateLock.Unlock();
-        NotifyListeners(app, true);
+        NotifyListeners(app, APPLICATIONS_REMOVED);
         return status;
 
-    case SYNC_OK:
+    case SYNC_OK: // application was successfully updated by agent
         // get latest application from storage
         managedApp.keyInfo = app.keyInfo;
         status = storage->GetManagedApplication(managedApp);
@@ -201,7 +209,7 @@ QStatus UIStorageImpl::UpdatesCompleted(Application& app, uint64_t& updateID)
         managedApp.syncState = app.syncState;
         status = storage->StoreApplication(managedApp, true);
         updateLock.Unlock();
-        NotifyListeners(managedApp, true);
+        NotifyListeners(managedApp, PENDING_CHANGES_COMPLETED);
         return status;
 
     default:
@@ -209,6 +217,33 @@ QStatus UIStorageImpl::UpdatesCompleted(Application& app, uint64_t& updateID)
     }
 
     updateLock.Unlock();
+    return status;
+}
+
+QStatus UIStorageImpl::ApplicationClaimed(Application& app, IdentityCertificate& cert, Manifest& mnf)
+{
+    QStatus status =  storage->StoreApplication(app);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("StoreApplication failed"));
+        return status;
+    }
+
+    status = storage->StoreCertificate(app, cert);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("StoreCertificate failed"));
+    } else {
+        status = storage->StoreManifest(app, mnf);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("StoreManifest failed"));
+        }
+    }
+
+    if (ER_OK != status) {
+        storage->RemoveApplication(app);
+        return status;
+    }
+
+    NotifyListeners(app, APPLICATIONS_ADDED);
     return status;
 }
 
@@ -236,16 +271,46 @@ void UIStorageImpl::UnRegisterStorageListener(StorageListener* listener)
     listenerLock.Unlock();
 }
 
-void UIStorageImpl::NotifyListeners(const Application& app, bool completed)
+void UIStorageImpl::NotifyListeners(const StorageEvent event)
+{
+    vector<Application> empty;
+    NotifyListeners(empty, event);
+}
+
+void UIStorageImpl::NotifyListeners(const Application& app, const StorageEvent event)
 {
     vector<Application> apps;
     apps.push_back(app);
+    NotifyListeners(apps, event);
+}
+
+void UIStorageImpl::NotifyListeners(vector<Application>& apps, const StorageEvent event)
+{
     listenerLock.Lock();
     for (size_t i = 0; i < listeners.size(); ++i) {
-        if (completed) {
-            listeners[i]->OnPendingChangesCompleted(apps);
-        } else {
+        switch (event) {
+        case PENDING_CHANGES:
             listeners[i]->OnPendingChanges(apps);
+            break;
+
+        case PENDING_CHANGES_COMPLETED:
+            listeners[i]->OnPendingChangesCompleted(apps);
+            break;
+
+        case APPLICATIONS_ADDED:
+            listeners[i]->OnApplicationsAdded(apps);
+            break;
+
+        case APPLICATIONS_REMOVED:
+            listeners[i]->OnApplicationsRemoved(apps);
+            break;
+
+        case STORAGE_RESET:
+            listeners[i]->OnStorageReset();
+            break;
+
+        default:
+            break;
         }
     }
     listenerLock.Unlock();
@@ -313,6 +378,12 @@ QStatus UIStorageImpl::RemoveMembership(const Application& app, const GroupInfo&
 QStatus UIStorageImpl::UpdatePolicy(Application& app, PermissionPolicy& policy)
 {
     QStatus status = ER_FAIL;
+
+    if (!PermissionPolicyUtil::HasValidDenyRules(policy)) {
+        status = ER_FAIL;
+        QCC_LogError(status, ("Policy contains invalid deny rules"));
+        return status;
+    }
 
     status = GetManagedApplication(app);
     if (ER_OK != status) {

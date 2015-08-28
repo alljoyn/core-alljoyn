@@ -91,7 +91,7 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Installing/retrieving policy before claiming should fail */
     Application app = lastAppInfo;
@@ -99,7 +99,7 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     ASSERT_NE(ER_OK, storage->UpdatePolicy(app, policy));
     ASSERT_NE(ER_OK, storage->UpdatePolicy(app, policy2));
     ASSERT_NE(ER_OK, storage->GetPolicy(app, policyLocal));
-    ASSERT_TRUE(CheckSyncState(SYNC_OK));
+    ASSERT_TRUE(CheckSyncState(SYNC_UNMANAGED));
 
     /* Create identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
@@ -108,7 +108,7 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     /* Check default policy */
@@ -166,14 +166,14 @@ TEST_F(PolicyTests, SuccessfulResetPolicy) {
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Store identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
     /* Claim application */
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckDefaultPolicy());
 
     /* Install policy */
@@ -204,13 +204,13 @@ TEST_F(PolicyTests, PermissionDenied) {
     /* Create identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Claim application */
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     /* Check default policy */
@@ -221,7 +221,7 @@ TEST_F(PolicyTests, PermissionDenied) {
 
     /* Install policy and check retrieved policy */
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, emptyPolicy));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_PENDING));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(WaitForSyncError(SYNC_ER_REMOTE, ER_PERMISSION_DENIED));
 }
 } // namespace

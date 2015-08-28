@@ -85,7 +85,7 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     ASSERT_EQ(ER_OK, testApp.Start());
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, true));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     /* Installing or removing membership before claiming should fail */
     Application app = lastAppInfo;
@@ -99,7 +99,7 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, true, SYNC_OK));
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
@@ -176,12 +176,5 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     memberships.erase(memberships.begin());
     ASSERT_TRUE(CheckMemberships(memberships));
     ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo2));
-}
-
-/**
- * @test Update the membership certificate chain.
- *       -# Pending AS-1573 (and implementation in core?)
- **/
-TEST_F(MembershipTests, DISABLED_SuccessfulInstallMembershipChain) {
 }
 } // namespace
