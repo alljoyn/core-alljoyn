@@ -1146,6 +1146,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, GenerateManifestTemplate(&rules, &count));
         PermissionConfigurator& pc = bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pc.SetPermissionManifest(rules, count));
+        delete [] rules;
     }
 
     QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
@@ -2976,6 +2977,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithInvalidCertChain)
     EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
     /* do a second claim and expect the same error code returned */
     EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
@@ -3060,6 +3062,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
 
     KeyInfoNISTP256 emptyKeyInfo;
     EXPECT_EQ(ER_BAD_ARG_1, saProxy.Claim(emptyKeyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
@@ -3084,6 +3087,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
     EXPECT_EQ(ER_BAD_ARG_2, saProxy.Claim(keyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
@@ -3109,6 +3113,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
     EXPECT_EQ(ER_BAD_ARG_5, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, keyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
@@ -3132,6 +3137,7 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
 
     KeyInfoNISTP256 emptyKeyInfo;
     EXPECT_EQ(ER_BAD_ARG_4, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)

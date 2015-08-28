@@ -1885,6 +1885,8 @@ QStatus PermissionMgmtObj::GenerateSendMemberships(std::vector<std::vector<MsgAr
         /* Now that we have the membership cert chain, determine whether it's relevant for this protocol instance. */
         if (this->IsRelevantMembershipCert(argList, peerIssuers)) {
             args.push_back(argList);
+        } else {
+            ClearArgVector(argList);
         }
     }
 

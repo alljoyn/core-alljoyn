@@ -668,7 +668,8 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
         peerState->ReleaseConversationHashLock();
     }
 
-    /* storing some handle for the given sender  */
+    /* storing the key exchanger for the given sender  */
+    delete keyExConversations[sender];
     keyExConversations[sender] = keyExchanger;
 
     lock.Unlock(MUTEX_CONTEXT);
