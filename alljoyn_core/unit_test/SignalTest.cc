@@ -19,10 +19,13 @@
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
+#include <memory>
 
 #include <qcc/String.h>
 #include <qcc/time.h>
 #include <qcc/Thread.h>
+#include <qcc/Mutex.h>
+#include <qcc/Condition.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
@@ -32,6 +35,9 @@
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
+
+#include "TestSecureApplication.h"
+#include "TestSecurityManager.h"
 
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
@@ -896,4 +902,114 @@ TEST_F(SignalTest, SignalTypeEnforcement)
     ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, globalBroadcastParticipant.SendSessionlessSignal());
     ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, globalBroadcastParticipant.SendUnicastSignal());
     ASSERT_EQ(ER_OK, globalBroadcastParticipant.SendGlobalBroadcastSignal());
+}
+
+class SecSignalTest :
+    public::testing::Test,
+    public MessageReceiver {
+  public:
+    SecSignalTest() : prov("provider"), cons("consumer"), proxy(NULL), evented(false), lastValue(false) { }
+    ~SecSignalTest() { }
+
+    TestSecurityManager tsm;
+    TestSecureApplication prov;
+    TestSecureApplication cons;
+    shared_ptr<ProxyBusObject> proxy;
+    Mutex lock;
+    Condition condition;
+    bool evented;
+    bool lastValue;
+
+    virtual void SetUp() {
+        ASSERT_EQ(ER_OK, tsm.Init());
+        ASSERT_EQ(ER_OK, prov.Init(tsm));
+        ASSERT_EQ(ER_OK, cons.Init(tsm));
+
+        ASSERT_EQ(ER_OK, prov.HostSession());
+        SessionId sid = 0;
+        ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
+
+        proxy = shared_ptr<ProxyBusObject>(cons.GetProxyObject(prov, sid));
+        ASSERT_TRUE(proxy != NULL);
+        cons.GetBusAttachement().RegisterSignalHandlerWithRule(this,
+                                                               static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
+                                                               cons.GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
+                                                               TEST_SIGNAL_MATCH_RULE);
+    }
+
+    void EventHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
+    {
+        QCC_UNUSED(msg);
+        QCC_UNUSED(srcPath);
+        QCC_UNUSED(member);
+        lock.Lock();
+        evented = true;
+        condition.Signal();
+        bool value = lastValue;
+        QStatus status = msg->GetArgs("b", &value);
+        EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
+
+        lastValue = value;
+        lock.Unlock();
+
+        cout << "received message ..." << endl;
+    }
+
+
+    QStatus SendAndWaitForEvent(TestSecureApplication& prov, bool newValue = true)
+    {
+        lock.Lock();
+        evented = false;
+        lastValue = !newValue;
+        QStatus status = prov.SendSignal(newValue, cons);
+        if (ER_OK != status) {
+            cout << "Failed to send event" << __FILE__ << "@" << __LINE__ << endl;
+        } else {
+            condition.TimedWait(lock, 5000);
+            EXPECT_TRUE(evented) << " No event received";
+            EXPECT_EQ(newValue, lastValue) << "Signal value";
+            status = evented  && (newValue == lastValue) ? ER_OK : ER_FAIL;
+            evented = false;
+        }
+        lock.Unlock();
+        return status;
+    }
+
+};
+
+TEST_F(SecSignalTest, DISABLED_SendSignalAllowed) //See asacore-2432
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+}
+
+TEST_F(SecSignalTest, DISABLED_SendSignalNotAllowedAfterConsumerPolicyUpdate) //See asacore-2432
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+
+}
+
+TEST_F(SecSignalTest, DISABLED_SendSignalAllowedAfterConsumerPolicyUpdate) //See asacore-2432
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+
 }
