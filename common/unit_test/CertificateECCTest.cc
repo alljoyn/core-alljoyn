@@ -1464,3 +1464,71 @@ TEST_F(CertificateECCTest, TestAKIEncodingDecoding)
     ASSERT_EQ(ER_OK, cert1.DecodeCertificateDER(der)) << " Decode certificate failed.";
     ASSERT_EQ(cert0.GetAuthorityKeyId(), cert1.GetAuthorityKeyId()) << " AKI mismatch.";
 }
+
+TEST_F(CertificateECCTest, CreateIdentityCertificateChain)
+{
+    Crypto_ECC key1;
+    Crypto_ECC key2;
+    Crypto_ECC key3;
+    Crypto_ECC key4;
+    IdentityCertificate cert1;
+    IdentityCertificate cert2;
+    IdentityCertificate cert3;
+    IdentityCertificate cert4;
+    CertificateX509::ValidPeriod validity;
+    String serial1 = "01";
+    String serial2 = "02";
+    String serial3 = "03";
+    String serial4 = "04";
+    String cn1 = "cn1";
+    String cn2 = "cn2";
+    String cn3 = "cn3";
+    String cn4 = "cn4";
+
+    ASSERT_EQ(ER_OK, key1.GenerateDSAKeyPair());
+    ASSERT_EQ(ER_OK, key2.GenerateDSAKeyPair());
+    ASSERT_EQ(ER_OK, key3.GenerateDSAKeyPair());
+    ASSERT_EQ(ER_OK, key4.GenerateDSAKeyPair());
+
+    cert1.SetSerial(reinterpret_cast<const uint8_t*>(serial1.data()), serial1.size());
+    cert2.SetSerial(reinterpret_cast<const uint8_t*>(serial2.data()), serial2.size());
+    cert3.SetSerial(reinterpret_cast<const uint8_t*>(serial3.data()), serial3.size());
+    cert4.SetSerial(reinterpret_cast<const uint8_t*>(serial3.data()), serial3.size());
+    cert1.SetIssuerCN((const uint8_t*) cn1.data(), cn1.size());
+    cert2.SetIssuerCN((const uint8_t*) cn1.data(), cn1.size());
+    cert3.SetIssuerCN((const uint8_t*) cn2.data(), cn2.size());
+    cert4.SetIssuerCN((const uint8_t*) cn3.data(), cn3.size());
+    cert1.SetSubjectCN((const uint8_t*) cn1.data(), cn1.size());
+    cert2.SetSubjectCN((const uint8_t*) cn2.data(), cn2.size());
+    cert3.SetSubjectCN((const uint8_t*) cn3.data(), cn3.size());
+    cert4.SetSubjectCN((const uint8_t*) cn4.data(), cn4.size());
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 10000;
+    cert1.SetValidity(&validity);
+    cert2.SetValidity(&validity);
+    cert3.SetValidity(&validity);
+    cert4.SetValidity(&validity);
+    cert1.SetCA(true);
+    cert2.SetCA(true);
+    cert3.SetCA(true);
+    cert4.SetCA(false);
+    cert1.SetSubjectPublicKey(key1.GetDSAPublicKey());
+    cert2.SetSubjectPublicKey(key2.GetDSAPublicKey());
+    cert3.SetSubjectPublicKey(key3.GetDSAPublicKey());
+    cert4.SetSubjectPublicKey(key4.GetDSAPublicKey());
+    EXPECT_EQ(ER_OK, cert1.Sign(key1.GetDSAPrivateKey()));
+    EXPECT_EQ(ER_OK, cert2.Sign(key1.GetDSAPrivateKey()));
+    EXPECT_EQ(ER_OK, cert3.Sign(key2.GetDSAPrivateKey()));
+    EXPECT_EQ(ER_OK, cert4.Sign(key3.GetDSAPrivateKey()));
+
+    EXPECT_EQ(ER_OK, cert1.Verify(key1.GetDSAPublicKey()));
+    EXPECT_EQ(ER_OK, cert2.Verify(key1.GetDSAPublicKey()));
+    EXPECT_EQ(ER_OK, cert3.Verify(key2.GetDSAPublicKey()));
+    EXPECT_EQ(ER_OK, cert4.Verify(key3.GetDSAPublicKey()));
+
+    /* Print out certs in end entity..root order */
+    printf("%s\n", cert4.GetPEM().c_str());
+    printf("%s\n", cert3.GetPEM().c_str());
+    printf("%s\n", cert2.GetPEM().c_str());
+    printf("%s\n", cert1.GetPEM().c_str());
+}
