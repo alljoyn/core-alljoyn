@@ -146,6 +146,22 @@ class BusObject : public MessageReceiver {
     /**
      * Send a signal.
      *
+     * When using session-cast signals in a multi-point session, all members of
+     * the session will see the signal.
+     *
+     * When using security and session-cast signals in a multipoint session all
+     * members must be in an established trust relationship or a specific
+     * destination specified. Otherwise the signal will not been seen by any peers.
+     *
+     * When using security with policy and manifest (aka security 2.0) if the
+     * destination is not specified only the receiving peers policy will be used
+     * when deciding to trust the signal. The sending peer will not check its
+     * policy before sending the signal.
+     *
+     * There is no way to securely transmit sessionless signals since there is
+     * no way to establish a trust relationship between sending and receiving
+     * peers
+     *
      * @param destination  The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
      * @param sessionId    A unique SessionId for this AllJoyn session instance. The session this message is for.
      *                     Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
