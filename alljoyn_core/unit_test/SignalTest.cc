@@ -19,10 +19,13 @@
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
+#include <memory>
 
 #include <qcc/String.h>
 #include <qcc/time.h>
 #include <qcc/Thread.h>
+#include <qcc/Mutex.h>
+#include <qcc/Condition.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
@@ -32,6 +35,9 @@
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
+
+#include "TestSecureApplication.h"
+#include "TestSecurityManager.h"
 
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
@@ -896,4 +902,276 @@ TEST_F(SignalTest, SignalTypeEnforcement)
     ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, globalBroadcastParticipant.SendSessionlessSignal());
     ASSERT_EQ(ER_INVALID_SIGNAL_EMISSION_TYPE, globalBroadcastParticipant.SendUnicastSignal());
     ASSERT_EQ(ER_OK, globalBroadcastParticipant.SendGlobalBroadcastSignal());
+}
+
+class SecSignalTest :
+    public::testing::Test,
+    public MessageReceiver {
+  public:
+    SecSignalTest() : prov("provider"), cons("consumer"), proxy(NULL), eventCount(0), eventsNeeded(0), lastValue(false) { }
+    ~SecSignalTest() { }
+
+    TestSecurityManager tsm;
+    TestSecureApplication prov;
+    TestSecureApplication cons;
+    shared_ptr<ProxyBusObject> proxy;
+    Mutex lock;
+    Condition condition;
+    int eventCount;
+    int eventsNeeded;
+    bool lastValue;
+
+    virtual void SetUp() {
+        ASSERT_EQ(ER_OK, tsm.Init());
+        ASSERT_EQ(ER_OK, prov.Init(tsm));
+        ASSERT_EQ(ER_OK, cons.Init(tsm));
+
+        ASSERT_EQ(ER_OK, prov.HostSession());
+        SessionId sid = 0;
+        ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
+
+        proxy = shared_ptr<ProxyBusObject>(cons.GetProxyObject(prov, sid));
+        ASSERT_TRUE(proxy != NULL);
+        cons.GetBusAttachement().RegisterSignalHandlerWithRule(this,
+                                                               static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
+                                                               cons.GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
+                                                               TEST_SIGNAL_MATCH_RULE);
+    }
+
+    void EventHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
+    {
+        QCC_UNUSED(srcPath);
+        QCC_UNUSED(member);
+
+        lock.Lock();
+        eventCount++;
+        if (eventCount == eventsNeeded) {
+            condition.Signal();
+        }
+        bool value = lastValue;
+        QStatus status = msg->GetArgs("b", &value);
+        EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
+        cout << "received message " << value << " on " << msg->GetRcvEndpointName() <<  endl;
+
+        lastValue = value;
+        lock.Unlock();
+    }
+
+
+    QStatus SendAndWaitForEvent(TestSecureApplication& prov, bool newValue = true, TestSecureApplication* destination = NULL, int requiredEvents = 1)
+    {
+        lock.Lock();
+        eventCount = 0;
+        eventsNeeded = requiredEvents;
+        lastValue = !newValue;
+        cout << "SendAndWaitForEvent (" << newValue << ") need " << requiredEvents << " events." << endl;
+        QStatus status = destination ? prov.SendSignal(newValue, *destination) : prov.SendSignal(newValue);
+        if (ER_OK != status) {
+            cout << "Failed to send event " << __FILE__ << "@" << __LINE__ << endl;
+        } else {
+            condition.TimedWait(lock, 5000);
+            EXPECT_TRUE(eventCount) << " No event received";
+            EXPECT_EQ(newValue, lastValue) << "Signal value";
+            status = (eventCount == requiredEvents) && (newValue == lastValue) ? ER_OK : ER_FAIL;
+            eventCount = 0;
+            eventsNeeded = 0;
+        }
+        lock.Unlock();
+        return status;
+    }
+
+    QStatus InitConsumer(shared_ptr<TestSecureApplication>& newConsumer, shared_ptr<ProxyBusObject> proxy)
+    {
+        QStatus status = newConsumer->Init(tsm);
+        if (ER_OK != status) {
+            EXPECT_EQ(ER_OK, status);
+            return status;
+        }
+        SessionId sid = 0;
+        status = newConsumer->JoinSession(prov, sid);
+        if (ER_OK != status) {
+            EXPECT_EQ(ER_OK, status);
+            return status;
+        }
+        status = newConsumer->SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        if (ER_OK != status) {
+            EXPECT_EQ(ER_OK, status);
+            return status;
+        }
+        proxy = shared_ptr<ProxyBusObject>(newConsumer->GetProxyObject(prov, sid));
+        if (proxy == NULL) {
+            EXPECT_TRUE(proxy != NULL);
+            return ER_FAIL;
+        }
+        status = proxy->SecureConnection(true);
+        if (ER_OK != status) {
+            EXPECT_EQ(ER_OK, status);
+            return status;
+        }
+        newConsumer->GetBusAttachement().RegisterSignalHandlerWithRule(this,
+                                                                       static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
+                                                                       newConsumer->GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
+                                                                       TEST_SIGNAL_MATCH_RULE);
+
+        return status;
+    }
+};
+
+TEST_F(SecSignalTest, SendSignalAllowed)
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    //Even though the policy allows the signal, since the connection is not yet secured a permission denied is returned.
+    ASSERT_EQ(ER_PERMISSION_DENIED, SendAndWaitForEvent(prov, true, &cons));
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, &cons)); //Force Unicast
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true)); //Point-to-Point sessioncast.
+}
+
+TEST_F(SecSignalTest, SendSignalNotAllowedAfterConsumerPolicyUpdate)
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    //Due to a known issue, the session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, &cons));
+
+    //Update policy so that the consumer is not allowed to receive events
+    //The master secret for the session is dropped by the consumer. No events will come until it secures the connection again.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+    qcc::Sleep(500);
+    ASSERT_EQ(0, eventCount);
+
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    //events should be send correctly now but dropped consumer.
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+
+    qcc::Sleep(500);
+    ASSERT_EQ(0, eventCount);
+}
+
+TEST_F(SecSignalTest, SendSignalNotAllowedAfterProviderPolicyUpdate)
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, &cons));
+
+    //Update policy so that the provider is not allowed to send events
+    //The master secret for the session is dropped by the provider. No events will come until it secures the connection again.
+    //The consumer is not informed of this and cannot restore security
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
+    qcc::Sleep(500);
+    ASSERT_EQ(0, eventCount);
+
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    //events should be send correctly now but dropped provider.
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
+
+    qcc::Sleep(500);
+    ASSERT_EQ(0, eventCount);
+}
+
+TEST_F(SecSignalTest, SendSignalAllowedAfterConsumerPolicyUpdate)
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    //Good config signals will arrive.
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, &cons));
+
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    //The master secret for the session is dropped by the consumer. No events will come until it secures the connection again.
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
+    qcc::Sleep(500);
+    ASSERT_EQ(0, eventCount);
+
+    //The consumer application has reinitilize the securrity on the session to enable the events
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, &cons));
+}
+
+TEST_F(SecSignalTest, SendSignalAllowedAfterProviderPolicyUpdate)
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY, "wrong.interface"));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    //Bad config signals will not arrive.
+    ASSERT_EQ(ER_PERMISSION_DENIED, SendAndWaitForEvent(prov, true, &cons));
+
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    //The master secret for the session is dropped by the provider.
+    //No events will come until it secures the connection again.
+    //However the provider has no means to secure the connection.
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
+    qcc::Sleep(500);
+    ASSERT_EQ(0, eventCount);
+
+    //The consumer application has reinitilize the securrity on the session in order to enable the events
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, &cons));
+}
+
+#define NR_OF_CONSUMERS 3
+
+TEST_F(SecSignalTest, SendSignalToAllHostedSession)
+{
+    //Define policy for basic consumer and provider
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    //Connection is not secure; We should get a permission denied.
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
+
+    //Not allowed by sender policy. Connection secured
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
+    //This is a known limitation. The session has to be secured. See ASACORE-2432
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
+
+    //Good policy and connection secure
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
+
+    //Use NULL destination to use ID_ALL_HOSTED_SESSIONS
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL));
+    //Add extra consumers.
+    shared_ptr<TestSecureApplication> consumers[NR_OF_CONSUMERS];
+    shared_ptr<ProxyBusObject> proxies[NR_OF_CONSUMERS];
+
+    for (size_t i = 0; i < NR_OF_CONSUMERS; i++) {
+        String name = "SendSignalToAllHostedSessionConsumer";
+        name += i;
+        consumers[i] = shared_ptr<TestSecureApplication>(new TestSecureApplication(name.c_str()));
+        ASSERT_EQ(ER_OK, InitConsumer(consumers[i], proxies[i]));
+        ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, i + 2));
+    }
+
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, false, NULL, 1 + NR_OF_CONSUMERS));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1 + NR_OF_CONSUMERS));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, false, NULL, 1 + NR_OF_CONSUMERS));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1 + NR_OF_CONSUMERS));
 }

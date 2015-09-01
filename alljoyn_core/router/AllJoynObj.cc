@@ -2966,7 +2966,7 @@ void AllJoynObj::SendSessionLost(const SessionMapEntry& sme, QStatus reason, uns
         }
     } else {
         ReleaseLocks();
-        /* For newer clients i.e. protocol version >= 11, emit SessionLostWithReason(uub) signal */
+        /* For newer clients i.e. protocol version >= 11, emit SessionLostWithReasonAndDisposition(uub) signal */
         MsgArg args[3];
         args[0].Set("u", sme.id);
         args[1].Set("u", ConvertReasonToSessionLostReason(reason));
