@@ -581,7 +581,7 @@ TEST_F(ObjectSecurityTest, Test4) {
     EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
     EXPECT_EQ(ER_OK, status);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
@@ -590,7 +590,7 @@ TEST_F(ObjectSecurityTest, Test4) {
     status = val.Get("i", &iVal);
     EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     ASSERT_TRUE(serviceObject.IsSecure());
     ASSERT_TRUE(clientProxyObject.IsSecure());
@@ -1076,7 +1076,7 @@ TEST_F(ObjectSecurityTest, Test10) {
     EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
     EXPECT_EQ(ER_OK, status);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
@@ -1085,7 +1085,7 @@ TEST_F(ObjectSecurityTest, Test10) {
     status = val.Get("i", &iVal);
     EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     ASSERT_FALSE(serviceObject.IsSecure());
     ASSERT_TRUE(clientProxyObject.IsSecure());
@@ -1307,7 +1307,7 @@ TEST_F(ObjectSecurityTest, Test13) {
     EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
     EXPECT_EQ(ER_OK, status);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
@@ -1316,7 +1316,7 @@ TEST_F(ObjectSecurityTest, Test13) {
     status = val.Get("i", &iVal);
     EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     ASSERT_TRUE(serviceObject.IsSecure());
     /* After introspect, proxybusobject becomes secure. */
@@ -1547,7 +1547,7 @@ TEST_F(ObjectSecurityTest, Test16) {
     EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
     EXPECT_EQ(ER_OK, status);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
@@ -1556,7 +1556,7 @@ TEST_F(ObjectSecurityTest, Test16) {
     status = val.Get("i", &iVal);
     EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     ASSERT_TRUE(serviceObject.IsSecure());
     ASSERT_TRUE(clientProxyObject.IsSecure());
@@ -2874,7 +2874,7 @@ TEST_F(ObjectSecurityTest, Test30) {
     EXPECT_EQ(ER_OK, status);
     status = clientProxyObject.SetProperty(interface2, "integer_property", val);
     EXPECT_EQ(ER_OK, status);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     serviceObject.msgEncrypted = false;
     status = clientProxyObject.GetProperty(interface2, "integer_property", val);
@@ -2883,7 +2883,7 @@ TEST_F(ObjectSecurityTest, Test30) {
     status = val.Get("i", &iVal);
     EXPECT_EQ(ER_OK, status);
     EXPECT_EQ(421, iVal);
-    EXPECT_FALSE(serviceObject.msgEncrypted);
+    EXPECT_TRUE(serviceObject.msgEncrypted);
 
     EXPECT_TRUE(serviceObject.IsSecure());
     EXPECT_TRUE(clientProxyObject.IsSecure());
