@@ -2966,7 +2966,7 @@ void AllJoynObj::SendSessionLost(const SessionMapEntry& sme, QStatus reason, uns
         }
     } else {
         ReleaseLocks();
-        /* For newer clients i.e. protocol version >= 11, emit SessionLostWithReason(uub) signal */
+        /* For newer clients i.e. protocol version >= 11, emit SessionLostWithReasonAndDisposition(uub) signal */
         MsgArg args[3];
         args[0].Set("u", sme.id);
         args[1].Set("u", ConvertReasonToSessionLostReason(reason));
@@ -2976,7 +2976,7 @@ void AllJoynObj::SendSessionLost(const SessionMapEntry& sme, QStatus reason, uns
         QStatus status = Signal(sme.endpointName.c_str(), sme.id, *sessionLostWithReasonAndDispositionSignal, args, ArraySize(args));
 
         if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to send sessionLostWithReason(%u, %s) to %s", sme.id, QCC_StatusText(reason), sme.endpointName.c_str()));
+            QCC_LogError(status, ("Failed to send sessionLostWithReasonAndDisposition(%u, %s, %d) to %s", sme.id, QCC_StatusText(reason), disposition, sme.endpointName.c_str()));
         }
     }
 }

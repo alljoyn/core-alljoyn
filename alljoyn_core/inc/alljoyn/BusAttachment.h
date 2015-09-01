@@ -1994,14 +1994,9 @@ class BusAttachment : public MessageReceiver {
     QStatus LeaveSession(const SessionId& sessionId, const char*method, SessionSideMask bitset);
 
     /**
-     * Clear session listeners for a particular session
+     * Clear session bookkeeping for a particular session
      */
-    void ClearSessionListener(SessionId sessionId, SessionSideMask bitset);
-
-    /**
-     * Remove references to session
-     */
-    void ClearSessionSet(SessionId sessionId, SessionSideMask bitset);
+    void ClearSession(SessionId sessionId, SessionSideMask bitset);
 
     /**
      * Register signal handlers for BusListener

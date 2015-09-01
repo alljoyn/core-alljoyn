@@ -671,24 +671,57 @@ QStatus BusObject::Signal(const char* destination,
         }
     }
 
-    std::set<SessionId> ids;
-    if (sessionId != SESSION_ID_ALL_HOSTED) {
-        ids.insert(sessionId);
+    /* For sessioncast signals (sessionId != 0 && destination == NULL), we need
+     * to perform some tricks here:
+     * - if sessionId == SESSION_ID_ALL_HOSTED, we want to emit sessioncast
+     *   signals for each hosted session
+     * - for individual sessioncast signals in point-to-point sessions, we fill
+     *   in the destination (i.e. the other end of the session) explicitly so
+     *   that Security 2.0 can perform better permission checking. This
+     *   preserves the non-Sec2.0 behavior that a sessioncast signal in a
+     *   point-to-point session is functionally equivalent to a unicast signal
+     *   over the same session.
+     */
+
+    /* declare these in the method scope to keep the strings inside alive until the end of the method */
+    std::vector<BusAttachment::Internal::Session> sessions;
+    BusAttachment::Internal::Session session;
+
+    std::vector<std::pair<SessionId, const char*> > emissionParams;
+    if (sessionId == SESSION_ID_ALL_HOSTED) {
+        sessions = bus->GetInternal().GetHostedSessions();
+        std::vector<BusAttachment::Internal::Session>::iterator it;
+        for (it = sessions.begin(); it != sessions.end(); ++it) {
+            if (it->multipoint) {
+                emissionParams.push_back(std::make_pair(it->id, (const char*) NULL));
+            } else {
+                emissionParams.push_back(std::make_pair(it->id, it->otherParticipants.begin()->c_str()));
+            }
+        }
+    } else if (sessionId != 0 && destination == NULL) {
+        BusAttachment::Internal::Session session;
+        QStatus status = bus->GetInternal().GetSession(sessionId, session);
+        if (status == ER_OK && !session.multipoint) {
+            emissionParams.push_back(std::make_pair(sessionId, session.otherParticipants.begin()->c_str()));
+        } else {
+            emissionParams.push_back(std::make_pair(sessionId, (const char*) NULL));
+        }
     } else {
-        ids = bus->GetInternal().GetHostedSessions();
+        emissionParams.push_back(std::make_pair(sessionId, destination));
     }
 
-    if (ids.empty()) {
+    if (emissionParams.empty()) {
         return ER_OK;
     }
 
     QStatus status = ER_FAIL;
 
-    for (std::set<SessionId>::iterator it = ids.begin(); it != ids.end(); ++it) {
+    std::vector<std::pair<SessionId, const char*> >::iterator it;
+    for (it = emissionParams.begin(); it != emissionParams.end(); ++it) {
         Message msg(*bus);
         QStatus aStatus = msg->SignalMsg(signalMember.signature,
-                                         destination,
-                                         *it,
+                                         it->second,
+                                         it->first,
                                          path,
                                          signalMember.iface->GetName(),
                                          signalMember.name,
