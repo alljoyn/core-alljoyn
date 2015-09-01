@@ -53,8 +53,11 @@ namespace ajn {
 
 class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncCB {
     friend class BusAttachment;
-  public:
+    friend class BusObject;
 
+    struct Session;
+
+  public:
     /**
      * Get a reference to the internal store object.
      *
@@ -355,11 +358,37 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      *
      * @return set with all hosted session ids
      */
-    std::set<SessionId> GetHostedSessions() const {
-        sessionSetLock[SESSION_SIDE_HOST].Lock(MUTEX_CONTEXT);
-        std::set<SessionId> copy = sessionSet[SESSION_SIDE_HOST];
-        sessionSetLock[SESSION_SIDE_HOST].Unlock(MUTEX_CONTEXT);
+    std::vector<Session> GetHostedSessions() const {
+        sessionsLock[SESSION_SIDE_HOST].Lock(MUTEX_CONTEXT);
+        std::vector<Session> copy;
+        for (SessionMap::const_iterator it = sessions[SESSION_SIDE_HOST].begin(); it != sessions[SESSION_SIDE_HOST].end(); ++it) {
+            copy.push_back(it->second);
+        }
+        sessionsLock[SESSION_SIDE_HOST].Unlock(MUTEX_CONTEXT);
         return copy;
+    }
+
+    /**
+     * Get a particular session description
+     *
+     * @param[in]  sessionId the session id
+     * @param[out] session_out   a reference to a Section struct to be filled in
+     *
+     * @return ER_OK if the session was found and the Session struct is filled in
+     *         ER_FAIL otherwise
+     */
+    QStatus GetSession(SessionId sessionId, Session& session_out) const {
+        bool found = false;
+        for (size_t side = 0; !found && side < sizeof(sessions) / sizeof(sessions[0]); ++side) {
+            sessionsLock[side].Lock(MUTEX_CONTEXT);
+            SessionMap::const_iterator it = sessions[side].find(sessionId);
+            if (it != sessions[side].end()) {
+                found = true;
+                session_out = it->second;
+            }
+            sessionsLock[side].Unlock(MUTEX_CONTEXT);
+        }
+        return found ? ER_OK : ER_FAIL;
     }
 
     /**
@@ -515,9 +544,17 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     qcc::Mutex sessionPortListenersLock;       /* Lock protecting sessionPortListeners map */
 
     typedef qcc::ManagedObj<SessionListener*> ProtectedSessionListener;
-    typedef std::map<SessionId, ProtectedSessionListener> SessionListenerMap;
-    SessionListenerMap sessionListeners[SESSION_SIDE_NUM];   /* Lookup SessionListener by session id (index 0 for hoster, index 1 for joiner)*/
-    mutable qcc::Mutex sessionListenersLock[SESSION_SIDE_NUM];       /* Lock protecting sessionListeners maps */
+    struct Session {
+        bool host;
+        bool multipoint;
+        SessionId id;
+        ProtectedSessionListener listener;
+        std::set<std::string> otherParticipants;
+    };
+
+    typedef std::map<SessionId, Session> SessionMap;
+    SessionMap sessions[SESSION_SIDE_NUM]; /* look up session description by session id (index 0 for hosted sessions, index 1 for joined sessions) */
+    mutable qcc::Mutex sessionsLock[SESSION_SIDE_NUM];
 
     typedef qcc::ManagedObj<AboutListener*> ProtectedAboutListener;
     typedef std::set<ProtectedAboutListener> AboutListenerSet;
@@ -531,18 +568,11 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
         SessionOpts opts;
     };
 
-
-    std::set<SessionId> sessionSet[SESSION_SIDE_NUM];
-    mutable qcc::Mutex sessionSetLock[SESSION_SIDE_NUM];
-
     std::map<qcc::Thread*, JoinContext> joinThreads;  /* List of threads waiting to join */
     qcc::Mutex joinLock;                              /* Mutex that protects joinThreads */
     KeyStoreKeyEventListener ksKeyEventListener;
     PermissionManager permissionManager;
     PermissionConfigurator permissionConfigurator;
-
-    std::set<SessionId> hostedSessions;    /* session IDs for all sessions hosted by this bus attachment */
-    qcc::Mutex hostedSessionsLock;         /* Mutex that protects hostedSessions */
 
     typedef qcc::ManagedObj<ApplicationStateListener*> ProtectedApplicationStateListener;
     typedef std::set<ProtectedApplicationStateListener> ApplicationStateListenerSet;
