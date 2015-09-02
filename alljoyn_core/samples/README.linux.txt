@@ -22,3 +22,12 @@ TrustedTLSampleRN -
          be quietly advertised.  This demonstrates how a thin library
          applications may be "bound" to a specific Routing Node bu using the
          initial Thin Library Routing Node discovery process.
+
+SecureDoorConsumer/Provider
+         These samples demonstrate how Security 2.0 compliant applicaions should
+         be developed. After successful claiming by a security agent, the
+         SecureDoorProvider exposes a door BusObject that a SecureDoorConsumer
+         can act upon. Accessing the provided door can only be allowed after
+         installing an adequate policy and membership using the security
+         agent; i.e., the agent that was used for claiming the applications
+         originally.
