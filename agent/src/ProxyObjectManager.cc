@@ -546,6 +546,7 @@ void ProxyObjectManager::SessionLost(SessionId sessionId,
                                      SessionLostReason reason)
 {
     QCC_UNUSED(reason);
+    QCC_UNUSED(sessionId);  // For Release builds.
 
     QCC_DbgPrintf(("Lost session %lu", (unsigned long)sessionId));
 }

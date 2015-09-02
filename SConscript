@@ -20,6 +20,11 @@ if 'cpp' not in env['bindings']:
     print('Not building security_api because cpp was not specified in bindings')
     Return()
 
+if env['OS_GROUP'] == 'windows':
+    if not os.path.exists('external/sqlite3/sqlite3.c') or not os.path.exists('external/sqlite3/sqlite3.h'):
+        print('sqlite3.c and sqlite3.h must be present under external/sqlite3. SQLite amalgamation can be obtained from http://www.sqlite.org/download.html.')
+        Return()
+
 if env.has_key('_ALLJOYNCORE_'):
     from_alljoyn_core=1
 else:
@@ -30,6 +35,10 @@ if env['OS_GROUP'] == 'windows':
     env.Append(CCFLAGS = '-GR')
 else:
     env.Append(CXXFLAGS = '-frtti')
+
+if env['OS_GROUP'] == 'windows':
+    # Use the proper x86 calling conventions in SQLite
+    env.Append(CCFLAGS = '-DSQLITE_CDECL=__cdecl -DSQLITE_STDCALL=__stdcall')
 
 # Indicate that this SConscript file has been loaded already
 env['_SECURITY_'] = True
@@ -51,16 +60,15 @@ env.Append(CPPPATH = '$DISTDIR/security/inc');
 secenv = env.Clone(tools = ['textfile'])
 
 sys.path.append(str(secenv.Dir('../alljoyn/build_core/tools/scons').srcnode()))
-from configurejni import ConfigureJNI
-
-if not ConfigureJNI(secenv):
-    if not GetOption('help'):
-        Exit(1)
 
 if env['OS_GROUP'] == 'windows':
     secenv.Append(CCFLAGS = '-WX')
 else:
     secenv.Append(CCFLAGS = '-Werror')
+    from configurejni import ConfigureJNI
+    if not ConfigureJNI(secenv):
+        if not GetOption('help'):
+            Exit(1)
 
 def create_libpath(self):
     libs = map(lambda s: self.subst(s).replace('#', Dir('#').abspath + '/'), self['LIBPATH'])
@@ -84,7 +92,6 @@ secenv.Append(CPPPATH = ['../../../../../../agent/inc/'])
 secenv.Append(CPPPATH = ['../../../../../../storage/inc'])
 
 if env['OS_GROUP'] == 'windows':
-    print "Please download sqlite-amalgamation-3081002.zip from http://www.sqlite.org/download.html and copy sqlite3.c sqlite3.h in external\\sqlite3\\"
     sqlite_objs = secenv.SConscript('external/sqlite3/SConscript', exports = ['secenv'], variant_dir=buildroot+'/ext/lib/sqlite3', duplicate=0)
     secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('storage/src/SConscript', exports = ['secenv', 'sqlite_objs'], variant_dir=buildroot+'/lib/storage/native', duplicate=0))
 else:
