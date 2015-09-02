@@ -128,11 +128,6 @@ QStatus AJNCaStorage::UpdatesCompleted(Application& app, uint64_t& updateID)
     return handler->UpdatesCompleted(app, updateID);
 }
 
-QStatus AJNCaStorage::ApplicationUpdated(Application& app)
-{
-    return handler->ApplicationUpdated(app);
-}
-
 QStatus AJNCaStorage::RegisterAgent(const KeyInfoNISTP256& agentKey,
                                     const Manifest& manifest,
                                     GroupInfo& adminGroup,

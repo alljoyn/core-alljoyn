@@ -177,4 +177,62 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     ASSERT_TRUE(CheckMemberships(memberships));
     ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo2));
 }
+
+/**
+ * @test Verify that installing and removing a membership triggers an increase in the policy version
+ *       -# Start an application and make sure it's online and CLAIMABLE.
+ *       -# Successfully store an IdentityInfo instance.
+ *       -# Successfully claim the application using the IdentityInfo instance.
+ *       -# Make sure the application is online and in the CLAIMED state
+ *          with no updates pending.
+ *       -# Make sure the remote identity and manifest of the application
+ *          match the stored ones.
+ *       -# Update a policy on an application
+ *       -# Verify that installing of membership using groupInfo1 is successful.
+ *       -# Make sure updates have been completed.
+ *       -# Check that the policy version increased.
+ *       -# Verify that removing of membership using groupInfo1 is successful.
+ *       -# Make sure updates have been completed.
+ *       -# Check that the policy version increased again.
+ **/
+TEST_F(MembershipTests, InstallRemoveMembershipPolicyUpdate) {
+    /* Create groups */
+    ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo1));
+
+    /* Start the test application */
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
+
+    /* Wait for signals */
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    OnlineApplication app = lastAppInfo;
+    /* Create identity */
+    ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
+
+    /* Claim application */
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+
+    /* Check security signal */
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
+    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+
+    vector<GroupInfo> policyGroups;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, pg->DefaultPolicy(policyGroups, policy));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+
+    uint32_t currentVersion;
+    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, currentVersion));
+    ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    uint32_t remoteVersion;
+    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, remoteVersion));
+    ASSERT_EQ(1 + currentVersion, remoteVersion);
+
+    ASSERT_EQ(ER_OK, storage->RemoveMembership(app, groupInfo1));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, remoteVersion));
+    ASSERT_EQ(2 + currentVersion, remoteVersion);
+}
 } // namespace

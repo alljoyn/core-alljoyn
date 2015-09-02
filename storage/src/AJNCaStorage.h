@@ -46,8 +46,6 @@ class StorageListenerHandler {
     virtual QStatus StartUpdates(Application& app,
                                  uint64_t& updateID) = 0;
 
-    virtual QStatus ApplicationUpdated(Application& app) = 0;
-
     virtual QStatus ApplicationClaimed(Application& app,
                                        IdentityCertificate& cert,
                                        Manifest& mnf) = 0;
@@ -90,8 +88,6 @@ class AJNCaStorage :
 
     virtual QStatus UpdatesCompleted(Application& app,
                                      uint64_t& updateID);
-
-    virtual QStatus ApplicationUpdated(Application& app);
 
     virtual QStatus StartApplicationClaiming(const Application& app,
                                              const IdentityInfo& idInfo,

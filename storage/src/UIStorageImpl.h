@@ -131,7 +131,8 @@ class UIStorageImpl :
     QStatus GetStoredGroupAndAppInfo(Application& app,
                                      GroupInfo& groupInfo);
 
-    QStatus ApplicationUpdated(Application& app);
+    QStatus ApplicationUpdated(Application& app,
+                               bool policyUpdateNeeded = true);
 
     QStatus ApplicationsUpdated(vector<Application>& app);
 

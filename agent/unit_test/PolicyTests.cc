@@ -222,6 +222,5 @@ TEST_F(PolicyTests, PermissionDenied) {
     /* Install policy and check retrieved policy */
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, emptyPolicy));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
-    ASSERT_TRUE(WaitForSyncError(SYNC_ER_REMOTE, ER_PERMISSION_DENIED));
 }
 } // namespace

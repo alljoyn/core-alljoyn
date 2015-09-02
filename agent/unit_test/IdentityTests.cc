@@ -103,4 +103,59 @@ TEST_F(IdentityTests, SuccessfulInstallIdentity) {
     ASSERT_EQ(ER_OK, storage->GetManagedApplications(apps));
     ASSERT_TRUE(apps.empty());
 }
+
+/**
+ * @test Verify that update identity triggers an increase of the policy version
+ *       -# Start an application and make sure it's online and CLAIMABLE.
+ *       -# Successfully store an IdentityInfo instance.
+ *       -# Successfully claim the application using the IdentityInfo instance.
+ *       -# Make sure the application is online and in the CLAIMED state
+ *          with no updates pending.
+ *       -# Make sure the remote identity and manifest of the application
+ *          match the stored ones.
+ *       -# Update a policy on an application
+ *       -# Verify that updateIdentity is succesful.
+ *       -# Make sure updates have been completed.
+ *       -# Check that the policy version increased.
+ **/
+TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
+    /* Start the test application */
+    TestApplication testApp;
+    ASSERT_EQ(ER_OK, testApp.Start());
+
+    /* Wait for signals */
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    OnlineApplication app = lastAppInfo;
+    /* Create identity */
+    IdentityInfo info;
+    info.name = "MyName";
+    ASSERT_EQ(ER_OK, storage->StoreIdentity(info));
+    ASSERT_EQ(storage->StoreIdentity(info), ER_OK);
+
+    /* Claim application */
+    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, info));
+
+    /* Check security signal */
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
+    ASSERT_TRUE(CheckIdentity(info, aa.lastManifest));
+
+    vector<GroupInfo> policyGroups;
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, pg->DefaultPolicy(policyGroups, policy));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+
+    uint32_t currentVersion;
+    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, currentVersion));
+    /* Try to install another identity */
+    IdentityInfo info2;
+    info2.name = "AnotherName";
+    ASSERT_EQ(ER_OK, storage->StoreIdentity(info2));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, info2, aa.lastManifest));
+    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(CheckIdentity(info2, aa.lastManifest));
+    uint32_t remoteVersion;
+    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, remoteVersion));
+    ASSERT_EQ(1 + currentVersion, remoteVersion);
+}
 } // namespace

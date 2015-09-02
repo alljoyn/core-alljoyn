@@ -32,7 +32,7 @@ namespace securitymgr {
 #define LOGSQLERROR(a) { QCC_LogError((a), ((string("SQL Error: ") + (sqlite3_errmsg(nativeStorageDB))).c_str())); \
 }
 
-QStatus SQLStorage::StoreApplication(const Application& app, const bool update)
+QStatus SQLStorage::StoreApplication(const Application& app, const bool update, const bool updatePolicy)
 {
     storageMutex.Lock(__FILE__, __LINE__);
 
@@ -104,6 +104,16 @@ QStatus SQLStorage::StoreApplication(const Application& app, const bool update)
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[]publicKeyInfo;
+    if (ER_OK == funcStatus && updatePolicy) {
+        PermissionPolicy policy;
+        funcStatus = GetPolicy(app, policy);
+        if (ER_OK == funcStatus) {
+            policy.SetVersion(policy.GetVersion() + 1);
+            funcStatus = StorePolicy(app, policy);
+        } else if (ER_END_OF_DATA == funcStatus) {
+            funcStatus = ER_OK;  //No policy defined, so we can't increase the version.
+        }
+    }
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;

@@ -78,14 +78,6 @@ QStatus UIStorageImpl::RemoveGroup(const GroupInfo& groupInfo)
         return status;
     }
 
-    vector<Application>::iterator appItr = appsToSync.begin();
-    for (; appItr != appsToSync.end(); appItr++) {
-        appItr->syncState = SYNC_PENDING;
-        if (ER_OK != (status = storage->StoreApplication(*appItr, true))) {
-            return status;
-        }
-    }
-
     return ApplicationsUpdated(appsToSync);
 }
 
@@ -127,13 +119,12 @@ QStatus UIStorageImpl::RemoveIdentity(const IdentityInfo& idInfo)
 
     vector<Application>::iterator appItr = appsToSync.begin();
     for (; appItr != appsToSync.end(); appItr++) {
-        appItr->syncState = SYNC_WILL_RESET;
-        if (ER_OK != (status = storage->StoreApplication(*appItr, true))) {
+        status = ResetApplication(*appItr);
+        if (ER_OK != status) {
             return status;
         }
     }
-
-    return ApplicationsUpdated(appsToSync);;
+    return status;
 }
 
 QStatus UIStorageImpl::GetIdentity(IdentityInfo& idInfo) const
@@ -342,13 +333,6 @@ QStatus UIStorageImpl::InstallMembership(const Application& app, const GroupInfo
     if (ER_OK != status) {
         return status;
     }
-    MembershipCertificate mc;
-    mc.SetSubjectPublicKey(certificate.GetSubjectPublicKey());
-    mc.SetGuild(certificate.GetGuild());
-    status = storage->GetCertificate(app, mc);
-    if (ER_OK != status) {
-        return status;
-    }
 
     return ApplicationUpdated(storedApp);
 }
@@ -409,7 +393,7 @@ QStatus UIStorageImpl::UpdatePolicy(Application& app, PermissionPolicy& policy)
         return status;
     }
 
-    return ApplicationUpdated(app);
+    return ApplicationUpdated(app, false);
 }
 
 QStatus UIStorageImpl::GetPolicy(const Application& app, PermissionPolicy& policy)
@@ -423,7 +407,7 @@ QStatus UIStorageImpl::RemovePolicy(Application& app)
     if (ER_OK != status) {
         return status;
     }
-    return ApplicationUpdated(app);
+    return ApplicationUpdated(app, false);
 }
 
 QStatus UIStorageImpl::UpdateIdentity(Application& app,
@@ -456,7 +440,7 @@ QStatus UIStorageImpl::UpdateIdentity(Application& app,
     return ApplicationUpdated(app);
 }
 
-QStatus UIStorageImpl::ApplicationUpdated(Application& app)
+QStatus UIStorageImpl::ApplicationUpdated(Application& app, bool policyUpdateNeeded)
 {
     updateLock.Lock();
     QStatus status = storage->GetManagedApplication(app);
@@ -466,7 +450,7 @@ QStatus UIStorageImpl::ApplicationUpdated(Application& app)
         switch (app.syncState) {
         case SYNC_OK:
             app.syncState = SYNC_PENDING;
-            status = storage->StoreApplication(app, true);
+            status = storage->StoreApplication(app, true, policyUpdateNeeded);
             updateLock.Unlock();
             NotifyListeners(app);
             return status;

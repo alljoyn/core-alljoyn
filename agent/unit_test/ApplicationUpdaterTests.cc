@@ -371,8 +371,7 @@ TEST_F(ApplicationUpdaterTests, SyncErReset) {
     invalidPolicyGenerator.DefaultPolicy(invalidGuilds, invalidPolicy);
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, invalidPolicy));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
-    ASSERT_TRUE(WaitForSyncError(SYNC_ER_REMOTE, ER_AUTH_FAIL));
-
+    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 

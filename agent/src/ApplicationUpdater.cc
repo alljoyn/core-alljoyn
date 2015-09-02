@@ -67,11 +67,9 @@ QStatus ApplicationUpdater::UpdatePolicy(const OnlineApplication& app)
     uint32_t remoteVersion;
     status = proxyObjectManager->GetPolicyVersion(app, remoteVersion);
     if (ER_OK != status) {
-        if (ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
-            QCC_DbgPrintf(("Failed to get remote policy version"));
-            SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
-            securityAgentImpl->NotifyApplicationListeners(error);
-        }
+        QCC_DbgPrintf(("Failed to get remote policy version"));
+        SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
+        securityAgentImpl->NotifyApplicationListeners(error);
         return status;
     }
     QCC_DbgPrintf(("Remote policy version is %i", remoteVersion));
@@ -219,9 +217,11 @@ QStatus ApplicationUpdater::UpdateMemberships(const OnlineApplication& app)
     vector<MembershipSummary> remote;
     status = proxyObjectManager->GetMembershipSummaries(app, remote);
     if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to GetMembershipSummaries"));
-        SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
-        securityAgentImpl->NotifyApplicationListeners(error);
+        if (ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
+            QCC_LogError(status, ("Failed to GetMembershipSummaries"));
+            SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
+            securityAgentImpl->NotifyApplicationListeners(error);
+        }
         return status;
     }
     QCC_DbgPrintf(("Retrieved %i membership summaries", remote.size()));
@@ -356,13 +356,13 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                     return status;
                 }
 
-                if (ER_OK != (status = UpdatePolicy(app))) {
-                    break;
-                }
                 if (ER_OK != (status = UpdateMemberships(app))) {
                     break;
                 }
                 if (ER_OK != (status = UpdateIdentity(app))) {
+                    break;
+                }
+                if (ER_OK != (status = UpdatePolicy(app))) {
                     break;
                 }
                 managedApp.syncState = SYNC_OK;

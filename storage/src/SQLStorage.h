@@ -136,7 +136,8 @@ class SQLStorage {
     }
 
     QStatus StoreApplication(const Application& app,
-                             const bool update = false);
+                             const bool update = false,
+                             const bool updatePolicy = false);
 
     QStatus SetAppMetaData(const Application& app,
                            const ApplicationMetaData& appMetaData);
