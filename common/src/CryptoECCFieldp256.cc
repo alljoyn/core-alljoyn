@@ -73,7 +73,7 @@ namespace qcc {
  * zero and p256.
  */
 
-static digit256_tc P256_MODULUS = { 18446744073709551615U, 4294967295U, 0, 18446744069414584321U };
+static digit256_tc P256_MODULUS = { 18446744073709551615ULL, 4294967295ULL, 0ULL, 18446744069414584321ULL };
 
 /* Macros to extract the lower and upper parts. */
 #define getlow_tolow(x) ((x) & (digit_t) 0xFFFFFFFF)
@@ -628,7 +628,7 @@ void fpdiv2_p256(
     digit_t*    temps)
 {
     /* The constant 1/2 (mod p256): */
-    digit256_tc half = { 0, 2147483648U, 9223372036854775808U, 9223372034707292160U };
+    digit256_tc half = { 0ULL, 2147483648ULL, 9223372036854775808ULL, 9223372034707292160ULL };
 
     assert(numerator != NULL);
     assert(quotient != NULL);
@@ -694,7 +694,7 @@ void fpinv_p256(
     digit_t*    temps)
 {
     /* Exponentiation by (p-2). */
-    digit256_tc P256m2 = { 18446744073709551613U, 4294967295U, 0, 18446744069414584321U };
+    digit256_tc P256m2 = { 18446744073709551613ULL, 4294967295ULL, 0ULL, 18446744069414584321ULL };
     fpexp_naive_p256(a, P256m2, inv, temps);
 }
 
