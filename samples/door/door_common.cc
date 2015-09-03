@@ -62,7 +62,7 @@ void Door::SendDoorEvent()
 void Door::ReplyWithBoolean(bool answer, Message& msg)
 {
     MsgArg outArg;
-    outArg.Set("b", &answer);
+    outArg.Set("b", answer);
 
     if (ER_OK != MethodReply(msg, &outArg, 1)) {
         printf("ReplyWithBoolean: Error sending reply.\n");
