@@ -124,7 +124,7 @@ QStatus AJ_CALL org::freedesktop::DBus::CreateInterfaces(BusAttachment& bus) {
 
     /* Create the org.freedesktop.DBus.Properties interface */
     InterfaceDescription* propsIntf = NULL;
-    status = bus.CreateInterface(org::freedesktop::DBus::Properties::InterfaceName, propsIntf, AJ_IFC_SECURITY_OFF);
+    status = bus.CreateInterface(org::freedesktop::DBus::Properties::InterfaceName, propsIntf, AJ_IFC_SECURITY_INHERIT);
     if ((ER_OK != status) || !propsIntf) {
         if (ER_OK == status) {
             status = ER_FAIL;

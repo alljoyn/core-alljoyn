@@ -244,6 +244,9 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
     qcc::String emitsChanged;
     if (ifc && ifc->GetPropertyAnnotation(propName, org::freedesktop::DBus::AnnotateEmitsChanged, emitsChanged)) {
         QCC_DbgPrintf(("emitsChanged = %s", emitsChanged.c_str()));
+        if (SecurityApplies(this, ifc)) {
+            flags |= ALLJOYN_FLAG_ENCRYPTED;
+        }
         if (emitsChanged == "true") {
             const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             const InterfaceDescription::Member* propChanged = (bus_ifc ? bus_ifc->GetMember("PropertiesChanged") : NULL);
@@ -287,6 +290,9 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
         size_t updatedPropNum = 0;
         size_t invalidatedPropNum = 0;
 
+        if (SecurityApplies(this, ifc)) {
+            flags |= ALLJOYN_FLAG_ENCRYPTED;
+        }
         for (size_t i = 0; i < numProps; ++i) {
             const char* propName = propNames[i];
             const InterfaceDescription::Property* prop = ifc->GetProperty(propName);
