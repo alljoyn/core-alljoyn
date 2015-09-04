@@ -7093,7 +7093,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
     //
     uint32_t nsVersion, msgVersion;
     whoHas.GetVersion(nsVersion, msgVersion);
-    if (nsVersion == 0 && msgVersion == 0) {
+    if (nsVersion == 1 && msgVersion == 0) {
         if (whoHas.GetUdpFlag()) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): Ignoring version zero message from version one peer"));
             m_mutex.Unlock();
@@ -7101,7 +7101,7 @@ void IpNameServiceImpl::HandleProtocolQuestion(WhoHas whoHas, const qcc::IPEndpo
         }
     }
 
-    if (nsVersion == 1 && msgVersion == 1) {
+    if (nsVersion == 2 && msgVersion == 1) {
         if (whoHas.GetUdpFlag()) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolQuestion(): Ignoring version one message from version two peer"));
             m_mutex.Unlock();
@@ -7316,7 +7316,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
     // The indication that this is the case is both versions being zero with a
     // UDP flag being true.
     //
-    if (nsVersion == 0 && msgVersion == 0) {
+    if (nsVersion == 1 && msgVersion == 0) {
         if (isAt.GetUdpFlag()) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Ignoring version zero message from version one/version two peer"));
 
@@ -7335,7 +7335,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
     // The indication that this is the case is both versions being one with a
     // IPv6 flag being true.
     //
-    if (nsVersion == 1 && msgVersion == 1) {
+    if (nsVersion == 2 && msgVersion == 1) {
         if (isAt.GetReliableIPv6Flag()) {
             QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolAnswer(): Ignoring version one message from version two peer"));
             m_mutex.Unlock();
