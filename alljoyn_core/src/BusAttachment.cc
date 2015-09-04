@@ -1636,6 +1636,44 @@ void BusAttachment::UnregisterBusListener(BusListener& listener)
     }
 }
 
+QStatus BusAttachment::SecureConnection(const char* name, bool forceAuth)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    if (!IsPeerSecurityEnabled()) {
+        return ER_BUS_SECURITY_NOT_ENABLED;
+    }
+    LocalEndpoint localEndpoint = GetInternal().GetLocalEndpoint();
+    if (!localEndpoint->IsValid()) {
+        return ER_BUS_ENDPOINT_CLOSING;
+    } else {
+        AllJoynPeerObj* peerObj = localEndpoint->GetPeerObj();
+        if (forceAuth) {
+            peerObj->ForceAuthentication(name);
+        }
+        return peerObj->AuthenticatePeer(MESSAGE_METHOD_CALL, name);
+    }
+}
+
+QStatus BusAttachment::SecureConnectionAsync(const char* name, bool forceAuth)
+{
+    if (!IsPeerSecurityEnabled()) {
+        return ER_BUS_SECURITY_NOT_ENABLED;
+    }
+    LocalEndpoint localEndpoint = GetInternal().GetLocalEndpoint();
+    if (!localEndpoint->IsValid()) {
+        return ER_BUS_ENDPOINT_CLOSING;
+    } else {
+        AllJoynPeerObj* peerObj =  localEndpoint->GetPeerObj();
+        if (forceAuth) {
+            peerObj->ForceAuthentication(name);
+        }
+        return peerObj->AuthenticatePeerAsync(name);
+    }
+}
+
 QStatus BusAttachment::NameHasOwner(const char* name, bool& hasOwner)
 {
     if (!IsConnected()) {

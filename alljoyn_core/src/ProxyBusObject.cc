@@ -1799,36 +1799,12 @@ void ProxyBusObject::SyncReplyHandler(Message& msg, void* context)
 
 QStatus ProxyBusObject::SecureConnection(bool forceAuth)
 {
-    if (!internal->bus->IsPeerSecurityEnabled()) {
-        return ER_BUS_SECURITY_NOT_ENABLED;
-    }
-    LocalEndpoint localEndpoint = internal->bus->GetInternal().GetLocalEndpoint();
-    if (!localEndpoint->IsValid()) {
-        return ER_BUS_ENDPOINT_CLOSING;
-    } else {
-        AllJoynPeerObj* peerObj = localEndpoint->GetPeerObj();
-        if (forceAuth) {
-            peerObj->ForceAuthentication(internal->serviceName);
-        }
-        return peerObj->AuthenticatePeer(MESSAGE_METHOD_CALL, internal->serviceName);
-    }
+    return internal->bus->SecureConnection(internal->serviceName.c_str(), forceAuth);
 }
 
 QStatus ProxyBusObject::SecureConnectionAsync(bool forceAuth)
 {
-    if (!internal->bus->IsPeerSecurityEnabled()) {
-        return ER_BUS_SECURITY_NOT_ENABLED;
-    }
-    LocalEndpoint localEndpoint = internal->bus->GetInternal().GetLocalEndpoint();
-    if (!localEndpoint->IsValid()) {
-        return ER_BUS_ENDPOINT_CLOSING;
-    } else {
-        AllJoynPeerObj* peerObj =  localEndpoint->GetPeerObj();
-        if (forceAuth) {
-            peerObj->ForceAuthentication(internal->serviceName);
-        }
-        return peerObj->AuthenticatePeerAsync(internal->serviceName);
-    }
+    return internal->bus->SecureConnectionAsync(internal->serviceName.c_str(), forceAuth);
 }
 
 const qcc::String& ProxyBusObject::GetPath(void) const {
