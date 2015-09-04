@@ -1134,6 +1134,48 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_setsessionlistener(alljoyn_b
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_leavesession(alljoyn_busattachment bus, alljoyn_sessionid sessionId);
 
 /**
+ * Explicitly secure the connection to the remote peer. Peer-to-peer
+ * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+ * attachment. If the peer-to-peer connection is already secure this
+ * function does nothing. Note that peer-to-peer connections are automatically secured when a
+ * method call requiring encryption is sent.
+ *
+ * This call causes messages to be sent on the bus, therefore it cannot be called within AllJoyn
+ * callbacks (method/signal/reply handlers or ObjectRegistered callbacks, etc.)
+ *
+ * @param[in]  name  The unique name of the remote peer.
+ * @param forceAuth  If true, forces re-authentication even if the peer connection is already
+ *                   authenticated.
+ *
+ * @return
+ *          - #ER_OK if the connection was secured or an error status indicating that the
+ *            connection could not be secured.
+ *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called.
+ *          - #ER_AUTH_FAIL if the attempt(s) to authenticate the peer failed.
+ *          - Other error status codes indicating a failure.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_secureconnection(alljoyn_busattachment bus, const char* name, QCC_BOOL forceAuth);
+
+/**
+ * Asynchronously secure the connection to the remote peer. Peer-to-peer connections can only
+ * be secured if EnablePeerSecurity() was previously called on the bus attachment.
+ * If the peer-to-peer connection is already secure this function does nothing.
+ * Note that peer-to-peer connections are automatically secured when a
+ * method call requiring encryption is sent.
+ *
+ * Notification of success or failure is via the AuthListener passed to EnablePeerSecurity().
+ *
+ * @param[in]  name  The unique name of the remote peer.
+ * @param forceAuth  If true, forces re-authentication even if the peer connection is already
+ *                   authenticated.
+ * @return
+ *          - #ER_OK if securing could begin.
+ *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called.
+ *          - Other error status codes indicating a failure.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_secureconnectionasync(alljoyn_busattachment bus, const char* name, QCC_BOOL forceAuth);
+
+/**
  * Remove a member from an existing multipoint session.
  * This function may be called by the binder of the session to forcefully remove a member from a session.
  *

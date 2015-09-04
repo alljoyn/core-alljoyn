@@ -641,3 +641,47 @@ TEST_F(BusAttachmentTest, PingAsync_other_on_same_bus) {
     otherBus.Stop();
     otherBus.Join();
 }
+
+TEST_F(BusAttachmentTest, BasicSecureConnection)
+{
+    DefaultECDHEAuthListener al;
+    BusAttachment otherBus("BusAttachmentOtherBus", false);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+    otherBus.Start();
+    //Use expect from now onward to make sure we reached the end of the function and do all clean-up
+    EXPECT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+    otherBus.Connect();
+    EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+
+    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myOtherTestKeyStore", true));
+    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myTestKeyStore", true));
+
+    EXPECT_EQ(ER_OK, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+
+    otherBus.Stop();
+    otherBus.ClearKeyStore();
+    otherBus.Join();
+    bus.ClearKeyStore();
+}
+
+TEST_F(BusAttachmentTest, BasicSecureConnectionAsync)
+{
+    DefaultECDHEAuthListener al;
+    BusAttachment otherBus("BusAttachmentOtherBus", false);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+    otherBus.Start();
+    //Use expect from now onward to make sure we reached the end of the function and do all clean-up
+    EXPECT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+    otherBus.Connect();
+    EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+
+    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myOtherTestKeyStore", true));
+    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myTestKeyStore", true));
+
+    EXPECT_EQ(ER_OK, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+
+    otherBus.Stop();
+    otherBus.ClearKeyStore();
+    otherBus.Join();
+    bus.ClearKeyStore();
+}

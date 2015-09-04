@@ -25,6 +25,8 @@
 #error Only include BusAttachment.h in C++ code.
 #endif
 
+#include <set>
+
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
@@ -1479,6 +1481,50 @@ class BusAttachment : public MessageReceiver {
                                 void* context = NULL);
 
     /**
+     * Explicitly secure the connection to the remote peer. Peer-to-peer
+     * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+     * attachment. If the peer-to-peer connection is already secure this
+     * function does nothing. Note that peer-to-peer connections are automatically secured when a
+     * method call requiring encryption is sent.
+     *
+     * This call causes messages to be sent on the bus, therefore it cannot be called within AllJoyn
+     * callbacks (method/signal/reply handlers or ObjectRegistered callbacks, etc.)
+     *
+     * @param[in]  name  The unique name of the remote peer or NULL to restore the connections to all peers
+     *                   this BusAttachement is in session with.
+     * @param forceAuth  If true, forces re-authentication even if the peer connection is already
+     *                   authenticated.
+     *
+     * @return
+     *          - #ER_OK if the connection was secured or an error status indicating that the
+     *            connection could not be secured.
+     *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called.
+     *          - #ER_AUTH_FAIL if the attempt(s) to authenticate the peer failed.
+     *          - Other error status codes indicating a failure.
+     */
+    QStatus SecureConnection(const char* name, bool forceAuth = false);
+
+    /**
+     * Asynchronously secure the connection to the remote peer. Peer-to-peer connections can only
+     * be secured if EnablePeerSecurity() was previously called on the bus attachment.
+     * If the peer-to-peer connection is already secure this function does nothing.
+     * Note that peer-to-peer connections are automatically secured when a
+     * method call requiring encryption is sent.
+     *
+     * Notification of success or failure is via the AuthListener passed to EnablePeerSecurity().
+     *
+     * @param[in]  name  The unique name of the remote peer or NULL to restore the connections to all peers
+     *                   this BusAttachement is in session with.
+     * @param forceAuth  If true, forces re-authentication even if the peer connection is already
+     *                   authenticated.
+     * @return
+     *          - #ER_OK if securing could begin.
+     *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called.
+     *          - Other error status codes indicating a failure.
+     */
+    QStatus SecureConnectionAsync(const char* name, bool forceAuth = false);
+
+    /**
      * Determine whether a given well-known name exists on the bus.
      * This method is a shortcut/helper that issues an org.freedesktop.DBus.NameHasOwner method call to the router
      * and interprets the response.
@@ -2007,6 +2053,17 @@ class BusAttachment : public MessageReceiver {
      * Unregister signal handlers for BusListener
      */
     void UnregisterSignalHandlers();
+
+    /**
+     * Loops over all sessions this BusAttachment is involved in and puts the
+     * bus names in the provided set (one entry per peer).
+     */
+    void GetConnectedPeers(std::set<const char*>& busNames);
+
+    /**
+     * Common logic for securing a connection. Called by SecureConnection and SecureConnectionAsync.
+     */
+    QStatus SecureConnectionInternal(const char* name, bool forceAuth, bool async);
 
     qcc::String connectSpec;  /**< The connect spec used to connect to the bus */
     bool isStarted;           /**< Indicates if the bus has been started */

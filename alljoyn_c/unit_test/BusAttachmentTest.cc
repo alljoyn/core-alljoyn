@@ -354,3 +354,137 @@ TEST(BusAttachmentTest, ping_other_on_same_bus) {
 
     alljoyn_busattachment_destroy(bus);
 }
+
+static QCC_BOOL test_alljoyn_authlistener_requestcredentials(const void* context, const char* authMechanism, const char* peerName, uint16_t authCount,
+                                                             const char* userName, uint16_t credMask, alljoyn_credentials credentials)
+{
+    QCC_UNUSED(context);
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+    QCC_UNUSED(credMask);
+    QCC_UNUSED(credentials);
+    return true;
+}
+
+static void test_alljoyn_authlistener_authenticationcomplete(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success)
+{
+
+    QCC_UNUSED(authMechanism);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(success);
+    if (context) {
+        int* count = (int*) context;
+        *count += 1;
+    }
+}
+
+
+TEST(BusAttachmentTest, BasicSecureConnection)
+{
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("BusAttachmentTest", QCC_TRUE);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnection(bus, "busname", false));
+
+    QStatus status = alljoyn_busattachment_start(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnection(bus, "busname", false));
+    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_SECURITY_NOT_ENABLED, alljoyn_busattachment_secureconnection(bus, "busname", false));
+
+    alljoyn_busattachment otherbus = NULL;
+    otherbus = alljoyn_busattachment_create("BusAttachment OtherBus", QCC_TRUE);
+
+    status = alljoyn_busattachment_start(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_connect(otherbus, ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_authlistener al = NULL;
+    alljoyn_authlistener_callbacks cbs;
+    cbs.authentication_complete = &test_alljoyn_authlistener_authenticationcomplete;
+    cbs.request_credentials = &test_alljoyn_authlistener_requestcredentials;
+    cbs.security_violation = NULL;
+    cbs.verify_credentials = NULL;
+    al = alljoyn_authlistener_create(&cbs, NULL);
+
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(bus, "ALLJOYN_ECDHE_NULL", al, "myKeyStore", false));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(otherbus, "ALLJOYN_ECDHE_NULL", al, "myOtherKeyStore", false));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_secureconnection(bus, alljoyn_busattachment_getuniquename(otherbus), false));
+
+    status = alljoyn_busattachment_stop(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_busattachment_clearkeystore(otherbus);
+    status = alljoyn_busattachment_join(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_busattachment_destroy(otherbus);
+
+    status = alljoyn_busattachment_stop(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_busattachment_clearkeystore(bus);
+    status = alljoyn_busattachment_join(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_busattachment_destroy(bus);
+    alljoyn_authlistener_destroy(al);
+}
+
+TEST(BusAttachmentTest, BasicSecureConnectionAsync)
+{
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("BusAttachmentTest", QCC_TRUE);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnectionasync(bus, "busname", false));
+
+    QStatus status = alljoyn_busattachment_start(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnectionasync(bus, "busname", false));
+    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_EQ(ER_BUS_SECURITY_NOT_ENABLED, alljoyn_busattachment_secureconnectionasync(bus, "busname", false));
+
+    alljoyn_busattachment otherbus = NULL;
+    otherbus = alljoyn_busattachment_create("BusAttachment OtherBus", QCC_TRUE);
+
+    status = alljoyn_busattachment_start(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_busattachment_connect(otherbus, ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_authlistener al = NULL;
+    alljoyn_authlistener_callbacks cbs;
+    cbs.authentication_complete = &test_alljoyn_authlistener_authenticationcomplete;
+    cbs.request_credentials = &test_alljoyn_authlistener_requestcredentials;
+    cbs.security_violation = NULL;
+    cbs.verify_credentials = NULL;
+    int authCompleteCount = 0;
+    al = alljoyn_authlistener_create(&cbs, &authCompleteCount);
+
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(bus, "ALLJOYN_ECDHE_NULL", al, "myKeyStore", false));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(otherbus, "ALLJOYN_ECDHE_NULL", al, "myOtherKeyStore", false));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_secureconnectionasync(bus, alljoyn_busattachment_getuniquename(otherbus), false));
+
+    int ticks = 0;
+    while (authCompleteCount == 0 && (ticks++ < 50)) {
+        qcc::Sleep(100);
+    }
+    EXPECT_NE(0, authCompleteCount);
+    status = alljoyn_busattachment_stop(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_busattachment_clearkeystore(otherbus);
+    status = alljoyn_busattachment_join(otherbus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_busattachment_destroy(otherbus);
+
+    status = alljoyn_busattachment_stop(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_busattachment_clearkeystore(bus);
+    status = alljoyn_busattachment_join(bus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_busattachment_destroy(bus);
+    alljoyn_authlistener_destroy(al);
+}
+

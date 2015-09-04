@@ -1635,6 +1635,64 @@ void BusAttachment::UnregisterBusListener(BusListener& listener)
     }
 }
 
+void BusAttachment::GetConnectedPeers(set<const char*>& names)
+{
+    for (size_t i = 0; i < ArraySize(busInternal->sessionsLock); i++) {
+        busInternal->sessionsLock[i].Lock();
+        auto itr = busInternal->sessions[i].begin();
+        for (; itr != busInternal->sessions[i].end(); itr++) {
+            auto namesIter = itr->second.otherParticipants.begin();
+            for (; namesIter != itr->second.otherParticipants.end(); namesIter++) {
+                names.insert(namesIter->c_str());
+            }
+        }
+        busInternal->sessionsLock[i].Unlock();
+    }
+}
+
+QStatus BusAttachment::SecureConnectionInternal(const char* name, bool forceAuth, bool async)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    if (!IsPeerSecurityEnabled()) {
+        return ER_BUS_SECURITY_NOT_ENABLED;
+    }
+    LocalEndpoint localEndpoint = GetInternal().GetLocalEndpoint();
+    if (!localEndpoint->IsValid()) {
+        return ER_BUS_ENDPOINT_CLOSING;
+    } else {
+        AllJoynPeerObj* peerObj = localEndpoint->GetPeerObj();
+        set<const char*> names;
+        if (name) {
+            names.insert(name);
+        } else {
+            GetConnectedPeers(names);
+        }
+        for (auto it = names.begin(); it != names.end(); it++) {
+            if (forceAuth) {
+                peerObj->ForceAuthentication(*it);
+            }
+            QStatus status = async ? peerObj->AuthenticatePeerAsync(*it) : peerObj->AuthenticatePeer(MESSAGE_METHOD_CALL, *it);
+            if (status != ER_OK) {
+                return status;
+            }
+        }
+    }
+    return ER_OK;
+}
+
+QStatus BusAttachment::SecureConnection(const char* name, bool forceAuth)
+{
+    return SecureConnectionInternal(name, forceAuth, false);
+}
+
+QStatus BusAttachment::SecureConnectionAsync(const char* name, bool forceAuth)
+{
+    return SecureConnectionInternal(name, forceAuth, true);
+}
+
 QStatus BusAttachment::NameHasOwner(const char* name, bool& hasOwner)
 {
     if (!IsConnected()) {

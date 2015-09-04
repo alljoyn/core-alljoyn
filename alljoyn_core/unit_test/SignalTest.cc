@@ -1240,3 +1240,90 @@ TEST_F(SecSignalTest, DISABLED_SendSignalToMultiPointSession) // Awaits fix for 
     ASSERT_EQ(ER_OK, mpproxy->SecureConnection(true));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(mpProv, true));
 }
+
+/**
+ * Test to validate the behavior of securing connections
+ */
+TEST_F(SecSignalTest, SecureConnection)
+{
+    //Provide a valid policy both on consumer and provider.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    //Sending signals not allowed as the connection is not yet secured.
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
+
+    //Securing connection;  Signals are now allowed.
+    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+
+    SessionId sid = 0;
+    //Join a second session. The connection for this new session is already secured; event allowed
+    ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
+    qcc::Sleep(250);
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    //Update the policy. Session key is dropped by the provider --> permission denied again.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_PERMISSION_DENIED, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    //Secure the connection again. All events are allowed again.
+    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    //Update the policy. Session key is dropped by the provider --> permission denied again.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    ASSERT_EQ(ER_PERMISSION_DENIED, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    //Secure session on the consumer side: consumer still thinks that the session is secured.
+    //SecureConnection does nothing, still no events
+    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str()));
+    ASSERT_EQ(ER_PERMISSION_DENIED, SendAndWaitForEvent(prov, true, NULL, 2));
+    //Secure session on the consumer side: consumer still thinks that the session is secured.
+    //The override causes to re-secure the connection, events will be sent
+    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str(), true));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    //Add extra consumer.
+    TestSecureApplication cons2("consumer2");
+    ASSERT_EQ(ER_OK, cons2.Init(tsm));
+    cons2.GetBusAttachement().RegisterSignalHandlerWithRule(this,
+                                                            static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
+                                                            cons2.GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
+                                                            TEST_SIGNAL_MATCH_RULE);
+    ASSERT_EQ(ER_OK, cons2.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    //Securing a session between peers does not require an active session.
+    ASSERT_EQ(ER_OK, cons2.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str()));
+
+    //Receiving events does require a session. The third event is only received
+    //after Joining a session with the host
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    SessionId sid2 = 0;
+    ASSERT_EQ(ER_OK, cons2.JoinSession(prov, sid2));
+    qcc::Sleep(500);
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    //Secure connection using NULL destination.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_PERMISSION_DENIED, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(NULL)); //Should restore all sessions.
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); //invalidated cons.
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); //events to cons are dropped.
+    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(NULL)); //restore cons.
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); //All events should be received.
+
+    //Secure connection using NULL destination and async variant.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    ASSERT_EQ(ER_PERMISSION_DENIED, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnectionAsync(NULL)); //Should restore all sessions asynchronously.
+    qcc::Sleep(1500);// Give some time to restore the connections.
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); //invalidated cons.
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); //events to cons are dropped.
+    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnectionAsync(NULL)); //restore cons.
+    qcc::Sleep(750);// Give some time to restore the connection.
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); //All events should be received.
+}
