@@ -113,6 +113,8 @@ $DIST_dbg/cpp/bin/samples/SampleClientECDHE.exe
 $DIST_dbg/cpp/bin/samples/SampleClientECDHE.pdb
 $DIST_dbg/cpp/bin/samples/SampleServiceECDHE.exe
 $DIST_dbg/cpp/bin/samples/SampleServiceECDHE.pdb
+$DIST_dbg/cpp/bin/samples/TrustedTLSampleRN.exe
+$DIST_dbg/cpp/bin/samples/TrustedTLSampleRN.pdb
 $DIST_dbg/cpp/bin/samples/basic_client.exe
 $DIST_dbg/cpp/bin/samples/basic_client.pdb
 $DIST_dbg/cpp/bin/samples/basic_service.exe
@@ -201,6 +203,7 @@ $DIST_dbg/cpp/lib/alljoyn.lib
 $DIST_dbg/cpp/lib/alljoyn_about.lib
 $DIST_dbg/cpp/lib/daemonlib.lib
 $DIST_dbg/cpp/samples/README.txt
+$DIST_dbg/cpp/samples/TrustedTLSampleRN/TrustedTLSampleRN.cc
 $DIST_dbg/cpp/samples/about/AboutClient.cc
 $DIST_dbg/cpp/samples/about/AboutService.cc
 $DIST_dbg/cpp/samples/aboutlistener/AboutListener.cc
@@ -425,6 +428,8 @@ $DIST_rel/cpp/bin/samples/SampleClientECDHE.exe
 $DIST_rel/cpp/bin/samples/SampleClientECDHE.pdb
 $DIST_rel/cpp/bin/samples/SampleServiceECDHE.exe
 $DIST_rel/cpp/bin/samples/SampleServiceECDHE.pdb
+$DIST_rel/cpp/bin/samples/TrustedTLSampleRN.exe
+$DIST_rel/cpp/bin/samples/TrustedTLSampleRN.pdb
 $DIST_rel/cpp/bin/samples/basic_client.exe
 $DIST_rel/cpp/bin/samples/basic_client.pdb
 $DIST_rel/cpp/bin/samples/basic_service.exe
@@ -513,6 +518,7 @@ $DIST_rel/cpp/lib/alljoyn.lib
 $DIST_rel/cpp/lib/alljoyn_about.lib
 $DIST_rel/cpp/lib/daemonlib.lib
 $DIST_rel/cpp/samples/README.txt
+$DIST_rel/cpp/samples/TrustedTLSampleRN/TrustedTLSampleRN.cc
 $DIST_rel/cpp/samples/about/AboutClient.cc
 $DIST_rel/cpp/samples/about/AboutService.cc
 $DIST_rel/cpp/samples/aboutlistener/AboutListener.cc
