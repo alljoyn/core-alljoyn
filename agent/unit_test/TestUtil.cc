@@ -658,7 +658,7 @@ void BasicTest::TearDown()
 
     // reset agent keystore
     string fname = GetHomeDir().c_str();
-    fname.append("/.alljoyn_keystore/c_ecdhe.ks");
+    fname.append(AJNKEY_STORE);
     remove(fname.c_str());
 }
 }
