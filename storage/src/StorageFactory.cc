@@ -26,19 +26,38 @@
 
 #define QCC_MODULE "SECMGR_STORAGE"
 
-#define HOME_KEY "HOME"
-
 using namespace qcc;
 using namespace std;
 
 namespace ajn {
 namespace securitymgr {
+
+static void GetHomePath(string& homePath)
+{
+#if !defined(QCC_OS_GROUP_WINDOWS)
+    homePath = Environ::GetAppEnviron()->Find("HOME").c_str();
+#else
+    // Same path is returned by qcc::GetHomeDir() too.
+    homePath = Environ::GetAppEnviron()->Find("LOCALAPPDATA").c_str();
+    if (homePath.empty()) {
+        homePath = Environ::GetAppEnviron()->Find("USERPROFILE").c_str();
+    }
+#endif
+}
+
+static void GetStorageFilePath(string& storageFilePath)
+{
+    storageFilePath = Environ::GetAppEnviron()->Find(STORAGE_FILEPATH_KEY).c_str();
+}
+
 static SQLStorage* GetSQLStorage()
 {
     SQLStorage* storage;
     SQLStorageConfig storageConfig;
-    string homePath = Environ::GetAppEnviron()->Find(HOME_KEY).c_str();
-    string storageFilePath = Environ::GetAppEnviron()->Find(STORAGE_FILEPATH_KEY).c_str();
+    string homePath;
+    GetHomePath(homePath);
+    string storageFilePath;
+    GetStorageFilePath(storageFilePath);
 
     if (!storageFilePath.empty()) {
         storageConfig.settings[STORAGE_FILEPATH_KEY] = storageFilePath;
