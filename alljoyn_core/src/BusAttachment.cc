@@ -1635,6 +1635,63 @@ void BusAttachment::UnregisterBusListener(BusListener& listener)
     }
 }
 
+void BusAttachment::GetConnectedPeers(set<const char*>& names)
+{
+    for (size_t i = 0; i < ArraySize(busInternal->sessionsLock); i++) {
+        busInternal->sessionsLock[i].Lock();
+        for (auto sessionMember: busInternal->sessions[i]) {
+            for (auto name: sessionMember.second.otherParticipants) {
+                names.insert(name.c_str());
+            }
+        }
+        busInternal->sessionsLock[i].Unlock();
+    }
+}
+
+QStatus BusAttachment::SecureConnectionInternal(const char* name, bool forceAuth, bool async)
+{
+    if (!IsConnected()) {
+        return ER_BUS_NOT_CONNECTED;
+    }
+
+    if (!IsPeerSecurityEnabled()) {
+        return ER_BUS_SECURITY_NOT_ENABLED;
+    }
+    LocalEndpoint localEndpoint = GetInternal().GetLocalEndpoint();
+    if (!localEndpoint->IsValid()) {
+        return ER_BUS_ENDPOINT_CLOSING;
+    } else {
+        AllJoynPeerObj* peerObj = localEndpoint->GetPeerObj();
+        set<const char*> names;
+        if (name) {
+            names.insert(name);
+        } else {
+            GetConnectedPeers(names);
+        }
+
+        for (auto name: names) {
+            if (forceAuth) {
+                peerObj->ForceAuthentication(name);
+            }
+            QStatus status = async ? peerObj->AuthenticatePeerAsync(name) : peerObj->AuthenticatePeer(MESSAGE_METHOD_CALL, name);
+            if (status != ER_OK) {
+                return status;
+            }
+        }
+    }
+    return ER_OK;
+}
+
+QStatus BusAttachment::SecureConnection(const char* name, bool forceAuth)
+{
+    return SecureConnectionInternal(name, forceAuth, false);
+}
+
+QStatus BusAttachment::SecureConnectionAsync(const char* name, bool forceAuth)
+{
+    return SecureConnectionInternal(name, forceAuth, true);
+}
+
 QStatus BusAttachment::NameHasOwner(const char* name, bool& hasOwner)
 {
     if (!IsConnected()) {

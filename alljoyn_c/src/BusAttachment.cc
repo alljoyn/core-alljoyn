@@ -454,6 +454,18 @@ QStatus AJ_CALL alljoyn_busattachment_setlinktimeoutasync(alljoyn_busattachment 
                                                             (void*)new ajn::SetLinkTimeoutContext(callback, context));
 }
 
+QStatus AJ_CALL alljoyn_busattachment_secureconnection(alljoyn_busattachment bus, const char* name, QCC_BOOL forceAuth)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->SecureConnection(name, forceAuth);
+}
+
+QStatus AJ_CALL alljoyn_busattachment_secureconnectionasync(alljoyn_busattachment bus, const char* name, QCC_BOOL forceAuth)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::BusAttachmentC*)bus)->SecureConnectionAsync(name, forceAuth);
+}
+
 QStatus AJ_CALL alljoyn_busattachment_namehasowner(alljoyn_busattachment bus, const char* name, QCC_BOOL* hasOwner)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
