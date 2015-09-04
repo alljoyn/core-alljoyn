@@ -164,7 +164,7 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait upto 8 seconds for the both found name signals to complete.
+    // Wait upto 8 seconds for the both found name signals to complete.
     for (int i = 0; i < 800; ++i) {
         qcc::Sleep(10);
         if (foundNameA && foundNameB) {
@@ -192,7 +192,7 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait upto 2 seconds for the found name signal to complete.
+    // Wait upto 2 seconds for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
         qcc::Sleep(10);
         if (foundNameA) {
@@ -211,7 +211,7 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     status = bus.CancelFindAdvertisedName(nameA.c_str());
     EXPECT_EQ(ER_OK, status);
 
-    //Must Unregister bus listener or the test will segfault
+    // Must Unregister bus listener or the test will segfault
     bus.UnregisterBusListener(testBusListener);
 
     otherBus.Stop();
@@ -278,7 +278,7 @@ TEST_F(BusAttachmentTest, find_names_by_transport)
     status = otherBus.AdvertiseName("name.z", TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait upto 2 seconds for the found name signal to complete.
+    // Wait upto 2 seconds for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
         qcc::Sleep(10);
         if (foundName2) {
@@ -290,7 +290,7 @@ TEST_F(BusAttachmentTest, find_names_by_transport)
     EXPECT_TRUE(foundName2);
     EXPECT_EQ(transport2, TRANSPORT_LOCAL);
     EXPECT_FALSE(foundName3);
-    //Must Unregister bus listener or the test will segfault
+    // Must Unregister bus listener or the test will segfault
     bus.UnregisterBusListener(testBusListener);
 
     otherBus.Stop();
@@ -334,7 +334,7 @@ TEST_F(BusAttachmentTest, quiet_advertise_name)
     status = otherBus.FindAdvertisedName("org.alljoyn.BusNode.test");
     EXPECT_EQ(ER_OK, status);
 
-    //Wait upto 2 seconds for the found name signal to complete.
+    // Wait upto 2 seconds for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
         if (foundQuietAdvertisedName) {
             break;
@@ -349,7 +349,7 @@ TEST_F(BusAttachmentTest, quiet_advertise_name)
      * called.  The LostAdvertisedName sets the FountQuietAdvertisedName flag
      * to false.
      */
-    //Wait upto 2 seconds for the found name signal to complete.
+    // Wait upto 2 seconds for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
         if (!foundQuietAdvertisedName) {
             break;
@@ -469,7 +469,7 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
     // User defined sessionPort Number
     SessionPort sessionPort = 42;
 
-    //bindSessionPort new SessionPortListener
+    // bindSessionPort new SessionPortListener
     JoinSession_SessionPortListener sessionPortListener(&bus);
     status = bus.BindSessionPort(sessionPort, sessionOpts, sessionPortListener);
     EXPECT_EQ(ER_OK, status);
@@ -601,7 +601,7 @@ TEST_F(BusAttachmentTest, Ping_self_async) {
     const char* contextStr = "PingContextTestString";
     ASSERT_EQ(ER_OK, bus.PingAsync(bus.GetUniqueName().c_str(), 1000, &pingCB, (void*)contextStr));
 
-    //wait just over 1 seconds
+    // wait just over 1 seconds
     for (size_t msecs = 0; msecs < 1100; msecs += 5) {
         if (pingAsyncFlag) {
             break;
@@ -627,7 +627,7 @@ TEST_F(BusAttachmentTest, PingAsync_other_on_same_bus) {
     const char* contextStr = "PingOtherContextTestString";
     ASSERT_EQ(ER_OK, bus.PingAsync(otherBus.GetUniqueName().c_str(), 1000,  &pingCB, (void*)contextStr));
 
-    //wait just over 1 seconds
+    // wait just over 1 seconds
     for (size_t msecs = 0; msecs < 1100; msecs += 5) {
         if (pingAsyncFlag) {
             break;
@@ -640,4 +640,48 @@ TEST_F(BusAttachmentTest, PingAsync_other_on_same_bus) {
 
     otherBus.Stop();
     otherBus.Join();
+}
+
+TEST_F(BusAttachmentTest, BasicSecureConnection)
+{
+    DefaultECDHEAuthListener al;
+    BusAttachment otherBus("BusAttachmentOtherBus", false);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+    otherBus.Start();
+    // Use expect from now onward to make sure we reached the end of the function and do all clean-up
+    EXPECT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+    otherBus.Connect();
+    EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+
+    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myOtherTestKeyStore", true));
+    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myTestKeyStore", true));
+
+    EXPECT_EQ(ER_OK, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
+
+    otherBus.Stop();
+    otherBus.ClearKeyStore();
+    otherBus.Join();
+    bus.ClearKeyStore();
+}
+
+TEST_F(BusAttachmentTest, BasicSecureConnectionAsync)
+{
+    DefaultECDHEAuthListener al;
+    BusAttachment otherBus("BusAttachmentOtherBus", false);
+    ASSERT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+    otherBus.Start();
+    // Use expect from now onward to make sure we reached the end of the function and do all clean-up
+    EXPECT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+    otherBus.Connect();
+    EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+
+    EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myOtherTestKeyStore", true));
+    EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myTestKeyStore", true));
+
+    EXPECT_EQ(ER_OK, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
+
+    otherBus.Stop();
+    otherBus.ClearKeyStore();
+    otherBus.Join();
+    bus.ClearKeyStore();
 }
