@@ -35,6 +35,10 @@ namespace ajn {
 void PrintTo(const SessionlessObj::BackoffLimits& p, ::std::ostream* os) {
     *os << "T=" << p.periodMs << ",k=" << p.linear << ",c=" << p.exponential << ",R=" << p.maxSecs;
 }
+void PrintTo(const SessionlessObj::WorkType& work, ::std::ostream* os) {
+    static const char* workString[] = { "NONE", "APPLY_NEW_RULES", "REQUEST_NEW_SIGNALS" };
+    *os << workString[work];
+}
 };
 
 class SessionlessBackoffAlgorithmTest : public testing::TestWithParam<SessionlessObj::BackoffLimits> {
@@ -92,3 +96,67 @@ INSTANTIATE_TEST_CASE_P(SessionlessBackoff, SessionlessBackoffAlgorithmTest,
                         ::testing::Values(SessionlessObj::BackoffLimits(1500, 4, 32, 120),
                                           SessionlessObj::BackoffLimits(1500, 5, 32, 120),
                                           SessionlessObj::BackoffLimits(1500, 2, 16, 120)));
+
+#if GTEST_HAS_COMBINE
+
+typedef::testing::TestWithParam<tuple<bool, bool, bool, bool, bool> > TestParamTuple;
+
+class SessionlessPendingWorkTest : public TestParamTuple {
+  public:
+    virtual void SetUp()
+    {
+        haveReceived = get<0>(GetParam());
+        haveNewRule = get<1>(GetParam());
+        haveNewChangeId = get<2>(GetParam());
+        newRuleMatchesInterface = get<3>(GetParam());
+        oldRuleMatchesInterface = get<4>(GetParam());
+    }
+    bool haveReceived;
+    bool haveNewRule;
+    bool haveNewChangeId;
+    bool newRuleMatchesInterface;
+    bool oldRuleMatchesInterface;
+};
+
+TEST_P(SessionlessPendingWorkTest, PendingWork)
+{
+    SessionlessObj::TimestampedRules rules;
+    uint32_t nextRulesId = 0;
+    Rule oldRule(oldRuleMatchesInterface ? "interface='org.alljoyn.About'" : "interface='org.oldRule'");
+    rules.insert(std::pair<String, SessionlessObj::TimestampedRule>
+                     (":test.2", SessionlessObj::TimestampedRule(oldRule, nextRulesId++)));
+    if (haveNewRule) {
+        Rule newRule(newRuleMatchesInterface ? "interface='org.alljoyn.About'" : "interface='org.newRule'");
+        rules.insert(std::pair<String, SessionlessObj::TimestampedRule>
+                         (":test.2", SessionlessObj::TimestampedRule(newRule, nextRulesId++)));
+    }
+
+    SessionlessObj::RemoteCache cache("org.alljoyn.sl.y2VZ0CWRc.x0", 1 /* version */, "2VZ0CWRc",
+                                      "org.alljoyn.About", 0 /* changeId */, TRANSPORT_UDP);
+    if (haveReceived) {
+        cache.haveReceived = haveReceived;
+        cache.receivedChangeId = cache.changeId;
+        cache.appliedRulesId = 0;
+    }
+    if (haveNewChangeId) {
+        ++cache.changeId;
+    }
+
+    SessionlessObj::WorkType expectedWork = SessionlessObj::NONE;
+    if (haveReceived && haveNewRule && newRuleMatchesInterface) {
+        expectedWork = SessionlessObj::APPLY_NEW_RULES;
+    } else if ((!haveReceived || haveNewChangeId) && ((haveNewRule && newRuleMatchesInterface) || oldRuleMatchesInterface)) {
+        expectedWork = SessionlessObj::REQUEST_NEW_SIGNALS;
+    }
+    EXPECT_EQ(expectedWork, SessionlessObj::PendingWork(cache, rules, nextRulesId));
+}
+
+INSTANTIATE_TEST_CASE_P(SessionlessPendingWork,
+                        SessionlessPendingWorkTest,
+                        ::testing::Combine(::testing::Bool(),   /* haveReceived */
+                                           ::testing::Bool(),   /* haveNewRule */
+                                           ::testing::Bool(),   /* haveNewChangeId */
+                                           ::testing::Bool(),   /* newRuleMatchesInterface */
+                                           ::testing::Bool())); /* oldRuleMatchesInterface */
+
+#endif /* GTEST_HAS_COMBINE */

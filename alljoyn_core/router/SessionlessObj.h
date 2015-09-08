@@ -216,6 +216,16 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     void RequestRangeMatchSignalHandler(const InterfaceDescription::Member* member,
                                         const char* sourcePath,
                                         Message& msg);
+
+    /**
+     * Is this endpoint a sessionless emitter.
+     *
+     * @param name Name of endpoint to check.
+     *
+     * @return true if this endpoint is emitting a sessionless signal.
+     */
+    bool IsSessionlessEmitter(qcc::String name);
+
     /**
      * The parameters of the backoff algorithm.
      */
@@ -244,17 +254,55 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     static QStatus GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
                                    uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime);
 
+    class RemoteCache {
+      public:
+        RemoteCache(const qcc::String& name, uint32_t versionNumber, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
+            name(name), version(versionNumber), guid(guid), changeId(changeId), transports(transport), haveReceived(false),
+            receivedChangeId(std::numeric_limits<uint32_t>::max()), appliedRulesId(std::numeric_limits<uint32_t>::max()) {
+            ifaces.insert(iface);
+        }
+
+        /* The most recent advertisement */
+        qcc::String name;
+        /* The union of all the advertisements */
+        uint32_t version;
+        qcc::String guid;
+        std::set<qcc::String> ifaces;
+        uint32_t changeId;
+        TransportMask transports;
+
+        /* State */
+        bool haveReceived; /* true once we have received something from the remote cache */
+        uint32_t receivedChangeId;
+        uint32_t appliedRulesId;
+    };
+
     /**
-     * Is this endpoint a sessionless emitter.
-     *
-     * @param name Name of endpoint to check.
-     *
-     * @return true if this endpoint is emitting a sessionless signal.
+     * A match rule that includes a change ID for recording when it was entered
+     * into the rule table.
      */
-    bool IsSessionlessEmitter(qcc::String name);
+    struct TimestampedRule : public Rule {
+        TimestampedRule(Rule& rule, uint32_t id) : Rule(rule), id(id) { }
+        uint32_t id;
+    };
+
+    /** Table of endpoint name, timestamped rule. */
+    typedef std::multimap<qcc::String, TimestampedRule> TimestampedRules;
+    TimestampedRules rules;
+
+    typedef enum {
+        NONE = 0,               /**< No work, we have received all signals and applied all the rules. */
+        APPLY_NEW_RULES = 1,    /**< There are new rules that need to be applied the remote caches */
+        REQUEST_NEW_SIGNALS = 2 /**< There are new signals in the cache that need to be received */
+    } WorkType;
+
+    /*
+     * Return the pending work needing to be done for a remote cache.
+     */
+    static WorkType PendingWork(RemoteCache& cache, TimestampedRules& rules, uint32_t nextRulesId);
 
   private:
-    friend struct RemoteCacheSnapshot;
+    friend struct RemoteCacheWorkSnapshot;
 
     /**
      * SessionlessObj worker.
@@ -342,28 +390,11 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         bool operator==(const RoutedMessage& other) const { return (sender == other.sender) && (serial == other.serial); }
     };
 
-    class RemoteCache {
+    class RemoteCacheWork : public RemoteCache {
       public:
-        RemoteCache(const qcc::String& name, uint32_t versionNumber, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
-            name(name), version(versionNumber), guid(guid), changeId(changeId), transports(transport), haveReceived(false),
-            receivedChangeId(std::numeric_limits<uint32_t>::max()), appliedRulesId(std::numeric_limits<uint32_t>::max()),
-            state(IDLE), retries(0), sid(0) {
-            ifaces.insert(iface);
+        RemoteCacheWork(const qcc::String& name, uint32_t versionNumber, const qcc::String& guid, const qcc::String& iface, uint32_t changeId, TransportMask transport) :
+            RemoteCache(name, versionNumber, guid, iface, changeId, transport), state(IDLE), retries(0), sid(0) {
         }
-
-        /* The most recent advertisement */
-        qcc::String name;
-        /* The union of all the advertisements */
-        uint32_t version;
-        qcc::String guid;
-        std::set<qcc::String> ifaces;
-        uint32_t changeId;
-        TransportMask transports;
-
-        /* State */
-        bool haveReceived; /* true once we have received something from the remote cache */
-        uint32_t receivedChangeId;
-        uint32_t appliedRulesId;
 
         /* Work item */
         uint32_t fromChangeId, toChangeId;
@@ -380,7 +411,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         std::list<RoutedMessage> routedMessages;
     };
 
-    typedef std::map<qcc::String, RemoteCache> RemoteCaches;
+    typedef std::map<qcc::String, RemoteCacheWork> RemoteCaches;
     /** The state of found remote caches */
     RemoteCaches remoteCaches;
 
@@ -467,18 +498,6 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId);
 
-    /**
-     * A match rule that includes a change ID for recording when it was entered
-     * into the rule table.
-     */
-    struct TimestampedRule : public Rule {
-        TimestampedRule(Rule& rule, uint32_t id) : Rule(rule), id(id) { }
-        uint32_t id;
-    };
-
-    /** Table of endpoint name, timestamped rule. */
-    std::multimap<qcc::String, TimestampedRule> rules;
-
     /** Rule iterator */
     typedef std::multimap<qcc::String, TimestampedRule>::iterator RuleIterator;
 
@@ -529,7 +548,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      *
      * @param[in] cache the remote cache
      */
-    void RemoveImplicitRules(const RemoteCache& cache);
+    void RemoveImplicitRules(const RemoteCacheWork& cache);
 
     /**
      * Returns true if the message matches the implicit rule associated with
@@ -600,18 +619,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @return true if the sessionless match rules include a match for the
      * cache.
      */
-    bool IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t toRulesId);
-
-    typedef enum {
-        NONE = 0,               /**< No work, we have received all signals and applied all the rules. */
-        APPLY_NEW_RULES = 1,    /**< There are new rules that need to be applied the remote caches */
-        REQUEST_NEW_SIGNALS = 2 /**< There are new signals in the cache that need to be received */
-    } WorkType;
-
-    /*
-     * Return the pending work needing to be done for a remote cache.
-     */
-    WorkType PendingWork(RemoteCache& cache);
+    static bool IsMatch(RemoteCache& cache, TimestampedRules& rules, uint32_t fromRulesId, uint32_t toRulesId);
 
     /*
      * Schedule work to be done for any of the remote caches we know about.
@@ -621,7 +629,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /*
      * Schedule work to be done for a remote cache.
      */
-    QStatus ScheduleWork(RemoteCache& cache, bool addAlarm = true, bool doInitialBackoff = true);
+    QStatus ScheduleWork(RemoteCacheWork& cache, bool addAlarm = true, bool doInitialBackoff = true);
 
     bool QueryHandler(TransportMask transport, MDNSPacket query, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst);
     bool SendResponseIfMatch(TransportMask transport, const qcc::IPEndpoint& src, const qcc::IPEndpoint& dst, const qcc::String& ruleStr);

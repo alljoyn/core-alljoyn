@@ -120,8 +120,8 @@ void SessionlessObj::SendResponseWork::Run()
  * Internal context passed through JoinSessionAsync.  This holds a snapshot of
  * the remote cache state at the time we issue the JoinSessionAsync.
  */
-struct RemoteCacheSnapshot {
-    RemoteCacheSnapshot(SessionlessObj::RemoteCache& cache) :
+struct RemoteCacheWorkSnapshot {
+    RemoteCacheWorkSnapshot(SessionlessObj::RemoteCacheWork& cache) :
         name(cache.name), guid(cache.guid) { }
 
     qcc::String name;
@@ -474,7 +474,7 @@ void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
         router.UnlockNameTable();
         return;
     }
-    RemoteCache& cache = cit->second;
+    RemoteCacheWork& cache = cit->second;
 
     if (find(cache.routedMessages.begin(), cache.routedMessages.end(), RoutedMessage(msg)) != cache.routedMessages.end()) {
         /* We are retrying and have already routed this message, ignore it */
@@ -685,7 +685,7 @@ void SessionlessObj::FoundAdvertisedNameHandler(const char* name, TransportMask 
     lock.Lock();
     RemoteCaches::iterator cit = remoteCaches.find(guid);
     if (cit == remoteCaches.end()) {
-        remoteCaches.insert(pair<String, RemoteCache>(guid, RemoteCache(name, versionNumber, guid, iface, changeId, transport)));
+        remoteCaches.insert(pair<String, RemoteCacheWork>(guid, RemoteCacheWork(name, versionNumber, guid, iface, changeId, transport)));
     } else {
         cit->second.name = name;
         cit->second.ifaces.insert(iface);
@@ -743,9 +743,9 @@ void SessionlessObj::DoSessionLost(SessionId sid, SessionLostReason reason)
 
     RemoteCaches::iterator cit = FindRemoteCache(sid);
     if (cit != remoteCaches.end()) {
-        RemoteCache& cache = cit->second;
+        RemoteCacheWork& cache = cit->second;
         /* Reset in progress */
-        cache.state = RemoteCache::IDLE;
+        cache.state = RemoteCacheWork::IDLE;
         cache.sid = 0;
 
         if (reason == ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION) {
@@ -953,11 +953,11 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         RemoteCaches::iterator cit = remoteCaches.begin();
         while (cit != remoteCaches.end()) {
             String guid = cit->first;
-            RemoteCache& cache = cit->second;
-            WorkType pendingWork = PendingWork(cache);
-            if ((cache.nextJoinTime <= now) && (cache.state == RemoteCache::IDLE) && pendingWork) {
-                RemoteCacheSnapshot* ctx = new RemoteCacheSnapshot(cache);
-                cache.state = RemoteCache::IN_PROGRESS;
+            RemoteCacheWork& cache = cit->second;
+            WorkType pendingWork = PendingWork(cache, rules, nextRulesId);
+            if ((cache.nextJoinTime <= now) && (cache.state == RemoteCacheWork::IDLE) && pendingWork) {
+                RemoteCacheWorkSnapshot* ctx = new RemoteCacheWorkSnapshot(cache);
+                cache.state = RemoteCacheWork::IN_PROGRESS;
                 if (pendingWork == SessionlessObj::APPLY_NEW_RULES) {
                     cache.fromChangeId = cache.receivedChangeId - (numeric_limits<uint32_t>::max() >> 1);
                     cache.toChangeId = cache.receivedChangeId + 1;
@@ -992,7 +992,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                         }
                     } else {
                         QCC_LogError(status, ("JoinSessionAsync to %s failed", cache.name.c_str()));
-                        cache.state = RemoteCache::IDLE;
+                        cache.state = RemoteCacheWork::IDLE;
                         /* Retry with a random backoff */
                         ScheduleWork(cache, false);
                         if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
@@ -1027,7 +1027,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
 {
     QCC_UNUSED(opts);
 
-    RemoteCacheSnapshot* ctx = reinterpret_cast<RemoteCacheSnapshot*>(context);
+    RemoteCacheWorkSnapshot* ctx = reinterpret_cast<RemoteCacheWorkSnapshot*>(context);
 
     QCC_DbgPrintf(("JoinSessionCB(status=%s,sid=%u) name=%s", QCC_StatusText(status), sid, ctx->name.c_str()));
 
@@ -1036,7 +1036,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
     lock.Lock();
     RemoteCaches::iterator cit = remoteCaches.find(ctx->guid);
     if (cit != remoteCaches.end()) {
-        RemoteCache& cache = cit->second;
+        RemoteCacheWork& cache = cit->second;
         uint32_t fromId = cache.fromChangeId;
         uint32_t toId = cache.toChangeId;
         bool rangeCapable = false;
@@ -1080,7 +1080,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
             QCC_DbgPrintf(("JoinSessionAsync to %s failed - %s", cache.name.c_str(), QCC_StatusText(status)));
 
             /* Clear in progress */
-            cache.state = RemoteCache::IDLE;
+            cache.state = RemoteCacheWork::IDLE;
             cache.sid = 0;
 
             if (ScheduleWork(cache) != ER_OK) {
@@ -1124,7 +1124,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                     cache = cit->second;
 
                     /* Clear in progress */
-                    cache.state = RemoteCache::IDLE;
+                    cache.state = RemoteCacheWork::IDLE;
                     cache.sid = 0;
 
                     if (ScheduleWork(cache) != ER_OK) {
@@ -1407,9 +1407,9 @@ void SessionlessObj::ScheduleWork(bool doInitialBackoff)
 {
     RemoteCaches::iterator cit = remoteCaches.begin();
     while (cit != remoteCaches.end()) {
-        RemoteCache& cache = cit->second;
+        RemoteCacheWork& cache = cit->second;
         String guid = cache.guid;
-        if (PendingWork(cache) && ScheduleWork(cache, true, doInitialBackoff) != ER_OK) {
+        if (PendingWork(cache, rules, nextRulesId) && ScheduleWork(cache, true, doInitialBackoff) != ER_OK) {
             /* Retries exhausted. Clear state and wait for new advertisment */
             EraseRemoteCache(cit);
             cit = remoteCaches.upper_bound(guid);
@@ -1419,9 +1419,9 @@ void SessionlessObj::ScheduleWork(bool doInitialBackoff)
     }
 }
 
-QStatus SessionlessObj::ScheduleWork(RemoteCache& cache, bool addAlarm, bool doInitialBackoff)
+QStatus SessionlessObj::ScheduleWork(RemoteCacheWork& cache, bool addAlarm, bool doInitialBackoff)
 {
-    if (cache.state != RemoteCache::IDLE) {
+    if (cache.state != RemoteCacheWork::IDLE) {
         return ER_OK;
     }
 
@@ -1492,21 +1492,20 @@ QStatus SessionlessObj::GetNextJoinTime(const BackoffLimits& backoff, bool doIni
     }
 }
 
-SessionlessObj::WorkType SessionlessObj::PendingWork(RemoteCache& cache)
+SessionlessObj::WorkType SessionlessObj::PendingWork(RemoteCache& cache, TimestampedRules& rules, uint32_t nextRulesId)
 {
-    if (cache.haveReceived && IS_GREATER(uint32_t, nextRulesId - 1, cache.appliedRulesId)) {
-        if (IsMatch(cache, cache.appliedRulesId + 1, nextRulesId)) {
-            return APPLY_NEW_RULES;
-        }
-    } else if (IS_GREATER(uint32_t, cache.changeId, cache.receivedChangeId)) {
-        if (IsMatch(cache, cache.appliedRulesId - (numeric_limits<uint32_t>::max() >> 1), nextRulesId)) {
-            return REQUEST_NEW_SIGNALS;
-        }
+    if (cache.haveReceived && IS_GREATER(uint32_t, nextRulesId - 1, cache.appliedRulesId) &&
+        IsMatch(cache, rules, cache.appliedRulesId + 1, nextRulesId)) {
+        return APPLY_NEW_RULES;
+    }
+    if (IS_GREATER(uint32_t, cache.changeId, cache.receivedChangeId) &&
+        IsMatch(cache, rules, cache.appliedRulesId - (numeric_limits<uint32_t>::max() >> 1), nextRulesId)) {
+        return REQUEST_NEW_SIGNALS;
     }
     return NONE;
 }
 
-bool SessionlessObj::IsMatch(RemoteCache& cache, uint32_t fromRulesId, uint32_t toRulesId)
+bool SessionlessObj::IsMatch(RemoteCache& cache, TimestampedRules& rules, uint32_t fromRulesId, uint32_t toRulesId)
 {
     if (cache.version == 0) {
         return true;
@@ -1736,7 +1735,8 @@ void SessionlessObj::EraseRemoteCache(RemoteCaches::iterator cit)
     remoteCaches.erase(cit);
 }
 
-void SessionlessObj::AddImplicitRule(const Rule& rule, const RuleIterator& explicitRule) {
+void SessionlessObj::AddImplicitRule(const Rule& rule, const RuleIterator& explicitRule)
+{
     for (ImplicitRuleIterator irit = implicitRules.begin(); irit != implicitRules.end(); ++irit) {
         if (*irit == rule) {
             for (std::vector<RuleIterator>::iterator erit = irit->explicitRules.begin(); erit != irit->explicitRules.end(); ++erit) {
@@ -1751,7 +1751,8 @@ void SessionlessObj::AddImplicitRule(const Rule& rule, const RuleIterator& expli
     implicitRules.push_back(ImplicitRule(rule, explicitRule));
 }
 
-void SessionlessObj::RemoveImplicitRules(const qcc::String& epName) {
+void SessionlessObj::RemoveImplicitRules(const qcc::String& epName)
+{
     QCC_DbgTrace(("SessionlessObj::RemoveImplicitRules(epName=%s)", epName.c_str()));
     ImplicitRuleIterator irit = implicitRules.begin();
     while (irit != implicitRules.end()) {
@@ -1773,7 +1774,8 @@ void SessionlessObj::RemoveImplicitRules(const qcc::String& epName) {
     }
 }
 
-void SessionlessObj::RemoveImplicitRules(const RuleIterator& explicitRule) {
+void SessionlessObj::RemoveImplicitRules(const RuleIterator& explicitRule)
+{
     QCC_DbgTrace(("SessionlessObj::RemoveImplicitRules(explicitrule=%s for endpoint %s)", explicitRule->second.ToString().c_str(), explicitRule->first.c_str()));
     ImplicitRuleIterator irit = implicitRules.begin();
     while (irit != implicitRules.end()) {
@@ -1796,7 +1798,8 @@ void SessionlessObj::RemoveImplicitRules(const RuleIterator& explicitRule) {
     }
 }
 
-void SessionlessObj::RemoveImplicitRules(const RemoteCache& cache) {
+void SessionlessObj::RemoveImplicitRules(const RemoteCacheWork& cache)
+{
     QCC_DbgTrace(("SessionlessObj::RemoveImplicitRules(remotecache=%s)", cache.guid.c_str()));
     String guid = cache.guid;
     ImplicitRuleIterator irit = implicitRules.begin();
