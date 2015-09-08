@@ -126,9 +126,9 @@ TEST_P(DiscoveryTest, ComputePriority)
 
 INSTANTIATE_TEST_CASE_P(Discovery, DiscoveryTest,
                         testing::Values(TestParams(StaticParams(ajn::IpNameServiceImpl::ROUTER_POWER_SOURCE_MIN, ajn::IpNameServiceImpl::ROUTER_MOBILITY_MIN, ajn::IpNameServiceImpl::ROUTER_AVAILABILITY_MIN, ajn::IpNameServiceImpl::ROUTER_NODE_CONNECTION_MIN, 7987),
-                                                   DynamicParams(1, 16, 2, 16, 2, 8, 2189), 55359),
+                                                   DynamicParams(1, 16, 2, 16, 2, 8, 1439), 56109),
                                         TestParams(StaticParams(ajn::IpNameServiceImpl::ROUTER_POWER_SOURCE_MAX, ajn::IpNameServiceImpl::ROUTER_MOBILITY_MAX, ajn::IpNameServiceImpl::ROUTER_AVAILABILITY_MAX, ajn::IpNameServiceImpl::ROUTER_NODE_CONNECTION_MAX, 27000),
-                                                   DynamicParams(16, 16, 16, 16, 8, 8, 12585), 25950)));
+                                                   DynamicParams(16, 16, 16, 16, 8, 8, 9585), 28950)));
 
 INSTANTIATE_TEST_CASE_P(DiscoveryEnumeration, ConfigEnumerationTest,
                         testing::Values(TestEnumerationParams("router_power_source", "<busconfig> <property name=\"router_power_source\">Always AC powered</property> </busconfig>", 2700),
