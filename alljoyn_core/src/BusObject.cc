@@ -77,6 +77,55 @@ struct BusObject::Components {
     volatile int32_t inUseCounter;
 };
 
+/**
+ * Callback to allow the signal caller to authorize the signal.
+ */
+class SignalAuthorizationCallback {
+  public:
+    SignalAuthorizationCallback(BusAttachment& bus, qcc::String ifcName, vector<qcc::String> propNames) : bus(bus), ifcName(ifcName), propNames(propNames)
+    {
+    }
+
+    ~SignalAuthorizationCallback()
+    {
+        propNames.clear();
+    }
+
+    /**
+     * Authorize the signal
+     * @return ER_OK when signal is authorized; otherwise, a failure code
+     */
+    QStatus Authorize(Message& msg)
+    {
+        if (propNames.size() == 0) {
+            return ER_PERMISSION_DENIED;
+        }
+
+        PeerState peerState = bus.GetInternal().GetPeerStateTable()->GetPeerState(msg->GetDestination());
+        for (vector<qcc::String>::iterator it = propNames.begin(); it != propNames.end(); it++) {
+            QStatus status = bus.GetInternal().GetPermissionManager().AuthorizeGetProperty(msg->GetObjectPath(), ifcName.c_str(), (*it).c_str(), peerState);
+            if (ER_OK != status) {
+                return status;
+            }
+        }
+        return ER_OK;
+    }
+
+  private:
+    /**
+     * Assignment not allowed
+     */
+    SignalAuthorizationCallback& operator=(const SignalAuthorizationCallback& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    SignalAuthorizationCallback(const SignalAuthorizationCallback& other);
+
+    BusAttachment& bus;
+    qcc::String ifcName;
+    vector<qcc::String> propNames;
+};
 
 static inline bool SecurityApplies(const BusObject* obj, const InterfaceDescription* ifc)
 {
@@ -258,7 +307,11 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
                 MsgArg str("{sv}", propName, &val);
                 args[1].Set("a{sv}", 1, &str);
                 args[2].Set("as", 0, NULL);
-                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
+                vector<qcc::String> vNames;
+                vNames.push_back(propName);
+                SignalAuthorizationCallback signalAuth(*bus, ifcName, vNames);
+                vNames.clear();
+                SignalInternal(NULL, id, *propChanged, args, ArraySize(args), 0, flags, NULL, &signalAuth);
             }
         } else if (emitsChanged == "invalidates") {
             const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
@@ -269,7 +322,11 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
                 args[0].Set("s", ifcName);
                 args[1].Set("a{sv}", 0, NULL);
                 args[2].Set("as", 1, &propName);
-                Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
+                vector<qcc::String> vNames;
+                vNames.push_back(propName);
+                SignalAuthorizationCallback signalAuth(*bus, ifcName, vNames);
+                vNames.clear();
+                SignalInternal(NULL, id, *propChanged, args, ArraySize(args), 0, flags, NULL, &signalAuth);
             }
         }
     }
@@ -293,6 +350,7 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
         if (SecurityApplies(this, ifc)) {
             flags |= ALLJOYN_FLAG_ENCRYPTED;
         }
+        vector<qcc::String> vNames;
         for (size_t i = 0; i < numProps; ++i) {
             const char* propName = propNames[i];
             const InterfaceDescription::Property* prop = ifc->GetProperty(propName);
@@ -316,10 +374,12 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
                     updatedProp[updatedPropNum].Set("{sv}", propName, val);
                     updatedProp[updatedPropNum].SetOwnershipFlags(MsgArg::OwnsArgs, true /*deep*/);
                     updatedPropNum++;
+                    vNames.push_back(propName);
                 } else if (emitsChanged == "invalidates") {
                     /* only emit that it's invalidated */
                     invalidatedProp[invalidatedPropNum] = propName;
                     invalidatedPropNum++;
+                    vNames.push_back(propName);
                 }
             }
         }
@@ -333,16 +393,17 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
             args[0].Set("s", ifcName);
             args[1].Set("a{sv}", updatedPropNum, updatedProp);
             args[2].Set("as", invalidatedPropNum, invalidatedProp);
+            SignalAuthorizationCallback signalAuth(*bus, ifcName, vNames);
             /* send the signal */
-            status = Signal(NULL, id, *propChanged, args, ArraySize(args), 0, flags);
+            status = SignalInternal(NULL, id, *propChanged, args, ArraySize(args), 0, flags, NULL, &signalAuth);
         }
+        vNames.clear();
 
         delete[] updatedProp;
         delete[] invalidatedProp;
     }
     return status;
 }
-
 
 void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg)
 {
@@ -630,14 +691,15 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
     return status;
 }
 
-QStatus BusObject::Signal(const char* destination,
-                          SessionId sessionId,
-                          const InterfaceDescription::Member& signalMember,
-                          const MsgArg* args,
-                          size_t numArgs,
-                          uint16_t timeToLive,
-                          uint8_t flags,
-                          Message* outMsg)
+QStatus BusObject::SignalInternal(const char* destination,
+                                  SessionId sessionId,
+                                  const InterfaceDescription::Member& signalMember,
+                                  const MsgArg* args,
+                                  size_t numArgs,
+                                  uint16_t timeToLive,
+                                  uint8_t flags,
+                                  Message* outMsg,
+                                  SignalAuthorizationCallback* authorizationCallback)
 {
     /* Protect against calling Signal before object is registered */
     if (!bus) {
@@ -735,15 +797,24 @@ QStatus BusObject::Signal(const char* destination,
                                          flags,
                                          timeToLive);
         if (aStatus == ER_OK) {
-            if (msg->IsEncrypted() && (!bus->GetInternal().GetRouter().IsDaemon())) {
-                /* do an earlier permission authorization to make sure this
-                 * signal is allowed to send to the router for delivery.
-                 */
-                PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetDestination());
-                aStatus = bus->GetInternal().GetPermissionManager().AuthorizeMessage(true, msg, peerState);
-                /* mark the message so the Message::EncryptMessage method does
-                 * not need to authorize the message again */
-                msg->authorizationChecked = true;
+            if (msg->IsEncrypted()) {
+                if (authorizationCallback != NULL) {
+                    aStatus = authorizationCallback->Authorize(msg);
+                    /* mark the message so the Message::EncryptMessage method does
+                     * not need to authorize the message again.
+                     */
+                    msg->authorizationChecked = true;
+                } else if (!bus->GetInternal().GetRouter().IsDaemon()) {
+                    /* do an earlier permission authorization to make sure this
+                     * signal is allowed to send to the router for delivery.
+                     */
+                    PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetDestination());
+                    aStatus = bus->GetInternal().GetPermissionManager().AuthorizeMessage(true, msg, peerState);
+                    /* mark the message so the Message::EncryptMessage method does
+                     * not need to authorize the message again.
+                     */
+                    msg->authorizationChecked = true;
+                }
             }
             if (aStatus == ER_OK) {
                 BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
@@ -759,6 +830,18 @@ QStatus BusObject::Signal(const char* destination,
         }
     }
     return status;
+}
+
+QStatus BusObject::Signal(const char* destination,
+                          SessionId sessionId,
+                          const InterfaceDescription::Member& signalMember,
+                          const MsgArg* args,
+                          size_t numArgs,
+                          uint16_t timeToLive,
+                          uint8_t flags,
+                          Message* outMsg)
+{
+    return SignalInternal(destination, sessionId, signalMember, args, numArgs, timeToLive, flags, outMsg, NULL);
 }
 
 QStatus BusObject::CancelSessionlessMessage(uint32_t serialNum)

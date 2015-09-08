@@ -985,6 +985,23 @@ static QStatus GenerateManifestNoGetAllProperties(PermissionPolicy::Rule** retRu
     return ER_OK;
 }
 
+static QStatus GenerateManifestSetVolumeProperty(PermissionPolicy::Rule** retRules, size_t* count)
+{
+    *count = 1;
+    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    {
+        rules[0].SetObjPath("*");
+        rules[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("Volume");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rules[0].SetMembers(1, prms);
+    }
+    *retRules = rules;
+    return ER_OK;
+}
+
 static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, PermissionPolicy::Rule** retRules, size_t* count)
 {
     *count = 2;
@@ -1146,7 +1163,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, GenerateManifestTemplate(&rules, &count));
         PermissionConfigurator& pc = bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pc.SetPermissionManifest(rules, count));
-        delete [] rules;
     }
 
     QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
@@ -1817,13 +1833,21 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOff ExcerciseOff should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
-    void AppCanSetTVVolume(BusAttachment& bus, BusAttachment& targetBus, uint32_t tvVolume)
+    void AppCanSetTVVolume(BusAttachment& bus, BusAttachment& targetBus, uint32_t tvVolume, bool listenToPropertiesChanged = false, bool getVolume = true)
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
+        if (listenToPropertiesChanged) {
+            const char* props[1];
+            props[0] = "Volume";
+            clientProxyObject.RegisterPropertiesChangedListener(BasePermissionMgmtTest::TV_IFC_NAME, props, ArraySize(props), *this, NULL);
+            SetPropertiesChangedSignalReceived(false);
+        }
         EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SetTVVolume(bus, clientProxyObject, tvVolume)) << "  AppCanSetTVVolume SetTVVolume failed.";
-        uint32_t newTvVolume = 0;
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::GetTVVolume(bus, clientProxyObject, newTvVolume)) << "  AppCanSetTVVolume failed.";
-        EXPECT_EQ(newTvVolume, tvVolume) << "  AppCanSetTVVolume GetTVVolume got wrong TV volume.";
+        if (getVolume) {
+            uint32_t newTvVolume = 0;
+            EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::GetTVVolume(bus, clientProxyObject, newTvVolume)) << "  AppCanSetTVVolume failed.";
+            EXPECT_EQ(newTvVolume, tvVolume) << "  AppCanSetTVVolume GetTVVolume got wrong TV volume.";
+        }
     }
 
     /**
@@ -1938,23 +1962,23 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Admin can change channel
      */
-    void AdminCanChangeChannlel()
+    void AdminCanChangeChannel()
     {
 
         ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
         status = PermissionMgmtTestHelper::ExcerciseTVChannel(adminBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AdminCanChangeChannlel failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "  AdminCanChangeChannel failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
      *  consumer can change channel
      */
-    void ConsumerCanChangeChannlel()
+    void ConsumerCanChangeChannel()
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
         status = PermissionMgmtTestHelper::ExcerciseTVChannel(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCanChangeChannlel failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanChangeChannel failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /*
@@ -2177,6 +2201,9 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     CreateAppInterfaces(consumerBus, false);
 
     AnyUserCanCallOnAndNotOff(consumerBus);
+    /* join session to retrieve sessioncast signal */
+    SessionId sessionId;
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
     SetChannelChangedSignalReceived(false);
     ConsumerCanTVUpAndDownAndNotChannel();
     /* sleep a second to see whether the ChannelChanged signal is received */
@@ -2345,7 +2372,7 @@ TEST_F(PermissionMgmtUseCaseTest, AdminHasFullAccess)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(adminBus, false);
 
-    AdminCanChangeChannlel();
+    AdminCanChangeChannel();
 }
 
 /*
@@ -2359,7 +2386,7 @@ TEST_F(PermissionMgmtUseCaseTest, UnclaimedProviderAllowsEverything)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCanChangeChannlel();
+    ConsumerCanChangeChannel();
 }
 
 TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithDifferentPubKey)
@@ -2515,7 +2542,7 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreMembershipCertsThanService)
     CreateAppInterfaces(consumerBus, false);
 
     ConsumerCanCallOnAndOff();
-    ConsumerCanChangeChannlel();
+    ConsumerCanChangeChannel();
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
@@ -2674,7 +2701,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalAllowedFromAnyUser)
     CreateAppInterfaces(consumerBus, false);
 
     SetChannelChangedSignalReceived(false);
-    ConsumerCanChangeChannlel();
+    ConsumerCanChangeChannel();
     /* sleep a second to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
@@ -2701,7 +2728,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToEmit)
     CreateAppInterfaces(consumerBus, false);
 
     SetChannelChangedSignalReceived(false);
-    ConsumerCanChangeChannlel();
+    ConsumerCanChangeChannel();
     /* sleep a second to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
@@ -2729,7 +2756,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToReceive)
     CreateAppInterfaces(consumerBus, false);
 
     SetChannelChangedSignalReceived(false);
-    ConsumerCanChangeChannlel();
+    ConsumerCanChangeChannel();
     /* sleep a second to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
@@ -3044,7 +3071,6 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithInvalidCertChain)
     EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
     /* do a second claim and expect the same error code returned */
     EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
@@ -3129,7 +3155,6 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
 
     KeyInfoNISTP256 emptyKeyInfo;
     EXPECT_EQ(ER_BAD_ARG_1, saProxy.Claim(emptyKeyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
@@ -3154,7 +3179,6 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
     EXPECT_EQ(ER_BAD_ARG_2, saProxy.Claim(keyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
@@ -3180,7 +3204,6 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
     EXPECT_EQ(ER_BAD_ARG_5, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, keyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
@@ -3204,7 +3227,6 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
 
     KeyInfoNISTP256 emptyKeyInfo;
     EXPECT_EQ(ER_BAD_ARG_4, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)
@@ -3413,3 +3435,100 @@ TEST_F(PermissionMgmtUseCaseTest, GetEmptyCertificateIdBeforeClaim)
     EXPECT_TRUE(keyInfo.GetPublicKey()->empty());
 }
 
+TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+    InstallMembershipToServiceProvider();
+
+    PermissionPolicy consumerPolicy;
+    /* generate consumer policy that does not allow receiving broadcast signal */
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy, true)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    /* join session to retrieve sessioncast signal */
+    SessionId sessionId;
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    AppCanSetTVVolume(consumerBus, serviceBus, 14, true);
+    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    for (int cnt = 0; cnt < 200; cnt++) {
+        if (GetPropertiesChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetPropertiesChangedSignalReceived()) << " Did not receive PropertiesChanged signal.";
+    /* test the PropertiesChanged signal for a list of properties changed */
+    AppCanSetTVVolume(consumerBus, serviceBus, 23, true);
+    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    for (int cnt = 0; cnt < 200; cnt++) {
+        if (GetPropertiesChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetPropertiesChangedSignalReceived()) << " Did not receive PropertiesChanged signal.";
+}
+
+TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+    InstallMembershipToServiceProvider();
+
+    PermissionPolicy consumerPolicy;
+    /* generate consumer policy that does not allow receiving broadcast signal */
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy, true)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+    /* generate manifest that allows the consumer to modify the Volume
+     * property but does not allow it to retrieve the property or receiving
+     * the PropertiesChanged signal on that property. */
+    PermissionPolicy::Rule* manifest;
+    size_t manifestSize;
+    GenerateManifestSetVolumeProperty(&manifest, &manifestSize);
+    ReplaceIdentityCert(adminBus, consumerBus, manifest, manifestSize, false);
+    delete [] manifest;
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    /* join session to retrieve sessioncast signal */
+    SessionId sessionId;
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    AppCanSetTVVolume(consumerBus, serviceBus, 14, true, false);
+    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    for (int cnt = 0; cnt < 200; cnt++) {
+        if (GetPropertiesChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(GetPropertiesChangedSignalReceived()) << " Not expected to receive PropertiesChanged signal.";
+    /* test the PropertiesChanged signal for a list of properties changed */
+    AppCanSetTVVolume(consumerBus, serviceBus, 25, true, false);
+    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    for (int cnt = 0; cnt < 200; cnt++) {
+        if (GetPropertiesChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(GetPropertiesChangedSignalReceived()) << " Not expected to receive PropertiesChanged signal.";
+}

@@ -60,7 +60,8 @@ class TestPermissionConfigurationListener : public PermissionConfigurationListen
     bool policyChangedReceived;
 };
 
-class BasePermissionMgmtTest : public testing::Test, public BusObject {
+class BasePermissionMgmtTest : public testing::Test, public BusObject,
+    public ProxyBusObject::PropertiesChangedListener {
   public:
 
 
@@ -68,97 +69,6 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     static const char* NOTIFY_INTERFACE_NAME;
     static const char* ONOFF_IFC_NAME;
     static const char* TV_IFC_NAME;
-
-    class ECDHEKeyXListener : public AuthListener {
-      public:
-        /* the type of agent */
-        typedef enum {
-            RUN_AS_ADMIN = 0,
-            RUN_AS_SERVICE = 1,
-            RUN_AS_CONSUMER = 2,
-            RUN_AS_CONSUMER_DELEGATE = 3
-        } AgentType;
-
-        ECDHEKeyXListener(AgentType agentType) : agentType(agentType), authComplete(false)
-        {
-        }
-
-        bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
-        {
-            QCC_UNUSED(credMask);
-            QCC_UNUSED(userId);
-            QCC_UNUSED(authCount);
-            QCC_UNUSED(authPeer);
-            if (strcmp(authMechanism, "ALLJOYN_ECDHE_NULL") == 0) {
-                // creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
-                return true;
-            } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_PSK") == 0) {
-                /*
-                 * Solicit the Pre shared secret
-                 * Based on the pre shared secret id, the application can retrieve
-                 * the pre shared secret from storage or from the end user.
-                 * In this example, the pre shared secret is a hard coded string
-                 */
-                qcc::String psk("123456");
-                creds.SetPassword(psk);
-                creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
-                return true;
-            } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
-                return true;
-            }
-            return false;
-        }
-
-        bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
-        {
-            QCC_UNUSED(authPeer);
-            /* only the ECDHE_ECDSA calls for peer credential verification */
-            if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
-                if (creds.IsSet(AuthListener::CRED_CERT_CHAIN)) {
-                    /*
-                     * AllJoyn sends back the certificate chain for the application to verify.
-                     * The application has to option to verify the certificate
-                     * chain.  If the cert chain is validated and trusted then return true; otherwise, return false.
-                     */
-                    return true;
-                }
-                return true;
-            }
-            return false;
-        }
-
-        void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success) {
-            QCC_UNUSED(authPeer);
-            qcc::String msg;
-            if (agentType == RUN_AS_ADMIN) {
-                msg += "Admin: ";
-            } else if (agentType == RUN_AS_SERVICE) {
-                msg += "Service: ";
-            } else if (agentType == RUN_AS_CONSUMER) {
-                msg += "Consumer: ";
-            } else {
-                msg += "Consumer Delegate: ";
-            }
-            msg += "AuthenticationComplete auth mechanism ";
-            msg += authMechanism;
-            printf("%s ", msg.c_str());
-            if (success) {
-                printf("succeeded\n");
-            } else {
-                printf("failed\n");
-            }
-            authComplete = success;
-        }
-
-        bool IsAuthComplete()
-        {
-            return authComplete;
-        }
-
-      private:
-        AgentType agentType;
-        bool authComplete;
-    };
 
     BasePermissionMgmtTest(const char* path) : BusObject(path),
         adminBus("PermissionMgmtTestAdmin", false),
@@ -179,6 +89,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
         currentTVChannel(1),
         volume(1),
         channelChangedSignalReceived(false),
+        propertiesChangedSignalReceived(false),
         testASL(),
         testPCL()
     {
@@ -187,6 +98,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     virtual void SetUp();
 
     virtual void TearDown();
+
+    virtual void PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context);
 
     void EnableSecurity(const char* keyExchange);
     const bool GetFactoryResetReceived();
@@ -218,6 +131,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     const bool GetApplicationStateSignalReceived();
     void SetChannelChangedSignalReceived(bool flag);
     const bool GetChannelChangedSignalReceived();
+    void SetPropertiesChangedSignalReceived(bool flag);
+    const bool GetPropertiesChangedSignalReceived();
 
     void OnOffOn(const InterfaceDescription::Member* member, Message& msg);
     void OnOffOff(const InterfaceDescription::Member* member, Message& msg);
@@ -225,7 +140,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
 
     void TVDown(const InterfaceDescription::Member* member, Message& msg);
     void TVChannel(const InterfaceDescription::Member* member, Message& msg);
-    void TVChannelChanged(const InterfaceDescription::Member* member, Message& msg);
+    void TVChannelChanged(const InterfaceDescription::Member* member, Message& msg, bool sendBroadcastSignal);
     void TVMute(const InterfaceDescription::Member* member, Message& msg);
     void TVInputSource(const InterfaceDescription::Member* member, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
@@ -251,6 +166,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject {
     uint32_t currentTVChannel;
     uint32_t volume;
     bool channelChangedSignalReceived;
+    bool propertiesChangedSignalReceived;
     qcc::String authMechanisms;
     TestApplicationStateListener testASL;
     TestPermissionConfigurationListener testPCL;

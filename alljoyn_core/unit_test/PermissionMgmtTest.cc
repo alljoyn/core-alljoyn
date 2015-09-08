@@ -304,6 +304,17 @@ void BasePermissionMgmtTest::TearDown()
     remoteControlKeyListener = NULL;
 }
 
+void BasePermissionMgmtTest::PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
+{
+    QCC_UNUSED(obj);
+    QCC_UNUSED(ifaceName);
+    QCC_UNUSED(changed);
+    QCC_UNUSED(changed);
+    QCC_UNUSED(invalidated);
+    QCC_UNUSED(context);
+    propertiesChangedSignalReceived = true;
+}
+
 void BasePermissionMgmtTest::GenerateCAKeys()
 {
     KeyInfoNISTP256 keyInfo;
@@ -404,8 +415,10 @@ void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addSe
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = ifc->AddProperty("Volume", "u", PROP_ACCESS_RW);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, ifc->AddPropertyAnnotation("Volume", ajn::org::freedesktop::DBus::AnnotateEmitsChanged, "true"));
         status = ifc->AddProperty("Caption", "y", PROP_ACCESS_RW);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, ifc->AddPropertyAnnotation("Caption", ajn::org::freedesktop::DBus::AnnotateEmitsChanged, "true"));
 
         ifc->Activate();
         status = bus.RegisterSignalHandler(this,
@@ -487,6 +500,16 @@ const bool BasePermissionMgmtTest::GetChannelChangedSignalReceived()
     return channelChangedSignalReceived;
 }
 
+void BasePermissionMgmtTest::SetPropertiesChangedSignalReceived(bool flag)
+{
+    propertiesChangedSignalReceived = flag;
+}
+
+const bool BasePermissionMgmtTest::GetPropertiesChangedSignalReceived()
+{
+    return propertiesChangedSignalReceived;
+}
+
 void BasePermissionMgmtTest::OnOffOn(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
@@ -504,7 +527,7 @@ void BasePermissionMgmtTest::TVUp(const InterfaceDescription::Member* member, Me
     QCC_UNUSED(member);
     currentTVChannel++;
     MethodReply(msg, ER_OK);
-    TVChannelChanged(member, msg);
+    TVChannelChanged(member, msg, true);
 }
 
 void BasePermissionMgmtTest::TVDown(const InterfaceDescription::Member* member, Message& msg)
@@ -514,7 +537,7 @@ void BasePermissionMgmtTest::TVDown(const InterfaceDescription::Member* member, 
         currentTVChannel--;
     }
     MethodReply(msg, ER_OK);
-    TVChannelChanged(member, msg);
+    TVChannelChanged(member, msg, true);
 }
 
 void BasePermissionMgmtTest::TVChannel(const InterfaceDescription::Member* member, Message& msg)
@@ -522,18 +545,21 @@ void BasePermissionMgmtTest::TVChannel(const InterfaceDescription::Member* membe
     QCC_UNUSED(member);
     MethodReply(msg, ER_OK);
     /* emit a signal */
-    TVChannelChanged(member, msg);
+    TVChannelChanged(member, msg, false);
 }
 
-void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member* member, Message& msg)
+void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member* member, Message& msg, bool sendSessioncastSignal)
 {
-    QCC_UNUSED(member);
     QCC_UNUSED(msg);
     /* emit a signal */
     MsgArg args[1];
     args[0].Set("u", currentTVChannel);
-    Signal(consumerBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
-    Signal(remoteControlBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+    if (sendSessioncastSignal) {
+        Signal(NULL, SESSION_ID_ALL_HOSTED, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+    } else {
+        Signal(consumerBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+        Signal(remoteControlBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+    }
 }
 
 void BasePermissionMgmtTest::TVMute(const InterfaceDescription::Member* member, Message& msg)
@@ -961,6 +987,13 @@ QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, M
     QCC_UNUSED(ifcName);
     if ((0 == strcmp("Volume", propName)) && (val.typeId == ALLJOYN_UINT32)) {
         volume = val.v_uint32;
+        if (volume <= 20) {
+            EmitPropChanged(BasePermissionMgmtTest::TV_IFC_NAME, "Volume", val, SESSION_ID_ALL_HOSTED, 0);
+        } else {
+            const char* propNames[1];
+            propNames[0] = "Volume";
+            EmitPropChanged(BasePermissionMgmtTest::TV_IFC_NAME, propNames, ArraySize(propNames), SESSION_ID_ALL_HOSTED, 0);
+        }
         return ER_OK;
     }
     return ER_BUS_NO_SUCH_PROPERTY;
