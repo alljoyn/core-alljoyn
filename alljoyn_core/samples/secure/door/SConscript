@@ -11,29 +11,19 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
 
 Import('env')
-clientDistDir = '$CPP_DISTDIR/samples/secure'
-env1 = env.Clone();
-env2 = env.Clone();
-env1.Append(CPPDEFINES=[('CLIENT=1')])
-env2.Append(CPPDEFINES=[('CLIENT=2')])
 
-obj = env2.Object('DeskTopSharedKSClient2',  ['DeskTopSharedKSClient.cc'])
+app_env = env.Clone()
+app_env.Prepend(LIBS = ['alljoyn'])
 
 # Sample Programs
 progs = [
-    env1.Program('DeskTopSharedKSClient1',  ['DeskTopSharedKSClient.cc']),
-    env2.Program('DeskTopSharedKSClient2',  [obj]),
-    env.Program('DeskTopSharedKSService', ['DeskTopSharedKSService.cc']),
-    env.Program('SampleServiceECDHE', ['SampleServiceECDHE.cc', 'SampleCertificateChainEngine.cc']),
-    env.Program('SampleClientECDHE', ['SampleClientECDHE.cc', 'SampleCertificateChainEngine.cc']),
-    env.Program('SampleCertificateUtility', ['SampleCertificateUtility.cc'])
+    env.Program('SecureDoorProvider', ['secure_door_provider.cc', 'secure_door_common.cc']),
+    env.Program('SecureDoorConsumer', ['secure_door_consumer.cc', 'secure_door_common.cc']),
     ]
 
-# Door Sample
-env.SConscript('door/SConscript', exports = {'env': env})
+clientDistDir = '$CPP_DISTDIR/samples/secure/door'
 
 if env['OS'] != 'android':
      env.Install('$CPP_DISTDIR/bin/samples', progs )
