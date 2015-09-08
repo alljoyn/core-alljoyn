@@ -1676,6 +1676,32 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     }
 
     /**
+     *  Install Membership chain with 3 certs
+     */
+    void Install3CertMembershipChainToTarget(BusAttachment& caBus, BusAttachment& middleBus, BusAttachment& targetBus, qcc::String leafSerial, qcc::GUID128& sgID)
+    {
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::InstallMembershipChain(caBus, middleBus, targetBus, leafSerial, sgID)) << "Install3CertMembershipChainToTarget failed";
+
+        /* retrieve the membership summaries to verify the issuer public key is provided */
+        SecurityApplicationProxy saProxy(middleBus, targetBus.GetUniqueName().c_str());
+        MsgArg arg;
+        EXPECT_EQ(ER_OK, saProxy.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+        size_t count = arg.v_array.GetNumElements();
+
+        ASSERT_EQ(count, (size_t) 1) << "Bad membership cert chain.";
+        KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+        String* serials = new String[count];
+        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToCertificateIds(arg, serials, keyInfos, count)) << " MsgArgToCertificateIds failed.";
+
+        EXPECT_TRUE(serials[0] == leafSerial) << "Serial numbers don't match";
+        KeyInfoNISTP256 middleBusCA;
+        middleBus.GetPermissionConfigurator().GetSigningPublicKey(middleBusCA);
+        EXPECT_EQ(*keyInfos[0].GetPublicKey(), *middleBusCA.GetPublicKey()) << "issuer keys don't match";
+        delete [] serials;
+        delete [] keyInfos;
+    }
+
+    /**
      *  Install other's membership certificate to a consumer
      */
     void InstallOthersMembershipToConsumer()
@@ -2511,6 +2537,46 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasGoodMembershipCertChain)
     CreateAppInterfaces(consumerBus, false);
 
     ConsumerCanTVUpAndDownAndNotChannel();
+}
+
+TEST_F(PermissionMgmtUseCaseTest, RemoteControlHasMembershipCertChainLen3)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy servicePolicy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, servicePolicy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(servicePolicy);
+
+    PermissionPolicy remoteControlPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(consumerBus, remoteControlBus, remoteControlPolicy)) << "GeneratePolicy failed.";
+
+    EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(remoteControlBus, false);
+
+    /* Set up the service provider to trust the remote control via the peer
+     * type FROM_CERTIFICATE_AUTHORITY.
+     */
+    KeyInfoNISTP256 consumerCA;
+    consumerBus.GetPermissionConfigurator().GetSigningPublicKey(consumerCA);
+    AddSpecificCertAuthorityToPolicy(servicePolicy, consumerCA);
+    InstallPolicyToService(servicePolicy);
+    InstallMembershipToServiceProvider();
+
+    KeyInfoNISTP256 adminCA;
+    adminBus.GetPermissionConfigurator().GetSigningPublicKey(adminCA);
+    PermissionPolicy rcPolicy;
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicyWithGuestServices(consumerBus, remoteControlBus, rcPolicy, false, adminCA)) << "GeneratePolicy failed.";
+    InstallPolicyToClientBus(consumerBus, remoteControlBus, rcPolicy);
+    Install3CertMembershipChainToTarget(adminBus, consumerBus, remoteControlBus, "serial", membershipGUID1);
+
+    /* remote control can access the service provider */
+    AnyUserCanCallOnAndNotOff(remoteControlBus);
+    /* remote control can access specific right for the given CA */
+    AppCanSetTVVolume(remoteControlBus, serviceBus, 21);
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreRestrictiveManifest)

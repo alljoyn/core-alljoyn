@@ -1432,6 +1432,7 @@ QStatus PermissionMgmtObj::StoreMembership(const qcc::CertificateX509* certChain
             GUID128 guid;
             KeyStore::Key key(KeyStore::Key::LOCAL, guid);
             status = ca->AddAssociatedKey(membershipKey, key, kb);
+            membershipKey = key;
         }
     }
     return status;

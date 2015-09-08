@@ -727,6 +727,44 @@ QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, 
     return saSecondProxy.InstallMembership(certs, 2);
 }
 
+QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& caBus, BusAttachment& intermediateBus, BusAttachment& targetBus, qcc::String& leafSerial, const qcc::GUID128& sgID)
+{
+    qcc::MembershipCertificate certs[3];
+    /* create the top cert first self signed CA cert with delegate on  */
+    PermissionConfigurator& caPC = caBus.GetPermissionConfigurator();
+    String caSerial = leafSerial + "02";
+    KeyInfoNISTP256 keyInfo;
+    caPC.GetSigningPublicKey(keyInfo);
+    qcc::GUID128 subject(0);
+    GetGUID(caBus, subject);
+    QStatus status = CreateMembershipCert(caSerial, caBus, subject.ToString(), keyInfo.GetPublicKey(), sgID, true, 24 * 3600, certs[2]);
+    if (status != ER_OK) {
+        return status;
+    }
+    /* create the intermediate cert with delegate on  */
+    PermissionConfigurator& intermediatePC = intermediateBus.GetPermissionConfigurator();
+    String intermediateSerial = leafSerial + "01";
+    intermediatePC.GetSigningPublicKey(keyInfo);
+    GetGUID(intermediateBus, subject);
+    status = CreateMembershipCert(intermediateSerial, caBus, subject.ToString(), keyInfo.GetPublicKey(), sgID, true, 24 * 3600, certs[1]);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    /* create the leaf cert delegate off */
+    PermissionConfigurator& targetPC = targetBus.GetPermissionConfigurator();
+    targetPC.GetSigningPublicKey(keyInfo);
+    GetGUID(targetBus, subject);
+    status = CreateMembershipCert(leafSerial, intermediateBus, subject.ToString(), keyInfo.GetPublicKey(), sgID, false, 24 * 3600, certs[0]);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    /* install cert chain */
+    SecurityApplicationProxy saProxy(intermediateBus, targetBus.GetUniqueName().c_str());
+    return saProxy.InstallMembership(certs, ArraySize(certs));
+}
+
 QStatus PermissionMgmtTestHelper::ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;

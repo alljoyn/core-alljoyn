@@ -1250,7 +1250,7 @@ bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* c
             return false;
         }
         if (!certs[cnt + 1].IsIssuerOf(certs[cnt])) {
-            QCC_DbgPrintf(("Certificate chain signature verification failed"));
+            QCC_DbgPrintf(("Certificate chain issuer DN verification failed"));
             return false;
         }
     }
