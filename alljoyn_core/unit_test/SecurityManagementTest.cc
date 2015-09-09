@@ -32,6 +32,7 @@ using namespace std;
  * Also busy wait loops do not require any platform specific threading code.
  */
 #define WAIT_MSECS 5
+#define TEN_MINS 600 // 600 secs is 10 mins
 
 class SecurityManagement_ApplicationStateListener : public ApplicationStateListener {
   public:
@@ -150,6 +151,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         managerBus("SecurityPolicyRulesManager"),
         peer1Bus("SecurityPolicyRulesPeer1"),
         peer2Bus("SecurityPolicyRulesPeer2"),
+        peer3Bus("SecurityPolicyRulesPeer3"),
         managerSessionPort(42),
         peer1SessionPort(42),
         peer2SessionPort(42),
@@ -160,6 +162,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         managerAuthListener(NULL),
         peer1AuthListener(NULL),
         peer2AuthListener(NULL),
+        peer3AuthListener(NULL),
         appStateListener()
     {
     }
@@ -171,19 +174,30 @@ class SecurityManagementPolicyTest : public testing::Test {
         EXPECT_EQ(ER_OK, peer1Bus.Connect());
         EXPECT_EQ(ER_OK, peer2Bus.Start());
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
+        EXPECT_EQ(ER_OK, peer3Bus.Start());
+        EXPECT_EQ(ER_OK, peer3Bus.Connect());
 
         // Register in memory keystore listeners
         EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
         EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
         EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer3Bus.RegisterKeyStoreListener(peer3KeyStoreListener));
 
         managerAuthListener = new DefaultECDHEAuthListener();
         peer1AuthListener = new DefaultECDHEAuthListener();
         peer2AuthListener = new DefaultECDHEAuthListener();
+        peer3AuthListener = new DefaultECDHEAuthListener();
 
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener));
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
         EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+        EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+
+        PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
+        SetManifestTemplate(managerBus);
+        SetManifestTemplate(peer1Bus);
+        SetManifestTemplate(peer2Bus);
+        SetManifestTemplate(peer3Bus);
 
         // We are not marking the interface as a secure interface. Some of the
         // tests don't use security. So we use Object based security for any
@@ -205,6 +219,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         EXPECT_EQ(ER_OK, managerBus.CreateInterfacesFromXml(interface.c_str()));
         EXPECT_EQ(ER_OK, peer1Bus.CreateInterfacesFromXml(interface.c_str()));
         EXPECT_EQ(ER_OK, peer2Bus.CreateInterfacesFromXml(interface.c_str()));
+        EXPECT_EQ(ER_OK, peer3Bus.CreateInterfacesFromXml(interface.c_str()));
 
         SessionOpts opts1;
         EXPECT_EQ(ER_OK, managerBus.BindSessionPort(managerSessionPort, opts1, managerSessionPortListener));
@@ -240,8 +255,6 @@ class SecurityManagementPolicyTest : public testing::Test {
         // All Inclusive manifest
         const size_t manifestSize = 1;
         PermissionPolicy::Rule manifest[manifestSize];
-        manifest[0].SetObjPath("*");
-        manifest[0].SetInterfaceName("*");
         {
             PermissionPolicy::Rule::Member member[1];
             member[0].Set("*",
@@ -249,6 +262,8 @@ class SecurityManagementPolicyTest : public testing::Test {
                           PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                           PermissionPolicy::Rule::Member::ACTION_MODIFY |
                           PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            manifest[0].SetObjPath("*");
+            manifest[0].SetInterfaceName("*");
             manifest[0].SetMembers(1, member);
         }
 
@@ -359,16 +374,17 @@ class SecurityManagementPolicyTest : public testing::Test {
             qcc::Sleep(WAIT_MSECS);
         }
 
+
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
 
         //Change the managerBus so it only uses ECDHE_ECDSA
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, true));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
 
         PermissionPolicy defaultPolicy;
         EXPECT_EQ(ER_OK, sapWithManager.GetDefaultPolicy(defaultPolicy));
 
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
     }
 
     virtual void TearDown() {
@@ -386,6 +402,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         delete peer2AuthListener;
     }
 
+
     void InstallMembershipOnManager() {
         //Get manager key
         KeyInfoNISTP256 managerKey;
@@ -399,13 +416,14 @@ class SecurityManagementPolicyTest : public testing::Test {
                                                                         managerBus.GetUniqueName(),
                                                                         managerKey.GetPublicKey(),
                                                                         managerGuid,
-                                                                        false,
+                                                                        true,
                                                                         3600,
                                                                         managerMembershipCertificate[0]
                                                                         ));
         SecurityApplicationProxy sapWithManagerBus(managerBus, managerBus.GetUniqueName().c_str());
         EXPECT_EQ(ER_OK, sapWithManagerBus.InstallMembership(managerMembershipCertificate, 1));
     }
+
 
     void InstallMembershipOnPeer1() {
         //Create peer1 key
@@ -428,6 +446,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
     }
 
+
     void InstallMembershipOnPeer2() {
         //Create peer2 key
         KeyInfoNISTP256 peer2Key;
@@ -449,6 +468,19 @@ class SecurityManagementPolicyTest : public testing::Test {
         EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
     }
 
+    void SetManifestTemplate(BusAttachment& bus)
+    {
+        // All Inclusive manifest template
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        const size_t manifestSize = 1;
+        PermissionPolicy::Rule manifestTemplate[manifestSize];
+        manifestTemplate[0].SetObjPath("*");
+        manifestTemplate[0].SetInterfaceName("*");
+        manifestTemplate[0].SetMembers(1, member);
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifest(manifestTemplate, manifestSize));
+    }
+
     static QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
                                                            PermissionPolicy& policy,
                                                            bool keepCAentry = true,
@@ -468,6 +500,7 @@ class SecurityManagementPolicyTest : public testing::Test {
     BusAttachment managerBus;
     BusAttachment peer1Bus;
     BusAttachment peer2Bus;
+    BusAttachment peer3Bus;
 
     SessionPort managerSessionPort;
     SessionPort peer1SessionPort;
@@ -484,12 +517,14 @@ class SecurityManagementPolicyTest : public testing::Test {
     InMemoryKeyStoreListener managerKeyStoreListener;
     InMemoryKeyStoreListener peer1KeyStoreListener;
     InMemoryKeyStoreListener peer2KeyStoreListener;
+    InMemoryKeyStoreListener peer3KeyStoreListener;
 
     String interface;
     const char* interfaceName;
     DefaultECDHEAuthListener* managerAuthListener;
     DefaultECDHEAuthListener* peer1AuthListener;
     DefaultECDHEAuthListener* peer2AuthListener;
+    DefaultECDHEAuthListener* peer3AuthListener;
 
     SecurityManagement_ApplicationStateListener appStateListener;
 
@@ -733,6 +768,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_fails_if_version_not_newer)
  */
 TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_older_policy)
 {
+
     InstallMembershipOnManager();
     InstallMembershipOnPeer1();
 
@@ -825,6 +861,7 @@ TEST_F(SecurityManagementPolicyTest, UpdatePolicy_new_policy_should_override_old
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
     PermissionPolicy fetchedPolicy2;
+
     EXPECT_EQ(ER_OK, sapWithPeer1.GetPolicy(fetchedPolicy2));
     EXPECT_NE(policy1, fetchedPolicy2);
     EXPECT_EQ(policy2.GetVersion(), fetchedPolicy2.GetVersion());
@@ -853,6 +890,7 @@ static const char ecdsaCertChainX509PEM[] = {
 };
 
 class SecurityManagementPolicy2AuthListener : public AuthListener {
+
   public:
     SecurityManagementPolicy2AuthListener() : authenticationSuccessfull(false) {
     }
@@ -893,7 +931,6 @@ class SecurityManagementPolicy2AuthListener : public AuthListener {
         QCC_UNUSED(authMechanism);
         QCC_UNUSED(authPeer);
         QCC_UNUSED(success);
-        //printf(">>>> Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
         if (success) {
             authenticationSuccessfull = true;
         }
@@ -902,11 +939,1710 @@ class SecurityManagementPolicy2AuthListener : public AuthListener {
     void SecurityViolation(QStatus status, const Message& msg) {
         QCC_UNUSED(status);
         QCC_UNUSED(msg);
-        //printf(">>>> Security violation %s\n", QCC_StatusText(status));
     }
     bool authenticationSuccessfull;
 
 };
+
+
+TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_digest_mismatch)
+{
+    SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    // Intentionally set the digest so that it does not match the one with the manifest above
+    for (uint8_t i = 0; i < Crypto_SHA256::DIGEST_SIZE; i++) {
+        digest[i] = 0;
+    }
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 5, 6, 7, 8 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"1234", 5);
+    caCert.SetIssuerCN(managerCN, 4);
+    caCert.SetSubjectCN(managerCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = 1427404154;
+    validityCA.validTo = 1427404154 + 630720000;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 managerPublicKey;
+    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(managerPublicKey));
+
+    caCert.SetSubjectPublicKey(managerPublicKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(caCert));
+
+    // Create the intermediate certificate using peer2
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"5678", 5);
+    peer2Cert.SetIssuerCN(managerCN, 4);
+    peer2Cert.SetSubjectCN(intermediateCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+
+    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
+    peer2Cert.SetAlias("intermediate-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(peer2Cert));
+
+    // Create the leaf certificate using peer2
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"9123", 5);
+    peer1Cert.SetIssuerCN(intermediateCN, 4);
+    peer1Cert.SetSubjectCN(leafCN, 4);
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("peer2-cert-alias");
+    peer1Cert.SetCA(false);
+
+    //sign the leaf cert
+    PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer2PermissionConfigurator.SignCertificate(peer1Cert));
+
+    //We need identityCert chain CA1->Peer1
+    const size_t certChainSize = 3;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer1Cert;
+    identityCertChain[1] = peer2Cert;
+    identityCertChain[2] = caCert;
+
+    InstallMembershipOnManager();
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_DIGEST_MISMATCH, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize)) << "Failed to update Identity cert or manifest ";
+
+}
+
+TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 5, 6, 7, 8 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"5678", 5);
+    caCert.SetIssuerCN(managerCN, 4);
+    caCert.SetSubjectCN(managerCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = 1427404154;
+    validityCA.validTo = 1427404154 + 630720000;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 managerPublicKey;
+    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(managerPublicKey));
+
+    caCert.SetSubjectPublicKey(managerPublicKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(caCert));
+
+    // Create the intermediate certificate using peer1
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"1234", 5);
+    peer1Cert.SetIssuerCN(managerCN, 4);
+    peer1Cert.SetSubjectCN(intermediateCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("intermediate-cert-alias");
+    peer1Cert.SetCA(true);
+
+    //We intentionally skip signing the leaf cert
+    PermissionConfigurator& peer3PermissionConfigurator = peer3Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer3PermissionConfigurator.SignCertificate(peer1Cert));
+
+    // Create the leaf certificate using peer2
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"1234", 5);
+    peer2Cert.SetIssuerCN(intermediateCN, 4);
+    peer2Cert.SetSubjectCN(leafCN, 4);
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+
+    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(peer2Cert));
+
+    //We need identityCert chain CA1->Peer2
+    const size_t certChainSize = 3;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer2Cert;
+    identityCertChain[1] = peer1Cert;
+    identityCertChain[2] = caCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+}
+
+TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_flag_false)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 5, 6, 7, 8 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"5678", 5);
+    caCert.SetIssuerCN(managerCN, 4);
+    caCert.SetSubjectCN(managerCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = 1427404154;
+    validityCA.validTo = 1427404154 + 630720000;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 managerPublicKey;
+    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(managerPublicKey));
+
+    caCert.SetSubjectPublicKey(managerPublicKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(caCert));
+
+    // Create the intermediate certificate using peer1
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"1234", 5);
+    peer1Cert.SetIssuerCN(managerCN, 4);
+    peer1Cert.SetSubjectCN(intermediateCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("intermediate-cert-alias");
+    peer1Cert.SetCA(false);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(peer1Cert));
+
+    // Create the leaf certificate using peer2
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"1234", 5);
+    peer2Cert.SetIssuerCN(intermediateCN, 4);
+    peer2Cert.SetSubjectCN(leafCN, 4);
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+
+    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(peer2Cert));
+
+    //We need identityCert chain CA1->Peer2
+    const size_t certChainSize = 3;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer2Cert;
+    identityCertChain[1] = peer1Cert;
+    identityCertChain[2] = caCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+}
+
+
+TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_leaf_node)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 5, 6, 7, 8 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"5678", 5);
+    caCert.SetIssuerCN(managerCN, 4);
+    caCert.SetSubjectCN(managerCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = 1427404154;
+    validityCA.validTo = 1427404154 + 630720000;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 managerPublicKey;
+    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(managerPublicKey));
+
+    caCert.SetSubjectPublicKey(managerPublicKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(caCert));
+
+    // Create the intermediate certificate using peer1
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"1234", 5);
+    peer1Cert.SetIssuerCN(managerCN, 4);
+    peer1Cert.SetSubjectCN(intermediateCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("intermediate-cert-alias");
+    peer1Cert.SetCA(false);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(peer1Cert));
+
+    // Create the leaf certificate using peer2
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"1234", 5);
+    peer2Cert.SetIssuerCN(intermediateCN, 4);
+    peer2Cert.SetSubjectCN(leafCN, 4);
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    // We are intentionally making the leaf certificate public key different
+    peer2Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(peer2Cert));
+
+    //We need identityCert chain CA1->Peer2
+    const size_t certChainSize = 3;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer2Cert;
+    identityCertChain[1] = peer1Cert;
+    identityCertChain[2] = caCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+}
+
+TEST_F(SecurityManagementPolicyTest, Update_identity_succeeds_on_long_icc)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 5, 6, 7, 8 };
+    uint8_t intermediate2CN[] = { 4, 3, 2, 1 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"1234", 5);
+    caCert.SetIssuerCN(managerCN, 4);
+    caCert.SetSubjectCN(managerCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validityCA.validTo = validityCA.validFrom + TEN_MINS;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 managerPublicKey;
+    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(managerPublicKey));
+
+    caCert.SetSubjectPublicKey(managerPublicKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(caCert));
+
+    // Create the intermediate certificate using peer1
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"2345", 5);
+    peer1Cert.SetIssuerCN(managerCN, 4);
+    peer1Cert.SetSubjectCN(intermediateCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("intermediate-cert-alias");
+    peer1Cert.SetCA(true);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(peer1Cert));
+
+    // Create third intermediate CA
+    KeyInfoNISTP256 peer3PublicKey;
+    PermissionConfigurator& peer3PermissionConfigurator = peer3Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer3PermissionConfigurator.GetSigningPublicKey(peer3PublicKey));
+
+    qcc::IdentityCertificate intermediateCACert;
+    intermediateCACert.SetSerial((uint8_t*)"1234", 5);
+    intermediateCACert.SetIssuerCN(intermediateCN, 4);
+    intermediateCACert.SetSubjectCN(intermediate2CN, 4);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    intermediateCACert.SetValidity(&validity);
+    intermediateCACert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    intermediateCACert.SetSubjectPublicKey(peer3PublicKey.GetPublicKey());
+    intermediateCACert.SetAlias("intermediate-ca-cert-alias");
+    intermediateCACert.SetCA(true);
+
+    //sign the intermediate 2 cert
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(intermediateCACert));
+
+    // Create the leaf certificate using peer2
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"1234", 5);
+    peer2Cert.SetIssuerCN(intermediate2CN, 4);
+    peer2Cert.SetSubjectCN(leafCN, 4);
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(false);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, peer3PermissionConfigurator.SignCertificate(peer2Cert));
+
+    const size_t certChainSize = 4;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer2Cert;
+    identityCertChain[1] = intermediateCACert;
+    identityCertChain[2] = peer1Cert;
+    identityCertChain[3] = caCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+}
+
+TEST_F(SecurityManagementPolicyTest, Update_identity_single_icc_any_sign)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    KeyInfoNISTP256 peer1PublicKey;
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1PublicKey));
+
+    // Create the leaf certificate using peer2
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"1234", 5);
+    peer2Cert.SetIssuerCN(leafCN, 4);
+    peer2Cert.SetSubjectCN(leafCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.SignCertificate(peer2Cert));
+
+    //We need identityCert chain CA1->Peer2
+    const size_t certChainSize = 1;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer2Cert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+}
+
+TEST_F(SecurityManagementPolicyTest, DISABLED_install_membership_fails_with_invalid_public_key)
+{
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 managerPublicKey;
+    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(managerPublicKey));
+
+    KeyInfoNISTP256 peer1PublicKey;
+    PermissionConfigurator& peer1PermissionConfigurator = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1PublicKey));
+
+
+    qcc::MembershipCertificate membershipCertificate[2];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1",
+                                                                    managerBus,
+                                                                    managerBus.GetUniqueName(),
+                                                                    managerPublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    true,
+                                                                    3600,
+                                                                    membershipCertificate[1]
+                                                                    ));
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2",
+                                                                    managerBus,
+                                                                    peer1Bus.GetUniqueName(),
+                                                                    peer1PublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    false,
+                                                                    3600,
+                                                                    membershipCertificate[0]
+                                                                    ));
+
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+
+    // Call UpdateIdentity to install the cert chain
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.InstallMembership(membershipCertificate, 2)) << "Failed to install membership ";
+}
+
+TEST_F(SecurityManagementPolicyTest, install_membership_fails_with_same_cert_serial)
+{
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+
+    KeyInfoNISTP256 peer2PublicKey;
+    PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer2PermissionConfigurator.GetSigningPublicKey(peer2PublicKey));
+
+    qcc::MembershipCertificate membershipCertificate[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1",
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2PublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    true,
+                                                                    3600,
+                                                                    membershipCertificate[0]
+                                                                    ));
+
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
+
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1",
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2PublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    true,
+                                                                    3600,
+                                                                    membershipCertificate[0]
+                                                                    ));
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_DUPLICATE_CERTIFICATE, sapWithPeer2.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
+}
+
+TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
+{
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t issuerCN[] = { 1, 2, 3, 4 };
+    uint8_t leafCN[] = { 5, 6, 7, 8 };
+
+    // Create the membership certificate from the first issuer
+    qcc::MembershipCertificate memCert;
+    memCert.SetSerial((uint8_t*)"1234", 5);
+    memCert.SetIssuerCN(issuerCN, 4);
+    memCert.SetSubjectCN(leafCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    memCert.SetValidity(&validity);
+    memCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer2PublicKey;
+    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+    memCert.SetSubjectPublicKey(&peer2PublicKey);
+    memCert.SetCA(true);
+    GUID128 asgaGUID;
+    memCert.SetGuild(asgaGUID);
+
+    //sign the leaf cert
+    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(memCert));
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(&memCert, 1)) << "Failed to install membership ";
+
+    // Create the membership certificate from the second issuer Peer 1
+    qcc::MembershipCertificate memCert2;
+    memCert2.SetSerial((uint8_t*)"5678", 5);
+    memCert2.SetIssuerCN(issuerCN, 4);
+    memCert2.SetSubjectCN(leafCN, 4);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    memCert2.SetValidity(&validity);
+    memCert2.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+    memCert2.SetSubjectPublicKey(&peer2PublicKey);
+    memCert2.SetCA(true);
+    memCert.SetGuild(asgaGUID);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(memCert2));
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(&memCert2, 1)) << "Failed to install membership ";
+
+    // Call GetProperty("MembershipSummaries"). This call should show 2 membership certificates
+    MsgArg arg;
+    EXPECT_EQ(ER_OK, sapWithPeer2.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+
+    size_t count = arg.v_array.GetNumElements();
+    EXPECT_EQ((uint32_t)2, count);
+    String*serials = new String[count];
+    KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+    EXPECT_EQ(ER_OK, sapWithPeer2.MsgArgToCertificateIds(arg, serials, keyInfos, count));
+
+    String serial0("1234");
+    String serial1("5678");
+    // Compare the serial  in the certificates just retrieved
+    EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
+    EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+
+    // Call RemoveMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.RemoveMembership(serials[0], keyInfos[0]));
+
+    // Call GetProperty("MembershipSummaries"). This call should show 1 membership certificate
+    EXPECT_EQ(ER_OK, sapWithPeer2.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+    count = arg.v_array.GetNumElements();
+    EXPECT_EQ((uint32_t)1, count);
+    serials = new String[count];
+    keyInfos = new KeyInfoNISTP256[count];
+    EXPECT_EQ(ER_OK, sapWithPeer2.MsgArgToCertificateIds(arg, serials, keyInfos, count));
+    EXPECT_EQ(count, (uint32_t)1);
+    EXPECT_STREQ(serials[0].c_str(), "5678");
+}
+
+TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_fails_if_serial_does_not_match)
+{
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+    InstallMembershipOnManager();
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+
+    KeyInfoNISTP256 peer2PublicKey;
+    PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer2PermissionConfigurator.GetSigningPublicKey(peer2PublicKey));
+
+    qcc::MembershipCertificate membershipCertificate[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("123",
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2PublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    true,
+                                                                    3600,
+                                                                    membershipCertificate[0]
+                                                                    ));
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("456",
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2PublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    true,
+                                                                    3600,
+                                                                    membershipCertificate[0]
+                                                                    ));
+
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
+
+    // Call GetProperty("MembershipSummaries"). This call should show 2 membership certificates
+    MsgArg arg;
+    EXPECT_EQ(ER_OK, sapWithPeer2.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+
+    size_t count = arg.v_array.GetNumElements();
+    EXPECT_EQ((uint32_t)2, count);
+    String*serials = new String[count];
+    KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+    EXPECT_EQ(ER_OK, sapWithPeer2.MsgArgToCertificateIds(arg, serials, keyInfos, count));
+
+    String serial0("123");
+    String serial1("456");
+    // Compare the serial  in the certificates just retrieved
+    EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
+    EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+
+    // Call RemoveMembership
+    String fakeSerial("333");
+    EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, sapWithPeer2.RemoveMembership(fakeSerial, keyInfos[0]));
+
+}
+
+TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_fails_if_issuer_does_not_match)
+{
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+    InstallMembershipOnManager();
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+
+    KeyInfoNISTP256 peer2PublicKey;
+    PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer2PermissionConfigurator.GetSigningPublicKey(peer2PublicKey));
+
+    qcc::MembershipCertificate membershipCertificate[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("123",
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2PublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    true,
+                                                                    3600,
+                                                                    membershipCertificate[0]
+                                                                    ));
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("456",
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2PublicKey.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    true,
+                                                                    3600,
+                                                                    membershipCertificate[0]
+                                                                    ));
+
+
+    // Call InstallMembership
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
+
+    // Call GetProperty("MembershipSummaries"). This call should show 2 membership certificates
+    MsgArg arg;
+    EXPECT_EQ(ER_OK, sapWithPeer2.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
+
+    size_t count = arg.v_array.GetNumElements();
+    EXPECT_EQ((uint32_t)2, count);
+    String*serials = new String[count];
+    KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+    EXPECT_EQ(ER_OK, sapWithPeer2.MsgArgToCertificateIds(arg, serials, keyInfos, count));
+
+    String serial0("123");
+    String serial1("456");
+    // Compare the serial  in the certificates just retrieved
+    EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
+    EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+
+    // Call RemoveMembership
+    EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, sapWithPeer2.RemoveMembership(serials[0], peer2PublicKey));
+}
+
+
+
+TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_membership_installation)
+{
+    BusAttachment busUsedAsCA("caBus");
+    busUsedAsCA.Start();
+    busUsedAsCA.Connect();
+
+    DefaultECDHEAuthListener* caAuthListener;
+    caAuthListener = new DefaultECDHEAuthListener();
+
+    EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", caAuthListener));
+
+    qcc::GUID128 guildAuthorityGUID;
+    GUID128 leafGuid;
+    GUID128 interGuid;
+    GUID128 caGUID;
+
+    PermissionMgmtTestHelper::GetGUID(peer1Bus, leafGuid);
+    PermissionMgmtTestHelper::GetGUID(peer3Bus, interGuid);
+    PermissionMgmtTestHelper::GetGUID(busUsedAsCA, caGUID);
+
+
+    SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 9, 9, 9, 9 };
+    uint8_t caCN[] = { 9, 9, 9, 9 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"1234", 5);
+    caCert.SetIssuerCN(caCN, 4);
+    caCert.SetSubjectCN(caCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validityCA.validTo = validityCA.validFrom + TEN_MINS;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 caKey;
+    PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, caPC.GetSigningPublicKey(caKey));
+
+    caCert.SetSubjectPublicKey(caKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    caPC.SignCertificate(caCert);
+
+    // Create the intermediate certificate using peer1
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"2345", 5);
+    peer1Cert.SetIssuerCN(caCN, 4);
+    peer1Cert.SetSubjectCN(leafCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("intermediate-cert-alias");
+    peer1Cert.SetCA(false);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, caPC.SignCertificate(peer1Cert));
+
+    //We need identityCert chain CA1->Peer1
+    const size_t certChainSize = 2;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer1Cert;
+    identityCertChain[1] = caCert;
+
+    //
+    // Create membership chain to be installed on peer 1
+    //
+
+    PermissionMgmtTestHelper::GetGUID(managerBus, guildAuthorityGUID);
+    KeyInfoNISTP256 sgaKey;
+    PermissionConfigurator& managerPC = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, managerPC.GetSigningPublicKey(sgaKey));
+
+    // SGA membership certificate
+    qcc::MembershipCertificate sgaMembershipCert;
+    sgaMembershipCert.SetSerial((uint8_t*)"1234", 5);
+    sgaMembershipCert.SetIssuerCN(managerCN, 4);
+    sgaMembershipCert.SetSubjectCN(managerCN, 4);
+    sgaMembershipCert.SetSubjectPublicKey(sgaKey.GetPublicKey());
+    sgaMembershipCert.SetGuild(managerGuid);
+    sgaMembershipCert.SetCA(true);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    sgaMembershipCert.SetValidity(&validity);
+
+    managerPC.SignCertificate(sgaMembershipCert);
+
+    MembershipCertificate managerMembershipCertChain[1];
+    managerMembershipCertChain[0] = sgaMembershipCert;
+
+    EXPECT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertChain, 1));
+
+    // Intermediate membership certificate
+    qcc::MembershipCertificate intermediateMembershipCert;
+    intermediateMembershipCert.SetSerial((uint8_t*)"2345", 5);
+    intermediateMembershipCert.SetIssuerCN(managerCN, 4);
+    intermediateMembershipCert.SetSubjectCN(intermediateCN, 4);
+    KeyInfoNISTP256 interKey;
+    PermissionConfigurator& peer3PC = peer3Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer3PC.GetSigningPublicKey(interKey));
+    intermediateMembershipCert.SetSubjectPublicKey(interKey.GetPublicKey());
+    intermediateMembershipCert.SetGuild(interGuid);
+    intermediateMembershipCert.SetCA(true);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    intermediateMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    managerPC.SignCertificate(intermediateMembershipCert);
+
+    // Leaf membership certificate
+    qcc::MembershipCertificate leafMembershipCert;
+    leafMembershipCert.SetSerial((uint8_t*)"3456", 5);
+    leafMembershipCert.SetIssuerCN(intermediateCN, 4);
+    leafMembershipCert.SetSubjectCN(leafCN, 4);
+    KeyInfoNISTP256 leafKey;
+    PermissionConfigurator& peer1PC = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PC.GetSigningPublicKey(leafKey));
+    leafMembershipCert.SetSubjectPublicKey(leafKey.GetPublicKey());
+    leafMembershipCert.SetGuild(leafGuid);
+    leafMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    leafMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    peer3PC.SignCertificate(leafMembershipCert);
+
+    const size_t membershipChainSize = 3;
+    MembershipCertificate membershipCertChain[membershipChainSize];
+    membershipCertChain[0] = leafMembershipCert;
+    membershipCertChain[1] = intermediateMembershipCert;
+    membershipCertChain[2] = sgaMembershipCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+
+    //EXPECT_EQ(ER_OK, sapWithPeer1.Reset());
+    EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(membershipCertChain, 3));
+
+    // Call UpdateIdentity on Peer 1 to install the cert chain
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    // Create the intermediate certificate using peer2
+    qcc::IdentityCertificate peer2Cert;
+    peer2Cert.SetSerial((uint8_t*)"5678", 5);
+    peer2Cert.SetIssuerCN(caCN, 4);
+    peer2Cert.SetSubjectCN(leafCN, 4);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer2Cert.SetValidity(&validity);
+    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& peer2PC = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer2PC.GetSigningPublicKey(peer2Key));
+
+    peer2Cert.SetSubjectPublicKey(peer2Key.GetPublicKey());
+    peer2Cert.SetAlias("peer2-cert-alias");
+    peer2Cert.SetCA(true);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, caPC.SignCertificate(peer2Cert));
+
+    //We need identityCert chain CA1->Peer2
+    identityCertChain[0] = peer2Cert;
+    identityCertChain[1] = caCert;
+
+    // Call UpdateIdentity on Peer 1 to install the cert chain
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+        << "Failed to update Identity cert or manifest ";
+
+    uint32_t peer1ToPeer2SessionId;
+    SessionOpts opts;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    ProxyBusObject peer2Obj;
+    peer2Obj = ProxyBusObject(peer1Bus, org::alljoyn::Bus::InterfaceName, org::alljoyn::Bus::ObjectPath, peer1ToPeer2SessionId, false);
+
+    EXPECT_EQ(ER_OK, peer2Obj.IntrospectRemoteObject());
+}
+
+
+TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_membership_installation)
+{
+    BusAttachment busUsedAsCA("caBus");
+    busUsedAsCA.Start();
+    busUsedAsCA.Connect();
+
+    DefaultECDHEAuthListener* caAuthListener;
+    caAuthListener = new DefaultECDHEAuthListener();
+
+    EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", caAuthListener));
+
+    qcc::GUID128 guildAuthorityGUID;
+    GUID128 leafGuid;
+    GUID128 interGuid;
+    GUID128 caGUID;
+
+    PermissionMgmtTestHelper::GetGUID(peer1Bus, leafGuid);
+    PermissionMgmtTestHelper::GetGUID(peer3Bus, interGuid);
+    PermissionMgmtTestHelper::GetGUID(busUsedAsCA, caGUID);
+
+
+    SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 9, 9, 9, 9 };
+    uint8_t caCN[] = { 9, 9, 9, 9 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"1234", 5);
+    caCert.SetIssuerCN(caCN, 4);
+    caCert.SetSubjectCN(caCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validityCA.validTo = validityCA.validFrom + TEN_MINS;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 caKey;
+    PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, caPC.GetSigningPublicKey(caKey));
+
+    caCert.SetSubjectPublicKey(caKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    caPC.SignCertificate(caCert);
+
+    // Create the intermediate certificate using peer1
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"2345", 5);
+    peer1Cert.SetIssuerCN(caCN, 4);
+    peer1Cert.SetSubjectCN(leafCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("intermediate-cert-alias");
+    peer1Cert.SetCA(false);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, caPC.SignCertificate(peer1Cert));
+
+    //We need identityCert chain CA1->Peer1
+    const size_t certChainSize = 2;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer1Cert;
+    identityCertChain[1] = caCert;
+
+    //
+    // Create membership chain to be installed on peer 1
+    //
+
+    PermissionMgmtTestHelper::GetGUID(managerBus, guildAuthorityGUID);
+    KeyInfoNISTP256 sgaKey;
+    PermissionConfigurator& managerPC = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, managerPC.GetSigningPublicKey(sgaKey));
+
+    // SGA membership certificate
+    qcc::MembershipCertificate sgaMembershipCert;
+    sgaMembershipCert.SetSerial((uint8_t*)"1234", 5);
+    sgaMembershipCert.SetIssuerCN(managerCN, 4);
+    sgaMembershipCert.SetSubjectCN(managerCN, 4);
+    sgaMembershipCert.SetSubjectPublicKey(sgaKey.GetPublicKey());
+    sgaMembershipCert.SetGuild(managerGuid);
+    sgaMembershipCert.SetCA(true);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    sgaMembershipCert.SetValidity(&validity);
+
+    managerPC.SignCertificate(sgaMembershipCert);
+
+    MembershipCertificate managerMembershipCertChain[1];
+    managerMembershipCertChain[0] = sgaMembershipCert;
+
+    EXPECT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertChain, 1));
+
+    // Intermediate membership certificate
+    qcc::MembershipCertificate intermediateMembershipCert;
+    intermediateMembershipCert.SetSerial((uint8_t*)"2345", 5);
+    intermediateMembershipCert.SetIssuerCN(managerCN, 4);
+    intermediateMembershipCert.SetSubjectCN(intermediateCN, 4);
+    KeyInfoNISTP256 interKey;
+    PermissionConfigurator& peer3PC = peer3Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer3PC.GetSigningPublicKey(interKey));
+    intermediateMembershipCert.SetSubjectPublicKey(interKey.GetPublicKey());
+    intermediateMembershipCert.SetGuild(interGuid);
+    intermediateMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    intermediateMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    managerPC.SignCertificate(intermediateMembershipCert);
+
+    // Leaf membership certificate
+    qcc::MembershipCertificate leafMembershipCert;
+    leafMembershipCert.SetSerial((uint8_t*)"3456", 5);
+    leafMembershipCert.SetIssuerCN(intermediateCN, 4);
+    leafMembershipCert.SetSubjectCN(leafCN, 4);
+    KeyInfoNISTP256 leafKey;
+    PermissionConfigurator& peer1PC = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PC.GetSigningPublicKey(leafKey));
+    leafMembershipCert.SetSubjectPublicKey(leafKey.GetPublicKey());
+    leafMembershipCert.SetGuild(leafGuid);
+    leafMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    leafMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    peer3PC.SignCertificate(leafMembershipCert);
+
+    const size_t membershipChainSize = 3;
+    MembershipCertificate membershipCertChain[membershipChainSize];
+    membershipCertChain[0] = leafMembershipCert;
+    membershipCertChain[1] = intermediateMembershipCert;
+    membershipCertChain[2] = sgaMembershipCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 3));
+}
+
+
+TEST_F(SecurityManagementPolicyTest, chained_membership_signed_upto_ca_fails)
+{
+    BusAttachment busUsedAsCA("caBus");
+    busUsedAsCA.Start();
+    busUsedAsCA.Connect();
+
+    DefaultECDHEAuthListener* caAuthListener;
+    caAuthListener = new DefaultECDHEAuthListener();
+
+    EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", caAuthListener));
+
+    qcc::GUID128 guildAuthorityGUID;
+    GUID128 leafGuid;
+    GUID128 interGuid;
+    GUID128 caGUID;
+
+    PermissionMgmtTestHelper::GetGUID(peer1Bus, leafGuid);
+    PermissionMgmtTestHelper::GetGUID(peer3Bus, interGuid);
+    PermissionMgmtTestHelper::GetGUID(busUsedAsCA, caGUID);
+
+
+    SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 9, 9, 9, 9 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    KeyInfoNISTP256 caKey;
+    PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, caPC.GetSigningPublicKey(caKey));
+
+    //
+    // Create membership chain to be installed on peer 1
+    //
+
+    PermissionMgmtTestHelper::GetGUID(managerBus, guildAuthorityGUID);
+
+    // SGA membership certificate
+    qcc::MembershipCertificate caMembershipCert;
+    caMembershipCert.SetSerial((uint8_t*)"1234", 5);
+    caMembershipCert.SetIssuerCN(managerCN, 4);
+    caMembershipCert.SetSubjectCN(managerCN, 4);
+    caMembershipCert.SetSubjectPublicKey(caKey.GetPublicKey());
+    caMembershipCert.SetGuild(managerGuid);
+    caMembershipCert.SetCA(true);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    caMembershipCert.SetValidity(&validity);
+
+    caPC.SignCertificate(caMembershipCert);
+
+    InstallMembershipOnManager();
+
+    // Intermediate membership certificate
+    qcc::MembershipCertificate intermediateMembershipCert;
+    intermediateMembershipCert.SetSerial((uint8_t*)"2345", 5);
+    intermediateMembershipCert.SetIssuerCN(managerCN, 4);
+    intermediateMembershipCert.SetSubjectCN(intermediateCN, 4);
+    KeyInfoNISTP256 interKey;
+    PermissionConfigurator& peer3PC = peer3Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer3PC.GetSigningPublicKey(interKey));
+    intermediateMembershipCert.SetSubjectPublicKey(interKey.GetPublicKey());
+    intermediateMembershipCert.SetGuild(interGuid);
+    intermediateMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    intermediateMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    caPC.SignCertificate(intermediateMembershipCert);
+
+    // Leaf membership certificate
+    qcc::MembershipCertificate leafMembershipCert;
+    leafMembershipCert.SetSerial((uint8_t*)"3456", 5);
+    leafMembershipCert.SetIssuerCN(intermediateCN, 4);
+    leafMembershipCert.SetSubjectCN(leafCN, 4);
+    KeyInfoNISTP256 leafKey;
+    PermissionConfigurator& peer1PC = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PC.GetSigningPublicKey(leafKey));
+    leafMembershipCert.SetSubjectPublicKey(leafKey.GetPublicKey());
+    leafMembershipCert.SetGuild(leafGuid);
+    leafMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    leafMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    peer3PC.SignCertificate(leafMembershipCert);
+
+    const size_t membershipChainSize = 3;
+    MembershipCertificate membershipCertChain[membershipChainSize];
+    membershipCertChain[0] = leafMembershipCert;
+    membershipCertChain[1] = intermediateMembershipCert;
+    membershipCertChain[2] = caMembershipCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 3));
+}
+
+TEST_F(SecurityManagementPolicyTest, chained_membership_with_two_levels_fails)
+{
+    BusAttachment busUsedAsCA("caBus");
+    busUsedAsCA.Start();
+    busUsedAsCA.Connect();
+
+    DefaultECDHEAuthListener* caAuthListener;
+    caAuthListener = new DefaultECDHEAuthListener();
+
+    EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", caAuthListener));
+
+    qcc::GUID128 guildAuthorityGUID;
+    GUID128 leafGuid;
+    GUID128 interGuid;
+    GUID128 inter2Guid;
+    GUID128 caGUID;
+
+    PermissionMgmtTestHelper::GetGUID(peer1Bus, leafGuid);
+    PermissionMgmtTestHelper::GetGUID(peer2Bus, inter2Guid);
+    PermissionMgmtTestHelper::GetGUID(peer3Bus, interGuid);
+    PermissionMgmtTestHelper::GetGUID(busUsedAsCA, caGUID);
+
+    SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    uint8_t intermediateCN[] = { 9, 9, 9, 9 };
+    uint8_t intermediate2CN[] = { 9, 9, 9, 9 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    KeyInfoNISTP256 caKey;
+    PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, caPC.GetSigningPublicKey(caKey));
+
+    //
+    // Create membership chain to be installed on peer 1
+    //
+
+    PermissionMgmtTestHelper::GetGUID(managerBus, guildAuthorityGUID);
+
+    // SGA membership certificate
+    qcc::MembershipCertificate caMembershipCert;
+    caMembershipCert.SetSerial((uint8_t*)"1234", 5);
+    caMembershipCert.SetIssuerCN(managerCN, 4);
+    caMembershipCert.SetSubjectCN(managerCN, 4);
+    caMembershipCert.SetSubjectPublicKey(caKey.GetPublicKey());
+    caMembershipCert.SetGuild(managerGuid);
+    caMembershipCert.SetCA(true);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    caMembershipCert.SetValidity(&validity);
+
+    caPC.SignCertificate(caMembershipCert);
+
+    InstallMembershipOnManager();
+
+    // Intermediate membership certificate
+    qcc::MembershipCertificate intermediateMembershipCert;
+    intermediateMembershipCert.SetSerial((uint8_t*)"2345", 5);
+    intermediateMembershipCert.SetIssuerCN(managerCN, 4);
+    intermediateMembershipCert.SetSubjectCN(intermediateCN, 4);
+    KeyInfoNISTP256 interKey;
+    PermissionConfigurator& peer3PC = peer3Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer3PC.GetSigningPublicKey(interKey));
+    intermediateMembershipCert.SetSubjectPublicKey(interKey.GetPublicKey());
+    intermediateMembershipCert.SetGuild(interGuid);
+    intermediateMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    intermediateMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    caPC.SignCertificate(intermediateMembershipCert);
+
+    // Intermediate 2 membership certificate
+    qcc::MembershipCertificate intermediate2MembershipCert;
+    intermediate2MembershipCert.SetSerial((uint8_t*)"2345", 5);
+    intermediate2MembershipCert.SetIssuerCN(intermediateCN, 4);
+    intermediate2MembershipCert.SetSubjectCN(intermediate2CN, 4);
+    KeyInfoNISTP256 inter2Key;
+    PermissionConfigurator& peer2PC = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer2PC.GetSigningPublicKey(inter2Key));
+    intermediate2MembershipCert.SetSubjectPublicKey(inter2Key.GetPublicKey());
+    intermediate2MembershipCert.SetGuild(interGuid);
+    intermediate2MembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    intermediate2MembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    peer3PC.SignCertificate(intermediateMembershipCert);
+
+    // Leaf membership certificate
+    qcc::MembershipCertificate leafMembershipCert;
+    leafMembershipCert.SetSerial((uint8_t*)"3456", 5);
+    leafMembershipCert.SetIssuerCN(intermediate2CN, 4);
+    leafMembershipCert.SetSubjectCN(leafCN, 4);
+    KeyInfoNISTP256 leafKey;
+    PermissionConfigurator& peer1PC = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PC.GetSigningPublicKey(leafKey));
+    leafMembershipCert.SetSubjectPublicKey(leafKey.GetPublicKey());
+    leafMembershipCert.SetGuild(leafGuid);
+    leafMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    leafMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    peer2PC.SignCertificate(leafMembershipCert);
+
+    const size_t membershipChainSize = 4;
+    MembershipCertificate membershipCertChain[membershipChainSize];
+    membershipCertChain[0] = leafMembershipCert;
+    membershipCertChain[1] = intermediate2MembershipCert;
+    membershipCertChain[2] = intermediateMembershipCert;
+    membershipCertChain[3] = caMembershipCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+
+    EXPECT_EQ(ER_FAIL, sapWithPeer1.InstallMembership(membershipCertChain, 4));
+}
+
+TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegation_is_false)
+{
+    BusAttachment busUsedAsCA("caBus");
+    busUsedAsCA.Start();
+    busUsedAsCA.Connect();
+
+    DefaultECDHEAuthListener* caAuthListener;
+    caAuthListener = new DefaultECDHEAuthListener();
+
+    EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", caAuthListener));
+
+    qcc::GUID128 guildAuthorityGUID;
+    GUID128 leafGuid;
+    GUID128 interGuid;
+    GUID128 caGUID;
+
+    PermissionMgmtTestHelper::GetGUID(peer1Bus, leafGuid);
+    PermissionMgmtTestHelper::GetGUID(peer3Bus, interGuid);
+    PermissionMgmtTestHelper::GetGUID(busUsedAsCA, caGUID);
+
+
+    SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+
+    uint8_t managerCN[] = { 1, 2, 3, 4 };
+    //uint8_t intermediateCN[] = { 9, 9, 9, 9 };
+    uint8_t caCN[] = { 9, 9, 9, 9 };
+    uint8_t leafCN[] = { 9, 0, 1, 2 };
+
+    //Create the CA cert
+    qcc::IdentityCertificate caCert;
+    caCert.SetSerial((uint8_t*)"1234", 5);
+    caCert.SetIssuerCN(caCN, 4);
+    caCert.SetSubjectCN(caCN, 4);
+    CertificateX509::ValidPeriod validityCA;
+    validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validityCA.validTo = validityCA.validFrom + TEN_MINS;
+    caCert.SetValidity(&validityCA);
+    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    KeyInfoNISTP256 caKey;
+    PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, caPC.GetSigningPublicKey(caKey));
+
+    caCert.SetSubjectPublicKey(caKey.GetPublicKey());
+    caCert.SetAlias("ca-cert-alias");
+    caCert.SetCA(true);
+
+    //sign the ca cert
+    caPC.SignCertificate(caCert);
+
+    // Create the intermediate certificate using peer1
+    qcc::IdentityCertificate peer1Cert;
+    peer1Cert.SetSerial((uint8_t*)"2345", 5);
+    peer1Cert.SetIssuerCN(caCN, 4);
+    peer1Cert.SetSubjectCN(leafCN, 4);
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    peer1Cert.SetValidity(&validity);
+    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
+
+    ECCPublicKey peer1PublicKey;
+    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+
+    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
+    peer1Cert.SetAlias("intermediate-cert-alias");
+    peer1Cert.SetCA(false);
+
+    //sign the leaf cert
+    EXPECT_EQ(ER_OK, caPC.SignCertificate(peer1Cert));
+
+    //We need identityCert chain CA1->Peer1
+    const size_t certChainSize = 2;
+    IdentityCertificate identityCertChain[certChainSize];
+    identityCertChain[0] = peer1Cert;
+    identityCertChain[1] = caCert;
+
+    //
+    // Create membership chain to be installed on peer 1
+    //
+
+    PermissionMgmtTestHelper::GetGUID(managerBus, guildAuthorityGUID);
+    KeyInfoNISTP256 sgaKey;
+    PermissionConfigurator& managerPC = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, managerPC.GetSigningPublicKey(sgaKey));
+
+    // SGA membership certificate
+    qcc::MembershipCertificate sgaMembershipCert;
+    sgaMembershipCert.SetSerial((uint8_t*)"1234", 5);
+    sgaMembershipCert.SetIssuerCN(managerCN, 4);
+    sgaMembershipCert.SetSubjectCN(managerCN, 4);
+    sgaMembershipCert.SetSubjectPublicKey(sgaKey.GetPublicKey());
+    sgaMembershipCert.SetGuild(managerGuid);
+    sgaMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    sgaMembershipCert.SetValidity(&validity);
+
+    managerPC.SignCertificate(sgaMembershipCert);
+
+    MembershipCertificate managerMembershipCertChain[1];
+    managerMembershipCertChain[0] = sgaMembershipCert;
+
+    EXPECT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertChain, 1));
+
+    // Leaf membership certificate
+    qcc::MembershipCertificate leafMembershipCert;
+    leafMembershipCert.SetSerial((uint8_t*)"3456", 5);
+    leafMembershipCert.SetIssuerCN(managerCN, 4);
+    leafMembershipCert.SetSubjectCN(leafCN, 4);
+    KeyInfoNISTP256 leafKey;
+    PermissionConfigurator& peer1PC = peer1Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, peer1PC.GetSigningPublicKey(leafKey));
+    leafMembershipCert.SetSubjectPublicKey(leafKey.GetPublicKey());
+    leafMembershipCert.SetGuild(leafGuid);
+    leafMembershipCert.SetCA(false);
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + TEN_MINS;
+    leafMembershipCert.SetValidity(&validity);
+    /* use the signing bus to sign the cert */
+    managerPC.SignCertificate(leafMembershipCert);
+
+    const size_t membershipChainSize = 2;
+    MembershipCertificate membershipCertChain[membershipChainSize];
+    membershipCertChain[0] = leafMembershipCert;
+    membershipCertChain[1] = sgaMembershipCert;
+
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+
+    //EXPECT_EQ(ER_OK, sapWithPeer1.Reset());
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 2));
+}
 
 /*
  * Purpose:
@@ -990,6 +2726,7 @@ TEST(SecurityManagementPolicy2Test, DISABLED_ManagedApplication_method_calls_sho
         PermissionPolicy::Rule manifest[manifestSize];
         manifest[0].SetObjPath("*");
         manifest[0].SetInterfaceName("*");
+
         {
             PermissionPolicy::Rule::Member member[1];
             member[0].Set("*",
@@ -1014,6 +2751,7 @@ TEST(SecurityManagementPolicy2Test, DISABLED_ManagedApplication_method_calls_sho
         const size_t certChainSize = 1;
         IdentityCertificate identityCertChain[certChainSize];
         GUID128 guid;
+
 
         EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(peer1,
                                                                       "0",
