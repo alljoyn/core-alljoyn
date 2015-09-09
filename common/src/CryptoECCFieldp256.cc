@@ -73,7 +73,15 @@ namespace qcc {
  * zero and p256.
  */
 
-static digit256_tc P256_MODULUS = { 18446744073709551615U, 4294967295U, 0, 18446744069414584321U };
+/*
+ * The constant P256_MODULUS is the integer 2^256 - 2^224 + 2^192 + 2^96 - 1,
+ * the prime defining the field for the NIST curve P-256.  As defined in FIPS
+ * PUB 186-4, "Digital Signature Standard (DSS)", Appendix D "Recommended
+ * Elliptic Curves for Federal Government Use", Subsection D.1.2.3 "Curve
+ * P-256".
+ * http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+ */
+static digit256_tc P256_MODULUS = { 0xFFFFFFFFFFFFFFFFULL, 0x00000000FFFFFFFFULL, 0x0000000000000000ULL, 0xFFFFFFFF00000001ULL };
 
 /* Macros to extract the lower and upper parts. */
 #define getlow_tolow(x) ((x) & (digit_t) 0xFFFFFFFF)
@@ -627,8 +635,8 @@ void fpdiv2_p256(
     digit256_t quotient,
     digit_t*    temps)
 {
-    /* The constant 1/2 (mod p256): */
-    digit256_tc half = { 0, 2147483648U, 9223372036854775808U, 9223372034707292160U };
+    /* Division by two is done by multiplication by 1/2. The constant "half" is 1/2 (mod P256): */
+    digit256_tc half = { 0x0000000000000000ULL, 0x0000000080000000ULL, 0x8000000000000000ULL, 0x7FFFFFFF80000000ULL };
 
     assert(numerator != NULL);
     assert(quotient != NULL);
@@ -693,8 +701,11 @@ void fpinv_p256(
     digit256_t inv,
     digit_t*    temps)
 {
-    /* Exponentiation by (p-2). */
-    digit256_tc P256m2 = { 18446744073709551613U, 4294967295U, 0, 18446744069414584321U };
+    /*
+     * Inverse modulo P256 is done by exponentiation by (P256-2).
+     * The constant P256m2 is P256_MODULUS - 2.
+     */
+    digit256_tc P256m2 = { 0xFFFFFFFFFFFFFFFDULL, 0x00000000FFFFFFFFULL, 0x0000000000000000ULL, 0xFFFFFFFF00000001ULL };
     fpexp_naive_p256(a, P256m2, inv, temps);
 }
 
