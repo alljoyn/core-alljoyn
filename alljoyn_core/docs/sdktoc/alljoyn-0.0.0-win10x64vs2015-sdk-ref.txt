@@ -113,6 +113,10 @@ $DIST_dbg/cpp/bin/samples/SampleClientECDHE.exe
 $DIST_dbg/cpp/bin/samples/SampleClientECDHE.pdb
 $DIST_dbg/cpp/bin/samples/SampleServiceECDHE.exe
 $DIST_dbg/cpp/bin/samples/SampleServiceECDHE.pdb
+$DIST_dbg/cpp/bin/samples/SecureDoorConsumer.exe
+$DIST_dbg/cpp/bin/samples/SecureDoorConsumer.pdb
+$DIST_dbg/cpp/bin/samples/SecureDoorProvider.exe
+$DIST_dbg/cpp/bin/samples/SecureDoorProvider.pdb
 $DIST_dbg/cpp/bin/samples/TrustedTLSampleRN.exe
 $DIST_dbg/cpp/bin/samples/TrustedTLSampleRN.pdb
 $DIST_dbg/cpp/bin/samples/basic_client.exe
@@ -229,6 +233,10 @@ $DIST_dbg/cpp/samples/secure/SampleCertificateChainEngine.h
 $DIST_dbg/cpp/samples/secure/SampleCertificateUtility.cc
 $DIST_dbg/cpp/samples/secure/SampleClientECDHE.cc
 $DIST_dbg/cpp/samples/secure/SampleServiceECDHE.cc
+$DIST_dbg/cpp/samples/secure/door/secure_door_common.cc
+$DIST_dbg/cpp/samples/secure/door/secure_door_common.h
+$DIST_dbg/cpp/samples/secure/door/secure_door_consumer.cc
+$DIST_dbg/cpp/samples/secure/door/secure_door_provider.cc
 $DIST_dbg/java/docs/html/index.html
 $DIST_dbg/java/jar/JavaSDKDocAboutClient.jar
 $DIST_dbg/java/jar/JavaSDKDocAboutService.jar
@@ -428,6 +436,10 @@ $DIST_rel/cpp/bin/samples/SampleClientECDHE.exe
 $DIST_rel/cpp/bin/samples/SampleClientECDHE.pdb
 $DIST_rel/cpp/bin/samples/SampleServiceECDHE.exe
 $DIST_rel/cpp/bin/samples/SampleServiceECDHE.pdb
+$DIST_rel/cpp/bin/samples/SecureDoorConsumer.exe
+$DIST_rel/cpp/bin/samples/SecureDoorConsumer.pdb
+$DIST_rel/cpp/bin/samples/SecureDoorProvider.exe
+$DIST_rel/cpp/bin/samples/SecureDoorProvider.pdb
 $DIST_rel/cpp/bin/samples/TrustedTLSampleRN.exe
 $DIST_rel/cpp/bin/samples/TrustedTLSampleRN.pdb
 $DIST_rel/cpp/bin/samples/basic_client.exe
@@ -544,6 +556,10 @@ $DIST_rel/cpp/samples/secure/SampleCertificateChainEngine.h
 $DIST_rel/cpp/samples/secure/SampleCertificateUtility.cc
 $DIST_rel/cpp/samples/secure/SampleClientECDHE.cc
 $DIST_rel/cpp/samples/secure/SampleServiceECDHE.cc
+$DIST_rel/cpp/samples/secure/door/secure_door_common.cc
+$DIST_rel/cpp/samples/secure/door/secure_door_common.h
+$DIST_rel/cpp/samples/secure/door/secure_door_consumer.cc
+$DIST_rel/cpp/samples/secure/door/secure_door_provider.cc
 $DIST_rel/java/docs/html/index.html
 $DIST_rel/java/jar/JavaSDKDocAboutClient.jar
 $DIST_rel/java/jar/JavaSDKDocAboutService.jar

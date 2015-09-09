@@ -83,6 +83,8 @@ $DIST/cpp/bin/samples/DeskTopSharedKSService
 $DIST/cpp/bin/samples/SampleCertificateUtility
 $DIST/cpp/bin/samples/SampleClientECDHE
 $DIST/cpp/bin/samples/SampleServiceECDHE
+$DIST/cpp/bin/samples/SecureDoorConsumer
+$DIST/cpp/bin/samples/SecureDoorProvider
 $DIST/cpp/bin/samples/TrustedTLSampleRN
 $DIST/cpp/bin/samples/basic_client
 $DIST/cpp/bin/samples/basic_service
@@ -193,6 +195,10 @@ $DIST/cpp/samples/secure/SampleCertificateChainEngine.h
 $DIST/cpp/samples/secure/SampleCertificateUtility.cc
 $DIST/cpp/samples/secure/SampleClientECDHE.cc
 $DIST/cpp/samples/secure/SampleServiceECDHE.cc
+$DIST/cpp/samples/secure/door/secure_door_common.cc
+$DIST/cpp/samples/secure/door/secure_door_common.h
+$DIST/cpp/samples/secure/door/secure_door_consumer.cc
+$DIST/cpp/samples/secure/door/secure_door_provider.cc
 $DIST/java/docs/html/index.html
 $DIST/java/jar/JavaSDKDocAboutClient.jar
 $DIST/java/jar/JavaSDKDocAboutService.jar

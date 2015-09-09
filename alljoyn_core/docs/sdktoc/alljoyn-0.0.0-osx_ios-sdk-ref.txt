@@ -1748,6 +1748,8 @@ $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/DeskTopSharedKSService
 $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/SampleCertificateUtility
 $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/SampleClientECDHE
 $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/SampleServiceECDHE
+$SDK/build/darwin/x86/debug/dist/cpp/bin/samples/SecureDoorConsumer
+$SDK/build/darwin/x86/debug/dist/cpp/bin/samples/SecureDoorProvider
 $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/basic_client
 $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/basic_service
 $SDK/build/darwin/x86/debug/dist/cpp/bin/samples/chat
@@ -1852,6 +1854,10 @@ $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/SampleCertificateChainEngine
 $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/SampleCertificateUtility.cc
 $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/SampleClientECDHE.cc
 $SDK/build/darwin/x86/debug/dist/cpp/samples/secure/SampleServiceECDHE.cc
+$SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_common.cc
+$SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_common.h
+$SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_consumer.cc
+$SDK/build/darwin/x86/debug/dist/cpp/samples/secure/door/secure_door_provider.cc
 $SDK/build/darwin/x86/release/dist/cpp/bin/aclient
 $SDK/build/darwin/x86/release/dist/cpp/bin/advtunnel
 $SDK/build/darwin/x86/release/dist/cpp/bin/ajxmlcop
@@ -1879,6 +1885,8 @@ $SDK/build/darwin/x86/release/dist/cpp/bin/samples/DeskTopSharedKSService
 $SDK/build/darwin/x86/release/dist/cpp/bin/samples/SampleCertificateUtility
 $SDK/build/darwin/x86/release/dist/cpp/bin/samples/SampleClientECDHE
 $SDK/build/darwin/x86/release/dist/cpp/bin/samples/SampleServiceECDHE
+$SDK/build/darwin/x86/release/dist/cpp/bin/samples/SecureDoorConsumer
+$SDK/build/darwin/x86/release/dist/cpp/bin/samples/SecureDoorProvider
 $SDK/build/darwin/x86/release/dist/cpp/bin/samples/basic_client
 $SDK/build/darwin/x86/release/dist/cpp/bin/samples/basic_service
 $SDK/build/darwin/x86/release/dist/cpp/bin/samples/chat
@@ -1983,6 +1991,10 @@ $SDK/build/darwin/x86/release/dist/cpp/samples/secure/SampleCertificateChainEngi
 $SDK/build/darwin/x86/release/dist/cpp/samples/secure/SampleCertificateUtility.cc
 $SDK/build/darwin/x86/release/dist/cpp/samples/secure/SampleClientECDHE.cc
 $SDK/build/darwin/x86/release/dist/cpp/samples/secure/SampleServiceECDHE.cc
+$SDK/build/darwin/x86/release/dist/cpp/samples/secure/door/secure_door_common.cc
+$SDK/build/darwin/x86/release/dist/cpp/samples/secure/door/secure_door_common.h
+$SDK/build/darwin/x86/release/dist/cpp/samples/secure/door/secure_door_consumer.cc
+$SDK/build/darwin/x86/release/dist/cpp/samples/secure/door/secure_door_provider.cc
 $SDK/build/docs/html/index.html
 $SDK/manifest.txt
 $SDK/services/about/SConscript
