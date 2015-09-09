@@ -25,6 +25,6 @@ prog = [ env.Program('TrustedTLSampleRN', 'TrustedTLSampleRN.cc') ]
 # manner.  The fact that the program sets credentials implies a bundled router
 # configuration.
 
-if env['BR'] == 'on' and env['OS'] in ['linux', 'win7']:
+if env['BR'] == 'on' and env['OS'] in ['linux', 'win7', 'win10' ]:
     env.Install('$DISTDIR/cpp/bin/samples', prog )
     env.Install(clientDistDir, env.Glob('*.cc'))
