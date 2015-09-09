@@ -1175,9 +1175,9 @@ TEST_F(PropChangedTest, MultiSession)
     store.Clear();
     EXPECT_EQ((size_t)0, store.proxySamples.size());
     bobA.EmitSignal(tp, tp.intfParams[0], clientBus.id);
-    qcc::Sleep(500);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status);
+    // qcc::Sleep(500);
+    status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
     EXPECT_TRUE(pb1.iden(store.proxySamples[0]));
 
@@ -1185,11 +1185,11 @@ TEST_F(PropChangedTest, MultiSession)
     store.Clear();
     EXPECT_EQ((size_t)0, store.proxySamples.size());
     bobA.EmitSignal(tp, tp.intfParams[0], clientBus2.id);
-    qcc::Sleep(500);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status);
+    // qcc::Sleep(500);
+    status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    EXPECT_EQ(ER_OK, status);
+    status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)2, store.proxySamples.size());
     EXPECT_TRUE(pb2.iden(store.proxySamples[0]));
     EXPECT_TRUE(pb2.iden(store.proxySamples[1]));
@@ -1198,9 +1198,9 @@ TEST_F(PropChangedTest, MultiSession)
     store.Clear();
     EXPECT_EQ((size_t)0, store.proxySamples.size());
     bobB.EmitSignal(tp, tp.intfParams[0], clientBus.id);
-    qcc::Sleep(500);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
-    // EXPECT_EQ(ER_OK, status);
+    // qcc::Sleep(500);
+    status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
     EXPECT_TRUE(pb3.iden(store.proxySamples[0]));
 
