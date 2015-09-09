@@ -35,7 +35,7 @@
 #define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
 #define KEYX_ECDHE_PSK "ALLJOYN_ECDHE_PSK"
 #define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
-#define AJNKEY_STORE "/.alljoyn_keystore/c_ecdhe.ks"
+#define AJNKEY_STORE "/.alljoyn_keystore/secmgr_ecdhe.ks"
 
 using namespace qcc;
 using namespace std;
