@@ -1528,6 +1528,76 @@ class SecurityAuthenticationTest2 : public testing::Test {
             << "Failed to update Identity cert or manifest ";
     }
 
+    /**
+     * Base for test case 6.
+     * Verify that under the default policy, authentication will succeed if the
+     * IC is signed by either the CA or the ASGA.
+     *
+     * Both Peers use default policy
+     */
+    void BaseAuthenticationTest6(BusAttachment& identityIssuer, QStatus expectedStatus, const char* reference)
+    {
+        //Get peer1 key
+        KeyInfoNISTP256 peer1Key;
+        PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+        //Create peer1 identityCert
+
+        // All Inclusive manifest
+        const size_t manifestSize = 1;
+        PermissionPolicy::Rule manifest[manifestSize];
+        manifest[0].SetObjPath("*");
+        manifest[0].SetInterfaceName("*");
+        {
+            PermissionPolicy::Rule::Member member[1];
+            member[0].Set("*",
+                          PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                          PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            manifest[0].SetMembers(1, member);
+        }
+
+        GUID128 peer1Guid;
+
+        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA1,
+                                                                   manifest, manifestSize,
+                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+        IdentityCertificate identityCertChainPeer1[1];
+
+        PermissionConfigurator& pcCA = peer1Bus.GetPermissionConfigurator();
+        KeyInfoNISTP256 peer1PublicKey;
+        EXPECT_EQ(ER_OK, pcCA.GetSigningPublicKey(peer1PublicKey));
+
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(identityIssuer,
+                                                                      "1",
+                                                                      peer1Guid.ToString(),
+                                                                      peer1PublicKey.GetPublicKey(),
+                                                                      "Peer1Alias",
+                                                                      3600,
+                                                                      identityCertChainPeer1[0],
+                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+        SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+        EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, 1, manifest, manifestSize))
+            << "Failed to update Identity cert or manifest ";
+        uint32_t sessionId;
+        SessionOpts opts;
+        EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+
+        {
+            EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
+            EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer2AuthListener));
+            SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
+            EXPECT_EQ(expectedStatus, proxy.SecureConnection(true)) << reference << " expects status " << QCC_StatusText(expectedStatus);
+            SecurityApplicationProxy proxy2(peer2Bus, peer1Bus.GetUniqueName().c_str(), sessionId);
+            EXPECT_EQ(expectedStatus, proxy2.SecureConnection(true)) << reference << " expects status " << QCC_StatusText(expectedStatus);
+        }
+    }
+
     BusAttachment managerBus;
     BusAttachment peer1Bus;
     BusAttachment peer2Bus;
@@ -2576,4 +2646,403 @@ TEST_F(SecurityAuthenticationTest3, authenticate_test5_peer2_tries_to_secure_ses
         EXPECT_TRUE(peer1AuthListener.calledAuthMechanisms.find("ALLJOYN_ECDHE_PSK") != peer1AuthListener.calledAuthMechanisms.end()) << "Expected ECDHE_PSK Auth Mechanism to be requested it was not called.";
         EXPECT_TRUE(peer1AuthListener.calledAuthMechanisms.find("ALLJOYN_ECDHE_NULL") != peer1AuthListener.calledAuthMechanisms.end()) << "Expected ECDHE_NULL Auth Mechanism to be requested it was not called.";
     }
+}
+
+class SecurityAuthenticationTest4 : public testing::Test {
+  public:
+    SecurityAuthenticationTest4() :
+        managerBus("SecurityAuthenticationManager", true),
+        peer1Bus("SecuritAuthenticationPeer1", true),
+        peer2Bus("SecurityAuthenticationPeer2", true),
+
+        busUsedAsCA("foo1"),
+        busUsedAsCA1("foo2"),
+        busUsedAsLivingRoom("foo3"),
+        busUsedAsPeerC("foo4"),
+
+        managerKeyStoreListener(),
+        peer1KeyStoreListener(),
+        peer2KeyStoreListener(),
+
+        listener1(),
+        listener2(),
+        listener3(),
+        listener4(),
+
+        managerAuthListener(),
+        peer1AuthListener(),
+        peer2AuthListener(),
+
+        managerSessionPortListener(),
+        peer1SessionPortListener(),
+        peer2SessionPortListener(),
+
+        managerToPeer1SessionId(0),
+        managerToPeer2SessionId(0),
+
+        peer1SessionPort(42),
+        peer2SessionPort(42),
+
+        managerGuid(),
+        caGuid(),
+        livingRoomSGID(),
+
+        manifestSize(1)
+    {
+    }
+
+    virtual void SetUp() {
+        EXPECT_EQ(ER_OK, managerBus.Start());
+        EXPECT_EQ(ER_OK, managerBus.Connect());
+        EXPECT_EQ(ER_OK, peer1Bus.Start());
+        EXPECT_EQ(ER_OK, peer1Bus.Connect());
+        EXPECT_EQ(ER_OK, peer2Bus.Start());
+        EXPECT_EQ(ER_OK, peer2Bus.Connect());
+
+        // Register in memory keystore listeners
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+
+        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &peer2AuthListener));
+
+        busUsedAsCA.Start();
+        busUsedAsCA.Connect();
+        busUsedAsCA1.Start();
+        busUsedAsLivingRoom.Start();
+        busUsedAsPeerC.Start();
+
+        EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(listener1));
+        EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(listener2));
+        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(listener3));
+        EXPECT_EQ(ER_OK, busUsedAsPeerC.RegisterKeyStoreListener(listener4));
+
+        EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
+        EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
+        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
+        EXPECT_EQ(ER_OK, busUsedAsPeerC.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
+
+        SessionOpts opts1;
+        SessionId managerToManagerSessionId;
+        SessionPort managerSessionPort = 42;
+        EXPECT_EQ(ER_OK, managerBus.BindSessionPort(managerSessionPort, opts1, managerSessionPortListener));
+
+        SessionOpts opts2;
+        EXPECT_EQ(ER_OK, peer1Bus.BindSessionPort(peer1SessionPort, opts2, peer1SessionPortListener));
+
+        SessionOpts opts3;
+        EXPECT_EQ(ER_OK, peer2Bus.BindSessionPort(peer2SessionPort, opts3, peer2SessionPortListener));
+
+        EXPECT_EQ(ER_OK, managerBus.JoinSession(managerBus.GetUniqueName().c_str(), managerSessionPort, NULL, managerToManagerSessionId, opts1));
+        EXPECT_EQ(ER_OK, managerBus.JoinSession(peer1Bus.GetUniqueName().c_str(), peer1SessionPort, NULL, managerToPeer1SessionId, opts2));
+        EXPECT_EQ(ER_OK, managerBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, managerToPeer2SessionId, opts3));
+
+        //-----------------------Claim each bus Attachments------------------
+        SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
+        SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+
+        // All Inclusive manifest
+        manifest[0].SetObjPath("*");
+        manifest[0].SetInterfaceName("*");
+        {
+            PermissionPolicy::Rule::Member member[1];
+            member[0].Set("*",
+                          PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                          PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            manifest[0].SetMembers(1, member);
+        }
+
+        //Get manager key
+        KeyInfoNISTP256 managerKey;
+        PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+
+        //Get peer1 key
+        KeyInfoNISTP256 peer1Key;
+        PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+        //Get peer2 key
+        KeyInfoNISTP256 peer2Key;
+        PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+        //Get peer2 key
+        KeyInfoNISTP256 caKey;
+        PermissionConfigurator& pcCA = busUsedAsCA.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pcCA.GetSigningPublicKey(caKey));
+
+        //------------ Claim self(managerBus), Peer1, and Peer2 --------
+        uint8_t managerDigest[Crypto_SHA256::DIGEST_SIZE];
+        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                                   manifest, manifestSize,
+                                                                   managerDigest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA,
+                                                                   manifest, manifestSize,
+                                                                   caDigest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+        //Create identityCert
+        const size_t certChainSize = 1;
+        IdentityCertificate identityCertChainMaster[certChainSize];
+
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                      "0",
+                                                                      managerGuid.ToString(),
+                                                                      managerKey.GetPublicKey(),
+                                                                      "ManagerAlias",
+                                                                      3600,
+                                                                      identityCertChainMaster[0],
+                                                                      managerDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+        /* set claimable */
+        managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+        EXPECT_EQ(ER_OK, sapWithManager.Claim(caKey,
+                                              managerGuid,
+                                              managerKey,
+                                              identityCertChainMaster, certChainSize,
+                                              manifest, manifestSize));
+
+
+        ECCPublicKey managerPublicKey;
+        GetAppPublicKey(managerBus, managerPublicKey);
+        ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
+
+        //Create peer1 identityCert
+        IdentityCertificate identityCertChainPeer1[1];
+
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                      "0",
+                                                                      caGuid.ToString(),
+                                                                      peer1Key.GetPublicKey(),
+                                                                      "Peer1Alias",
+                                                                      3600,
+                                                                      identityCertChainPeer1[0],
+                                                                      caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+        peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+        SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+        //Manager claims Peers
+        EXPECT_EQ(ER_OK, sapWithPeer1.Claim(caKey,
+                                            managerGuid,
+                                            managerKey,
+                                            identityCertChainPeer1, 1,
+                                            manifest, manifestSize));
+
+        //Create peer2 identityCert
+        IdentityCertificate identityCertChainPeer2[certChainSize];
+
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                      "0",
+                                                                      caGuid.ToString(),
+                                                                      peer2Key.GetPublicKey(),
+                                                                      "Peer2Alias",
+                                                                      3600,
+                                                                      identityCertChainPeer2[0],
+                                                                      caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+        peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+        EXPECT_EQ(ER_OK, sapWithPeer2.Claim(caKey,
+                                            managerGuid,
+                                            managerKey,
+                                            identityCertChainPeer2, certChainSize,
+                                            manifest, manifestSize));
+
+        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer2AuthListener));
+
+        //--------- InstallMembership certificates on self, peer1, and peer2
+
+        String membershipSerial = "1";
+        qcc::MembershipCertificate managerMembershipCertificate[1];
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+                                                                        managerBus,
+                                                                        managerBus.GetUniqueName(),
+                                                                        managerKey.GetPublicKey(),
+                                                                        managerGuid,
+                                                                        false,
+                                                                        3600,
+                                                                        managerMembershipCertificate[0]
+                                                                        ));
+
+        EXPECT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 1));
+
+        // Install Membership certificate
+        qcc::MembershipCertificate peer1MembershipCertificate[1];
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1",
+                                                                        managerBus,
+                                                                        peer1Bus.GetUniqueName(),
+                                                                        peer1Key.GetPublicKey(),
+                                                                        managerGuid,
+                                                                        false,
+                                                                        3600,
+                                                                        peer1MembershipCertificate[0]
+                                                                        ));
+
+        EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
+
+        qcc::MembershipCertificate peer2MembershipCertificate[1];
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+                                                                        managerBus,
+                                                                        peer2Bus.GetUniqueName(),
+                                                                        peer2Key.GetPublicKey(),
+                                                                        managerGuid,
+                                                                        false,
+                                                                        3600,
+                                                                        peer2MembershipCertificate[0]
+                                                                        ));
+        EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
+    }
+
+    virtual void TearDown() {
+        EXPECT_EQ(ER_OK, managerBus.Stop());
+        EXPECT_EQ(ER_OK, managerBus.Join());
+        EXPECT_EQ(ER_OK, peer1Bus.Stop());
+        EXPECT_EQ(ER_OK, peer1Bus.Join());
+        EXPECT_EQ(ER_OK, peer2Bus.Stop());
+        EXPECT_EQ(ER_OK, peer2Bus.Join());
+    }
+
+    /**
+     * Base for test case 6.
+     * Verify that under the default policy, authentication will succeed if the
+     * IC is signed by either the CA or the ASGA.
+     *
+     * Both Peers use default policy
+     */
+    void BaseAuthenticationTest6(BusAttachment& identityIssuer, QStatus expectedStatus, const char* reference)
+    {
+        //Get peer1 key
+        KeyInfoNISTP256 peer1Key;
+        PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+
+        //Create peer1 identityCert
+
+        // All Inclusive manifest
+        const size_t manifestSize = 1;
+        PermissionPolicy::Rule manifest[manifestSize];
+        manifest[0].SetObjPath("*");
+        manifest[0].SetInterfaceName("*");
+        {
+            PermissionPolicy::Rule::Member member[1];
+            member[0].Set("*",
+                          PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                          PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+            manifest[0].SetMembers(1, member);
+        }
+
+        GUID128 peer1Guid;
+
+        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA1,
+                                                                   manifest, manifestSize,
+                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+        IdentityCertificate identityCertChainPeer1[1];
+
+        PermissionConfigurator& pcCA = peer1Bus.GetPermissionConfigurator();
+        KeyInfoNISTP256 peer1PublicKey;
+        EXPECT_EQ(ER_OK, pcCA.GetSigningPublicKey(peer1PublicKey));
+
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(identityIssuer,
+                                                                      "1",
+                                                                      peer1Guid.ToString(),
+                                                                      peer1PublicKey.GetPublicKey(),
+                                                                      "Peer1Alias",
+                                                                      3600,
+                                                                      identityCertChainPeer1[0],
+                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+        SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+        EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, 1, manifest, manifestSize))
+            << "Failed to update Identity cert or manifest ";
+        uint32_t sessionId;
+        SessionOpts opts;
+        EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+
+        {
+            EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
+            EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer2AuthListener));
+            SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
+            EXPECT_EQ(expectedStatus, proxy.SecureConnection(true)) << reference << " expects status " << QCC_StatusText(expectedStatus);
+            SecurityApplicationProxy proxy2(peer2Bus, peer1Bus.GetUniqueName().c_str(), sessionId);
+            EXPECT_EQ(expectedStatus, proxy2.SecureConnection(true)) << reference << " expects status " << QCC_StatusText(expectedStatus);
+        }
+    }
+
+    BusAttachment managerBus;
+    BusAttachment peer1Bus;
+    BusAttachment peer2Bus;
+
+    BusAttachment busUsedAsCA;
+    BusAttachment busUsedAsCA1;
+    BusAttachment busUsedAsLivingRoom;
+    BusAttachment busUsedAsPeerC;
+
+    InMemoryKeyStoreListener managerKeyStoreListener;
+    InMemoryKeyStoreListener peer1KeyStoreListener;
+    InMemoryKeyStoreListener peer2KeyStoreListener;
+
+    InMemoryKeyStoreListener listener1;
+    InMemoryKeyStoreListener listener2;
+    InMemoryKeyStoreListener listener3;
+    InMemoryKeyStoreListener listener4;
+
+    SecurityAuthentication2AuthListener managerAuthListener;
+    SecurityAuthentication2AuthListener peer1AuthListener;
+    SecurityAuthentication2AuthListener peer2AuthListener;
+
+    SecurityAuthenticationTestSessionPortListener managerSessionPortListener;
+    SecurityAuthenticationTestSessionPortListener peer1SessionPortListener;
+    SecurityAuthenticationTestSessionPortListener peer2SessionPortListener;
+
+    SessionId managerToPeer1SessionId;
+    SessionId managerToPeer2SessionId;
+
+    SessionPort peer1SessionPort;
+    SessionPort peer2SessionPort;
+
+    GUID128 managerGuid;
+    GUID128 caGuid;
+    qcc::GUID128 livingRoomSGID;
+
+    const size_t manifestSize;
+    PermissionPolicy::Rule manifest[1];
+    uint8_t caDigest[Crypto_SHA256::DIGEST_SIZE];
+};
+
+/*
+ * Purpose:
+ * Verify that under the default policy, authentication will succeed if the IC
+ * is signed by either the CA or the ASGA.
+ *
+ * Setup:
+ * App. bus is claimed. The CA and ASGA public key are passed as arguments as a part of claim.
+ *
+ * (The app. bus has a default policy.)
+ *
+ * Case 1: A and app. bus  set up a ECDHE_ECDSA based session, IC of A is signed by CA.
+ * Case 1: A and app. bus  set up a ECDHE_ECDSA based session, IC of A is signed by ASGA.
+ *
+ * Verification:
+ * Cases 1-2: Secure sessions can be set up successfully.
+ *
+ */
+TEST_F(SecurityAuthenticationTest4, authenticate_test6_case1) {
+    BaseAuthenticationTest6(busUsedAsCA, ER_OK, "authenticate_test6_case1");
+}
+/*
+ * See authenticate_test6_case1 above for full test description
+ */
+TEST_F(SecurityAuthenticationTest4, authenticate_test6_case2) {
+    BaseAuthenticationTest6(managerBus, ER_OK, "authenticate_test6_case2");
 }
