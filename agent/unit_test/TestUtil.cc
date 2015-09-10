@@ -23,12 +23,11 @@
 
 #include <alljoyn/securitymgr/Util.h>
 
+#include "SQLStorageConfig.h"
+
 using namespace ajn;
 using namespace ajn::securitymgr;
 using namespace std;
-
-#define STORAGE_DEFAULT_PATH "/tmp/secmgr.db"
-#define STORAGE_DEFAULT_PATH_KEY "STORAGE_PATH"
 
 /** @file TestUtil.cc */
 
@@ -85,6 +84,21 @@ string ManifestUpdateToString(const ManifestUpdate* update)
     return result;
 }
 
+static void GetDefaultStorageFilePath(string& storageFilePath)
+{
+#if !defined(QCC_OS_GROUP_WINDOWS)
+    storageFilePath = "/tmp";
+#else
+    /* Same path is returned by qcc::GetHomeDir() too */
+    storageFilePath = Environ::GetAppEnviron()->Find("LOCALAPPDATA").c_str();
+    if (storageFilePath.empty()) {
+        storageFilePath = Environ::GetAppEnviron()->Find("USERPROFILE").c_str();
+    }
+#endif
+
+    storageFilePath += "/secmgr.db";
+}
+
 void TestApplicationListener::OnManifestUpdate(const ManifestUpdate* manifestUpdate)
 {
     cout << ManifestUpdateToString(manifestUpdate) << endl;
@@ -103,10 +117,13 @@ BasicTest::BasicTest() :
 
 void BasicTest::SetUp()
 {
-    string storage_path;
+    string storage_path = Environ::GetAppEnviron()->Find(STORAGE_FILEPATH_KEY).c_str();
 
-    storage_path = Environ::GetAppEnviron()->Find(STORAGE_DEFAULT_PATH_KEY, STORAGE_DEFAULT_PATH).c_str();
-    Environ::GetAppEnviron()->Add(STORAGE_DEFAULT_PATH_KEY, STORAGE_DEFAULT_PATH);
+    if (storage_path.empty()) {
+        GetDefaultStorageFilePath(storage_path);
+        assert(!storage_path.empty());
+        Environ::GetAppEnviron()->Add(STORAGE_FILEPATH_KEY, storage_path.c_str());
+    }
 
     remove(storage_path.c_str());
 
