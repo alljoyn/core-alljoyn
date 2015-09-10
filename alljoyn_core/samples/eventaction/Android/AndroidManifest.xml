@@ -16,8 +16,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.allseen.sample.eventaction"
-    android:versionCode="1"
-    android:versionName="00.00.01">
+    android:versionCode="15090000"
+    android:versionName="15.09.00">
 
     <uses-sdk android:minSdkVersion="16" />
 
@@ -27,8 +27,8 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_STATE"></uses-permission>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-	<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-	<uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application
         android:allowBackup="true"
@@ -49,7 +49,7 @@
         </activity>
 
          <service android:name=".BackgroundService"
-		  android:label="BackgroundService"></service>
+                  android:label="BackgroundService"></service>
     </application>
 
 </manifest>
