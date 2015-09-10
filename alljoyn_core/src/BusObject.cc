@@ -705,7 +705,6 @@ QStatus BusObject::Signal(const char* destination,
             }
         }
     } else if (sessionId != 0 && destination == NULL) {
-        BusAttachment::Internal::Session session;
         QStatus status = bus->GetInternal().GetSession(sessionId, session);
         if (status == ER_OK && !session.multipoint) {
             emissionParams.push_back(std::make_pair(sessionId, session.otherParticipants.begin()->c_str()));
