@@ -35,6 +35,9 @@
 
 namespace qcc {
 
+/**
+ * class for creating 128 bit GUIDs
+ */
 class GUID128 {
 
   public:

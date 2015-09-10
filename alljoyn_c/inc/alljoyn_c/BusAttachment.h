@@ -711,7 +711,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecurity(alljoyn_b
  *                              This is a space separated list of any of the following values: ALLJOYN_SRP_LOGON,
  *                              ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
  *
- * @param authLlistener         Passes password and other authentication related requests to the application.
+ * @param authListener          Passes password and other authentication related requests to the application.
  *
  * @param keyStoreFileName      Optional parameter to specify the filename of the default key store. The
  *                              default value is the applicationName parameter of alljoyn_busattachment_create().

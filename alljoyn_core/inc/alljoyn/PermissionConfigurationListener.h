@@ -24,6 +24,10 @@
 
 namespace ajn {
 
+/**
+ * Abstract base class implemented by AllJoyn users and called by AllJoyn to
+ * inform users of security permission related events.
+ */
 class PermissionConfigurationListener {
   public:
     /**

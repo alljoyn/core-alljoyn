@@ -367,6 +367,10 @@ class AuthListener {
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success) = 0;
 };
 
+/**
+ * AuthListener that provides the default operations for ECDHE authentication
+ * mechanisms.
+ */
 class DefaultECDHEAuthListener : public AuthListener {
 
   public:
@@ -411,20 +415,23 @@ class DefaultECDHEAuthListener : public AuthListener {
      *
      * This method allows to update the current set pre-shared secret (or set
      * when it is not yet defined) or clear it by providing a NULL array.
+     *
      * @param[in] psk the pre-shared secret or NULL.
      * @param[in] pskSize the size of the pre-shared secret.  It must be at
      *                    least 128 bits (pksSize >= 16) or 0 to clear the
-                          current set secret.
-     *
+     *                    current set secret.
+     * @return ER_OK on success
      */
     virtual QStatus SetPSK(const uint8_t* psk, size_t pskSize);
 
     /**
+     * @copydoc AuthListener::RequestCredentials
      * @see AuthListener::RequestCredentials
      */
     virtual bool RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials);
 
     /**
+     * @copydoc AuthListener::AuthenticationComplete
      * @see AuthListener::AuthenticationComplete
      */
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success);

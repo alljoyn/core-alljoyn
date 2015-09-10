@@ -28,6 +28,9 @@
 
 namespace qcc {
 
+/**
+ * Abstract base class for various containers for cryptographic signatures.
+ */
 class SigInfo {
 
   public:
@@ -100,6 +103,9 @@ class SigInfo {
     uint8_t algorithm;
 };
 
+/**
+ * A container for an ECDSA signature
+ */
 class SigInfoECC : public SigInfo {
 
   public:
@@ -118,7 +124,7 @@ class SigInfoECC : public SigInfo {
     }
 
     /**
-     * desstructor.
+     * destructor.
      */
     virtual ~SigInfoECC()
     {
