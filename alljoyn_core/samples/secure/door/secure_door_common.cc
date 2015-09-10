@@ -29,6 +29,50 @@ namespace sample {
 namespace secure {
 namespace door {
 
+void DoorCommonPCL::PolicyChanged()
+{
+    lock.Lock();
+    QStatus status;
+    PermissionConfigurator::ApplicationState appState;
+    if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState))) {
+        if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
+            // Upon a policy update, there's no guarantee that the connection among peers
+            // will remain secure, hence, it's vital to ask the bus attachment
+            // to secure the connection explicitly.
+            if (ER_OK != (status = ba.SecureConnectionAsync(nullptr, true))) {
+                fprintf(stderr, "Attempt to secure the connection - status (%s)\n",
+                        QCC_StatusText(status));
+            }
+            sem.Signal();
+        }
+    }
+    lock.Unlock();
+}
+
+bool DoorCommonPCL::WaitForClaimedState()
+{
+    lock.Lock();
+    QStatus status;
+    PermissionConfigurator::ApplicationState appState;
+    if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState)) &&
+        PermissionConfigurator::ApplicationState::CLAIMED == appState) {
+        printf("Already claimed !\n");
+        lock.Unlock();
+        return true;
+    }
+
+    printf("Waiting to be claimed...\n");
+    status = sem.Wait(lock);
+    if (ER_OK != status) {
+        lock.Unlock();
+        return false;
+    }
+
+    printf("Claimed !\n");
+    lock.Unlock();
+    return true;
+}
+
 Door::Door(BusAttachment* ba) :
     BusObject(DOOR_OBJECT_PATH), autoSignal(false), open(false)
 {
@@ -193,7 +237,7 @@ QStatus DoorCommon::AnnounceAbout()
     return status;
 }
 
-QStatus DoorCommon::Init(bool provider)
+QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
 {
     QStatus status = CreateInterface();
 
@@ -214,7 +258,7 @@ QStatus DoorCommon::Init(bool provider)
     GUID128 psk;
     status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK,
                                     provider ? new DefaultECDHEAuthListener(
-                                        psk.GetBytes(), GUID128::SIZE) : new DefaultECDHEAuthListener());
+                                        psk.GetBytes(), GUID128::SIZE) : new DefaultECDHEAuthListener(), nullptr, false, pcl);
     if (status != ER_OK) {
         return status;
     }
