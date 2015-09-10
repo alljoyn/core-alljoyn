@@ -1189,9 +1189,9 @@ TEST_F(SecSignalTest, SendSignalToAllHostedSession)
     shared_ptr<ProxyBusObject> proxies[NR_OF_CONSUMERS];
 
     for (size_t i = 0; i < NR_OF_CONSUMERS; i++) {
-        String name = "SendSignalToAllHostedSessionConsumer";
-        name += i;
-        consumers[i] = shared_ptr<TestSecureApplication>(new TestSecureApplication(name.c_str()));
+        char name[50];
+        snprintf(name, sizeof(name), "SSTAHSC%d", (int) i);
+        consumers[i] = shared_ptr<TestSecureApplication>(new TestSecureApplication(name));
         ASSERT_EQ(ER_OK, InitConsumer(consumers[i], proxies[i]));
         ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, i + 2));
     }
