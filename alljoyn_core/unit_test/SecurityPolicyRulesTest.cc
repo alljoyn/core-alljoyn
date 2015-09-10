@@ -163,6 +163,13 @@ class PolicyRulesTestBusObject : public BusObject {
     int32_t prop2;
 };
 
+static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+{
+    KeyInfoNISTP256 keyInfo;
+    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    publicKey = *keyInfo.GetPublicKey();
+}
+
 class SecurityPolicyRulesTest : public testing::Test {
   public:
     SecurityPolicyRulesTest() :
@@ -311,7 +318,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         }
 
         ECCPublicKey managerPublicKey;
-        sapWithManager.GetEccPublicKey(managerPublicKey);
+        GetAppPublicKey(managerBus, managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[managerBus.GetUniqueName()]);
@@ -378,9 +385,6 @@ class SecurityPolicyRulesTest : public testing::Test {
 
         //Change the managerBus so it only uses ECDHE_ECDSA
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-
-        PermissionPolicy defaultPolicy;
-        EXPECT_EQ(ER_OK, sapWithManager.GetDefaultPolicy(defaultPolicy));
 
         String membershipSerial = "1";
         qcc::MembershipCertificate managerMembershipCertificate[1];
@@ -4335,7 +4339,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
-    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+    GetAppPublicKey(peer2Bus, peer2PublicKey);
 
     peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
     peer2Cert.SetAlias("peer2-cert-alias");
@@ -4595,7 +4599,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
-    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+    GetAppPublicKey(peer2Bus, peer2PublicKey);
 
     peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
     peer2Cert.SetAlias("peer2-cert-alias");

@@ -164,6 +164,13 @@ class SecurityDefaultPolicyTest : public testing::Test {
     {
     }
 
+    void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+    {
+        KeyInfoNISTP256 keyInfo;
+        bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+        publicKey = *keyInfo.GetPublicKey();
+    }
+
     virtual void SetUp() {
         EXPECT_EQ(ER_OK, managerBus.Start());
         EXPECT_EQ(ER_OK, managerBus.Connect());
@@ -301,7 +308,7 @@ class SecurityDefaultPolicyTest : public testing::Test {
         }
 
         ECCPublicKey managerPublicKey;
-        sapWithManager.GetEccPublicKey(managerPublicKey);
+        GetAppPublicKey(managerBus, managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[managerBus.GetUniqueName()]);

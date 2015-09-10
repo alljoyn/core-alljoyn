@@ -325,6 +325,13 @@ class ArabicTestBusObject : public BusObject {
     int32_t mini;
 };
 
+static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+{
+    KeyInfoNISTP256 keyInfo;
+    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    publicKey = *keyInfo.GetPublicKey();
+}
+
 class SecurityWildCardPolicyRulesTest : public testing::Test {
   public:
     SecurityWildCardPolicyRulesTest() :
@@ -538,7 +545,7 @@ void SecurityWildCardPolicyRulesTest::SetUp()
     }
 
     ECCPublicKey managerPublicKey;
-    sapWithManager.GetEccPublicKey(managerPublicKey);
+    GetAppPublicKey(managerBus, managerPublicKey);
     ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
     ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[managerBus.GetUniqueName()]);
@@ -605,9 +612,6 @@ void SecurityWildCardPolicyRulesTest::SetUp()
 
     //Change the managerBus so it only uses ECDHE_ECDSA
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-
-    PermissionPolicy defaultPolicy;
-    EXPECT_EQ(ER_OK, sapWithManager.GetDefaultPolicy(defaultPolicy));
 
     String membershipSerial = "1";
     qcc::MembershipCertificate managerMembershipCertificate[1];

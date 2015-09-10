@@ -614,42 +614,48 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
     if (!mbrName) {
         return false;  /* not handled */
     }
-    if (strncmp(mbrName, "Version", 7) == 0) {
-        authorized = true;
-        return true;  /* handled */
-    }
 
     if (strcmp(iName, org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName) == 0) {
+        if (strncmp(mbrName, "Version", 7) == 0) {
+            authorized = true;
+            return true;  /* handled */
+        }
         if (strncmp(mbrName, "Claim", 5) == 0) {
             /* only allowed when there is no trust anchor */
             authorized = (!permissionMgmtObj->HasTrustAnchors());
             return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
-        if (
-            (strncmp(mbrName, "Identity", 8) == 0) ||
-            (strncmp(mbrName, "Manifest", 8) == 0) ||
-            (strncmp(mbrName, "IdentityCertificateId", 8) == 0) ||
-            (strncmp(mbrName, "DefaultPolicy", 13) == 0)
-            ) {
-            authorized = true;
-            return true;  /* handled */
-        } else if (!permissionMgmtObj->HasTrustAnchors()) {
+        if (!permissionMgmtObj->HasTrustAnchors()) {
+            /* not claimed */
             authorized = false;
+            return true;  /* handled */
+        }
+        if (strncmp(mbrName, "Version", 7) == 0) {
+            authorized = true;
             return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
         if (
-            (strncmp(mbrName, "ApplicationState", 16) == 0) ||
-            (strncmp(mbrName, "ManifestTemplateDigest", 22) == 0) ||
-            (strncmp(mbrName, "EccPublicKey", 12) == 0) ||
-            (strncmp(mbrName, "ManufacturerCertificate", 23) == 0) ||
-            (strncmp(mbrName, "ManifestTemplate", 16) == 0) ||
-            (strncmp(mbrName, "ClaimCapabilities", 17) == 0) ||
-            (strncmp(mbrName, "ClaimCapabilityAdditionalInfo", 29) == 0)
+            (strncmp(mbrName, "Version", 7) == 0) ||
+            (strncmp(mbrName, "ApplicationState", 16) == 0)
             ) {
             authorized = true;
             return true;  /* handled */
+        }
+        if (!permissionMgmtObj->HasTrustAnchors()) {
+            /* not claimed */
+            if (
+                (strncmp(mbrName, "ManifestTemplateDigest", 22) == 0) ||
+                (strncmp(mbrName, "EccPublicKey", 12) == 0) ||
+                (strncmp(mbrName, "ManufacturerCertificate", 23) == 0) ||
+                (strncmp(mbrName, "ManifestTemplate", 16) == 0) ||
+                (strncmp(mbrName, "ClaimCapabilities", 17) == 0) ||
+                (strncmp(mbrName, "ClaimCapabilityAdditionalInfo", 29) == 0)
+                ) {
+                authorized = true;
+                return true;  /* handled */
+            }
         }
     }
     return false;  /* not handled */

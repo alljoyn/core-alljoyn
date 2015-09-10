@@ -38,9 +38,9 @@ class TestSecurityManager :
 
     QStatus Claim(BusAttachment& peerBus, const PermissionPolicy::Acl& manifest);
 
-    QStatus UpdateIdentity(const BusAttachment& peerBus, const PermissionPolicy::Acl& manifest);
+    QStatus UpdateIdentity(BusAttachment& peerBus, const PermissionPolicy::Acl& manifest);
 
-    QStatus InstallMembership(const BusAttachment& peerBus, const GUID128& group);
+    QStatus InstallMembership(BusAttachment& peerBus, const GUID128& group);
 
     QStatus UpdatePolicy(const BusAttachment& peerBus, const PermissionPolicy& policy);
 
