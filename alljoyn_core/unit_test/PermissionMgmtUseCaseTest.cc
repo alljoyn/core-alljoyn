@@ -1089,6 +1089,13 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
     }
 
+    void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+    {
+        KeyInfoNISTP256 keyInfo;
+        bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+        publicKey = *keyInfo.GetPublicKey();
+    }
+
     QStatus VerifyIdentity(BusAttachment& bus, BusAttachment& targetBus, IdentityCertificate* identityCertChain, size_t certChainCount)
     {
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
@@ -1163,6 +1170,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, GenerateManifestTemplate(&rules, &count));
         PermissionConfigurator& pc = bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pc.SetPermissionManifest(rules, count));
+        delete [] rules;
     }
 
     QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
@@ -3043,6 +3051,55 @@ TEST_F(PermissionMgmtUseCaseTest, ValidCertChainStructure)
 
 }
 
+TEST_F(PermissionMgmtUseCaseTest, ClaimUnenabledAppShouldFail)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    GenerateCAKeys();
+    IdentityCertificate identityCert;
+    PermissionPolicy::Rule* manifest = NULL;
+    size_t manifestSize = 0;
+    GenerateAllowAllManifest(&manifest, &manifestSize);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    /* retrieve public key from to-be-claimed app to create identity cert */
+    ECCPublicKey claimedPubKey;
+    GetAppPublicKey(serviceBus, claimedPubKey);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+
+    IdentityCertificate signingCert;
+    ECCPublicKey consumerPubKey;
+    GetAppPublicKey(consumerBus, consumerPubKey);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "1011", "signer", &consumerPubKey, "consumer alias", 3600, signingCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+
+    IdentityCertificate certChain[2];
+    certChain[0] = identityCert;
+    certChain[1] = signingCert;
+    EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
+}
+
+TEST_F(PermissionMgmtUseCaseTest, ClaimClaimableAppWithoutManifestTemplate)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    GenerateCAKeys();
+    IdentityCertificate identityCert;
+    PermissionPolicy::Rule* manifest = NULL;
+    size_t manifestSize = 0;
+    GenerateAllowAllManifest(&manifest, &manifestSize);
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    /* retrieve public key from to-be-claimed app to create identity cert */
+    ECCPublicKey claimedPubKey;
+    GetAppPublicKey(serviceBus, claimedPubKey);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+
+    EXPECT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE)) << "  SetApplicationState failed.";
+    EXPECT_EQ(ER_OK, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, &identityCert, 1, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
+}
+
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithInvalidCertChain)
 {
     EnableSecurity("ALLJOYN_ECDHE_NULL");
@@ -3065,12 +3122,15 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithInvalidCertChain)
     EXPECT_EQ(ER_OK, consumerProxy.GetEccPublicKey(consumerPubKey)) << " Fail to retrieve to-be-claimed public key.";
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "1011", "signer", &consumerPubKey, "consumer alias", 3600, signingCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
 
+    /* app is claimable after installing manifest template or explicitly set to be claimable */
+    SetManifestTemplate(serviceBus);
     IdentityCertificate certChain[2];
     certChain[0] = identityCert;
     certChain[1] = signingCert;
     EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
     /* do a second claim and expect the same error code returned */
     EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
@@ -3125,6 +3185,8 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
     EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(remoteControlBus, adminBus, "303030", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain, certChainCount, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed";
 
+    /* app is claimable after installing manifest template or explicitly set to be claimable */
+    SetManifestTemplate(consumerBus);
     Crypto_ECC ecc;
     ecc.GenerateDSAKeyPair();
     KeyInfoNISTP256 keyInfo;
@@ -3153,8 +3215,11 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
     certChainCount = 1;
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
 
+    /* app is claimable after installing manifest template or explicitly set to be claimable */
+    SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
     EXPECT_EQ(ER_BAD_ARG_1, saProxy.Claim(emptyKeyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
@@ -3176,9 +3241,12 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
     certChainCount = 1;
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
 
+    /* app is claimable after installing manifest template or explicitly set to be claimable */
+    SetManifestTemplate(adminBus);
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
     EXPECT_EQ(ER_BAD_ARG_2, saProxy.Claim(keyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
@@ -3200,10 +3268,13 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
     certChainCount = 1;
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
 
+    /* app is claimable after installing manifest template or explicitly set to be claimable */
+    SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
     EXPECT_EQ(ER_BAD_ARG_5, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, keyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
@@ -3225,8 +3296,11 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
     certChainCount = 1;
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
 
+    /* app is claimable after installing manifest template or explicitly set to be claimable */
+    SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
     EXPECT_EQ(ER_BAD_ARG_4, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
+    delete [] manifest;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)

@@ -222,17 +222,17 @@ class SecurityDefaultPolicyTest : public testing::Test {
         SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
         PermissionConfigurator::ApplicationState applicationStateManager;
         EXPECT_EQ(ER_OK, sapWithManager.GetApplicationState(applicationStateManager));
-        EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStateManager);
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStateManager);
 
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         PermissionConfigurator::ApplicationState applicationStatePeer1;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
-        EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
 
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         PermissionConfigurator::ApplicationState applicationStatePeer2;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetApplicationState(applicationStatePeer2));
-        EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer2);
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer2);
 
         managerBus.RegisterApplicationStateListener(appStateListener);
         managerBus.AddApplicationStateRule();
@@ -285,6 +285,8 @@ class SecurityDefaultPolicyTest : public testing::Test {
                                                                       digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
         SecurityApplicationProxy sapWithManagerBus(managerBus, managerBus.GetUniqueName().c_str());
+        /* set claimable */
+        managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
         EXPECT_EQ(ER_OK, sapWithManagerBus.Claim(managerKey,
                                                  managerGuid,
                                                  managerKey,
@@ -318,6 +320,8 @@ class SecurityDefaultPolicyTest : public testing::Test {
                                                                       digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
         //Manager claims Peers
+        /* set claimable */
+        peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
         EXPECT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
@@ -345,6 +349,8 @@ class SecurityDefaultPolicyTest : public testing::Test {
                                                                       3600,
                                                                       identityCertChainPeer2[0],
                                                                       digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+        /* set claimable */
+        peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
         EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                             managerGuid,
                                             managerKey,

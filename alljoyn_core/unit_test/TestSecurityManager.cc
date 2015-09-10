@@ -183,7 +183,7 @@ void TestSecurityManager::AddAdminAcl(const PermissionPolicy& in,
     out.SetAcls(acls.size(), &acls[0]);
 }
 
-QStatus TestSecurityManager::Claim(const BusAttachment& peerBus, const PermissionPolicy::Acl& manifest)
+QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolicy::Acl& manifest)
 {
     QStatus status = ER_FAIL;
 
@@ -195,6 +195,8 @@ QStatus TestSecurityManager::Claim(const BusAttachment& peerBus, const Permissio
         return status;
     }
 
+    /* set claimable */
+    peerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
     status = bus.JoinSession(peerBusName, ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
                              this, sessionId, opts);
     if (ER_OK != status) {
