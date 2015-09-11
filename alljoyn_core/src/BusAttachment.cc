@@ -1635,16 +1635,14 @@ void BusAttachment::UnregisterBusListener(BusListener& listener)
     }
 }
 
-void BusAttachment::GetConnectedPeers(set<const char*>& names)
+void BusAttachment::Internal::GetConnectedPeers(set<string>& names)
 {
-    for (size_t i = 0; i < ArraySize(busInternal->sessionsLock); i++) {
-        busInternal->sessionsLock[i].Lock();
-        for (auto sessionMember: busInternal->sessions[i]) {
-            for (auto name: sessionMember.second.otherParticipants) {
-                names.insert(name.c_str());
-            }
+    for (size_t i = 0; i < ArraySize(busInternal->sessions); i++) {
+        sessionsLock[i].Lock();
+        for (auto sessionMember: sessions[i]) {
+            names.insert(sessionMember.second.otherParticipants.begin(), sessionMember.second.otherParticipants.end());
         }
-        busInternal->sessionsLock[i].Unlock();
+        sessionsLock[i].Unlock();
     }
 }
 
@@ -1662,18 +1660,19 @@ QStatus BusAttachment::SecureConnectionInternal(const char* name, bool forceAuth
         return ER_BUS_ENDPOINT_CLOSING;
     } else {
         AllJoynPeerObj* peerObj = localEndpoint->GetPeerObj();
-        set<const char*> names;
+        set<string> names;
         if (name) {
             names.insert(name);
         } else {
-            GetConnectedPeers(names);
+            GetInternal().GetConnectedPeers(names);
         }
 
         for (auto name: names) {
+            const char* cname = name.c_str();
             if (forceAuth) {
-                peerObj->ForceAuthentication(name);
+                peerObj->ForceAuthentication(cname);
             }
-            QStatus status = async ? peerObj->AuthenticatePeerAsync(name) : peerObj->AuthenticatePeer(MESSAGE_METHOD_CALL, name);
+            QStatus status = async ? peerObj->AuthenticatePeerAsync(cname) : peerObj->AuthenticatePeer(MESSAGE_METHOD_CALL, cname);
             if (status != ER_OK) {
                 return status;
             }

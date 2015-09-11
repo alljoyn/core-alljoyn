@@ -2055,12 +2055,6 @@ class BusAttachment : public MessageReceiver {
     void UnregisterSignalHandlers();
 
     /**
-     * Loops over all sessions this BusAttachment is involved in and puts the
-     * bus names in the provided set (one entry per peer).
-     */
-    void GetConnectedPeers(std::set<const char*>& busNames);
-
-    /**
      * Common logic for securing a connection. Called by SecureConnection and SecureConnectionAsync.
      */
     QStatus SecureConnectionInternal(const char* name, bool forceAuth, bool async);
