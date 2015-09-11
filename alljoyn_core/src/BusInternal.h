@@ -392,6 +392,14 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     }
 
     /**
+     * Retrieve bus names for all peers that are in session (either hosted
+     * or joined) with this BusAttachment.
+     *
+     * @param[out] busNames a reference to a set<string> to be filled in
+     */
+    void GetConnectedPeers(std::set<std::string>& busNames);
+
+    /**
      * Indicate whether bus is currently connected.
      *
      * Messages can only be sent or received when the bus is connected.
