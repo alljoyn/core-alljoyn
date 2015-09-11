@@ -1532,3 +1532,46 @@ TEST_F(CertificateECCTest, CreateIdentityCertificateChain)
     printf("%s\n", cert2.GetPEM().c_str());
     printf("%s\n", cert1.GetPEM().c_str());
 }
+
+/**
+ * Test Getting and setting of AKI
+ */
+TEST_F(CertificateECCTest, TestGetSetAKI)
+{
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 24 * 3600;
+
+    qcc::GUID128 subject0;
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    CertificateX509 cert0;
+    CertificateX509 cert1;
+    qcc::String der;
+
+    /* self signed cert */
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject0, "organization", ecc0.GetDSAPrivateKey(), ecc0.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+    qcc::String aki("abcdeef");
+    cert0.SetAuthorityKeyId(aki);
+    ASSERT_EQ(aki, cert0.GetAuthorityKeyId());
+
+    ASSERT_EQ(ER_OK, cert0.Sign(ecc0.GetDSAPrivateKey())) << " Resigning certificate failed.";
+    ASSERT_EQ(ER_OK, cert0.EncodeCertificateDER(der)) << " Encode certificate failed.";
+    ASSERT_EQ(ER_OK, cert1.DecodeCertificateDER(der)) << " Decode certificate failed.";
+    ASSERT_EQ(aki, cert1.GetAuthorityKeyId()) << " AKI mismatch.";
+
+    //Check for for strings with 0 char
+    char charWithNull[] = { 'a', 'b', 0, 'c', 'd' };
+    ASSERT_EQ((size_t)2, strlen(charWithNull)); // sanity check, make sure strlen is 2
+    ASSERT_NE(strlen(charWithNull), sizeof(charWithNull)); // sanity check: strlen is not same as the size of the array.
+    qcc::String akiWithNull(charWithNull, sizeof(charWithNull));
+    cert0.SetAuthorityKeyId(akiWithNull);
+    ASSERT_EQ(sizeof(charWithNull), cert0.GetAuthorityKeyId().size());
+    qcc::String derWithNull;
+    ASSERT_EQ(ER_OK, cert0.Sign(ecc0.GetDSAPrivateKey())) << " Resigning certificate failed.";
+    ASSERT_EQ(ER_OK, cert0.EncodeCertificateDER(derWithNull)) << " Encode certificate failed.";
+    CertificateX509 cert2;
+    ASSERT_EQ(ER_OK, cert2.DecodeCertificateDER(derWithNull)) << " Decode certificate failed.";
+    ASSERT_EQ(sizeof(charWithNull), cert2.GetAuthorityKeyId().size()) << " AKI mismatch.";
+    ASSERT_EQ(akiWithNull, cert2.GetAuthorityKeyId()) << " AKI mismatch.";
+}
