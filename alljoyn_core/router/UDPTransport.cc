@@ -7597,9 +7597,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
          */
         if (connValid == false) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Provided connection no longer valid"));
-            m_ardpLock.Lock();
-            ARDP_ReleaseConnection(ardpHandle, conn);
-            m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
