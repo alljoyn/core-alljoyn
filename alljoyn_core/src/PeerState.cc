@@ -120,6 +120,11 @@ bool _PeerState::IsValidSerial(uint32_t serial, bool secure, bool unreliable)
 
 }
 
+bool _PeerState::IsConversationHashInitialized()
+{
+    return hashUtil != NULL;
+}
+
 void _PeerState::InitializeConversationHash()
 {
     delete hashUtil;
