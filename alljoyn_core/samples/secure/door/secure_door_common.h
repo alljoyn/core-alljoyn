@@ -18,6 +18,7 @@
 #define ALLJOYN_SAMPLE_SECURE_DOOR_COMMON_H_
 
 #include <string>
+#include <cstdio>
 
 #include <qcc/GUID.h>
 
