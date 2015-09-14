@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -158,8 +158,11 @@ QStatus Manifest::GetDigest(uint8_t* digest) const
     }
 
     delete[] rules;
+    rules = nullptr;
     delete msg;
+    msg = nullptr;
     delete marshaller;
+    marshaller = nullptr;
 
     return status;
 }
@@ -188,7 +191,9 @@ QStatus Manifest::SetFromByteArray(const uint8_t* manifestByteArray, const size_
     }
 
     delete msg;
+    msg = nullptr;
     delete marshaller;
+    marshaller = nullptr;
 
     return status;
 }
@@ -242,7 +247,9 @@ Exit:
     delete[]buf;
     buf = nullptr;
     delete msg;
+    msg = nullptr;
     delete marshaller;
+    marshaller = nullptr;
 
     return status;
 }

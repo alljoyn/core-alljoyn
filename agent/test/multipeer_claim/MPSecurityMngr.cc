@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -124,7 +124,17 @@ void MPSecurityMngr::CheckApplicationUpdated(const OnlineApplication& app)
 {
     cout << "Secmgr[DoCheckApplicationUpdated]: checking application '" << app.busName << "'" << endl;
     vector<MembershipSummary> summaries;
-    QStatus status = pomngr->GetMembershipSummaries(app, summaries);
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+
+    QStatus status = pomngr->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        cerr << "Secmgr[DoCheckApplicationUpdated]: Failed to connect to application" << app.busName << ". Got " <<
+            status << endl;
+        errorFound = true;
+        return;
+    }
+
+    status = mngdProxy.GetMembershipSummaries(summaries);
     if (ER_OK != status) {
         cerr << "Secmgr[DoCheckApplicationUpdated]: Failed to get membership summaries " << app.busName << ". Got " <<
             status << endl;
@@ -139,7 +149,7 @@ void MPSecurityMngr::CheckApplicationUpdated(const OnlineApplication& app)
         return;
     }
     uint32_t version = 0;
-    status = pomngr->GetPolicyVersion(app, version);
+    status = mngdProxy.GetPolicyVersion(version);
     if (ER_OK != status) {
         cerr << "Secmgr[DoCheckApplicationUpdated]: Failed to get policy version " << app.busName << ". Got " <<
             status << endl;

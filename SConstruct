@@ -1,4 +1,4 @@
-# Copyright (c) AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -13,8 +13,18 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
 import os
+import sys
 
-env = SConscript('../../core/alljoyn/build_core/SConscript')
+REL_AJ_SCL_SRC_DIR = os.getenv('AJ_SCL_SRC_DIR', '../alljoyn')
+
+AJ_SCL_SRC_DIR = os.path.abspath(REL_AJ_SCL_SRC_DIR)
+
+if not os.path.exists(AJ_SCL_SRC_DIR):
+        print('AJ_SCL_SRC_DIR \'' + AJ_SCL_SRC_DIR +'\' does not exist. Please define AJ_SCL_SRC_DIR.')
+        sys.exit()
+
+env = SConscript(AJ_SCL_SRC_DIR + '/build_core/SConscript')
+env['AJ_SCL_SRC_DIR'] = AJ_SCL_SRC_DIR
 
 vars = Variables()
 vars.Add('BINDINGS', 'Bindings to build (comma separated list): cpp', 'cpp')

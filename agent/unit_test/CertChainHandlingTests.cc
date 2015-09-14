@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -112,22 +112,38 @@ class CertChainAgentStorageWrapper :
         AJNCa tmpCa;
         tmpCa.Init("tmpCA");
         ECCPrivateKey privateKey;
-        ECCPublicKey publicKey;
+        ECCPublicKey rootKey;
+        Crypto_ECC ecc;
+        ecc.GenerateDHKeyPair();
         tmpCa.GetDSAPrivateKey(privateKey);
-        tmpCa.GetDSAPublicKey(publicKey);
+        tmpCa.GetDSAPublicKey(rootKey);
         MembershipCertificate cert;
         cert.SetCA(false);
         cert.SetSerial((const uint8_t*)serial, strlen(serial));
         CertificateUtil::SetValityPeriod(36000, cert);
-        cert.SetSubjectPublicKey(&publicKey);
+        cert.SetSubjectPublicKey(ecc.GetDHPublicKey());
         GUID128 group(serial[0]);
         cert.SetGuild(group);
+        qcc::String rootkAki;
         qcc::String aki;
-        CertificateX509::GenerateAuthorityKeyId(&publicKey, aki);
-        cert.SetIssuerCN((const uint8_t*)aki.data(), aki.size());
-        cert.SetSubjectCN((const uint8_t*)aki.data(), aki.size());
-        cert.SignAndGenerateAuthorityKeyId(&privateKey, &publicKey);
+
+        CertificateX509::GenerateAuthorityKeyId(ecc.GetDHPublicKey(), aki);
+        CertificateX509::GenerateAuthorityKeyId(&rootKey, rootkAki);
+        cert.SetIssuerCN((const uint8_t*)rootkAki.data(), rootkAki.size());
+        cert.SetSubjectCN((const uint8_t*)rootkAki.data(), rootkAki.size());
+        EXPECT_EQ(ER_OK, cert.SignAndGenerateAuthorityKeyId(&privateKey, &rootKey));
         chain.push_back(cert);
+
+        MembershipCertificate rootCert;
+        rootCert.SetCA(true);
+        rootCert.SetSerial((const uint8_t*)serial, strlen(serial));
+        CertificateUtil::SetValityPeriod(36000, rootCert);
+        rootCert.SetGuild(group);
+        rootCert.SetSubjectPublicKey(&rootKey);
+        rootCert.SetIssuerCN((const uint8_t*)rootkAki.data(), rootkAki.size());
+        rootCert.SetSubjectCN((const uint8_t*)rootkAki.data(), rootkAki.size());
+        EXPECT_EQ(ER_OK, rootCert.SignAndGenerateAuthorityKeyId(&privateKey, &rootKey));
+        chain.push_back(rootCert);
         tmpCa.Reset();
     }
 
@@ -209,7 +225,7 @@ class CertChainHandlingTests :
     void CheckMembershipSummaries(bool& failure, const char* function, int line)
     {
         vector<MembershipSummary> summaries;
-        ASSERT_EQ(ER_OK, proxyObjectManager->GetMembershipSummaries(lastAppInfo, summaries))
+        ASSERT_EQ(ER_OK, GetMembershipSummaries(lastAppInfo, summaries))
             << "failure from " << function << "@" << line;
         vector<MembershipCertificateChain> chains;
         ASSERT_EQ(ER_OK,
@@ -251,7 +267,7 @@ class CertChainHandlingTests :
 
 TEST_F(CertChainHandlingTests, ClaimChain) {
     IdentityCertificateChain singleIdCertChain;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetIdentity(lastAppInfo, singleIdCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, singleIdCertChain));
     CHECK_IDENTITY_CHAIN(singleIdCertChain);
     //Reset the application as it is already claimed.
     ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
@@ -262,7 +278,7 @@ TEST_F(CertChainHandlingTests, ClaimChain) {
     ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     IdentityCertificateChain idCertChain;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetIdentity(lastAppInfo, idCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, idCertChain));
     ASSERT_EQ((size_t)2, idCertChain.size());
     CHECK_IDENTITY_CHAIN(idCertChain);
 }
@@ -281,7 +297,7 @@ TEST_F(CertChainHandlingTests, InstallMembershipChain) {
     ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, groupInfo));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     vector<MembershipSummary> summaries;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetMembershipSummaries(lastAppInfo, summaries));
+    ASSERT_EQ(ER_OK, GetMembershipSummaries(lastAppInfo, summaries));
     ASSERT_EQ((size_t)1, summaries.size());
     CHECK_MEMBERSHIP_SUMMARIES();
     GroupInfo group2;
@@ -317,14 +333,14 @@ TEST_F(CertChainHandlingTests, InstallMembershipChain) {
  **/
 TEST_F(CertChainHandlingTests, UpdateIdentityChains) {
     IdentityCertificateChain singleIdCertChain;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetIdentity(lastAppInfo, singleIdCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, singleIdCertChain));
     CHECK_IDENTITY_CHAIN(singleIdCertChain);
     wrappedCa->addIdRootCert = true;
 
     ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, idInfo, aa.lastManifest));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     IdentityCertificateChain idCertChain;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetIdentity(lastAppInfo, idCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, idCertChain));
     ASSERT_EQ((size_t)2, idCertChain.size());
     CHECK_IDENTITY_CHAIN(idCertChain);
 }
@@ -341,7 +357,7 @@ TEST_F(CertChainHandlingTests, RegisterAgent) {
     agent.busName = ba->GetUniqueName().c_str();
 
     IdentityCertificateChain idChain;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetIdentity(agent, idChain));
+    ASSERT_EQ(ER_OK, GetIdentity(agent, idChain));
     ASSERT_EQ(wrappedCa->agentIdChain.size(), idChain.size());
     ASSERT_EQ((size_t)2, idChain.size()); //extra check to make sure the test passed the full chain.
     for (size_t i = 0; i < idChain.size(); i++) {
@@ -353,7 +369,7 @@ TEST_F(CertChainHandlingTests, RegisterAgent) {
     }
 
     vector<MembershipSummary> summaries;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetMembershipSummaries(agent, summaries));
+    ASSERT_EQ(ER_OK, GetMembershipSummaries(agent, summaries));
     ASSERT_EQ(wrappedCa->agentMembershipCertificates.size(), summaries.size());
     ASSERT_EQ((size_t)6, summaries.size()); //extra check to make sure the test passed the extra chains.
     for (size_t i = 0; i < wrappedCa->agentMembershipCertificates.size(); i++) {

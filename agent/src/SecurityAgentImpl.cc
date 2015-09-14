@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -166,11 +166,17 @@ QStatus SecurityAgentImpl::ClaimSelf()
     string ownBusName = busAttachment->GetUniqueName().c_str();
     OnlineApplication ownAppInfo;
     ownAppInfo.busName = ownBusName;
-    {
+    {   // Open new scope to shorten life-time of local variables.
         GUID128 psk;
         DefaultECDHEAuthListener el(psk.GetBytes(), GUID128::SIZE);
-        status = proxyObjectManager->Claim(ownAppInfo, publicKeyInfo,
-                                           adminGroup, idCerts, mf, ProxyObjectManager::ECDHE_PSK, el);
+        ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
+        status = proxyObjectManager->GetProxyObject(me, ProxyObjectManager::ECDHE_PSK, &el);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to connect to self"));
+            return status;
+        }
+
+        status = me.Claim(publicKeyInfo, adminGroup, idCerts, mf);
     }
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to Claim"));
@@ -185,6 +191,7 @@ QStatus SecurityAgentImpl::ClaimSelf()
     pKey.SetGUID(GUID128("F5CB9E723D7D4F1CFF985F4DD0D5E388"));
     KeyBlob pKeyBlob((uint8_t*)pByteArray, pSize, KeyBlob::GENERIC);
     delete[] pByteArray;
+    pByteArray = nullptr;
     status = ca.StoreKey(pKey, pKeyBlob);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to store policy"));
@@ -192,6 +199,19 @@ QStatus SecurityAgentImpl::ClaimSelf()
     }
 
     // Store membership certificate chains
+    KeyStore::Key mHead;
+    // Membership certificates are associated with one very specific keystore entry
+    // We create this entry and link all leaf membership certificates to it
+    mHead.SetGUID(GUID128("42B0C7F35695A3220A46B3938771E965")); //Hard coded key
+    KeyBlob mHeaderBlob;
+    uint8_t mNumEntries = 1;
+    mHeaderBlob.Set(&mNumEntries, 1, KeyBlob::GENERIC);
+    status = ca.StoreKey(mHead, mHeaderBlob);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to store membership header"));
+        return status;
+    }
+
     vector<MembershipCertificateChain>::iterator chains;
 
     for (chains = memberships.begin(); chains != memberships.end(); ++chains) {
@@ -202,21 +222,13 @@ QStatus SecurityAgentImpl::ClaimSelf()
         mCert->EncodeCertificateDER(der);
         KeyBlob mKeyBlob((const uint8_t*)der.data(), der.size(), KeyBlob::GENERIC);
         mKeyBlob.SetTag(String((const char*)mCert->GetSerial(), mCert->GetSerialLen()));
-        KeyStore::Key mHead;
-        mHead.SetGUID(GUID128("42B0C7F35695A3220A46B3938771E965"));
-        KeyBlob mHeaderBlob;
-        uint8_t mNumEntries = 1;
-        mHeaderBlob.Set(&mNumEntries, 1, KeyBlob::GENERIC);
-        status = ca.StoreKey(mHead, mHeaderBlob);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to store membership header"));
-            return status;
-        }
+        // The leaf certificate is linked to the membership entry.
         status = ca.AddAssociatedKey(mHead, mKey, mKeyBlob);
         if (ER_OK != status) {
             QCC_LogError(status, ("Failed to store membership certificate"));
             return status;
         }
+        //All other elements in the chain are associated with the leaf certificate
         for (size_t i = 1; i < chains->size(); i++) {
             qcc::String cder;
             (*chains)[i].EncodeCertificateDER(cder);
@@ -237,12 +249,38 @@ QStatus SecurityAgentImpl::ClaimSelf()
 SecurityAgentImpl::SecurityAgentImpl(const shared_ptr<AgentCAStorage>& _caStorage, BusAttachment* ba) :
     publicKeyInfo(),
     appMonitor(nullptr),
-    busAttachment(ba),
+    ownBa(false),
     caStorage(_caStorage),
     queue(TaskQueue<AppListenerEvent*, SecurityAgentImpl>(this)), claimListener(nullptr)
 {
     proxyObjectManager = nullptr;
     applicationUpdater = nullptr;
+
+    QStatus status = ER_FAIL;
+    if (ba == nullptr) {
+        ba = new BusAttachment("SecurityAgent", true);
+        ownBa = true;
+    }
+
+    do {
+        if (!ba->IsStarted()) {
+            status = ba->Start();
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Failed to start bus attachment"));
+                break;
+            }
+        }
+
+        if (!ba->IsConnected()) {
+            status = ba->Connect();
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Failed to connect bus attachment"));
+                break;
+            }
+        }
+    } while (0);
+
+    busAttachment = ba;
 }
 
 QStatus SecurityAgentImpl::Init()
@@ -346,6 +384,7 @@ SecurityAgentImpl::~SecurityAgentImpl()
     appMonitor->UnregisterSecurityInfoListener(this);
 
     applicationUpdater = nullptr;
+    appMonitor = nullptr;
 
     queue.Stop();
 
@@ -356,10 +395,18 @@ SecurityAgentImpl::~SecurityAgentImpl()
     delete ProxyObjectManager::listener;
     ProxyObjectManager::listener = nullptr;
 
-    // empty string as authMechanism to avoid resetting keyStore
+    // Empty string as authMechanism to avoid resetting keyStore
     QStatus status = busAttachment->EnablePeerSecurity("", nullptr, nullptr, true);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to disable security on busAttachment at destruction"));
+    }
+
+    if (ownBa) {
+        busAttachment->Disconnect();
+        busAttachment->Stop();
+        busAttachment->Join();
+        delete busAttachment;
+        busAttachment = nullptr;
     }
 }
 
@@ -423,19 +470,26 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
      * Step 1: Select Session type  & Accept manifest
      */
     Manifest manifest;
-    status = proxyObjectManager->GetManifestTemplate(_app, manifest);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not retrieve manifest"));
-        return status;
-    }
-
     PermissionConfigurator::ClaimCapabilities claimCapabilities;
     PermissionConfigurator::ClaimCapabilityAdditionalInfo claimCapInfo;
+    {   // Open scope limit the lifetime of the proxy object
+        ProxyObjectManager::ManagedProxyObject mngdProxy(_app);
+        status = proxyObjectManager->GetProxyObject(mngdProxy, ProxyObjectManager::ECDHE_NULL);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not connect to the remote application"));
+            return status;
+        }
+        status = mngdProxy.GetManifestTemplate(manifest);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not retrieve manifest"));
+            return status;
+        }
 
-    status = proxyObjectManager->GetClaimCapabilities(_app, claimCapabilities, claimCapInfo);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not retrieve ClaimCapabilities"));
-        return status;
+        status = mngdProxy.GetClaimCapabilities(claimCapabilities, claimCapInfo);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not retrieve ClaimCapabilities"));
+            return status;
+        }
     }
     ClaimContextImpl ctx(_app, manifest, claimCapabilities, claimCapInfo);
 
@@ -472,23 +526,33 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
     if (status != ER_OK) {
         return status;
     }
-    status =
-        proxyObjectManager->Claim(_app, CAKeyInfo, adminGroup, idCertificate, manifest, ctx.GetSessionType(), ctx);
+    {   // Open scope limit the lifetime of the proxy object
+        ProxyObjectManager::ManagedProxyObject mngdProxy(_app);
+        status = proxyObjectManager->GetProxyObject(mngdProxy, ctx.GetSessionType(), &ctx);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not connect to application"));
+            return status;
+        }
 
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not claim application"));
+        status = mngdProxy.Claim(CAKeyInfo, adminGroup, idCertificate, manifest);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not claim application"));
+        }
     }
     QStatus finiStatus = caStorage->FinishApplicationClaiming(_app, status);
     if (ER_OK != finiStatus) {
         QCC_LogError(finiStatus, ("Failed to finalize claiming attempt"));
         if (ER_OK == status) {
-            QStatus resetStatus = proxyObjectManager->Reset(_app);
+            ProxyObjectManager::ManagedProxyObject mngdProxy(_app);
+            QStatus resetStatus = proxyObjectManager->GetProxyObject(mngdProxy);
+            if (ER_OK == resetStatus) {
+                resetStatus = mngdProxy.Reset();
+            }
             if (ER_OK != resetStatus) {
                 QCC_LogError(resetStatus, ("Failed to reset application after storage failure"));
             }
         }
     }
-
     return ER_OK != finiStatus ? finiStatus : status;
 }
 
@@ -738,7 +802,7 @@ void SecurityAgentImpl::UpdateApplications(const vector<OnlineApplication>* apps
                     applicationUpdater->UpdateApplication(app);
                 }
             }
-            appMapItr++;
+            appItr++;
         }
     }
 }

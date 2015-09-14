@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -266,11 +266,17 @@ bool BasicTest::WaitForEvents(size_t numOfEvents)
 bool BasicTest::CheckRemotePolicy(PermissionPolicy& expected)
 {
     bool result = true;
-    QStatus status = ER_OK;
 
     printf("Checking remote policy ... ");
+    ProxyObjectManager::ManagedProxyObject mngdProxy(lastAppInfo);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        printf("failed to connect to the application\n");
+        return false;
+    }
+
     PermissionPolicy remote;
-    status = proxyObjectManager->GetPolicy(lastAppInfo, remote);
+    status = mngdProxy.GetPolicy(remote);
     if (ER_OK != status) {
         printf("failed to GetPolicy\n");
         return false;
@@ -316,14 +322,76 @@ bool BasicTest::CheckPolicy(PermissionPolicy& expected)
     return CheckRemotePolicy(expected) && CheckStoredPolicy(expected);
 }
 
+QStatus BasicTest::Reset(const OnlineApplication& app)
+{
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        printf("failed to connect to the application\n");
+        return status;
+    }
+    return mngdProxy.Reset();
+}
+
+QStatus BasicTest::GetMembershipSummaries(const OnlineApplication& app, vector<MembershipSummary>& summaries)
+{
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        printf("failed to connect to the application\n");
+        return status;
+    }
+    return mngdProxy.GetMembershipSummaries(summaries);
+}
+
+QStatus BasicTest::GetPolicyVersion(const OnlineApplication& app, uint32_t& version)
+{
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        printf("failed to connect to the application\n");
+        return status;
+    }
+    return mngdProxy.GetPolicyVersion(version);
+}
+
+QStatus BasicTest::GetIdentity(const OnlineApplication& app, IdentityCertificateChain& idCertChain)
+{
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        printf("failed to connect to the application\n");
+        return status;
+    }
+    return mngdProxy.GetIdentity(idCertChain);
+}
+
+QStatus BasicTest::GetClaimCapabilities(const OnlineApplication& app,
+                                        PermissionConfigurator::ClaimCapabilities& claimCaps,
+                                        PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo)
+{
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy, ProxyObjectManager::ECDHE_NULL);
+    if (ER_OK != status) {
+        printf("failed to connect to the application\n");
+        return status;
+    }
+    return mngdProxy.GetClaimCapabilities(claimCaps, claimCapInfo);
+}
+
 bool BasicTest::CheckDefaultPolicy()
 {
     bool result = true;
-    QStatus status = ER_OK;
 
     printf("Retrieving default policy ... ");
+    ProxyObjectManager::ManagedProxyObject mngdProxy(lastAppInfo);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        printf("failed to connect to the application\n");
+        return false;
+    }
     PermissionPolicy defaultPolicy;
-    status = proxyObjectManager->GetDefaultPolicy(lastAppInfo, defaultPolicy);
+    status = mngdProxy.GetDefaultPolicy(defaultPolicy);
     if (ER_OK != status) {
         printf("failed to GetDefaultPolicy\n");
         return false;
@@ -353,11 +421,16 @@ bool BasicTest::CheckRemoteIdentity(IdentityInfo& expected,
                                     Manifest& remoteManifest)
 {
     printf("Checking remote identity ... ");
-    QStatus status = ER_OK;
+    ProxyObjectManager::ManagedProxyObject mngdProxy(lastAppInfo);
+    QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
+    if (ER_OK != status) {
+        printf("failed to connect to application\n");
+        return false;
+    }
 
     IdentityCertificateChain remoteIdentityChain;
 
-    status = proxyObjectManager->GetIdentity(lastAppInfo, remoteIdentityChain);
+    status = mngdProxy.GetIdentity(remoteIdentityChain);
     if (ER_OK != status) {
         printf("failed to GetIdentity\n");
         return false;
@@ -372,7 +445,7 @@ bool BasicTest::CheckRemoteIdentity(IdentityInfo& expected,
         return false;
     }
 
-    status = proxyObjectManager->GetManifest(lastAppInfo, remoteManifest);
+    status = mngdProxy.GetManifest(remoteManifest);
     if (ER_OK != status) {
         printf("failed to GetManifest\n");
         return false;
@@ -445,7 +518,7 @@ bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
 {
     printf("Checking remote memberships ... ");
     vector<MembershipSummary> remote;
-    QStatus status = proxyObjectManager->GetMembershipSummaries(lastAppInfo, remote);
+    QStatus status = GetMembershipSummaries(lastAppInfo, remote);
     if (ER_OK != status) {
         printf("failed to GetMembershipSummaries\n");
         return false;

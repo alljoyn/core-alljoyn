@@ -1,4 +1,4 @@
-# Copyright (c) AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -25,10 +25,10 @@ lib_env.Append(LIBS = ['ajsecstorage'])
 
 # Header files
 lib_env.Append(CPPPATH = ['.'])
-lib_env.Append(CPPPATH = ['../../../../../../agent/inc'])
-lib_env.Append(CPPPATH = ['../../../../../../agent/src'])
-lib_env.Append(CPPPATH = ['../../../../../../storage/inc'])
-lib_env.Append(CPPPATH = ['../../../../../../../alljoyn/alljoyn_core/src'])
+lib_env.Append(CPPPATH = ['#agent/inc'])
+lib_env.Append(CPPPATH = ['#agent/src'])
+lib_env.Append(CPPPATH = ['#storage/inc'])
+lib_env.Append(CPPPATH = [lib_env['AJ_SCL_SRC_DIR'] + '/alljoyn_core/src'])
 
 #if lib_env['BR'] == 'on':
 #    lib_env.Append(LIBPATH = ['$DISTDIR' + '/cpp/lib'])

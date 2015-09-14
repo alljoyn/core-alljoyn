@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -26,49 +26,18 @@ using namespace ajn::securitymgr;
 
 SecurityAgentFactory::SecurityAgentFactory()
 {
-    ownBa = false;
-    ba = nullptr;
 }
 
 SecurityAgentFactory::~SecurityAgentFactory()
 {
-    if (ownBa == true) {
-        ba->Disconnect();
-        ba->Stop();
-        ba->Join();
-        delete ba;
-        ba = nullptr;
-    }
 }
 
 QStatus SecurityAgentFactory::GetSecurityAgent(const shared_ptr<AgentCAStorage>& caStorage,
                                                shared_ptr<SecurityAgent>& agentRef,
-                                               BusAttachment* _ba)
+                                               BusAttachment* ba)
 {
     shared_ptr<SecurityAgentImpl> sa = nullptr;
     QStatus status = ER_OK;
-    if (_ba == nullptr) {
-        if (ba == nullptr) {
-            ba =
-                new BusAttachment("SecurityAgent", true);
-            ownBa = true;
-            do {
-                status = ba->Start();
-                if (status != ER_OK) {
-                    QCC_LogError(status, ("Failed to start bus attachment"));
-                    break;
-                }
-
-                status = ba->Connect();
-                if (status != ER_OK) {
-                    QCC_LogError(status, ("Failed to connect bus attachment"));
-                    break;
-                }
-            } while (0);
-        }
-    } else {
-        ba = _ba;
-    }
 
     sa = make_shared<SecurityAgentImpl>(caStorage, ba);
     if (ER_OK == (status = sa->Init())) {

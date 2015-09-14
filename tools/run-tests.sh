@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright (c) AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -69,12 +69,12 @@ echo "[[ Running unit tests ]]"
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 for target in "agent"
 do
-    STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/$target/unit_test/secmgrctest --gtest_output=xml:"${TEST_ROOT}"/gtestresults/ 
+    STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/$target/unit_test/secmgrctest --gtest_output=xml:"${TEST_ROOT}"/gtestresults/
 done
 
 # running system tests
 # echo "[[ Running system tests ]]"
-# STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/seccore/test/multipeer_claim/run.sh
+#STORAGE_PATH=/tmp/secmgr.db "${TEST_ROOT}"/agent/multipeer_claim/run.sh
 
 #Kill any remaining multipeer_claim processes hanging around.
 kill $(pidof multipeer_claim) || true
@@ -84,20 +84,17 @@ if [ ! -z "$(which lcov)" ]; then
         EXTRA_ARGS="--no-external"
     fi
         COVDIR="${AJN_SM_PATH}"/build/coverage
-        for target in "agent"
-	    do
+        declare -a arr=("agent" "storage")
+        for target in "${arr[@]}"
+            do
             mkdir -p "${COVDIR}"/"$target"src > /dev/null 2>&1
             mkdir -p "${COVDIR}"/"$target"inc > /dev/null 2>&1
 
-	    lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/src --directory "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_src.info
-            lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/inc --directory "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_inc.info
-            genhtml --quiet --output-directory "${COVDIR}"/"$target"src "${COVDIR}"/secmgr_"$target"_src.info 
-            genhtml --quiet --output-directory "${COVDIR}"/"$target"inc "${COVDIR}"/secmgr_"$target"_inc.info || true
-	    done
-
-        for target in "storage"
-            do
-            lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/inc --directory "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_inc.info
+            lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/src --directory \
+            "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_src.info || true
+            lcov --quiet --capture -b "${AJN_SM_PATH}"/$target/inc --directory \
+            "${PLATFORM_ROOT}"/lib/$target $EXTRA_ARGS --output-file "${COVDIR}"/secmgr_"$target"_inc.info || true
+            genhtml --quiet --output-directory "${COVDIR}"/"$target"src "${COVDIR}"/secmgr_"$target"_src.info || true 
             genhtml --quiet --output-directory "${COVDIR}"/"$target"inc "${COVDIR}"/secmgr_"$target"_inc.info || true
             done
 fi

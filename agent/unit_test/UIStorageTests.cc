@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -21,12 +21,46 @@ using namespace ajn::securitymgr;
 /** @file UIStorageTests.cc */
 
 namespace secmgr_tests {
+class StorageListenerReset :
+    public StorageListener {
+  public:
+    StorageListenerReset() : storageReset(false) { }
+
+    void OnPendingChanges(vector<Application>& apps) { QCC_UNUSED(apps); }
+
+    void OnPendingChangesCompleted(vector<Application>& apps) { QCC_UNUSED(apps); }
+
+    void OnStorageReset()
+    {
+        storageReset = true;
+    }
+
+    bool WaitForStorageReset()
+    {
+        QStatus status;
+        lock.Lock();
+        while (!storageReset) {
+            status = sem.TimedWait(lock, 10000);
+            if (ER_OK != status) {
+                printf("Timeout- failing test - %i\n", status);
+                lock.Unlock();
+                return false;
+            }
+        }
+        lock.Unlock();
+        return true;
+    }
+
+  public:
+    bool storageReset;
+
+  private:
+    qcc::Mutex lock;
+    qcc::Condition sem;
+};
+
 class UIStorageTests :
     public SecurityAgentTest {
-  private:
-
-  protected:
-
   public:
     UIStorageTests()
     {
@@ -92,5 +126,19 @@ TEST_F(UIStorageTests, SetMetaData) {
     ASSERT_EQ(ER_OK, storage->SetAppMetaData(mAppInfo, emptyAppMetaData));
     ASSERT_EQ(ER_OK, storage->GetAppMetaData(mAppInfo, appMetaData));
     ASSERT_TRUE(appMetaData == emptyAppMetaData);
+}
+
+/**
+ * @test Ensure that resetting the database will trigger OnStorageReset.
+ *       -# Register a storage listener.
+ *       -# Reset the storage and make sure that OnStorageReset was called.
+ *       -# Unregister the listener.
+ **/
+TEST_F(UIStorageTests, StorageReset) {
+    StorageListenerReset listener;
+    GetAgentCAStorage()->RegisterStorageListener(&listener);
+    storage->Reset();
+    EXPECT_TRUE(listener.WaitForStorageReset());
+    GetAgentCAStorage()->UnRegisterStorageListener(&listener);
 }
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -94,7 +94,9 @@ QStatus Util::GetPolicyByteArray(const PermissionPolicy& policy, uint8_t** byteA
         }
 
         delete msg;
+        msg = nullptr;
         delete marshaller;
+        marshaller = nullptr;
     }
     mutex.Unlock(__FILE__, __LINE__);
     return status;
@@ -125,7 +127,9 @@ QStatus Util::GetPolicy(const uint8_t* byteArray, const size_t size, PermissionP
             QCC_LogError(status, ("Failed to de-serialize policy"));
         }
         delete msg;
+        msg = nullptr;
         delete marshaller;
+        marshaller = nullptr;
     }
     mutex.Unlock(__FILE__, __LINE__);
     return status;

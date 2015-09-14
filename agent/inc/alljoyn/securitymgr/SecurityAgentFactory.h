@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -48,8 +48,11 @@ class SecurityAgentFactory {
      * @param[in]  caStorage   The CaStorage this agent should use.
      * @param[out] agentRef    A reference to shared_ptr. This reference will be updated on success and will
      *                         contain the agent.
-     * @param[in]  ba          The bus attachment to be used. If nullptr,
-     *                         then one will be created and owned.
+     * @param[in]  ba          The bus attachment to be used.
+     *                         The bus attachment will be started
+     *                         and connected if it was not so originally.
+     *                         If nullptr, then one will be created and owned
+     *                         by the returned security agent.
      *
      * @return ER_OK           If successful, otherwise an error code.
      */
@@ -68,11 +71,6 @@ class SecurityAgentFactory {
      */
     SecurityAgentFactory(const SecurityAgentFactory& sf);
     SecurityAgentFactory& operator=(const SecurityAgentFactory& sf);
-
-  private:
-
-    BusAttachment* ba;
-    bool ownBa;
 };
 }
 }

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -223,16 +223,16 @@ TEST_F(MembershipTests, InstallRemoveMembershipPolicyUpdate) {
     ASSERT_TRUE(WaitForUpdatesCompleted());
 
     uint32_t currentVersion;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, currentVersion));
+    ASSERT_EQ(ER_OK, GetPolicyVersion(app, currentVersion));
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     uint32_t remoteVersion;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, remoteVersion));
+    ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
     ASSERT_EQ(1 + currentVersion, remoteVersion);
 
     ASSERT_EQ(ER_OK, storage->RemoveMembership(app, groupInfo1));
     ASSERT_TRUE(WaitForUpdatesCompleted());
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, remoteVersion));
+    ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
     ASSERT_EQ(2 + currentVersion, remoteVersion);
 }
 } // namespace

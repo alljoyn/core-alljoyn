@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -311,12 +311,12 @@ TEST_F(ClaimingTests, OOBSuccessfulClaiming) {
     //Sanity checks. Make sure that the claim caps are as expected.
     PermissionConfigurator::ClaimCapabilities claimCaps;
     PermissionConfigurator::ClaimCapabilityAdditionalInfo claimCapInfo;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetClaimCapabilities(lastAppInfo, claimCaps, claimCapInfo));
+    ASSERT_EQ(ER_OK, GetClaimCapabilities(lastAppInfo, claimCaps, claimCapInfo));
     ASSERT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCaps);
     ASSERT_EQ((size_t)0, claimCapInfo);
 
     ASSERT_EQ(ER_OK, testApp.SetClaimByPSK());
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetClaimCapabilities(lastAppInfo, claimCaps, claimCapInfo));
+    ASSERT_EQ(ER_OK, GetClaimCapabilities(lastAppInfo, claimCaps, claimCapInfo));
     ASSERT_EQ(PermissionConfigurator::CAPABLE_ECDHE_PSK, claimCaps);
     ASSERT_EQ(PermissionConfigurator::PSK_GENERATED_BY_APPLICATION, claimCapInfo);
 

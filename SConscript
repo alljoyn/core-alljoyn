@@ -1,4 +1,4 @@
-# Copyright (c) AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -47,11 +47,11 @@ if env['CXX'][:5] == 'clang':
     #clang cannot always deal with gnu++0x
     env.Append(CXXFLAGS = '-D__STRICT_ANSI__')
 
-if not env.has_key('_ALLJOYN_ABOUT_') and os.path.exists('../../core/alljoyn/services/about/SConscript'):
-    env.SConscript('../../core/alljoyn/services/about/SConscript')
+if not env.has_key('_ALLJOYN_ABOUT_') and os.path.exists(env['AJ_SCL_SRC_DIR'] + '/services/about/SConscript'):
+    env.SConscript(env['AJ_SCL_SRC_DIR'] + '/services/about/SConscript')
 
-if 'cpp' in env['bindings'] and not env.has_key('_ALLJOYNCORE_') and os.path.exists('../../core/alljoyn/alljoyn_core/SConscript'):
-    env.SConscript('../../core/alljoyn/alljoyn_core/SConscript')
+if 'cpp' in env['bindings'] and not env.has_key('_ALLJOYNCORE_') and os.path.exists(env['AJ_SCL_SRC_DIR'] + '/alljoyn_core/SConscript'):
+    env.SConscript(env['AJ_SCL_SRC_DIR'] + '/alljoyn_core/SConscript')
 
 # Make config library and header file paths available to the global environment
 env.Append(LIBPATH = '$DISTDIR/security/lib');
@@ -59,7 +59,7 @@ env.Append(CPPPATH = '$DISTDIR/security/inc');
 
 secenv = env.Clone(tools = ['textfile'])
 
-sys.path.append(str(secenv.Dir('../alljoyn/build_core/tools/scons').srcnode()))
+sys.path.append(str(secenv.Dir(env['AJ_SCL_SRC_DIR'] + '/build_core/tools/scons').srcnode()))
 
 if env['OS_GROUP'] == 'windows':
     secenv.Append(CCFLAGS = '-WX')
@@ -88,8 +88,8 @@ buildroot = secenv.subst('build/${OS}/${CPU}/${VARIANT}')
 secenv.Install('$SEC_DISTDIR/security/inc', secenv.Glob('security/inc/*.h'))
 
 secenv.Append(CPPPATH = ['$SEC_DISTDIR/security/inc'])
-secenv.Append(CPPPATH = ['../../../../../../agent/inc/'])
-secenv.Append(CPPPATH = ['../../../../../../storage/inc'])
+secenv.Append(CPPPATH = ['#agent/inc/'])
+secenv.Append(CPPPATH = ['#storage/inc'])
 
 if env['OS_GROUP'] == 'windows':
     sqlite_objs = secenv.SConscript('external/sqlite3/SConscript', exports = ['secenv'], variant_dir=buildroot+'/ext/lib/sqlite3', duplicate=0)
@@ -100,7 +100,6 @@ secenv.Install('$SEC_DISTDIR/lib', secenv.SConscript('agent/src/SConscript', exp
 
 # Security Manager App building
 secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/cli/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/cli', duplicate=0))
-secenv.Install('$SEC_DISTDIR/bin/samples', secenv.SConscript('samples/door/SConscript', exports=['secenv'], variant_dir=buildroot+'/samples/door', duplicate=0))
 
 # Security core tests building (are not installed)
 if secenv['OS_CONF'] != 'android':

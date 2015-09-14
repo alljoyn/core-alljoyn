@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -60,58 +60,93 @@ class ProxyObjectManager :
 
     ~ProxyObjectManager();
 
-    QStatus Claim(const OnlineApplication& app,
-                  KeyInfoNISTP256& certificateAuthority,
-                  GroupInfo& adminGroup,
-                  IdentityCertificateChain identityCertChain,
-                  const Manifest& manifest,
-                  const SessionType type,
-                  AuthListener& listener);
+    class ManagedProxyObject {
+      public:
+        ManagedProxyObject(const OnlineApplication& app) : remoteApp(app), remoteObj(nullptr), resetAuthListener(false),
+            needReAuth(false), proxyObjectManager(nullptr)
+        {
+        }
 
-    QStatus GetIdentity(const OnlineApplication& app,
-                        IdentityCertificateChain& cert);
+        ~ManagedProxyObject();
 
-    QStatus UpdateIdentity(const OnlineApplication& app,
-                           IdentityCertificateChain certChain,
-                           const Manifest& mf);
+        QStatus Claim(KeyInfoNISTP256& certificateAuthority,
+                      GroupInfo& adminGroup,
+                      IdentityCertificateChain identityCertChain,
+                      const Manifest& manifest);
 
-    QStatus InstallMembership(const OnlineApplication& app,
-                              const MembershipCertificateChain certificateChain);
+        QStatus GetIdentity(IdentityCertificateChain& cert);
 
-    QStatus RemoveMembership(const OnlineApplication& app,
-                             const string& serial,
-                             const KeyInfoNISTP256& issuerKeyInfo);
+        QStatus UpdateIdentity(IdentityCertificateChain certChain,
+                               const Manifest& mf);
 
-    QStatus GetMembershipSummaries(const OnlineApplication& app,
-                                   vector<MembershipSummary>& summaries);
+        QStatus InstallMembership(const MembershipCertificateChain certificateChain);
 
-    QStatus GetPolicy(const OnlineApplication& app,
-                      PermissionPolicy& policy);
+        QStatus RemoveMembership(const string& serial,
+                                 const KeyInfoNISTP256& issuerKeyInfo);
 
-    QStatus GetPolicyVersion(const OnlineApplication& app,
-                             uint32_t& policyVersion);
+        QStatus GetMembershipSummaries(vector<MembershipSummary>& summaries);
 
-    QStatus GetDefaultPolicy(const OnlineApplication& app,
-                             PermissionPolicy& policy);
+        QStatus GetPolicy(PermissionPolicy& policy);
 
-    QStatus UpdatePolicy(const OnlineApplication& app,
-                         const PermissionPolicy& policy);
+        QStatus GetPolicyVersion(uint32_t& policyVersion);
 
-    QStatus ResetPolicy(const OnlineApplication& app);
+        QStatus GetDefaultPolicy(PermissionPolicy& policy);
 
-    QStatus GetManifestTemplate(const OnlineApplication& app,
-                                Manifest& mf);
+        QStatus UpdatePolicy(const PermissionPolicy& policy);
 
-    QStatus GetManifest(const OnlineApplication& app,
-                        Manifest& manifest);
+        QStatus ResetPolicy();
 
-    QStatus GetClaimCapabilities(const OnlineApplication& app,
-                                 PermissionConfigurator::ClaimCapabilities& claimCapabilities,
-                                 PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo);
+        QStatus GetManifestTemplate(Manifest& mf);
 
-    QStatus Reset(const OnlineApplication& app);
+        QStatus GetManifest(Manifest& manifest);
+
+        QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities,
+                                     PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo);
+
+        QStatus Reset();
+
+        const OnlineApplication& GetApplication()
+        {
+            return remoteApp;
+        }
+
+      private:
+        OnlineApplication remoteApp;
+        SecurityApplicationProxy* remoteObj;
+        bool resetAuthListener;
+        bool needReAuth;
+        ProxyObjectManager* proxyObjectManager;
+
+        void CheckReAuthenticate();
+
+        ManagedProxyObject(const ManagedProxyObject& other);
+        ManagedProxyObject& operator=(const ManagedProxyObject& other);
+
+        friend class ProxyObjectManager;
+    };
 
     static AuthListener* listener;
+
+    /**
+     * @brief Ask the ProxyObjectManager to provide a ProxyBusObject to a given
+     * application.
+     *
+     *  The ManagedProxyObject passed will be initialized by the ProxyObjectManager.
+     *  It should only be used by the thread making the call. The life-cycle of the
+     *  ManagedProxyObject should be short. So, ideally it is allocated on the stack
+     *  in a limited scope so the destructor will be called soon after the last usage
+     *  of the ManagedProxyObject. A single thread should only have one ManagedProxyObject
+     *  at a time. A ManagedProxyObject should only be offered once to this function.
+     *
+     * @param[in]  managedProxy The application to initialize and to connect to.
+     * @param[in]  type         The type of session required.
+     * @param[out] al           The AuthListener to use for the setting up the session or nullptr to
+     *                          use the default. No ownership is taken.
+     *
+     */
+    QStatus GetProxyObject(ManagedProxyObject& managedProxy,
+                           SessionType type = ECDHE_DSA,
+                           AuthListener* al = nullptr);
 
   private:
     /*
@@ -126,24 +161,10 @@ class ProxyObjectManager :
                              SessionLostReason reason);
 
     /**
-     * @brief Ask the ProxyObjectManager to provide a ProxyBusObject to given
-     * application. For every GetProxyObject, a matching
-     * ReleaseProxyObject must be done.
-     * @param[in] app           The application to connect to.
-     * @param[in] type          The type of session required.
-     * @param[out] remoteObject The ProxyBusObject will be stored in this.
-     * pointer on success.
-     */
-    QStatus GetProxyObject(const OnlineApplication app,
-                           SessionType type,
-                           SecurityApplicationProxy** remoteObject,
-                           AuthListener* al = nullptr);
-
-    /**
      * @brief Release the remoteObject.
-     * @param[in] remoteObject The object to be released.
+     * @param[in] managedProxy The object to be released.
      */
-    QStatus ReleaseProxyObject(SecurityApplicationProxy* remoteObject,
+    QStatus ReleaseProxyObject(SecurityApplicationProxy* managedProxy,
                                bool resetListener = false);
 };
 }

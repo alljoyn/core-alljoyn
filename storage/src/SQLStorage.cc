@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -104,6 +104,7 @@ QStatus SQLStorage::StoreApplication(const Application& app, const bool update, 
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     if (ER_OK == funcStatus && updatePolicy) {
         PermissionPolicy policy;
         funcStatus = GetPolicy(app, policy);
@@ -165,6 +166,7 @@ QStatus SQLStorage::RemoveApplication(const Application& app)
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -228,6 +230,7 @@ QStatus SQLStorage::SetAppMetaData(const Application& app, const ApplicationMeta
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -302,6 +305,7 @@ QStatus SQLStorage::GetAppMetaData(const Application& app, ApplicationMetaData& 
         LOGSQLERROR(funcStatus);
     }
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -372,6 +376,7 @@ QStatus SQLStorage::GetManifest(const Application& app,
     }
 
     delete byteArray;
+    byteArray = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -391,6 +396,7 @@ QStatus SQLStorage::GetPolicy(const Application& app, PermissionPolicy& policy) 
     }
 
     delete byteArray;
+    byteArray = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -526,6 +532,7 @@ QStatus SQLStorage::GetManagedApplication(Application& app) const
         LOGSQLERROR(funcStatus);
     }
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -551,7 +558,7 @@ QStatus SQLStorage::StoreManifest(const Application& app, const Manifest& manife
     } while (0);
 
     delete[]manifestByteArray;
-
+    manifestByteArray = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -616,6 +623,7 @@ QStatus SQLStorage::RemovePolicy(const Application& app)
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
 
     storageMutex.Unlock(__FILE__, __LINE__);
     return funcStatus;
@@ -635,6 +643,7 @@ QStatus SQLStorage::StorePolicy(const Application& app, const PermissionPolicy& 
     }
 
     delete[]byteArray;
+    byteArray = nullptr;
 
     storageMutex.Unlock(__FILE__, __LINE__);
 
@@ -844,6 +853,7 @@ QStatus SQLStorage::GetCertificate(const Application& app, CertificateX509& cert
         LOGSQLERROR(funcStatus);
     }
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -924,6 +934,7 @@ QStatus SQLStorage::RemoveCertificate(const Application& app, CertificateX509& c
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     storageMutex.Unlock(__FILE__, __LINE__);
 
     return funcStatus;
@@ -1237,6 +1248,7 @@ QStatus SQLStorage::BindCertForStorage(const Application& app, CertificateX509& 
 
         default: {
                 delete[]publicKeyInfo;
+                publicKeyInfo = nullptr;
                 QCC_LogError(ER_FAIL, ("Unsupported certificate type !"));
                 return ER_FAIL;
             }
@@ -1248,6 +1260,7 @@ QStatus SQLStorage::BindCertForStorage(const Application& app, CertificateX509& 
         LOGSQLERROR(funcStatus);
     }
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     return funcStatus;
 }
 
@@ -1431,6 +1444,7 @@ QStatus SQLStorage::StoreInfo(InfoType type,
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[] authority;
+    authority = nullptr;
 
     return funcStatus;
 }
@@ -1513,6 +1527,7 @@ QStatus SQLStorage::GetInfo(InfoType type,
         LOGSQLERROR(funcStatus);
     }
     delete[] authority;
+    authority = nullptr;
     return funcStatus;
 }
 
@@ -1582,6 +1597,7 @@ QStatus SQLStorage::RemoveInfo(InfoType type,
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[] authority;
+    authority = nullptr;
     return funcStatus;
 }
 
@@ -1669,6 +1685,7 @@ QStatus SQLStorage::GetPolicyOrManifest(const Application& app,
         LOGSQLERROR(funcStatus);
     }
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     return funcStatus;
 }
 
@@ -1734,6 +1751,7 @@ QStatus SQLStorage::StorePolicyOrManifest(const Application& app,  const uint8_t
 
     funcStatus = StepAndFinalizeSqlStmt(statement);
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     return funcStatus;
 }
 
@@ -1841,6 +1859,7 @@ QStatus SQLStorage::PrepareMembershipCertificateQuery(const Application& app,
         LOGSQLERROR(funcStatus);
     }
     delete[]publicKeyInfo;
+    publicKeyInfo = nullptr;
     return funcStatus;
 }
 

@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -183,6 +183,21 @@ class BasicTest :
     bool WaitForManifestUpdate(ManifestUpdate& manifestUpdate);
 
     bool CheckUnexpectedManifestUpdates();
+
+    QStatus Reset(const OnlineApplication& app);
+
+    QStatus GetMembershipSummaries(const OnlineApplication& app,
+                                   vector<MembershipSummary>& summaries);
+
+    QStatus GetPolicyVersion(const OnlineApplication& app,
+                             uint32_t& version);
+
+    QStatus GetIdentity(const OnlineApplication& app,
+                        IdentityCertificateChain& idCertChain);
+
+    QStatus GetClaimCapabilities(const OnlineApplication& app,
+                                 PermissionConfigurator::ClaimCapabilities& claimCaps,
+                                 PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo);
 
     virtual shared_ptr<AgentCAStorage>& GetAgentCAStorage()
     {

@@ -1,4 +1,4 @@
-# Copyright (c) AllSeen Alliance. All rights reserved.
+# Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -15,8 +15,8 @@
 Import('secenv')
 
 app_env = secenv.Clone()
-app_env.Append(CPPPATH = ['../../../../../../agent/inc/'])
-app_env.Append(CPPPATH = ['../../../../../../storage/inc/'])
+app_env.Append(CPPPATH = ['#agent/inc/'])
+app_env.Append(CPPPATH = ['#storage/inc/'])
 app_env.Append(LIBPATH =  '$SEC_DISTDIR/lib')
 app_env.Prepend(LIBS = ['ajsecstorage'])
 app_env.Prepend(LIBS = ['ajsecmgr'])

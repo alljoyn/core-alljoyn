@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -40,13 +40,13 @@ ProxyObjectManager::~ProxyObjectManager()
 {
 }
 
-QStatus ProxyObjectManager::GetProxyObject(const OnlineApplication app,
+QStatus ProxyObjectManager::GetProxyObject(ManagedProxyObject& managedProxy,
                                            SessionType sessionType,
-                                           SecurityApplicationProxy** remoteObject,
                                            AuthListener* authListener)
 {
     QStatus status = ER_FAIL;
-    if (app.busName == "") {
+    const char* busName = managedProxy.remoteApp.busName.c_str();
+    if (strlen(busName) == 0) {
         status = ER_FAIL;
         QCC_DbgRemoteError(("Application is offline"));
         return status;
@@ -62,8 +62,6 @@ QStatus ProxyObjectManager::GetProxyObject(const OnlineApplication app,
         bus->EnablePeerSecurity(KEYX_ECDHE_PSK, authListener ? authListener : listener, AJNKEY_STORE, true);
     }
 
-    const char* busName = app.busName.c_str();
-
     SessionId sessionId;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false,
                      SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
@@ -78,8 +76,9 @@ QStatus ProxyObjectManager::GetProxyObject(const OnlineApplication app,
         return status;
     }
 
-    SecurityApplicationProxy* remoteObj = new SecurityApplicationProxy(*bus, busName, sessionId);
-    *remoteObject = remoteObj;
+    managedProxy.remoteObj = new SecurityApplicationProxy(*bus, busName, sessionId);
+    managedProxy.resetAuthListener = (authListener != nullptr);
+    managedProxy.proxyObjectManager = this;
     return status;
 }
 
@@ -88,6 +87,7 @@ QStatus ProxyObjectManager::ReleaseProxyObject(SecurityApplicationProxy* remoteO
 {
     SessionId sessionId = remoteObject->GetSessionId();
     delete remoteObject;
+    remoteObject = nullptr;
     QStatus status =  bus->LeaveSession(sessionId);
     if (resetListener) {
         bus->EnablePeerSecurity(KEYX_ECDHE_NULL, listener, AJNKEY_STORE, true);
@@ -96,25 +96,23 @@ QStatus ProxyObjectManager::ReleaseProxyObject(SecurityApplicationProxy* remoteO
     return status;
 }
 
-QStatus ProxyObjectManager::Claim(const OnlineApplication& app,
-                                  KeyInfoNISTP256& certificateAuthority,
-                                  GroupInfo& adminGroup,
-                                  IdentityCertificateChain identityCertChain,
-                                  const Manifest& manifest,
-                                  const SessionType sessionType,
-                                  AuthListener& authListener)
+ProxyObjectManager::ManagedProxyObject::~ManagedProxyObject()
 {
-    SecurityApplicationProxy* remoteObj;
-
-    QStatus status = GetProxyObject(app, sessionType, &remoteObj, &authListener);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
+    if (remoteObj != nullptr) {
+        assert(proxyObjectManager);
+        proxyObjectManager->ReleaseProxyObject(remoteObj, resetAuthListener);
     }
+}
 
+QStatus ProxyObjectManager::ManagedProxyObject::Claim(KeyInfoNISTP256& certificateAuthority,
+                                                      GroupInfo& adminGroup,
+                                                      IdentityCertificateChain identityCertChain,
+                                                      const Manifest& manifest)
+{
+    CheckReAuthenticate();
     PermissionPolicy::Rule* manifestRules;
     size_t manifestRulesCount;
-    status = manifest.GetRules(&manifestRules, &manifestRulesCount);
+    QStatus status = manifest.GetRules(&manifestRules, &manifestRulesCount);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to get manifest rules"));
     }
@@ -132,7 +130,6 @@ QStatus ProxyObjectManager::Claim(const OnlineApplication& app,
         delete[] identityCertChainArray;
         identityCertChainArray = nullptr;
     }
-    ReleaseProxyObject(remoteObj, true);
 
     delete[] manifestRules;
     manifestRules = nullptr;
@@ -140,22 +137,11 @@ QStatus ProxyObjectManager::Claim(const OnlineApplication& app,
     return status;
 }
 
-QStatus ProxyObjectManager::GetIdentity(const OnlineApplication& app,
-                                        IdentityCertificateChain& certChain)
+QStatus ProxyObjectManager::ManagedProxyObject::GetIdentity(IdentityCertificateChain& certChain)
 {
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
-    }
-
+    CheckReAuthenticate();
     MsgArg certChainArg;
-    status = remoteObj->GetIdentity(certChainArg);
-    ReleaseProxyObject(remoteObj);
-
+    QStatus status = remoteObj->GetIdentity(certChainArg);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetIndentity"));
         return status;
@@ -182,19 +168,10 @@ QStatus ProxyObjectManager::GetIdentity(const OnlineApplication& app,
     return status;
 }
 
-QStatus ProxyObjectManager::UpdateIdentity(const OnlineApplication& app,
-                                           IdentityCertificateChain certChain,
-                                           const Manifest& mf)
+QStatus ProxyObjectManager::ManagedProxyObject::UpdateIdentity(IdentityCertificateChain certChain,
+                                                               const Manifest& mf)
 {
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
-    }
-
+    CheckReAuthenticate();
     size_t chainSize = certChain.size();
     IdentityCertificate* certArray = new IdentityCertificate[chainSize];
 
@@ -204,59 +181,46 @@ QStatus ProxyObjectManager::UpdateIdentity(const OnlineApplication& app,
 
     PermissionPolicy::Rule* manifestRules;
     size_t manifestRuleCount;
-    status = mf.GetRules(&manifestRules, &manifestRuleCount);
+    QStatus status = mf.GetRules(&manifestRules, &manifestRuleCount);
 
     if (ER_OK == status) {
         status = remoteObj->UpdateIdentity(certArray, chainSize, manifestRules, manifestRuleCount);
+        if (ER_OK == status) {
+            needReAuth = true;
+        }
     }
 
     delete[] certArray;
-    ReleaseProxyObject(remoteObj);
-
+    certArray = nullptr;
     delete[] manifestRules;
     manifestRules = nullptr;
 
     return status;
 }
 
-QStatus ProxyObjectManager::InstallMembership(const OnlineApplication& app,
-                                              const MembershipCertificateChain certChainVector)
+QStatus ProxyObjectManager::ManagedProxyObject::InstallMembership(const MembershipCertificateChain certChainVector)
 {
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
+    CheckReAuthenticate();
     size_t size = certChainVector.size();
     MembershipCertificate* certChain = new MembershipCertificate[size];
     for (size_t i = 0; i < size; i++) {
         certChain[i] = certChainVector[i];
     }
 
-    status = remoteObj->InstallMembership(certChain, size);
+    QStatus status = remoteObj->InstallMembership(certChain, size);
 
+    if (ER_OK == status) {
+        needReAuth = true;
+    }
     delete[] certChain;
-    ReleaseProxyObject(remoteObj);
-
+    certChain = nullptr;
     return status;
 }
 
-QStatus ProxyObjectManager::GetPolicy(const OnlineApplication& app,
-                                      PermissionPolicy& policy)
+QStatus ProxyObjectManager::ManagedProxyObject::GetPolicy(PermissionPolicy& policy)
 {
-    SecurityApplicationProxy* remoteObj;
-    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
-    status = remoteObj->GetPolicy(policy);
-    ReleaseProxyObject(remoteObj);
+    CheckReAuthenticate();
+    QStatus status = remoteObj->GetPolicy(policy);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetPolicy"));
     }
@@ -264,18 +228,10 @@ QStatus ProxyObjectManager::GetPolicy(const OnlineApplication& app,
     return status;
 }
 
-QStatus ProxyObjectManager::GetPolicyVersion(const OnlineApplication& app,
-                                             uint32_t&  policyVersion)
+QStatus ProxyObjectManager::ManagedProxyObject::GetPolicyVersion(uint32_t&  policyVersion)
 {
-    SecurityApplicationProxy* remoteObj;
-    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
-    status = remoteObj->GetPolicyVersion(policyVersion);
-    ReleaseProxyObject(remoteObj);
+    CheckReAuthenticate();
+    QStatus status = remoteObj->GetPolicyVersion(policyVersion);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetPolicyVersion"));
     }
@@ -283,18 +239,10 @@ QStatus ProxyObjectManager::GetPolicyVersion(const OnlineApplication& app,
     return status;
 }
 
-QStatus ProxyObjectManager::GetDefaultPolicy(const OnlineApplication& app,
-                                             PermissionPolicy& policy)
+QStatus ProxyObjectManager::ManagedProxyObject::GetDefaultPolicy(PermissionPolicy& policy)
 {
-    SecurityApplicationProxy* remoteObj;
-    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
-    status = remoteObj->GetDefaultPolicy(policy);
-    ReleaseProxyObject(remoteObj);
+    CheckReAuthenticate();
+    QStatus status = remoteObj->GetDefaultPolicy(policy);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetDefaultPolicy"));
     }
@@ -302,58 +250,39 @@ QStatus ProxyObjectManager::GetDefaultPolicy(const OnlineApplication& app,
     return status;
 }
 
-QStatus ProxyObjectManager::UpdatePolicy(const OnlineApplication& app,
-                                         const PermissionPolicy& policy)
+QStatus ProxyObjectManager::ManagedProxyObject::UpdatePolicy(const PermissionPolicy& policy)
 {
-    SecurityApplicationProxy* remoteObj;
-    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
-    status = remoteObj->UpdatePolicy(policy);
-    ReleaseProxyObject(remoteObj);
+    CheckReAuthenticate();
+    QStatus status = remoteObj->UpdatePolicy(policy);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to UpdatePolicy"));
+    } else {
+        needReAuth = true;
     }
 
     return status;
 }
 
-QStatus ProxyObjectManager::ResetPolicy(const OnlineApplication& app)
+QStatus ProxyObjectManager::ManagedProxyObject::ResetPolicy()
 {
-    SecurityApplicationProxy* remoteObj;
-    QStatus status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
-    status = remoteObj->ResetPolicy();
-    ReleaseProxyObject(remoteObj);
+    CheckReAuthenticate();
+    QStatus status = remoteObj->ResetPolicy();
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to ResetPolicy"));
+    } else {
+        needReAuth = true;
     }
 
     return status;
 }
 
-QStatus ProxyObjectManager::GetClaimCapabilities(const OnlineApplication& app,
-                                                 PermissionConfigurator::ClaimCapabilities& claimCapabilities,
-                                                 PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo)
+QStatus ProxyObjectManager::ManagedProxyObject::GetClaimCapabilities(
+    PermissionConfigurator::ClaimCapabilities& claimCapabilities,
+    PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo)
 {
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_NULL, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
+    CheckReAuthenticate();
     MsgArg rulesMsgArg;
-    status = remoteObj->GetClaimCapabilities(claimCapabilities);
+    QStatus status = remoteObj->GetClaimCapabilities(claimCapabilities);
     if (ER_OK != status) {
         QCC_LogError(status, ("GetClaimCapabilities failed"));
     } else {
@@ -362,28 +291,14 @@ QStatus ProxyObjectManager::GetClaimCapabilities(const OnlineApplication& app,
             QCC_LogError(status, ("GetClaimCapabilityAdditionalInfo failed"));
         }
     }
-
-    ReleaseProxyObject(remoteObj);
     return status;
 }
 
-QStatus ProxyObjectManager::GetManifestTemplate(const OnlineApplication& app,
-                                                Manifest& manifest)
+QStatus ProxyObjectManager::ManagedProxyObject::GetManifestTemplate(Manifest& manifest)
 {
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_NULL, &remoteObj);
-    if (ER_OK != status) {
-        // errors logged in GetProxyObject
-        return status;
-    }
-
+    CheckReAuthenticate();
     MsgArg rulesMsgArg;
-    status = remoteObj->GetManifestTemplate(rulesMsgArg);
-
-    ReleaseProxyObject(remoteObj);
-
+    QStatus status = remoteObj->GetManifestTemplate(rulesMsgArg);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetManifestTemplate"));
         return status;
@@ -411,24 +326,14 @@ QStatus ProxyObjectManager::GetManifestTemplate(const OnlineApplication& app,
 
 Exit:
     delete[] manifestRules;
+    manifestRules = nullptr;
     return status;
 }
 
-QStatus ProxyObjectManager::Reset(const OnlineApplication& app)
+QStatus ProxyObjectManager::ManagedProxyObject::Reset()
 {
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
-    }
-
-    status = remoteObj->Reset();
-
-    ReleaseProxyObject(remoteObj);
-
+    CheckReAuthenticate();
+    QStatus status = remoteObj->Reset();
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to Reset"));
     }
@@ -436,45 +341,26 @@ QStatus ProxyObjectManager::Reset(const OnlineApplication& app)
     return status;
 }
 
-QStatus ProxyObjectManager::RemoveMembership(const OnlineApplication& app,
-                                             const string& serial,
-                                             const KeyInfoNISTP256& issuerKeyInfo)
+QStatus ProxyObjectManager::ManagedProxyObject::RemoveMembership(const string& serial,
+                                                                 const KeyInfoNISTP256& issuerKeyInfo)
 {
-    QStatus status;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
-    }
-
-    status = remoteObj->RemoveMembership(serial.c_str(), issuerKeyInfo);
-
-    ReleaseProxyObject(remoteObj);
-
+    CheckReAuthenticate();
+    QStatus status = remoteObj->RemoveMembership(serial.c_str(), issuerKeyInfo);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to RemoveMembership"));
+    } else {
+        needReAuth = true;
     }
 
     return status;
 }
 
-QStatus ProxyObjectManager::GetMembershipSummaries(const OnlineApplication& app,
-                                                   vector<MembershipSummary>& summaries)
+QStatus ProxyObjectManager::ManagedProxyObject::GetMembershipSummaries(vector<MembershipSummary>& summaries)
 {
+    CheckReAuthenticate();
     QStatus status = ER_FAIL;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
-    }
-
     MsgArg replyMsgArg;
     status = remoteObj->GetMembershipSummaries(replyMsgArg);
-    ReleaseProxyObject(remoteObj);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetMembershipSummaries"));
         return status;
@@ -498,26 +384,18 @@ QStatus ProxyObjectManager::GetMembershipSummaries(const OnlineApplication& app,
         }
     }
     delete[] keyInfos;
+    keyInfos = nullptr;
     delete[] serials;
+    serials = nullptr;
 
     return status;
 }
 
-QStatus ProxyObjectManager::GetManifest(const OnlineApplication& app,
-                                        Manifest& manifest)
+QStatus ProxyObjectManager::ManagedProxyObject::GetManifest(Manifest& manifest)
 {
-    QStatus status = ER_OK;
-
-    SecurityApplicationProxy* remoteObj;
-    status = GetProxyObject(app, ECDHE_DSA, &remoteObj);
-    if (ER_OK != status) {
-        // Errors logged in GetProxyObject.
-        return status;
-    }
-
+    CheckReAuthenticate();
     MsgArg rulesMsgArg;
-    status = remoteObj->GetManifest(rulesMsgArg);
-    ReleaseProxyObject(remoteObj);
+    QStatus status = remoteObj->GetManifest(rulesMsgArg);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetManifest"));
         return status;
@@ -539,7 +417,16 @@ QStatus ProxyObjectManager::GetManifest(const OnlineApplication& app,
 
 Exit:
     delete[] manifestRules;
+    manifestRules = nullptr;
     return status;
+}
+
+void ProxyObjectManager::ManagedProxyObject::CheckReAuthenticate()
+{
+    if (needReAuth) {
+        remoteObj->SecureConnection(true);
+        needReAuth = false;
+    }
 }
 
 void ProxyObjectManager::SessionLost(SessionId sessionId,

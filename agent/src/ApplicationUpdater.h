@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -47,7 +47,9 @@ class SecurityEvent {
     ~SecurityEvent()
     {
         delete newInfo;
+        newInfo = nullptr;
         delete oldInfo;
+        oldInfo = nullptr;
     }
 };
 
@@ -93,17 +95,21 @@ class ApplicationUpdater :
     QStatus UpdateApplication(const OnlineApplication& app,
                               const SecurityInfo& secInfo);
 
-    QStatus UpdatePolicy(const OnlineApplication& app);
+    QStatus UpdatePolicy(ProxyObjectManager::ManagedProxyObject& app,
+                         const PermissionPolicy* localPolicy);
 
-    QStatus UpdateMemberships(const OnlineApplication& app);
+    QStatus UpdateMemberships(ProxyObjectManager::ManagedProxyObject& mngdProxy,
+                              const vector<MembershipCertificateChain>& local);
 
-    QStatus UpdateIdentity(const OnlineApplication& app);
+    QStatus UpdateIdentity(ProxyObjectManager::ManagedProxyObject& mngdProxy,
+                           const IdentityCertificateChain& persistedIdCerts,
+                           const Manifest& mf);
 
-    QStatus InstallMissingMemberships(const OnlineApplication& app,
+    QStatus InstallMissingMemberships(ProxyObjectManager::ManagedProxyObject& mngdProxy,
                                       const vector<MembershipCertificateChain>& local,
                                       const vector<MembershipSummary>& remote);
 
-    QStatus RemoveRedundantMemberships(const OnlineApplication& app,
+    QStatus RemoveRedundantMemberships(ProxyObjectManager::ManagedProxyObject& mngdProxy,
                                        const vector<MembershipCertificateChain>& local,
                                        const vector<MembershipSummary>& remote);
 

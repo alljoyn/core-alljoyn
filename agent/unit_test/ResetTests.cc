@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -95,7 +95,7 @@ TEST_F(ResetTests, RecoveryFromResetFailure) {
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 
     // make sure remote reset will fail
-    proxyObjectManager->Reset(lastAppInfo);
+    Reset(lastAppInfo);
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_OK));
 
     // make sure storage will fail on UpdatesCompleted
@@ -190,7 +190,7 @@ TEST_F(ResetTests, RecoveryFromRemoteReset) {
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
 
     // reset the application behind the back of the security manager
-    proxyObjectManager->Reset(lastAppInfo);
+    Reset(lastAppInfo);
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_OK));
 
     // restart test application and wait for sync error

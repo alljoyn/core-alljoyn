@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -28,7 +28,7 @@ using namespace std;
 namespace ajn {
 namespace securitymgr {
 /**
- * @brief The SQLStorageFactory is introduced because at run-time
+ * @brief The StorageFactory is introduced because at run-time
  *        we are not sure which class (derived from Storage) we'll be using.
  *        Every implementation needs to provide their own implementation of this class.
  */
@@ -43,7 +43,7 @@ class StorageFactory {
     /**
      * @brief Get a singleton instance of the storage factory.
      *
-     * @return SQLStorageFactory reference to the singleton storage factory.
+     * @return StorageFactory reference to the singleton storage factory.
      */
     static StorageFactory& GetInstance()
     {

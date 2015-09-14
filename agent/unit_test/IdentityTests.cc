@@ -1,5 +1,5 @@
 /******************************************************************************
- * Copyright (c) AllSeen Alliance. All rights reserved.
+ * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
  *    purpose with or without fee is hereby granted, provided that the above
@@ -146,7 +146,7 @@ TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
     ASSERT_TRUE(WaitForUpdatesCompleted());
 
     uint32_t currentVersion;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, currentVersion));
+    ASSERT_EQ(ER_OK, GetPolicyVersion(app, currentVersion));
     /* Try to install another identity */
     IdentityInfo info2;
     info2.name = "AnotherName";
@@ -155,7 +155,7 @@ TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
     ASSERT_TRUE(WaitForUpdatesCompleted());
     ASSERT_TRUE(CheckIdentity(info2, aa.lastManifest));
     uint32_t remoteVersion;
-    ASSERT_EQ(ER_OK, proxyObjectManager->GetPolicyVersion(app, remoteVersion));
+    ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
     ASSERT_EQ(1 + currentVersion, remoteVersion);
 }
 } // namespace
