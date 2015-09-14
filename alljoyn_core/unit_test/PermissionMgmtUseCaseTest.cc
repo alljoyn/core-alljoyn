@@ -1468,10 +1468,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         /* create a new identity cert */
         qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
+        Crypto_ECC ecc;
         const qcc::ECCPublicKey* subjectPublicKey;
         if (generateRandomSubjectKey) {
-            Crypto_ECC ecc;
             ecc.GenerateDSAKeyPair();
+            /* Note that the subjectPublicKey gets destroyed when the ecc object is destroyed */
             subjectPublicKey = ecc.GetDSAPublicKey();
         } else {
             subjectPublicKey = certs[0].GetSubjectPublicKey();
