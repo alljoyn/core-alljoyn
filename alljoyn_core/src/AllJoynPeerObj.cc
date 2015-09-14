@@ -384,24 +384,13 @@ void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, M
         peerState->SetGuidAndAuthVersion(remotePeerGuid, authVersion);
 
         /*
-         * Now that we know the auth version, start and update the conversation hash.
-         */
-        peerState->AcquireConversationHashLock();
-        peerState->InitializeConversationHash();
-        peerState->UpdateHash(CONVERSATION_V4, msg);
-        peerState->ReleaseConversationHashLock();
-        /*
          * Associate the remote peer GUID with the sender peer state.
          */
         MsgArg replyArgs[2];
         replyArgs[0].Set("s", localGuidStr.c_str());
         replyArgs[1].Set("u", authVersion);
-
         Message replyMsg(*bus);
-        peerState->AcquireConversationHashLock();
         MethodReply(msg, replyArgs, ArraySize(replyArgs), &replyMsg);
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
     } else {
         MethodReply(msg, ER_BUS_NO_PEER_GUID);
     }
@@ -493,7 +482,15 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
     PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
     Message replyMsg(*bus);
 
+    /*
+     * The hash state may have been previously initialized by ExchangeSuites. If so,
+     * ExchangeSuites will also hash the GUIDs.
+     */
     peerState->AcquireConversationHashLock();
+    if (!peerState->IsConversationHashInitialized()) {
+        peerState->InitializeConversationHash();
+        this->HashGUIDs(msg->GetSender(), false);
+    }
     peerState->UpdateHash(CONVERSATION_V4, msg);
     peerState->ReleaseConversationHashLock();
 
@@ -785,6 +782,30 @@ void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* memb
     }
 }
 
+void AllJoynPeerObj::HashGUIDs(const char* sender, bool localFirst)
+{
+    qcc::String guidStr;
+    assert(sender != NULL);
+
+    bus->GetPeerGUID(sender, guidStr);
+    qcc::GUID128 remotePeerGuid(guidStr);
+
+    guidStr = bus->GetInternal().GetKeyStore().GetGuid();
+    qcc::GUID128 localPeerGuid(guidStr);
+
+    PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(sender);
+    peerState->AcquireConversationHashLock();
+    assert(peerState->IsConversationHashInitialized());
+    if (localFirst) {
+        peerState->UpdateHash(CONVERSATION_V4, localPeerGuid.GetBytes(), qcc::GUID128::SIZE);
+        peerState->UpdateHash(CONVERSATION_V4, remotePeerGuid.GetBytes(), qcc::GUID128::SIZE);
+    } else   {
+        peerState->UpdateHash(CONVERSATION_V4, remotePeerGuid.GetBytes(), qcc::GUID128::SIZE);
+        peerState->UpdateHash(CONVERSATION_V4, localPeerGuid.GetBytes(), qcc::GUID128::SIZE);
+    }
+    peerState->ReleaseConversationHashLock();
+}
+
 void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
 {
     Message replyMsg(*bus);
@@ -796,6 +817,17 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
 
     PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
     PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
+
+    /*
+     * The hash state may have been previously initialized by GenSessionKey.
+     * If so, GenSessionKey will also hash the GUIDs.
+     */
+    peerState->AcquireConversationHashLock();
+    if (!peerState->IsConversationHashInitialized()) {
+        peerState->InitializeConversationHash();
+        this->HashGUIDs(msg->GetSender(), false);
+    }
+    peerState->ReleaseConversationHashLock();
 
     QStatus status = msg->GetArg(0)->Get("au", &remoteSuitesLen, &remoteSuites);
     if (status != ER_OK) {
@@ -1022,15 +1054,6 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         return ER_OK;
     }
     /*
-     * Now that we know the authentication version, and that we're starting a new
-     * conversation, start a new hash and hash the ExchangeGuids messages.
-     */
-    peerState->AcquireConversationHashLock();
-    peerState->InitializeConversationHash();
-    peerState->UpdateHash(CONVERSATION_V4, callMsg);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
-    /*
      * Check again if the peer is being authenticated on another thread. We need to do this because
      * the check above may have used a well-known-namme and now we know the unique name.
      */
@@ -1067,9 +1090,6 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         SetRights(peerState, true, false);
         /* We are still holding the lock */
         lock.Unlock(MUTEX_CONTEXT);
-        peerState->AcquireConversationHashLock();
-        peerState->FreeConversationHash();
-        peerState->ReleaseConversationHashLock();
         return ER_OK;
     }
     /*
@@ -1094,6 +1114,10 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
     bool authTried = false;
     bool firstPass = true;
     bool useKeyExchanger = UseKeyExchanger(authVersion, supportedAuthSuites, supportedAuthSuitesCount);
+    peerState->AcquireConversationHashLock();
+    peerState->InitializeConversationHash();
+    this->HashGUIDs(sender.c_str(), true);
+    peerState->ReleaseConversationHashLock();
     do {
         /*
          * Try to load the master secret for the remote peer. It is possible that the master secret

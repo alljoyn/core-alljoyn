@@ -405,6 +405,12 @@ class _PeerState {
     void InitializeConversationHash();
 
     /**
+     * Returns true if the conversation hash has been initalized, false otherwise.
+     * @see void InitializeConversationHash()
+     */
+    bool _PeerState::IsConversationHashInitialized();
+
+    /**
      * Free the conversation hash when it's no longer needed. After this, any new calls
      * to UpdateHash or GetDigest must be preceded by a call to InitializeConversationHash.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
