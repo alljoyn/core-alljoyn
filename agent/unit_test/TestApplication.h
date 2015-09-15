@@ -50,7 +50,7 @@ class TestApplication {
     /**
      * Creates a new TestApplication.
      */
-    TestApplication(string _appName = "Test");
+    TestApplication(string _appName = "secmgrctest");
 
     /**
      * Starts this TestApplication.
