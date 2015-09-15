@@ -26,6 +26,7 @@
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/SessionListener.h>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <stdio.h>
 #include <qcc/platform.h>
 
