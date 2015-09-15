@@ -71,8 +71,11 @@ void MyAllJoynCode::initialize(const char* packageName) {
         }
         aboutData.SetDeviceId(devId.c_str());
         aboutData.SetDescription("This is a sample rule application for developers to use as a simple reference application.");
-        uint8_t appId[16];
-        HexStringToBytes(aboutOpts.GetAppID(), appId, sizeof(appId) / sizeof(*appId));
+        uint8_t appId[16] = { 0 };
+        size_t bytesConverted = qcc::HexStringToBytes(aboutOpts.GetAppID(), appId, sizeof(appId) / sizeof(*appId));
+        if (bytesConverted != (sizeof(appId) / sizeof(*appId))) {
+            LOGTHIS("HexStringToBytes failed");
+        }
         aboutData.SetAppId(appId, sizeof(appId) / sizeof(*appId));
         aboutData.SetAppName("SampleRuleEngine");
         aboutData.SetManufacturer("AllSeen Developer Sample");
@@ -238,27 +241,4 @@ void MyAllJoynCode::SessionMemberRemoved(ajn::SessionId sessionId, const char* u
 {
     QCC_UNUSED(sessionId);
     QCC_UNUSED(uniqueName);
-}
-
-char MyAllJoynCode::HexToChar(char c)
-{
-    if ('0' <= c && c <= '9') {
-        return c - '0';
-    } else if ('a' <= c && c <= 'f') {
-        return c + 10 - 'a';
-    } else if ('A' <= c && c <= 'F') {
-        return c + 10 - 'A';
-    }
-
-    return -1;
-}
-
-void MyAllJoynCode::HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t len)
-{
-    unsigned char achar, bchar;
-    for (size_t i = 0; i < len; i++) {
-        achar = HexToChar(hex[i * 2]);
-        bchar = HexToChar(hex[i * 2 + 1]);
-        outBytes[i] = ((achar << 4) | bchar);
-    }
 }
