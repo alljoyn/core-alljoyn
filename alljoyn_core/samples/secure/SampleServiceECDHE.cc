@@ -183,9 +183,10 @@ class ECDHEKeyXListener : public AuthListener {
         } else if (strcmp(authMechanism, KEYX_ECDHE_ECDSA) == 0) {
             static const char ecdsaPrivateKeyPEM[] = {
                 "-----BEGIN EC PRIVATE KEY-----\n"
-                "MDECAQEEIJizQZiJuDAfWpd7mGByiuyf89i/xvIJCFlOHoMQg1D4oAoGCCqGSM49\n"
+                "MDECAQEEIP7pbEF7CiuHpW7FSodaUZRiBQKT0ydBJtm8TdaqFGRdoAoGCCqGSM49\n"
                 "AwEH\n"
                 "-----END EC PRIVATE KEY-----\n"
+
             };
 
             /* This chain is the service's certificate first followed by the CA's certificate.
@@ -198,25 +199,28 @@ class ECDHEKeyXListener : public AuthListener {
              * certificate to check. It is included here for demonstrative purposes. */
             static const char ecdsaCertChainX509PEM[] = {
                 "-----BEGIN CERTIFICATE-----\n"
-                "MIIBazCCARGgAwIBAgIUc8XbK46MXC7nCM230CDYiHw756gwCgYIKoZIzj0EAwIw\n"
+                "MIIBgDCCASegAwIBAgIUaWYhK64WMTXX2P7Mx9+jPS8nM/IwCgYIKoZIzj0EAwIw\n"
                 "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n"
-                "aG9yaXR5MB4XDTE1MDUwNzIyMTY1OFoXDTIwMDUwNTIyMTY1OFowJzElMCMGA1UE\n"
-                "AwwcQWxsSm95biBFQ0RIRSBTYW1wbGUgU2VydmljZTBZMBMGByqGSM49AgEGCCqG\n"
-                "SM49AwEHA0IABC4onmzONqAWcdt9Z7cZMN9QFGQ3oLdxuDw/NAiWY3CCn7xK32tQ\n"
-                "A08D3Lp6o4g75CO7yFTSVnm8o43jbnfB6/SjDTALMAkGA1UdEwQCMAAwCgYIKoZI\n"
-                "zj0EAwIDSAAwRQIgX1fCAUg20I3e55CwguZ3qZc8Fjedqw9lhnMjNz2Br38CIQCq\n"
-                "h4W65dWkP2ksE+m/5PCtfgur/jYSYsK1X/wvs8TOeg==\n"
+                "aG9yaXR5MB4XDTE1MDkxMjAyMjAzNVoXDTIwMDkxMDAyMjAzNVowJjEkMCIGA1UE\n"
+                "AwwbQWxsSm95biBFQ0RIRSBTYW1wbGUgU2VydmVyMFkwEwYHKoZIzj0CAQYIKoZI\n"
+                "zj0DAQcDQgAEDbQwLViVEHKnNwZ8DQJHIVoLohH4cInElLJ2DC73+eT8Y3Se2bMv\n"
+                "yMFE70OovRyLnC53conK2WqIOQAOp92saKMkMCIwCQYDVR0TBAIwADAVBgNVHSUE\n"
+                "DjAMBgorBgEEAYLefAEBMAoGCCqGSM49BAMCA0cAMEQCIHDb8SVrYon3EYaf6U57\n"
+                "d+xcBtr4kAN8GXSrQ3zuVgGSAiB2o+faXMa6O3Ae5+dB3kPOVMiOFg3WryPgYEzb\n"
+                "PN/PTg==\n"
                 "-----END CERTIFICATE-----\n"
                 "-----BEGIN CERTIFICATE-----\n"
-                "MIIBezCCASKgAwIBAgIUDrFhHE80+zbEUOCNTxw219Nd1qwwCgYIKoZIzj0EAwIw\n"
+                "MIIBnzCCAUWgAwIBAgIUdcyHkQndQDgjP2XnhmP43Kak/GAwCgYIKoZIzj0EAwIw\n"
                 "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n"
-                "aG9yaXR5MB4XDTE1MDUwNzIyMTYzNloXDTI1MDUwNDIyMTYzNlowNTEzMDEGA1UE\n"
+                "aG9yaXR5MB4XDTE1MDkxMjAyMTYzOFoXDTI1MDkwOTAyMTYzOFowNTEzMDEGA1UE\n"
                 "AwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MFkw\n"
-                "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6AsCTTviTBWX0Jw2e8Cs8DhwxfRd37Yp\n"
-                "IH5ALzBqwUN2sfG1odcthe6GKdE/9oVfy12SXOL3X2bi3yg1XFoWnaMQMA4wDAYD\n"
-                "VR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiASuD0OrpDM8ziC5GzMbZWKNE/X\n"
-                "eboedc0p6YsAZmry2AIgR23cKM4cKkc2bgUDbETNbDcOcwm+EWaK9E4CkOO/tBc=\n"
+                "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhUADDEGG1bvJ4qDDodD2maFmENFSEmhQ\n"
+                "hvP4iJ82WT7XrhIx/L/XIZo9wKnwNsHJusLVXXMKjyUwcPuVpYU7JqMzMDEwDAYD\n"
+                "VR0TBAUwAwEB/zAhBgNVHSUEGjAYBgorBgEEAYLefAEBBgorBgEEAYLefAEFMAoG\n"
+                "CCqGSM49BAMCA0gAMEUCIAWutM+O60m/awMwJvQXHVGXq+z+6nac4KRLDT5OXqn1\n"
+                "AiEAq/NwQWXJ/FYHBxVOXrKxGZXTFoBiudw9+konMAu1MaE=\n"
                 "-----END CERTIFICATE-----\n"
+
             };
             /*
              * The application may provide the DSA private key and public key in the certificate.
