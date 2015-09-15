@@ -16,6 +16,8 @@
 
 #include <alljoyn/about/AboutPropertyStoreImpl.h>
 #include <qcc/Debug.h>
+#include <qcc/StringUtil.h>
+#include <qcc/Util.h>
 #include <algorithm>
 
 #define QCC_MODULE "ALLJOYN_ABOUT_PROPERTYSTORE"
@@ -33,30 +35,6 @@ AboutPropertyStoreImpl::AboutPropertyStoreImpl()
 
 AboutPropertyStoreImpl::~AboutPropertyStoreImpl()
 {
-}
-
-static char HexToChar(char c)
-{
-    if ('0' <= c && c <= '9') {
-        return c - '0';
-    } else if ('a' <= c && c <= 'f') {
-        return c + 10 - 'a';
-    } else if ('A' <= c && c <= 'F') {
-        return c + 10 - 'A';
-    }
-
-    return -1;
-}
-
-static void HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t len)
-{
-    unsigned char achar, bchar;
-    for (size_t i = 0; i < len; i++) {
-
-        achar = HexToChar(hex[i * 2]);
-        bchar = HexToChar(hex[i * 2 + 1]);
-        outBytes[i] = ((achar << 4) | bchar);
-    }
 }
 
 QStatus AboutPropertyStoreImpl::isLanguageSupported(const char* language)
@@ -375,9 +353,14 @@ QStatus AboutPropertyStoreImpl::setAppId(const qcc::String& appId, bool isPublic
 {
     QStatus status = ER_OK;
     PropertyStoreKey propertyKey = APP_ID;
+
+    /* The input appId string must be a hex representation of a GUID */
     uint8_t AppId[16];
-    HexStringToBytes(appId, AppId, 16);
-    MsgArg msgArg("ay", sizeof(AppId) / sizeof(*AppId), AppId);
+    size_t bytesConverted = qcc::HexStringToBytes(appId, AppId, ArraySize(AppId));
+    if (bytesConverted != ArraySize(AppId)) {
+        return ER_BAD_ARG_1;
+    }
+    MsgArg msgArg("ay", ArraySize(AppId), AppId);
 
     status = validateValue(propertyKey, msgArg);
     if (status != ER_OK) {
