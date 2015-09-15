@@ -17,7 +17,6 @@
 #include "ApplicationUpdater.h"
 #include <alljoyn/securitymgr/ManifestUpdate.h>
 
-#include <stdlib.h>
 #include <string>
 
 #include <qcc/Debug.h>

@@ -17,8 +17,6 @@
 #ifndef ALLJOYN_SECMGR_SECURITYAGENT_H_
 #define ALLJOYN_SECMGR_SECURITYAGENT_H_
 
-#include <memory>
-
 #include <alljoyn/Status.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/PermissionConfigurator.h>

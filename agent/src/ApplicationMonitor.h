@@ -26,7 +26,6 @@
 #include <qcc/GUID.h>
 
 #include <alljoyn/BusAttachment.h>
-#include <alljoyn/AutoPinger.h>
 #include <alljoyn/ApplicationStateListener.h>
 
 #include "SecurityInfo.h"

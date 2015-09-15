@@ -14,10 +14,14 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <map>
+#include <vector>
+
 #include <alljoyn/securitymgr/PolicyUtil.h>
 
 #define QCC_MODULE "SECMGR_AGENT"
 
+using namespace std;
 using namespace ajn;
 using namespace ajn::securitymgr;
 

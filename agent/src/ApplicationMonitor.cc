@@ -16,20 +16,11 @@
 
 #include "ApplicationMonitor.h"
 
-#include <algorithm>
-#include <iostream>
-#include <vector>
-
 #include <qcc/Debug.h>
-
-#include <KeyInfoHelper.h>  // still in alljoyn_core/src!
 
 #include <alljoyn/securitymgr/Util.h>
 
 #define QCC_MODULE "SECMGR_APPMON"
-
-#define PM_NOTIF_MEMBER "NotifyConfig"
-#define AUTOPING_GROUPNAME "AMPingGroup"
 
 using namespace std;
 using namespace qcc;

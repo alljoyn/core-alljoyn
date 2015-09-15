@@ -17,9 +17,6 @@
 #ifndef ALLJOYN_SECMGR_APPLICATION_H_
 #define ALLJOYN_SECMGR_APPLICATION_H_
 
-#include <vector>
-#include <string>
-
 #include <qcc/GUID.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/String.h>

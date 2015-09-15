@@ -17,7 +17,6 @@
 #ifndef ALLJOYN_SECMGR_SECURITYINFO_H_
 #define ALLJOYN_SECMGR_SECURITYINFO_H_
 
-#include <vector>
 #include <string>
 
 #include <qcc/GUID.h>
