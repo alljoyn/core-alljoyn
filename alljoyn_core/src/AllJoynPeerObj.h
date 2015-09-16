@@ -465,6 +465,17 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param msg     The method call message
      */
     void SendMemberships(const InterfaceDescription::Member* member, Message& msg);
+
+    /**
+     *  Compute the hash of the local GUID and remote peer's GUID, using the
+     *  conversation hash state. The authentication protocol version is also
+     *  hashed (before the GUIDs).
+     *
+     *  @param sender      The name of the remote peer.
+     *  @param localFirst  If true compute Hash(local||remote), if false compute Hash(remote||local).
+     */
+    void HashGUIDs(const char* sender, bool localFirst);
+
     /**
      * The peer-to-peer authentication mechanisms available to this object
      */
