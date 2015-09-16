@@ -735,7 +735,7 @@ static void reverse(uint8_t* in, size_t inlen)
 /* Create a field element x from a byte string.
  * Input buffer must have length sizeof(digit256_t)
  * Inputs larger than P256 will be reduced mod P256. */
-void fpimport_p256(const uint8_t* bytes, digit256_t x, digit_t* temps, boolean_t is_bigendian)
+void fpimport_p256(const uint8_t* bytes, digit256_t x, digit_t* temps, bool is_bigendian)
 {
     digit256_t tmp;
 
@@ -748,7 +748,8 @@ void fpimport_p256(const uint8_t* bytes, digit256_t x, digit_t* temps, boolean_t
     fpmul_p256(x, tmp, x, temps);       /* x = tmp*x = x mod P256 */
     fpzero_p256(tmp);
 
-#if HOST_IS_BIG_ENDIAN                  /* Convert words to machine's endianness. */
+#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN)
+    /* Convert words to machine's endianness. */
     fpdigitswap_p256(x);
 #endif
 }
