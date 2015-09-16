@@ -1452,7 +1452,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /*
      *  Replace service app Identity Certificate
      */
-    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const PermissionPolicy::Rule* manifest, size_t manifestSize, bool generateRandomSubjectKey, bool setWrongManifestDigest)
+    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const PermissionPolicy::Rule* manifest, size_t manifestSize, bool generateRandomSubjectKey, bool setWrongManifestDigest, bool setEmptyAKI = false)
     {
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         /* retrieve the current identity cert */
@@ -1486,11 +1486,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         } else {
             EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(bus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
         }
-        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, subjectPublicKey, "Service Provider", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, subjectPublicKey, "Service Provider", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE, setEmptyAKI);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.";
 
         status = saProxy.UpdateIdentity(identityCertChain, 1, manifest, manifestSize);
-        if (generateRandomSubjectKey || setWrongManifestDigest) {
+        if (generateRandomSubjectKey || setWrongManifestDigest || setEmptyAKI) {
             EXPECT_NE(ER_OK, status) << "InstallIdentity did not fail.";
         } else {
             EXPECT_EQ(ER_OK, status) << "InstallIdentity failed.";
@@ -1508,12 +1508,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, false);
     }
 
-    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, bool generateRandomSubjectKey, bool setWrongManifestDigest)
+    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, bool generateRandomSubjectKey, bool setWrongManifestDigest, bool setEmptyAKI = false)
     {
         PermissionPolicy::Rule* manifest = NULL;
         size_t manifestSize = 0;
         GenerateAllowAllManifest(&manifest, &manifestSize);
-        ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, setWrongManifestDigest);
+        ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, setWrongManifestDigest, setEmptyAKI);
         delete [] manifest;
     }
 
@@ -1631,7 +1631,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install Membership chain to a consumer
      */
-    void InstallMembershipChainToTarget(BusAttachment& topBus, BusAttachment& middleBus, BusAttachment& targetBus, const char* serial0, const char* serial1, qcc::GUID128& guildID)
+    void InstallMembershipChainToTarget(BusAttachment& topBus, BusAttachment& middleBus, BusAttachment& targetBus, const char* serial0, const char* serial1, qcc::GUID128& guildID, bool setEmptyAKI = false)
     {
         ECCPublicKey targetPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(targetBus, &targetPubKey);
@@ -1647,7 +1647,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = tca.GetGuid(targetGUID);
         qcc::String middleCN(middleGUID.ToString());
         qcc::String targetCN(targetGUID.ToString());
-        status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, targetBus.GetUniqueName().c_str(), middleCN, &secondPubKey, targetCN, &targetPubKey, guildID);
+        status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, targetBus.GetUniqueName().c_str(), middleCN, &secondPubKey, targetCN, &targetPubKey, guildID, setEmptyAKI);
+        if (setEmptyAKI) {
+            EXPECT_EQ(ER_INVALID_CERTIFICATE, status) << "  InstallMembershipChainToTarget did not fail.";
+            return;
+        }
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToTarget failed.  Actual Status: " << QCC_StatusText(status);
 
         /* retrieve the membership summaries to verify the issuer public key is provided */
@@ -2378,6 +2382,18 @@ TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithBadManifestDigest)
 {
     Claims(false);
     ReplaceIdentityCertWithBadManifestDigest(adminBus, serviceBus);
+}
+
+TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithEmptyAKI)
+{
+    Claims(false);
+    ReplaceIdentityCert(adminBus, serviceBus, false, false, true);
+}
+
+TEST_F(PermissionMgmtUseCaseTest, InstallMembershipWithEmptyAKI)
+{
+    Claims(false);
+    InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1, true);
 }
 
 TEST_F(PermissionMgmtUseCaseTest, TurnStateFromNeedUpdateToClaimed)

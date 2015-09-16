@@ -806,6 +806,16 @@ static QStatus ValidateCertificateWithTrustAnchors(const CertificateX509& cert, 
     return ER_UNKNOWN_CERTIFICATE;
 }
 
+static bool ValidateAKIInCertChain(const qcc::CertificateX509* certChain, size_t count)
+{
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        if (certChain[cnt].GetAuthorityKeyId().empty()) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static QStatus ValidateMembershipCertificateChain(const CertificateX509* certChain, size_t count, PermissionMgmtObj::TrustAnchorList* taList)
 {
     if (count == 0) {
@@ -816,6 +826,9 @@ static QStatus ValidateMembershipCertificateChain(const CertificateX509* certCha
         return ER_INVALID_CERTIFICATE;
     }
     if (!CertificateX509::ValidateCertificateTypeInCertChain(certChain, count)) {
+        return ER_INVALID_CERTIFICATE;
+    }
+    if (!ValidateAKIInCertChain(certChain, count)) {
         return ER_INVALID_CERTIFICATE;
     }
     if (!taList) {
@@ -2390,10 +2403,16 @@ QStatus PermissionMgmtObj::GetManifestTemplateDigest(MsgArg& arg)
     return status;
 }
 
-bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, bool validateTrust, const qcc::CertificateX509* certChain, size_t count)
+bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, bool validateTrust, const qcc::CertificateX509* certChain, size_t count, bool enforceAKI)
 {
     if (verifyIssuerChain) {
         if (!KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(certChain, count)) {
+            return false;
+        }
+    }
+    /* check for AKI existence */
+    if (enforceAKI) {
+        if (!ValidateAKIInCertChain(certChain, count)) {
             return false;
         }
     }
@@ -2439,7 +2458,7 @@ bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, bool validateT
     return valid;
 }
 
-bool PermissionMgmtObj::ValidateCertChainPEM(const qcc::String& certChainPEM, bool& authorized)
+bool PermissionMgmtObj::ValidateCertChainPEM(const qcc::String& certChainPEM, bool& authorized, bool enforceAKI)
 {
     /* get the trust anchor public key */
     bool handled = false;
@@ -2468,7 +2487,7 @@ bool PermissionMgmtObj::ValidateCertChainPEM(const qcc::String& certChainPEM, bo
         delete [] certChain;
         return handled;
     }
-    authorized = ValidateCertChain(false, true, certChain, count);
+    authorized = ValidateCertChain(false, true, certChain, count, enforceAKI);
     delete [] certChain;
     return handled;
 }
@@ -2511,7 +2530,8 @@ bool PermissionMgmtObj::KeyExchangeListener::VerifyCredentials(const char* authM
             return false;
         }
         bool authorized = false;
-        bool handled = pmo->ValidateCertChainPEM(certChainPEM, authorized);
+        bool enforceAKI = false; /* prior to security 2.0 app may have not AKI */
+        bool handled = pmo->ValidateCertChainPEM(certChainPEM, authorized, enforceAKI);
         if (handled) {
             return authorized;
         }
