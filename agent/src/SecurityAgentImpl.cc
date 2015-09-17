@@ -162,6 +162,12 @@ QStatus SecurityAgentImpl::ClaimSelf()
         return status;
     }
 
+    // Go into claimable state by setting up a manifest.
+    busAttachment->GetPermissionConfigurator().SetPermissionManifest(manifestRules, 1);
+    if (status != ER_OK) {
+        return status;
+    }
+
     // Claim
     string ownBusName = busAttachment->GetUniqueName().c_str();
     OnlineApplication ownAppInfo;
@@ -381,10 +387,12 @@ SecurityAgentImpl::~SecurityAgentImpl()
 {
     caStorage->UnRegisterStorageListener(this);
 
-    appMonitor->UnregisterSecurityInfoListener(this);
+    if (appMonitor != nullptr) {
+        appMonitor->UnregisterSecurityInfoListener(this);
+        appMonitor = nullptr;
+    }
 
     applicationUpdater = nullptr;
-    appMonitor = nullptr;
 
     queue.Stop();
 
