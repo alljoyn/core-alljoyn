@@ -482,6 +482,16 @@ class CertificateX509 {
     }
 
     /**
+     * Updates the current AuthorityKeyId with a new one.
+     *
+     * @param[in] newAki the new AuthorityKeyId for this certificate.
+     */
+    void SetAuthorityKeyId(const qcc::String& newAki)
+    {
+        aki = newAki;
+    }
+
+    /**
      * Set the validity field
      * @param validPeriod the validity period
      */

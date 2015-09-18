@@ -66,14 +66,15 @@ static const char* TRUSTED_ROOTS_PEM[] = {
     /* AllJoyn ECDHE Sample Certificate Authority
      * This CA issued the certificates used for the Client and Service in this sample. */
     "-----BEGIN CERTIFICATE-----\n"
-    "MIIBezCCASKgAwIBAgIUDrFhHE80+zbEUOCNTxw219Nd1qwwCgYIKoZIzj0EAwIw\n"
+    "MIIBnzCCAUWgAwIBAgIUdcyHkQndQDgjP2XnhmP43Kak/GAwCgYIKoZIzj0EAwIw\n"
     "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n"
-    "aG9yaXR5MB4XDTE1MDUwNzIyMTYzNloXDTI1MDUwNDIyMTYzNlowNTEzMDEGA1UE\n"
+    "aG9yaXR5MB4XDTE1MDkxMjAyMTYzOFoXDTI1MDkwOTAyMTYzOFowNTEzMDEGA1UE\n"
     "AwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MFkw\n"
-    "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE6AsCTTviTBWX0Jw2e8Cs8DhwxfRd37Yp\n"
-    "IH5ALzBqwUN2sfG1odcthe6GKdE/9oVfy12SXOL3X2bi3yg1XFoWnaMQMA4wDAYD\n"
-    "VR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiASuD0OrpDM8ziC5GzMbZWKNE/X\n"
-    "eboedc0p6YsAZmry2AIgR23cKM4cKkc2bgUDbETNbDcOcwm+EWaK9E4CkOO/tBc=\n"
+    "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhUADDEGG1bvJ4qDDodD2maFmENFSEmhQ\n"
+    "hvP4iJ82WT7XrhIx/L/XIZo9wKnwNsHJusLVXXMKjyUwcPuVpYU7JqMzMDEwDAYD\n"
+    "VR0TBAUwAwEB/zAhBgNVHSUEGjAYBgorBgEEAYLefAEBBgorBgEEAYLefAEFMAoG\n"
+    "CCqGSM49BAMCA0gAMEUCIAWutM+O60m/awMwJvQXHVGXq+z+6nac4KRLDT5OXqn1\n"
+    "AiEAq/NwQWXJ/FYHBxVOXrKxGZXTFoBiudw9+konMAu1MaE=\n"
     "-----END CERTIFICATE-----\n"
 };
 
@@ -182,7 +183,23 @@ bool VerifyCertificateChain(const AuthListener::Credentials& creds)
              * EKUs to ensure they are not used for other purposes. */
             trusted = CertificateX509::ValidateCertificateTypeInCertChain(certChain, chainLength);
         }
-        /* trusted will remain false if certificate is not an identity certificate. */
+
+        /* However, we also need to check for unrestricted certificates here.
+         * The reason to allow unrestricted here is for backwards compatibility
+         * with pre-1509 peers that use certificates without EKUs in Security 1.0
+         * contexts. Certificates created by AllJoyn in 1509 and above will always
+         * have an EKU indicating the type. */
+        if (certChain[0].GetType() == CertificateX509::UNRESTRICTED_CERTIFICATE) {
+            /* Loop through and determine if the entire cert chain has type UNRESTRICTED_CERTIFICATE. */
+            trusted = true;
+            for (size_t iCert = 1; iCert < chainLength; iCert++) {
+                if (certChain[iCert].GetType() != CertificateX509::UNRESTRICTED_CERTIFICATE) {
+                    trusted = false;
+                    break;
+                }
+            }
+        }
+        /* trusted will remain false if certificate is not an identity certificate or the whole cert chain is unrestricted. */
     }
 
     if (trusted && (ER_OK == status)) {
