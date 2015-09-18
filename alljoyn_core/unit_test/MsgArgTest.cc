@@ -1289,10 +1289,11 @@ TEST(MsgArgTest, MaximumLengthArrays_signature) {
     }
 }
 
-static MsgArg max_length_av[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_variant) {
     QStatus status;
     MsgArg arg;
+    MsgArg* max_length_av = new MsgArg[ALLJOYN_MAX_ARRAY_LEN];
+
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
         status = max_length_av[i].Set("v", new MsgArg("i", i));
         EXPECT_EQ(ER_OK, status);
@@ -1311,12 +1312,15 @@ TEST(MsgArgTest, MaximumLengthArrays_variant) {
         EXPECT_EQ(ER_OK, status);
         ASSERT_EQ(static_cast<int32_t>(i), iValue);
     }
+
+    delete[] max_length_av;
 }
 
-static MsgArg max_length_adictEntry[ALLJOYN_MAX_ARRAY_LEN];
 TEST(MsgArgTest, MaximumLengthArrays_dictionary) {
     QStatus status;
     MsgArg arg;
+    MsgArg* max_length_adictEntry = new MsgArg[ALLJOYN_MAX_ARRAY_LEN];
+
     for (size_t i = 0; i < ALLJOYN_MAX_ARRAY_LEN; ++i) {
         status = max_length_adictEntry[i].Set("{xx}", static_cast<int64_t>(i), static_cast<int64_t>(i));
         EXPECT_EQ(ER_OK, status);
@@ -1335,6 +1339,8 @@ TEST(MsgArgTest, MaximumLengthArrays_dictionary) {
         ASSERT_EQ(static_cast<int64_t>(i), xKey);
         ASSERT_EQ(static_cast<int64_t>(i), xValue);
     }
+
+    delete[] max_length_adictEntry;
 }
 
 static uint8_t* over_max_length_ay[ALLJOYN_MAX_ARRAY_LEN + 1];

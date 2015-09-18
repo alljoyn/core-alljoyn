@@ -20,7 +20,6 @@
 #include <memory>
 
 #include <qcc/Crypto.h>
-#include <qcc/Thread.h>
 
 #include <alljoyn/Init.h>
 #include <alljoyn/AboutListener.h>
@@ -326,30 +325,27 @@ int CDECL_CALL main(int argc, char** argv)
 
     //Do the common set-up
     DoorCommon common(appName);
-    QStatus status = common.Init(false);
+    BusAttachment* ba = common.GetBusAttachment();
+    DoorCommonPCL pcl(*ba);
+
+    QStatus status = common.Init(false, &pcl);
     if (status != ER_OK) {
-        cerr << "Failed to initialize common layer" << endl;
+        fprintf(stderr, "Failed to initialize common layer\n");
         exit(1);
     }
     printf("Common layer is initialized\n");
 
     status = common.AnnounceAbout();
     if (status != ER_OK) {
-        cerr << "Failed to announce about" << endl;
+        fprintf(stderr, "Failed to announce about\n");
         exit(1);
     }
 
-    BusAttachment* ba = common.GetBusAttachment();
-    DoorSessionManager sessionManager(ba, 10000);
+    //Wait until we are claimed
+    pcl.WaitForClaimedState();
 
-    //Wait until we are claimed...
-    PermissionConfigurator::ApplicationState appState = PermissionConfigurator::NOT_CLAIMABLE;
-    ba->GetPermissionConfigurator().GetApplicationState(appState);
-    while (PermissionConfigurator::CLAIMED != appState) {
-        printf("Consumer is not yet Claimed; Waiting to be claimed\n");
-        qcc::Sleep(5000);
-        ba->GetPermissionConfigurator().GetApplicationState(appState);
-    }
+    //Create a session manager
+    DoorSessionManager sessionManager(ba, 10000);
 
     //Register signal hander
     DoorMessageReceiver dmr;
@@ -358,7 +354,7 @@ int CDECL_CALL main(int argc, char** argv)
                                       common.GetDoorSignal(),
                                       DOOR_SIGNAL_MATCH_RULE);
 
-    //Register About listener and look for doors...
+    //Register About listener and look for doors
     ba->WhoImplements(DOOR_INTERFACE);
     DoorAboutListener dal;
     ba->RegisterAboutListener(dal);

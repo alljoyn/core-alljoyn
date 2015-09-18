@@ -26,6 +26,7 @@
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn/SessionListener.h>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <stdio.h>
 #include <qcc/platform.h>
 
@@ -87,10 +88,6 @@ class MyAllJoynCode :
     virtual void SessionMemberAdded(ajn::SessionId sessionId, const char*uniqueName);
 
     virtual void SessionMemberRemoved(ajn::SessionId sessionId, const char*uniqueName);
-
-    char HexToChar(char c);
-
-    void HexStringToBytes(const qcc::String& hex, uint8_t* outBytes, size_t len);
 
   private:
     std::map<qcc::String, qcc::String> mBusFriendlyMap;

@@ -1244,7 +1244,7 @@ TEST_F(SecSignalTest, DISABLED_SendSignalToMultiPointSession) // Awaits fix for 
 /**
  * Test to validate the behavior of securing connections
  */
-TEST_F(SecSignalTest, SecureConnection)
+TEST_F(SecSignalTest, DISABLED_SecureConnection)
 {
     // Provide a valid policy both on consumer and provider.
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));

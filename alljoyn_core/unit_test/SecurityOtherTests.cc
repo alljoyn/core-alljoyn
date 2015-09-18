@@ -543,6 +543,8 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                                                                   identityCertChainMaster[0],
                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
+    /* set claimable */
+    managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
     EXPECT_EQ(ER_OK, sapWithManager.Claim(managerKey,
                                           managerGuid,
                                           managerKey,
@@ -568,6 +570,8 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     //Manager claims Peers
+    /* set claimable */
+    peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
     EXPECT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
                                         managerGuid,
                                         managerKey,
@@ -585,6 +589,8 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                                                                   3600,
                                                                   identityCertChainPeer2[0],
                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+    /* set claimable */
+    peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
     EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                         managerGuid,
                                         managerKey,
@@ -866,10 +872,10 @@ TEST(SecurityOtherTest, call_security_application_over_ECDHE_NULL) {
     EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
     EXPECT_EQ(1, secuirtyApplicaitonVersion);
 
-    // "ApplicationState"  Expected value="Claimable"
+    // "ApplicationState"  Expected value="Not Claimable"
     PermissionConfigurator::ApplicationState applicationState;
     EXPECT_EQ(ER_OK, proxy.GetApplicationState(applicationState));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationState);
 
     // "ManifestTemplateDigest"  Expected value=Unknown
     uint8_t manifestTemplateDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
@@ -1031,10 +1037,10 @@ TEST(SecurityOtherTest, call_security_application_over_SRP) {
     EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
     EXPECT_EQ(1, secuirtyApplicaitonVersion);
 
-    // "ApplicationState"  Expected value="Claimable"
+    // "ApplicationState"  Expected value="Not Claimable"
     PermissionConfigurator::ApplicationState applicationState;
     EXPECT_EQ(ER_OK, proxy.GetApplicationState(applicationState));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationState);
 
     // "ManifestTemplateDigest"  Expected value=Unknown
     uint8_t manifestTemplateDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
@@ -1142,10 +1148,10 @@ TEST(SecurityOtherTest, call_security_application_over_ECDHE_ECDSA) {
     EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
     EXPECT_EQ(1, secuirtyApplicaitonVersion);
 
-    // "ApplicationState"  Expected value="Claimable"
+    // "ApplicationState"  Expected value="Not Claimable"
     PermissionConfigurator::ApplicationState applicationState;
     EXPECT_EQ(ER_OK, proxy.GetApplicationState(applicationState));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationState);
 
     // "ManifestTemplateDigest"  Expected value=Unknown
     uint8_t manifestTemplateDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
