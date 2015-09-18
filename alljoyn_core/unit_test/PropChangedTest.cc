@@ -2239,6 +2239,8 @@ TEST_F(PropChangedTest, PropertyCache_updatedUponPropChangedCallback)
     // cached value was used - comparing to "2" just to take into account the Get called once from EmitSignals internals
     EXPECT_EQ(2, obj->getsPerPropName.at("P1"));
 
+    proxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "1", *l);
+    delete l;
 }
 
 /*
@@ -2285,7 +2287,9 @@ TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallback)
     EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &val));
     EXPECT_EQ(expectedNewPropValue, val);
+
     proxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "1", *l);
+    delete l;
 }
 
 /*
