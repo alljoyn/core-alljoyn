@@ -852,7 +852,7 @@ QStatus PermissionMgmtTestHelper::GetTVVolume(BusAttachment& bus, ProxyBusObject
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj, size_t& propertyCount)
 {
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
     remoteObj.AddInterface(*itf);
@@ -860,6 +860,11 @@ QStatus PermissionMgmtTestHelper::GetTVCaption(BusAttachment& bus, ProxyBusObjec
     /* test the GetAllProperites */
     MsgArg mapVal;
     QStatus status = remoteObj.GetAllProperties(BasePermissionMgmtTest::TV_IFC_NAME, mapVal);
+    if (ER_OK != status) {
+        return status;
+    }
+    MsgArg args;
+    status = mapVal.Get("a{sv}", &propertyCount, &args);
     if (ER_OK != status) {
         return status;
     }

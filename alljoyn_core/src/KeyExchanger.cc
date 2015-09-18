@@ -843,8 +843,8 @@ QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
     variant.Set("ay", sizeof(verifier), verifier);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->AcquireConversationHashLock();
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     peerState->ReleaseConversationHashLock();
     return status;

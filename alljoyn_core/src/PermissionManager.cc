@@ -156,7 +156,7 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
          *     Need to check to see it is authorized for all properties in
          *     this interface.  So a rule with member name = * is required.
          * otherwise,
-         *     Allowed when at least one property is allowed
+         *     Allowed
          */
         bool allowed = false;
         for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
@@ -183,14 +183,7 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
                     allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
                 }
             } else if (!strictGetAllProperties) {
-                if (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::PROPERTY) {
-                    continue;  /* only interested in PROPERTY_TYPE when name is specified */
-
-                }
-                /* now check the action mask for at least one allowed */
-                if (!allowed) {
-                    allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
-                }
+                allowed = true;
             }
             if (allowed && !scanForDenied) {
                 return allowed;

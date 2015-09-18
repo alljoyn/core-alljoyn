@@ -208,7 +208,7 @@ class PermissionMgmtTestHelper {
     static QStatus GetPeerGUID(BusAttachment& bus, qcc::String& peerName, qcc::GUID128& peerGuid);
     static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
-    static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj, size_t& propertyCount);
 };
 
 }
