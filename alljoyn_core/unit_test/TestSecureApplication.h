@@ -23,6 +23,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AuthListener.h>
 #include "TestSecurityManager.h"
+#include "InMemoryKeyStore.h"
 
 using namespace std;
 using namespace ajn;
@@ -43,6 +44,7 @@ class TestSecureApplication :
   public:
     TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener()
     {
+        bus.RegisterKeyStoreListener(keyStoreListener);
     }
 
     ~TestSecureApplication();
@@ -153,6 +155,7 @@ class TestSecureApplication :
     Mutex sessionLock;
     BusAttachment bus;
     DefaultECDHEAuthListener authListener;
+    InMemoryKeyStoreListener keyStoreListener;
 };
 
 #endif /* _ALLJOYN_TESTSECUREAPPLICATION_H */

@@ -112,7 +112,7 @@ class SecurityClaimApplicationTest : public testing::Test {
 
 };
 
-TEST_F(SecurityClaimApplicationTest, IsClaimable)
+TEST_F(SecurityClaimApplicationTest, IsUnclaimableByDefault)
 {
     //EnablePeerSecurity
     securityManagerKeyListener = new DefaultECDHEAuthListener();
@@ -121,7 +121,7 @@ TEST_F(SecurityClaimApplicationTest, IsClaimable)
     SecurityApplicationProxy saWithSecurityManager(securityManagerBus, securityManagerBus.GetUniqueName().c_str());
     PermissionConfigurator::ApplicationState applicationStateSecurityManager;
     EXPECT_EQ(ER_OK, saWithSecurityManager.GetApplicationState(applicationStateSecurityManager));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStateSecurityManager);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStateSecurityManager);
 
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
@@ -129,7 +129,7 @@ TEST_F(SecurityClaimApplicationTest, IsClaimable)
     SecurityApplicationProxy saWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
     PermissionConfigurator::ApplicationState applicationStatePeer1;
     EXPECT_EQ(ER_OK, saWithPeer1.GetApplicationState(applicationStatePeer1));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
 
     peer2KeyListener = new DefaultECDHEAuthListener();
     peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer2KeyListener);
@@ -137,7 +137,7 @@ TEST_F(SecurityClaimApplicationTest, IsClaimable)
     SecurityApplicationProxy saWithPeer2(securityManagerBus, peer2Bus.GetUniqueName().c_str());
     PermissionConfigurator::ApplicationState applicationStatePeer2;
     EXPECT_EQ(ER_OK, saWithPeer2.GetApplicationState(applicationStatePeer2));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer2);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer2);
 }
 
 class Claim_ApplicationStateListener : public ApplicationStateListener {
@@ -298,7 +298,7 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_caPublicKeyIdentifi
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
     PermissionConfigurator::ApplicationState applicationStatePeer1;
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
 
     Claim_ApplicationStateListener appStateListener;
     securityManagerBus.RegisterApplicationStateListener(appStateListener);
@@ -350,6 +350,8 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_caPublicKeyIdentifi
 
     appStateListener.stateChanged = false;
 
+    /* set claimable */
+    peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
     /*
      * Claim Peer1
      * the CA key is empty.
@@ -392,7 +394,7 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_adminGroupSecurityP
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
     PermissionConfigurator::ApplicationState applicationStatePeer1;
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
 
     Claim_ApplicationStateListener appStateListener;
     securityManagerBus.RegisterApplicationStateListener(appStateListener);
@@ -446,6 +448,8 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_adminGroupSecurityP
 
     appStateListener.stateChanged = false;
 
+    /* set claimable */
+    peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
     /*
      * Claim Peer1
      * the CA key is empty.

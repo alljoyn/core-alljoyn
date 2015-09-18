@@ -127,13 +127,6 @@ void PermissionMgmtObj::Load()
         applicationState = static_cast<PermissionConfigurator::ApplicationState> (config.applicationState);
         claimCapabilities = config.claimCapabilities;
         claimCapabilityAdditionalInfo = config.claimCapabilityAdditionalInfo;
-    } else {
-        if (HasDefaultPolicy()) {
-            applicationState = PermissionConfigurator::CLAIMED;
-        } else {
-            applicationState = PermissionConfigurator::CLAIMABLE;
-        }
-        StoreApplicationState();
     }
 
     ready = true;
@@ -141,7 +134,7 @@ void PermissionMgmtObj::Load()
     /* Bind to the reserved port for PermissionMgmt */
     BindPort();
 
-    /* notify others */
+    /* notify others about policy changed */
     PermissionPolicy* policy = new PermissionPolicy();
     status = RetrievePolicy(*policy);
     if (ER_OK == status) {
@@ -154,7 +147,14 @@ void PermissionMgmtObj::Load()
     PolicyChanged(policy);
     bool hasManifestTemplate;
     status = LookForManifestTemplate(hasManifestTemplate);
+    /* emit application state signal only when there is an installed manifest
+     * template. */
     if ((ER_OK == status) && hasManifestTemplate) {
+        if (!config.applicationStateSet) {
+            /* if the application is not set yet, then set it as claimable */
+            applicationState = PermissionConfigurator::CLAIMABLE;
+            StoreApplicationState();
+        }
         StateChanged();
     }
 }
@@ -2058,6 +2058,19 @@ QStatus PermissionMgmtObj::GetConfiguration(Configuration& config)
     KeyStore::Key key;
     GetACLKey(ENTRY_CONFIGURATION, key);
     QStatus status = ca->GetKey(key, kb);
+    if (ER_BUS_KEY_UNAVAILABLE == status) {
+        /* generate the default configuration */
+        if (HasDefaultPolicy()) {
+            config.applicationStateSet = 1;
+            config.applicationState = (uint8_t) PermissionConfigurator::CLAIMED;
+        } else {
+            config.applicationStateSet = 0;
+            config.applicationState = (uint8_t) PermissionConfigurator::NOT_CLAIMABLE;
+        }
+        config.claimCapabilities = claimCapabilities;
+        config.claimCapabilityAdditionalInfo = claimCapabilityAdditionalInfo;
+        return StoreConfiguration(config);
+    }
     if (ER_OK != status) {
         return status;
     }
@@ -2078,10 +2091,10 @@ QStatus PermissionMgmtObj::StoreApplicationState()
     Configuration config;
     QStatus status = GetConfiguration(config);
     if (ER_OK != status) {
-        config.claimCapabilities = claimCapabilities;
-        config.claimCapabilityAdditionalInfo = claimCapabilityAdditionalInfo;
+        return status;
     }
     config.applicationState = (uint8_t) applicationState;
+    config.applicationStateSet = 1;
     return StoreConfiguration(config);
 }
 
@@ -2276,7 +2289,25 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
 
     status = ca->StoreKey(key, kb);
     if (ER_OK == status) {
-        StateChanged();
+        if (applicationState == PermissionConfigurator::NOT_CLAIMABLE) {
+            /* Setting the manifest template triggers changing the application
+             * state from the default value of not claimable to claimable
+             * unless it has been intentionally set to be not claimable.
+             */
+            bool setClaimable = false;
+            Configuration config;
+            QStatus aStatus = GetConfiguration(config);
+            if (ER_OK == aStatus) {
+                if (!config.applicationStateSet) {
+                    setClaimable = true;
+                }
+            }
+            if (setClaimable) {
+                applicationState = PermissionConfigurator::CLAIMABLE;
+                StoreApplicationState();
+                StateChanged();
+            }
+        }
     }
     return status;
 }
@@ -2556,8 +2587,7 @@ QStatus PermissionMgmtObj::SetClaimCapabilities(PermissionConfigurator::ClaimCap
     Configuration config;
     QStatus status = GetConfiguration(config);
     if (ER_OK != status) {
-        config.applicationState = (uint8_t) applicationState;
-        config.claimCapabilityAdditionalInfo = claimCapabilityAdditionalInfo;
+        return status;
     }
     config.claimCapabilities = caps;
     status = StoreConfiguration(config);
@@ -2573,8 +2603,7 @@ QStatus PermissionMgmtObj::SetClaimCapabilityAdditionalInfo(PermissionConfigurat
     Configuration config;
     QStatus status = GetConfiguration(config);
     if (ER_OK != status) {
-        config.applicationState = (uint8_t) applicationState;
-        config.claimCapabilities = claimCapabilities;
+        return status;
     }
     config.claimCapabilityAdditionalInfo = additionalInfo;
     status = StoreConfiguration(config);
