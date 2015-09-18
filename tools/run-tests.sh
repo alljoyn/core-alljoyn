@@ -18,12 +18,7 @@ set -x
 set -e
 SELF_DIR=$(cd $(dirname $0) > /dev/null; pwd)
 
-if [ -z ${AJ_ROOT} ]; then
-    AJ_ROOT="${SELF_DIR}/../../.."
-fi
-
-AJN_SM_PATH="${SELF_DIR}/.."
-
+AJN_SM_PATH=$(readlink -f "${SELF_DIR}/..")
 
 AJN_DAEMON_PNAME="alljoyn-daemon"
 VARIANT="debug"

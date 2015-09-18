@@ -11,15 +11,18 @@ other AllSeen applications. It allows an administrator to:
 * update policies
 * install and remove membership certificates
 
-More details on the different Security 2.0 concepts can be found on the
-[AllSeen Wiki|https://wiki.allseenalliance.org/core/security_enhancements]
+Generic information on the different Security 2.0 concepts can be found on the
+[AllSeen Wiki|https://wiki.allseenalliance.org/core/security_enhancements].
+Details on the security manager architecture, its library and additions to the
+framework can be found on the [security manager wiki page
+|https://wiki.allseenalliance.org/core/security_manager_description].
 
 Status
 ------
 
-SecurityMgr is still under heavy development. It allows other developers to
-have first-hand experiences with its public API, but this API might still
-change without prior notice.
+The basic SecurityMgr functionality is completed. It allows other developers to
+have first-hand experiences with its public API. However, this API is marked
+experimental and might still change.
 
 Dependencies
 ------------
@@ -28,30 +31,41 @@ SecurityMgr depends on the following software packages. Make sure you have them
 installed on your system before building SecurityMgr.
 
 * [gtest 1.7.0|https://code.google.com/p/googletest/] available under the [New
-BSD License|http://opensource.org/licenses/BSD-3-Clause]
+BSD License|http://opensource.org/licenses/BSD-3-Clause] for tests
 * [sqlite 3.7.9 2011-11-01|http://www.sqlite.org/] available in the [public
-domain|http://www.sqlite.org/copyright.html]
+domain|http://www.sqlite.org/copyright.html] for the sample storage
+implementation
 
 Building
 --------
 
-You can build SecurityMmgr using `scons`.
+You can build SecurityMmgr using `scons`. Please refer to [alljoyn build
+instructions|https://allseenalliance.org/developers/develop/building] for more
+details on setting up your environment.
 
 Samples
 -------
 
-SecurityMgr comes with a set of samples, that can be used to demonstrate the
-functionality of the security agent:
+SecurityMgr comes with a CLI sample, that can be used to demonstrate the
+functionality of the security agent. The CLI allows an administrator to
+claim and manage the security configuration of any AllSeen application that
+supports Security 2.0.
 
-Secure door consumer and provider (see alljoyn_core/samples/secure/door):
-* a secure door provider which implements a door that can be opened and closed over
+A secure door consumer and provider can be found in standard client library
+in the alljoyn_core/samples/secure/door directory:
+* The secure door provider implements a door that can be opened and closed over
   a secure interface
-* a secure door consumer which monitors all doors on the local network
+* The secure door consumer monitors all doors on the local network
 
-A sample CLI:
-* a sample CLI that allows an administrator to change the security configuration
-  of any AllSeen application that supports Security 2.0, including the door
-  provider and consumer
+Note
+* Even though the door samples are part of core, they are built when compiling
+the security manager. You can find them in:
+'build/{OS}/{ARCH}/{MODE}/dist/cpp/bin/samples/'
+* The samples will generate some artifacts. They create a keystore and the CLI
+will also create a database file. In order to have a fresh restart you should
+delete these files. Unless configured otherwise, they are created in your home
+directory. Keystores under '.alljoyn\_keystore' and the database of the CLI is
+named 'secmgrstorage.db'.
 
 Example scenario:
 
@@ -68,24 +82,57 @@ Example scenario:
      Application Name : DoorProvider
      Device Name      : cplx224
 
-* Start a secure door consumer. The secure door consumer does not publish
-  any about data, but you should notice its ApplicationId.
+* Start a secure door consumer.
 
     >> Old application state = null
     >> New application state = OnlineApplication: Busname: :-ARcsaj-.140, Claim state: CLAIMABLE, Updates pending: false
     >> ApplicationId: 807a6b1d7d387be5fe86cafa4ea57e0f
 
 * Claim the secure door provider and consumer, accepting the manifest requested
-  by the applications
+  by the applications. First the consumer. The consumer can only be claimed using
+  NULL session. No input is required from the administrator.
+
+    > c 807a6b1d7d387be5fe86cafa4ea57e0f
+    The application requests the following rights:
+    <rule>
+      <objPath>*</objPath>
+      <interfaceName>sample.securitymgr.door.Door</interfaceName>
+      <member>
+        <name>*</name>
+        <action>Observe</action>
+        <action>Modify</action>
+      </member>
+    </rule>
+    Accept (y/n)? y
+
+  The door provider also supports claiming by using a PSK. After approving the
+  manifest, the security agent prompts for the desired claiming method: PSK
+  or NULL. Press p to select PSK. The CLI will ask you to fill in the PSK. Copy
+  then paste the value printed out by the door provider.
 
     > c 92a2f6d44b030173d307dfeb2fd9c0cc
     The application requests the following rights:
-    Rule:
-      interfaceName: sample.securitymgr.door.Door
-    Member:
-      memberName: *
-      action mask: Provide
+    <rule>
+      <objPath>*</objPath>
+      <interfaceName>sample.securitymgr.door.Door</interfaceName>
+      <member>
+        <name>*</name>
+        <type>method call</type>
+        <action>Provide</action>
+      </member>
+      <member>
+        <name>*</name>
+        <type>property</type>
+        <action>Provide</action>
+      </member>
+    </rule>
     Accept (y/n)? y
+    Select claim mechanism:
+      'n' to claim over a ECDHE_NULL session
+      'p' to claim over a ECDHE_PSK session
+      others to abort claiming process
+    p
+    please enter the PSK provided by the application
 
 * Define a security group.
 
@@ -122,11 +169,11 @@ Tests
 To build the tests, make sure to set the `GTEST_DIR` to your local Google Test
 installation when building SecurityMgr.
 
-Make sure an AllJoyn deamon is running on your system. You can start one using
-the following script:
+Make sure an AllJoyn deamon is running on your system if you have compiled with
+BR=off. You can start one using the following script:
 
 ```
-<alljoyn_root>/tools/jenkins/start-alljoyn-daemon.sh
+<securitymgr>/tools/start-alljoyn-daemon.sh
 ```
 
 You can run all the tests using the following script:
