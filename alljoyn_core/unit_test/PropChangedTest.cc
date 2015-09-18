@@ -18,6 +18,7 @@
 #include <sstream>
 #include <utility>
 #include <vector>
+#include <memory>
 
 #include <gtest/gtest.h>
 
@@ -34,6 +35,8 @@
 #include <alljoyn/ProxyBusObject.h>
 
 #include "ajTestCommon.h"
+#include "TestSecurityManager.h"
+#include "TestSecureApplication.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -2363,4 +2366,380 @@ TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallbackMultiProxy
     proxy->UnregisterPropertiesChangedListener(INTERFACE_NAME "1", *l);
     delete anotherProxy;
     delete l;
+}
+
+
+class SecPropChangedTest :
+    public::testing::Test,
+    public ProxyBusObject::PropertiesChangedListener {
+  public:
+    SecPropChangedTest() : prov("provider"), cons("consumer"), proxy(NULL), evented(false) { }
+    ~SecPropChangedTest() { }
+
+    TestSecurityManager tsm;
+    TestSecureApplication prov;
+    TestSecureApplication cons;
+    shared_ptr<ProxyBusObject> proxy;
+    Mutex lock;
+    Condition condition;
+    bool evented;
+
+    virtual void SetUp() {
+        ASSERT_EQ(ER_OK, tsm.Init());
+        ASSERT_EQ(ER_OK, prov.Init(tsm));
+        ASSERT_EQ(ER_OK, cons.Init(tsm));
+
+        ASSERT_EQ(ER_OK, prov.HostSession());
+        SessionId sid = 0;
+        ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
+
+        proxy = shared_ptr<ProxyBusObject>(cons.GetProxyObject(prov, sid));
+        ASSERT_TRUE(proxy != NULL);
+        qcc::Sleep(WAIT_CACHE_ENABLED_MS);
+        const char* props[1];
+        props[0] = TEST_PROP_NAME;
+        proxy->RegisterPropertiesChangedListener(TEST_INTERFACE, props, 1, *this, NULL);
+    }
+
+    void PropertiesChanged(ProxyBusObject& obj,
+                           const char* ifaceName,
+                           const MsgArg& changed,
+                           const MsgArg& invalidated,
+                           void* context)
+    {
+        QCC_UNUSED(obj);
+        QCC_UNUSED(ifaceName);
+        QCC_UNUSED(changed);
+        QCC_UNUSED(changed);
+        QCC_UNUSED(invalidated);
+        QCC_UNUSED(context);
+        lock.Lock();
+        evented = true;
+        condition.Signal();
+        lock.Unlock();
+    }
+
+    QStatus SendAndWaitForEvent(TestSecureApplication& prov, bool newValue = true)
+    {
+        lock.Lock();
+        evented = false;
+        QStatus status = prov.UpdateTestProperty(newValue);
+        if (ER_OK != status) {
+            cout << "Failed to send event" << __FILE__ << "@" << __LINE__ << endl;
+        } else {
+            condition.TimedWait(lock, 5000);
+            status = evented ? ER_OK : ER_FAIL;
+            evented = false;
+        }
+        lock.Unlock();
+        return status;
+    }
+
+    QStatus GetProperty()
+    {
+        MsgArg arg;
+        return proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+    }
+
+    QStatus GetAllProperties(size_t expected = 2)
+    {
+        MsgArg props;
+        QStatus status = proxy->GetAllProperties(TEST_INTERFACE, props);
+        if (ER_OK != status) {
+            return status;
+        }
+        size_t numprops;
+        MsgArg* propValues;
+
+        status = props.Get("a{sv}", &numprops, &propValues);
+        if (ER_OK != status) {
+            EXPECT_EQ(ER_OK, status);
+            return status;
+        }
+
+        if (expected != numprops) {
+            EXPECT_EQ(expected, numprops);
+            return ER_FAIL;
+        }
+        bool foundProp1 = false;
+        bool foundProp2 = false;
+        for (size_t i = 0; i < numprops; i++) {
+            MsgArg* propval;
+            const char* propname;
+            status = propValues[i].Get("{sv}", &propname, &propval);
+            if (ER_OK != status) {
+                EXPECT_EQ(ER_OK, status) << "Got " << propValues[i].Signature() << " @index " << i;
+                return status;
+            }
+            if (strcmp(propname, TEST_PROP_NAME) == 0) {
+                if (foundProp1) {
+                    EXPECT_FALSE(foundProp1) << "loop " << i;
+                    return ER_FAIL;
+                }
+                foundProp1 = true;
+            } else if (strcmp(propname, TEST_PROP_NAME2) == 0) {
+                if (foundProp2) {
+                    EXPECT_FALSE(foundProp2) << "loop " << i;
+                    return ER_FAIL;
+                }
+                foundProp2 = true;
+            } else {
+                EXPECT_TRUE(false) << "Unknown property name '" << propname << "'";
+                return ER_BUS_NO_SUCH_PROPERTY;
+            }
+        }
+        return status;
+    }
+
+    QStatus CheckProperty(bool expected)
+    {
+        MsgArg arg;
+        QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+        EXPECT_EQ(ER_OK, status) << "Failed to GetProperty";
+        if (ER_OK != status) {
+            return status;
+        }
+        bool prop = !expected;
+        status = arg.Get("b", &prop);
+        EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
+        return prop == expected ? ER_OK : ER_FAIL;
+    }
+
+};
+
+/**
+ * Basic test for the property cache with security enabled.
+ * Test events being sent when policy is configured properly.
+ */
+TEST_F(SecPropChangedTest, PropertyCache_SecurityEnabled)
+{
+    proxy->EnablePropertyCaching();
+    // No policy set. So GetProperty should be denied by remote policy.
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+
+    // Set Policy on provider & consumer.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, CheckProperty(false));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov));
+    ASSERT_EQ(ER_OK, CheckProperty(true));
+    ASSERT_EQ(1, prov.GetCurrentGetPropertyCount());
+}
+
+/**
+ * Basic test for the property cache with security enabled. The test validates that no events
+ * are received when the provider policy doesn't allow it.
+ */
+TEST_F(SecPropChangedTest, PropertyCache_NotAllowedByProviderPolicy)
+{
+    proxy->EnablePropertyCaching();
+    // Set Policy on consumer & provider.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    // We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
+}
+
+/**
+ * Basic test for the property cache with security enabled. The test validates that events
+ * are received when the provider uses a default policy.
+ */
+TEST_F(SecPropChangedTest, PropertyCache_DefaultProviderPolicy)
+{
+    proxy->EnablePropertyCaching();
+    // Set Policy on consumer.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    // We should not get an event. Sleep for a while and see if we got one
+    // The default policy of the provider does not allow to observe properties
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
+}
+
+/**
+ * Basic test for the property cache with security enabled. The test validates that events
+ * are not received when the consmuer uses a default policy.
+ */
+TEST_F(SecPropChangedTest, PropertyCache_DefaultConsumerPolicy)
+{
+    proxy->EnablePropertyCaching();
+    // Set Policy on provider.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    // We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    // Default policy of consumer should allow the outgoing message
+    ASSERT_EQ(ER_OK, CheckProperty(true));
+    ASSERT_EQ(1, prov.GetCurrentGetPropertyCount());
+}
+
+/**
+ * Basic test for the property cache with security enabled. The test validates that events
+ * are not received when the consumer policy doesn't allow it.
+ */
+TEST_F(SecPropChangedTest, PropertyCache_NotAllowedByConsumerPolicy)
+{
+    proxy->EnablePropertyCaching();
+    // Set Policy on provider & consumer.
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    // No matching policy set. So GetProperty should be denied.
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    // We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
+}
+
+/**
+ * Basic test for the property cache with security enabled. The test validates that events are
+ * not received when the policy doesn't specify it.
+ */
+TEST_F(SecPropChangedTest, PropertyCache_WrongInterfaceName)
+{
+    proxy->EnablePropertyCaching();
+    // Set Policy on consumer & provider.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
+    ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
+    // We should not get an event. Sleep for a while and see if we got one
+    qcc::Sleep(500);
+    ASSERT_FALSE(evented);
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
+    ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
+}
+
+static void FillPolicy(const char* propertyName, PermissionPolicy& policy)
+{
+    PermissionPolicy::Acl acl;
+    PermissionPolicy::Rule::Member member;
+    member.SetMemberName(propertyName);
+    member.SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    member.SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    PermissionPolicy::Rule rules;
+    rules.SetInterfaceName(TEST_INTERFACE);
+    rules.SetMembers(1, &member);
+    acl.SetRules(1, &rules);
+    PermissionPolicy::Peer peer;
+    peer.SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+    acl.SetPeers(1, &peer);
+    policy.SetAcls(1, &acl);
+}
+
+/**
+ * A test validating the behavior of the GetAllProperties call with security enabled.
+ */
+TEST_F(SecPropChangedTest, GetAllProperties)
+{
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    ASSERT_EQ(ER_OK, GetAllProperties());
+    ASSERT_EQ(2, prov.GetCurrentGetPropertyCount());
+
+    // Policy allows none of the provided properties
+    // Bad Consumer policy
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetAllProperties());
+    ASSERT_EQ(2, prov.GetCurrentGetPropertyCount());
+
+    // Bad Provider Policy
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetAllProperties());
+    ASSERT_EQ(2, prov.GetCurrentGetPropertyCount());
+
+    // Policy allows some of the provided properties
+    PermissionPolicy policy;
+    FillPolicy(TEST_PROP_NAME, policy);
+    PermissionPolicy policy2;
+    FillPolicy(TEST_PROP_NAME2, policy2);
+
+    // Use partial provider policy:
+    ASSERT_EQ(ER_OK, prov.SetPolicy(tsm, policy));
+    // Auth failure. Provider dropped master secret after policy update, but consumer doesn't know
+    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, GetAllProperties());
+    ASSERT_EQ(ER_OK, GetAllProperties(1));
+    ASSERT_EQ(3, prov.GetCurrentGetPropertyCount());
+
+    ASSERT_EQ(ER_OK, prov.SetPolicy(tsm, policy2));
+    // Auth failure. Provider dropped master secret after policy update, but consumer doesn't know
+    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, GetAllProperties());
+    ASSERT_EQ(ER_OK, GetAllProperties(1));
+    ASSERT_EQ(4, prov.GetCurrentGetPropertyCount());
+
+    // Use partial consumer policy:
+    ASSERT_EQ(ER_OK, cons.SetPolicy(tsm, policy));
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY, "wrong.interface"));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetAllProperties());
+    ASSERT_EQ(4, prov.GetCurrentGetPropertyCount());
+
+    // Both partial policy
+    ASSERT_EQ(ER_OK, prov.SetPolicy(tsm, policy));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetAllProperties());
+    ASSERT_EQ(4, prov.GetCurrentGetPropertyCount());
+
+    // Reset policy to valid ones.
+    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, GetAllProperties(1));
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, GetAllProperties());
+    ASSERT_EQ(ER_OK, GetAllProperties());
+    ASSERT_EQ(7, prov.GetCurrentGetPropertyCount());
+
+    // Update Manifest - bad manifest on provider
+    ASSERT_EQ(ER_OK, prov.UpdateManifest(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
+    // Auth failure. Provider dropped master secret after policy update, but consumer doesn't know
+    ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, GetAllProperties());
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetAllProperties());
+    ASSERT_EQ(7, prov.GetCurrentGetPropertyCount());
+
+    // Update Manifest - bad manifest on consumer
+    ASSERT_EQ(ER_OK, prov.UpdateManifest(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    ASSERT_EQ(ER_OK, cons.UpdateManifest(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetAllProperties());
+    ASSERT_EQ(7, prov.GetCurrentGetPropertyCount());
+
+    // Partial manifests.
+    ASSERT_EQ(ER_OK, cons.UpdateManifest(tsm, *policy.GetAcls()));
+    ASSERT_EQ(ER_OK, GetAllProperties(1));
+    ASSERT_EQ(8, prov.GetCurrentGetPropertyCount());
+
+    ASSERT_EQ(ER_OK, prov.UpdateManifest(tsm, *policy.GetAcls()));
+    ASSERT_EQ(ER_OK, cons.UpdateManifest(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    ASSERT_EQ(ER_PERMISSION_DENIED, GetAllProperties());
+    ASSERT_EQ(8, prov.GetCurrentGetPropertyCount());
+}
+
+/**
+ * A test validating the behavior of the GetAllProperties call with security enabled and no common
+ * root of trust is in place.
+ */
+TEST_F(SecPropChangedTest, GetAllPropertiesNoAuth)
+{
+    TestSecurityManager tsm2("tsm2");
+    ASSERT_EQ(ER_OK, tsm2.Init());
+    TestSecureApplication cons2("other.consumer");
+    ASSERT_EQ(ER_OK, cons2.Init(tsm2));
+    SessionId sid = 0;
+    ASSERT_EQ(ER_OK, cons2.JoinSession(prov, sid));
+    shared_ptr<ProxyBusObject> proxy2 = shared_ptr<ProxyBusObject>(cons2.GetProxyObject(prov, sid));
+    ASSERT_TRUE(proxy2 != NULL);
+
+    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    ASSERT_EQ(ER_OK, cons2.SetAnyTrustedUserPolicy(tsm2, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    MsgArg props;
+    ASSERT_EQ(ER_PERMISSION_DENIED, proxy2->GetAllProperties(TEST_INTERFACE, props));
 }
