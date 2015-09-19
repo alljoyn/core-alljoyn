@@ -161,7 +161,7 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      *
      * @param endpoint   Daemon RemoteEndpoint instance that has exited.
      */
-    void EndpointExit(RemoteEndpoint& endpoint);
+    virtual void EndpointExit(RemoteEndpoint& endpoint);
 
   protected:
     std::list<RemoteEndpoint> endpointList;   /**< List of active endpoints */
