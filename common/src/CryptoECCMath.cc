@@ -1340,7 +1340,7 @@ void digit256_to_bigval(digit256_tc src, bigval_t* dst)
     memcpy(dst->data, src, sizeof(digit256_t));
     dst->data[BIGLEN - 1] = 0;
 
-#if HOST_IS_BIG_ENDIAN
+#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN)
     int i;
     for (i = 0; i < (BIGLEN - 1); i += 2) {    /* Swap adjacent 32-bit words */
         SWAP(dst->data[i], dst->data[i + 1]);
@@ -1366,7 +1366,7 @@ bool bigval_to_digit256(const bigval_t* src, digit256_t dst)
 
     memcpy(dst, src->data, sizeof(digit256_t));
 
-#if HOST_IS_BIG_ENDIAN
+#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN)
     int i;
     uint32_t* data = (uint32_t*)dst;
     for (i = 0; i < (BIGLEN - 1); i += 2) {    /* Swap adjacent 32-bit words */
