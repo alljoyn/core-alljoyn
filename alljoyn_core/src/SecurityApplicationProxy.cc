@@ -680,7 +680,12 @@ QStatus SecurityApplicationProxy::GetIdentityCertificateId(qcc::String& serial, 
         publicKey.Import(xCoord, publicKey.GetCoordinateSize(), yCoord, publicKey.GetCoordinateSize());
         issuerKeyInfo.SetPublicKey(&publicKey);
         issuerKeyInfo.SetKeyId(akiVal, akiLen);
-        serial.assign((const char*) serialVal, serialLen);
+
+        if (serialLen == 0) {
+            serial = qcc::String::Empty;
+        } else {
+            serial.assign((const char*)serialVal, serialLen);
+        }
     }
 
     return status;

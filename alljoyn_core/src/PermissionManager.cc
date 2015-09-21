@@ -254,7 +254,16 @@ static bool IsPolicyAclMatched(const PermissionPolicy::Acl& acl, const Request& 
 static void GenRight(const Request& request, Right& right)
 {
     if (request.propertyRequest) {
-        if (request.isSetProperty) {
+        if (request.mbrType == PermissionPolicy::Rule::Member::SIGNAL) {
+            /* the PropertiesChanged signal */
+            if (request.outgoing) {
+                /* send PropertiesChanged signal */
+                right.authByPolicy = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+            } else {
+                /* receive PropertiesChanged signal */
+                right.authByPolicy = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+            }
+        } else if (request.isSetProperty) {
             if (request.outgoing) {
                 /* send SetProperty */
                 right.authByPolicy = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
@@ -579,6 +588,14 @@ static QStatus ParsePropertiesMessage(Request& request, Message& msg)
         request.mbrType = PermissionPolicy::Rule::Member::PROPERTY;
         request.isSetProperty = (strncmp(mbrName, "Set", 3) == 0);
         QCC_DbgPrintf(("PermissionManager::ParsePropertiesMessage %s %s.%s", mbrName, propIName, propName));
+    } else if (strncmp(mbrName, "PropertiesChanged", 17) == 0) {
+        status = msg->GetArg(0)->Get("s", &propIName);
+        if (status != ER_OK) {
+            return status;
+        }
+        request.propertyRequest = true;
+        request.mbrType = PermissionPolicy::Rule::Member::SIGNAL;
+        QCC_DbgPrintf(("PermissionManager::ParsePropertiesMessage PropertiesChanged %s", propIName));
     } else {
         return ER_FAIL;
     }
@@ -708,7 +725,7 @@ QStatus PermissionManager::AuthorizeGetProperty(const char* objPath, const char*
         return ER_OK;
     }
 
-    QCC_DbgPrintf(("PermissionManager::AuthorizeGetProperty: local policy %s", GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));
+    QCC_DbgPrintf(("PermissionManager::AuthorizeGetProperty: ifc %s prop %s local policy %s", ifcName, propName, GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));
 
     Request request(objPath, ifcName, propName, PermissionPolicy::Rule::Member::PROPERTY, false, true);
     if (!IsAuthorized(request, GetPolicy(), peerState, permissionMgmtObj)) {

@@ -18,13 +18,17 @@
 #define ALLJOYN_SAMPLE_SECURE_DOOR_COMMON_H_
 
 #include <string>
+#include <cstdio>
 
 #include <qcc/GUID.h>
+#include <qcc/Mutex.h>
+#include <qcc/Condition.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/AboutObj.h>
+#include <alljoyn/PermissionConfigurationListener.h>
 
 /* Door sample common definitions. */
 #define DOOR_INTERFACE "sample.securitymgr.door.Door"
@@ -45,10 +49,27 @@
 
 using namespace ajn;
 using namespace std;
+using namespace qcc;
 
 namespace sample {
 namespace secure {
 namespace door {
+
+/* DoorComon PermissionConfigurationListener*/
+class DoorCommonPCL : public PermissionConfigurationListener {
+
+  public:
+    DoorCommonPCL(BusAttachment& _ba) : ba(_ba) { }
+
+    void PolicyChanged();
+
+    bool WaitForClaimedState();
+
+  private:
+    BusAttachment& ba;
+    Mutex lock;
+    Condition sem;
+};
 
 /* Session port listener. */
 class SPListener :
@@ -112,7 +133,7 @@ class DoorCommon {
 
     ~DoorCommon();
 
-    QStatus Init(bool provider);
+    QStatus Init(bool provider, PermissionConfigurationListener* pcl = nullptr);
 
     QStatus Fini();
 

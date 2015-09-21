@@ -71,8 +71,14 @@ int CDECL_CALL main(int argc, char** argv)
 
     // Do the common set-up
     DoorCommon common(appName);
-    QStatus status = common.Init(true);
-    BusAttachment* ba = common.GetBusAttachment();;
+    BusAttachment* ba = common.GetBusAttachment();
+    DoorCommonPCL pcl(*ba);
+
+    QStatus status = common.Init(true, &pcl);
+    if (status != ER_OK) {
+        fprintf(stderr, "Failed to initialize common layer\n");
+        exit(1);
+    }
 
     do {
         if (status != ER_OK) {
@@ -92,6 +98,9 @@ int CDECL_CALL main(int argc, char** argv)
             printf("Failed to announce about\n");
             break;
         }
+
+        //Wait until we are claimed
+        pcl.WaitForClaimedState();
 
         printf("Door provider initialized; Waiting for consumers ...\n");
         printf("Type 'q' to quit\n");

@@ -41,6 +41,8 @@ namespace ajn {
 /** @internal Forward references */
 class BusAttachment;
 class MethodTable;
+class SignalAuthorizationCallback;
+
 /// @endcond
 
 /**
@@ -649,6 +651,20 @@ class BusObject : public MessageReceiver {
      * @return The description or NULL if not found
      */
     const char* GetDescription(const char* toLanguage, qcc::String& buffer) const;
+
+    /**
+     * the internal method to send signal.
+     * @see Signal
+     */
+    QStatus SignalInternal(const char* destination,
+                           SessionId sessionId,
+                           const InterfaceDescription::Member& signal,
+                           const MsgArg* args = NULL,
+                           size_t numArgs = 0,
+                           uint16_t timeToLive = 0,
+                           uint8_t flags = 0,
+                           Message* msg = NULL,
+                           SignalAuthorizationCallback* authorizationCallback = NULL);
 
     struct Components;
     Components* components; /**< Internal components of this object */

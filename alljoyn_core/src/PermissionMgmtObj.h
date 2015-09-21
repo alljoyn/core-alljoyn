@@ -552,11 +552,12 @@ class PermissionMgmtObj : public BusObject {
 
     struct Configuration {
         uint8_t version;
+        uint8_t applicationStateSet;
         uint8_t applicationState;
         uint16_t claimCapabilities;
         uint16_t claimCapabilityAdditionalInfo;
 
-        Configuration() : version(1), applicationState(PermissionConfigurator::CLAIMABLE), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0)
+        Configuration() : version(1), applicationStateSet(0), applicationState(PermissionConfigurator::NOT_CLAIMABLE), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0)
         {
         }
     };
