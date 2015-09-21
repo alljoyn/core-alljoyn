@@ -20,7 +20,7 @@
 
 #define QCC_MODULE "ALLJOYN_JS"
 
-std::map<qcc::StringMapKey, int32_t> PluginData::permissionLevels;
+std::map<std::string, int32_t> PluginData::permissionLevels;
 
 QStatus PluginData::PermissionLevel(Plugin& plugin, const qcc::String& feature, int32_t& level)
 {
@@ -28,7 +28,7 @@ QStatus PluginData::PermissionLevel(Plugin& plugin, const qcc::String& feature, 
 
     QStatus status = ER_OK;
     qcc::String origin;
-    std::map<qcc::StringMapKey, int32_t>::iterator it;
+    std::map<std::string, int32_t>::iterator it;
 
     level = DEFAULT_DENIED;
 

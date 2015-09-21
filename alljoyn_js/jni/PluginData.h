@@ -21,7 +21,6 @@
 #include <alljoyn/Status.h>
 #include <qcc/Event.h>
 #include <qcc/Mutex.h>
-#include <qcc/StringMapKey.h>
 #include <list>
 #include <map>
 class NativeObject;
@@ -90,7 +89,7 @@ class PluginData {
      *
      * The value is written to persistent storage if the user says to remember the setting.
      */
-    static std::map<qcc::StringMapKey, int32_t> permissionLevels;
+    static std::map<std::string, int32_t> permissionLevels;
 
     Plugin plugin;
     BusNamespace busNamespace;

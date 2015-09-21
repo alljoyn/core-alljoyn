@@ -531,7 +531,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     typedef std::set<ProtectedBusListener> ListenerSet;
     ListenerSet listeners;               /* List of registered BusListeners */
     qcc::IODispatch m_ioDispatch;         /* iodispatch for this bus */
-    std::map<qcc::StringMapKey, InterfaceDescription> ifaceDescriptions;
+    std::map<std::string, InterfaceDescription> ifaceDescriptions;
     TransportList transportList;          /* List of active transports */
     KeyStore keyStore;                    /* The key store for the bus attachment */
     AuthManager authManager;              /* The authentication manager for the bus attachment */

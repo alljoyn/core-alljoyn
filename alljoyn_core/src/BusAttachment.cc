@@ -862,16 +862,16 @@ QStatus BusAttachment::CreateInterface(const char* name, InterfaceDescription*& 
         iface = NULL;
         return ER_BUS_IFACE_ALREADY_EXISTS;
     }
-    StringMapKey key = String(name);
+    std::string key = String(name);
     InterfaceDescription intf(name, secPolicy);
-    iface = &(busInternal->ifaceDescriptions.insert(pair<StringMapKey, InterfaceDescription>(key, intf)).first->second);
+    iface = &(busInternal->ifaceDescriptions.insert(pair<std::string, InterfaceDescription>(key, intf)).first->second);
     return ER_OK;
 }
 
 QStatus BusAttachment::DeleteInterface(InterfaceDescription& iface)
 {
     /* Get the (hopefully) unactivated interface */
-    map<StringMapKey, InterfaceDescription>::iterator it = busInternal->ifaceDescriptions.find(StringMapKey(iface.GetName()));
+    map<std::string, InterfaceDescription>::iterator it = busInternal->ifaceDescriptions.find(std::string(iface.GetName()));
     if ((it != busInternal->ifaceDescriptions.end()) && !it->second.isActivated) {
         busInternal->ifaceDescriptions.erase(it);
         return ER_OK;
@@ -883,7 +883,7 @@ QStatus BusAttachment::DeleteInterface(InterfaceDescription& iface)
 size_t BusAttachment::GetInterfaces(const InterfaceDescription** ifaces, size_t numIfaces) const
 {
     size_t count = 0;
-    map<qcc::StringMapKey, InterfaceDescription>::const_iterator it;
+    map<std::string, InterfaceDescription>::const_iterator it;
     for (it = busInternal->ifaceDescriptions.begin(); it != busInternal->ifaceDescriptions.end(); it++) {
         if (it->second.isActivated) {
             if (ifaces && (count < numIfaces)) {
@@ -897,11 +897,15 @@ size_t BusAttachment::GetInterfaces(const InterfaceDescription** ifaces, size_t 
 
 const InterfaceDescription* BusAttachment::GetInterface(const char* name) const
 {
-    map<StringMapKey, InterfaceDescription>::const_iterator it = busInternal->ifaceDescriptions.find(StringMapKey(name));
+    if (name == nullptr) {
+        return nullptr;
+    }
+
+    map<std::string, InterfaceDescription>::const_iterator it = busInternal->ifaceDescriptions.find(std::string(name));
     if ((it != busInternal->ifaceDescriptions.end()) && it->second.isActivated) {
         return &(it->second);
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 

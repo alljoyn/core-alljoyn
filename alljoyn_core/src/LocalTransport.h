@@ -32,7 +32,6 @@
 #include <qcc/GUID.h>
 #include <qcc/Event.h>
 #include <qcc/Mutex.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/Timer.h>
 #include <qcc/Util.h>
 

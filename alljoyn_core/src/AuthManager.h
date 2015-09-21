@@ -27,7 +27,6 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/Debug.h>
 
 #include <map>
@@ -90,7 +89,7 @@ class AuthManager {
     size_t FilterMechanisms(const qcc::String& list)
     {
         size_t num = 0;
-        std::map<qcc::StringMapKey, AuthMechFactory>::iterator it;
+        std::map<std::string, AuthMechFactory>::iterator it;
 
         for (it = authMechanisms.begin(); it != authMechanisms.end(); it++) {
             if (list.find(it->first.c_str()) == qcc::String::npos) {
@@ -141,7 +140,7 @@ class AuthManager {
      */
     AuthMechanism* GetMechanism(const qcc::String& mechanismName, ProtectedAuthListener& listener)
     {
-        std::map<qcc::StringMapKey, AuthMechFactory>::iterator it = authMechanisms.find(mechanismName);
+        std::map<std::string, AuthMechFactory>::iterator it = authMechanisms.find(mechanismName);
         if (authMechanisms.end() != it) {
             return (it->second)(keyStore, listener);
         } else {
@@ -162,7 +161,7 @@ class AuthManager {
     /**
      * Maps authentication mechanisms names to factory functions
      */
-    typedef std::map<qcc::StringMapKey, AuthMechFactory> AuthMechFactoryMap;
+    typedef std::map<std::string, AuthMechFactory> AuthMechFactoryMap;
     AuthMechFactoryMap authMechanisms;
 };
 

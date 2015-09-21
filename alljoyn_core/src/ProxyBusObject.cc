@@ -32,7 +32,6 @@
 #include <qcc/ManagedObj.h>
 #include <qcc/Mutex.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/StringSource.h>
 #include <qcc/Util.h>
 #include <qcc/XmlElement.h>
@@ -92,7 +91,7 @@ struct _PropertiesChangedCB {
 
     ProxyBusObject::PropertiesChangedListener& listener;
     void* context;
-    set<StringMapKey> properties;  // Properties to monitor - empty set == all properties.
+    set<std::string> properties;  // Properties to monitor - empty set == all properties.
     bool isRegistered;
     int32_t numRunning;
     _PropertiesChangedCB& operator=(const _PropertiesChangedCB&) { return *this; }
@@ -102,7 +101,7 @@ typedef ManagedObj<_PropertiesChangedCB> PropertiesChangedCB;
 
 class CachedProps {
     qcc::Mutex lock;
-    typedef std::map<qcc::StringMapKey, MsgArg> ValueMap;
+    typedef std::map<std::string, MsgArg> ValueMap;
     ValueMap values;
     const InterfaceDescription* description;
     bool isFullyCacheable;
@@ -317,10 +316,10 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
     map<qcc::Thread*, _PropertiesChangedCB*> handlerThreads;   /**< Thread actively calling PropertiesChangedListeners */
 
     /** The interfaces this object implements */
-    map<qcc::StringMapKey, const InterfaceDescription*> ifaces;
+    map<std::string, const InterfaceDescription*> ifaces;
 
     /** The property caches for the various interfaces */
-    mutable map<qcc::StringMapKey, CachedProps> caches;
+    mutable map<std::string, CachedProps> caches;
 
     /** Names of child objects of this object */
     vector<ProxyBusObject> children;
@@ -330,11 +329,11 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
     mutable Condition syncMethodComplete;
 
     /** Match rule book keeping */
-    typedef map<StringMapKey, MatchRuleInfo> MatchRuleBookKeeping;
+    typedef map<std::string, MatchRuleInfo> MatchRuleBookKeeping;
     MatchRuleBookKeeping matchRuleBookKeeping;
 
     /** Property changed handlers */
-    multimap<StringMapKey, PropertiesChangedCB> propertiesChangedCBs;
+    multimap<std::string, PropertiesChangedCB> propertiesChangedCBs;
 };
 
 ProxyBusObject::Internal::~Internal()
@@ -451,7 +450,7 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
         bool cached = false;
         internal->lock.Lock(MUTEX_CONTEXT);
         if (internal->cacheProperties) {
-            map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+            map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
                 cached = it->second.GetAll(value);
             }
@@ -484,7 +483,7 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
                 /* use the retrieved property values to update the cache, if applicable */
                 internal->lock.Lock(MUTEX_CONTEXT);
                 if (internal->cacheProperties) {
-                    map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+                    map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
                     if (it != internal->caches.end()) {
                         it->second.SetAll(value, reply->GetCallSerial());
                     }
@@ -507,7 +506,7 @@ void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
         /* use the retrieved property values to update the cache, if applicable */
         internal->lock.Lock(MUTEX_CONTEXT);
         if (internal->cacheProperties) {
-            map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+            map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
                 it->second.SetAll(*message->GetArg(0), message->GetCallSerial());
             }
@@ -548,7 +547,7 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
         MsgArg value;
         internal->lock.Lock(MUTEX_CONTEXT);
         if (internal->cacheProperties) {
-            map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+            map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
                 cached = it->second.GetAll(value);
             }
@@ -605,7 +604,7 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
         bool cached = false;
         internal->lock.Lock(MUTEX_CONTEXT);
         if (internal->cacheProperties) {
-            map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+            map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
                 cached = it->second.Get(property, value);
             }
@@ -640,7 +639,7 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
                 /* use the retrieved property value to update the cache, if applicable */
                 internal->lock.Lock(MUTEX_CONTEXT);
                 if (internal->cacheProperties) {
-                    map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+                    map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
                     if (it != internal->caches.end()) {
                         it->second.Set(property, value, reply->GetCallSerial());
                     }
@@ -666,7 +665,7 @@ void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
         /* use the retrieved property value to update the cache, if applicable */
         internal->lock.Lock(MUTEX_CONTEXT);
         if (internal->cacheProperties) {
-            map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+            map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
                 it->second.Set(property, *message->GetArg(0), message->GetCallSerial());
             }
@@ -708,7 +707,7 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
         MsgArg value;
         internal->lock.Lock(MUTEX_CONTEXT);
         if (internal->cacheProperties) {
-            map<qcc::StringMapKey, CachedProps>::iterator it = internal->caches.find(iface);
+            map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
             if (it != internal->caches.end()) {
                 cached = it->second.Get(property, value);
             }
@@ -834,11 +833,11 @@ QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
     bool replace = false;
     String ifaceStr = iface;
     PropertiesChangedCB ctx(listener, properties, propertiesSize, context);
-    pair<StringMapKey, PropertiesChangedCB> cbItem(ifaceStr, ctx);
+    pair<std::string, PropertiesChangedCB> cbItem(ifaceStr, ctx);
     internal->lock.Lock(MUTEX_CONTEXT);
     // remove old version first
-    multimap<StringMapKey, PropertiesChangedCB>::iterator it = internal->propertiesChangedCBs.lower_bound(iface);
-    multimap<StringMapKey, PropertiesChangedCB>::iterator end = internal->propertiesChangedCBs.upper_bound(iface);
+    multimap<std::string, PropertiesChangedCB>::iterator it = internal->propertiesChangedCBs.lower_bound(iface);
+    multimap<std::string, PropertiesChangedCB>::iterator end = internal->propertiesChangedCBs.upper_bound(iface);
     while (it != end) {
         PropertiesChangedCB propChangedCb = it->second;
         if (&propChangedCb->listener == &listener) {
@@ -882,8 +881,8 @@ QStatus ProxyBusObject::UnregisterPropertiesChangedListener(const char* iface,
         return ER_DEADLOCK;
     }
 
-    multimap<StringMapKey, PropertiesChangedCB>::iterator it = internal->propertiesChangedCBs.lower_bound(iface);
-    multimap<StringMapKey, PropertiesChangedCB>::iterator end = internal->propertiesChangedCBs.upper_bound(iface);
+    multimap<std::string, PropertiesChangedCB>::iterator it = internal->propertiesChangedCBs.lower_bound(iface);
+    multimap<std::string, PropertiesChangedCB>::iterator end = internal->propertiesChangedCBs.upper_bound(iface);
     while (it != end) {
         PropertiesChangedCB ctx = it->second;
         if (&ctx->listener == &listener) {
@@ -943,7 +942,7 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
     lock.Lock(MUTEX_CONTEXT);
     /* first, update caches */
     if (cacheProperties) {
-        map<StringMapKey, CachedProps>::iterator it = caches.find(ifaceName);
+        map<std::string, CachedProps>::iterator it = caches.find(ifaceName);
         if (it != caches.end()) {
             it->second.PropertiesChanged(changedProps, numChangedProps, invalidProps, numInvalidProps, message->GetCallSerial());
         }
@@ -951,8 +950,8 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
 
     /* then, alert listeners */
     handlerThreads[Thread::GetThread()] = nullptr;
-    multimap<StringMapKey, PropertiesChangedCB>::iterator it = propertiesChangedCBs.lower_bound(ifaceName);
-    multimap<StringMapKey, PropertiesChangedCB>::iterator end = propertiesChangedCBs.upper_bound(ifaceName);
+    multimap<std::string, PropertiesChangedCB>::iterator it = propertiesChangedCBs.lower_bound(ifaceName);
+    multimap<std::string, PropertiesChangedCB>::iterator end = propertiesChangedCBs.upper_bound(ifaceName);
     list<PropertiesChangedCB> handlers;
     while (it != end) {
         if (it->second->isRegistered) {
@@ -1096,7 +1095,7 @@ size_t ProxyBusObject::GetInterfaces(const InterfaceDescription** ifaces, size_t
     size_t count = internal->ifaces.size();
     if (ifaces) {
         count = min(count, numIfaces);
-        map<qcc::StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.begin();
+        map<std::string, const InterfaceDescription*>::const_iterator it = internal->ifaces.begin();
         for (size_t i = 0; i < count && it != internal->ifaces.end(); ++i, ++it) {
             ifaces[i] = it->second;
         }
@@ -1107,9 +1106,9 @@ size_t ProxyBusObject::GetInterfaces(const InterfaceDescription** ifaces, size_t
 
 const InterfaceDescription* ProxyBusObject::GetInterface(const char* ifaceName) const
 {
-    StringMapKey key = ifaceName;
+    std::string key = ifaceName;
     internal->lock.Lock(MUTEX_CONTEXT);
-    map<StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(key);
+    map<std::string, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(key);
     const InterfaceDescription* ret = (it == internal->ifaces.end()) ? NULL : it->second;
     internal->lock.Unlock(MUTEX_CONTEXT);
     return ret;
@@ -1117,12 +1116,12 @@ const InterfaceDescription* ProxyBusObject::GetInterface(const char* ifaceName) 
 
 
 QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
-    StringMapKey key(qcc::String(iface.GetName()));
-    pair<StringMapKey, const InterfaceDescription*> item(key, &iface);
+    std::string key(qcc::String(iface.GetName()));
+    pair<std::string, const InterfaceDescription*> item(key, &iface);
     bool addRule = false;
 
     internal->lock.Lock(MUTEX_CONTEXT);
-    pair<map<StringMapKey, const InterfaceDescription*>::const_iterator, bool> ret = internal->ifaces.insert(item);
+    pair<map<std::string, const InterfaceDescription*>::const_iterator, bool> ret = internal->ifaces.insert(item);
     QStatus status = ret.second ? ER_OK : ER_BUS_IFACE_ALREADY_EXISTS;
 
     if ((status == ER_OK) && internal->cacheProperties && iface.HasCacheableProperties()) {
@@ -1168,7 +1167,7 @@ void ProxyBusObject::Internal::AddMatchCB(QStatus status, void* context)
     lock.Lock(MUTEX_CONTEXT);
     info->addingRef = false;
     /* enable property caches */
-    map<StringMapKey, CachedProps>::iterator it = caches.find(info->ifaceName);
+    map<std::string, CachedProps>::iterator it = caches.find(info->ifaceName);
     if (it != caches.end()) {
         it->second.Enable();
     }
@@ -1193,7 +1192,7 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
          * Setup placeholder.  Other threads that call this function with the
          * same interface after us will block until our AddMatch call completes.
          */
-        r = matchRuleBookKeeping.insert(pair<StringMapKey, MatchRuleInfo>(qcc::String(intf), true));
+        r = matchRuleBookKeeping.insert(pair<std::string, MatchRuleInfo>(qcc::String(intf), true));
         it = r.first;
     }
 
@@ -1234,7 +1233,7 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
      * If we don't have the match rule yet, PBO::Internal::AddMatchCB will enable the
      * cache for us. */
     if (!it->second.adding) {
-        map<StringMapKey, CachedProps>::iterator cit = caches.find(intf);
+        map<std::string, CachedProps>::iterator cit = caches.find(intf);
         if (cit != caches.end()) {
             cit->second.Enable();
         }
@@ -1304,7 +1303,7 @@ void ProxyBusObject::EnablePropertyCaching()
     ifcNames.reserve(internal->ifaces.size());
     if (!internal->cacheProperties) {
         internal->cacheProperties = true;
-        map<StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.begin();
+        map<std::string, const InterfaceDescription*>::const_iterator it = internal->ifaces.begin();
         for (; it != internal->ifaces.end(); ++it) {
             if (it->second->HasCacheableProperties()) {
                 internal->caches.insert(std::make_pair(qcc::String(it->first.c_str()), CachedProps(it->second)));
@@ -1577,7 +1576,7 @@ QStatus ProxyBusObject::MethodCallAsync(const char* ifaceName,
                                         uint8_t flags) const
 {
     internal->lock.Lock(MUTEX_CONTEXT);
-    map<StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(StringMapKey(ifaceName));
+    map<std::string, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(std::string(ifaceName));
     if (it == internal->ifaces.end()) {
         internal->lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_NO_SUCH_INTERFACE;
@@ -1762,7 +1761,7 @@ QStatus ProxyBusObject::MethodCall(const char* ifaceName,
                                    uint8_t flags) const
 {
     internal->lock.Lock(MUTEX_CONTEXT);
-    map<StringMapKey, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(StringMapKey(ifaceName));
+    map<std::string, const InterfaceDescription*>::const_iterator it = internal->ifaces.find(std::string(ifaceName));
     if (it == internal->ifaces.end()) {
         internal->lock.Unlock(MUTEX_CONTEXT);
         return ER_BUS_NO_SUCH_INTERFACE;
