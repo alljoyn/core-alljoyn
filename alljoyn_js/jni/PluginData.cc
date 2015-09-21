@@ -30,6 +30,7 @@ PluginData::_Callback::_Callback(Plugin& plugin, void(*callback)(CallbackContext
     callback(callback),
     context(NULL),
     plugin(plugin),
+    npp(0),
     key(0)
 {
 }
@@ -37,6 +38,7 @@ PluginData::_Callback::_Callback(Plugin& plugin, void(*callback)(CallbackContext
 PluginData::_Callback::_Callback() :
     callback(NULL),
     context(NULL),
+    npp(0),
     key(0)
 {
 }

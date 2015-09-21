@@ -82,9 +82,6 @@ exit:
     if ((ER_OK == status) && !typeError) {
         return true;
     } else {
-        if (ER_OK != status) {
-            plugin->RaiseBusError(status);
-        }
         return false;
     }
 }

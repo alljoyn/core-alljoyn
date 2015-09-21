@@ -97,7 +97,8 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
             proxyBusObject(proxyBusObject),
             interfaceName(interfaceName),
             methodName(methodName),
-            callbackNative(callbackNative) {
+            callbackNative(callbackNative),
+            status(ER_OK) {
             this->npargCount = npargCount;
             this->npargs = new NPVariant[this->npargCount];
             for (uint32_t i = 0; i < this->npargCount; ++i) {
@@ -111,6 +112,9 @@ class ReplyReceiver : public ajn::ProxyBusObject::Listener, public ajn::MessageR
             delete[] npargs;
             delete callbackNative;
         }
+      private:
+        _Env& operator=(const _Env&);
+        _Env(const _Env&);
     };
     typedef qcc::ManagedObj<_Env> Env;
     Env env;
@@ -498,12 +502,12 @@ bool _ProxyBusObjectHost::getInterfaces(const NPVariant* args, uint32_t argCount
     }
 
     CallbackNative::DispatchCallback(plugin, callbackNative, status, descs, numIfaces);
-    descs = NULL;
     callbackNative = NULL;
 
 exit:
     delete callbackNative;
     delete[] descs;
+    descs = NULL;
     delete[] ifaces;
     VOID_TO_NPVARIANT(*result);
     return !typeError;

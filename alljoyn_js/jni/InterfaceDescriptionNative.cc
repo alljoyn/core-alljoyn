@@ -139,6 +139,12 @@ QStatus InterfaceDescriptionNative::CreateInterface(Plugin& plugin, BusAttachmen
                         NPN_MemFree(property);
                     }
                     NPN_MemFree(properties);
+                    if (ER_OK != status) {
+                        NPN_ReleaseVariantValue(&element);
+                        NPN_ReleaseVariantValue(&length);
+                        NPN_ReleaseVariantValue(&method);
+                        goto exit;
+                    }
                 }
 
                 status = interface->AddMember(ajn::MESSAGE_METHOD_CALL,
@@ -210,6 +216,12 @@ QStatus InterfaceDescriptionNative::CreateInterface(Plugin& plugin, BusAttachmen
                         NPN_MemFree(property);
                     }
                     NPN_MemFree(properties);
+                    if (ER_OK != status) {
+                        NPN_ReleaseVariantValue(&element);
+                        NPN_ReleaseVariantValue(&length);
+                        NPN_ReleaseVariantValue(&signal);
+                        goto exit;
+                    }
                 }
 
                 status = interface->AddMember(ajn::MESSAGE_SIGNAL,
@@ -288,6 +300,12 @@ QStatus InterfaceDescriptionNative::CreateInterface(Plugin& plugin, BusAttachmen
                         NPN_MemFree(property);
                     }
                     NPN_MemFree(properties);
+                    if (ER_OK != status) {
+                        NPN_ReleaseVariantValue(&element);
+                        NPN_ReleaseVariantValue(&length);
+                        NPN_ReleaseVariantValue(&property);
+                        goto exit;
+                    }
                 }
 
                 status = interface->AddProperty(name.empty() ? 0 : name.c_str(),
