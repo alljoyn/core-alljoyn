@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/XmlElement.h>
 #include <map>
 #include <alljoyn/AllJoynStd.h>
@@ -300,8 +299,8 @@ bool InterfaceDescription::Property::operator==(const Property& o) const {
 
 
 struct InterfaceDescription::Definitions {
-    typedef std::map<qcc::StringMapKey, Member> MemberMap;
-    typedef std::map<qcc::StringMapKey, Property> PropertyMap;
+    typedef std::map<std::string, Member> MemberMap;
+    typedef std::map<std::string, Property> PropertyMap;
 
     MemberMap members;              /**< Interface members */
     PropertyMap properties;         /**< Interface properties */
@@ -554,9 +553,9 @@ QStatus InterfaceDescription::AddMember(AllJoynMessageType type,
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    StringMapKey key = qcc::String(memberName);
+    std::string key = qcc::String(memberName);
     Member member(this, type, memberName, inSig, outSig, argNames, annotation, accessPerms);
-    pair<StringMapKey, Member> item(key, member);
+    pair<std::string, Member> item(key, member);
     pair<Definitions::MemberMap::iterator, bool> ret = defs->members.insert(item);
     return ret.second ? ER_OK : ER_BUS_MEMBER_ALREADY_EXISTS;
 }
@@ -567,7 +566,7 @@ QStatus InterfaceDescription::AddMemberAnnotation(const char* member, const qcc:
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    Definitions::MemberMap::iterator it = defs->members.find(std::string(member));
     if (it == defs->members.end()) {
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
@@ -579,7 +578,7 @@ QStatus InterfaceDescription::AddMemberAnnotation(const char* member, const qcc:
 
 bool InterfaceDescription::GetMemberAnnotation(const char* member, const qcc::String& annotationName, qcc::String& value) const
 {
-    Definitions::MemberMap::const_iterator mit = defs->members.find(StringMapKey(member));
+    Definitions::MemberMap::const_iterator mit = defs->members.find(std::string(member));
     if (mit == defs->members.end()) {
         return false;
     }
@@ -596,9 +595,9 @@ QStatus InterfaceDescription::AddProperty(const char* propertyName, const char* 
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    StringMapKey key = qcc::String(propertyName);
+    std::string key = qcc::String(propertyName);
     Property prop(propertyName, signature, access);
-    pair<StringMapKey, Property> item(key, prop);
+    pair<std::string, Property> item(key, prop);
     pair<Definitions::PropertyMap::iterator, bool> ret = defs->properties.insert(item);
     return ret.second ? ER_OK : ER_BUS_PROPERTY_ALREADY_EXISTS;
 }
@@ -609,7 +608,7 @@ QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, c
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    Definitions::PropertyMap::iterator pit = defs->properties.find(StringMapKey(p_name));
+    Definitions::PropertyMap::iterator pit = defs->properties.find(std::string(p_name));
     if (pit == defs->properties.end()) {
         return ER_BUS_NO_SUCH_PROPERTY;
     }
@@ -625,7 +624,7 @@ QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, c
 
 bool InterfaceDescription::GetPropertyAnnotation(const qcc::String& p_name, const qcc::String& annotationName, qcc::String& value) const
 {
-    Definitions::PropertyMap::const_iterator pit = defs->properties.find(StringMapKey(p_name));
+    Definitions::PropertyMap::const_iterator pit = defs->properties.find(std::string(p_name));
     if (pit == defs->properties.end()) {
         return false;
     }
@@ -697,7 +696,7 @@ size_t InterfaceDescription::GetProperties(const Property** props, size_t numPro
 
 const InterfaceDescription::Property* InterfaceDescription::GetProperty(const char* propertyName) const
 {
-    Definitions::PropertyMap::const_iterator pit = defs->properties.find(qcc::StringMapKey(propertyName));
+    Definitions::PropertyMap::const_iterator pit = defs->properties.find(std::string(propertyName));
     return (pit == defs->properties.end()) ? NULL : &(pit->second);
 }
 
@@ -716,7 +715,7 @@ size_t InterfaceDescription::GetMembers(const Member** members, size_t numMember
 
 const InterfaceDescription::Member* InterfaceDescription::GetMember(const char* memberName) const
 {
-    Definitions::MemberMap::const_iterator mit = defs->members.find(qcc::StringMapKey(memberName));
+    Definitions::MemberMap::const_iterator mit = defs->members.find(std::string(memberName));
     return (mit == defs->members.end()) ? NULL : &(mit->second);
 }
 
@@ -761,7 +760,7 @@ QStatus InterfaceDescription::SetMemberDescription(const char* member, const cha
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    Definitions::MemberMap::iterator it = defs->members.find(std::string(member));
     if (it == defs->members.end()) {
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
@@ -780,7 +779,7 @@ QStatus InterfaceDescription::SetMemberDescription(const char* member, const cha
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    Definitions::MemberMap::iterator it = defs->members.find(std::string(member));
     if (it == defs->members.end()) {
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
@@ -812,7 +811,7 @@ QStatus InterfaceDescription::SetArgDescription(const char* member, const char* 
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    Definitions::MemberMap::iterator it = defs->members.find(std::string(member));
     if (it == defs->members.end()) {
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
@@ -830,7 +829,7 @@ QStatus InterfaceDescription::SetPropertyDescription(const char* propName, const
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    Definitions::PropertyMap::iterator pit = defs->properties.find(StringMapKey(propName));
+    Definitions::PropertyMap::iterator pit = defs->properties.find(std::string(propName));
     if (pit == defs->properties.end()) {
         return ER_BUS_NO_SUCH_PROPERTY;
     }

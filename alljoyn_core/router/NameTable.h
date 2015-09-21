@@ -31,7 +31,6 @@
 #include <qcc/Mutex.h>
 #include <qcc/Environ.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 
 #include <alljoyn/Status.h>
 
@@ -269,7 +268,7 @@ class NameTable {
 
     typedef qcc::ManagedObj<NameListener*> ProtectedNameListener;
     std::set<ProtectedNameListener> listeners;                         /**< Listeners regsitered with name table */
-    std::map<qcc::StringMapKey, VirtualAliasEntry> virtualAliasNames;    /**< map of virtual aliases to virtual endpts */
+    std::map<std::string, VirtualAliasEntry> virtualAliasNames;    /**< map of virtual aliases to virtual endpts */
 
     /**
      * Returns the minimum name transfer value for sessions with the endpoint.

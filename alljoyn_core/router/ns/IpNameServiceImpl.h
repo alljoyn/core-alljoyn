@@ -37,7 +37,6 @@
 #include <qcc/Timer.h>
 #include <qcc/STLContainer.h>
 #include <qcc/platform.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 

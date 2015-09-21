@@ -89,16 +89,6 @@
 
 namespace qcc {
 /**
- * Returns a hash of C-style string
- *
- * @return Hash value
- */
-inline size_t hash_string(const char* __s) {
-    std::hash<std::string> hash_fn;
-    return hash_fn(std::string(__s));
-}
-
-/**
  * The enum defining the high level operating system on the device.
  */
 typedef enum _OSType {
