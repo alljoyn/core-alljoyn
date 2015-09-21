@@ -24,6 +24,7 @@
 
 #include <assert.h>
 
+#include <algorithm>
 #include <map>
 #include <vector>
 #include <set>
@@ -61,6 +62,13 @@ typedef struct {
     void* context;
 } MethodContext;
 #pragma pack(pop, MethodContext)
+
+static bool operator==(const MethodContext& a, const MethodContext& b)
+{
+    return (a.member == b.member) &&
+           (a.handler == b.handler) &&
+           (a.context == b.context);
+}
 
 struct BusObject::Components {
     /** The interfaces this object implements */
@@ -557,7 +565,9 @@ QStatus BusObject::AddMethodHandler(const InterfaceDescription::Member* member, 
         QCC_LogError(status, ("Cannot add method handler to an object that is already registered"));
     } else if (ImplementsInterface(member->iface->GetName())) {
         MethodContext ctx = { member, handler, handlerContext };
-        components->methodContexts.push_back(ctx);
+        if (find(components->methodContexts.begin(), components->methodContexts.end(), ctx) == components->methodContexts.end()) {
+            components->methodContexts.push_back(ctx);
+        }
     } else {
         status = ER_BUS_NO_SUCH_INTERFACE;
         QCC_LogError(status, ("Cannot add method handler for unknown interface"));
@@ -648,11 +658,17 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
     /* Add the standard DBus interfaces */
     const InterfaceDescription* introspectable = bus->GetInterface(org::freedesktop::DBus::Introspectable::InterfaceName);
     assert(introspectable);
-    components->ifaces.push_back(make_pair(introspectable, false));
+    pair<const InterfaceDescription*, bool> comp = make_pair(introspectable, false);
+    if (find(components->ifaces.begin(), components->ifaces.end(), comp) == components->ifaces.end()) {
+        components->ifaces.push_back(comp);
+    }
 
     const InterfaceDescription* allseenIntrospectable = bus->GetInterface(org::allseen::Introspectable::InterfaceName);
     assert(allseenIntrospectable);
-    components->ifaces.push_back(make_pair(allseenIntrospectable, false));
+    comp = make_pair(allseenIntrospectable, false);
+    if (find(components->ifaces.begin(), components->ifaces.end(), comp) == components->ifaces.end()) {
+        components->ifaces.push_back(comp);
+    }
 
     /* Add the standard method handlers */
     const MethodEntry methodEntries[] = {
@@ -671,7 +687,10 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
             /* Add the org::freedesktop::DBus::Properties interface to this list of interfaces implemented by this obj */
             const InterfaceDescription* propIntf = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
             assert(propIntf);
-            components->ifaces.push_back(make_pair(propIntf, false));
+            comp = make_pair(propIntf, false);
+            if (find(components->ifaces.begin(), components->ifaces.end(), comp) == components->ifaces.end()) {
+                components->ifaces.push_back(comp);
+            }
 
             /* Attach the handlers */
             const MethodEntry propHandlerList[] = {
