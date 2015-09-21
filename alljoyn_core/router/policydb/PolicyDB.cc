@@ -125,7 +125,7 @@ StringID _PolicyDB::UpdateDictionary(const String& key)
         if (it == dictionary.end()) {
             /* New string found; assign it an ID. */
             id = dictionary.size();
-            pair<StringMapKey, StringID> p(key, id);
+            pair<std::string, StringID> p(key, id);
             dictionary.insert(p);
         } else {
             /* The string already has an ID. */
@@ -475,7 +475,7 @@ void _PolicyDB::AddAlias(const String& alias, const String& name)
         QCC_DbgPrintf(("Add %s{%d} to table for %s", alias.c_str(), nameID, name.c_str()));
         bnids->insert(nameID);
     }
-    pair<StringMapKey, IDSet> p(alias, bnids);
+    pair<std::string, IDSet> p(alias, bnids);
     busNameIDMap.insert(p);
 }
 
@@ -540,7 +540,7 @@ void _PolicyDB::Finalize(Bus* bus)
         QCC_DbgPrintf(("    \"%s\" = %u", it->first.c_str(), it->second));
     }
     QCC_DbgPrintf(("Name Table:"));
-    for (unordered_map<qcc::StringMapKey, IDSet>::const_iterator it = busNameIDMap.begin(); it != busNameIDMap.end(); ++it) {
+    for (unordered_map<std::string, IDSet>::const_iterator it = busNameIDMap.begin(); it != busNameIDMap.end(); ++it) {
         QCC_DbgPrintf(("    \"%s\" = {%s}", it->first.c_str(), IDSet2String(it->second).c_str()));
     }
 #endif
@@ -622,7 +622,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
             QCC_DbgPrintf(("Add %s{%d} to table for %s", alias.c_str(), aliasID, newOwner->c_str()));
             bnids->insert(aliasID);
         }
-        pair<StringMapKey, IDSet> p(alias, bnids);
+        pair<std::string, IDSet> p(alias, bnids);
         busNameIDMap.insert(p);
     }
 

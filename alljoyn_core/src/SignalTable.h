@@ -26,12 +26,10 @@
 #endif
 
 #include <qcc/platform.h>
-#include <qcc/StringMapKey.h>
 
 #include <vector>
 
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/Mutex.h>
 
 #include <alljoyn/InterfaceDescription.h>
@@ -56,8 +54,8 @@ class SignalTable {
      * Type definition for signal hash table key
      */
     struct Key {
-        qcc::StringMapKey iface;                /**< The Interface name */
-        qcc::StringMapKey signalName;           /**< The signal name */
+        std::string iface;                /**< The Interface name */
+        std::string signalName;           /**< The signal name */
 
         /**
          * Constructor used for lookups only (no storage)

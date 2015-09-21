@@ -222,7 +222,7 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
             newOwner = &uniqueName;
 
             /* Check to see if we are overriding a virtual (remote) name */
-            map<qcc::StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(aliasName);
+            map<std::string, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(aliasName);
             if (vit != virtualAliasNames.end()) {
                 origOwner = vit->second.endpoint->GetUniqueName();
                 origOwnerNameTransfer = vit->second.nameTransfer;
@@ -278,7 +278,7 @@ void NameTable::RemoveAlias(const qcc::String& aliasName,
             }
             if (newOwner.empty()) {
                 /* Check to see if there is a (now unmasked) remote owner for the alias */
-                map<qcc::StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(aliasName);
+                map<std::string, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(aliasName);
                 if (vit != virtualAliasNames.end()) {
                     newOwner = vit->second.endpoint->GetUniqueName();
                     newOwnerNameTransfer = vit->second.nameTransfer;
@@ -347,7 +347,7 @@ BusEndpoint NameTable::FindEndpoint(const qcc::String& busName) const
         }
         /* Fallback to virtual (remote) aliases if a suitable local one cannot be found */
         if (!ep->IsValid()) {
-            map<qcc::StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(busName);
+            map<std::string, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.find(busName);
             if (vit != virtualAliasNames.end()) {
                 VirtualEndpoint vep = vit->second.endpoint;
                 ep = BusEndpoint::cast(vep);
@@ -396,7 +396,7 @@ void NameTable::GetUniqueNamesAndAliases(vector<pair<qcc::String, vector<qcc::St
         }
         ++ait;
     }
-    map<StringMapKey, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.begin();
+    map<std::string, VirtualAliasEntry>::const_iterator vit = virtualAliasNames.begin();
     while (vit != virtualAliasNames.end()) {
         VirtualEndpoint vep = vit->second.endpoint;
         epMap.insert(pair<BusEndpoint, qcc::String>(BusEndpoint::cast(vep), vit->first.c_str()));
@@ -458,7 +458,7 @@ String NameTable::GetNameOwner(const String& name) const
         }
     } else {
         // virtual alias maybe??
-        map<qcc::StringMapKey, VirtualAliasEntry>::const_iterator valiasit = virtualAliasNames.find(name);
+        map<std::string, VirtualAliasEntry>::const_iterator valiasit = virtualAliasNames.find(name);
         if (valiasit != virtualAliasNames.end()) {
             un = valiasit->second.endpoint->GetUniqueName();
         }
@@ -539,7 +539,7 @@ void NameTable::UpdateVirtualAliases(const qcc::String& epName)
                 lock.Lock(MUTEX_CONTEXT);
             }
         }
-        map<qcc::StringMapKey, VirtualAliasEntry>::iterator vit = virtualAliasNames.begin();
+        map<std::string, VirtualAliasEntry>::iterator vit = virtualAliasNames.begin();
         while (vit != virtualAliasNames.end()) {
             SessionOpts::NameTransferType oldNameTransfer = SessionOpts::ALL_NAMES;
             SessionOpts::NameTransferType newNameTransfer = SessionOpts::ALL_NAMES;
@@ -575,7 +575,7 @@ void NameTable::RemoveVirtualAliases(const qcc::String& epName)
     QCC_DbgTrace(("NameTable::RemoveVirtualAliases(%s)", ep->IsValid() ? ep->GetUniqueName().c_str() : "<none>"));
 
     if (ep->IsValid()) {
-        map<qcc::StringMapKey, VirtualAliasEntry>::iterator vit = virtualAliasNames.begin();
+        map<std::string, VirtualAliasEntry>::iterator vit = virtualAliasNames.begin();
         while (vit != virtualAliasNames.end()) {
             if (vit->second.endpoint == ep) {
                 String alias = vit->first.c_str();
@@ -611,7 +611,7 @@ bool NameTable::SetVirtualAlias(const qcc::String& alias,
     VirtualEndpoint oldOwner;
     String oldName;
     SessionOpts::NameTransferType oldOwnerNameTransfer = SessionOpts::ALL_NAMES;
-    map<qcc::StringMapKey, VirtualAliasEntry>::iterator vit = virtualAliasNames.find(alias);
+    map<std::string, VirtualAliasEntry>::iterator vit = virtualAliasNames.find(alias);
     if (vit != virtualAliasNames.end()) {
         oldOwner = vit->second.endpoint;
     }
@@ -644,7 +644,7 @@ bool NameTable::SetVirtualAlias(const qcc::String& alias,
         virtualAliasNames[alias] = entry;
         madeChange = !newOwner->iden(oldOwner) || (oldOwnerNameTransfer != newOwnerNameTransfer);
     } else {
-        virtualAliasNames.erase(StringMapKey(alias));
+        virtualAliasNames.erase(std::string(alias));
         madeChange = true;
     }
     if (newOwner && (*newOwner)->IsValid()) {

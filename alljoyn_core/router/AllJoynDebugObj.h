@@ -31,7 +31,6 @@
 #include <map>
 
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusObject.h>
@@ -93,7 +92,7 @@ class AllJoynDebugObj : public BusObject {
     };
 
   private:
-    typedef std::map<qcc::StringMapKey, Properties*> PropertyStore;
+    typedef std::map<std::string, Properties*> PropertyStore;
     typedef std::pair<AllJoynDebugObjAddon*, AllJoynDebugObjAddon::MethodHandler> AddonMethodHandler;
     typedef std::map<const InterfaceDescription::Member*, AddonMethodHandler> AddonMethodHandlerMap;
 
