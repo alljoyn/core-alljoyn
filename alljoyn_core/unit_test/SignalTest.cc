@@ -1327,3 +1327,37 @@ TEST_F(SecSignalTest, DISABLED_SecureConnection)
     qcc::Sleep(750);// Give some time to restore the connection.
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
 }
+
+TEST_F(SecSignalTest, DISABLED_SendSignalToSelf)
+{
+    GUID128 groupID;
+    tsm.InstallMembership(prov.GetBusAttachement(), groupID);
+    tsm.InstallMembership(cons.GetBusAttachement(), groupID);
+    PermissionPolicy policy;
+    PermissionPolicy::Acl acl;
+    PermissionPolicy::Peer peer;
+    peer.SetType(PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP);
+    peer.SetKeyInfo(&tsm.GetCaPublicKeyInfo());
+    peer.SetSecurityGroupId(groupID);
+    acl.SetPeers(1, &peer);
+    PermissionPolicy::Rule rule;
+    rule.SetInterfaceName("*");
+    PermissionPolicy::Rule::Member member;
+    member.Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    rule.SetMembers(1, &member);
+    acl.SetRules(1, &rule);
+    policy.SetAcls(1, &acl);
+    ASSERT_EQ(ER_OK, tsm.UpdatePolicy(prov.GetBusAttachement(), policy));
+    ASSERT_EQ(ER_OK, tsm.UpdatePolicy(cons.GetBusAttachement(), policy));
+
+    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, &cons, 1));
+
+    SessionId sid = 0;
+    // Host a session the consumer and join it. Policy should allow events...
+    ASSERT_EQ(ER_OK, cons.HostSession());
+    ASSERT_EQ(ER_OK, cons.JoinSession(cons, sid));
+    qcc::Sleep(500);
+    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
+    ASSERT_EQ(ER_OK, SendAndWaitForEvent(cons, true, &cons, 1));
+}
