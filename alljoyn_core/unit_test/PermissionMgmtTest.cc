@@ -273,6 +273,9 @@ void BasePermissionMgmtTest::SetUp()
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = SetupBus(serviceBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    SessionOpts opts;
+    status = serviceBus.BindSessionPort(servicePort, opts, servicePortListener);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = SetupBus(consumerBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = SetupBus(remoteControlBus);
@@ -287,6 +290,8 @@ void BasePermissionMgmtTest::SetUp()
 void BasePermissionMgmtTest::TearDown()
 {
     status = TeardownBus(adminBus);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = serviceBus.UnbindSessionPort(servicePort);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = TeardownBus(serviceBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -953,6 +958,23 @@ QStatus PermissionMgmtTestHelper::JoinPeerSession(BusAttachment& initiator, BusA
         qcc::Sleep(100);
     }
     return status;
+}
+
+QStatus BasePermissionMgmtTest::JoinSessionWithService(BusAttachment& initiator, SessionId& sessionId)
+{
+    servicePortListener.lastJoiner = String::Empty;
+    SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+    QStatus status = initiator.JoinSession(serviceBus.GetUniqueName().c_str(), servicePort, NULL, sessionId, opts);
+    if (ER_OK != status) {
+        return status;
+    }
+    for (int msecs = 0; msecs < 3000; msecs += 100) {
+        if (servicePortListener.lastJoiner == initiator.GetUniqueName()) {
+            return ER_OK;
+        }
+        qcc::Sleep(100);
+    }
+    return ER_TIMEOUT;
 }
 
 QStatus PermissionMgmtTestHelper::GetGUID(BusAttachment& bus, qcc::GUID128& guid)
