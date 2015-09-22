@@ -24,10 +24,6 @@
 #include <alljoyn/Session.h>
 #include <alljoyn/AllJoynStd.h>
 
-#include <CredentialAccessor.h> // Still in alljoyn_core/src!
-#include <PermissionManager.h> // Still in alljoyn_core/src!
-#include <PermissionMgmtObj.h> // Still in alljoyn_core/src!
-
 #include <alljoyn/securitymgr/Util.h>
 
 #include "ApplicationUpdater.h"
@@ -78,6 +74,7 @@ class ClaimContextImpl :
 QStatus SecurityAgentImpl::ClaimSelf()
 {
     QStatus status = ER_FAIL;
+
     KeyInfoNISTP256 caPublicKey;
     status = caStorage->GetCaPublicKeyInfo(caPublicKey);
     if (ER_OK != status) {
@@ -97,7 +94,84 @@ QStatus SecurityAgentImpl::ClaimSelf()
     Manifest mf;
     mf.SetFromRules(manifestRules, 1);
 
-    // Policy
+    string ownBusName = busAttachment->GetUniqueName().c_str();
+    OnlineApplication ownAppInfo;
+    ownAppInfo.busName = ownBusName;
+    // Get public key, identity and membership certificates
+    ECCPublicKey ownPublicKey;
+    {   // Open new scope to shorten life-time of the proxy object.
+        ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
+        status = proxyObjectManager->GetProxyObject(me, ProxyObjectManager::ECDHE_NULL);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to connect to self"));
+            return status;
+        }
+
+        status = me.GetPublicKey(ownPublicKey);
+    }
+
+    IdentityCertificateChain idCerts;
+    vector<MembershipCertificateChain> memberships;
+
+    GroupInfo adminGroup;
+    KeyInfoNISTP256 agentKeyInfo;
+    agentKeyInfo.SetPublicKey(&ownPublicKey);
+    String ownPubKeyID;
+    if (ER_OK != (status = CertificateX509::GenerateAuthorityKeyId(&ownPublicKey, ownPubKeyID))) {
+        QCC_LogError(status, ("Failed to generate public key ID."));
+        return status;
+    }
+    // Obliged to cast bcz of GenerateAuthorityKeyId String key ID output.
+    agentKeyInfo.SetKeyId((const uint8_t*)ownPubKeyID.c_str(), ownPubKeyID.size());
+
+    status = caStorage->RegisterAgent(agentKeyInfo, mf, adminGroup, idCerts, memberships);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to register agent"));
+        return status;
+    }
+
+    // Go into claimable state by setting up a manifest.
+    status = busAttachment->GetPermissionConfigurator().SetPermissionManifest(manifestRules, 1);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to set the Manifest"));
+        return status;
+    }
+
+    // Claim
+    {   // Open new scope to shorten life-time of local variables.
+        GUID128 psk;
+        DefaultECDHEAuthListener el(psk.GetBytes(), GUID128::SIZE);
+        ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
+        status = proxyObjectManager->GetProxyObject(me, ProxyObjectManager::ECDHE_PSK, &el);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to connect to self"));
+            return status;
+        }
+
+        status = me.Claim(publicKeyInfo, adminGroup, idCerts, mf);
+    }
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to Claim"));
+        return status;
+    }
+
+    ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
+    status = proxyObjectManager->GetProxyObject(me);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to connect to self over DSA"));
+        return status;
+    }
+
+    for (size_t i = 0; i < memberships.size(); i++) {
+        status = me.InstallMembership(memberships[i]);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to install membership certificate chain[%u]", i));
+            return status;
+        }
+    }
+
+    // Update policy
+/* Cannot install policy See ASACORE-2543
     PermissionPolicy policy;
     policy.SetVersion(1);
 
@@ -132,123 +206,12 @@ QStatus SecurityAgentImpl::ClaimSelf()
     acls[1].SetRules(1, rules);
     policy.SetAcls(2, acls);
 
-    // Get public key, identity and membership certificates
-    CredentialAccessor ca(*busAttachment);
-    ECCPublicKey ownPublicKey;
-    status = ca.GetDSAPublicKey(ownPublicKey);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to get Public key"));
-        return status;
-    }
-
-    IdentityCertificateChain idCerts;
-    vector<MembershipCertificateChain> memberships;
-
-    GroupInfo adminGroup;
-    KeyInfoNISTP256 agentKeyInfo;
-    agentKeyInfo.SetPublicKey(&ownPublicKey);
-    String ownPubKeyID;
-    if (ER_OK != (status = CertificateX509::GenerateAuthorityKeyId(&ownPublicKey, ownPubKeyID))) {
-        QCC_LogError(status, ("Failed to generate public key ID."));
-        return status;
-    }
-    // Obliged to cast bcz of GenerateAuthorityKeyId String key ID output.
-    agentKeyInfo.SetKeyId((const uint8_t*)ownPubKeyID.c_str(), ownPubKeyID.size());
-
-    status = caStorage->RegisterAgent(agentKeyInfo, mf, adminGroup, idCerts, memberships);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to register agent"));
-        return status;
-    }
-
-    // Go into claimable state by setting up a manifest.
-    status = busAttachment->GetPermissionConfigurator().SetPermissionManifest(manifestRules, 1);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to set the Manifest"));
-        return status;
-    }
-
-    // Claim
-    string ownBusName = busAttachment->GetUniqueName().c_str();
-    OnlineApplication ownAppInfo;
-    ownAppInfo.busName = ownBusName;
-    {   // Open new scope to shorten life-time of local variables.
-        GUID128 psk;
-        DefaultECDHEAuthListener el(psk.GetBytes(), GUID128::SIZE);
-        ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
-        status = proxyObjectManager->GetProxyObject(me, ProxyObjectManager::ECDHE_PSK, &el);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to connect to self"));
-            return status;
-        }
-
-        status = me.Claim(publicKeyInfo, adminGroup, idCerts, mf);
-    }
+    me.UpdatePolicy(policy);
     if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to Claim"));
+        QCC_LogError(status, ("Failed to update policy"));
         return status;
     }
-
-    // Store policy
-    uint8_t* pByteArray = nullptr;
-    size_t pSize;
-    Util::GetPolicyByteArray(policy, &pByteArray, &pSize);
-    KeyStore::Key pKey;
-    pKey.SetGUID(GUID128("F5CB9E723D7D4F1CFF985F4DD0D5E388"));
-    KeyBlob pKeyBlob((uint8_t*)pByteArray, pSize, KeyBlob::GENERIC);
-    delete[] pByteArray;
-    pByteArray = nullptr;
-    status = ca.StoreKey(pKey, pKeyBlob);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to store policy"));
-        return status;
-    }
-
-    // Store membership certificate chains
-    KeyStore::Key mHead;
-    // Membership certificates are associated with one very specific keystore entry
-    // We create this entry and link all leaf membership certificates to it
-    mHead.SetGUID(GUID128("42B0C7F35695A3220A46B3938771E965")); //Hard coded key
-    KeyBlob mHeaderBlob;
-    uint8_t mNumEntries = 1;
-    mHeaderBlob.Set(&mNumEntries, 1, KeyBlob::GENERIC);
-    status = ca.StoreKey(mHead, mHeaderBlob);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to store membership header"));
-        return status;
-    }
-
-    vector<MembershipCertificateChain>::iterator chains;
-
-    for (chains = memberships.begin(); chains != memberships.end(); ++chains) {
-        MembershipCertificate* mCert = &(*(chains->begin()));
-        GUID128 mGUID;
-        KeyStore::Key mKey(KeyStore::Key::LOCAL, mGUID);
-        qcc::String der;
-        mCert->EncodeCertificateDER(der);
-        KeyBlob mKeyBlob((const uint8_t*)der.data(), der.size(), KeyBlob::GENERIC);
-        mKeyBlob.SetTag(String((const char*)mCert->GetSerial(), mCert->GetSerialLen()));
-        // The leaf certificate is linked to the membership entry.
-        status = ca.AddAssociatedKey(mHead, mKey, mKeyBlob);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to store membership certificate"));
-            return status;
-        }
-        //All other elements in the chain are associated with the leaf certificate
-        for (size_t i = 1; i < chains->size(); i++) {
-            qcc::String cder;
-            (*chains)[i].EncodeCertificateDER(cder);
-            KeyBlob kb((const uint8_t*)cder.data(), cder.size(), KeyBlob::GENERIC);
-            GUID128 guid;
-            KeyStore::Key key(KeyStore::Key::LOCAL, guid);
-            status = ca.AddAssociatedKey(mKey, key, kb);
-            if (ER_OK != status) {
-                QCC_LogError(status, ("Failed to store membership certificate chain element"));
-                return status;
-            }
-        }
-    }
-
+ */
     return status;
 }
 

@@ -108,7 +108,6 @@ else:
     unittest_env.Append(CPPPATH = ['#agent/src'])
     unittest_env.Append(CPPPATH = ['#storage/inc'])
     unittest_env.Append(CPPPATH = ['#storage/src'])
-    unittest_env.Append(CPPPATH = [unittest_env['AJ_SCL_SRC_DIR'] +  '/alljoyn_core/src'])
 
     unittest_prog = unittest_env.Program('secmgrctest', objs)
     unittest_env.Install('$C_TESTDIR/bin', unittest_prog)

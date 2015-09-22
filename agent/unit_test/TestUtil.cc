@@ -129,7 +129,7 @@ void BasicTest::SetUp()
 
     StorageFactory& storageFac = StorageFactory::GetInstance();
 
-    ba = new BusAttachment("test", true);
+    ba = new BusAttachment("testsecmgr", true);
     ASSERT_TRUE(ba != nullptr);
     ASSERT_EQ(ER_OK, ba->Start());
     ASSERT_EQ(ER_OK, ba->Connect());

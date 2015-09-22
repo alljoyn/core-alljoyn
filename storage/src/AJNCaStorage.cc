@@ -19,8 +19,6 @@
 
 #include <qcc/Debug.h>
 
-#include <PermissionMgmtObj.h> // Still in alljoyn_core/src!
-
 #include <alljoyn/securitymgr/CertificateUtil.h>
 
 #define QCC_MODULE "SECMGR_STORAGE"

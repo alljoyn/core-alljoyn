@@ -16,133 +16,173 @@
 
 #include "AJNCa.h"
 
+#include <qcc/Util.h>
 #include <qcc/Debug.h>
 
 #define QCC_MODULE "SECMGR_STORAGE"
+
+#define AJNCA_HEADER_V1 "ajnca v1.0"
 
 using namespace qcc;
 using namespace std;
 
 namespace ajn {
 namespace securitymgr {
-QStatus AJNCa::StoreKey(const uint8_t* data, size_t dataSize, KeyBlob::Type keyType)
+QStatus AJNCa::GetDSAPublicKey(ECCPublicKey& publicKey) const
 {
-    KeyStore::Key key;
-    KeyBlob kb;
-    QStatus status = GetLocalKey(keyType, key);
-    if (status != ER_OK) {
-        return status;
+    if (nullptr == pkey) {
+        QCC_DbgPrintf(("AJNCA is not initialized"));
+        return ER_FAIL;
     }
-    status = kb.Set(data, dataSize, keyType);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Set key blob failure of type %i", keyType));
-        return status;
-    }
-
-    status = store->AddKey(key, kb);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to store key of type %i", keyType));
-        return status;
-    }
+    memcpy(&publicKey, pkey, pkey->GetSize());
     return ER_OK;
 }
 
-QStatus AJNCa::GetLocalKey(KeyBlob::Type keyType, KeyStore::Key& key)
+QStatus AJNCa::GetPrivateKeyBlob(ECCPrivateKey& privateKey, FileSource& fs) const
 {
-    key.SetType(KeyStore::Key::LOCAL);
-    /* each local key will be indexed by a hardcode randomly generated GUID.
-       This method is similar to that used by the RSA Key exchange to store
-       the private key and cert chain */
-    if (keyType == KeyBlob::DSA_PRIVATE) {
-        key.SetGUID(GUID128(String("d1b60ce37b271da4b8f0d73b6cd676f5")));
-        return ER_OK;
+    QStatus status = ER_OK;
+    KeyBlob blob;
+    size_t total = strlen(AJNCA_HEADER_V1);
+    size_t read = 0;
+    char buffer[16];
+    do {
+        size_t numRead = 0;
+        status = fs.PullBytes(buffer + read, total - read, numRead, 5000);
+        if (ER_OK != status) {
+            return status;
+        }
+        read += numRead;
+    } while (total > read);
+    if (0 != strncmp(AJNCA_HEADER_V1, buffer, total)) {
+        QCC_LogError(ER_FAIL, ("Header doesn't match"));
+        return ER_FAIL;
     }
-    if (keyType == KeyBlob::DSA_PUBLIC) {
-        key.SetGUID(GUID128(String("19409269762da560d78a2cb8a5b2f0c4")));
-        return ER_OK;
-    }
-    QCC_LogError(ER_CRYPTO_KEY_UNAVAILABLE, ("Wrong keytype requested %i", keyType));
-    return ER_CRYPTO_KEY_UNAVAILABLE;
-}
-
-QStatus AJNCa::GetDSAPublicKey(ECCPublicKey& publicKey) const
-{
-    KeyStore::Key key;
-    KeyBlob kb;
-    QStatus status = GetLocalKey(KeyBlob::DSA_PUBLIC, key);
-    if (status != ER_OK) {
+    status = blob.Load(fs);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to read private blob."));
         return status;
     }
-    status = store->GetKey(key, kb);
-    if (status != ER_OK) {
-        QCC_DbgPrintf(("Failed to retrieve public DSA key from store: %s", QCC_StatusText(status)));
-        return status;
+    if (KeyBlob::DSA_PRIVATE != blob.GetType()) {
+        QCC_LogError(ER_FAIL, ("Corrupt keystore -- key not found. %d", blob.GetType()));
+        return ER_FAIL;
     }
-    memcpy(&publicKey, kb.GetData(), kb.GetSize());
+    if (privateKey.GetSize() != blob.GetSize()) {
+        QCC_LogError(ER_FAIL, ("Keysize mismatch."));
+        return ER_FAIL;
+    }
+    memcpy(&privateKey, blob.GetData(), blob.GetSize());
     return ER_OK;
 }
 
 QStatus AJNCa::GetDSAPrivateKey(ECCPrivateKey& privateKey) const
 {
-    KeyStore::Key key;
-    KeyBlob kb;
-    QStatus status = GetLocalKey(KeyBlob::DSA_PRIVATE, key);
-    if (status != ER_OK) {
-        return status;
+    if (store.size() == 0) {
+        return ER_FAIL;
     }
-    status = store->GetKey(key, kb);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to retrieve private DSA key from store."));
-        return status;
-    }
-    memcpy(&privateKey, kb.GetData(), kb.GetSize());
-    return ER_OK;
+
+    FileSource fs(store);
+    return GetPrivateKeyBlob(privateKey, fs);
 }
 
 QStatus AJNCa::Init(string storeName)
 {
-    store = new KeyStore(storeName.c_str());
+    String store_path = GetHomeDir() + "/.alljoyn_keystore/" + storeName.c_str();
 
-    QStatus status = store->Init(nullptr, true);
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Failed to Init key store"));
-        return status;
-    }
-    ECCPublicKey publicKey;
-    status = GetDSAPublicKey(publicKey);
-    if (status == ER_BUS_KEY_UNAVAILABLE) {
+    QCC_DbgPrintf(("Init keyStore at '%s'", store_path.c_str()));
+    if (ER_OK != FileExists(store_path)) {
         QCC_DbgPrintf(("Generating new key pair"));
         Crypto_ECC ecc;
-        status = ecc.GenerateDSAKeyPair();
-        if (status != ER_OK) {
+        QStatus status = ecc.GenerateDSAKeyPair();
+        if (ER_OK != status) {
             QCC_LogError(status, ("Failed to generate key pair."));
             return status;
         }
+        KeyBlob blob;
+        status = blob.Set((const uint8_t*)ecc.GetDSAPrivateKey(),
+                          ecc.GetDSAPrivateKey()->GetSize(), KeyBlob::DSA_PRIVATE);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to generate private blob."));
+            return status;
+        }
+        KeyBlob pubblob;
+        status = pubblob.Set((const uint8_t*)ecc.GetDSAPublicKey(),
+                             ecc.GetDSAPublicKey()->GetSize(), KeyBlob::DSA_PUBLIC);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to generate public blob."));
+            return status;
+        }
+        FileSink fs(store_path, FileSink::PRIVATE);
+        if (!fs.IsValid()) {
+            QCC_LogError(ER_FAIL, ("Failed to create file '%s'", store_path.c_str()));
+            return ER_FAIL;
+        }
+        size_t total = strlen(AJNCA_HEADER_V1);
+        size_t written = 0;
+        do {
+            size_t numWritten = 0;
+            status = fs.PushBytes(AJNCA_HEADER_V1 + written, total - written, numWritten);
+            if (ER_OK != status) {
+                return status;
+            }
+            written += numWritten;
+        } while (written < total);
 
-        status = StoreKey((const uint8_t*)ecc.GetDSAPrivateKey(), sizeof(ECCPrivateKey), KeyBlob::DSA_PRIVATE);
-        if (status != ER_OK) {
+        status = blob.Store(fs);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to write private blob."));
             return status;
         }
 
-        status = StoreKey((const uint8_t*)ecc.GetDSAPublicKey(), sizeof(ECCPublicKey), KeyBlob::DSA_PUBLIC);
-        if (status != ER_OK) {
+        status = pubblob.Store(fs);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to write public blob."));
             return status;
         }
-        return store->Store();
+        pkey = new ECCPublicKey(*ecc.GetDSAPublicKey());
+    } else {
+        FileSource fs(store_path);
+        ECCPrivateKey key;
+        QStatus status = GetPrivateKeyBlob(key, fs);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to read private key."));
+            return status;
+        }
+        KeyBlob pubblob;
+        status = pubblob.Load(fs);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to read public blob."));
+            return status;
+        }
+        if (KeyBlob::DSA_PUBLIC != pubblob.GetType()) {
+            QCC_LogError(ER_FAIL, ("Corrupt keystore."));
+            return ER_FAIL;
+        }
+        pkey = new ECCPublicKey();
+        pkey->Import(pubblob.GetData(), pubblob.GetSize());
     }
-
+    store = store_path;
     return ER_OK;
 }
 
 QStatus AJNCa::Reset()
 {
-    return store->Reset();
+    if (store.size() != 0) {
+        QStatus status = DeleteFile(store);
+        store = "";
+        delete pkey;
+        pkey = nullptr;
+        return status;
+    }
+    return ER_FAIL;
 }
 
 QStatus AJNCa::SignCertificate(CertificateX509& certificate) const
 {
     ECCPrivateKey pk;
-    GetDSAPrivateKey(pk);
+    QStatus status = GetDSAPrivateKey(pk);
+    if (ER_OK != status) {
+        return status;
+    }
     return certificate.Sign(&pk);
 }
 }

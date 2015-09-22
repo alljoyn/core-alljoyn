@@ -330,6 +330,16 @@ Exit:
     return status;
 }
 
+QStatus ProxyObjectManager::ManagedProxyObject::GetPublicKey(ECCPublicKey& publicKey)
+{
+    CheckReAuthenticate();
+    QStatus status = remoteObj->GetEccPublicKey(publicKey);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to GetPublicKey"));
+    }
+    return status;
+}
+
 QStatus ProxyObjectManager::ManagedProxyObject::Reset()
 {
     CheckReAuthenticate();

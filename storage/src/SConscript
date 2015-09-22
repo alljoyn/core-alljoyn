@@ -30,7 +30,6 @@ libs = []
 lib_env.Append(CPPPATH = ['.'])
 lib_env.Append(CPPPATH = ['#storage/inc'])
 lib_env.Append(CPPPATH = ['#agent/inc/'])
-lib_env.Append(CPPPATH = [lib_env['AJ_SCL_SRC_DIR'] + '/alljoyn_core/src'])
 if secenv['OS_GROUP'] == 'windows':
     lib_env.Append(CPPPATH = ['#external/sqlite3'])
 

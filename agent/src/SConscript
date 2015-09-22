@@ -28,7 +28,6 @@ lib_env.Append(CPPPATH = ['.'])
 lib_env.Append(CPPPATH = ['#agent/inc'])
 lib_env.Append(CPPPATH = ['#agent/src'])
 lib_env.Append(CPPPATH = ['#storage/inc'])
-lib_env.Append(CPPPATH = [lib_env['AJ_SCL_SRC_DIR'] + '/alljoyn_core/src'])
 
 #if lib_env['BR'] == 'on':
 #    lib_env.Append(LIBPATH = ['$DISTDIR' + '/cpp/lib'])

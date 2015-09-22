@@ -22,7 +22,8 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
 
-#include <KeyStore.h> // Still in alljoyn_core/src !!
+#include <qcc/FileStream.h>
+#include <qcc/KeyBlob.h>
 #include <alljoyn/Status.h>
 
 using namespace qcc;
@@ -32,14 +33,14 @@ namespace ajn {
 namespace securitymgr {
 class AJNCa {
   public:
-    AJNCa() : store(nullptr)
+    AJNCa() : store(), pkey(nullptr)
     {
     };
 
     ~AJNCa()
     {
-        delete store;
-        store = nullptr;
+        delete pkey;
+        pkey = nullptr;
     }
 
     QStatus Reset();
@@ -53,14 +54,12 @@ class AJNCa {
     QStatus SignCertificate(CertificateX509& certificate) const;
 
   private:
-    static QStatus GetLocalKey(KeyBlob::Type keyType,
-                               KeyStore::Key& key);
 
-    QStatus StoreKey(const uint8_t* data,
-                     size_t dataSize,
-                     KeyBlob::Type keyType);
+    QStatus GetPrivateKeyBlob(ECCPrivateKey& key,
+                              FileSource& fs) const;
 
-    KeyStore* store;
+    String store;
+    ECCPublicKey* pkey;
 };
 }
 }

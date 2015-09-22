@@ -19,7 +19,6 @@
 #include <alljoyn/AuthListener.h>
 
 #include "TestApplication.h"
-#include "AJNCa.h"
 
 using namespace std;
 

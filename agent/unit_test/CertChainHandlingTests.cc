@@ -53,7 +53,7 @@ class CertChainAgentStorageWrapper :
                 char serial[6];
                 memset(serial, i + 100, 5);
                 serial[5] = 0;
-                CreateMembershipChain(chain, serial);
+                CreateMembershipChain(chain, serial, agentKey);
                 adminGroupMemberships.push_back(chain);
             }
             agentMembershipCertificates = adminGroupMemberships;
@@ -107,30 +107,25 @@ class CertChainAgentStorageWrapper :
   private:
     CertChainAgentStorageWrapper& operator=(const CertChainAgentStorageWrapper);
 
-    void CreateMembershipChain(MembershipCertificateChain& chain, const char* serial)
+    void CreateMembershipChain(MembershipCertificateChain& chain, const char* serial, const KeyInfoNISTP256& agentKey)
     {
         AJNCa tmpCa;
         tmpCa.Init("tmpCA");
         ECCPrivateKey privateKey;
         ECCPublicKey rootKey;
-        Crypto_ECC ecc;
-        ecc.GenerateDHKeyPair();
         tmpCa.GetDSAPrivateKey(privateKey);
         tmpCa.GetDSAPublicKey(rootKey);
         MembershipCertificate cert;
         cert.SetCA(false);
         cert.SetSerial((const uint8_t*)serial, strlen(serial));
         CertificateUtil::SetValityPeriod(36000, cert);
-        cert.SetSubjectPublicKey(ecc.GetDHPublicKey());
+        cert.SetSubjectPublicKey(agentKey.GetPublicKey());
         GUID128 group(serial[0]);
         cert.SetGuild(group);
         qcc::String rootkAki;
-        qcc::String aki;
-
-        CertificateX509::GenerateAuthorityKeyId(ecc.GetDHPublicKey(), aki);
         CertificateX509::GenerateAuthorityKeyId(&rootKey, rootkAki);
         cert.SetIssuerCN((const uint8_t*)rootkAki.data(), rootkAki.size());
-        cert.SetSubjectCN((const uint8_t*)rootkAki.data(), rootkAki.size());
+        cert.SetSubjectCN(agentKey.GetKeyId(), agentKey.GetKeyIdLen());
         EXPECT_EQ(ER_OK, cert.SignAndGenerateAuthorityKeyId(&privateKey, &rootKey));
         chain.push_back(cert);
 
@@ -352,7 +347,7 @@ TEST_F(CertChainHandlingTests, UpdateIdentityChains) {
  *       -# Check if the agent returns a correct membership list
  *       -# Check if the agent returns the full identity certificate chain
  **/
-TEST_F(CertChainHandlingTests, RegisterAgent) {
+TEST_F(CertChainHandlingTests, DISABLED_RegisterAgent) { // See ASACORE-2543
     OnlineApplication agent;
     agent.busName = ba->GetUniqueName().c_str();
 

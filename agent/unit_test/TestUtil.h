@@ -42,7 +42,7 @@ using namespace std;
 /** @file TestUtil.h */
 
 namespace secmgr_tests {
-#define TEST_STORAGE_NAME "test"
+#define TEST_STORAGE_NAME "testcakeystore"
 
 class TestSessionListener :
     public SessionListener {
