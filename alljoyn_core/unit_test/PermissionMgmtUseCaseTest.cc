@@ -1803,8 +1803,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void AppCanCallOn(BusAttachment& bus, BusAttachment& targetBus)
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AppCanCallOn ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AppCanCallOn ExerciseOn failed.  Actual Status: " << QCC_StatusText(status);
         //bus.LeaveSession(clientProxyObject.GetSessionId());
     }
 
@@ -1814,8 +1814,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void AppCannotCallOn(BusAttachment& bus, BusAttachment& targetBus)
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallOn ExcerciseOn did not fail.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallOn ExerciseOn did not fail.  Actual Status: " << QCC_StatusText(status);
         //bus.LeaveSession(clientProxyObject.GetSessionId());
     }
 
@@ -1826,9 +1826,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(bus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseOff(bus, clientProxyObject);
         EXPECT_NE(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExcersizeOff did not fail.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1839,9 +1839,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCanCallOnAndOff ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseOff(consumerBus, clientProxyObject);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(consumerBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanCallOnAndOff ExerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseOff(consumerBus, clientProxyObject);
         EXPECT_EQ(ER_OK, status) << "  ConsumerCanCallOnAndOff ExcersizeOff failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1852,24 +1852,24 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOn ExcerciseOn should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOn ExerciseOn should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void AppCannotCallTVDown(BusAttachment& bus, BusAttachment& targetBus)
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVDown(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVDown ExcerciseTVDown should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVDown(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVDown ExerciseTVDown should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void AppCanCallTVUp(BusAttachment& bus, BusAttachment& targetBus)
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVUp ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVUp(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVUp ExerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -1878,8 +1878,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void AppCannotCallTVOff(BusAttachment& bus, BusAttachment& targetBus)
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOff ExcerciseOff should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOff(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOff ExerciseOff should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void AppCanSetTVVolume(BusAttachment& bus, BusAttachment& targetBus, uint32_t tvVolume, bool listenToPropertiesChanged = false, bool getVolume = true)
@@ -1914,8 +1914,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVInputSource(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCannotCallTVInputSource ExcerciseTVInputSource should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVInputSource(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCannotCallTVInputSource ExerciseTVInputSource should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -1944,8 +1944,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVOff ExcerciseOff failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOff(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVOff ExerciseOff failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -1961,14 +1961,13 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void ConsumerCanTVUpAndDownAndNotChannel()
     {
-
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseTVDown(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseTVChannel(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVUp(consumerBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseTVDown(consumerBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseTVChannel(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
 
         uint32_t tvVolume = 35;
         status = PermissionMgmtTestHelper::SetTVVolume(consumerBus, clientProxyObject, tvVolume);
@@ -1986,8 +1985,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCannotTurnTVUp ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVUp(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCannotTurnTVUp ExerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -2019,7 +2018,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        status = PermissionMgmtTestHelper::ExcerciseTVChannel(adminBus, clientProxyObject);
+        status = PermissionMgmtTestHelper::ExerciseTVChannel(adminBus, clientProxyObject);
         EXPECT_EQ(ER_OK, status) << "  AdminCanChangeChannel failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -2030,7 +2029,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        status = PermissionMgmtTestHelper::ExcerciseTVChannel(consumerBus, clientProxyObject);
+        status = PermissionMgmtTestHelper::ExerciseTVChannel(consumerBus, clientProxyObject);
         EXPECT_EQ(ER_OK, status) << "  ConsumerCanChangeChannel failed.  Actual Status: " << QCC_StatusText(status);
     }
 
