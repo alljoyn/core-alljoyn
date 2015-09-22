@@ -791,7 +791,7 @@ QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& caBus, B
     return saProxy.InstallMembership(certs, ArraySize(certs));
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::ONOFF_IFC_NAME);
@@ -807,7 +807,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseOn(BusAttachment& bus, ProxyBusObject
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::ONOFF_IFC_NAME);
@@ -823,7 +823,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseOff(BusAttachment& bus, ProxyBusObjec
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -875,7 +875,7 @@ QStatus PermissionMgmtTestHelper::SetTVVolume(BusAttachment& bus, ProxyBusObject
     return remoteObj.SetProperty(BasePermissionMgmtTest::TV_IFC_NAME, "Volume", val);
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -891,7 +891,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVDown(BusAttachment& bus, ProxyBusOb
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -907,7 +907,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVChannel(BusAttachment& bus, ProxyBu
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -923,7 +923,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVMute(BusAttachment& bus, ProxyBusOb
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
