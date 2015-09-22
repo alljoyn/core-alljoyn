@@ -145,6 +145,13 @@ class ChirpSignalReceiver : public MessageReceiver {
     bool signalReceivedFlag;
 };
 
+static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+{
+    KeyInfoNISTP256 keyInfo;
+    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    publicKey = *keyInfo.GetPublicKey();
+}
+
 class SecurityManagementPolicyTest : public testing::Test {
   public:
     SecurityManagementPolicyTest() :
@@ -315,7 +322,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         }
 
         ECCPublicKey managerPublicKey;
-        sapWithManager.GetEccPublicKey(managerPublicKey);
+        GetAppPublicKey(managerBus, managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[managerBus.GetUniqueName()]);
@@ -381,9 +388,6 @@ class SecurityManagementPolicyTest : public testing::Test {
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, true));
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
         EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-
-        PermissionPolicy defaultPolicy;
-        EXPECT_EQ(ER_OK, sapWithManager.GetDefaultPolicy(defaultPolicy));
 
     }
 
@@ -1005,7 +1009,7 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_digest_mismatch)
     peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
-    sapWithPeer2.GetEccPublicKey(peer2PublicKey);
+    GetAppPublicKey(peer2Bus, peer2PublicKey);
 
     peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
     peer2Cert.SetAlias("intermediate-cert-alias");
@@ -1023,7 +1027,7 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_digest_mismatch)
     peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
-    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+    GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
     peer1Cert.SetAlias("peer2-cert-alias");
@@ -1953,7 +1957,7 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
-    sapWithPeer1.GetEccPublicKey(peer1PublicKey);
+    GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
     peer1Cert.SetAlias("intermediate-cert-alias");

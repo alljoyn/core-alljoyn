@@ -267,6 +267,12 @@ class SecurityAuthenticationAuthListener : public AuthListener {
 
 };
 
+static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+{
+    KeyInfoNISTP256 keyInfo;
+    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    publicKey = *keyInfo.GetPublicKey();
+}
 
 class SecurityAuthenticationTest : public testing::Test {
   public:
@@ -390,7 +396,7 @@ class SecurityAuthenticationTest : public testing::Test {
 
 
         ECCPublicKey managerPublicKey;
-        sapWithManager.GetEccPublicKey(managerPublicKey);
+        GetAppPublicKey(managerBus, managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
         //Create peer1 identityCert
@@ -1044,7 +1050,7 @@ class SecurityAuthenticationTest2 : public testing::Test {
 
 
         ECCPublicKey managerPublicKey;
-        sapWithManager.GetEccPublicKey(managerPublicKey);
+        GetAppPublicKey(managerBus, managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
         //Create peer1 identityCert

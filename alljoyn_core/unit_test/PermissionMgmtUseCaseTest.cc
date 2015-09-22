@@ -1173,12 +1173,16 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         delete [] rules;
     }
 
-    QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
+    QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus = NULL, IdentityCertificate** copyCertChain = NULL, size_t* copyCertChainCount = NULL)
     {
         SecurityApplicationProxy saProxy(claimerBus, claimedBus.GetUniqueName().c_str());
         /* retrieve public key from to-be-claimed app to create identity cert */
         ECCPublicKey claimedPubKey;
-        EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+        if (expectClaimToFail) {
+            GetAppPublicKey(claimedBus, claimedPubKey);
+        } else {
+            EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+        }
         qcc::GUID128 guid;
         PermissionMgmtTestHelper::GetGUID(claimedBus, guid);
         IdentityCertificate identityCertChain[3];
@@ -1207,12 +1211,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             return status;
         }
         EXPECT_EQ(ER_OK, status) << "Claim failed.";
-        return VerifyIdentity(claimerBus, claimedBus, identityCertChain, certChainCount);
-    }
-
-    QStatus InvokeClaim(bool useAdminCA, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail)
-    {
-        return InvokeClaim(useAdminCA, claimerBus, claimedBus, serial, alias, expectClaimToFail, NULL);
+        if (copyCertChain) {
+            *copyCertChainCount = certChainCount;
+            *copyCertChain = new IdentityCertificate[certChainCount];
+            for (size_t cnt = 0; cnt < certChainCount; cnt++) {
+                (*copyCertChain)[cnt] = identityCertChain[cnt];
+            }
+        }
+        return status;
     }
 
     /**
@@ -1286,6 +1292,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* try claiming with state claimable.  Expect to succeed */
         SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", false)) << " InvokeClaim failed.";
+        /* sleep a max of 1 second to see whether the claimed app issues the
+           PolicyChanged callback after the InvokeClaim is returned.
+         */
+        for (int cnt = 0; cnt < 100; cnt++) {
+            if (GetPolicyChangedReceived()) {
+                break;
+            }
+            qcc::Sleep(10);
+        }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
         /* try to claim one more time */
@@ -1294,9 +1309,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_FALSE(GetPolicyChangedReceived());
 
         ECCPublicKey claimedPubKey2;
-        /* retrieve public key from claimed app to validate that it is not changed */
-        EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey2)) << "GetPeerPublicKey failed.";
-        EXPECT_EQ(memcmp(&claimedPubKey2, &claimedPubKey, sizeof(ECCPublicKey)), 0) << "  The public key of the claimed app has changed.";
+        /* Get public key is no longer available on anonymous connection after claim */
+        EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.GetEccPublicKey(claimedPubKey2)) << "GetPeerPublicKey is not supposed to succeed.";
 
         TestStateSignalReception();
     }
@@ -1324,6 +1338,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         SetApplicationStateSignalReceived(false);
         SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(false, adminBus, consumerBus, "3030303", "Consumer", false, &adminBus)) << " InvokeClaim failed.";
+        /* sleep a max of 1 second to see whether the claimed app issues the
+           PolicyChanged callback after the InvokeClaim is returned.
+         */
+        for (int cnt = 0; cnt < 100; cnt++) {
+            if (GetPolicyChangedReceived()) {
+                break;
+            }
+            qcc::Sleep(10);
+        }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
         /* try to claim a second time */
@@ -1360,10 +1383,23 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
         SetApplicationStateSignalReceived(false);
         SetPolicyChangedReceived(false);
-        EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus)) << " InvokeClaim failed.";
+        IdentityCertificate* identityCertChain = NULL;
+        size_t certChainCount = 0;
+        EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus, &identityCertChain, &certChainCount)) << " InvokeClaim failed.";
+        /* sleep a max of 1 second to see whether the claimed app issues the
+           PolicyChanged callback after the InvokeClaim is returned.
+         */
+        for (int cnt = 0; cnt < 100; cnt++) {
+            if (GetPolicyChangedReceived()) {
+                break;
+            }
+            qcc::Sleep(10);
+        }
         EXPECT_TRUE(GetPolicyChangedReceived());
-
         TestStateSignalReception();
+        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+        EXPECT_EQ(ER_OK, VerifyIdentity(consumerBus, remoteControlBus, identityCertChain, certChainCount)) << "Verify identity cert chain failed after claim";
+        delete [] identityCertChain;
     }
 
     void Claims(bool usePSK, bool claimRemoteControl)
@@ -1384,6 +1420,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         if (claimRemoteControl) {
             ConsumerClaimsRemoteControl();
         }
+        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
     }
 
     void Claims(bool usePSK)
@@ -1880,7 +1917,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  App gets the Security interfaces' version number
      */
-    void AppGetVersionNumber(BusAttachment& bus, BusAttachment& targetBus)
+    void AppGetVersionNumber(BusAttachment& bus, BusAttachment& targetBus, bool expectFailToGetManagedAppVersion)
     {
         uint16_t versionNum = 0;
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
@@ -1888,8 +1925,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
         EXPECT_EQ(ER_OK, saProxy.GetClaimableApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
         EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
-        EXPECT_EQ(ER_OK, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
-        EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
+        if (expectFailToGetManagedAppVersion) {
+            EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion is supposed to fail.";
+        } else {
+            EXPECT_EQ(ER_OK, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
+            EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
+        }
     }
 
     /**
@@ -2226,11 +2267,12 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     SetManifestTemplateOnServiceProvider();
 
     RetrieveServicePublicKey();
+    AppGetVersionNumber(consumerBus, serviceBus, false);
     RemoveMembershipFromServiceProvider();
     RemoveMembershipFromConsumer();
     FailResetServiceByConsumer();
     SuccessfulResetServiceByAdmin();
-    AppGetVersionNumber(consumerBus, serviceBus);
+    AppGetVersionNumber(consumerBus, serviceBus, true);
 }
 
 /*
@@ -3499,14 +3541,13 @@ TEST_F(PermissionMgmtUseCaseTest, GetEmptyManifestTemplateDigestBeforeClaim)
     EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, 0)) << "SetPermissionManifest GetManifestTemplateDigest failed.";
 }
 
-TEST_F(PermissionMgmtUseCaseTest, GetEmptyCertificateIdBeforeClaim)
+TEST_F(PermissionMgmtUseCaseTest, CertificateIdNotAvailableBeforeClaim)
 {
     EnableSecurity("ALLJOYN_ECDHE_NULL");
     SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
     qcc::String serialNum;
     KeyInfoNISTP256 keyInfo;
-    EXPECT_EQ(ER_OK, saProxy.GetIdentityCertificateId(serialNum, keyInfo));
-    EXPECT_TRUE(keyInfo.GetPublicKey()->empty());
+    EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.GetIdentityCertificateId(serialNum, keyInfo));
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
