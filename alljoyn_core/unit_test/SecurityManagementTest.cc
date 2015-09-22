@@ -2679,7 +2679,7 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
  * The method calls and Get property calls should fail peer2. bus is not
  * yet claimed.
  */
-TEST(SecurityManagementPolicy2Test, DISABLED_ManagedApplication_method_calls_should_fail_befor_claim)
+TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_befor_claim)
 {
     BusAttachment peer1("bus1");
     BusAttachment peer2("bus2");
@@ -2713,13 +2713,13 @@ TEST(SecurityManagementPolicy2Test, DISABLED_ManagedApplication_method_calls_sho
     SecurityApplicationProxy sapWithBus1toSelf(peer1, peer1.GetUniqueName().c_str());
     PermissionConfigurator::ApplicationState applicationStateManager;
     EXPECT_EQ(ER_OK, sapWithBus1toSelf.GetApplicationState(applicationStateManager));
-    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStateManager);
+    EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStateManager);
 
     {
         SecurityApplicationProxy sapBus1toBus2(peer1, peer2.GetUniqueName().c_str(), sessionId);
         PermissionConfigurator::ApplicationState applicationStatePeer1;
         EXPECT_EQ(ER_OK, sapBus1toBus2.GetApplicationState(applicationStatePeer1));
-        EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
 
         // Call Reset
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.Reset());
@@ -2803,34 +2803,34 @@ TEST(SecurityManagementPolicy2Test, DISABLED_ManagedApplication_method_calls_sho
 
         // Fetch Version property
         uint16_t version;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetManagedApplicationVersion(version));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetManagedApplicationVersion(version));
 
         // Fetch Identity property
         MsgArg identityCertificate;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetIdentity(identityCertificate));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetIdentity(identityCertificate));
 
         // Fetch Manifest property
         MsgArg manifest;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetManifest(manifest));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetManifest(manifest));
 
         // Fetch IdentityCertificateId property
         String serial;
         qcc::KeyInfoNISTP256 issuerKey;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetIdentityCertificateId(serial, issuerKey));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetIdentityCertificateId(serial, issuerKey));
 
         // Fetch PolicyVersion property
         uint32_t policyVersion;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetPolicyVersion(policyVersion));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetPolicyVersion(policyVersion));
 
         // Fetch Policy property
         PermissionPolicy policy;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetPolicy(policy));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetPolicy(policy));
 
         // Fetch DefaultPolicy property
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetDefaultPolicy(policy));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetDefaultPolicy(policy));
 
         // Fetch MembershipSummaries property
         MsgArg membershipSummaries;
-        EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, sapBus1toBus2.GetMembershipSummaries(membershipSummaries));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetMembershipSummaries(membershipSummaries));
     }
 }
