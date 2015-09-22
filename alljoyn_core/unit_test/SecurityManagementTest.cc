@@ -385,9 +385,9 @@ class SecurityManagementPolicyTest : public testing::Test {
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
 
         //Change the managerBus so it only uses ECDHE_ECDSA
-        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, true));
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
 
     }
 
@@ -2650,6 +2650,408 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
 
 /*
  * Purpose:
+ * ASG members  can also call methods from the org.alljoyn.Bus.Security.ManagedApplication
+ * interface on the app. bus in the default policy.
+ *
+ * Setup:
+ * ASGA bus claims the app. bus.
+ * app. bus has default policy installed.
+ *
+ * ASG bus calls UpdateIdentity on the app. bus.
+ * ASG bus calls GetIdentity on the app. bus.
+ *
+ * ASG bus calls UpdatePolicy on the app. bus
+ * ASG bus calls GetPolicy on the app. bus
+ *
+ * ASG bus calls ResetPolicy on the app. bus
+ * ASG bus calls GetPolicy on the app. bus
+ *
+ * ASG bus calls InstallMembership on the app. bus
+ * ASG bus calls GetMembershipSummaries on the app. bus
+ *
+ * ASG bus calls RemoveMembership on the app. bus
+ *
+ * ASG bus calls Reset on the app. bus
+ *
+ * Verification:
+ * GetPolicy should fetch the policy with no rules.
+ *
+ * UpdaterIdentity should be successful.
+ * GetProperty("Identity") should return the same identity certificate as before.
+ *
+ * UpdatePolicy should be successful.
+ * GetProperty("Policy") should return the same policy as before.
+ *
+ * ResetPolicy should be successful.
+ * GetProperty("Policy") should return the default policy.
+ *
+ * InstallMembership should be successful.
+ * GetProperty("MembershipSummaries") should return the details about the membership certificates installed.
+ *
+ * RemoveMembership should be sucessful.
+ *
+ * Reset should be successful.
+ *
+ * Peer1 = ASG bus
+ * Peer2 = app. bus
+ */
+TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_members_for_managedapplication_default_policy)
+{
+    InstallMembershipOnManager();
+    InstallMembershipOnPeer1();
+    InstallMembershipOnPeer2();
+
+    SessionOpts opts;
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy sapWithPeer1toPeer2(peer1Bus, peer2Bus.GetUniqueName().c_str());
+
+    // Call UpdateIdentity
+    // All Inclusive manifest
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+
+    {
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*",
+                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        manifest[0].SetMembers(1, member);
+    }
+
+    //Get manager key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(peer1Bus,
+                                                               manifest, manifestSize,
+                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create identityCert
+    const size_t certChainSize = 1;
+    IdentityCertificate identityCertChain[certChainSize];
+    GUID128 guid;
+
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Alias",
+                                                                  3600,
+                                                                  identityCertChain[0],
+                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.SecureConnection(true));
+
+    MsgArg identityArg;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetIdentity(identityArg));
+
+    IdentityCertificate identityCertChain_out[certChainSize];
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.MsgArgToIdentityCertChain(identityArg, identityCertChain_out, 1));
+
+    ASSERT_EQ(identityCertChain[0].GetSerialLen(), identityCertChain_out[0].GetSerialLen());
+    for (size_t i = 0; i < identityCertChain[0].GetSerialLen(); ++i) {
+        EXPECT_EQ(identityCertChain[0].GetSerial()[i], identityCertChain_out[0].GetSerial()[i]);
+    }
+
+    PermissionPolicy policy;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetPolicy(policy));
+
+    // Assume the default policy which is always 0
+    EXPECT_EQ(static_cast<uint32_t>(0), policy.GetVersion());
+
+    policy.SetVersion(policy.GetVersion() + 1);
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdatePolicy(policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.SecureConnection(true));
+
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetPolicy(policy));
+
+    EXPECT_EQ(static_cast<uint32_t>(1), policy.GetVersion());
+
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.ResetPolicy());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetPolicy(policy));
+
+    // Reset back to the default policy which is always 0
+    EXPECT_EQ(static_cast<uint32_t>(0), policy.GetVersion());
+
+    String membershipSerial = "2";
+    qcc::MembershipCertificate peer2MembershipCertificate[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2Key.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    false,
+                                                                    3600,
+                                                                    peer2MembershipCertificate[0]
+                                                                    ));
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.InstallMembership(peer2MembershipCertificate, 1));
+
+    MsgArg membershipSummariesArg;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetMembershipSummaries(membershipSummariesArg));
+
+    // Call GetProperty("MembershipSummaries"). This call should show 2 membership certificates
+    size_t count = membershipSummariesArg.v_array.GetNumElements();
+    EXPECT_EQ((uint32_t)2, count);
+    String*serials = new String[count];
+    KeyInfoNISTP256* keyInfos = new KeyInfoNISTP256[count];
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.MsgArgToCertificateIds(membershipSummariesArg, serials, keyInfos, count));
+
+    String serial0("2");
+    String serial1("1");
+    // Compare the serial  in the certificates just retrieved
+    // Membership certs are stored as a non-deterministic set so the order can
+    // change. We just want to make sure both certificates are returned. The
+    // only time order will remain the same is if the certificates are in a
+    // certificate chain.
+    if (serials[0] == serial0) {
+        EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+    } else {
+        EXPECT_STREQ(serials[0].c_str(), serial1.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial0.c_str());
+    }
+
+    //Get manager key
+    KeyInfoNISTP256 managerKey;
+    PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.RemoveMembership("2", managerKey));
+
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.Reset());
+}
+
+/*
+ * Purpose:
+ * Non ASG members should not be able to access org.alljoyn.Bus.Security.ManagedApplication
+ * interface on the app. bus in the default policy.
+ *
+ * Setup:
+ * ASGA bus claims the app. bus.
+ * app. bus has default policy installed.
+ *
+ * non ASG bus calls the following methods on the app. bus:
+ * Reset
+ * UpdateIdentity
+ * UpdatePolicy
+ * ResetPolicy
+ * InstallMembership
+ * RemoveMembership
+ *
+ * non ASG bus tries to fetch the following properties on the  app. bus:
+ * Version
+ * Identity
+ * Manifest
+ * IdentityCertificateId
+ * PolicyVersion
+ * Policy
+ * DefaultPolicy
+ * MembershipSummaries
+ *
+ * non ASG bus calls GetAllProperties on the org.alljoyn.Bus.Security.ManagedApplication
+ * interface on the app. bus.
+ *
+ * Verification:
+ * All methods will fail as Non ASG members cannot call these methods on the app. bus.
+ *
+ * The non ASG bus should not be able to fetch  any property on the app. bus.
+ * All the GetProperty calls should fail with permission denied.
+ *
+ * All properties can be called by ASG member only. This is because the IRB spec
+ * says: The ManagedApplication is an interface that provides the mechanism for
+ * an admin to manage the application's security configuration.
+ *
+ * Peer1 = ASG bus
+ * Peer2 = app. bus
+ */
+TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedapplication)
+{
+    InstallMembershipOnManager();
+    InstallMembershipOnPeer2();
+
+    SessionOpts opts;
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy sapWithPeer1toPeer2(peer1Bus, peer2Bus.GetUniqueName().c_str());
+
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.Reset());
+
+    // Call UpdateIdentity
+    // All Inclusive manifest
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+
+    {
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*",
+                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        manifest[0].SetMembers(1, member);
+    }
+
+    //Get manager key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(peer1Bus,
+                                                               manifest, manifestSize,
+                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create identityCert
+    const size_t certChainSize = 1;
+    IdentityCertificate identityCertChain[certChainSize];
+    GUID128 guid;
+
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "1",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Alias",
+                                                                  3600,
+                                                                  identityCertChain[0],
+                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+
+
+    PermissionPolicy policy;
+    CreatePermissivePolicy(policy, 1);
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.UpdatePolicy(policy));
+
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.ResetPolicy());
+
+    String membershipSerial = "2";
+    qcc::MembershipCertificate peer2MembershipCertificate[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2Key.GetPublicKey(),
+                                                                    managerGuid,
+                                                                    false,
+                                                                    3600,
+                                                                    peer2MembershipCertificate[0]
+                                                                    ));
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.InstallMembership(peer2MembershipCertificate, 1));
+
+    //Get manager key
+    KeyInfoNISTP256 managerKey;
+    PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.RemoveMembership("1", managerKey));
+
+    MsgArg identityCertArg;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetIdentity(identityCertArg));
+    MsgArg manifestArg;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetManifest(manifestArg));
+    String serial;
+    qcc::KeyInfoNISTP256 issuerKey;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetIdentityCertificateId(serial, issuerKey));
+    uint32_t policyVersion;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetPolicyVersion(policyVersion));
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetPolicy(policy));
+    MsgArg membershipSummariesArg;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetMembershipSummaries(membershipSummariesArg));
+}
+
+/*
+ * Test is identical to non_group_members_can_not_call_managedapplication except
+ * it only tests the GetManagedApplicationVersion call. This way the rest of the
+ * code can be tested till ASACORE-2557 is fixed
+ */
+// Please re-enable test once ASACORE-2557 is fixed.
+TEST_F(SecurityManagementPolicyTest, DISABLED_non_group_members_can_not_get_managedapplication_version)
+{
+    InstallMembershipOnManager();
+    InstallMembershipOnPeer2();
+
+    SessionOpts opts;
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy sapWithPeer1toPeer2(peer1Bus, peer2Bus.GetUniqueName().c_str());
+
+    uint16_t managedAppVersion;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetManagedApplicationVersion(managedAppVersion));
+}
+
+/*
+ * Purpose:
+ * If an app. bus has a policy that allows all inbound messages, anybody can
+ * manage the device.
+ *
+ * Setup:
+ * ASGA bus claims the app. bus.
+ *
+ * App. bus has the following policy installed:
+ * Peer type: ALL
+ * Rule: Object path: *, Interface Name: *; Action mask: PROVIDE|MODIFY|OBSERVE
+ * A ECDHE_NULL session is set between the app. bus and the non-ASG bus.
+ * The non ASG bus calls Reset on the app. bus
+ *
+ * Verification:
+ * Reset should be successful.
+ */
+TEST_F(SecurityManagementPolicyTest, non_members_can_call_managedapplication_methods_if_policy_allows)
+{
+    InstallMembershipOnManager();
+    InstallMembershipOnPeer2();
+
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    PermissionPolicy defaultPolicy;
+    EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(defaultPolicy));
+    PermissionPolicy policy;
+    CreatePermissivePolicy(policy, 1);
+    EXPECT_EQ(ER_OK, UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, policy, true, true, true));
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
+
+    BusAttachment nonASGBus("non-ASGBus", true);
+    EXPECT_EQ(ER_OK, nonASGBus.Start());
+    EXPECT_EQ(ER_OK, nonASGBus.Connect());
+
+    InMemoryKeyStoreListener keyStoreListener;
+    EXPECT_EQ(ER_OK, nonASGBus.RegisterKeyStoreListener(keyStoreListener));
+
+    DefaultECDHEAuthListener authListener;
+    EXPECT_EQ(ER_OK, nonASGBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", peer2AuthListener));
+
+    SessionOpts opts;
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, nonASGBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy sapWithNonASGBustoPeer2(nonASGBus, peer2Bus.GetUniqueName().c_str());
+
+
+    // Policy updated must secure connection to update keys.
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.SecureConnection(true));
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.Reset());
+
+    EXPECT_EQ(ER_OK, nonASGBus.Stop());
+    EXPECT_EQ(ER_OK, nonASGBus.Join());
+}
+/*
+ * Purpose:
  * Before claim, any peer trying to call methods on the
  * org.alljoyn.Bus.Security.ManagedApplication interface should fail.
  *
@@ -2833,4 +3235,31 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         MsgArg membershipSummaries;
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetMembershipSummaries(membershipSummaries));
     }
+}
+
+/*
+ * Verify org.alljoyn.Bus.Security.ManagedApplication interface read only values
+ * are read only.
+ *
+ * These properties should be read only:
+ * Version
+ * Identity
+ * Manifest
+ * IdentityCertificateId
+ * PolicyVersion
+ * Policy
+ * DefaultPolicy
+ * MembershipSummaries
+ */
+TEST(SecurityManagementPolicy2Test, verify_values_are_readonly) {
+    BusAttachment bus("verify_values_are_readonly");
+    const InterfaceDescription* managedAppIface = bus.GetInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Version")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Identity")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Manifest")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("IdentityCertificateId")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("PolicyVersion")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Policy")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("DefaultPolicy")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("MembershipSummaries")->access);
 }
