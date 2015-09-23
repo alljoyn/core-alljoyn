@@ -156,9 +156,6 @@ class SecurityAgentImpl :
     void AddSecurityInfo(OnlineApplication& app,
                          const SecurityInfo& si);
 
-    void RemoveSecurityInfo(OnlineApplication& app,
-                            const SecurityInfo& si);
-
     void NotifyApplicationListeners(const OnlineApplication* oldApp,
                                     const OnlineApplication* newApp);
 

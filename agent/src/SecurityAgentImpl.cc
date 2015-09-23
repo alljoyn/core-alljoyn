@@ -572,14 +572,6 @@ void SecurityAgentImpl::AddSecurityInfo(OnlineApplication& app, const SecurityIn
     app.keyInfo = si.keyInfo;
 }
 
-void SecurityAgentImpl::RemoveSecurityInfo(OnlineApplication& app, const SecurityInfo& si)
-{
-    // Update online app if the busName is still relevant.
-    if (app.busName == si.busName) {
-        //app.busName = "";
-    }
-}
-
 void SecurityAgentImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
                                               const SecurityInfo* newSecInfo)
 {
@@ -601,7 +593,6 @@ void SecurityAgentImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
             NotifyApplicationListeners(&old, &foundAppItr->second);
         } else {
             // removal of known application
-            RemoveSecurityInfo(foundAppItr->second, *oldSecInfo);
             NotifyApplicationListeners(&old, &foundAppItr->second);
         }
     } else {
