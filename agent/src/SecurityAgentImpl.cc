@@ -156,7 +156,6 @@ QStatus SecurityAgentImpl::ClaimSelf()
     agentKeyInfo.SetKeyId((const uint8_t*)ownPubKeyID.c_str(), ownPubKeyID.size());
 
     status = caStorage->RegisterAgent(agentKeyInfo, mf, adminGroup, idCerts, memberships);
-
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to register agent"));
         return status;
@@ -309,8 +308,15 @@ QStatus SecurityAgentImpl::Init()
         }
 
         status = caStorage->GetCaPublicKeyInfo(publicKeyInfo);
-        if (ER_OK != status || publicKeyInfo.empty()) {
-            QCC_LogError(status, ("CA is inaccessible or its  Public Key is empty"));
+        if (ER_OK != status) {
+            QCC_LogError(status, ("CA is inaccessible"));
+            break;
+        }
+
+        if (publicKeyInfo.empty()) {
+            status = ER_FAIL;
+            QCC_LogError(status, ("Public key of CA is empty"));
+            break;
         }
 
         status = Util::Init(busAttachment);
