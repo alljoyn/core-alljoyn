@@ -3233,17 +3233,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
             return;
         }
 
-        /*
-         * Our contract with ARDP says that it will provide us with valid data
-         * if it calls us back.
-         */
-        assert(rcv != NULL && rcv->data != NULL && rcv->datalen != 0 && "_UDPEndpoint::RecvCb(): No data from ARDP in RecvCb()");
-
-
         if (IsEpStarted() == false) {
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Not accepting inbound messages"));
-
-#if RETURN_ORPHAN_BUFS
 
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
             m_transport->m_ardpLock.Lock();
@@ -3281,24 +3272,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
 #endif
             m_transport->m_ardpLock.Unlock();
 
-#else // not RETURN_ORPHAN_BUFS
-
-            /*
-             * Since we are getting an indication that the endpoint is going
-             * down, we assume that the endpoint will continue the process and
-             * be destroyed.  In this case, we assume that ARDP is going to
-             * particpate in closing down the connection and released any
-             * pending buffers.  This means that we can just ignore the buffer
-             * here.  We'll just print a message saying that's what we did.
-             */
-            QCC_DbgPrintf(("UDPEndpoint::RecvCb(): Orphaned RECV_CB for conn ID == %d. ignored", connId));
-
-#endif // not RETURN_ORPHAN_BUFS
-
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
+
+        /*
+         * Our contract with ARDP says that it will provide us with valid data
+         * if it calls us back.
+         */
+        assert(rcv != NULL && rcv->data != NULL && rcv->datalen != 0 && "_UDPEndpoint::RecvCb(): No data from ARDP in RecvCb()");
 
         if (rcv->fcnt == 0) {
             QCC_LogError(ER_UDP_INVALID, ("_UDPEndpoint::RecvCb(): Unexpected rcv->fcnt==%d.", rcv->fcnt));

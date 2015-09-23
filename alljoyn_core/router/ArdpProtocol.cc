@@ -894,20 +894,22 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
         ++handle->stats.disconnectCbs;
 #endif
         handle->cb.DisconnectCb(handle, conn, reason);
-        /* This is a result of a local disconnect: from the transport's perspective the connection is gone
-         * and nothing is going to be done to it from now on. Therefore, we have nothing to wait on.
-         * Just delete the connection record. */
+        /*
+         * Change the status to ER_ARDP_INVALID_CONNECTION. This is needed in case the DisconnectTimer is rescheduled
+         * in order to wait on RCV queue to drain.
+         */
+        reason = ER_ARDP_INVALID_CONNECTION;
+        conn->connectTimer.context = (void*) reason;
+    }
+
+    /* Check if there are any received buffers delivered to the upper layer that haven't been consumed yet */
+    if (IsRcvQueueEmpty(handle, conn)) {
         DelConnRecord(handle, conn, false);
     } else {
-        /* Check if there are any received buffers delivered to the upper layer that haven't been consumed yet */
-        if (IsRcvQueueEmpty(handle, conn)) {
-            DelConnRecord(handle, conn, false);
-        } else {
-            /* Reschedule connection removal */
-            QCC_DbgPrintf(("DisconnectTimerHandler: waiting for receive Q to drain handle=%p, con=%p",
-                           handle, conn));
-            UpdateTimer(handle, conn, &conn->connectTimer, ARDP_DISCONNECT_RETRY_TIMEOUT, ARDP_DISCONNECT_RETRY);
-        }
+        /* Reschedule connection removal */
+        QCC_DbgPrintf(("DisconnectTimerHandler: waiting for receive Q to drain handle=%p, con=%p",
+                       handle, conn));
+        UpdateTimer(handle, conn, &conn->connectTimer, ARDP_DISCONNECT_RETRY_TIMEOUT, ARDP_DISCONNECT_RETRY);
     }
 }
 
