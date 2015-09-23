@@ -678,7 +678,7 @@ void NamedPipeDaemonTransport::ManageAuthenticatingEndpoints()
     list<NamedPipeDaemonEndpoint>::iterator authIterator = authenticatingEndpointList.begin();
 
     while (authIterator != authenticatingEndpointList.end()) {
-        if ((*authIterator)->AuthSucceeded()) {
+        if ((*authIterator)->IsValid() && (*authIterator)->AuthSucceeded()) {
             QCC_DbgHLPrintf(("ManageAuthenticatingEndpoints: moving endpoint to active list"));
             list<NamedPipeDaemonEndpoint>::iterator movedIterator = authIterator;
             authIterator++;
@@ -686,8 +686,8 @@ void NamedPipeDaemonTransport::ManageAuthenticatingEndpoints()
             NamedPipeDaemonEndpoint movedEndpoint = *movedIterator;
             authenticatingEndpointList.erase(movedIterator);
             endpointList.push_back(RemoteEndpoint::cast(movedEndpoint));
-        } else if ((*authIterator)->AuthFailed() || (*authIterator)->AuthStopped()) {
-            QCC_DbgHLPrintf(("ManageAuthenticatingEndpoints: removing failed or stopped endpoint"));
+        } else if (!(*authIterator)->IsValid() || (*authIterator)->AuthFailed() || (*authIterator)->AuthStopped()) {
+            QCC_DbgHLPrintf(("ManageAuthenticatingEndpoints: removing invalidated, failed or stopped endpoint"));
             list<NamedPipeDaemonEndpoint>::iterator erasedIterator = authIterator;
             authIterator++;
             (*erasedIterator)->Join();
@@ -755,6 +755,29 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
 
     QCC_DbgHLPrintf(("NamedPipeAcceptThread: exiting, status=%s", QCC_StatusText(status)));
     return (void*) status;
+}
+
+void NamedPipeDaemonTransport::EndpointExit(RemoteEndpoint& ep)
+{
+    /*
+     * This is a callback driven from the remote endpoint thread exit function.
+     * NamedPipeDaemonEndpoint inherits from class RemoteEndpoint and so when
+     * either of the threads (transmit or receive) of one of our endpoints exits
+     * for some reason, we get called back here.
+     */
+    QCC_DbgTrace(("NamedPipeDaemonTransport::EndpointExit()"));
+
+    /* Remove the dead endpoint from the live endpoint list */
+    endpointListLock.Lock(MUTEX_CONTEXT);
+    for (list<NamedPipeDaemonEndpoint>::iterator i = authenticatingEndpointList.begin(); i != authenticatingEndpointList.end(); i++) {
+        if (ep.iden(*i)) {
+            authenticatingEndpointList.erase(i);
+            break;
+        }
+    }
+    endpointListLock.Unlock(MUTEX_CONTEXT);
+
+    DaemonTransport::EndpointExit(ep);
 }
 
 } // namespace ajn

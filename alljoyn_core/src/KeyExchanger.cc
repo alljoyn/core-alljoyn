@@ -843,8 +843,8 @@ QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
     variant.Set("ay", sizeof(verifier), verifier);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->AcquireConversationHashLock();
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     peerState->ReleaseConversationHashLock();
     return status;
@@ -923,8 +923,8 @@ QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
     variant.Set("(ayay)", pskName.length(), pskName.data(), sizeof(verifier), verifier);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->AcquireConversationHashLock();
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     peerState->ReleaseConversationHashLock();
     return status;
@@ -1472,8 +1472,8 @@ QStatus KeyExchangerECDHE_ECDSA::ReplyWithVerifier(Message& msg)
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->AcquireConversationHashLock();
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     peerState->ReleaseConversationHashLock();
     return status;

@@ -40,6 +40,13 @@ using namespace std;
  * most of the tests are related to backward compatibility.
  */
 
+static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+{
+    KeyInfoNISTP256 keyInfo;
+    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    publicKey = *keyInfo.GetPublicKey();
+}
+
 class SecurityOtherTestSessionPortListener : public SessionPortListener {
   public:
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
@@ -553,7 +560,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
 
 
     ECCPublicKey managerPublicKey;
-    sapWithManager.GetEccPublicKey(managerPublicKey);
+    GetAppPublicKey(managerBus, managerPublicKey);
     ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
     //Create peer1 identityCert

@@ -1505,7 +1505,10 @@ class ClaimThread2 : public Thread {
 
         // peer public key used to generate the identity certificate chain
         ECCPublicKey peer1PublicKey;
-        EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
+        KeyInfoNISTP256 keyInfo;
+        PermissionConfigurator& pc1 = thiz->peer1Bus.GetPermissionConfigurator();
+        EXPECT_EQ(ER_OK, pc1.GetSigningPublicKey(keyInfo));
+        peer1PublicKey = *keyInfo.GetPublicKey();
 
         // All Inclusive manifest
         PermissionPolicy::Rule::Member member[1];

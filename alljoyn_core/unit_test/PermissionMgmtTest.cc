@@ -149,7 +149,7 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCertChain(BusAttachment& caBus, 
     return ER_OK;
 }
 
-QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, uint8_t* digest, size_t digestSize)
+QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, uint8_t* digest, size_t digestSize, bool setEmptyAKI)
 {
     qcc::GUID128 issuer(0);
     GetGUID(issuerBus, issuer);
@@ -171,7 +171,17 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, c
 
     /* use the issuer bus to sign the cert */
     PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
-    status = pc.SignCertificate(cert);
+    if (setEmptyAKI) {
+        CredentialAccessor ca(issuerBus);
+        ECCPrivateKey privateKey;
+        status = ca.GetDSAPrivateKey(privateKey);
+        if (ER_OK != status) {
+            return status;
+        }
+        status = cert.Sign(&privateKey);
+    } else {
+        status = pc.SignCertificate(cert);
+    }
     if (ER_OK != status) {
         return status;
     }
@@ -202,7 +212,7 @@ QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, c
     return CreateIdentityCert(issuerBus, serial, subject, subjectPubKey, alias, 24 * 3600, der);
 }
 
-QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::MembershipCertificate& cert)
+QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::MembershipCertificate& cert, bool setEmptyAKI)
 {
     qcc::GUID128 issuer(0);
     GetGUID(signingBus, issuer);
@@ -219,7 +229,19 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, Bus
     cert.SetValidity(&validity);
     /* use the signing bus to sign the cert */
     PermissionConfigurator& pc = signingBus.GetPermissionConfigurator();
-    return pc.SignCertificate(cert);
+    QStatus status = ER_CRYPTO_ERROR;
+    if (setEmptyAKI) {
+        CredentialAccessor ca(signingBus);
+        ECCPrivateKey privateKey;
+        status = ca.GetDSAPrivateKey(privateKey);
+        if (ER_OK != status) {
+            return status;
+        }
+        status = cert.Sign(&privateKey);
+    } else {
+        status = pc.SignCertificate(cert);
+    }
+    return status;
 }
 
 QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der)
@@ -732,19 +754,19 @@ QStatus PermissionMgmtTestHelper::InstallMembership(const String& serial, BusAtt
     return saProxy.InstallMembership(certs, 1);
 }
 
-QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild)
+QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const String& serial0, const String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const ECCPublicKey* targetPubKey, const qcc::GUID128& guild, bool setEmptyAKI)
 {
     SecurityApplicationProxy saSecondProxy(secondBus, remoteObjName.c_str());
 
     /* create the second cert first -- with delegate on  */
     qcc::MembershipCertificate certs[2];
-    QStatus status = CreateMembershipCert(serial1, topBus, secondSubject, secondPubKey, guild, true, 24 * 3600, certs[1]);
+    QStatus status = CreateMembershipCert(serial1, topBus, secondSubject, secondPubKey, guild, true, 24 * 3600, certs[1], setEmptyAKI);
     if (status != ER_OK) {
         return status;
     }
 
     /* create the leaf cert signed by the subject */
-    status = CreateMembershipCert(serial0, secondBus, targetSubject, targetPubKey, guild, false, 24 * 3600, certs[0]);
+    status = CreateMembershipCert(serial0, secondBus, targetSubject, targetPubKey, guild, false, 24 * 3600, certs[0], setEmptyAKI);
     if (status != ER_OK) {
         return status;
     }
@@ -791,7 +813,7 @@ QStatus PermissionMgmtTestHelper::InstallMembershipChain(BusAttachment& caBus, B
     return saProxy.InstallMembership(certs, ArraySize(certs));
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::ONOFF_IFC_NAME);
@@ -807,7 +829,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseOn(BusAttachment& bus, ProxyBusObject
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::ONOFF_IFC_NAME);
@@ -823,7 +845,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseOff(BusAttachment& bus, ProxyBusObjec
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -875,7 +897,7 @@ QStatus PermissionMgmtTestHelper::SetTVVolume(BusAttachment& bus, ProxyBusObject
     return remoteObj.SetProperty(BasePermissionMgmtTest::TV_IFC_NAME, "Volume", val);
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -891,7 +913,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVDown(BusAttachment& bus, ProxyBusOb
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -907,7 +929,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVChannel(BusAttachment& bus, ProxyBu
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -923,7 +945,7 @@ QStatus PermissionMgmtTestHelper::ExcerciseTVMute(BusAttachment& bus, ProxyBusOb
     return status;
 }
 
-QStatus PermissionMgmtTestHelper::ExcerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj)
+QStatus PermissionMgmtTestHelper::ExerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj)
 {
     QStatus status;
     const InterfaceDescription* itf = bus.GetInterface(BasePermissionMgmtTest::TV_IFC_NAME);
