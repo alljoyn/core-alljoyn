@@ -274,14 +274,6 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
         if (status != ER_OK) {
             printf("Failed to SetClaimCapabilityAdditionalInfo - status(%s)\n", QCC_StatusText(status));
         }
-        PermissionConfigurator::ApplicationState state;
-        if (ER_OK == ba->GetPermissionConfigurator().GetApplicationState(state)) {
-            if (PermissionConfigurator::CLAIMABLE == state) {
-                printf("Door provider is not claimed.\n");
-                printf("The provider can be claimed using PSK with an application generated secret.\n");
-                printf("PSK = (%s)\n", psk.ToString().c_str());
-            }
-        }
     }
 
     PermissionPolicy::Rule manifestRule;
@@ -310,6 +302,17 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     status = ba->GetPermissionConfigurator().SetPermissionManifest(&manifestRule, 1);
     if (status != ER_OK) {
         return status;
+    }
+
+    if (provider) {
+        PermissionConfigurator::ApplicationState state;
+        if (ER_OK == ba->GetPermissionConfigurator().GetApplicationState(state)) {
+            if (PermissionConfigurator::CLAIMABLE == state) {
+                printf("Door provider is not claimed.\n");
+                printf("The provider can be claimed using PSK with an application generated secret.\n");
+                printf("PSK = (%s)\n", psk.ToString().c_str());
+            }
+        }
     }
 
     status = HostSession();
