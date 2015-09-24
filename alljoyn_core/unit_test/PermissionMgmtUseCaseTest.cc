@@ -1990,14 +1990,22 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     }
 
     /**
-     *  consumer cannot get the TV caption
+     *  consumer tries to get the TV caption
      */
-    void ConsumerCannotGetTVCaption()
+    QStatus ConsumerGetTVCaption(size_t& propertyCount)
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCannotGetTVCaption GetTVCaption did not fail.  Actual Status: " << QCC_StatusText(status);
+        return PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject, propertyCount);
+    }
+
+    /**
+     *  consumer tries to get the TV caption
+     */
+    QStatus ConsumerGetTVCaption()
+    {
+        size_t propertyCount = 0;
+        return ConsumerGetTVCaption(propertyCount);
     }
 
     /**
@@ -2007,8 +2015,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCannotGetTVCaption GetTVCaption failed.  Actual Status: " << QCC_StatusText(status);
+        size_t propertyCount = 0;
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject, propertyCount)) << "  ConsumerCanGetTVCaption GetTVCaption failed.";
+        ASSERT_GT(propertyCount, static_cast<size_t>(0)) << " property count is not greater than zero";
     }
 
     /**
@@ -2727,7 +2736,9 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInManifestUsingDe
 
     AnyUserCanCallOnAndNotOff(consumerBus);
     ConsumerCannotTurnTVUp();
-    ConsumerCannotGetTVCaption();
+    size_t propertyCount = 0;
+    EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, ConsumerGetTVCaption(propertyCount));
+    ASSERT_EQ(static_cast<size_t>(0), propertyCount) << " property count is not zero";
 }
 
 TEST_F(PermissionMgmtUseCaseTest, AllowEverything)
@@ -3409,7 +3420,7 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByOutgoingPolicy)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    EXPECT_EQ(ER_PERMISSION_DENIED, ConsumerGetTVCaption());
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesAllowed)
@@ -3481,7 +3492,9 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesNotAllowedByProviderPolicy)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    size_t propertyCount = 0;
+    EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, ConsumerGetTVCaption(propertyCount));
+    ASSERT_EQ(static_cast<size_t>(0), propertyCount) << " property count is not zero";
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByProviderManifest)
@@ -3508,7 +3521,7 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByProviderManifest)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    EXPECT_EQ(ER_PERMISSION_DENIED, ConsumerGetTVCaption());
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByConsumerManifest)
@@ -3535,7 +3548,9 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByConsumerManifest)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    size_t propertyCount = 0;
+    EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, ConsumerGetTVCaption(propertyCount));
+    ASSERT_EQ(static_cast<size_t>(0), propertyCount) << " property count is not zero";
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetEmptyManifestTemplateBeforeClaim)
