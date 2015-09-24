@@ -138,7 +138,7 @@ int CDECL_CALL main(int argc, char** argv)
         }
         //add some delay before starting the next process
         //to avoid too much concurrency during start-up.
-        qcc::Sleep(100);
+        qcc::Sleep(i == 0 ? 5000 : 100);
     }
     if (AllJoynInit() != ER_OK) {
         return EXIT_FAILURE;

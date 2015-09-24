@@ -83,12 +83,13 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     /* Start the test application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
     /* Installing or removing membership before claiming should fail */
-    Application app = lastAppInfo;
     ASSERT_NE(ER_OK, storage->InstallMembership(app, groupInfo2)); // fails due to manifest missing in persistency
     ASSERT_NE(ER_OK, storage->RemoveMembership(app, groupInfo2)); // fails due to certificate missing in persistency
 
@@ -96,32 +97,32 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     vector<GroupInfo> memberships;
     memberships.push_back(groupInfo1);
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.push_back(groupInfo2);
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     ASSERT_EQ(ER_OK, storage->RemoveMembership(app, groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.erase(memberships.begin());
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     ASSERT_EQ(ER_OK, storage->RemoveMembership(app, groupInfo2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.erase(memberships.begin());
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     /* *
      * Install memberships for groupinfo1 and groupinfo1 then
@@ -129,22 +130,22 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
      * memberships associated are deleted.
      * */
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.push_back(groupInfo1);
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.push_back(groupInfo2);
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.erase(memberships.begin());
     memberships.erase(memberships.begin());
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
     ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo1));
     ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo2));
 
@@ -156,25 +157,25 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo2));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.push_back(groupInfo1);
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.push_back(groupInfo2);
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
 
     ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.erase(memberships.begin());
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
     ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo1));
 
     ASSERT_EQ(ER_OK, storage->RemoveGroup(groupInfo2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     memberships.erase(memberships.begin());
-    ASSERT_TRUE(CheckMemberships(memberships));
+    ASSERT_TRUE(CheckMemberships(app, memberships));
     ASSERT_EQ(ER_END_OF_DATA, storage->RemoveMembership(app, groupInfo2));
 }
 
@@ -202,36 +203,37 @@ TEST_F(MembershipTests, InstallRemoveMembershipPolicyUpdate) {
     /* Start the test application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
-    OnlineApplication app = lastAppInfo;
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
     /* Create identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     vector<GroupInfo> policyGroups;
     PermissionPolicy policy;
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(policyGroups, policy));
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
 
     uint32_t currentVersion;
     ASSERT_EQ(ER_OK, GetPolicyVersion(app, currentVersion));
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     uint32_t remoteVersion;
     ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
     ASSERT_EQ(1 + currentVersion, remoteVersion);
 
     ASSERT_EQ(ER_OK, storage->RemoveMembership(app, groupInfo1));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
     ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
     ASSERT_EQ(2 + currentVersion, remoteVersion);
 }

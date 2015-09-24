@@ -78,8 +78,10 @@ class UIStorageTests :
 TEST_F(UIStorageTests, SetMetaData) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
 
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128();
@@ -87,12 +89,12 @@ TEST_F(UIStorageTests, SetMetaData) {
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
     ApplicationMetaData appMetaData;
-    ASSERT_EQ(ER_END_OF_DATA, storage->SetAppMetaData(lastAppInfo, appMetaData));
-    ASSERT_EQ(ER_END_OF_DATA, storage->GetAppMetaData(lastAppInfo, appMetaData));
+    ASSERT_EQ(ER_END_OF_DATA, storage->SetAppMetaData(app, appMetaData));
+    ASSERT_EQ(ER_END_OF_DATA, storage->GetAppMetaData(app, appMetaData));
 
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     string userDefinedName = "User-defined test name";
     string deviceName = "Device test name";
@@ -102,15 +104,15 @@ TEST_F(UIStorageTests, SetMetaData) {
     appMetaData.deviceName  = deviceName;
     appMetaData.appName  = appName;
 
-    ASSERT_EQ(ER_OK, storage->SetAppMetaData(lastAppInfo, appMetaData));
+    ASSERT_EQ(ER_OK, storage->SetAppMetaData(app, appMetaData));
 
-    OnlineApplication app;
-    app.busName = lastAppInfo.busName;
-    ASSERT_EQ(ER_END_OF_DATA, secMgr->GetApplication(app));
-    app.keyInfo = lastAppInfo.keyInfo;
-    ASSERT_EQ(ER_OK, secMgr->GetApplication(app));
+    OnlineApplication newapp;
+    newapp.busName = newapp.busName;
+    ASSERT_EQ(ER_END_OF_DATA, secMgr->GetApplication(newapp));
+    newapp.keyInfo = app.keyInfo;
+    ASSERT_EQ(ER_OK, secMgr->GetApplication(newapp));
     Application mAppInfo;
-    mAppInfo.keyInfo = lastAppInfo.keyInfo;
+    mAppInfo.keyInfo = app.keyInfo;
     ASSERT_EQ(ER_OK, storage->GetManagedApplication(mAppInfo));
 
     appMetaData.userDefinedName = "";

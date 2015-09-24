@@ -54,7 +54,7 @@ class TestApplication {
     /**
      * Creates a new TestApplication.
      */
-    TestApplication(string _appName = "secmgrctest");
+    TestApplication(string _appName = "secmgrctestapp");
 
     /**
      * Starts this TestApplication.
@@ -99,6 +99,18 @@ class TestApplication {
     }
 
     const string GetBusName() const;
+
+    bool IsClaimed() const
+    {
+        PermissionConfigurator::ApplicationState state = PermissionConfigurator::NOT_CLAIMABLE;
+        QStatus status = busAttachment->GetPermissionConfigurator().GetApplicationState(state);
+        if (ER_OK == status) {
+            if (PermissionConfigurator::CLAIMED == state || PermissionConfigurator::NEED_UPDATE == state) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     const string& GetLastAuthMechanism()
     {

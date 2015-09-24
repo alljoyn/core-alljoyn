@@ -42,7 +42,7 @@ using namespace std;
 /** @file TestUtil.h */
 
 namespace secmgr_tests {
-#define TEST_STORAGE_NAME "testcakeystore"
+#define TEST_STORAGE_NAME "testCaKeystore"
 
 class TestSessionListener :
     public SessionListener {
@@ -119,9 +119,14 @@ class AutoAccepter :
 class BasicTest :
     public::testing::Test {
   private:
-    void UpdateLastAppInfo();
+    bool UpdateLastAppInfo(OnlineApplication& app,
+                           const OnlineApplication& needed,
+                           bool useBusName);
+
+    BusAttachment* ownBus;
 
   protected:
+    shared_ptr<ProxyObjectManager> proxyObjectManager;
     Condition sem;
     Mutex lock;
     Condition errorSem;
@@ -134,44 +139,57 @@ class BasicTest :
 
     virtual void TearDown();
 
+    QStatus CreateProxyObjectManager();
+
   public:
 
     shared_ptr<SecurityAgent> secMgr;
     BusAttachment* ba;
     shared_ptr<UIStorage> storage;
     shared_ptr<AgentCAStorage> ca;
-    OnlineApplication lastAppInfo;
+
     AutoAccepter aa;
     PolicyGenerator* pg;
-    ProxyObjectManager* proxyObjectManager;
     Mutex secAgentLock;
 
     BasicTest();
 
-    bool WaitForState(PermissionConfigurator::ApplicationState newApplicationState,
-                      ApplicationSyncState updateState = SYNC_UNKNOWN);
+    QStatus GetPublicKey(const TestApplication& app,
+                         OnlineApplication& appInfo);
 
-    bool CheckRemotePolicy(PermissionPolicy& expectedPolicy);
+    bool CheckRemotePolicy(const OnlineApplication& app,
+                           PermissionPolicy& expectedPolicy);
 
-    bool CheckStoredPolicy(PermissionPolicy& expectedPolicy);
+    bool CheckStoredPolicy(const OnlineApplication& app,
+                           PermissionPolicy& expectedPolicy);
 
-    bool CheckPolicy(PermissionPolicy& expectedPolicy);
+    bool CheckPolicy(const OnlineApplication& app,
+                     PermissionPolicy& expectedPolicy);
 
-    bool CheckDefaultPolicy();
+    bool CheckDefaultPolicy(const OnlineApplication& app);
 
-    bool CheckRemoteIdentity(IdentityInfo& expectedIdentity,
+    bool CheckRemoteIdentity(const OnlineApplication& app,
+                             IdentityInfo& expectedIdentity,
                              Manifest& expectedManifest,
                              IdentityCertificate& remoteIdentity,
                              Manifest& remoteManifest);
 
-    bool CheckIdentity(IdentityInfo& expectedIdentity,
+    bool CheckIdentity(const OnlineApplication& app,
+                       IdentityInfo& expectedIdentity,
                        Manifest& expectedManifest);
 
-    bool CheckMemberships(vector<GroupInfo> expectedGroups);
+    bool CheckMemberships(const OnlineApplication& app,
+                          vector<GroupInfo> expectedGroups);
 
-    bool CheckSyncState(ApplicationSyncState updateState);
+    bool CheckSyncState(const OnlineApplication& app,
+                        ApplicationSyncState updateState);
 
-    bool WaitForUpdatesCompleted();
+    bool WaitForState(const OnlineApplication& app,
+                      PermissionConfigurator::ApplicationState newApplicationState,
+                      ApplicationSyncState updateState = SYNC_UNKNOWN,
+                      bool useBusName = false);
+
+    bool WaitForUpdatesCompleted(const OnlineApplication& app);
 
     bool WaitForSyncError(SyncErrorType type,
                           QStatus status);
@@ -226,21 +244,99 @@ class ClaimedTest :
 
     IdentityInfo idInfo;
     TestApplication testApp;
+    OnlineApplication testAppInfo;
 
     void SetUp()
     {
         SecurityAgentTest::SetUp();
+
+        ASSERT_EQ(ER_OK, CreateProxyObjectManager());
 
         idInfo.guid = GUID128(0xEF);
         idInfo.name = "MyTest ID Name";
         storage->StoreIdentity(idInfo);
 
         ASSERT_EQ(ER_OK, testApp.Start());
+        ASSERT_EQ(ER_OK, BasicTest::GetPublicKey(testApp, testAppInfo));
         ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
-        secMgr->Claim(lastAppInfo, idInfo);
+        ASSERT_EQ(ER_OK, secMgr->Claim(testAppInfo, idInfo));
         ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
-        ASSERT_EQ(ER_OK, secMgr->GetApplication(lastAppInfo));
+        ASSERT_EQ(ER_OK, secMgr->GetApplication(testAppInfo));
         ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    }
+
+    bool CheckRemotePolicy(PermissionPolicy& expectedPolicy)
+    {
+        UpdateBusname();
+        return BasicTest::CheckRemotePolicy(testAppInfo, expectedPolicy);
+    }
+
+    bool CheckStoredPolicy(PermissionPolicy& expectedPolicy)
+    {
+        UpdateBusname();
+        return BasicTest::CheckStoredPolicy(testAppInfo, expectedPolicy);
+    }
+
+    bool CheckPolicy(PermissionPolicy& expectedPolicy)
+    {
+        UpdateBusname();
+        return BasicTest::CheckPolicy(testAppInfo, expectedPolicy);
+    }
+
+    bool CheckDefaultPolicy()
+    {
+        UpdateBusname();
+        return BasicTest::CheckDefaultPolicy(testAppInfo);
+    }
+
+    bool CheckRemoteIdentity(IdentityInfo& expectedIdentity,
+                             Manifest& expectedManifest,
+                             IdentityCertificate& remoteIdentity,
+                             Manifest& remoteManifest)
+    {
+        UpdateBusname();
+        return BasicTest::CheckRemoteIdentity(testAppInfo,
+                                              expectedIdentity,
+                                              expectedManifest,
+                                              remoteIdentity,
+                                              remoteManifest);
+    }
+
+    bool CheckIdentity(IdentityInfo& expectedIdentity,
+                       Manifest& expectedManifest)
+    {
+        UpdateBusname();
+        return BasicTest::CheckIdentity(testAppInfo, expectedIdentity, expectedManifest);
+    }
+
+    bool CheckMemberships(vector<GroupInfo> expectedGroups)
+    {
+        UpdateBusname();
+        return BasicTest::CheckMemberships(testAppInfo, expectedGroups);
+    }
+
+    bool CheckSyncState(ApplicationSyncState updateState)
+    {
+        UpdateBusname();
+        return BasicTest::CheckSyncState(testAppInfo, updateState);
+    }
+
+    bool WaitForState(PermissionConfigurator::ApplicationState newApplicationState,
+                      ApplicationSyncState updateState = SYNC_UNKNOWN)
+    {
+        UpdateBusname();
+        return BasicTest::WaitForState(testAppInfo, newApplicationState, updateState);
+    }
+
+    bool WaitForUpdatesCompleted()
+    {
+        UpdateBusname();
+        return BasicTest::WaitForUpdatesCompleted(testAppInfo);
+    }
+
+    void UpdateBusname()
+    {
+        testAppInfo.busName = testApp.GetBusName();
     }
 };
 }

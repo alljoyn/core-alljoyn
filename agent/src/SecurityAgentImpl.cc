@@ -287,27 +287,12 @@ QStatus SecurityAgentImpl::Init()
             QCC_LogError(status, ("Failed to initialize Util"));
         }
 
-        ProxyObjectManager::listener = new DefaultECDHEAuthListener();
-        if (ProxyObjectManager::listener == nullptr) {
-            status = ER_FAIL;
-            QCC_LogError(status, ("Failed to allocate ECDHEKeyXListener"));
-            break;
-        }
+        proxyObjectManager = make_shared<ProxyObjectManager>(busAttachment);
 
-        status = busAttachment->EnablePeerSecurity(KEYX_ECDHE_PSK, ProxyObjectManager::listener,
-                                                   AJNKEY_STORE, true);
+        status = busAttachment->EnablePeerSecurity(KEYX_ECDHE_PSK, &proxyObjectManager->listener);
         if (ER_OK != status) {
             QCC_LogError(status,
                          ("Failed to enable security on the security agent bus attachment."));
-            break;
-        }
-
-        proxyObjectManager = make_shared<ProxyObjectManager>(busAttachment);
-
-        if (nullptr == proxyObjectManager) {
-            QCC_LogError(ER_FAIL,
-                         ("Could not create proxyObjectManager!"));
-            status = ER_FAIL;
             break;
         }
 
@@ -369,15 +354,6 @@ SecurityAgentImpl::~SecurityAgentImpl()
     Util::Fini();
 
     proxyObjectManager = nullptr;
-
-    delete ProxyObjectManager::listener;
-    ProxyObjectManager::listener = nullptr;
-
-    // Empty string as authMechanism to avoid resetting keyStore
-    QStatus status = busAttachment->EnablePeerSecurity("", nullptr, nullptr, true);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to disable security on busAttachment at destruction"));
-    }
 
     if (ownBa) {
         busAttachment->Disconnect();

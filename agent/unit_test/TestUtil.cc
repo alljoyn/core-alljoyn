@@ -109,9 +109,8 @@ void TestApplicationListener::OnManifestUpdate(const ManifestUpdate* manifestUpd
 }
 
 BasicTest::BasicTest() :
-    tal(nullptr),
-    secMgr(nullptr), ba(nullptr), storage(nullptr), ca(nullptr), pg(nullptr),
-    proxyObjectManager(nullptr)
+    ownBus(nullptr), proxyObjectManager(nullptr), tal(nullptr),
+    secMgr(nullptr), ba(nullptr), storage(nullptr), ca(nullptr), pg(nullptr)
 {
 }
 
@@ -148,8 +147,6 @@ void BasicTest::SetUp()
     GroupInfo adminGroup;
     storage->GetAdminGroup(adminGroup);
     pg = new PolicyGenerator(adminGroup);
-
-    proxyObjectManager = new ProxyObjectManager(ba);
 }
 
 void BasicTest::InitSecAgent()
@@ -178,19 +175,133 @@ void BasicTest::RemoveSecAgent()
     secAgentLock.Unlock();
 }
 
-void BasicTest::UpdateLastAppInfo()
+bool BasicTest::UpdateLastAppInfo(OnlineApplication& lastAppInfo, const OnlineApplication& needed, bool useBusName)
 {
     lock.Lock();
-    if (tal->events.size()) {
-        vector<OnlineApplication>::iterator it = tal->events.begin();
-        lastAppInfo = *it;
-        tal->events.erase(it);
+    bool found = false;
+    vector<OnlineApplication>::iterator it = tal->events.begin();
+    while (it != tal->events.end()) {
+        if (useBusName ? needed.busName == it->busName : needed.keyInfo == it->keyInfo) {
+            lastAppInfo = *it;
+            tal->events.erase(it);
+            found = true;
+            break;
+        }
+        it++;
     }
     lock.Unlock();
+    return found;
 }
 
-bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
-                             ApplicationSyncState syncState)
+QStatus BasicTest::CreateProxyObjectManager()
+{
+    if (nullptr == proxyObjectManager) {
+        ownBus = new BusAttachment("ownsecmgrtest");
+        QStatus status = ownBus->Start();
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        status = ownBus->Connect();
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        proxyObjectManager = shared_ptr<ProxyObjectManager>(new ProxyObjectManager(ownBus));
+        status =
+            ownBus->EnablePeerSecurity(KEYX_ECDHE_NULL " " ECDHE_KEYX, &proxyObjectManager->listener, nullptr, true);
+        PermissionPolicy::Rule rule;
+        rule.SetInterfaceName("*");
+        PermissionPolicy::Rule::Member member;
+        member.SetMemberName("*");
+        member.SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
+        member.SetActionMask(
+            PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+            PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        rule.SetMembers(1, &member);
+        ownBus->GetPermissionConfigurator().SetPermissionManifest(&rule, 1);
+        IdentityInfo id;
+        id.name = "basictest";
+        storage->StoreIdentity(id);
+        OnlineApplication me;
+        me.busName = ownBus->GetUniqueName().c_str();
+        if (!WaitForState(me, PermissionConfigurator::CLAIMABLE, SYNC_UNKNOWN, true)) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return ER_FAIL;
+        }
+        {
+            ProxyObjectManager::ManagedProxyObject mpo(me);
+            status = proxyObjectManager->GetProxyObject(mpo, ProxyObjectManager::ECDHE_NULL);
+            if (ER_OK != status) {
+                cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+                return status;
+            }
+            ECCPublicKey pk;
+            status = mpo.GetPublicKey(pk);
+            if (ER_OK != status) {
+                cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+                return status;
+            }
+            me.keyInfo.SetPublicKey(&pk);
+        }
+        status = secMgr->Claim(me, id);
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        status = ownBus->EnablePeerSecurity(ECDHE_KEYX, &proxyObjectManager->listener);
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        GroupInfo adminGroup;
+        status = storage->GetAdminGroup(adminGroup);
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        status = storage->StoreGroup(adminGroup);
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        status = storage->InstallMembership(me, adminGroup);
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        if (!WaitForUpdatesCompleted(me)) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return ER_FAIL;
+        }
+        PermissionPolicy p;
+        PermissionPolicy::Acl pacl;
+        PermissionPolicy::Peer peers[2];
+        peers[1].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+        shared_ptr<AgentCAStorage> ca;
+        storage->GetCaStorage(ca);
+        KeyInfoNISTP256 pk;
+        ca->GetCaPublicKeyInfo(pk);
+        peers[0].SetKeyInfo(&pk);
+        pacl.SetPeers(2, peers);
+        pacl.SetRules(1, &rule);
+        p.SetAcls(1, &pacl);
+        status = storage->UpdatePolicy(me, p);
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
+        }
+        if (!WaitForUpdatesCompleted(me)) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return ER_FAIL;
+        }
+    }
+    return ER_OK;
+}
+
+bool BasicTest::WaitForState(const OnlineApplication& appInfoNeeded, PermissionConfigurator::ApplicationState newState,
+                             ApplicationSyncState syncState, bool useBusName)
 {
     if (SYNC_UNKNOWN == syncState) {
         switch (newState) {
@@ -210,12 +321,12 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
     printf("\nWaitForState: waiting for event(s) ...\n");
     //Prior to entering this function, the test should have taken an action which leads to one or more events.
     //These events are handled in a separate thread.
+    OnlineApplication appInfo;
     do {
-        if (tal && tal->events.size()) { //if no event is in the queue, we will return immediately
-            UpdateLastAppInfo(); //update latest value.
+        if (tal && UpdateLastAppInfo(appInfo, appInfoNeeded, useBusName)) { //if no event is in the queue, we will return immediately
             printf("WaitForState: Checking event ... ");
-            if ((newState == lastAppInfo.applicationState)
-                && (syncState == lastAppInfo.syncState)) {
+            if ((newState == appInfo.applicationState)
+                && (syncState == appInfo.syncState)) {
                 printf("ok\n");
                 lock.Unlock();
                 return true;
@@ -232,10 +343,10 @@ bool BasicTest::WaitForState(PermissionConfigurator::ApplicationState newState,
     } while (true);
     printf("WaitForState failed.\n");
     printf("\tClaimableState: expected = %s, got %s\n", PermissionConfigurator::ToString(
-               newState), PermissionConfigurator::ToString(lastAppInfo.applicationState));
-    printf("\t Busname lastAppInfo.busName (%s)\n", lastAppInfo.busName.c_str());
+               newState), PermissionConfigurator::ToString(appInfo.applicationState));
+    printf("\t Busname appInfo.busName (%s)\n", appInfo.busName.c_str());
     printf("\t SyncState : expected = %s, got %s\n",
-           ToString(syncState), ToString(lastAppInfo.syncState));
+           ToString(syncState), ToString(appInfo.syncState));
 
     lock.Unlock();
     return false;
@@ -263,12 +374,13 @@ bool BasicTest::WaitForEvents(size_t numOfEvents)
     return false;
 }
 
-bool BasicTest::CheckRemotePolicy(PermissionPolicy& expected)
+bool BasicTest::CheckRemotePolicy(const OnlineApplication& app, PermissionPolicy& expected)
 {
     bool result = true;
+    CreateProxyObjectManager();
 
     printf("Checking remote policy ... ");
-    ProxyObjectManager::ManagedProxyObject mngdProxy(lastAppInfo);
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
     if (ER_OK != status) {
         printf("failed to connect to the application\n");
@@ -293,14 +405,15 @@ bool BasicTest::CheckRemotePolicy(PermissionPolicy& expected)
     return result;
 }
 
-bool BasicTest::CheckStoredPolicy(PermissionPolicy& expected)
+bool BasicTest::CheckStoredPolicy(const OnlineApplication& app, PermissionPolicy& expected)
 {
     bool result = true;
     QStatus status = ER_OK;
+    CreateProxyObjectManager();
 
     printf("Checking stored policy ... ");
     PermissionPolicy stored;
-    status = ca->GetPolicy(lastAppInfo, stored);
+    status = ca->GetPolicy(app, stored);
     if (ER_OK != status) {
         printf("failed to GetPolicy\n");
         return false;
@@ -317,13 +430,14 @@ bool BasicTest::CheckStoredPolicy(PermissionPolicy& expected)
     return result;
 }
 
-bool BasicTest::CheckPolicy(PermissionPolicy& expected)
+bool BasicTest::CheckPolicy(const OnlineApplication& app, PermissionPolicy& expected)
 {
-    return CheckRemotePolicy(expected) && CheckStoredPolicy(expected);
+    return CheckRemotePolicy(app, expected) && CheckStoredPolicy(app, expected);
 }
 
 QStatus BasicTest::Reset(const OnlineApplication& app)
 {
+    CreateProxyObjectManager();
     ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
     if (ER_OK != status) {
@@ -335,6 +449,7 @@ QStatus BasicTest::Reset(const OnlineApplication& app)
 
 QStatus BasicTest::GetMembershipSummaries(const OnlineApplication& app, vector<MembershipSummary>& summaries)
 {
+    CreateProxyObjectManager();
     ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
     if (ER_OK != status) {
@@ -346,6 +461,7 @@ QStatus BasicTest::GetMembershipSummaries(const OnlineApplication& app, vector<M
 
 QStatus BasicTest::GetPolicyVersion(const OnlineApplication& app, uint32_t& version)
 {
+    CreateProxyObjectManager();
     ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
     if (ER_OK != status) {
@@ -357,6 +473,7 @@ QStatus BasicTest::GetPolicyVersion(const OnlineApplication& app, uint32_t& vers
 
 QStatus BasicTest::GetIdentity(const OnlineApplication& app, IdentityCertificateChain& idCertChain)
 {
+    CreateProxyObjectManager();
     ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
     if (ER_OK != status) {
@@ -370,6 +487,7 @@ QStatus BasicTest::GetClaimCapabilities(const OnlineApplication& app,
                                         PermissionConfigurator::ClaimCapabilities& claimCaps,
                                         PermissionConfigurator::ClaimCapabilityAdditionalInfo& claimCapInfo)
 {
+    CreateProxyObjectManager();
     ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy, ProxyObjectManager::ECDHE_NULL);
     if (ER_OK != status) {
@@ -379,12 +497,13 @@ QStatus BasicTest::GetClaimCapabilities(const OnlineApplication& app,
     return mngdProxy.GetClaimCapabilities(claimCaps, claimCapInfo);
 }
 
-bool BasicTest::CheckDefaultPolicy()
+bool BasicTest::CheckDefaultPolicy(const OnlineApplication& app)
 {
     bool result = true;
+    CreateProxyObjectManager();
 
     printf("Retrieving default policy ... ");
-    ProxyObjectManager::ManagedProxyObject mngdProxy(lastAppInfo);
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
     if (ER_OK != status) {
         printf("failed to connect to the application\n");
@@ -398,13 +517,13 @@ bool BasicTest::CheckDefaultPolicy()
     }
     printf("ok\n");
 
-    if (!CheckRemotePolicy(defaultPolicy)) {
+    if (!CheckRemotePolicy(app, defaultPolicy)) {
         return false;
     }
 
     printf("Retrieving stored policy ... ");
     PermissionPolicy stored;
-    status = ca->GetPolicy(lastAppInfo, stored);
+    status = ca->GetPolicy(app, stored);
     QStatus expectedStatus = ER_END_OF_DATA;
     if (expectedStatus != status) {
         printf("mismatching status: expected %i, got %i\n", expectedStatus, status);
@@ -415,13 +534,15 @@ bool BasicTest::CheckDefaultPolicy()
     return result;
 }
 
-bool BasicTest::CheckRemoteIdentity(IdentityInfo& expected,
+bool BasicTest::CheckRemoteIdentity(const OnlineApplication& app,
+                                    IdentityInfo& expected,
                                     Manifest& expectedManifest,
                                     IdentityCertificate& remoteIdentity,
                                     Manifest& remoteManifest)
 {
-    printf("Checking remote identity ... ");
-    ProxyObjectManager::ManagedProxyObject mngdProxy(lastAppInfo);
+    CreateProxyObjectManager();
+    printf("Checking remote identity ... \n");
+    ProxyObjectManager::ManagedProxyObject mngdProxy(app);
     QStatus status = proxyObjectManager->GetProxyObject(mngdProxy);
     if (ER_OK != status) {
         printf("failed to connect to application\n");
@@ -462,13 +583,14 @@ bool BasicTest::CheckRemoteIdentity(IdentityInfo& expected,
     return true;
 }
 
-bool BasicTest::CheckIdentity(IdentityInfo& expected,
+bool BasicTest::CheckIdentity(const OnlineApplication& app,
+                              IdentityInfo& expected,
                               Manifest& expectedManifest)
 {
     IdentityCertificate remoteIdentity;
     Manifest remoteManifest;
 
-    if (!CheckRemoteIdentity(expected, expectedManifest,
+    if (!CheckRemoteIdentity(app, expected, expectedManifest,
                              remoteIdentity, remoteManifest)) {
         return false;
     }
@@ -478,7 +600,7 @@ bool BasicTest::CheckIdentity(IdentityInfo& expected,
 
     IdentityCertificateChain storedIdCerts;
     Manifest storedManifest;
-    status = ca->GetIdentityCertificatesAndManifest(lastAppInfo, storedIdCerts, storedManifest);
+    status = ca->GetIdentityCertificatesAndManifest(app, storedIdCerts, storedManifest);
     if (ER_OK != status) {
         printf("failed to GetIdentityCertificateAndManifest\n");
         return false;
@@ -514,11 +636,11 @@ bool BasicTest::CheckIdentity(IdentityInfo& expected,
     return true;
 }
 
-bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
+bool BasicTest::CheckMemberships(const OnlineApplication& app, vector<GroupInfo> expected)
 {
     printf("Checking remote memberships ... ");
     vector<MembershipSummary> remote;
-    QStatus status = GetMembershipSummaries(lastAppInfo, remote);
+    QStatus status = GetMembershipSummaries(app, remote);
     if (ER_OK != status) {
         printf("failed to GetMembershipSummaries\n");
         return false;
@@ -534,7 +656,7 @@ bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
     }
 
     vector<MembershipCertificateChain> stored;
-    status = ca->GetMembershipCertificates(lastAppInfo, stored);
+    status = ca->GetMembershipCertificates(app, stored);
     if (ER_OK != status) {
         printf("failed to GetMembershipCertificates\n");
         return status;
@@ -585,11 +707,11 @@ bool BasicTest::CheckMemberships(vector<GroupInfo> expected)
     return true;
 }
 
-bool BasicTest::CheckSyncState(ApplicationSyncState expected)
+bool BasicTest::CheckSyncState(const OnlineApplication& appinfo, ApplicationSyncState expected)
 {
     printf("Checking sync state in security agent ... ");
     OnlineApplication check;
-    check.keyInfo = lastAppInfo.keyInfo;
+    check.keyInfo = appinfo.keyInfo;
     QStatus status = secMgr->GetApplication(check);
     if (ER_OK != status) {
         printf("failed to GetApplication\n");
@@ -607,22 +729,22 @@ bool BasicTest::CheckSyncState(ApplicationSyncState expected)
     return true;
 }
 
-bool BasicTest::WaitForUpdatesCompleted()
+bool BasicTest::WaitForUpdatesCompleted(const OnlineApplication& app)
 {
     printf("Waiting for updates completed ... ");
     bool result = true;
 
-    result = WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING);
+    result = WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_PENDING);
     if (!result) {
         return result;
     }
 
-    result = WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK);
+    result = WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK);
     if (!result) {
         return result;
     }
 
-    result = CheckSyncState(SYNC_OK);
+    result = CheckSyncState(app, SYNC_OK);
 
     return result;
 }
@@ -722,11 +844,19 @@ bool BasicTest::CheckUnexpectedManifestUpdates()
 
 void BasicTest::TearDown()
 {
-    ASSERT_TRUE(CheckUnexpectedSyncErrors());
-    ASSERT_TRUE(CheckUnexpectedManifestUpdates());
+    EXPECT_TRUE(CheckUnexpectedSyncErrors());
+    EXPECT_TRUE(CheckUnexpectedManifestUpdates());
 
-    delete proxyObjectManager;
     proxyObjectManager = nullptr;
+
+    if (nullptr != ownBus) {
+        ownBus->Disconnect();
+        ownBus->Stop();
+        ownBus->ClearKeyStore();
+        ownBus->Join();
+        delete ownBus;
+        ownBus = nullptr;
+    }
 
     delete pg;
     pg = nullptr;
@@ -739,19 +869,35 @@ void BasicTest::TearDown()
 
     ba->Disconnect();
     ba->Stop();
+    ba->ClearKeyStore();
     ba->Join();
 
     delete ba;
     ba = nullptr;
 
     storage->Reset();
+}
 
-    // reset agent keystore
-    string fname = GetHomeDir().c_str();
-#if defined (QCC_OS_GROUP_WINDOWS)
-    fname.append("/.alljoyn_secure_keystore");
-#endif
-    fname.append(AJNKEY_STORE);
-    remove(fname.c_str());
+QStatus BasicTest::GetPublicKey(const TestApplication& app, OnlineApplication& appInfo)
+{
+    appInfo.busName = app.GetBusName();
+    QStatus status = CreateProxyObjectManager();
+    if (ER_OK != status) {
+        EXPECT_EQ(ER_OK, status);
+        return status;
+    }
+    ProxyObjectManager::ManagedProxyObject ta(appInfo);
+    status = proxyObjectManager->GetProxyObject(ta, app.IsClaimed() ?
+                                                ProxyObjectManager::ECDHE_DSA : ProxyObjectManager::ECDHE_NULL);
+    if (ER_OK != status) {
+        return status;
+    }
+    ECCPublicKey key;
+    status = ta.GetPublicKey(key);
+    if (ER_OK != status) {
+        return status;
+    }
+    appInfo.keyInfo.SetPublicKey(&key);
+    return status;
 }
 }

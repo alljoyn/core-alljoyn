@@ -32,7 +32,9 @@ TEST_F(DiscoveryTests, LateJoiningSecurityAgent) {
     // start security agent
     InitSecAgent();
 
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
     // wait for signal
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 }
 } // namespace

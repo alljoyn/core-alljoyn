@@ -53,22 +53,24 @@ class ResetTests :
 TEST_F(ResetTests, SuccessfulReset) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
     IdentityInfo idInfo;
     idInfo.guid = GUID128();
     idInfo.name = "TestIdentity";
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
-    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(app));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
 }
 
 /**
@@ -90,20 +92,23 @@ TEST_F(ResetTests, RecoveryFromResetFailure) {
     // start and claim test app
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
+
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
 
     // make sure remote reset will fail
-    Reset(lastAppInfo);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_OK));
+    Reset(app);
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE, SYNC_OK));
 
     // make sure storage will fail on UpdatesCompleted
     wrappedCA->failOnUpdatesCompleted = true;
 
     // reset the test application
-    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(app));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
 
     // stop agent to make sure update is completed
     RemoveSecAgent();
@@ -119,11 +124,11 @@ TEST_F(ResetTests, RecoveryFromResetFailure) {
 
     // start the remote application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
     // check storage
-    ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
-    ASSERT_EQ(ER_FAIL, storage->ResetApplication(lastAppInfo));
+    ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(app));
+    ASSERT_EQ(ER_FAIL, storage->ResetApplication(app));
 }
 
 /**
@@ -143,17 +148,19 @@ TEST_F(ResetTests, RecoveryFromResetSuccess) {
     // start and claim test app
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
 
     // make sure storage will fail on UpdatesCompleted
     wrappedCA->failOnUpdatesCompleted = true;
 
     // reset the application
-    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
-    ASSERT_NE(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(app));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE, SYNC_WILL_RESET));
+    ASSERT_NE(ER_END_OF_DATA, storage->GetManagedApplication(app));
 
     // stop the test app
     ASSERT_EQ(ER_OK, testApp.Stop());
@@ -163,8 +170,8 @@ TEST_F(ResetTests, RecoveryFromResetSuccess) {
 
     // restart the app and check whether it is removed from storage
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
-    ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(lastAppInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
+    ASSERT_EQ(ER_END_OF_DATA, storage->GetManagedApplication(app));
 }
 
 /**
@@ -185,13 +192,16 @@ TEST_F(ResetTests, RecoveryFromRemoteReset) {
     // start and claim test app
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
+
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
 
     // reset the application behind the back of the security manager
-    Reset(lastAppInfo);
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE, SYNC_OK));
+    Reset(app);
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE, SYNC_OK));
 
     // restart test application and wait for sync error
     ASSERT_EQ(ER_OK, testApp.Stop());
@@ -199,10 +209,10 @@ TEST_F(ResetTests, RecoveryFromRemoteReset) {
     ASSERT_TRUE(WaitForSyncError(SYNC_ER_UNEXPECTED_STATE, ER_FAIL));
 
     // check that claim fails
-    ASSERT_EQ(ER_FAIL, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_EQ(ER_FAIL, secMgr->Claim(app, idInfo));
 
     // claim should succeed after removing application from storage
-    ASSERT_EQ(ER_OK, storage->RemoveApplication(lastAppInfo));
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, storage->RemoveApplication(app));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
 }
 } // namespace

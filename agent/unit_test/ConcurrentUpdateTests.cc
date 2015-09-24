@@ -173,13 +173,13 @@ class ConcurrentUpdateTests :
 
 TEST_F(ConcurrentUpdateTests, ResetAfterPolicy) {
     //Schedule reset.
-    wrappedCa->SetAction(lastAppInfo, RESET);
+    wrappedCa->SetAction(testAppInfo, RESET);
     wrappedCa->BlockNothingAction();
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     vector<GroupInfo> groups;
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
-    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(testAppInfo, policy));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_WILL_RESET));
     wrappedCa->UnblockNothingAction();
@@ -199,11 +199,11 @@ TEST_F(ConcurrentUpdateTests, ResetAfterPolicy) {
  **/
 TEST_F(ConcurrentUpdateTests, InstallMembershipAfterPolicy) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
-    wrappedCa->SetAction(lastAppInfo, groupInfo);
+    wrappedCa->SetAction(testAppInfo, groupInfo);
     vector<GroupInfo> groups;
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
-    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(testAppInfo, policy));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
 
@@ -231,9 +231,9 @@ TEST_F(ConcurrentUpdateTests, UpdatePolicyAfterPolicy) {
 
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
-    wrappedCa->SetAction(lastAppInfo, policy);
+    wrappedCa->SetAction(testAppInfo, policy);
 
-    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, p));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(testAppInfo, p));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
 
@@ -263,11 +263,11 @@ TEST_F(ConcurrentUpdateTests, UpdateMultiple) {
     groups.push_back(groupInfo);
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(groups, policy));
 
-    wrappedCa->SetAction(lastAppInfo, policy);
-    wrappedCa->SetAction(lastAppInfo, groupInfo);
-    wrappedCa->SetAction(lastAppInfo, MULTI);
+    wrappedCa->SetAction(testAppInfo, policy);
+    wrappedCa->SetAction(testAppInfo, groupInfo);
+    wrappedCa->SetAction(testAppInfo, MULTI);
 
-    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, p));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(testAppInfo, p));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
 

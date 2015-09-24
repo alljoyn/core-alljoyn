@@ -26,6 +26,8 @@
 /** @file UpdateFromSecMgrTests.cc */
 
 namespace secmgr_tests {
+enum UpdateStage { UPDATE_STARTED, UPDATE_COMPLETED };
+
 class UpdatesFromSecMgrWrapper :
     public AgentStorageWrapper {
   public:
@@ -34,10 +36,71 @@ class UpdatesFromSecMgrWrapper :
     {
     }
 
+    bool WaitForStageUpdates(UpdateStage stage, OnlineApplication& app, size_t until)
+    {
+        lock.Lock();
+        bool returnVal = true;
+        do {
+            switch (stage) {
+            case UPDATE_STARTED: {
+                    auto itr = appsStartedUpdating.find(app);
+                    while (itr == appsStartedUpdating.end()) {
+                        QStatus status = sem.TimedWait(lock, 10000);
+                        if (ER_OK != status) {
+                            printf("Timeout- failing test - %i\n", status);
+                            goto Exit;
+                        }
+                        itr = appsStartedUpdating.find(app);
+                    }
+                    while (itr->second != until) {
+                        QStatus status = sem.TimedWait(lock, 10000);
+                        if (ER_OK != status) {
+                            printf("Timeout- failing test - %i\n", status);
+                            goto Exit;
+                        }
+                    }
+                    itr = appsStartedUpdating.find(app);
+                    lock.Unlock();
+                    return returnVal;
+                }
+
+            case UPDATE_COMPLETED: {
+                    auto itr = appsWithUpdatesCompleted.find(app);
+                    while (itr == appsWithUpdatesCompleted.end()) {
+                        QStatus status = sem.TimedWait(lock, 10000);
+                        if (ER_OK != status) {
+                            printf("Timeout- failing test - %i\n", status);
+                            goto Exit;
+                        }
+                        itr = appsWithUpdatesCompleted.find(app);
+                    }
+                    while (itr->second != until) {
+                        QStatus status = sem.TimedWait(lock, 10000);
+                        if (ER_OK != status) {
+                            printf("Timeout- failing test - %i\n", status);
+                            goto Exit;
+                        }
+                    }
+                    itr = appsWithUpdatesCompleted.find(app);
+                    lock.Unlock();
+                    return returnVal;
+                }
+
+            default:
+                break;
+            }
+        } while (true);
+
+    Exit:
+        lock.Unlock();
+        return false;
+    }
+
     QStatus StartUpdates(Application& app, uint64_t& updateID)
     {
         lock.Lock();
         appsStartedUpdating[app]++;
+        sem.Signal();
         lock.Unlock();
         return ca->StartUpdates(app, updateID);
     }
@@ -46,6 +109,7 @@ class UpdatesFromSecMgrWrapper :
     {
         lock.Lock();
         appsWithUpdatesCompleted[app]++;
+        sem.Signal();
         lock.Unlock();
         return ca->UpdatesCompleted(app, updateID);
     }
@@ -58,6 +122,7 @@ class UpdatesFromSecMgrWrapper :
     UpdatesFromSecMgrWrapper& operator=(const UpdatesFromSecMgrWrapper);
 
     qcc::Mutex lock;
+    qcc::Condition sem;
 };
 
 class UpdateFromSecmgrTest :
@@ -67,7 +132,6 @@ class UpdateFromSecmgrTest :
     {
     }
 
-    enum UpdateStage { UPDATE_STATRED, UPDATE_COMPLETED };
     void TearDown()
     {
         ClaimedTest::TearDown();
@@ -80,64 +144,8 @@ class UpdateFromSecmgrTest :
         return ca;
     }
 
-    bool WaitForStageUpdates(UpdateStage stage, size_t numOfApps, size_t until)
-    {
-        lock.Lock();
-        bool returnVal = true;
-        map<Application, size_t>::const_iterator itr;
-        QStatus status;
-        do {
-            switch (stage) {
-            case UPDATE_STATRED:
-                itr = wrappedCa->appsStartedUpdating.begin();
-                while (itr != wrappedCa->appsStartedUpdating.end()) {
-                    returnVal = returnVal && (itr->second == until);
-                    itr++;
-                }
-                if (numOfApps != wrappedCa->appsStartedUpdating.size() || !returnVal) {
-                    status = sem.TimedWait(lock, 10000);
-                    if (ER_OK != status) {
-                        printf("Timeout- failing test - %i\n", status);
-                        goto Exit;
-                    }
-                } else {
-                    lock.Unlock();
-                    return returnVal;
-                }
-                break;
-
-            case UPDATE_COMPLETED:
-                itr = wrappedCa->appsWithUpdatesCompleted.begin();
-                while (itr != wrappedCa->appsWithUpdatesCompleted.end()) {
-                    returnVal = returnVal && (itr->second == until);
-                    itr++;
-                }
-                if (numOfApps != wrappedCa->appsWithUpdatesCompleted.size() || !returnVal) {
-                    status = sem.TimedWait(lock, 10000);
-                    if (ER_OK != status) {
-                        printf("Timeout- failing test - %i\n", status);
-                        goto Exit;
-                    }
-                } else {
-                    lock.Unlock();
-                    return returnVal;
-                }
-                break;
-
-            default:
-                break;
-            }
-        } while (true);
-
-    Exit:
-        lock.Unlock();
-        return false;
-    }
-
   public:
     shared_ptr<UpdatesFromSecMgrWrapper> wrappedCa;
-    qcc::Condition sem;
-    qcc::Mutex lock;
 };
 
 /**
@@ -155,16 +163,14 @@ class UpdateFromSecmgrTest :
 TEST_F(UpdateFromSecmgrTest, BasicUpdateFromSecMgr) {
     secMgr->UpdateApplications();
 
-    ASSERT_TRUE(WaitForStageUpdates(UPDATE_STATRED, 1, 2)); // once by the auto-updater
-    ASSERT_TRUE(WaitForStageUpdates(UPDATE_COMPLETED, 1, 1));
+    ASSERT_TRUE(wrappedCa->WaitForStageUpdates(UPDATE_STARTED, testAppInfo, 2)); // once by the auto-updater
+    ASSERT_TRUE(wrappedCa->WaitForStageUpdates(UPDATE_COMPLETED, testAppInfo, 1));
 
     vector<OnlineApplication> appV;
-    OnlineApplication app;
-    app.keyInfo = wrappedCa->appsWithUpdatesCompleted.begin()->first.keyInfo;
-    appV.push_back(app);
+    appV.push_back(testAppInfo);
     secMgr->UpdateApplications(&appV);
 
-    ASSERT_TRUE(WaitForStageUpdates(UPDATE_STATRED, 1, 3));
-    ASSERT_TRUE(WaitForStageUpdates(UPDATE_COMPLETED, 1, 2));
+    ASSERT_TRUE(wrappedCa->WaitForStageUpdates(UPDATE_STARTED, testAppInfo, 3));
+    ASSERT_TRUE(wrappedCa->WaitForStageUpdates(UPDATE_COMPLETED, testAppInfo, 2));
 }
 }

@@ -198,7 +198,8 @@ class CertChainHandlingTests :
     {
         Manifest ignored;
         IdentityCertificateChain expectedChain;
-        ASSERT_EQ(ER_OK, wrappedCa->GetIdentityCertificatesAndManifest(lastAppInfo, expectedChain, ignored))
+
+        ASSERT_EQ(ER_OK, wrappedCa->GetIdentityCertificatesAndManifest(testAppInfo, expectedChain, ignored))
             << "failure from " << function << "@" << line;
         ASSERT_EQ(expectedChain.size(), chain.size()) << "failure from " << function << "@" << line;
 
@@ -220,11 +221,11 @@ class CertChainHandlingTests :
     void CheckMembershipSummaries(bool& failure, const char* function, int line)
     {
         vector<MembershipSummary> summaries;
-        ASSERT_EQ(ER_OK, GetMembershipSummaries(lastAppInfo, summaries))
+        ASSERT_EQ(ER_OK, GetMembershipSummaries(testAppInfo, summaries))
             << "failure from " << function << "@" << line;
         vector<MembershipCertificateChain> chains;
         ASSERT_EQ(ER_OK,
-                  wrappedCa->GetMembershipCertificates(lastAppInfo,
+                  wrappedCa->GetMembershipCertificates(testAppInfo,
                                                        chains)) << "failure from " << function << "@" << line;
         ASSERT_EQ(chains.size(), summaries.size()) << "failure from " << function << "@" << line;
 
@@ -262,18 +263,18 @@ class CertChainHandlingTests :
 
 TEST_F(CertChainHandlingTests, ClaimChain) {
     IdentityCertificateChain singleIdCertChain;
-    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, singleIdCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(testAppInfo, singleIdCertChain));
     CHECK_IDENTITY_CHAIN(singleIdCertChain);
     //Reset the application as it is already claimed.
-    ASSERT_EQ(ER_OK, storage->ResetApplication(lastAppInfo));
+    ASSERT_EQ(ER_OK, storage->ResetApplication(testAppInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
 
     wrappedCa->addIdRootCert = true;
 
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(testAppInfo, idInfo));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
     IdentityCertificateChain idCertChain;
-    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, idCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(testAppInfo, idCertChain));
     ASSERT_EQ((size_t)2, idCertChain.size());
     CHECK_IDENTITY_CHAIN(idCertChain);
 }
@@ -289,10 +290,10 @@ TEST_F(CertChainHandlingTests, ClaimChain) {
 TEST_F(CertChainHandlingTests, InstallMembershipChain) {
     wrappedCa->addMembershipRootCert = true;
     storage->StoreGroup(groupInfo);
-    ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, groupInfo));
+    ASSERT_EQ(ER_OK, storage->InstallMembership(testAppInfo, groupInfo));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     vector<MembershipSummary> summaries;
-    ASSERT_EQ(ER_OK, GetMembershipSummaries(lastAppInfo, summaries));
+    ASSERT_EQ(ER_OK, GetMembershipSummaries(testAppInfo, summaries));
     ASSERT_EQ((size_t)1, summaries.size());
     CHECK_MEMBERSHIP_SUMMARIES();
     GroupInfo group2;
@@ -302,19 +303,19 @@ TEST_F(CertChainHandlingTests, InstallMembershipChain) {
     storage->StoreGroup(group2);
     storage->StoreGroup(group3);
 
-    ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, group2));
+    ASSERT_EQ(ER_OK, storage->InstallMembership(testAppInfo, group2));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     CHECK_MEMBERSHIP_SUMMARIES();
-    ASSERT_EQ(ER_OK, storage->InstallMembership(lastAppInfo, group3));
+    ASSERT_EQ(ER_OK, storage->InstallMembership(testAppInfo, group3));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     CHECK_MEMBERSHIP_SUMMARIES();
-    ASSERT_EQ(ER_OK, storage->RemoveMembership(lastAppInfo, group3));
+    ASSERT_EQ(ER_OK, storage->RemoveMembership(testAppInfo, group3));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     CHECK_MEMBERSHIP_SUMMARIES();
-    ASSERT_EQ(ER_OK, storage->RemoveMembership(lastAppInfo, groupInfo));
+    ASSERT_EQ(ER_OK, storage->RemoveMembership(testAppInfo, groupInfo));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     CHECK_MEMBERSHIP_SUMMARIES();
-    ASSERT_EQ(ER_OK, storage->RemoveMembership(lastAppInfo, group2));
+    ASSERT_EQ(ER_OK, storage->RemoveMembership(testAppInfo, group2));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     CHECK_MEMBERSHIP_SUMMARIES();
 }
@@ -328,14 +329,14 @@ TEST_F(CertChainHandlingTests, InstallMembershipChain) {
  **/
 TEST_F(CertChainHandlingTests, UpdateIdentityChains) {
     IdentityCertificateChain singleIdCertChain;
-    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, singleIdCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(testAppInfo, singleIdCertChain));
     CHECK_IDENTITY_CHAIN(singleIdCertChain);
     wrappedCa->addIdRootCert = true;
 
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(lastAppInfo, idInfo, aa.lastManifest));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(testAppInfo, idInfo, aa.lastManifest));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     IdentityCertificateChain idCertChain;
-    ASSERT_EQ(ER_OK, GetIdentity(lastAppInfo, idCertChain));
+    ASSERT_EQ(ER_OK, GetIdentity(testAppInfo, idCertChain));
     ASSERT_EQ((size_t)2, idCertChain.size());
     CHECK_IDENTITY_CHAIN(idCertChain);
 }
@@ -347,11 +348,13 @@ TEST_F(CertChainHandlingTests, UpdateIdentityChains) {
  *       -# Check if the agent returns a correct membership list
  *       -# Check if the agent returns the full identity certificate chain
  **/
-TEST_F(CertChainHandlingTests, DISABLED_RegisterAgent) { // See ASACORE-2543
+TEST_F(CertChainHandlingTests, RegisterAgent) {
     OnlineApplication agent;
     agent.busName = ba->GetUniqueName().c_str();
 
     IdentityCertificateChain idChain;
+    DefaultECDHEAuthListener dal;
+    ba->EnablePeerSecurity(ECDHE_KEYX, &dal); //make sure our bus DSA enabled.
     ASSERT_EQ(ER_OK, GetIdentity(agent, idChain));
     ASSERT_EQ(wrappedCa->agentIdChain.size(), idChain.size());
     ASSERT_EQ((size_t)2, idChain.size()); //extra check to make sure the test passed the full chain.
@@ -383,5 +386,6 @@ TEST_F(CertChainHandlingTests, DISABLED_RegisterAgent) { // See ASACORE-2543
         ASSERT_TRUE(found) << "loop " << i << ": serialNr = " << serial;
     }
     ASSERT_EQ((size_t)0, summaries.size());
+    ba->EnablePeerSecurity("", nullptr);
 }
 }

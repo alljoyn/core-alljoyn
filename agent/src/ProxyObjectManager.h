@@ -34,7 +34,6 @@
 #define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
 #define KEYX_ECDHE_PSK "ALLJOYN_ECDHE_PSK"
 #define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
-#define AJNKEY_STORE "/.alljoyn_keystore/secmgr_ecdhe.ks"
 
 using namespace qcc;
 using namespace std;
@@ -126,8 +125,6 @@ class ProxyObjectManager :
         friend class ProxyObjectManager;
     };
 
-    static AuthListener* listener;
-
     /**
      * @brief Ask the ProxyObjectManager to provide a ProxyBusObject to a given
      * application.
@@ -149,12 +146,10 @@ class ProxyObjectManager :
                            SessionType type = ECDHE_DSA,
                            AuthListener* al = nullptr);
 
+    DefaultECDHEAuthListener listener;
+
   private:
-    /*
-     * Lock made static as different instances of ProxyObjectManager
-     * might use the same busattachment.
-     */
-    static Mutex lock;
+    Mutex lock;
     BusAttachment* bus;
 
     /* SessionListener */

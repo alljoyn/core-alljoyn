@@ -28,9 +28,6 @@ using namespace std;
 
 namespace ajn {
 namespace securitymgr {
-AuthListener* ProxyObjectManager::listener = nullptr;
-Mutex ProxyObjectManager::lock;
-
 ProxyObjectManager::ProxyObjectManager(BusAttachment* ba) :
     bus(ba)
 {
@@ -38,6 +35,8 @@ ProxyObjectManager::ProxyObjectManager(BusAttachment* ba) :
 
 ProxyObjectManager::~ProxyObjectManager()
 {
+    // Empty string as authMechanism to avoid resetting keyStore
+    bus->EnablePeerSecurity("", nullptr);
 }
 
 QStatus ProxyObjectManager::GetProxyObject(ManagedProxyObject& managedProxy,
@@ -55,11 +54,11 @@ QStatus ProxyObjectManager::GetProxyObject(ManagedProxyObject& managedProxy,
     lock.Lock(__FILE__, __LINE__);
 
     if (sessionType == ECDHE_NULL) {
-        bus->EnablePeerSecurity(KEYX_ECDHE_NULL, listener, AJNKEY_STORE, true);
+        bus->EnablePeerSecurity(KEYX_ECDHE_NULL, &listener);
     } else if (sessionType == ECDHE_DSA) {
-        bus->EnablePeerSecurity(ECDHE_KEYX, listener, AJNKEY_STORE, true);
+        bus->EnablePeerSecurity(ECDHE_KEYX, &listener);
     } else if (sessionType == ECDHE_PSK) {
-        bus->EnablePeerSecurity(KEYX_ECDHE_PSK, authListener ? authListener : listener, AJNKEY_STORE, true);
+        bus->EnablePeerSecurity(KEYX_ECDHE_PSK, authListener ? authListener : &listener);
     }
 
     SessionId sessionId;
@@ -70,7 +69,7 @@ QStatus ProxyObjectManager::GetProxyObject(ManagedProxyObject& managedProxy,
     if (status != ER_OK) {
         QCC_DbgRemoteError(("Could not join session with %s", busName));
         if (authListener) {
-            bus->EnablePeerSecurity(KEYX_ECDHE_NULL, listener, AJNKEY_STORE, true);
+            bus->EnablePeerSecurity(KEYX_ECDHE_NULL, &listener);
         }
         lock.Unlock(__FILE__, __LINE__);
         return status;
@@ -90,7 +89,7 @@ QStatus ProxyObjectManager::ReleaseProxyObject(SecurityApplicationProxy* remoteO
     remoteObject = nullptr;
     QStatus status =  bus->LeaveSession(sessionId);
     if (resetListener) {
-        bus->EnablePeerSecurity(KEYX_ECDHE_NULL, listener, AJNKEY_STORE, true);
+        bus->EnablePeerSecurity(KEYX_ECDHE_NULL, &listener);
     }
     lock.Unlock(__FILE__, __LINE__);
     return status;

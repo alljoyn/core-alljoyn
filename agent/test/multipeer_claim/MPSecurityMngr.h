@@ -45,6 +45,13 @@ class AutoAccepter :
     }
 };
 
+typedef enum {
+    LS_UNCLAIMED,
+    LS_CLAIMING,
+    LS_SYNC_INPROGRESS,
+    LS_INITIALIZED
+} localbus_state;
+
 class MPSecurityMngr :
     ApplicationListener {
   public:
@@ -130,14 +137,19 @@ class MPSecurityMngr :
         }
     }
 
+    void ClaimLocalBus(const OnlineApplication& localApp);
+
   private:
     void Reset();
+
+    QStatus StopBus(BusAttachment& bus);
 
     void UpdateApplication(const OnlineApplication& app);
 
     void DumpState();
 
-    BusAttachment busAttachment;
+    BusAttachment managerBus;
+    BusAttachment validatorBus;
     DefaultECDHEAuthListener authListener;
     shared_ptr<SecurityAgent> secMgr;
     shared_ptr<UIStorage> storage;
@@ -154,15 +166,23 @@ class MPSecurityMngr :
     IdentityInfo idInfo;
     GroupInfo group;
     bool errorFound;
+    localbus_state localstate;
+    GroupInfo adminGroup;
     map<OnlineApplication, AppState> apps;
 };
+
+typedef enum {
+    CLAIM_APPS,
+    CHECK_UPDATES,
+    CLAIM_LOCALBUS
+} task_type;
 
 class ASyncTask :
     public Thread {
   public:
 
-    ASyncTask(const OnlineApplication& _app, MPSecurityMngr* _mgr, bool _do_claim) : app(_app), mgr(_mgr), do_claim(
-            _do_claim)
+    ASyncTask(const OnlineApplication& _app, MPSecurityMngr* _mgr, task_type _action) : app(_app), mgr(_mgr), action(
+            _action)
     {
         Start();
     }
@@ -170,10 +190,21 @@ class ASyncTask :
     virtual ThreadReturn STDCALL Run(void* arg)
     {
         QCC_UNUSED(arg);
-        if (do_claim) {
+        switch (action) {
+        case CLAIM_APPS:
             mgr->ClaimApplications();
-        } else {
+            break;
+
+        case CHECK_UPDATES:
             mgr->CheckApplicationUpdated(app);
+            break;
+
+        case CLAIM_LOCALBUS:
+            mgr->ClaimLocalBus(app);
+            break;
+
+        default:
+            break;
         }
         return nullptr;
     }
@@ -181,7 +212,7 @@ class ASyncTask :
   private:
     OnlineApplication app;
     MPSecurityMngr* mgr;
-    bool do_claim;
+    task_type action;
 };
 } // namespace
 #endif //ALLJOYN_SECMGR_MPSECURITYMNGR_H_

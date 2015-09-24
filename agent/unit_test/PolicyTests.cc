@@ -89,58 +89,59 @@ TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     /* Start the test application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
     /* Installing/retrieving policy before claiming should fail */
-    Application app = lastAppInfo;
     PermissionPolicy policyLocal;
     ASSERT_NE(ER_OK, storage->UpdatePolicy(app, policy));
     ASSERT_NE(ER_OK, storage->UpdatePolicy(app, policy2));
     ASSERT_NE(ER_OK, storage->GetPolicy(app, policyLocal));
-    ASSERT_TRUE(CheckSyncState(SYNC_UNMANAGED));
+    ASSERT_TRUE(CheckSyncState(app, SYNC_UNMANAGED));
 
     /* Create identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     /* Check default policy */
-    ASSERT_TRUE(CheckDefaultPolicy());
+    ASSERT_TRUE(CheckDefaultPolicy(app));
 
     /* Install policy and check retrieved policy */
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
-    ASSERT_TRUE(CheckPolicy(policy));
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
+    ASSERT_TRUE(CheckPolicy(app, policy));
 
     /* Install another policy and check retrieved policy */
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
-    ASSERT_TRUE(CheckPolicy(policy2));
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
+    ASSERT_TRUE(CheckPolicy(app, policy2));
 
     /* Install a newer policy and check retrieved policy */
     policy2.SetVersion(100);
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
-    ASSERT_TRUE(CheckPolicy(policy2));
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
+    ASSERT_TRUE(CheckPolicy(app, policy2));
 
     /* Install an older policy and ensure failure */
     policy2.SetVersion(1);
     ASSERT_EQ(ER_POLICY_NOT_NEWER, storage->UpdatePolicy(app, policy2));
-    ASSERT_FALSE(WaitForUpdatesCompleted());
-    ASSERT_FALSE(CheckPolicy(policy2));
+    ASSERT_FALSE(WaitForUpdatesCompleted(app));
+    ASSERT_FALSE(CheckPolicy(app, policy2));
 
     /* Install an default v=0 policy and ensure successful update */
     policy2.SetVersion(0);
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy2));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
-    ASSERT_TRUE(CheckPolicy(policy2));
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
+    ASSERT_TRUE(CheckPolicy(app, policy2));
 
     /* Get the persisted policy and compare latest version */
     PermissionPolicy finalPolicy;
@@ -164,29 +165,31 @@ TEST_F(PolicyTests, SuccessfulResetPolicy) {
     /* Start the test application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
 
     /* Wait for signals */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
     /* Store identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckDefaultPolicy());
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
+    ASSERT_TRUE(CheckDefaultPolicy(app));
 
     /* Install policy */
     vector<GroupInfo> policyGroups;
     ASSERT_EQ(ER_OK, pg->DefaultPolicy(policyGroups, policy));
-    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, policy));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
-    ASSERT_TRUE(CheckPolicy(policy));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, policy));
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
+    ASSERT_TRUE(CheckPolicy(app, policy));
 
     /* Reset policy */
-    ASSERT_EQ(ER_OK, storage->RemovePolicy(lastAppInfo));
-    ASSERT_TRUE(WaitForUpdatesCompleted());
-    ASSERT_TRUE(CheckDefaultPolicy());
+    ASSERT_EQ(ER_OK, storage->RemovePolicy(app));
+    ASSERT_TRUE(WaitForUpdatesCompleted(app));
+    ASSERT_TRUE(CheckDefaultPolicy(app));
 }
 
 /**
@@ -200,27 +203,29 @@ TEST_F(PolicyTests, SuccessfulResetPolicy) {
 TEST_F(PolicyTests, PermissionDenied) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
+    OnlineApplication app;
+    ASSERT_EQ(ER_OK, GetPublicKey(testApp, app));
 
     /* Create identity */
     ASSERT_EQ(storage->StoreIdentity(idInfo), ER_OK);
 
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMABLE));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
 
     /* Claim application */
-    ASSERT_EQ(ER_OK, secMgr->Claim(lastAppInfo, idInfo));
+    ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
 
     /* Check security signal */
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     /* Check default policy */
-    ASSERT_TRUE(CheckDefaultPolicy());
+    ASSERT_TRUE(CheckDefaultPolicy(app));
 
     /* No admin group policy*/
     PermissionPolicy emptyPolicy;
 
     /* Install policy and check retrieved policy */
-    ASSERT_EQ(ER_OK, storage->UpdatePolicy(lastAppInfo, emptyPolicy));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
+    ASSERT_EQ(ER_OK, storage->UpdatePolicy(app, emptyPolicy));
+    ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_PENDING));
 }
 } // namespace
