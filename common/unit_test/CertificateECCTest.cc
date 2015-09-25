@@ -1531,6 +1531,11 @@ TEST_F(CertificateECCTest, CreateIdentityCertificateChain)
     printf("%s\n", cert3.GetPEM().c_str());
     printf("%s\n", cert2.GetPEM().c_str());
     printf("%s\n", cert1.GetPEM().c_str());
+
+    IdentityCertificate cert5;
+    EXPECT_EQ(ER_OK, cert5.LoadPEM(cert1.GetPEM()));
+    EXPECT_EQ(cert1.GetValidity()->validFrom, cert5.GetValidity()->validFrom);
+    EXPECT_EQ(cert1.GetValidity()->validTo, cert5.GetValidity()->validTo);
 }
 
 /**
