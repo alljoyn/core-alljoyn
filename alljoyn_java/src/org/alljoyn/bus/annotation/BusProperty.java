@@ -76,4 +76,13 @@ public @interface BusProperty {
      * @return annotation EmitChagedSignal annotate flag specified in the BusProperty annotation
      */
     int annotation() default 0;
+
+   /**
+    * Timeout specified in milliseconds to wait for a reply.
+    * The default value is -1.
+    * The value -1 means use the implementation dependent default timeout.
+    *
+    * @return timeout specified in the BusMethod annotation
+    */
+    int timeout() default -1;
 }
