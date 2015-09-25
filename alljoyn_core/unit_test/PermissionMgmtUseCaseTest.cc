@@ -2264,7 +2264,7 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     AnyUserCanCallOnAndNotOff(consumerBus);
     /* join session to retrieve sessioncast signal */
     SessionId sessionId;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     SetChannelChangedSignalReceived(false);
     ConsumerCanTVUpAndDownAndNotChannel();
     /* sleep a second to see whether the ChannelChanged signal is received */
@@ -3603,7 +3603,7 @@ TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
 
     /* join session to retrieve sessioncast signal */
     SessionId sessionId;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     AppCanSetTVVolume(consumerBus, serviceBus, 14, true);
     /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {
@@ -3656,7 +3656,7 @@ TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
 
     /* join session to retrieve sessioncast signal */
     SessionId sessionId;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     AppCanSetTVVolume(consumerBus, serviceBus, 14, true, false);
     /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {
