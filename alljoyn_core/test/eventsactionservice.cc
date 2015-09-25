@@ -40,8 +40,8 @@ class TestBusListener;
 static BusAttachment* s_msgBus = NULL;
 static TestBusListener* s_busListener = NULL;
 
-static const char* INTERFACE_NAME = "org.alljoyn.example.eventsactionsservice";
-static const char* SERVICE_NAME = "org.alljoyn.example.eventsactionsservice";
+static const char* INTERFACE_NAME = "test.alljoyn.example.eventsactionsservice";
+static const char* SERVICE_NAME = "test.alljoyn.example.eventsactionsservice";
 static const char* SERVICE_PATH = "/example/path";
 static SessionPort SERVICE_PORT = 24;
 static const char* testAction = "Test Action";
@@ -52,7 +52,7 @@ static const char* xmlWithDescription =
     "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
-    "  <interface name=\"org.alljoyn.example.eventsactionsservice\">\n"
+    "  <interface name=\"test.alljoyn.example.eventsactionsservice\">\n"
     "    <description>This is the interface</description>\n"
     "    <method name='TestAction'>"
     "      <description>This is the test action</description>\n"

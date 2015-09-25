@@ -60,6 +60,22 @@ class TestPermissionConfigurationListener : public PermissionConfigurationListen
     bool policyChangedReceived;
 };
 
+class TestPortListener : public SessionPortListener {
+  public:
+    qcc::String lastJoiner;
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
+    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(id);
+        lastJoiner = joiner;
+    }
+};
+
 class BasePermissionMgmtTest : public testing::Test, public BusObject,
     public ProxyBusObject::PropertiesChangedListener {
   public:
@@ -73,6 +89,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
     BasePermissionMgmtTest(const char* path) : BusObject(path),
         adminBus("PermissionMgmtTestAdmin", false),
         serviceBus("PermissionMgmtTestService", false),
+        servicePort(0),
         consumerBus("PermissionMgmtTestConsumer", false),
         remoteControlBus("PermissionMgmtTestRemoteControl", false),
         adminAdminGroupGUID("00112233445566778899AABBCCDDEEFF"),
@@ -113,6 +130,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
 
     BusAttachment adminBus;
     BusAttachment serviceBus;
+    SessionPort servicePort;
+    TestPortListener servicePortListener;
     BusAttachment consumerBus;
     BusAttachment remoteControlBus;
     qcc::GUID128 adminAdminGroupGUID;
@@ -159,6 +178,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
     bool canTestStateSignalReception;
     QStatus SetupBus(BusAttachment& bus);
     QStatus TeardownBus(BusAttachment& bus);
+    QStatus JoinSessionWithService(BusAttachment& initiator, SessionId& sessionId);
 
   private:
     void RegisterKeyStoreListeners();
@@ -208,7 +228,7 @@ class PermissionMgmtTestHelper {
     static QStatus GetPeerGUID(BusAttachment& bus, qcc::String& peerName, qcc::GUID128& peerGuid);
     static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
-    static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj, size_t& propertyCount);
 };
 
 }
