@@ -159,6 +159,8 @@ public class ProxyBusObject {
             public Type genericReturnType;
             public Class<?> returnType;
 
+	    public int timeout;
+
             public Invocation(Method method) throws BusException {
                 this.method = method;
                 if (method.getAnnotation(BusProperty.class) != null) {
@@ -173,6 +175,7 @@ public class ProxyBusObject {
                 this.methodName = InterfaceDescription.getName(method);
                 this.genericReturnType = method.getGenericReturnType();
                 this.returnType = method.getReturnType();
+                this.timeout = InterfaceDescription.getTimeout(method);
             }
         };
 
@@ -267,7 +270,7 @@ public class ProxyBusObject {
                                    invocation.inputSig,
                                    invocation.genericReturnType,
                                    args,
-                                   replyTimeoutMsecs,
+                                   invocation.timeout == -1 ? replyTimeoutMsecs : invocation.timeout,
                                    flags);
             } else {
                 if (invocation.isGet) {
