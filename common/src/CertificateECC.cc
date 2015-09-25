@@ -416,6 +416,7 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
      *  savings time is in effect
      */
     int originalTmHour = tm.tm_hour;
+    int originalTmDay = tm.tm_mday;
 
     /* Compute the GMT time from struct tm.
         Can't use timegm since it is not available in some platforms like Android and Windows */
@@ -435,7 +436,12 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
     if (tzDiff < -12) {
         tzDiff += 24;
     } else if (tzDiff > 12) {
-        tzDiff = 24 - tzDiff;
+        if (gtm->tm_mday == originalTmDay) {
+            /* same day */
+            tzDiff = 24 - tzDiff;
+        } else {
+            tzDiff = tzDiff - 24;
+        }
     }
     epoch = localTime - (tzDiff * 3600) - (minuteDiff * 60);
     return ER_OK;
