@@ -68,17 +68,17 @@ the security manager. You can find them in:
 * The samples will generate some artifacts. They create a keystore and the CLI
 will also create a database file ('secmgrstorage.db'). In order to have a fresh
 restart you should delete these files.
-** On Linux, those artifacts will by be stored in your home directory unless
+  * On Linux, those artifacts will by be stored in your home directory unless
 configured otherwise. Keystores are stored under '.alljoyn\_keystore'.
-** On Windows, the artifacts are by default are under the 'AppData\Local'
-directory of your user. Keystores are stored under 
+  * On Windows, the artifacts are by default are under the 'AppData\Local'
+directory of your user. Keystores are stored under
 '.alljoyn\_secure\_keystore'.
 
 Example scenario:
 
 * Start a CLI
-** On Linux, you can start the CLI using the 'cli.sh' script.
-** On Windows, run 'secmgr.exe' in the 'build\{OS}\{ARCH}\{MODE}\samples'
+  * On Linux, you can start the CLI using the 'cli.sh' script.
+  * On Windows, run 'secmgr.exe' in the 'build\{OS}\{ARCH}\{MODE}\samples'
 directory.
 * Start a secure door provider. The secure door provider publishes some
   about data, which can be used to find its ApplicationId.
@@ -179,7 +179,6 @@ Tests
 To build the tests, make sure to set the `GTEST_DIR` to your local Google Test
 installation when building SecurityMgr.
 
-
 ### Linux
 
 Make sure an AllJoyn deamon is running on your system if you have compiled with
@@ -193,4 +192,29 @@ You can run all the tests using the following script:
 
 ```
 <securitymgr>/tools/run-test.sh
+```
+
+### Windows
+
+Clean up any existing keystore and database used by previous SecurityMgr:
+
+```
+IF exist %LOCALAPPDATA%\.alljoyn_secure_keystore (rd /s/q %LOCALAPPDATA%\.alljoyn_secure_keystore)
+set TEST_ROOT=%LOCALAPPDATA%\AJSecurityMgr
+IF NOT exist %TEST_ROOT% (mkdir %TEST_ROOT%)
+set STORAGE_PATH=%TEST_ROOT%\secmgr.db
+IF exist %STORAGE_PATH% (del /f/q %STORAGE_PATH%)
+```
+
+Set up a folder to store gtest output:
+
+```
+set GTEST_OUTPUT=%TEST_ROOT%\gtestresults\
+IF exist %GTEST_OUTPUT% (rd /s/q %GTEST_OUTPUT%)
+```
+
+Run all the unit tests:
+
+```
+.build\{OS}\{ARCH}\{MODE}\test\agent\unit_test\secmgrctest.exe --gtest_output=xml:%GTEST_OUTPUT%
 ```
