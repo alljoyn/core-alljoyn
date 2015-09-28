@@ -1718,11 +1718,24 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
     String serial0("1234");
     String serial1("5678");
     // Compare the serial  in the certificates just retrieved
-    EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
-    EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+    // Membership certs are stored as a non-deterministic set so the order can
+    // change. We just want to make sure both certificates are returned. The
+    // only time order will remain the same is if the certificates are in a
+    // certificate chain.
 
-    // Call RemoveMembership
-    EXPECT_EQ(ER_OK, sapWithPeer2.RemoveMembership(serials[0], keyInfos[0]));
+    if (serials[0].compare(serial0) == 0) {
+        EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+        // Call RemoveMembership
+        EXPECT_EQ(ER_OK, sapWithPeer2.RemoveMembership(serials[0], keyInfos[0]));
+
+    } else {
+        EXPECT_STREQ(serials[0].c_str(), serial1.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial0.c_str());
+        // Call RemoveMembership
+        EXPECT_EQ(ER_OK, sapWithPeer2.RemoveMembership(serials[1], keyInfos[1]));
+    }
+
 
     // Call GetProperty("MembershipSummaries"). This call should show 1 membership certificate
     EXPECT_EQ(ER_OK, sapWithPeer2.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
@@ -1735,7 +1748,7 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
     EXPECT_STREQ(serials[0].c_str(), "5678");
 }
 
-TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_fails_if_serial_does_not_match)
+TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_serial_does_not_match)
 {
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
     InstallMembershipOnManager();
@@ -1800,8 +1813,17 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_fails_if_serial_
     String serial0("123");
     String serial1("456");
     // Compare the serial  in the certificates just retrieved
-    EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
-    EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+    // Membership certs are stored as a non-deterministic set so the order can
+    // change. We just want to make sure both certificates are returned. The
+    // only time order will remain the same is if the certificates are in a
+    // certificate chain.
+    if (serials[0] == serial0) {
+        EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+    } else {
+        EXPECT_STREQ(serials[0].c_str(), serial1.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial0.c_str());
+    }
 
     // Call RemoveMembership
     String fakeSerial("333");
@@ -1809,7 +1831,7 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_fails_if_serial_
 
 }
 
-TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_fails_if_issuer_does_not_match)
+TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_issuer_does_not_match)
 {
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
     InstallMembershipOnManager();
@@ -1872,8 +1894,17 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_fails_if_issuer_
     String serial0("123");
     String serial1("456");
     // Compare the serial  in the certificates just retrieved
-    EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
-    EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+    // Membership certs are stored as a non-deterministic set so the order can
+    // change. We just want to make sure both certificates are returned. The
+    // only time order will remain the same is if the certificates are in a
+    // certificate chain.
+    if (serials[0] == serial0) {
+        EXPECT_STREQ(serials[0].c_str(), serial0.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial1.c_str());
+    } else {
+        EXPECT_STREQ(serials[0].c_str(), serial1.c_str());
+        EXPECT_STREQ(serials[1].c_str(), serial0.c_str());
+    }
 
     // Call RemoveMembership
     EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, sapWithPeer2.RemoveMembership(serials[0], peer2PublicKey));
@@ -2830,6 +2861,148 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
 
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.Reset());
 }
+
+/*
+   Purpose:
+   ASG members call GetAllProperties on the org.alljoyn.Bus.Security.ManagedApplication Interface on the app.
+   Bus  in the default policy.
+
+   Setup:
+   ASGA bus claims the app. bus.
+   app. bus has default policy installed.
+
+   App. bus also has 3 membership certiificates installed.
+   The identity certificate of the app. bus should be a certificate chain with 3 certificates i.e CA->Intermediate CA->leaf
+
+   ASG bus calls GetAllProperties on the app. bus.
+
+   Verfication:
+   ASG bus should fetch the following properties successfully:
+
+   Version
+   Identity
+   Manifest
+   IdentityCertificateId
+   PolicyVersion
+   Policy
+   DefaultPolicy
+   MembershipSummaries
+
+   Peer1 = ASG bus
+   Peer2 = app. bus
+
+ */
+
+TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallproperties_for_managedapplication_default_policy)
+{
+    InstallMembershipOnManager();
+    InstallMembershipOnPeer1();
+    InstallMembershipOnPeer2();
+
+    // Install 2 more membership certificates on the app bus : Peer2
+    // 1 is installed already installed in the call to InstallMembershipOnPeer2()
+    //Create peer2 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+
+    const qcc::GUID128 mem2Guid;
+    String membershipSerial = "2";
+    qcc::MembershipCertificate peer2MembershipCertificate[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2Key.GetPublicKey(),
+                                                                    mem2Guid,
+                                                                    false,
+                                                                    3600,
+                                                                    peer2MembershipCertificate[0]
+                                                                    ));
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
+
+    const qcc::GUID128 mem3Guid;
+    membershipSerial = "3";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+                                                                    managerBus,
+                                                                    peer2Bus.GetUniqueName(),
+                                                                    peer2Key.GetPublicKey(),
+                                                                    mem3Guid,
+                                                                    false,
+                                                                    3600,
+                                                                    peer2MembershipCertificate[0]
+                                                                    ));
+    EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
+
+    SessionOpts opts;
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+
+    SecurityApplicationProxy sapWithPeer1toPeer2(peer1Bus, peer2Bus.GetUniqueName().c_str());
+
+    // Call UpdateIdentity
+    // All Inclusive manifest
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+
+    {
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*",
+                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        manifest[0].SetMembers(1, member);
+    }
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(peer1Bus,
+                                                               manifest, manifestSize,
+                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create identityCert
+    const size_t certChainSize = 3;
+    IdentityCertificate identityCertChain[certChainSize];
+    GUID128 guid;
+
+    qcc::GUID128 peer2Guid(0);
+    PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(managerBus,
+                                                                       managerBus,
+                                                                       "2",
+                                                                       peer2Guid.ToString(),
+                                                                       peer2Key.GetPublicKey(),
+                                                                       "Alias",
+                                                                       3600,
+                                                                       identityCertChain,
+                                                                       certChainSize,
+                                                                       digest,
+                                                                       Crypto_SHA256::DIGEST_SIZE));
+
+
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.SecureConnection(true));
+
+    // Call GetAllProperties
+
+    MsgArg props;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetAllProperties(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, props));
+
+    MsgArg* propArg;
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Version", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Identity", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Manifest", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "IdentityCertificateId", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "PolicyVersion", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Policy", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "DefaultPolicy", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "MembershipSummaries", &propArg));
+}
+
+
 
 /*
  * Purpose:
