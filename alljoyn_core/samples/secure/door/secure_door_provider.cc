@@ -73,31 +73,22 @@ int CDECL_CALL main(int argc, char** argv)
     DoorCommon common(appName);
     BusAttachment* ba = common.GetBusAttachment();
     DoorCommonPCL pcl(*ba);
+    QStatus status;
 
-    QStatus status = common.Init(true, &pcl);
-    if (status != ER_OK) {
-        fprintf(stderr, "Failed to initialize common layer\n");
-        exit(1);
-    }
+    common.Init(true, &pcl);
 
     do {
-        if (status != ER_OK) {
-            break;
-        }
         // Create bus object
         Door door(ba);
 
         status = ba->RegisterBusObject(door, true);
         if (ER_OK != status) {
-            printf("Failed to RegisterBusObject\n");
-            break;
+            fprintf(stderr, "Failed to register bus object - status (%s)\n",
+                    QCC_StatusText(status));
+            goto Exit;
         }
 
-        status = common.AnnounceAbout();
-        if (ER_OK != status) {
-            printf("Failed to announce about\n");
-            break;
-        }
+        common.AnnounceAbout();
 
         //Wait until we are claimed
         pcl.WaitForClaimedState();
@@ -133,6 +124,7 @@ int CDECL_CALL main(int argc, char** argv)
         }
     } while (0);
 
+Exit:
     common.Fini();
 
 #ifdef ROUTER

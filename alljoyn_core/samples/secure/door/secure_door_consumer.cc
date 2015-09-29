@@ -48,8 +48,12 @@ class DoorMessageReceiver :
         const MsgArg* result;
         result = msg->GetArg(0);
         bool value;
-        result->Get("b", &value);
-        printf("Received door %s event ...\n", value ? "opened" : "closed");
+        QStatus status = result->Get("b", &value);
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to handle door event - status (%s)\n", QCC_StatusText(status));
+        } else {
+            printf("Received door %s event ...\n", value ? "opened" : "closed");
+        }
     }
 };
 
@@ -70,9 +74,17 @@ class DoorAboutListener :
 
         AboutData about(aboutDataArg);
         char* appName;
-        about.GetAppName(&appName);
+        QStatus status = about.GetAppName(&appName);
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to GetAppName - status (%s)\n", QCC_StatusText(status));
+            return;
+        }
         char* deviceName;
-        about.GetDeviceName(&deviceName);
+        status = about.GetDeviceName(&deviceName);
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to GetDeviceName - status (%s)\n", QCC_StatusText(status));
+            return;
+        }
 
         printf("Found door %s @ %s (%s)\n", appName, busName, deviceName);
         doors.insert(string(busName));
@@ -99,12 +111,12 @@ class DoorSessionManager {
     {
     }
 
-    QStatus MethodCall(const string& busName, const string& methodName)
+    void MethodCall(const string& busName, const string& methodName)
     {
         shared_ptr<ProxyBusObject> remoteObj;
         QStatus status = GetProxyDoorObject(busName, remoteObj);
         if (ER_OK != status) {
-            return status;
+            return;
         }
 
         Message reply(*ba);
@@ -123,29 +135,29 @@ class DoorSessionManager {
         }
 
         if (ER_OK != status) {
-            printf("Failed to call method %s (%s)\n", methodName.c_str(),
-                   QCC_StatusText(status));
-            if (reply->GetErrorName() != NULL) {
-                printf("ErrorName %s\n", reply->GetErrorName());
-            }
-            return status;
+            fprintf(stderr, "Failed to call method %s - status (%s)\n", methodName.c_str(),
+                    QCC_StatusText(status));
+            return;
         }
 
         const MsgArg* result;
         result = reply->GetArg(0);
         bool value;
-        result->Get("b", &value);
-        printf("%s returned %d\n", methodName.c_str(), value);
+        status = result->Get("b", &value);
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to Get boolean - status (%s)\n", QCC_StatusText(status));
+            return;
+        }
 
-        return status;
+        printf("%s returned %d\n", methodName.c_str(), value);
     }
 
-    QStatus GetProperty(const string& busName, const string& propertyName)
+    void GetProperty(const string& busName, const string& propertyName)
     {
         shared_ptr<ProxyBusObject> remoteObj;
         QStatus status = GetProxyDoorObject(busName, remoteObj);
         if (ER_OK != status) {
-            return status;
+            return;
         }
 
         MsgArg arg;
@@ -160,18 +172,21 @@ class DoorSessionManager {
         }
 
         if (ER_OK != status) {
-            printf("Failed to GetPropery %s (%s)\n", propertyName.c_str(),
-                   QCC_StatusText(status));
-            return status;
+            fprintf(stderr, "Failed to GetPropery %s - status (%s)\n", propertyName.c_str(),
+                    QCC_StatusText(status));
+            return;
         }
 
         const MsgArg* result;
         result = &arg;
         bool value;
-        result->Get("b", &value);
-        printf("%s returned %d\n", propertyName.c_str(), value);
+        status = result->Get("b", &value);
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to Get boolean - status (%s)\n", QCC_StatusText(status));
+            return;
+        }
 
-        return status;
+        printf("%s returned %d\n", propertyName.c_str(), value);
     }
 
     void Stop()
@@ -225,33 +240,35 @@ class DoorSessionManager {
         status = ba->JoinSession(busName.c_str(), DOOR_APPLICATION_PORT,
                                  &theListener, session.id, opts);
         if (ER_OK != status) {
-            printf("Failed to join session\n");
+            fprintf(stderr, "Failed to JoinSession - status (%s)\n", QCC_StatusText(status));
             return status;
         }
 
         const InterfaceDescription* remoteIntf = ba->GetInterface(DOOR_INTERFACE);
-        if (nullptr == remoteIntf) {
-            printf("Could not get door interface\n");
+        if (!remoteIntf) {
             status = ER_FAIL;
-            goto exit;
+            fprintf(stderr, "Failed to GetInterface\n");
+            return status;
         }
 
         session.doorProxy = make_shared<ProxyBusObject>(*ba, busName.c_str(),
                                                         DOOR_OBJECT_PATH, session.id);
         if (nullptr == session.doorProxy) {
-            printf("Failed to create proxy bus object\n");
             status = ER_FAIL;
+            fprintf(stderr, "Failed to create ProxyBusObject - status (%s)\n",
+                    QCC_StatusText(status));
             goto exit;
         }
 
         status = session.doorProxy->AddInterface(*remoteIntf);
-        if (status != ER_OK) {
-            printf("Failed to add door interface to proxy bus object\n");
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to AddInterface - status (%s)\n",
+                    QCC_StatusText(status));
             goto exit;
         }
 
     exit:
-        if (status != ER_OK) {
+        if (ER_OK != status) {
             session.doorProxy = nullptr;
             ba->LeaveSession(session.id);
         }
@@ -260,10 +277,8 @@ class DoorSessionManager {
     }
 };
 
-QStatus PerformDoorAction(DoorSessionManager& sm, char cmd, const string& busName)
+void PerformDoorAction(DoorSessionManager& sm, char cmd, const string& busName)
 {
-    QStatus status = ER_FAIL;
-
     string methodName;
     string propertyName = string(DOOR_STATE);
 
@@ -285,12 +300,10 @@ QStatus PerformDoorAction(DoorSessionManager& sm, char cmd, const string& busNam
     }
 
     if (methodName != "") {
-        status = sm.MethodCall(busName, methodName);
+        sm.MethodCall(busName, methodName);
     } else {
-        status = sm.GetProperty(busName, propertyName);
+        sm.GetProperty(busName, propertyName);
     }
-
-    return status;
 }
 
 void printHelp()
@@ -323,23 +336,18 @@ int CDECL_CALL main(int argc, char** argv)
     }
 #endif
 
-    //Do the common set-up
+    //Do the common setup
     DoorCommon common(appName);
     BusAttachment* ba = common.GetBusAttachment();
     DoorCommonPCL pcl(*ba);
+    DoorAboutListener dal;
+    char cmd;
+    set<string> doors;
 
-    QStatus status = common.Init(false, &pcl);
-    if (status != ER_OK) {
-        fprintf(stderr, "Failed to initialize common layer\n");
-        exit(1);
-    }
+    common.Init(false, &pcl);
     printf("Common layer is initialized\n");
 
-    status = common.AnnounceAbout();
-    if (status != ER_OK) {
-        fprintf(stderr, "Failed to announce about\n");
-        exit(1);
-    }
+    common.AnnounceAbout();
 
     //Wait until we are claimed
     pcl.WaitForClaimedState();
@@ -349,22 +357,26 @@ int CDECL_CALL main(int argc, char** argv)
 
     //Register signal hander
     DoorMessageReceiver dmr;
-    ba->RegisterSignalHandlerWithRule(&dmr,
-                                      static_cast<MessageReceiver::SignalHandler>(&DoorMessageReceiver::DoorEventHandler),
-                                      common.GetDoorSignal(),
-                                      DOOR_SIGNAL_MATCH_RULE);
+    QStatus status;
+    status = ba->RegisterSignalHandlerWithRule(&dmr,
+                                               static_cast<MessageReceiver::SignalHandler>(&DoorMessageReceiver::DoorEventHandler),
+                                               common.GetDoorSignal(),
+                                               DOOR_SIGNAL_MATCH_RULE);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to register signal handler - status (%s)\n",
+                QCC_StatusText(status));
+        goto Exit;
+    }
 
     //Register About listener and look for doors
-    ba->WhoImplements(DOOR_INTERFACE);
-    DoorAboutListener dal;
+    status = ba->WhoImplements(DOOR_INTERFACE);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to call WhoImplements - status (%s)\n",
+                QCC_StatusText(status));
+        goto Exit;
+    }
     ba->RegisterAboutListener(dal);
 
-    char cmd;
-    set<string> doors;
-
-    if (status != ER_OK) {
-        goto exit;
-    }
     //Execute commands
     printHelp();
 
@@ -404,10 +416,10 @@ int CDECL_CALL main(int argc, char** argv)
             }
         }
     }
-exit:
 
+Exit:
     sessionManager.Stop();
-    ba->UnregisterAboutListener(dal);
+    ba->UnregisterAllAboutListeners();
     common.Fini();
 
 #ifdef ROUTER

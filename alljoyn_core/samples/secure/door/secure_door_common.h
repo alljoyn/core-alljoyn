@@ -133,9 +133,9 @@ class DoorCommon {
 
     ~DoorCommon();
 
-    QStatus Init(bool provider, PermissionConfigurationListener* pcl = nullptr);
+    void Init(bool provider, PermissionConfigurationListener* pcl = nullptr);
 
-    QStatus Fini();
+    void Fini();
 
     const InterfaceDescription::Member* GetDoorSignal()
     {
@@ -147,18 +147,16 @@ class DoorCommon {
         return ba;
     }
 
-    QStatus AnnounceAbout();
+    void AnnounceAbout();
 
     void UpdateManifest(const PermissionPolicy::Acl& manifest);
 
   private:
-    QStatus CreateInterface();
+    void CreateInterface();
 
-    QStatus AdvertiseApplication();
+    void SetAboutData();
 
-    QStatus SetAboutData();
-
-    QStatus HostSession();
+    void HostSession();
 
     string appName;
     BusAttachment* ba;
