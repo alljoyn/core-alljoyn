@@ -101,9 +101,6 @@ class NamedPipeClientTransport : public ClientTransport {
      * transport has no name it is not available.
      */
     static bool IsAvailable() { return NamedPipeTransportName != NULL; }
-
-  private:
-    BusAttachment& m_bus;               /**< The message bus for this transport */
 };
 
 } // namespace ajn

@@ -57,8 +57,6 @@ typedef ECCBigVal bigval_t;
 typedef ECCAffinePoint affine_point_t;
 typedef ECDSASig ECDSA_sig_t;
 
-static const size_t U32_ECDSASIG_SZ = 2 * ECC_BIGVAL_SZ;
-
 struct Crypto_ECC::ECCState {
   public:
 
