@@ -60,7 +60,7 @@
 
 
 
-#if (__GNUC__ >= 4) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1))
+#if ((__GNUC__ >= 4) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1))) && !defined(__clang__)
 #define QCC_DEPRECATED(func) func __attribute__((deprecated)) /**< mark a function as deprecated in gcc. */
 #define QCC_DEPRECATED_CLASS __attribute__((deprecated)) /**< mark a class as deprecated in qcc. */
 #else
