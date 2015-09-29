@@ -613,12 +613,20 @@ int CDECL_CALL main(int argc, char** argv)
                        propertyName.c_str(), interfaceName.c_str());
             }
 
-            // RULE-14: They must consist solely of alphanumeric characters.
-            length = propertyName.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890");
+            // RULE-14: They must consist solely of alphanumeric characters plus underscore.
+            length = propertyName.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz1234567890_");
             if (length != qcc::String::npos) {
                 g_errors++;
                 printf("ERROR-14: property name '%s' in interface '%s' contains illegal character '%c'\n",
                        propertyName.c_str(), interfaceName.c_str(), propertyName.c_str()[length]);
+            }
+
+            // RULE-65: Underscore should not be used either, even though it is legal in D-Bus.
+            length = propertyName.find_first_of('_');
+            if (length != qcc::String::npos) {
+                g_warnings++;
+                printf("WARNING-65: property name '%s' in interface '%s' should use UpperCamelCase, not underscore\n",
+                       propertyName.c_str(), interfaceName.c_str());
             }
 
             // RULE-15: Property names should be nouns or predicates.
