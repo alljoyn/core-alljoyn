@@ -361,7 +361,7 @@ void DebugContext::Process(DbgMsgType type, const char* module, const char* file
 
     GenPrefix(oss, type, module, filename, lineno, dbgControl->PrintThread(), dbgUseEpoch);
 
-    if (msg != NULL) {
+    if (msg[0] != '\0') {
         oss.append(msg);
     }
 

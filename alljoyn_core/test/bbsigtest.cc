@@ -151,7 +151,7 @@ class LocalTestObject : public BusObject {
             QCC_LogError(status, ("Error sending signal."));
         }
         std::cout << "<=== Sending signal with " << rand_len << "bytes" << std::endl;
-        delete buf;
+        delete [] buf;
         u++;
         qcc::Sleep(1000);
         return status;

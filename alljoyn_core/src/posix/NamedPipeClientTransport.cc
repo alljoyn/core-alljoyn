@@ -64,7 +64,7 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
 }
 
 NamedPipeClientTransport::NamedPipeClientTransport(BusAttachment& bus)
-    : ClientTransport(bus), m_bus(bus)
+    : ClientTransport(bus)
 {
 }
 
