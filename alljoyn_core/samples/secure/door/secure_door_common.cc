@@ -16,6 +16,7 @@
 
 #include "secure_door_common.h"
 
+#include <qcc/Thread.h>
 #include <alljoyn/PermissionPolicy.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -36,6 +37,7 @@ void DoorCommonPCL::PolicyChanged()
     PermissionConfigurator::ApplicationState appState;
     if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState))) {
         if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
+            qcc::Sleep(250); // Allow SecurityMgmtObj to send method reply (see ASACORE-2331)
             // Upon a policy update, existing connections are invalidated
             // and one needs to make them valid again.
             if (ER_OK != (status = ba.SecureConnectionAsync(nullptr, true))) {
@@ -44,6 +46,8 @@ void DoorCommonPCL::PolicyChanged()
             }
             sem.Signal();
         }
+    } else {
+        fprintf(stderr, "Failed to GetApplicationState - status (%s)\n", QCC_StatusText(status));
     }
     lock.Unlock();
 }
@@ -51,10 +55,17 @@ void DoorCommonPCL::PolicyChanged()
 bool DoorCommonPCL::WaitForClaimedState()
 {
     lock.Lock();
-    QStatus status;
     PermissionConfigurator::ApplicationState appState;
-    if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState)) &&
-        PermissionConfigurator::ApplicationState::CLAIMED == appState) {
+
+    QStatus status = ba.GetPermissionConfigurator().GetApplicationState(appState);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to get application state - status (%s)\n",
+                QCC_StatusText(status));
+        lock.Unlock();
+        return false;
+    }
+
+    if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
         printf("Already claimed !\n");
         lock.Unlock();
         return true;
@@ -77,7 +88,8 @@ Door::Door(BusAttachment* ba) :
 {
     const InterfaceDescription* secPermIntf = ba->GetInterface(DOOR_INTERFACE);
     assert(secPermIntf);
-    AddInterface(*secPermIntf, ANNOUNCED);
+    QStatus status = AddInterface(*secPermIntf, ANNOUNCED);
+    assert(ER_OK == status);
 
     /* Register the method handlers with the door bus object */
     const MethodEntry methodEntries[] = {
@@ -85,10 +97,8 @@ Door::Door(BusAttachment* ba) :
         { secPermIntf->GetMember(DOOR_CLOSE), static_cast<MessageReceiver::MethodHandler>(&Door::Close) },
         { secPermIntf->GetMember(DOOR_GET_STATE), static_cast<MessageReceiver::MethodHandler>(&Door::GetState) }
     };
-    QStatus status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
-    if (ER_OK != status) {
-        printf("Failed to register method handlers for the Door.\n");
-    }
+    status = AddMethodHandlers(methodEntries, sizeof(methodEntries) / sizeof(methodEntries[0]));
+    assert(ER_OK == status);
 
     stateSignal = secPermIntf->GetMember(DOOR_STATE_CHANGED);
 }
@@ -98,7 +108,11 @@ void Door::SendDoorEvent()
     printf("Sending door event ...\n");
     MsgArg outArg;
     outArg.Set("b", open);
-    Signal(nullptr, SESSION_ID_ALL_HOSTED, *stateSignal, &outArg, 1, 0, 0,  nullptr);
+
+    QStatus status = Signal(nullptr, SESSION_ID_ALL_HOSTED, *stateSignal, &outArg, 1, 0, 0,  nullptr);
+    if (status != ER_OK) {
+        fprintf(stderr, "Failed to send Signal - status (%s)\n", QCC_StatusText(status));
+    }
 }
 
 void Door::ReplyWithBoolean(bool answer, Message& msg)
@@ -106,8 +120,9 @@ void Door::ReplyWithBoolean(bool answer, Message& msg)
     MsgArg outArg;
     outArg.Set("b", answer);
 
-    if (ER_OK != MethodReply(msg, &outArg, 1)) {
-        printf("ReplyWithBoolean: Error sending reply.\n");
+    QStatus status = MethodReply(msg, &outArg, 1);
+    if (status != ER_OK) {
+        fprintf(stderr, "Failed to send MethodReply - status (%s)\n", QCC_StatusText(status));
     }
 }
 
@@ -160,120 +175,105 @@ void Door::GetState(const InterfaceDescription::Member* member,
     ReplyWithBoolean(open, msg);
 }
 
-QStatus DoorCommon::CreateInterface()
+void DoorCommon::CreateInterface()
 {
     InterfaceDescription* doorIntf = nullptr;
     // Create a secure door interface on the bus attachment
     QStatus status = ba->CreateInterface(DOOR_INTERFACE, doorIntf, AJ_IFC_SECURITY_REQUIRED);
-    if (ER_OK == status) {
-        printf("Secure door interface was created.\n");
-        doorIntf->AddMethod(DOOR_OPEN, nullptr, "b", "success");
-        doorIntf->AddMethod(DOOR_CLOSE, nullptr, "b", "success");
-        doorIntf->AddMethod(DOOR_GET_STATE, nullptr, "b", "state");
-        doorIntf->AddSignal(DOOR_STATE_CHANGED, "b", "state", 0);
-        doorIntf->AddProperty(DOOR_STATE, "b", PROP_ACCESS_RW);
-        doorIntf->Activate();
-    } else {
-        printf("Failed to create Secure PermissionMgmt interface.\n");
-    }
+    assert(ER_OK == status);
 
-    return status;
+    status = doorIntf->AddMethod(DOOR_OPEN, nullptr, "b", "success");
+    assert(ER_OK == status);
+    status = doorIntf->AddMethod(DOOR_CLOSE, nullptr, "b", "success");
+    assert(ER_OK == status);
+    status = doorIntf->AddMethod(DOOR_GET_STATE, nullptr, "b", "state");
+    assert(ER_OK == status);
+    status = doorIntf->AddSignal(DOOR_STATE_CHANGED, "b", "state", 0);
+    assert(ER_OK == status);
+    status = doorIntf->AddProperty(DOOR_STATE, "b", PROP_ACCESS_RW);
+    assert(ER_OK == status);
+    doorIntf->Activate();
+
+    printf("Secure door interface was created.\n");
 }
 
-QStatus DoorCommon::SetAboutData()
+void DoorCommon::SetAboutData()
 {
     GUID128 appId;
-    aboutData.SetAppId(appId.ToString().c_str());
+    QStatus status = aboutData.SetAppId(appId.ToString().c_str());
+    assert(ER_OK == status);
 
     char buf[64];
     gethostname(buf, sizeof(buf));
-    aboutData.SetDeviceName(buf);
+    status = aboutData.SetDeviceName(buf);
+    assert(ER_OK == status);
 
     GUID128 deviceId;
-    aboutData.SetDeviceId(deviceId.ToString().c_str());
+    status = aboutData.SetDeviceId(deviceId.ToString().c_str());
+    assert(ER_OK == status);
 
-    aboutData.SetAppName(appName.c_str());
-    aboutData.SetManufacturer("Manufacturer");
-    aboutData.SetModelNumber("1");
-    aboutData.SetDescription(appName.c_str());
-    aboutData.SetDateOfManufacture("2015-04-14");
-    aboutData.SetSoftwareVersion("0.1");
-    aboutData.SetHardwareVersion("0.0.1");
-    aboutData.SetSupportUrl("https://allseenalliance.org/");
+    status = aboutData.SetAppName(appName.c_str());
+    assert(ER_OK == status);
+    status = aboutData.SetManufacturer("Manufacturer");
+    assert(ER_OK == status);
+    status = aboutData.SetModelNumber("1");
+    assert(ER_OK == status);
+    status = aboutData.SetDescription(appName.c_str());
+    assert(ER_OK == status);
+    status = aboutData.SetDateOfManufacture("2015-04-14");
+    assert(ER_OK == status);
+    status = aboutData.SetSoftwareVersion("0.1");
+    assert(ER_OK == status);
+    status = aboutData.SetHardwareVersion("0.0.1");
+    assert(ER_OK == status);
+    status = aboutData.SetSupportUrl("https://allseenalliance.org/");
+    assert(ER_OK == status);
 
-    if (!aboutData.IsValid()) {
-        printf("Invalid about data.\n");
-        return ER_FAIL;
-    }
-    return ER_OK;
+    assert(aboutData.IsValid());
 }
 
-QStatus DoorCommon::HostSession()
+void DoorCommon::HostSession()
 {
     SessionOpts opts;
     SessionPort port = DOOR_APPLICATION_PORT;
 
     QStatus status = ba->BindSessionPort(port, opts, spl);
-
-    if (ER_OK != status) {
-        printf("Failed to BindSesssionPort\n");
-    }
-
-    return status;
+    assert(ER_OK == status);
 }
 
-QStatus DoorCommon::AnnounceAbout()
+void DoorCommon::AnnounceAbout()
 {
-    QStatus status = SetAboutData();
-    if (ER_OK != status) {
-        printf("Failed to set about data - status(%s)\n", QCC_StatusText(status));
-    }
+    SetAboutData();
 
-    status = aboutObj->Announce(DOOR_APPLICATION_PORT, aboutData);
-    if (ER_OK != status) {
-        printf("Announcing about failed - status(%s)\n", QCC_StatusText(status));
-    }
-    return status;
+    QStatus status = aboutObj->Announce(DOOR_APPLICATION_PORT, aboutData);
+    assert(ER_OK == status);
 }
 
-QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
+void DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
 {
-    QStatus status = CreateInterface();
+    CreateInterface();
 
-    if (status != ER_OK) {
-        return status;
-    }
-
-    status = ba->Start();
-    if (status != ER_OK) {
-        return status;
-    }
+    QStatus status = ba->Start();
+    assert(ER_OK == status);
 
     status = ba->Connect();
-    if (status != ER_OK) {
-        return status;
-    }
+    assert(ER_OK == status);
 
     GUID128 psk;
     status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK,
                                     provider ? new DefaultECDHEAuthListener(
                                         psk.GetBytes(), GUID128::SIZE) : new DefaultECDHEAuthListener(), nullptr, false, pcl);
-    if (status != ER_OK) {
-        return status;
-    }
+    assert(ER_OK == status);
 
     if (provider) {
         printf("Allow doors to be claimable using a PSK.\n");
         status = ba->GetPermissionConfigurator().SetClaimCapabilities(
             PermissionConfigurator::CAPABLE_ECDHE_PSK | PermissionConfigurator::CAPABLE_ECDHE_NULL);
-        if (status != ER_OK) {
-            printf("Failed to SetClaimCapabilities - status(%s)\n", QCC_StatusText(status));
-        }
+        assert(ER_OK == status);
+
         status = ba->GetPermissionConfigurator().SetClaimCapabilityAdditionalInfo(
             PermissionConfigurator::PSK_GENERATED_BY_APPLICATION);
-        if (status != ER_OK) {
-            printf("Failed to SetClaimCapabilityAdditionalInfo - status(%s)\n", QCC_StatusText(status));
-        }
+        assert(ER_OK == status);
     }
 
     PermissionPolicy::Rule manifestRule;
@@ -300,49 +300,48 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     }
 
     status = ba->GetPermissionConfigurator().SetPermissionManifest(&manifestRule, 1);
-    if (status != ER_OK) {
-        return status;
-    }
+    assert(ER_OK == status);
 
     if (provider) {
         PermissionConfigurator::ApplicationState state;
-        if (ER_OK == ba->GetPermissionConfigurator().GetApplicationState(state)) {
-            if (PermissionConfigurator::CLAIMABLE == state) {
-                printf("Door provider is not claimed.\n");
-                printf("The provider can be claimed using PSK with an application generated secret.\n");
-                printf("PSK = (%s)\n", psk.ToString().c_str());
-            }
+        status = ba->GetPermissionConfigurator().GetApplicationState(state);
+        assert(ER_OK == status);
+
+        if (PermissionConfigurator::CLAIMABLE == state) {
+            printf("Door provider is not claimed.\n");
+            printf("The provider can be claimed using PSK with an application generated secret.\n");
+            printf("PSK = (%s)\n", psk.ToString().c_str());
         }
     }
 
-    status = HostSession();
-    if (status != ER_OK) {
-        return status;
-    }
-
-    return status;
+    HostSession();
 }
 
 void DoorCommon::UpdateManifest(const PermissionPolicy::Acl& manifest)
 {
     PermissionPolicy::Rule* rules = const_cast<PermissionPolicy::Rule*> (manifest.GetRules());
 
-    ba->GetPermissionConfigurator().SetPermissionManifest(rules, manifest.GetRulesSize());
-    ba->GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::NEED_UPDATE);
+    QStatus status = ba->GetPermissionConfigurator().SetPermissionManifest(rules, manifest.GetRulesSize());
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to SetPermissionManifest - status (%s)\n", QCC_StatusText(status));
+        return;
+    }
+
+    status = ba->GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::NEED_UPDATE);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to SetApplicationState - status (%s)\n", QCC_StatusText(status));
+    }
 }
 
-QStatus DoorCommon::Fini()
+void DoorCommon::Fini()
 {
     /**
      * This is needed to make sure that the authentication listener is removed before the
-     * bus attachement is destructed.
+     * bus attachment is destructed.
      * Use an empty string as a first parameter (authMechanism) to avoid resetting the keyStore
-     * so previosuly claimed apps can still be so after restarting.
+     * so previously claimed apps can still be so after restarting.
      **/
-    QStatus status = ba->EnablePeerSecurity("", nullptr, nullptr, true);
-    if (status != ER_OK) {
-        printf("Failed to disable peer security at destruction...\n");
-    }
+    ba->EnablePeerSecurity("", nullptr, nullptr, true);
 
     delete aboutObj;
     aboutObj = nullptr;
@@ -353,8 +352,6 @@ QStatus DoorCommon::Fini()
 
     delete ba;
     ba = nullptr;
-
-    return status;
 }
 
 DoorCommon::~DoorCommon()
