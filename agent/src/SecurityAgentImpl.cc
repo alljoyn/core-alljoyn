@@ -599,6 +599,7 @@ void SecurityAgentImpl::OnSecurityStateChange(const SecurityInfo* oldSecInfo,
             NotifyApplicationListeners(&old, &foundAppItr->second);
         } else {
             // removal of known application
+            // no internal clean-up is done. See ASACORE-2549
             NotifyApplicationListeners(&old, &foundAppItr->second);
         }
     } else {
