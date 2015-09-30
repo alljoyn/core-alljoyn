@@ -17,6 +17,9 @@
 #ifndef ALLJOYN_SECMGR_AGENTSTORAGEWRAPPER_H_
 #define ALLJOYN_SECMGR_AGENTSTORAGEWRAPPER_H_
 
+/** @file AgentStorageWrapper.h */
+
+namespace secmgr_tests {
 class AgentStorageWrapper :
     public AgentCAStorage {
   public:
@@ -143,4 +146,5 @@ class FailingStorageWrapper :
 
     shared_ptr<UIStorage>& storage;
 };
+}
 #endif /* ALLJOYN_SECMGR_AGENTSTORAGEWRAPPER_H_ */

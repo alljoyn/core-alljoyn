@@ -13,6 +13,8 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#ifndef ALLJOYN_SECMGR_TESTAPPLICATION_H_
+#define ALLJOYN_SECMGR_TESTAPPLICATION_H_
 
 #include <string>
 #include <memory>
@@ -25,6 +27,8 @@ using namespace std;
 using namespace ajn;
 using namespace ajn::securitymgr;
 using namespace qcc;
+
+/** @file TestApplication.h */
 
 namespace secmgr_tests {
 class TestAppAuthListener :
@@ -115,3 +119,4 @@ class TestApplication {
     TestAppAuthListener authListener;
 };
 } // namespace
+#endif /* ALLJOYN_SECMGR_TESTAPPLICATION_H_ */

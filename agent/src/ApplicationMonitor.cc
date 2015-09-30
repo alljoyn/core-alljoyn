@@ -24,9 +24,9 @@
 
 using namespace std;
 using namespace qcc;
-using namespace ajn;
-using namespace ajn::securitymgr;
 
+namespace ajn {
+namespace securitymgr {
 ApplicationMonitor::ApplicationMonitor(BusAttachment* ba) :
     busAttachment(ba)
 {
@@ -148,5 +148,6 @@ void ApplicationMonitor::NotifySecurityInfoListeners(const SecurityInfo* oldSecI
     }
     securityListenersMutex.Unlock(__FILE__, __LINE__);
 }
-
+}
+}
 #undef QCC_MODULE
