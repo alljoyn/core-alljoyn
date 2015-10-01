@@ -444,7 +444,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                             "  <property name='Prop2' type='i' access='readwrite'/>"
                             "</interface>"
                             "<interface name='org.allseen.test.security.other.insecure'>"
-                            "<annotation name='org.alljoyn.Bus.Secure' value='false'/>"
+                            "<annotation name='org.alljoyn.Bus.Secure' value='off'/>"
                             "  <method name='Echo'>"
                             "    <arg name='shout' type='s' direction='in'/>"
                             "    <arg name='reply' type='s' direction='out'/>"

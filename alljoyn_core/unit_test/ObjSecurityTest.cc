@@ -2529,7 +2529,7 @@ TEST_F(ObjectSecurityTest, Test26) {
 
 static const char* Test27XML =  {
     "<node>\n"
-    "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"false\"/>\n"
+    "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
     "     <interface name=\"org.alljoyn.alljoyn_test.interface1\">\n"
     "        <method name=\"my_ping\">\n"
     "          <arg name=\"inStr\" type=\"s\" direction=\"in\"/>\n"
@@ -2621,7 +2621,7 @@ TEST_F(ObjectSecurityTest, Test27) {
  */
 static const char* Test28XML =  {
     "<node>\n"
-    "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"false\"/>\n"
+    "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
     "     <interface name=\"org.alljoyn.alljoyn_test.interface1\">\n"
     "        <method name=\"my_ping\">\n"
     "          <arg name=\"inStr\" type=\"s\" direction=\"in\"/>\n"
@@ -2716,7 +2716,7 @@ TEST_F(ObjectSecurityTest, Test28) {
 
 static const char* Test29XML =  {
     "<node>\n"
-    "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"false\"/>\n"
+    "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
     "     <interface name=\"org.alljoyn.alljoyn_test.interface1\">\n"
     "        <method name=\"my_ping\">\n"
     "          <arg name=\"inStr\" type=\"s\" direction=\"in\"/>\n"
