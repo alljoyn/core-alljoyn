@@ -775,6 +775,7 @@ void NamedPipeDaemonTransport::EndpointExit(RemoteEndpoint& ep)
             break;
         }
     }
+    ep->Join();
     endpointListLock.Unlock(MUTEX_CONTEXT);
 
     DaemonTransport::EndpointExit(ep);
