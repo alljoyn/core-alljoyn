@@ -255,8 +255,8 @@ int CDECL_CALL main(int argc, char** argv)
         }
 
         const qcc::String secureValue = GetAnnotation(interfaceElement, "org.alljoyn.Bus.Secure");
-        if (!secureValue.empty() && (secureValue != "true") && (secureValue != "false")) {
-            // RULE-59: Secure annotation must be true or false, if present.
+        if (!secureValue.empty() && (secureValue != "true") && (secureValue != "inherit") && (secureValue != "off")) {
+            // RULE-59: Secure annotation must be true, inherit, or off, if present.
             g_errors++;
             printf("ERROR-59: interface '%s' org.alljoyn.Bus.Secure annotation has illegal value '%s'\n",
                    interfaceName.c_str(), secureValue.c_str());
