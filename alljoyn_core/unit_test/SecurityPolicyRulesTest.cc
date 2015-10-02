@@ -284,6 +284,8 @@ class SecurityPolicyRulesTest : public testing::Test {
         PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
 
+        PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
+
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
         EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
                                                                    manifest, manifestSize,
@@ -7065,6 +7067,617 @@ TEST_F(SecurityPolicyRulesTest, acl_ECDHE_NULL_methodcall_fails_for_ANY_TRUSTED_
     MsgArg arg("s", "String that should be Echoed back.");
     Message replyMsg(peer1Bus);
     EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/**
+ * Purpose:
+ * Method call is successful between two peers , both of whom have
+ * FROM_CERTIFICATE_AUTHORITY as the peer type and their identity certificate is
+ * signed by Cas which is stated in their respective policies.
+ *
+ * Setup:
+ * Peer1 and Peer2 are claimed and they have a CA set.
+ * Peer1's ICC is signed by CA2
+ * Peer2's ICC is signed by CA1
+ *
+ * Peer1 has a local policy with FROM_CERTIFICATE_AUTHORITY Peer Type with a CA1
+ * Peer2 has a local policy with FROM_CERTIFICATE_AUTHORITY Peer Type with a CA2
+ *
+ * Peers have rules and manifests that allow everything.
+ *
+ * Peer1 and Peer2 set up a ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ *
+ * verification:
+ * Peers authentication are successful.
+ * Method call is successful.
+ */
+TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORITY_different_identity_certs)
+{
+
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    BusAttachment busUsedAsCA1("busUsedAsCA1");
+    BusAttachment busUsedAsCA2("busUsedAsCA2");
+
+    EXPECT_EQ(ER_OK, busUsedAsCA1.Start());
+    EXPECT_EQ(ER_OK, busUsedAsCA1.Connect());
+    EXPECT_EQ(ER_OK, busUsedAsCA2.Start());
+    EXPECT_EQ(ER_OK, busUsedAsCA2.Connect());
+
+    InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+
+    DefaultECDHEAuthListener busUsedAsCA1AuthListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
+    DefaultECDHEAuthListener busUsedAsCA2AuthListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA2AuthListener));
+
+    KeyInfoNISTP256 ca1Key;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.GetPermissionConfigurator().GetSigningPublicKey(ca1Key));
+    KeyInfoNISTP256 ca2Key;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.GetPermissionConfigurator().GetSigningPublicKey(ca2Key));
+    KeyInfoNISTP256 peer1Key;
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().GetSigningPublicKey(peer1Key));
+    KeyInfoNISTP256 peer2Key;
+    EXPECT_EQ(ER_OK, peer2Bus.GetPermissionConfigurator().GetSigningPublicKey(peer2Key));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&ca1Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&ca2Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t ca2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA2,
+                                                               manifest, manifestSize,
+                                                               ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    const size_t certChainSize = 1;
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                                  "2",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifest, manifestSize));
+
+    uint8_t ca1Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA1,
+                                                               manifest, manifestSize,
+                                                               ca1Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                                  "2",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  ca1Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifest, manifestSize));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
+    SCOPED_TRACE(p1policyStr.c_str());
+    qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
+    SCOPED_TRACE(p2policyStr.c_str());
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    EXPECT_EQ(ER_OK, proxy.SecureConnection());
+
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    char* echoReply;
+    replyMsg->GetArg(0)->Get("s", &echoReply);
+    EXPECT_STREQ("String that should be Echoed back.", echoReply);
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/**
+ * Purpose:
+ * Method call is not successful between two peers , both of whom have
+ * FROM_CERTIFICATE_AUTHORITY as the peer type and the sender's ICC is signed by
+ * a different CA as mentioned in the policy.
+ *
+ * Setup:
+ * Peer1 and Peer2 are claimed and they have a CA2 set.
+ * Peer1's ICC is signed by CA2
+ * Peer2's ICC is signed by CA2
+ *
+ * Peer1 has a local policy with FROM_CERTIFICATE_AUTHORITY Peer Type with a CA1
+ * Peer2 has a local policy with FROM_CERTIFICATE_AUTHORITY Peer Type with a CA2
+ *
+ * Peers have rules and manifests that allow everything.
+ *
+ * Peer1 and Peer1 set up a ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ *
+ * verification:
+ * Peers authentication is not successful.
+ * Method call cannot be sent.
+ */
+TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORITY_peer_signed_by_different_CA_sender)
+{
+
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    BusAttachment busUsedAsCA1("busUsedAsCA1");
+    BusAttachment busUsedAsCA2("busUsedAsCA2");
+
+    EXPECT_EQ(ER_OK, busUsedAsCA1.Start());
+    EXPECT_EQ(ER_OK, busUsedAsCA1.Connect());
+    EXPECT_EQ(ER_OK, busUsedAsCA2.Start());
+    EXPECT_EQ(ER_OK, busUsedAsCA2.Connect());
+
+    InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+
+    DefaultECDHEAuthListener busUsedAsCA1AuthListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
+    DefaultECDHEAuthListener busUsedAsCA2AuthListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA2AuthListener));
+
+    KeyInfoNISTP256 ca1Key;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.GetPermissionConfigurator().GetSigningPublicKey(ca1Key));
+    KeyInfoNISTP256 ca2Key;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.GetPermissionConfigurator().GetSigningPublicKey(ca2Key));
+    KeyInfoNISTP256 peer1Key;
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().GetSigningPublicKey(peer1Key));
+    KeyInfoNISTP256 peer2Key;
+    EXPECT_EQ(ER_OK, peer2Bus.GetPermissionConfigurator().GetSigningPublicKey(peer2Key));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&ca1Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&ca2Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t ca2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA2,
+                                                               manifest, manifestSize,
+                                                               ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    const size_t certChainSize = 1;
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                                  "2",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifest, manifestSize));
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                                  "2",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifest, manifestSize));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
+    SCOPED_TRACE(p1policyStr.c_str());
+    qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
+    SCOPED_TRACE(p2policyStr.c_str());
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    EXPECT_EQ(ER_AUTH_FAIL, proxy.SecureConnection());
+
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
+    EXPECT_EQ(ER_AUTH_FAIL, (QStatus)replyMsg->GetArg(1)->v_uint16) << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
+
+    /* clean up */
+    peer2Bus.UnregisterBusObject(peer2BusObject);
+}
+
+/**
+ * Purpose:
+ * Method call is not successful between two peers , both of whom have
+ * FROM_CERTIFICATE_AUTHORITY as the peer type and the receiver's ICC is signed by
+ * a different CA as mentioned in the policy.
+ *
+ * Setup:
+ * Peer1 and Peer2 are claimed and they have a CA2 set.
+ * Peer1's ICC is signed by CA2
+ * Peer2's ICC is signed by CA2
+ *
+ * Peer1 has a local policy with FROM_CERTIFICATE_AUTHORITY Peer Type with a CA2
+ * Peer2 has a local policy with FROM_CERTIFICATE_AUTHORITY Peer Type with a CA1
+ *
+ * Peers have rules and manifests that allow everything.
+ *
+ * Peer1 and Peer1 set up a ECDHE_ECDSA based session.
+ * Peer1 makes a method call to Peer2.
+ *
+ * verification:
+ * Peers authentication is not successful.
+ * Method call cannot be sent.
+ */
+TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORITY_peer_signed_by_different_CA_receiver)
+{
+
+    PolicyRulesTestBusObject peer2BusObject(peer2Bus, "/test", interfaceName);
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
+
+    BusAttachment busUsedAsCA1("busUsedAsCA1");
+    BusAttachment busUsedAsCA2("busUsedAsCA2");
+
+    EXPECT_EQ(ER_OK, busUsedAsCA1.Start());
+    EXPECT_EQ(ER_OK, busUsedAsCA1.Connect());
+    EXPECT_EQ(ER_OK, busUsedAsCA2.Start());
+    EXPECT_EQ(ER_OK, busUsedAsCA2.Connect());
+
+    InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+
+    DefaultECDHEAuthListener busUsedAsCA1AuthListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
+    DefaultECDHEAuthListener busUsedAsCA2AuthListener;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA2AuthListener));
+
+    KeyInfoNISTP256 ca1Key;
+    EXPECT_EQ(ER_OK, busUsedAsCA1.GetPermissionConfigurator().GetSigningPublicKey(ca1Key));
+    KeyInfoNISTP256 ca2Key;
+    EXPECT_EQ(ER_OK, busUsedAsCA2.GetPermissionConfigurator().GetSigningPublicKey(ca2Key));
+    KeyInfoNISTP256 peer1Key;
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().GetSigningPublicKey(peer1Key));
+    KeyInfoNISTP256 peer2Key;
+    EXPECT_EQ(ER_OK, peer2Bus.GetPermissionConfigurator().GetSigningPublicKey(peer2Key));
+
+    /* install permissions make method calls */
+    // Permission policy that will be installed on peer2
+    PermissionPolicy peer1Policy;
+    peer1Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            // Peer type: WITH_PUBLICKEY, Public key of Peer1
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&ca2Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer1Policy.SetAcls(1, acls);
+    }
+
+    //Permission policy that will be installed on peer1
+    PermissionPolicy peer2Policy;
+    peer2Policy.SetVersion(1);
+    {
+        PermissionPolicy::Acl acls[1];
+        {
+            // Peer type: WITH_PUBLICKEY, Public Key of Peer2
+            PermissionPolicy::Peer peers[1];
+            peers[0].SetType(PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY);
+            peers[0].SetKeyInfo(&ca1Key);
+            acls[0].SetPeers(1, peers);
+        }
+        {
+            PermissionPolicy::Rule rules[1];
+            rules[0].SetObjPath("*");
+            rules[0].SetInterfaceName("*");
+            {
+                PermissionPolicy::Rule::Member members[1];
+                members[0].Set("*",
+                               PermissionPolicy::Rule::Member::METHOD_CALL,
+                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+                rules[0].SetMembers(1, members);
+            }
+            acls[0].SetRules(1, rules);
+        }
+        peer2Policy.SetAcls(1, acls);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+
+    {
+        PermissionPolicy peer1DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
+    }
+    {
+        PermissionPolicy peer2DefaultPolicy;
+        EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
+        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
+    }
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
+    EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetObjPath("*");
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t ca2Digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA2,
+                                                               manifest, manifestSize,
+                                                               ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    //Create peer1 identityCert
+    const size_t certChainSize = 1;
+    IdentityCertificate identityCertChainPeer1[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                                  "2",
+                                                                  managerGuid.ToString(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  "Peer1Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer1[0],
+                                                                  ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifest, manifestSize));
+
+    //Create peer2 identityCert
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                                  "2",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  ca2Digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifest, manifestSize));
+
+    SessionOpts opts;
+    SessionId peer1ToPeer2SessionId;
+    EXPECT_EQ(ER_OK, peer1Bus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, peer1ToPeer2SessionId, opts));
+    qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
+    SCOPED_TRACE(p1policyStr.c_str());
+    qcc::String p2policyStr = "\n----Peer2 Policy-----\n" + peer2Policy.ToString();
+    SCOPED_TRACE(p2policyStr.c_str());
+
+    /* Create the ProxyBusObject and call the Echo method on the interface */
+    ProxyBusObject proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), "/test", peer1ToPeer2SessionId, true);
+    EXPECT_EQ(ER_OK, proxy.ParseXml(interface.c_str()));
+    EXPECT_TRUE(proxy.ImplementsInterface(interfaceName)) << interface.c_str() << "\n" << interfaceName;
+    EXPECT_EQ(ER_AUTH_FAIL, proxy.SecureConnection());
+
+    MsgArg arg("s", "String that should be Echoed back.");
+    Message replyMsg(peer1Bus);
+    EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(interfaceName, "Echo", &arg, static_cast<size_t>(1), replyMsg));
+    ASSERT_STREQ("org.alljoyn.Bus.ErStatus", replyMsg->GetErrorName());
+    EXPECT_EQ(ER_AUTH_FAIL, (QStatus)replyMsg->GetArg(1)->v_uint16) << "\n" << replyMsg->GetArg(0)->ToString().c_str() << "\n" << replyMsg->GetArg(1)->ToString().c_str();
 
     /* clean up */
     peer2Bus.UnregisterBusObject(peer2BusObject);
