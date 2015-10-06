@@ -435,7 +435,8 @@ static bool IsAuthorized(const Request& request, const PermissionPolicy* policy,
             } else {
                 bool publicKeyFound = false;
                 qcc::String authMechanism;
-                if (ER_OK == permissionMgmtObj->GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, NULL, issuerPublicKeys)) {
+                QStatus status = permissionMgmtObj->GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, NULL, issuerPublicKeys);
+                if (ER_OK == status) {
                     /* trusted peer */
                     if (publicKeyFound) {
                         trustedPeerPublicKey = &peerPublicKey;
@@ -448,6 +449,10 @@ static bool IsAuthorized(const Request& request, const PermissionPolicy* policy,
                     } else {
                         enforceManifest = false;
                     }
+                } else if (ER_BUS_KEY_UNAVAILABLE == status) {
+                    /* assuming the peer secret just expires so it is not a trusted
+                     * peer */
+                    enforceManifest = false;
                 }
             }
         }
