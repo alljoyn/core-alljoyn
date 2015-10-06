@@ -592,11 +592,16 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
     }
 
     bool permissionCheckMet = true;
+    bool authenticated = false;
     if (msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED) {
         bool broadcast = (hdrFields.field[ALLJOYN_HDR_FIELD_DESTINATION].typeId == ALLJOYN_INVALID);
         size_t hdrLen = bodyPtr - (uint8_t*)msgBuf;
         PeerState peerState = peerStateTable->GetPeerState(GetSender());
         KeyBlob key;
+        /* A broadcast message is encrypted but not authenticated since any
+         * peer that connects with the sender has access to the same group key
+         */
+        authenticated = !broadcast;
         status = peerState->GetKey(key, broadcast ? PEER_GROUP_KEY : PEER_SESSION_KEY);
         if (status != ER_OK) {
             QCC_LogError(status, ("Unable to decrypt (broadcast %d) message from sender %s", broadcast, GetSender()));
@@ -622,7 +627,7 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
             permissionCheckMet = true;
             Message msg(*this);
             /* decrypting a message means receiving */
-            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState);
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState, authenticated);
             QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x\n", status));
             if (status != ER_OK) {
                 goto ExitUnmarshalArgs;
@@ -708,7 +713,7 @@ ExitUnmarshalArgs:
             Message msg(*this);
             /* decrypting a message means receiving */
             PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(GetSender());
-            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState);
+            status = bus->GetInternal().GetPermissionManager().AuthorizeMessage(false, msg, peerState, authenticated);
             QCC_DbgHLPrintf(("_Message::UnmarshalArgs decrypt permission authorization returns status 0x%x\n", status));
         }
     } else {

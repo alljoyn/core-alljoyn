@@ -626,7 +626,7 @@ static QStatus GenerateAnyUserDeniedPrefixPolicy(BusAttachment& bus, BusAttachme
     return ReplaceAnyTrustAcl(policy, acl);
 }
 
-static QStatus GenerateFullAccessOutgoingPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, bool allowIncomingSignal)
+static QStatus GenerateFullAccessOutgoingPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy, bool allowIncomingSignal, bool acceptBroadcastSignal = false)
 {
     SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
     /* retrieve the default policy */
@@ -641,29 +641,42 @@ static QStatus GenerateFullAccessOutgoingPolicy(BusAttachment& bus, BusAttachmen
     PermissionPolicy::Rule rules[1];
     rules[0].SetObjPath("*");
     rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member* prms = NULL;
-    size_t count = 0;
-    if (allowIncomingSignal) {
-        prms = new PermissionPolicy::Rule::Member[3];
-        prms[count].SetMemberName("*");
-        prms[count].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-        prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-        count++;
-    } else {
-        prms = new PermissionPolicy::Rule::Member[2];
-    }
-    prms[count].SetMemberName("*");
-    prms[count].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    count++;
-    prms[count].SetMemberName("*");
-    prms[count].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[count].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    count++;
-    rules[0].SetMembers(count, prms);
+    PermissionPolicy::Rule::Member prms[2];
+    prms[0].SetMemberName("*");
+    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
+    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    prms[1].SetMemberName("*");
+    prms[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
+    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+    rules[0].SetMembers(2, prms);
     acl.SetRules(1, rules);
-    delete [] prms;
-    return ReplaceAnyTrustAcl(policy, acl);
+
+    QStatus status = ReplaceAnyTrustAcl(policy, acl);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    if (allowIncomingSignal) {
+        PermissionPolicy::Acl acls[1];
+        PermissionPolicy::Peer peers[1];
+        if (acceptBroadcastSignal) {
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
+        } else {
+            peers[0].SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
+        }
+        acls[0].SetPeers(1, peers);
+        PermissionPolicy::Rule rules[1];
+        rules[0].SetObjPath("*");
+        rules[0].SetInterfaceName("*");
+        PermissionPolicy::Rule::Member prms[1];
+        prms[0].SetMemberName("*");
+        prms[0].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
+        prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
+        rules[0].SetMembers(1, prms);
+        acls[0].SetRules(1, rules);
+        status = AddAcls(policy, acls, ArraySize(acls));
+    }
+    return status;
 }
 
 static QStatus GenerateFullAnonymousAccessOutgoingPolicy(BusAttachment& bus, BusAttachment& targetBus, PermissionPolicy& policy)
@@ -3677,3 +3690,74 @@ TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
     }
     EXPECT_FALSE(GetPropertiesChangedSignalReceived()) << " Not expected to receive PropertiesChanged signal.";
 }
+
+TEST_F(PermissionMgmtUseCaseTest, ReceiverAcceptsBroadcastSignal)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    InstallMembershipToServiceProvider();
+
+    PermissionPolicy consumerPolicy;
+    /* generate consumer policy that allows receiving broadcast signal */
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy, true, true)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    SetChannelChangedSignalReceived(false);
+    ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::ExerciseTVDown(consumerBus, clientProxyObject));
+    /* sleep at most 5 seconds to see whether the ChannelChanged signal is received */
+    for (int cnt = 0; cnt < 500; cnt++) {
+        if (GetChannelChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Expect to receive ChannelChanged signal.";
+}
+
+TEST_F(PermissionMgmtUseCaseTest, ReceiverIgnoresBroadcastSignal)
+{
+    Claims(false);
+
+    /* generate a policy */
+    PermissionPolicy policy;
+    ASSERT_EQ(ER_OK, GeneratePolicy(adminBus, serviceBus, policy, adminBus)) << "GeneratePolicy failed.";
+    InstallPolicyToService(policy);
+
+    InstallMembershipToServiceProvider();
+
+    PermissionPolicy consumerPolicy;
+    /* generate consumer policy that does not allow receiving broadcast signal */
+    ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy, true, false)) << "GeneratePolicy failed.";
+    InstallPolicyToConsumer(consumerPolicy);
+
+    InstallMembershipToConsumer();
+
+    /* setup the application interfaces for access tests */
+    CreateAppInterfaces(serviceBus, true);
+    CreateAppInterfaces(consumerBus, false);
+
+    SetChannelChangedSignalReceived(false);
+    ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::ExerciseTVDown(consumerBus, clientProxyObject));
+    /* sleep at most 5 seconds to see whether the ChannelChanged signal is received */
+    for (int cnt = 0; cnt < 500; cnt++) {
+        if (GetChannelChangedSignalReceived()) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+    EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Not expect to receive ChannelChanged signal.";
+}
+
