@@ -580,6 +580,9 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
             masterSecret.SetTag(mech, KeyBlob::RESPONDER);
             KeyStore::Key key(KeyStore::Key::REMOTE, remotePeerGuid);
             status = keyStore.AddKey(key, masterSecret, peerState->authorizations);
+            if (ER_OK == status) {
+                status = keyStore.Store();
+            }
         }
         /*
          * Report the succesful authentication to allow application to clear UI etc.
@@ -1333,6 +1336,9 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
                     /* Tag the master secret with the auth mechanism used to generate it */
                     masterSecret.SetTag(mech, KeyBlob::INITIATOR);
                     status = bus->GetInternal().GetKeyStore().AddKey(remotePeerKey, masterSecret, peerState->authorizations);
+                    if (ER_OK == status) {
+                        status = bus->GetInternal().GetKeyStore().Store();
+                    }
                 }
             }
         } else {

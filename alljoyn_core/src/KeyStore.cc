@@ -94,10 +94,13 @@ KeyStore::KeyStore(const qcc::String& application) :
     application(application),
     storeState(UNAVAILABLE),
     keys(new KeyMap),
+    persistentKeys(new KeyMap),
     defaultListener(NULL),
     listener(NULL),
     thisGuid(),
     keyStoreKey(NULL),
+    revision(0),
+    persistentRevision(0),
     shared(false),
     stored(NULL),
     storedRefCount(0),
@@ -143,7 +146,14 @@ KeyStore::~KeyStore()
     delete defaultListener;
     delete listener;
     delete keyStoreKey;
+    if (keys) {
+        keys->clear();
+    }
     delete keys;
+    if (persistentKeys) {
+        persistentKeys->clear();
+    }
+    delete persistentKeys;
 }
 
 QStatus KeyStore::SetListener(KeyStoreListener& keyStoreListener)
@@ -253,14 +263,13 @@ QStatus KeyStore::Store()
         return ER_OK;
     }
     EraseExpiredKeys();
+    lock.Unlock(MUTEX_CONTEXT);
 
+    consistencyLock.Lock(MUTEX_CONTEXT);
     /* Reload to merge keystore changes before storing */
-    if (revision > 0) {
-        lock.Unlock(MUTEX_CONTEXT);
-        status = Reload();
-        lock.Lock(MUTEX_CONTEXT);
-    }
+    status = Reload();
     if (status == ER_OK) {
+        lock.Lock(MUTEX_CONTEXT);
         if (storedRefCount == 0) {
             stored = new Event();
         }
@@ -276,25 +285,29 @@ QStatus KeyStore::Store()
             delete stored;
             stored = NULL;
         }
-        /* Done tracking deletions */
-        deletions.clear();
+        lock.Unlock(MUTEX_CONTEXT);
     }
-    lock.Unlock(MUTEX_CONTEXT);
+    consistencyLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
-QStatus KeyStore::Load()
+QStatus KeyStore::LoadPersistentKeys()
 {
     QStatus status;
     lock.Lock(MUTEX_CONTEXT);
-    keys->clear();
-    storeState = UNAVAILABLE;
+    bool callingLoadRequest = false;
     if (loadedRefCount == 0) {
         loaded = new Event();
+        callingLoadRequest = true;
+        persistentKeys->clear();
     }
     loadedRefCount++;
     lock.Unlock(MUTEX_CONTEXT);
-    status = listener->LoadRequest(*this);
+    if (callingLoadRequest) {
+        status = listener->LoadRequest(*this);
+    } else {
+        status = ER_OK;
+    }
     if (status == ER_OK) {
         status = Event::Wait(*loaded);
     }
@@ -308,6 +321,121 @@ QStatus KeyStore::Load()
     return status;
 }
 
+/**
+ * An instance of the KeyStore has a cached copy in memory and the persistent
+ * storage.  The persistent storage can be shared with other processes.
+ * Therefore, the Load function loads the data from the persistent storage and
+ * merge with its cache.  The following merging rules applies.
+ * 1. If the entry is deleted from the cache then it will not be merged.
+ * 2. If the entry is in the cache but not in the persistent storage:
+ *     a. If the entry is a brand new entry (never persisted before), it will be
+ *          merged.
+ *     b. The entry is an existing entry (persisted before), it may be deleted
+ *          by another process, its revision will be checked against the
+ *          persistent storage revision.  The entry be merged only if its
+ *          revision is not older than the persistent storage revision.
+ */
+QStatus KeyStore::Load()
+{
+    QCC_DbgHLPrintf(("KeyStore::Load"));
+    persistentKeysLock.Lock(MUTEX_CONTEXT);
+
+    QStatus status;
+    /*
+     * Load the keys so we can check for changes and merge if needed
+     */
+    status = LoadPersistentKeys();
+    if (ER_OK != status) {
+        persistentKeysLock.Unlock(MUTEX_CONTEXT);
+        return status;
+    }
+
+    lock.Lock(MUTEX_CONTEXT);
+    storeState = UNAVAILABLE;
+
+    /*
+     * Check if key store has been changed since we last touched it.
+     */
+    bool needToMerge = false;
+    if (status == ER_OK) {
+        if (persistentRevision > revision) {
+            needToMerge = true;
+        } else if (!deletions.empty()) {
+            needToMerge = true;
+        }
+    }
+
+    if (needToMerge) {
+        QCC_DbgHLPrintf(("KeyStore::Load merging changes"));
+        bool dirty = false;
+        /*
+         * Handle deletions
+         */
+        for (std::set<Key>::iterator itDel = deletions.begin(); itDel != deletions.end(); ++itDel) {
+            KeyMap::iterator it = persistentKeys->find(*itDel);
+            if ((it != persistentKeys->end()) && (it->second.revision <= revision)) {
+                QCC_DbgPrintf(("KeyStore::Load deleting %s", itDel->ToString().c_str()));
+                persistentKeys->erase(*itDel);
+                dirty = true;
+            }
+        }
+        deletions.clear();
+        /*
+         * Handle additions and updates
+         */
+        for (KeyMap::iterator it = keys->begin(); it != keys->end(); ++it) {
+            bool addIt = false;
+            /* take the newer entries */
+            if (persistentKeys->find(it->first) == persistentKeys->end()) {
+                /* in the current inmemory map but not in the persistent store */
+                if (!it->second.persisted) {
+                    /* brand new entry that has never been persisted */
+                    addIt = true;
+                } else {
+                    /* the entry could have been deleted from persistent
+                     * storage by other process.
+                     */
+                    if (it->second.revision >= persistentRevision) {
+                        /* the in-memory entry may have been updated */
+                        addIt = true;
+                    }
+                }
+            } else if ((*persistentKeys)[it->first].revision < it->second.revision) {
+                /* persistent entry is older then the in-memory entry.  Need update */
+                addIt = true;
+            }
+            if (addIt) {
+                (*persistentKeys)[it->first] = it->second;
+                QCC_DbgPrintf(("KeyStore::Load merging %s", it->first.ToString().c_str()));
+                dirty = true;
+            }
+        }
+        keys->clear();
+        delete keys;
+        keys = persistentKeys;
+        /* the cache revision is now the same as the persistent storage revision */
+        revision = persistentRevision;
+        persistentKeys = new KeyMap();
+        if (EraseExpiredKeys()) {
+            storeState = MODIFIED;
+        } else if (dirty) {
+            storeState = MODIFIED;
+        } else {
+            storeState = LOADED;
+        }
+    } else {
+        /*
+         * nothing changes
+         */
+        persistentKeys->clear();
+        storeState = LOADED;
+    }
+
+    lock.Unlock(MUTEX_CONTEXT);
+    persistentKeysLock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
+
 /* private method assumes lock is already acquired by the caller. */
 size_t KeyStore::EraseExpiredKeys()
 {
@@ -315,39 +443,32 @@ size_t KeyStore::EraseExpiredKeys()
     bool dirty = true;
     while (dirty) {
         dirty = false;
-        KeyMap::iterator it = keys->begin();
-        while (it != keys->end()) {
-            KeyMap::iterator current = it++;
-            if (current->second.keyBlob.HasExpired()) {
-                QCC_DbgPrintf(("Deleting expired key for GUID %s", current->first.ToString().c_str()));
-                bool affected = false;
+        /* Only delete one key at a time because the iterator will become
+         * invalid from either the erase action or the key event listener's
+         * action on the keys */
+        const Key* keyToDelete = NULL;
+        for (KeyMap::iterator it = keys->begin(); it != keys->end(); it++) {
+            if (it->second.keyBlob.HasExpired()) {
+                keyToDelete = &(it->first);
+                QCC_DbgPrintf(("Deleting expired key for GUID %s", it->first.ToString().c_str()));
                 if (keyEventListener) {
-                    affected = keyEventListener->NotifyAutoDelete(this, current->first);
+                    keyEventListener->NotifyAutoDelete(this, it->first);
                 }
-                keys->erase(current);
-                ++count;
-                dirty = true;
-                if (affected) {
-                    break;  /* need to refresh the iterator because the list members may have changed by the NotifyAutoDelete call */
-                }
+                break;
             }
         }
+        if (keyToDelete) {
+            keys->erase(*keyToDelete);
+            ++count;
+            dirty = true;
+        }
     } /* clean sweep */
-
     return count;
 }
 
 QStatus KeyStore::Pull(Source& source, const qcc::String& password)
 {
     QCC_DbgPrintf(("KeyStore::Pull"));
-
-
-    /* Don't load if already loaded */
-    lock.Lock(MUTEX_CONTEXT);
-    if (storeState != UNAVAILABLE) {
-        lock.Unlock(MUTEX_CONTEXT);
-        return ER_OK;
-    }
 
     uint8_t guidBuf[qcc::GUID128::SIZE];
     size_t pulled;
@@ -360,9 +481,9 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
         status = ER_BUS_KEYSTORE_VERSION_MISMATCH;
         QCC_LogError(status, ("Keystore has wrong version expected %d got %d", KeyStoreVersion, version));
     }
-    /* Pull the revision number */
+    /* Pull the persistent storage revision number */
     if (status == ER_OK) {
-        status = source.PullBytes(&revision, sizeof(revision), pulled);
+        status = source.PullBytes(&persistentRevision, sizeof(persistentRevision), pulled);
     }
     /* Pull the application GUID */
     if (status == ER_OK) {
@@ -380,9 +501,8 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
 
     /* Allow for an uninitialized (empty) key store */
     if (status == ER_EOF) {
-        keys->clear();
-        storeState = MODIFIED;
-        revision = 0;
+        persistentKeys->clear();
+        persistentRevision = 0;
         MarkGuidSet();  /* make thisGuid the keystore guid */
         status = ER_OK;
         goto ExitPull;
@@ -390,7 +510,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
     if (status != ER_OK) {
         goto ExitPull;
     }
-    QCC_DbgPrintf(("KeyStore::Pull (revision %d)", revision));
+    QCC_DbgPrintf(("KeyStore::Pull (revision %d)", persistentRevision));
     /* Get length of the encrypted keys */
     status = source.PullBytes(&len, sizeof(len), pulled);
     if (status != ER_OK) {
@@ -431,7 +551,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
                 /* copy the data in case to decrypt with an alternate key.  The data needs to be copied since the call aes.Decrypt_CCM below overwrites the data buffer */
                 memcpy(altData, data, altLen);
             }
-            KeyBlob nonce((uint8_t*)&revision, sizeof(revision), KeyBlob::GENERIC);
+            KeyBlob nonce((uint8_t*)&persistentRevision, sizeof(persistentRevision), KeyBlob::GENERIC);
             Crypto_AES aes(*keyStoreKey, Crypto_AES::CCM);
             status = aes.Decrypt_CCM(data, data, len, nonce, NULL, 0, 16);
             if ((status != ER_OK) && mayUseAlternateKey) {
@@ -460,7 +580,8 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
                     qcc::GUID128 guid(0);
                     guid.SetBytes(guidBuf);
                     Key key(keyType, guid);
-                    KeyRecord& keyRec = (*keys)[key];
+                    KeyRecord& keyRec = (*persistentKeys)[key];
+                    keyRec.persisted = true;
                     keyRec.revision = rev;
                     status = keyRec.keyBlob.Load(strSource);
                     if (status == ER_OK) {
@@ -487,22 +608,15 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
     if (status != ER_OK) {
         goto ExitPull;
     }
-    if (EraseExpiredKeys()) {
-        storeState = MODIFIED;
-    } else {
-        storeState = LOADED;
-    }
 
 ExitPull:
 
     if (status != ER_OK) {
-        keys->clear();
-        storeState = MODIFIED;
+        persistentKeys->clear();
     }
     if (loaded) {
         loaded->SetEvent();
     }
-    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
@@ -516,6 +630,7 @@ QStatus KeyStore::Clear()
     keys->clear();
     storeState = MODIFIED;
     revision = 0;
+    persistentRevision = 0;
     deletions.clear();
     lock.Unlock(MUTEX_CONTEXT);
     listener->StoreRequest(*this);
@@ -557,7 +672,7 @@ QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
     }
     lock.Unlock(MUTEX_CONTEXT);
     if (ER_OK == status) {
-        listener->StoreRequest(*this);
+        Store();
     }
     return status;
 }
@@ -565,83 +680,13 @@ QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
 QStatus KeyStore::Reload()
 {
     QCC_DbgHLPrintf(("KeyStore::Reload"));
-
-    /*
-     * Cannot reload if the key store has never been loaded
-     */
-    lock.Lock(MUTEX_CONTEXT);
-    if (storeState == UNAVAILABLE) {
-        lock.Unlock(MUTEX_CONTEXT);
-        return ER_BUS_KEYSTORE_NOT_LOADED;
-    }
     /*
      * Reload is defined to be a no-op for non-shared key stores
      */
     if (!shared) {
-        lock.Unlock(MUTEX_CONTEXT);
         return ER_OK;
     }
-
-    QStatus status;
-    uint32_t currentRevision = revision;
-    KeyMap* currentKeys = keys;
-    keys = new KeyMap();
-
-    /*
-     * Load the keys so we can check for changes and merge if needed
-     */
-    lock.Unlock(MUTEX_CONTEXT);
-    status = Load();
-    lock.Lock(MUTEX_CONTEXT);
-
-    /*
-     * Check if key store has been changed since we last touched it.
-     */
-    if ((status == ER_OK) && (revision > currentRevision)) {
-        QCC_DbgHLPrintf(("KeyStore::Reload merging changes"));
-        KeyMap::iterator it;
-        /*
-         * Handle deletions
-         */
-        std::set<Key>::iterator itDel;
-        for (itDel = deletions.begin(); itDel != deletions.end(); ++itDel) {
-            it = keys->find(*itDel);
-            if ((it != keys->end()) && (it->second.revision <= currentRevision)) {
-                QCC_DbgPrintf(("KeyStore::Reload deleting %s", itDel->ToString().c_str()));
-                keys->erase(*itDel);
-            }
-        }
-        /*
-         * Handle additions and updates
-         */
-        for (it = currentKeys->begin(); it != currentKeys->end(); ++it) {
-            if (it->second.revision > currentRevision) {
-                QCC_DbgPrintf(("KeyStore::Reload added rev:%d %s", it->second.revision, it->first.ToString().c_str()));
-                if ((*keys)[it->first].revision > currentRevision) {
-                    /*
-                     * In case of a merge conflict go with the key that is currently stored
-                     */
-                    QCC_DbgPrintf(("KeyStore::Reload merge conflict rev:%d %s", it->second.revision, it->first.ToString().c_str()));
-                } else {
-                    (*keys)[it->first] = it->second;
-                    QCC_DbgPrintf(("KeyStore::Reload merging %s", it->first.ToString().c_str()));
-                }
-            }
-        }
-        delete currentKeys;
-        EraseExpiredKeys();
-    } else {
-        /*
-         * Restore state
-         */
-        KeyMap* goner = keys;
-        keys = currentKeys;
-        delete goner;
-        revision = currentRevision;
-    }
-
-    lock.Unlock(MUTEX_CONTEXT);
-    return status;
+    return Load();
 }
 
 QStatus KeyStore::Push(Sink& sink)
@@ -807,7 +852,7 @@ QStatus KeyStore::DelKey(const Key& key)
     if (ER_OK != status) {
         return status;
     }
-    listener->StoreRequest(*this);
+    Store();
     return ER_OK;
 }
 
@@ -828,7 +873,7 @@ QStatus KeyStore::SetKeyExpiration(const Key& key, const Timespec& expiration)
     }
     lock.Unlock(MUTEX_CONTEXT);
     if (status == ER_OK) {
-        listener->StoreRequest(*this);
+        Store();
     }
     return status;
 }
