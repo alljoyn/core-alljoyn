@@ -23,6 +23,8 @@
 
 using namespace std;
 
+/** @file TestApplication.cc */
+
 namespace secmgr_tests {
 TestApplication::TestApplication(string _appName) :
     busAttachment(nullptr), appName(_appName), psk(), authListener(psk)

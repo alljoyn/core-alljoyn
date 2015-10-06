@@ -20,10 +20,10 @@
 
 #define QCC_MODULE "SECMGR_AGENT"
 
-using namespace ajn;
 using namespace qcc;
-using namespace ajn::securitymgr;
 
+namespace ajn {
+namespace securitymgr {
 QStatus PolicyGenerator::DefaultPolicy(const vector<GroupInfo>& groupInfos,
                                        PermissionPolicy& policy) const
 {
@@ -135,5 +135,6 @@ void PolicyGenerator::DefaultGroupPolicyRule(PermissionPolicy::Rule& rule) const
     rule.SetInterfaceName("*");
     rule.SetMembers(1, members);
 }
-
+}
+}
 #undef QCC_MODULE

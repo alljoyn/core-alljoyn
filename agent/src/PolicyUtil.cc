@@ -22,9 +22,9 @@
 #define QCC_MODULE "SECMGR_AGENT"
 
 using namespace std;
-using namespace ajn;
-using namespace ajn::securitymgr;
 
+namespace ajn {
+namespace securitymgr {
 struct MemberCompare {
     bool operator()(const PermissionPolicy::Rule::Member& lhs,
                     const PermissionPolicy::Rule::Member& rhs)
@@ -108,4 +108,6 @@ void PolicyUtil::NormalizePolicy(PermissionPolicy& policy)
     }
 
     policy.SetAcls(acls.size(), &acls[0]);
+}
+}
 }

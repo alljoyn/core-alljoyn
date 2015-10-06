@@ -30,6 +30,10 @@ Dependencies
 SecurityMgr depends on the following software packages. Make sure you have them
 installed on your system before building SecurityMgr.
 
+* [AllJoyn Core SDK v15.09|https://allseenalliance.org/developers/download]
+licensed under the [Creative Commons Attribution 4.0 International License|
+http://creativecommons.org/licenses/by/4.0/]. More details are available on
+the [AllSeen License page|https://allseenalliance.org/license].
 * [gtest 1.7.0|https://code.google.com/p/googletest/] available under the [New
 BSD License|http://opensource.org/licenses/BSD-3-Clause] for tests
 * [sqlite 3.7.9 2011-11-01|http://www.sqlite.org/] available in the [public
@@ -39,7 +43,7 @@ implementation
 Building
 --------
 
-You can build SecurityMmgr using `scons`. Please refer to [alljoyn build
+You can build SecurityMgr using `scons`. Please refer to [alljoyn build
 instructions|https://allseenalliance.org/developers/develop/building] for more
 details on setting up your environment.
 
@@ -52,24 +56,30 @@ claim and manage the security configuration of any AllSeen application that
 supports Security 2.0.
 
 A secure door consumer and provider can be found in standard client library
-in the alljoyn_core/samples/secure/door directory:
+in the samples/secure/door directory of AllJoyn Core SDK:
 * The secure door provider implements a door that can be opened and closed over
   a secure interface
 * The secure door consumer monitors all doors on the local network
 
-Note
+Note:
 * Even though the door samples are part of core, they are built when compiling
 the security manager. You can find them in:
 'build/{OS}/{ARCH}/{MODE}/dist/cpp/bin/samples/'
 * The samples will generate some artifacts. They create a keystore and the CLI
-will also create a database file. In order to have a fresh restart you should
-delete these files. Unless configured otherwise, they are created in your home
-directory. Keystores under '.alljoyn\_keystore' and the database of the CLI is
-named 'secmgrstorage.db'.
+will also create a database file ('secmgrstorage.db'). In order to have a fresh
+restart you should delete these files.
+  * On Linux, those artifacts will by be stored in your home directory unless
+configured otherwise. Keystores are stored under '.alljoyn\_keystore'.
+  * On Windows, the artifacts are by default are under the 'AppData\Local'
+directory of your user. Keystores are stored under
+'.alljoyn\_secure\_keystore'.
 
 Example scenario:
 
-* Start a CLI (cli.sh)
+* Start a CLI
+  * On Linux, you can start the CLI using the 'cli.sh' script.
+  * On Windows, run 'secmgr.exe' in the 'build\{OS}\{ARCH}\{MODE}\samples'
+directory.
 * Start a secure door provider. The secure door provider publishes some
   about data, which can be used to find its ApplicationId.
 
@@ -169,6 +179,8 @@ Tests
 To build the tests, make sure to set the `GTEST_DIR` to your local Google Test
 installation when building SecurityMgr.
 
+### Linux
+
 Make sure an AllJoyn deamon is running on your system if you have compiled with
 BR=off. You can start one using the following script:
 
@@ -180,4 +192,29 @@ You can run all the tests using the following script:
 
 ```
 <securitymgr>/tools/run-test.sh
+```
+
+### Windows
+
+Clean up any existing keystore and database used by previous SecurityMgr:
+
+```
+IF exist %LOCALAPPDATA%\.alljoyn_secure_keystore (rd /s/q %LOCALAPPDATA%\.alljoyn_secure_keystore)
+set TEST_ROOT=%LOCALAPPDATA%\AJSecurityMgr
+IF NOT exist %TEST_ROOT% (mkdir %TEST_ROOT%)
+set STORAGE_PATH=%TEST_ROOT%\secmgr.db
+IF exist %STORAGE_PATH% (del /f/q %STORAGE_PATH%)
+```
+
+Set up a folder to store gtest output:
+
+```
+set GTEST_OUTPUT=%TEST_ROOT%\gtestresults\
+IF exist %GTEST_OUTPUT% (rd /s/q %GTEST_OUTPUT%)
+```
+
+Run all the unit tests:
+
+```
+.build\{OS}\{ARCH}\{MODE}\test\agent\unit_test\secmgrctest.exe --gtest_output=xml:%GTEST_OUTPUT%
 ```

@@ -748,6 +748,9 @@ void BasicTest::TearDown()
 
     // reset agent keystore
     string fname = GetHomeDir().c_str();
+#if defined (QCC_OS_GROUP_WINDOWS)
+    fname.append("/.alljoyn_secure_keystore");
+#endif
     fname.append(AJNKEY_STORE);
     remove(fname.c_str());
 }

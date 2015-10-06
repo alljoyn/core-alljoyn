@@ -80,7 +80,7 @@ static int be_secmgr(int peers)
 int CDECL_CALL main(int argc, char** argv)
 {
     int status = true;
-    int peers;
+    int peers = 0;
     if (argc == 1) {
         peers = 4;
     } else if (argc == 2) {

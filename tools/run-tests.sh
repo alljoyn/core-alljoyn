@@ -21,7 +21,10 @@ SELF_DIR=$(cd $(dirname $0) > /dev/null; pwd)
 AJN_SM_PATH=$(readlink -f "${SELF_DIR}/..")
 
 AJN_DAEMON_PNAME="alljoyn-daemon"
-VARIANT="debug"
+
+if [ -z "${VARIANT}" ]; then
+    VARIANT="debug"
+fi
 
 if [ -d "${AJN_SM_PATH}/build/linux/x86/${VARIANT}" ]; then
     PLATFORM="x86"
@@ -35,12 +38,14 @@ fi
 PLATFORM_ROOT="${AJN_SM_PATH}/build/linux/${PLATFORM}/${VARIANT}"
 TEST_ROOT="${PLATFORM_ROOT}/test/"
 
-if ! nm "${TEST_ROOT}/agent/unit_test/secmgrctest" | grep BundledRouter &> /dev/null; then
-    if [ "$(pidof ${AJN_DAEMON_PNAME})" ]; then
-         echo "alljoyn-daemon is active...running tests..."
-    else
-         echo "Please start an alljoyn-daemon to be able to run the tests !"
-         exit 1
+if [ "${VARIANT}" = "debug" ]; then  
+    if ! nm "${TEST_ROOT}/agent/unit_test/secmgrctest" | grep BundledRouter &> /dev/null; then
+        if [ "$(pidof ${AJN_DAEMON_PNAME})" ]; then
+            echo "alljoyn-daemon is active...running tests..."
+        else
+             echo "Please start an alljoyn-daemon to be able to run the tests !"
+             exit 1
+        fi
     fi
 fi
 

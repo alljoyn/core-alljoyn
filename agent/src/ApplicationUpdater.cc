@@ -24,9 +24,9 @@
 
 using namespace std;
 using namespace qcc;
-using namespace ajn;
-using namespace ajn::securitymgr;
 
+namespace ajn {
+namespace securitymgr {
 QStatus ApplicationUpdater::ResetApplication(const OnlineApplication& app)
 {
     QStatus status = ER_FAIL;
@@ -499,5 +499,6 @@ bool ApplicationUpdater::IsSameCertificate(const MembershipSummary& summary, con
     }
     return true;
 }
-
+}
+}
 #undef QCC_MODULE

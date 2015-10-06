@@ -1,0 +1,42 @@
+AllJoyn Security Manager 15.09 Release Notes
+============================================
+
+Fully Validated Platforms
+-------------------------
+ 1) Linux Ubuntu 14.04 LTS (64 bit)
+ 2) Windows 7/8.1 (64 bit)
+ 3) Windows 10 (64 bit)
+
+Features added in Version 15.09
+-------------------------------
+* Claim factory reset applications without out-of-band registration data
+  (ASACORE-2010)
+* Claim factory reset applications using out-of-band registration data
+  (ASACORE-2011)
+* Change security configuration of claimed applications (ASACORE-2012)
+  including policy and identity certificate updates, installing and removing
+  of membership certificates. Resetting of policies and unclaiming/resetting
+  applications is also supported.
+* Change security configuration of offline applications (ASACORE-2013)
+* Provide platform independent CA/storage abstraction layer for security
+  manager (ASACORE-2014) including a sample implementation for this layer
+* Certificate revocation by blacklisting peers in the policy (ASACORE-2017)
+* Enforce syntax of DENY rules in policies (ASACORE-2086)
+* AllJoyn Security Manager sample app for Windows (ASACORE-1401)
+
+Issues Addressed in Version 15.09
+---------------------------------
+ASACORE-2255 Apps appear disconnected in the security manager client app in
+             Windows
+ASACORE-2441 The security manager should always update policy after membership
+             or identity changes
+
+For a complete list of fixed issues:
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20fixVersion%20in%20(%2215.09%22)%20AND%20component%20%3D%20%22Security%20Manager%22%20ORDER%20BY%20key%20ASC
+
+Known Issues in Version 15.09
+-----------------------------
+ASACORE-2549 Cache of discovered applications is never cleared
+
+For a complete list of open issues:
+https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20(closed%2C%20resolved)%20and%20type%20not%20in%20(task%2C%20%22New%20Feature%22)%20%20and%20component%20%3D%20%22Security%20Manager%22%20order%20by%20priority%20DESC%2C%20id%20ASC

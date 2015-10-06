@@ -20,10 +20,10 @@
 
 #define QCC_MODULE "SECMGR_AGENT"
 
-using namespace ajn;
 using namespace qcc;
-using namespace ajn::securitymgr;
 
+namespace ajn {
+namespace securitymgr {
 SecurityAgentFactory::SecurityAgentFactory()
 {
 }
@@ -47,5 +47,6 @@ QStatus SecurityAgentFactory::GetSecurityAgent(const shared_ptr<AgentCAStorage>&
     }
     return status;
 }
-
+}
+}
 #undef QCC_MODULE
