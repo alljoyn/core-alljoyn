@@ -19,7 +19,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <string.h>
 #include <vector>
 #include <stdlib.h>

@@ -50,7 +50,7 @@ class BusObjectTestBusObject : public BusObject {
 
     QStatus SendSignal(SessionId sessionid = 0) {
         const InterfaceDescription::Member*  signal_member = bus.GetInterface("org.test")->GetMember("my_signal");
-        assert(signal_member != NULL);
+        QCC_ASSERT(signal_member != NULL);
         MsgArg arg("s", "Signal");
         QStatus status = Signal(NULL, sessionid, *signal_member, &arg, 1, 0, 0);
         return status;

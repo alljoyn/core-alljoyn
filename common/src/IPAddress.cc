@@ -44,8 +44,8 @@ using namespace qcc;
 
 IPAddress::IPAddress(const uint8_t* addrBuf, size_t addrBufSize)
 {
-    assert(addrBuf != NULL);
-    assert(addrBufSize == IPv4_SIZE || addrBufSize == IPv6_SIZE);
+    QCC_ASSERT(addrBuf != NULL);
+    QCC_ASSERT(addrBufSize == IPv4_SIZE || addrBufSize == IPv6_SIZE);
     addrSize = (uint16_t)addrBufSize;
     if (addrSize == IPv4_SIZE) {
         // Encode the IPv4 address in the IPv6 address space for easy
@@ -984,7 +984,7 @@ QStatus IPAddress::SetAddress(const qcc::String& addrString, bool allowHostNames
 QStatus IPAddress::RenderIPv4Binary(uint8_t addrBuf[], size_t addrBufSize) const
 {
     QStatus status = ER_OK;
-    assert(addrSize == IPv4_SIZE);
+    QCC_ASSERT(addrSize == IPv4_SIZE);
     if (addrBufSize < IPv4_SIZE) {
         status = ER_BUFFER_TOO_SMALL;
         QCC_LogError(status, ("Copying IPv4 address to buffer"));
@@ -998,7 +998,7 @@ exit:
 QStatus IPAddress::RenderIPv6Binary(uint8_t addrBuf[], size_t addrBufSize) const
 {
     QStatus status = ER_OK;
-    assert(addrSize == IPv6_SIZE);
+    QCC_ASSERT(addrSize == IPv6_SIZE);
     if (addrBufSize < IPv6_SIZE) {
         status = ER_BUFFER_TOO_SMALL;
         QCC_LogError(status, ("Copying IPv6 address to buffer"));

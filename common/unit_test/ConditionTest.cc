@@ -275,7 +275,7 @@ TEST(ConditionTest, simple_empty_protected_buffer)
      * test that assumption explicitly instead of letting someone figure it out
      * the hard way.
      */
-    assert(WATCHDOG % TICK == 0 && "WATCHDOG must be an even multiple of TICK");
+    QCC_ASSERT(WATCHDOG % TICK == 0 && "WATCHDOG must be an even multiple of TICK");
 
     /*
      * Wait for the consumer thread to actually run and block, then make sure

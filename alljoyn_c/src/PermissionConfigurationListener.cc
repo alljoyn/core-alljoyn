@@ -22,7 +22,6 @@
 
 #include <alljoyn/PermissionConfigurationListener.h>
 #include <alljoyn_c/PermissionConfigurationListener.h>
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include <qcc/Debug.h>
@@ -83,6 +82,6 @@ alljoyn_permissionconfigurationlistener AJ_CALL alljoyn_permissionconfigurationl
 void AJ_CALL alljoyn_permissionconfigurationlistener_destroy(alljoyn_permissionconfigurationlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::PermissionConfigurationListenerCallbackC*)listener;
 }

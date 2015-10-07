@@ -51,7 +51,7 @@ int AllJoynConnection::CreateProxy(const char* ifPath, const char* objPath, cons
     NotifyUser(MSG_SYSTEM, "CREATE PROXY = %s %s", name, path.c_str(), ifPath);
     ProxyBusObject* prox = new ProxyBusObject(*busAttachment, name, XFER_SERVICE_OBJECT_PATH, sessionId);
     const InterfaceDescription* xferIntf = busAttachment->GetInterface(XFER_SERVICE_INTERFACE_NAME);
-    assert(xferIntf);
+    QCC_ASSERT(xferIntf);
     QStatus stat = prox->AddInterface(*xferIntf);
     if (ER_OK == stat) {
         ret = nProxies;
@@ -99,7 +99,7 @@ void AllJoynConnection::Connect(char* tag, bool asAdvertiser)
         advertisedName = "";
         NotifyUser(MSG_STATUS, "%s is joiner\n", joinName.c_str());
     }
-    assert(invariants());
+    QCC_ASSERT(invariants());
     myTag = tag;
     createMessageBus();
     startMessageBus();
@@ -321,7 +321,7 @@ bool ChatObject::CreateInterfaces()
     InterfaceDescription* chatIntf = NULL;
 
     status = ajConnection->busAttachment->CreateInterface(ifName, chatIntf);
-    assert(chatIntf);
+    QCC_ASSERT(chatIntf);
     if (ER_OK == status) {
         chatIntf->AddSignal("Chat", "s",  "str", 0);
         chatIntf->Activate();
@@ -337,11 +337,11 @@ bool ChatObject::RegisterInterfaces()
 {
     /* Add the chat interface to this object */
     const InterfaceDescription* chatIntf = bus.GetInterface(CHAT_SERVICE_INTERFACE_NAME);
-    assert(chatIntf);
+    QCC_ASSERT(chatIntf);
     AddInterface(*chatIntf);
     /* Store the Chat signal member away so it can be quickly looked up when signals are sent */
     chatSignalMember = chatIntf->GetMember("Chat");
-    assert(chatSignalMember);
+    QCC_ASSERT(chatSignalMember);
 
     /* Register signal handler */
     status =  bus.RegisterSignalHandler(this,
@@ -389,7 +389,7 @@ bool XferObject::CreateInterfaces()
     const char* ifName = XFER_SERVICE_INTERFACE_NAME;
     InterfaceDescription* xferIntf = NULL;
     status = ajConnection->busAttachment->CreateInterface(ifName, xferIntf);
-    assert(xferIntf);
+    QCC_ASSERT(xferIntf);
     if (ER_OK == status) {
         xferIntf->AddMethod("query", "si",  "i", "filename, filesize, acceptsize ", 0);
         xferIntf->AddMethod("initiate", "ii",  "i", "segmentSize, nSegs, acceptsize ", 0);
@@ -409,7 +409,7 @@ bool XferObject::CreateInterfaces()
 bool XferObject::RegisterInterfaces()
 {
     const InterfaceDescription* serviceIntf = ajConnection->busAttachment->GetInterface(XFER_SERVICE_INTERFACE_NAME);
-    assert(serviceIntf);
+    QCC_ASSERT(serviceIntf);
     AddInterface(*serviceIntf);
     /** Register the method handlers with the object */
     MethodEntry methodEntries[6];

@@ -29,7 +29,6 @@
 
 #include <signal.h>
 #include <stdio.h>
-#include <assert.h>
 #include <stdlib.h>
 
 using namespace ajn;
@@ -107,7 +106,7 @@ static alljoyn_busobject create_my_alljoyn_busobject(alljoyn_busattachment bus,
     result = alljoyn_busobject_create(path, QCC_FALSE, NULL, NULL);
 
     alljoyn_interfacedescription iface = alljoyn_busattachment_getinterface(bus, INTERFACE_NAME);
-    assert(iface != NULL);
+    QCC_ASSERT(iface != NULL);
 
     status = alljoyn_busobject_addinterface(result, iface);
     alljoyn_busobject_setannounceflag(result, iface, ANNOUNCED);

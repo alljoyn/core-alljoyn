@@ -127,7 +127,7 @@ class SuperWaiter {
 
     QStatus WaitForMultipleObjects(_In_ uint32_t totalHandles, _In_reads_(totalHandles) const HANDLE* handles, _In_ uint32_t timeoutMsec, _Out_ uint32_t* indexSignaled)
     {
-        assert(totalHandles != 0);
+        QCC_ASSERT(totalHandles != 0);
         m_signaled = false;
         *indexSignaled = m_indexSignaled = MAXUINT;
 
@@ -183,7 +183,7 @@ class SuperWaiter {
             m_timeoutMsec(timeoutMsec)
         {
             /* The number of handles must be MAXIMUM_WAIT_OBJECTS - 1 or fewer per group */
-            assert(numHandles < MAXIMUM_WAIT_OBJECTS);
+            QCC_ASSERT(numHandles < MAXIMUM_WAIT_OBJECTS);
         }
 
         SuperWaiter* m_waiter;
@@ -208,7 +208,7 @@ class SuperWaiter {
         HANDLE* handles = new HANDLE[numHandles];
         handles[0] = group->m_waiter->m_shutdownEvent;
         if (memcpy_s(&handles[1], (sizeof(HANDLE) * group->m_numHandles), group->m_handles, (sizeof(HANDLE) * group->m_numHandles))) {
-            assert(!"memcpy_s failed");
+            QCC_ASSERT(!"memcpy_s failed");
             delete [] handles;
             delete group;
             return;
@@ -220,7 +220,7 @@ class SuperWaiter {
         switch (waitResult) {
         case WAIT_FAILED:
         case WAIT_ABANDONED:
-            assert(false);
+            QCC_ASSERT(false);
             break;
 
         case WAIT_TIMEOUT:
@@ -289,7 +289,7 @@ class IoEventMonitor {
     {
         SocketFd sock = event->GetFD();
         QCC_DbgHLPrintf(("RegisterEvent %s for fd %d (ioHandle=%p)", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", sock, event->GetHandle()));
-        assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
+        QCC_ASSERT((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
 
         lock.Lock();
         std::map<SocketFd, EventList*>::iterator iter = eventMap.find(sock);
@@ -330,7 +330,7 @@ class IoEventMonitor {
         SocketFd sock = event->GetFD();
 
         QCC_DbgPrintf(("DeregisterEvent %s for fd %d", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", sock));
-        assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
+        QCC_ASSERT((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
 
         lock.Lock();
         std::map<SocketFd, EventList*>::iterator iter = eventMap.find(sock);
@@ -372,7 +372,7 @@ class IoEventMonitor {
     {
         HANDLE pipe = LongToHandle((ULONG)event->GetFD());
         QCC_DbgHLPrintf(("RegisterEvent %s for fd %d (ioHandle=%p)", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", pipe, event->GetHandle()));
-        assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
+        QCC_ASSERT((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
 
         lock.Lock();
         std::map<HANDLE, EventList*>::iterator iter = namedPipeEventMap.find(pipe);
@@ -411,7 +411,7 @@ class IoEventMonitor {
     {
         HANDLE pipe = LongToHandle((ULONG)event->GetFD());
         QCC_DbgPrintf(("DeregisterEvent %s for pipe %p", event->GetEventType() == Event::IO_READ ? "IO_READ" : "IO_WRITE", pipe));
-        assert((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
+        QCC_ASSERT((event->GetEventType() == Event::IO_READ) || (event->GetEventType() == Event::IO_WRITE));
 
         lock.Lock();
         std::map<HANDLE, EventList*>::iterator iter = namedPipeEventMap.find(pipe);
@@ -597,7 +597,7 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs, bool includeStopEven
     } else if (nullptr != evt.handle) {
         handles[numHandles++] = evt.handle;
     } else if (nullptr != evt.timerHandle) {
-        assert(TIMED == evt.eventType);
+        QCC_ASSERT(TIMED == evt.eventType);
         handles[numHandles++] = evt.timerHandle;
     }
 
@@ -608,7 +608,7 @@ QStatus AJ_CALL Event::Wait(Event& evt, uint32_t maxWaitMs, bool includeStopEven
         stopEvent = &thread->GetStopEvent();
         handles[numHandles++] = stopEvent->handle;
     }
-    assert(numHandles <= ARRAYSIZE(handles));
+    QCC_ASSERT(numHandles <= ARRAYSIZE(handles));
 
     QStatus status = ER_OK;
     evt.IncrementNumThreads();
@@ -663,7 +663,7 @@ QStatus AJ_CALL Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& s
             handles.push_back(evt->ioHandle);
             numHandles++;
         } else if (evt->timerHandle != nullptr) {
-            assert(evt->eventType == TIMED);
+            QCC_ASSERT(evt->eventType == TIMED);
             handles.push_back(evt->timerHandle);
             numHandles++;
         }
@@ -687,7 +687,7 @@ QStatus AJ_CALL Event::Wait(const vector<Event*>& checkEvents, vector<Event*>& s
 
     if (numHandles == 0) {
         QCC_LogError(status, ("Wait: incorrect checkEvents vector."));
-        assert(false);
+        QCC_ASSERT(false);
 
         /* Preserve the behavior of the Posix implementation */
         Sleep(maxWaitMs);
@@ -824,7 +824,7 @@ Event::Event(Event& event, EventType eventType, bool genPurpose) :
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd != INVALID_SOCKET_FD) {
-        assert((eventType == IO_READ) || (eventType == IO_WRITE));
+        QCC_ASSERT((eventType == IO_READ) || (eventType == IO_WRITE));
         ioHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
         IoMonitor->RegisterEvent(this);
     }
@@ -847,7 +847,7 @@ Event::Event(SocketFd ioFd, EventType eventType) :
 {
     /* Create an auto reset event for the socket fd */
     if (ioFd != INVALID_SOCKET_FD) {
-        assert((eventType == IO_READ) || (eventType == IO_WRITE));
+        QCC_ASSERT((eventType == IO_READ) || (eventType == IO_WRITE));
         ioHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
         IoMonitor->RegisterEvent(this);
     }
@@ -884,7 +884,7 @@ Event::Event(HANDLE busHandle, EventType eventType) :
     networkIfaceHandle(nullptr),
     isSocket(false)
 {
-    assert((eventType == IO_READ) || (eventType == IO_WRITE));
+    QCC_ASSERT((eventType == IO_READ) || (eventType == IO_WRITE));
     ioHandle = CreateEvent(NULL, FALSE, FALSE, NULL);
     IoMonitor->RegisterEvent(this);
 }
@@ -913,7 +913,7 @@ Event::~Event()
     }
 
     if (timerHandle != nullptr) {
-        assert(eventType == TIMED);
+        QCC_ASSERT(eventType == TIMED);
         ::CancelWaitableTimer(timerHandle);
         ::CloseHandle(timerHandle);
     }
@@ -1002,7 +1002,7 @@ bool Event::IsNetworkEventSet()
         HANDLE pipe = LongToHandle((ULONG) this->ioFd);
         BOOL success = qcc::NamedPipeWrapper::AllJoynEnumEvents(pipe, NULL, &eventMask);
         QCC_UNUSED(success);
-        assert(success);
+        QCC_ASSERT(success);
         if ((eventMask & NP_WRITE_SET) && (this->eventType == Event::IO_WRITE)) {
             ret = true;
         }

@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 
@@ -140,7 +139,7 @@ PropTesterObject::PropTesterObject(BusAttachment& bus, const char* path, Session
         bus.CreateInterfacesFromXml(propTesterInterfaceXML);
         ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester");
     }
-    assert(ifc);
+    QCC_ASSERT(ifc);
 
     AddInterface(*ifc);
 }
@@ -300,7 +299,7 @@ PropTesterObject2::PropTesterObject2(BusAttachment& bus, const char* path, Sessi
         bus.CreateInterfacesFromXml(propTester2InterfaceXML);
         ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester2");
     }
-    assert(ifc);
+    QCC_ASSERT(ifc);
 
     AddInterface(*ifc);
 }
@@ -353,7 +352,7 @@ ThreadReturn STDCALL PropTesterObject2::Run(void* arg)
         stringProp.append("X");
         QCC_SyncPrintf("PropTesterObject2::Run : (%d) %d -- %s\n", id, intProp, stringProp.c_str());
         status = EmitPropChanged("org.alljoyn.Testing.PropertyTester2", propTester2Names, propTester2Count, id, ALLJOYN_FLAG_GLOBAL_BROADCAST);
-        assert(status == ER_OK);
+        QCC_ASSERT(status == ER_OK);
         QCC_UNUSED(status);
         lock.Unlock();
         Event::Wait(dummy, 2000);
@@ -403,7 +402,7 @@ _PropTesterProxyObject::_PropTesterProxyObject(BusAttachment& bus, const String&
         bus.CreateInterfacesFromXml(propTesterInterfaceXML);
         ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester");
     }
-    assert(ifc);
+    QCC_ASSERT(ifc);
 
     AddInterface(*ifc);
     const char* watchProps[] = {
@@ -541,13 +540,13 @@ _PropTesterProxyObject2::_PropTesterProxyObject2(BusAttachment& bus, const Strin
         bus.CreateInterfacesFromXml(propTester2InterfaceXML);
         ifc = bus.GetInterface("org.alljoyn.Testing.PropertyTester2");
     }
-    assert(ifc);
+    QCC_ASSERT(ifc);
 
     AddInterface(*ifc);
 
     QStatus status = RegisterPropertiesChangedListener("org.alljoyn.Testing.PropertyTester2",
                                                        NULL, 0, *this, NULL);
-    assert(status == ER_OK);
+    QCC_ASSERT(status == ER_OK);
     QCC_UNUSED(status);
 }
 
@@ -623,24 +622,24 @@ void _PropTesterProxyObject2::PropCB(QStatus status, ProxyBusObject* obj, const 
         int32_t i2;
         value.Get("i", &i2);
         QCC_SyncPrintf("Property Get Callback: %s (%d = %d)\n", ctx->name.c_str(), i, i2);
-        assert(i == i2);
+        QCC_ASSERT(i == i2);
     } else if (ctx->name.compare("int2") == 0) {
         int32_t i;
         value.Get("i", &i);
         QCC_SyncPrintf("Property Get Callback: %s (%d)\n", ctx->name.c_str(), i);
-        assert(ctx->value == NULL);
+        QCC_ASSERT(ctx->value == NULL);
     } else if (ctx->name.compare("string1") == 0) {
         const char* s;
         ctx->value->Get("s", &s);
         const char* s2;
         value.Get("s", &s2);
         QCC_SyncPrintf("Property Get Callback: %s (%s = %s)\n", ctx->name.c_str(), s, s2);
-        assert(strcmp(s, s2) == 0);
+        QCC_ASSERT(strcmp(s, s2) == 0);
     } else if (ctx->name.compare("string2") == 0) {
         const char* s;
         value.Get("s", &s);
         QCC_SyncPrintf("Property Get Callback: %s (%s)\n", ctx->name.c_str(), s);
-        assert(ctx->value == NULL);
+        QCC_ASSERT(ctx->value == NULL);
     } else {
         QCC_SyncPrintf("Unknown property\n");
     }

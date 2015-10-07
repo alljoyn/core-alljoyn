@@ -38,6 +38,16 @@
 #error No OS GROUP defined.
 #endif
 
+/**
+ * Platform-independent assertion macro. If this is not defined in the
+ * platform-specific header file or by other preprocessor define, it defaults
+ * to assert.
+ */
+#ifndef QCC_ASSERT
+#include <assert.h>
+#define QCC_ASSERT(expr) assert(expr)
+#endif
+
 #if defined(__GNUC__)
 
 #define GCC_VERSION ((__GNUC__ * 10000) + (__GNUC_MINOR__ * 100) + __GNUC_PATCHLEVEL__)

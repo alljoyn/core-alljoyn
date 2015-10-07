@@ -25,7 +25,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <map>
 
@@ -49,7 +48,7 @@ AllJoynDebugObj* AllJoynDebugObj::self = NULL;
 
 AllJoynDebugObj* AllJoynDebugObj::GetAllJoynDebugObj()
 {
-    assert(self && "Invalid access to AllJoynDebugObj; read the comments");
+    QCC_ASSERT(self && "Invalid access to AllJoynDebugObj; read the comments");
     return self;
 }
 
@@ -88,8 +87,8 @@ QStatus AllJoynDebugObj::AddDebugInterface(AllJoynDebugObjAddon* addon,
                                            size_t methodInfoSize,
                                            Properties& ifaceProperties)
 {
-    assert(addon);
-    assert(ifaceName);
+    QCC_ASSERT(addon);
+    QCC_ASSERT(ifaceName);
 
     InterfaceDescription* ifc;
     MethodEntry* methodEntries = methodInfoSize ? new MethodEntry[methodInfoSize] : NULL;

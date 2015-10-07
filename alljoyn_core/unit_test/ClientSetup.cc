@@ -301,12 +301,12 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
     }
 
     intf = remoteObj.GetInterface(::cl::org::alljoyn::alljoyn_test::InterfaceName);
-    assert(intf);
+    QCC_ASSERT(intf);
     remoteObj.AddInterface(*intf);
     mysignal = intf->GetMember("my_signal");
-    assert("mysignal");
+    QCC_ASSERT(mysignal);
     mysignal_2 = intf->GetMember("my_signal_string");
-    assert("mysignal_2");
+    QCC_ASSERT(mysignal_2);
 
     /* register the signal handler for the the 'my_signal' signal */
     status =  clientMsgBus.RegisterSignalHandler(this,

@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <alljoyn/ProxyBusObject.h>
 #include <alljoyn_c/ProxyBusObject.h>
 #include "BusAttachmentC.h"
@@ -132,7 +131,7 @@ alljoyn_proxybusobject AJ_CALL alljoyn_proxybusobject_create_secure(alljoyn_busa
 void AJ_CALL alljoyn_proxybusobject_destroy(alljoyn_proxybusobject proxyObj)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(proxyObj != NULL && "NULL parameter passed to alljoyn_proxybusobject_destroy.");
+    QCC_ASSERT(proxyObj != NULL && "NULL parameter passed to alljoyn_proxybusobject_destroy.");
 
     // Clean up the C++ ProxyBusObject before cleaning up the listeners.
     delete (ProxyBusObjectC*)proxyObj;

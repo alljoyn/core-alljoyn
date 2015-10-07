@@ -25,7 +25,6 @@
 #endif
 #include <alljoyn_c/AjAPI.h>
 
-#include <assert.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
@@ -242,7 +241,7 @@ int CDECL_CALL main(int argc, char** argv)
 
         alljoyn_proxybusobject remoteObj = alljoyn_proxybusobject_create(s_msgBus, OBJECT_NAME, OBJECT_PATH, s_sessionId);
         const alljoyn_interfacedescription alljoynTestIntf = alljoyn_busattachment_getinterface(s_msgBus, INTERFACE_NAME);
-        assert(alljoynTestIntf);
+        QCC_ASSERT(alljoynTestIntf);
         alljoyn_proxybusobject_addinterface(remoteObj, alljoynTestIntf);
 
         reply = alljoyn_message_create(s_msgBus);

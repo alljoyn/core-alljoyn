@@ -17,7 +17,6 @@
 #include <iostream>
 #include <vector>
 #include <cstdlib>
-#include <cassert>
 #include <string>
 
 #include <alljoyn/Status.h>
@@ -266,29 +265,29 @@ static QStatus BuildInterface(BusAttachment& bus)
 
     InterfaceDescription* intf = NULL;
     status = bus.CreateInterface(INTF_NAME, intf);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddProperty("IsOpen", "b", PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddPropertyAnnotation("IsOpen", "org.freedesktop.DBus.Property.EmitsChangedSignal", "true");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddProperty("Location", "s", PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddPropertyAnnotation("Location", "org.freedesktop.DBus.Property.EmitsChangedSignal", "true");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddProperty("KeyCode", "u", PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddPropertyAnnotation("KeyCode", "org.freedesktop.DBus.Property.EmitsChangedSignal", "invalidates");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     status = intf->AddMethod("Open", "", "", "");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddMethod("Close", "", "", "");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddMethod("KnockAndRun", "", "", "", MEMBER_ANNOTATE_NO_REPLY);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     status = intf->AddSignal("PersonPassedThrough", "s", "name", MEMBER_ANNOTATE_SESSIONCAST);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     intf->Activate();
 
@@ -299,7 +298,7 @@ static QStatus SetupBusAttachment(BusAttachment& bus)
 {
     QStatus status;
     status = bus.Start();
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = bus.Connect();
 
     if (ER_OK != status) {
@@ -307,7 +306,7 @@ static QStatus SetupBusAttachment(BusAttachment& bus)
     }
 
     status = BuildInterface(bus);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     return status;
 }

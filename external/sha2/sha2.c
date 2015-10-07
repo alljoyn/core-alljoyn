@@ -48,7 +48,6 @@
  ******************************************************************************/
 
 #include <string.h>	/* memcpy()/memset() or bcopy()/bzero() */
-#include <assert.h>	/* assert() */
 #include <qcc/platform.h>
 #include "sha2.h"
 
@@ -57,12 +56,6 @@ extern "C" {
 #endif
 
 /*
- * ASSERT NOTE:
- * Some sanity checking code is included using assert().  On my FreeBSD
- * system, this additional code can be removed by compiling with NDEBUG
- * defined.  Check your own systems manpage on assert() to see how to
- * compile WITHOUT the sanity checking code on your system.
- *
  * UNROLLED TRANSFORM LOOP NOTE:
  * You can define SHA2_UNROLL_TRANSFORM to use the unrolled transform
  * loop version for the hash transform rounds (defined using macros
@@ -570,7 +563,7 @@ void SHA256_Update(SHA256_CTX* context, const sha2_byte *data, size_t len) {
 	}
 
 	/* Sanity check: */
-	assert(context != (SHA256_CTX*)0 && data != (sha2_byte*)0);
+	QCC_ASSERT(context != (SHA256_CTX*)0 && data != (sha2_byte*)0);
 
 	usedspace = (context->bitcount >> 3) % SHA256_BLOCK_LENGTH;
 	if (usedspace > 0) {
@@ -620,7 +613,7 @@ void SHA256_Final(sha2_byte digest[], SHA256_CTX* context) {
 	unsigned int	usedspace;
 
 	/* Sanity check: */
-	assert(context != (SHA256_CTX*)0);
+	QCC_ASSERT(context != (SHA256_CTX*)0);
 
 	/* If no digest buffer is passed, we don't bother doing this: */
 	if (digest != (sha2_byte*)0) {
@@ -683,7 +676,7 @@ char *SHA256_End(SHA256_CTX* context, char buffer[]) {
 	int		i;
 
 	/* Sanity check: */
-	assert(context != (SHA256_CTX*)0);
+	QCC_ASSERT(context != (SHA256_CTX*)0);
 
 	if (buffer != (char*)0) {
 		SHA256_Final(digest, context);
@@ -898,7 +891,7 @@ void SHA512_Update(SHA512_CTX* context, const sha2_byte *data, size_t len) {
 	}
 
 	/* Sanity check: */
-	assert(context != (SHA512_CTX*)0 && data != (sha2_byte*)0);
+	QCC_ASSERT(context != (SHA512_CTX*)0 && data != (sha2_byte*)0);
 
 	usedspace = (context->bitcount[0] >> 3) % SHA512_BLOCK_LENGTH;
 	if (usedspace > 0) {
@@ -982,7 +975,7 @@ void SHA512_Final(sha2_byte digest[], SHA512_CTX* context) {
 	sha2_word64	*d = (sha2_word64*)digest;
 
 	/* Sanity check: */
-	assert(context != (SHA512_CTX*)0);
+	QCC_ASSERT(context != (SHA512_CTX*)0);
 
 	/* If no digest buffer is passed, we don't bother doing this: */
 	if (digest != (sha2_byte*)0) {
@@ -1012,7 +1005,7 @@ char *SHA512_End(SHA512_CTX* context, char buffer[]) {
 	int		i;
 
 	/* Sanity check: */
-	assert(context != (SHA512_CTX*)0);
+	QCC_ASSERT(context != (SHA512_CTX*)0);
 
 	if (buffer != (char*)0) {
 		SHA512_Final(digest, context);
@@ -1057,7 +1050,7 @@ void SHA384_Final(sha2_byte digest[], SHA384_CTX* context) {
 	sha2_word64	*d = (sha2_word64*)digest;
 
 	/* Sanity check: */
-	assert(context != (SHA384_CTX*)0);
+	QCC_ASSERT(context != (SHA384_CTX*)0);
 
 	/* If no digest buffer is passed, we don't bother doing this: */
 	if (digest != (sha2_byte*)0) {
@@ -1087,7 +1080,7 @@ char *SHA384_End(SHA384_CTX* context, char buffer[]) {
 	int		i;
 
 	/* Sanity check: */
-	assert(context != (SHA384_CTX*)0);
+	QCC_ASSERT(context != (SHA384_CTX*)0);
 
 	if (buffer != (char*)0) {
 		SHA384_Final(digest, context);

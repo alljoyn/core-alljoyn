@@ -1508,7 +1508,7 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
         status = cryptoEcc.DSAVerifyDigest(verifier, sizeof(verifier), &sig);
         if (status != ER_OK) {
             QCC_DbgPrintf(("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to verify the signature just created, the key exchange protocol will fail."));
-            assert(false);
+            QCC_ASSERT(false);
         }
         );
 

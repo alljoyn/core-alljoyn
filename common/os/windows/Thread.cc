@@ -23,7 +23,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <process.h>
 #include <map>
 
@@ -203,7 +202,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
             if (ret == 0) {
                 QCC_LogError(ER_OS_ERROR, ("Setting TLS key: %s", GetLastError()));
             }
-            assert(ret != 0);
+            QCC_ASSERT(ret != 0);
         }
         threadListLock->Unlock();
     }
@@ -230,9 +229,9 @@ ThreadInternalReturn STDCALL Thread::RunInternal(void* arg)
 {
     Thread* thread(reinterpret_cast<Thread*>(arg));
 
-    assert(thread != NULL);
-    assert(thread->state == STARTED);
-    assert(!thread->isExternal);
+    QCC_ASSERT(thread != NULL);
+    QCC_ASSERT(thread->state == STARTED);
+    QCC_ASSERT(!thread->isExternal);
 
     QCC_DEBUG_ONLY(IncrementAndFetch(&started));
 
@@ -378,7 +377,7 @@ QStatus Thread::Alert(uint32_t threadAlertCode)
 QStatus Thread::Join(void)
 {
 
-    assert(!isExternal);
+    QCC_ASSERT(!isExternal);
 
     QStatus status = ER_OK;
     bool self = (threadId == GetCurrentThreadId());
@@ -445,7 +444,7 @@ void Thread::RemoveAuxListener(ThreadListener* listener)
 
 ThreadReturn STDCALL Thread::Run(void* arg)
 {
-    assert(NULL != function);
+    QCC_ASSERT(NULL != function);
     return (*function)(arg);
 }
 

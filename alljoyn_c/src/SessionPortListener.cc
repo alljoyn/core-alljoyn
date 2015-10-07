@@ -23,7 +23,6 @@
 #include <alljoyn/SessionPortListener.h>
 #include <alljoyn_c/SessionPortListener.h>
 #include <string.h>
-#include <assert.h>
 #include "DeferredCallback.h"
 #include <qcc/Debug.h>
 
@@ -93,6 +92,6 @@ alljoyn_sessionportlistener AJ_CALL alljoyn_sessionportlistener_create(const all
 void AJ_CALL alljoyn_sessionportlistener_destroy(alljoyn_sessionportlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::SessionPortListenerCallbackC*)listener;
 }

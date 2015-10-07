@@ -34,7 +34,6 @@
 
 #include <alljoyn_c/AjAPI.h>
 
-#include <assert.h>
 #include <limits.h>
 #include <signal.h>
 #include <stdio.h>
@@ -224,11 +223,11 @@ int CDECL_CALL main(int argc, char** argv)
         /* Set up bus object */
         testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
         exampleIntf = alljoyn_busattachment_getinterface(g_msgBus, INTERFACE_NAME);
-        assert(exampleIntf);
+        QCC_ASSERT(exampleIntf);
         alljoyn_busobject_addinterface(testObj, exampleIntf);
 
         foundMember = alljoyn_interfacedescription_getmember(exampleIntf, "cat", &cat_member);
-        assert(foundMember == QCC_TRUE);
+        QCC_ASSERT(foundMember == QCC_TRUE);
         if (!foundMember) {
             printf("Failed to get cat member of interface\n");
         }

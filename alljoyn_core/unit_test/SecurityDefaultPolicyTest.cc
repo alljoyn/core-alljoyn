@@ -526,7 +526,7 @@ class SecurityDefaultPolicyTest : public testing::Test {
 
         }
         for (size_t cnt = 0; cnt < policy.GetAclsSize(); ++cnt) {
-            assert(idx <= count);
+            QCC_ASSERT(idx <= count);
             acls[idx++] = policy.GetAcls()[cnt];
         }
         policy.SetAcls(count, acls);

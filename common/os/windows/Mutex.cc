@@ -23,7 +23,6 @@
 #include <qcc/platform.h>
 
 #include <windows.h>
-#include <assert.h>
 #include <stdio.h>
 
 #include <qcc/Thread.h>
@@ -37,7 +36,7 @@ using namespace qcc;
 
 void Mutex::Init()
 {
-    assert(!isInitialized);
+    QCC_ASSERT(!isInitialized);
 #ifndef NDEBUG
     file = NULL;
     line = static_cast<uint32_t>(-1);
@@ -56,7 +55,7 @@ void Mutex::Destroy()
 
 QStatus Mutex::Lock()
 {
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
@@ -66,7 +65,7 @@ QStatus Mutex::Lock()
 
 QStatus Mutex::Unlock()
 {
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
@@ -76,7 +75,7 @@ QStatus Mutex::Unlock()
 
 bool Mutex::TryLock()
 {
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     if (!isInitialized) {
         return false;
     }

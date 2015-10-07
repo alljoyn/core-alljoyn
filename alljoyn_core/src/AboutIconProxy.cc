@@ -27,7 +27,7 @@ AboutIconProxy::AboutIconProxy(ajn::BusAttachment& bus, const char* busName, Ses
 {
     QCC_DbgTrace(("AboutIcontClient::%s", __FUNCTION__));
     const InterfaceDescription* p_InterfaceDescription = bus.GetInterface(org::alljoyn::Icon::InterfaceName);
-    assert(p_InterfaceDescription);
+    QCC_ASSERT(p_InterfaceDescription);
     AddInterface(*p_InterfaceDescription);
 }
 

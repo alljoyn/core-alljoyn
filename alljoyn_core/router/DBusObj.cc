@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
@@ -196,7 +195,7 @@ void DBusObj::NameHasOwner(const InterfaceDescription::Member* member, Message& 
 
     /* Get the name */
     const MsgArg* nameArg = msg->GetArg(0);
-    assert(nameArg && (ALLJOYN_STRING == nameArg->typeId));
+    QCC_ASSERT(nameArg && (ALLJOYN_STRING == nameArg->typeId));
 
     /* Find name */
     boolArg.v_bool = router.FindEndpoint(nameArg->v_string.str)->IsValid();
@@ -252,7 +251,7 @@ void DBusObj::ReleaseName(const InterfaceDescription::Member* member, Message& m
     void* context = (void*) &msg;
 
     const MsgArg* nameArg = msg->GetArg(0);
-    assert(nameArg && (ALLJOYN_STRING == nameArg->typeId));
+    QCC_ASSERT(nameArg && (ALLJOYN_STRING == nameArg->typeId));
 
     /* Attempt to remove the alias */
     uint32_t disposition;
@@ -352,7 +351,7 @@ void DBusObj::AddMatch(const InterfaceDescription::Member* member, Message& msg)
     QStatus status;
     const MsgArg* nameArg = msg->GetArg(0);
 
-    assert(nameArg && (nameArg->typeId == ALLJOYN_STRING));
+    QCC_ASSERT(nameArg && (nameArg->typeId == ALLJOYN_STRING));
 
     Rule rule(nameArg->v_string.str, &status);
     if (ER_OK == status) {
@@ -378,7 +377,7 @@ void DBusObj::RemoveMatch(const InterfaceDescription::Member* member, Message& m
     QStatus status;
     const MsgArg* nameArg = msg->GetArg(0);
 
-    assert(nameArg && (nameArg->typeId == ALLJOYN_STRING));
+    QCC_ASSERT(nameArg && (nameArg->typeId == ALLJOYN_STRING));
 
     Rule rule(nameArg->v_string.str, &status);
     if (ER_OK == status) {
@@ -429,7 +428,7 @@ void DBusObj::ListQueuedOwners(const InterfaceDescription::Member* member, Messa
     QCC_UNUSED(member);
 
     const MsgArg* nameArg = msg->GetArg(0);
-    assert(nameArg && (ALLJOYN_STRING == nameArg->typeId));
+    QCC_ASSERT(nameArg && (ALLJOYN_STRING == nameArg->typeId));
 
     vector<qcc::String> namesVec;
     router.GetQueuedNames(nameArg->v_string.str, namesVec);
@@ -499,7 +498,7 @@ void DBusObj::AddAliasComplete(const qcc::String& aliasName, uint32_t dispositio
 {
     QCC_UNUSED(aliasName);
 
-    assert(context);
+    QCC_ASSERT(context);
     Message* msg = (Message*) context;
     MsgArg replyArg(ALLJOYN_UINT32);
     replyArg.v_uint32 = (uint32_t) disposition;
@@ -515,7 +514,7 @@ void DBusObj::RemoveAliasComplete(const qcc::String& aliasName,
 {
     QCC_UNUSED(aliasName);
 
-    assert(context);
+    QCC_ASSERT(context);
     Message* msg = (Message*) context;
     MsgArg replyArg(ALLJOYN_UINT32);
     replyArg.v_uint32 = (uint32_t)disposition;
@@ -552,7 +551,7 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias,
                                                                                    shortGuidStr.c_str(),
                                                                                    shortGuidStr.size()))) {
             const InterfaceDescription::Member* nameLost = dbusIntf->GetMember("NameLost");
-            assert(nameLost);
+            QCC_ASSERT(nameLost);
             status = Signal(oldOwner->c_str(), 0, *nameLost, &aliasArg, 1);
             if (ER_OK != status) {
                 QCC_DbgPrintf(("Failed to send NameLost signal for %s to %s (%s)", alias.c_str(), oldOwner->c_str(), QCC_StatusText(status)));
@@ -563,7 +562,7 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias,
         if (newOwner && !newOwner->empty() && (0 == ::strncmp(newOwner->c_str() + 1, shortGuidStr.c_str(),
                                                               shortGuidStr.size()))) {
             const InterfaceDescription::Member* nameAcquired = dbusIntf->GetMember("NameAcquired");
-            assert(nameAcquired);
+            QCC_ASSERT(nameAcquired);
             status = Signal(newOwner->c_str(), 0, *nameAcquired, &aliasArg, 1);
             if (ER_OK != status) {
                 QCC_DbgPrintf(("Failed to send NameAcquired signal for %s to %s (%s)", alias.c_str(), newOwner->c_str(), QCC_StatusText(status)));
@@ -582,7 +581,7 @@ void DBusObj::NameOwnerChanged(const qcc::String& alias,
                     (newOwner && SessionOpts::SLS_NAMES != newOwnerNameTransfer) ? newOwner->c_str() : "");
 
         const InterfaceDescription::Member* nameOwnerChanged = dbusIntf->GetMember("NameOwnerChanged");
-        assert(nameOwnerChanged);
+        QCC_ASSERT(nameOwnerChanged);
         status = Signal(NULL, 0, *nameOwnerChanged, ownerChangedArgs, numArgs);
         if (status != ER_OK) {
             QCC_DbgPrintf(("Failed to send NameOwnerChanged signal for %s to %s (%s)", alias.c_str(), newOwner ? newOwner->c_str() : "", QCC_StatusText(status)));

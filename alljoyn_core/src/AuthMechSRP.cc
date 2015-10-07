@@ -22,8 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
-
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
 #include <qcc/Debug.h>

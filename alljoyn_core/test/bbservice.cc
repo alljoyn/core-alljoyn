@@ -20,7 +20,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
@@ -436,7 +435,7 @@ class LocalTestObject : public BusObject {
 
         /* Add the test interface to this object */
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
-        assert(regTestIntf);
+        QCC_ASSERT(regTestIntf);
         if (g_useAboutFeatureDiscovery) {
             AddInterface(*regTestIntf, ANNOUNCED);
         } else {
@@ -444,7 +443,7 @@ class LocalTestObject : public BusObject {
         }
         /* Add the values interface to this object */
         const InterfaceDescription* valuesIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::values::InterfaceName);
-        assert(valuesIntf);
+        QCC_ASSERT(valuesIntf);
         if (g_useAboutFeatureDiscovery) {
             AddInterface(*valuesIntf, ANNOUNCED);
         } else {
@@ -453,7 +452,7 @@ class LocalTestObject : public BusObject {
 
         /* Register the signal handler with the bus */
         const InterfaceDescription::Member* member = regTestIntf->GetMember("my_signal");
-        assert(member);
+        QCC_ASSERT(member);
         status = bus.RegisterSignalHandler(this,
                                            static_cast<MessageReceiver::SignalHandler>(&LocalTestObject::SignalHandler),
                                            member,

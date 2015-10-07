@@ -226,7 +226,7 @@ NamedPipeClientTransport::NamedPipeClientTransport(BusAttachment& bus)
 
 void NamedPipeClientTransport::Init()
 {
-    assert(NamedPipeClientTransport::NamedPipeTransportName == nullptr);
+    QCC_ASSERT(NamedPipeClientTransport::NamedPipeTransportName == nullptr);
 
     if (qcc::NamedPipeWrapper::AreApisAvailable()) {
         NamedPipeClientTransport::NamedPipeTransportName = "npipe";

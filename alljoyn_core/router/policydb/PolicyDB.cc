@@ -156,8 +156,8 @@ StringID _PolicyDB::LookupStringID(const char* key) const
 
 const _PolicyDB::IDSet _PolicyDB::LookupStringIDPrefix(const char* idStr, char sep) const
 {
-    assert(idStr);
-    assert(sep != '\0');
+    QCC_ASSERT(idStr);
+    QCC_ASSERT(sep != '\0');
     IDSet ret;
     char* prefix = strdup(idStr); // duplicate idStr since we are modifying it
 
@@ -364,7 +364,7 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
     QCC_DEBUG_ONLY(rule.ruleString += "/>");
 
     if (success && !skip) {
-        assert(policyGroup != RULE_UNKNOWN);
+        QCC_ASSERT(policyGroup != RULE_UNKNOWN);
 
         if (policyGroup & RULE_SEND) {
             sendList.push_back(rule);
@@ -615,7 +615,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
         IDSet bnids;
         BusNameIDMap::iterator it = busNameIDMap.find(*newOwner);
         if (it != busNameIDMap.end()) {
-            assert(alias != *newOwner);
+            QCC_ASSERT(alias != *newOwner);
             bnids = it->second;
         }
         if ((aliasID != ID_NOT_FOUND) && (aliasID != WILDCARD)) {

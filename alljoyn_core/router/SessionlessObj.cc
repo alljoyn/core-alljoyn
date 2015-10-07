@@ -194,11 +194,11 @@ QStatus SessionlessObj::Init()
 
     /* Cache requestSignals, requestRange, and requestRangeMatch interface members */
     requestSignalsSignal = sessionlessIntf->GetMember("RequestSignals");
-    assert(requestSignalsSignal);
+    QCC_ASSERT(requestSignalsSignal);
     requestRangeSignal = sessionlessIntf->GetMember("RequestRange");
-    assert(requestRangeSignal);
+    QCC_ASSERT(requestRangeSignal);
     requestRangeMatchSignal = sessionlessIntf->GetMember("RequestRangeMatch");
-    assert(requestRangeMatchSignal);
+    QCC_ASSERT(requestRangeMatchSignal);
 
     /* Register a signal handler for requestSignals */
     status = bus.RegisterSignalHandler(this,
@@ -230,7 +230,7 @@ QStatus SessionlessObj::Init()
     /* Register signal handler for FoundAdvertisedName */
     /* (If we werent in the daemon, we could just use BusListener, but it doesnt work without the full BusAttachment implementation */
     const InterfaceDescription* ajIntf = bus.GetInterface(org::alljoyn::Bus::InterfaceName);
-    assert(ajIntf);
+    QCC_ASSERT(ajIntf);
     status = bus.RegisterSignalHandler(this,
                                        static_cast<MessageReceiver::SignalHandler>(&SessionlessObj::FoundAdvertisedNameSignalHandler),
                                        ajIntf->GetMember("FoundAdvertisedName"),
@@ -1321,7 +1321,7 @@ void SessionlessObj::FindAdvertisedNames()
         String name;
         String epName = rit->first;
         BusEndpoint ep = router.FindEndpoint(epName);
-        assert(!ep->IsValid() || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL || ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE));
+        QCC_ASSERT(!ep->IsValid() || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL || ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE));
         bool epCanReceive = ep->IsValid() && ep->AllowRemoteMessages();
         if (!epCanReceive) {
             /* Don't waste network traffic finding names for messages we can't receive. */

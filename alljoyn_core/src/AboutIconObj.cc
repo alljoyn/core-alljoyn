@@ -36,7 +36,7 @@ AboutIconObj::AboutIconObj(ajn::BusAttachment& bus, AboutIcon& icon) :
     if (m_busAttachment) {
         intf = m_busAttachment->GetInterface(org::alljoyn::Icon::InterfaceName);
     }
-    assert(intf != NULL);
+    QCC_ASSERT(intf != NULL);
 
     status = AddInterface(*intf, ANNOUNCED);
     QCC_DbgPrintf(("Add AboutIcon interface %s\n", QCC_StatusText(status)));

@@ -23,7 +23,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <ctype.h>
 #include <string.h>
 
@@ -329,7 +328,7 @@ KeyBlob::KeyBlob(const KeyBlob& other)
 KeyBlob& KeyBlob::operator=(const KeyBlob& other)
 {
     if (this != &other) {
-        assert(other.blobType < INVALID);
+        QCC_ASSERT(other.blobType < INVALID);
         Erase();
         version = other.version;
         if (other.blobType != EMPTY) {

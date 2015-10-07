@@ -26,7 +26,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
@@ -69,7 +68,7 @@ class BasicSampleObject : public BusObject {
     {
         /** Add the test interface to this object */
         const InterfaceDescription* exampleIntf = bus.GetInterface(SERVICE_NAME);
-        assert(exampleIntf);
+        QCC_ASSERT(exampleIntf);
         AddInterface(*exampleIntf);
 
         /** Register the method handlers with the object */

@@ -22,7 +22,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <qcc/platform.h>
 #include <qcc/GUID.h>
 #include <qcc/CryptoECC.h>

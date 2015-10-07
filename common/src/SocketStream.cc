@@ -158,7 +158,7 @@ QStatus SocketStream::Shutdown()
          * that is already closed.  Since we should not be doing this, assert
          * here.
          */
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         return status;
     }
 }
@@ -176,7 +176,7 @@ QStatus SocketStream::Abort()
          * that is already closed.  Since we should not be doing this, assert
          * here.
          */
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         return status;
     }
 }

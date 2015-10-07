@@ -144,7 +144,7 @@ QStatus SecurityApplicationObj::State(const qcc::KeyInfoNISTP256& publicKeyInfo,
     }
 
     const ajn::InterfaceDescription::Member* stateSignalMember = ifc->GetMember("State");
-    assert(stateSignalMember);
+    QCC_ASSERT(stateSignalMember);
 
     size_t stateArgsSize = 2;
     MsgArg stateArgs[2];

@@ -239,7 +239,7 @@ QStatus BundledRouter::Start(NullTransport* nullTransport)
     lock.Lock(MUTEX_CONTEXT);
     while (stopping) {
         if (!transports.empty()) {
-            assert(transports.empty());
+            QCC_ASSERT(transports.empty());
         }
         lock.Unlock(MUTEX_CONTEXT);
         qcc::Sleep(5);

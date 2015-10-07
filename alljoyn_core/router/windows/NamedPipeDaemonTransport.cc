@@ -173,7 +173,7 @@ _NamedPipeDaemonEndpoint::_NamedPipeDaemonEndpoint(_In_ BusAttachment& bus, _In_
 _NamedPipeDaemonEndpoint::~_NamedPipeDaemonEndpoint()
 {
     QCC_DbgTrace(("~_NamedPipeDaemonEndpoint: m_threadPoolWork = 0x%p", m_threadPoolWork));
-    assert(m_threadPoolWork == nullptr);
+    QCC_ASSERT(m_threadPoolWork == nullptr);
 }
 
 QStatus _NamedPipeDaemonEndpoint::Stop()
@@ -210,10 +210,10 @@ QStatus _NamedPipeDaemonEndpoint::AuthStart()
 {
     QCC_DbgTrace(("AuthStart"));
     QStatus status = ER_OK;
-    assert(m_threadPoolWork == nullptr);
+    QCC_ASSERT(m_threadPoolWork == nullptr);
 
     if (!TryToChangeAuthState(AUTH_INITIALIZED, AUTH_AUTHENTICATING)) {
-        assert(m_authState == AUTH_STOPPED);
+        QCC_ASSERT(m_authState == AUTH_STOPPED);
         QCC_DbgHLPrintf(("AuthStart: already stopped"));
     } else {
         /*
@@ -276,7 +276,7 @@ void _NamedPipeDaemonEndpoint::AuthenticationWorker(_Inout_ PTP_CALLBACK_INSTANC
      * Check if AuthStop() changed the state to AUTH_STOPPING while executing PullBytes() above.
      */
     if ((status == ER_OK) && (conn->m_authState != AUTH_AUTHENTICATING)) {
-        assert(conn->m_authState == AUTH_STOPPING);
+        QCC_ASSERT(conn->m_authState == AUTH_STOPPING);
         status = ER_STOPPING_THREAD;
     }
 
@@ -487,13 +487,13 @@ void _NamedPipeDaemonEndpoint::AuthenticationWorker(_Inout_ PTP_CALLBACK_INSTANC
             conn->GetFeatures().protocolVersion = ALLJOYN_PROTOCOL_VERSION;
             status = conn->Start();
         } else if (!conn->TryToChangeAuthState(AUTH_STOPPING, AUTH_STOPPED)) {
-            assert(false);
+            QCC_ASSERT(false);
         }
     } else {
         if (conn->TryToChangeAuthState(AUTH_AUTHENTICATING, AUTH_FAILED)) {
             QCC_DbgHLPrintf(("Worker: auth failed"));
         } else if (!conn->TryToChangeAuthState(AUTH_STOPPING, AUTH_STOPPED)) {
-            assert(false);
+            QCC_ASSERT(false);
         }
     }
 
@@ -517,7 +517,7 @@ NamedPipeDaemonTransport::NamedPipeDaemonTransport(_In_ BusAttachment& bus)
     /*
      * We know we are daemon code, so we'd better be running with a daemon router.
      */
-    assert(bus.GetInternal().GetRouter().IsDaemon());
+    QCC_ASSERT(bus.GetInternal().GetRouter().IsDaemon());
 }
 
 NamedPipeDaemonTransport::~NamedPipeDaemonTransport()
@@ -537,7 +537,7 @@ void* NamedPipeDaemonTransport::Run(_In_ void* arg)
             m_authFinishedEvent.ResetEvent();
             ManageAuthenticatingEndpoints();
         } else {
-            assert(IsTransportStopping());
+            QCC_ASSERT(IsTransportStopping());
             break;
         }
     }
@@ -733,7 +733,7 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
             QCC_DbgHLPrintf(("NamedPipeAcceptThread: Accepted client connection on pipeHandle 0x%p", pipeHandle));
         } else {
             if (acceptResult == ERROR_OPERATION_ABORTED) {
-                assert(IsStopping());
+                QCC_ASSERT(IsStopping());
                 QCC_DbgHLPrintf(("NamedPipeAcceptThread: transport is stopping"));
                 status = ER_STOPPING_THREAD;
             } else {
@@ -742,7 +742,7 @@ void* NamedPipeAcceptThread::Run(_In_ void* arg)
             }
 
             BOOL success = qcc::NamedPipeWrapper::AllJoynCloseBusHandle(pipeHandle);
-            assert(success);
+            QCC_ASSERT(success);
         }
 
         if (status == ER_OK) {

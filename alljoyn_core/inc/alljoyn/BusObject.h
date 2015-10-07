@@ -25,7 +25,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <qcc/String.h>
 #include <alljoyn/InterfaceDescription.h>
@@ -141,7 +140,7 @@ class BusObject : public MessageReceiver {
      */
     const BusAttachment& GetBusAttachment() const
     {
-        assert(bus);
+        QCC_ASSERT(bus);
         return *bus;
     }
 

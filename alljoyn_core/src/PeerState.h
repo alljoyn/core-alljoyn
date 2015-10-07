@@ -29,7 +29,6 @@
 
 #include <map>
 #include <limits>
-#include <assert.h>
 
 #include <alljoyn/Message.h>
 

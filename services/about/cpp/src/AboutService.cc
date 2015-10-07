@@ -68,7 +68,7 @@ QStatus AboutService::Register(int port) {
         }
 
         m_AnnounceSignalMember = p_InterfaceDescription->GetMember("Announce");
-        assert(m_AnnounceSignalMember);
+        QCC_ASSERT(m_AnnounceSignalMember);
     }
 
     return (status == ER_BUS_IFACE_ALREADY_EXISTS) ? ER_OK : status;

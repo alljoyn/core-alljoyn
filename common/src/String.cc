@@ -23,7 +23,6 @@
 #include <qcc/atomic.h>
 #include <qcc/String.h>
 #include <qcc/Util.h>
-#include <assert.h>
 #include <limits>
 #include <new>
 
@@ -573,7 +572,7 @@ void String::NewContext(const char* str, size_t strLen, size_t sizeHint)
     size_t capacity = MAX(MinCapacity, MAX(strLen, sizeHint));
     size_t mallocSz = capacity + 1 + sizeof(ManagedCtx) - MinCapacity;
     void* newCtxMem = malloc(mallocSz);
-    assert(newCtxMem);
+    QCC_ASSERT(newCtxMem);
     if (NULL == newCtxMem) {
         abort();
     }

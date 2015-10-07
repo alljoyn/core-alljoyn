@@ -19,7 +19,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <qcc/Debug.h>
 #include <qcc/SocketTypes.h>
 #include <qcc/IPAddress.h>
@@ -77,7 +76,7 @@ size_t StringData::GetSerializedSize(void) const
 size_t StringData::Serialize(uint8_t* buffer) const
 {
     QCC_DbgPrintf(("StringData::Serialize(): %s to buffer 0x%x", m_string.c_str(), buffer));
-    assert(m_size == m_string.size());
+    QCC_ASSERT(m_size == m_string.size());
     buffer[0] = static_cast<uint8_t>(m_size);
     memcpy(reinterpret_cast<void*>(&buffer[1]), const_cast<void*>(reinterpret_cast<const void*>(m_string.c_str())), m_size);
 
@@ -305,7 +304,7 @@ uint32_t IsAt::GetNumberNames(void) const
 
 qcc::String IsAt::GetName(uint32_t index) const
 {
-    assert(index < m_names.size());
+    QCC_ASSERT(index < m_names.size());
     return m_names[index];
 }
 
@@ -418,7 +417,7 @@ size_t IsAt::GetSerializedSize(void) const
         break;
 
     default:
-        assert(false && "IsAt::GetSerializedSize(): Unexpected version");
+        QCC_ASSERT(false && "IsAt::GetSerializedSize(): Unexpected version");
         QCC_LogError(ER_WARNING, ("IsAt::GetSerializedSize(): Unexpected version %d", m_version & 0xf));
         size = 0;
         break;
@@ -483,7 +482,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         //
         // The second octet is the count of bus names.
         //
-        assert(m_names.size() < 256);
+        QCC_ASSERT(m_names.size() < 256);
         buffer[1] = static_cast<uint8_t>(m_names.size());
         QCC_DbgPrintf(("IsAt::Serialize(): Count %d", m_names.size()));
         size += 1;
@@ -583,7 +582,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         //
         // The second octet is the count of bus names.
         //
-        assert(m_names.size() < 256);
+        QCC_ASSERT(m_names.size() < 256);
         buffer[1] = static_cast<uint8_t>(m_names.size());
         QCC_DbgPrintf(("IsAt::Serialize(): Count %d", m_names.size()));
         size += 1;
@@ -691,7 +690,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         break;
 
     default:
-        assert(false && "IsAt::Serialize(): Unexpected version");
+        QCC_ASSERT(false && "IsAt::Serialize(): Unexpected version");
         break;
     }
 
@@ -1068,7 +1067,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         break;
 
     default:
-        assert(false && "IsAt::Deserialize(): Unexpected version");
+        QCC_ASSERT(false && "IsAt::Deserialize(): Unexpected version");
         break;
     }
     return size;
@@ -1100,7 +1099,7 @@ uint32_t WhoHas::GetNumberNames(void) const
 
 qcc::String WhoHas::GetName(uint32_t index) const
 {
-    assert(index < m_names.size());
+    QCC_ASSERT(index < m_names.size());
     return m_names[index];
 }
 
@@ -1138,7 +1137,7 @@ size_t WhoHas::GetSerializedSize(void) const
         break;
 
     default:
-        assert(false && "WhoHas::GetSerializedSize(): Unexpected version");
+        QCC_ASSERT(false && "WhoHas::GetSerializedSize(): Unexpected version");
         break;
     }
 
@@ -1196,7 +1195,7 @@ size_t WhoHas::Serialize(uint8_t* buffer) const
     //
     // The second octet is the count of bus names.
     //
-    assert(m_names.size() < 256);
+    QCC_ASSERT(m_names.size() < 256);
     buffer[1] = static_cast<uint8_t>(m_names.size());
     QCC_DbgPrintf(("WhoHas::Serialize(): Count %d", m_names.size()));
     size += 1;
@@ -1292,7 +1291,7 @@ size_t WhoHas::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         break;
 
     default:
-        assert(false && "WhoHas::Deserialize(): Unexpected version");
+        QCC_ASSERT(false && "WhoHas::Deserialize(): Unexpected version");
         break;
     }
 
@@ -1372,14 +1371,14 @@ uint32_t _NSPacket::GetNumberQuestions(void) const
 
 WhoHas _NSPacket::GetQuestion(uint32_t index) const
 {
-    assert(index < m_questions.size());
+    QCC_ASSERT(index < m_questions.size());
     return m_questions[index];
 }
 
 
 void _NSPacket::GetQuestion(uint32_t index, WhoHas** question)
 {
-    assert(index < m_questions.size());
+    QCC_ASSERT(index < m_questions.size());
     *question = &m_questions[index];
 }
 
@@ -1403,13 +1402,13 @@ uint32_t _NSPacket::GetNumberAnswers(void) const
 
 IsAt _NSPacket::GetAnswer(uint32_t index) const
 {
-    assert(index < m_answers.size());
+    QCC_ASSERT(index < m_answers.size());
     return m_answers[index];
 }
 
 void _NSPacket::GetAnswer(uint32_t index, IsAt** answer)
 {
-    assert(index < m_answers.size());
+    QCC_ASSERT(index < m_answers.size());
     *answer = &m_answers[index];
 }
 
@@ -1881,7 +1880,7 @@ MDNSResourceRecord::~MDNSResourceRecord()
 
 size_t MDNSResourceRecord::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
 {
-    assert(m_rdata);
+    QCC_ASSERT(m_rdata);
     size_t size = m_rrDomainName.GetSerializedSize(offsets);
     size += 8;
     size += m_rdata->GetSerializedSize(offsets);
@@ -1890,7 +1889,7 @@ size_t MDNSResourceRecord::GetSerializedSize(std::map<qcc::String, uint32_t>& of
 
 size_t MDNSResourceRecord::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
 {
-    assert(m_rdata);
+    QCC_ASSERT(m_rdata);
 
     //
     // Serialize the NAME first
@@ -2234,7 +2233,7 @@ size_t MDNSTextRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>
     // txtvers must appear first in the record
     //
     Fields::const_iterator txtvers = m_fields.find("txtvers");
-    assert(txtvers != m_fields.end());
+    QCC_ASSERT(txtvers != m_fields.end());
     String str = txtvers->first + "=" + txtvers->second;
     *p++ = str.length();
     memcpy(reinterpret_cast<void*>(p), const_cast<void*>(reinterpret_cast<const void*>(str.c_str())), str.length());
@@ -3157,7 +3156,7 @@ size_t MDNSHeader::Serialize(uint8_t* buffer) const
     //
     // The next two octets are QDCOUNT
     //
-    //assert((m_qdCount == 0) || (m_qdCount == 1));
+    //QCC_ASSERT((m_qdCount == 0) || (m_qdCount == 1));
     buffer[4] = 0;
     buffer[5] = m_qdCount;
     QCC_DbgPrintf(("Header::Serialize(): QDCOUNT = %d", buffer[5]));
@@ -3167,7 +3166,7 @@ size_t MDNSHeader::Serialize(uint8_t* buffer) const
     //
     // The next two octets are ANCOUNT
     //
-    //assert((m_anCount == 0) || (m_anCount == 1));
+    //QCC_ASSERT((m_anCount == 0) || (m_anCount == 1));
     buffer[6] = 0;
     buffer[7] = m_anCount;
     QCC_DbgPrintf(("Header::Serialize(): ANCOUNT = %d", buffer[7]));
@@ -3241,14 +3240,14 @@ size_t MDNSHeader::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     // The next two octets are QDCOUNT
     //
     m_qdCount = buffer[5];
-    //assert((m_qdCount == 0) || (m_qdCount == 1));
+    //QCC_ASSERT((m_qdCount == 0) || (m_qdCount == 1));
     size += 2;
 
     //
     // The next two octets are ANCOUNT
     //
     m_anCount = (buffer[6] << 8) | buffer[7];
-    //assert((m_anCount == 0) || (m_anCount == 1));
+    //QCC_ASSERT((m_anCount == 0) || (m_anCount == 1));
     size += 2;
 
     //
@@ -3309,7 +3308,7 @@ MDNSHeader _MDNSPacket::GetHeader()
 void _MDNSPacket::AddQuestion(MDNSQuestion question)
 {
     m_questions.push_back(question);
-    assert(m_questions.size() <= MIN_RESERVE);
+    QCC_ASSERT(m_questions.size() <= MIN_RESERVE);
     m_header.SetQDCount(m_questions.size());
 }
 
@@ -3342,7 +3341,7 @@ void _MDNSPacket::AddAdditionalRecord(MDNSResourceRecord record)
 {
 
     m_additional.push_back(record);
-    assert(m_additional.size() <= MIN_RESERVE);
+    QCC_ASSERT(m_additional.size() <= MIN_RESERVE);
     m_header.SetARCount(m_additional.size());
 }
 
@@ -3489,7 +3488,7 @@ bool _MDNSPacket::GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, ui
 void _MDNSPacket::AddAnswer(MDNSResourceRecord record)
 {
     m_answers.push_back(record);
-    assert(m_answers.size() <= MIN_RESERVE);
+    QCC_ASSERT(m_answers.size() <= MIN_RESERVE);
     m_header.SetANCount(m_answers.size());
 }
 

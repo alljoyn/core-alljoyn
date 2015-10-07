@@ -25,7 +25,6 @@
 #include <qcc/SLAPPacket.h>
 #include <qcc/Debug.h>
 #include <qcc/Util.h>
-#include <assert.h>
 #include <memory.h>
 
 #define QCC_MODULE "SLAP"
@@ -164,7 +163,7 @@ QStatus SLAPReadPacket::DeSlip(uint8_t*& bufIn, size_t& lenIn)
             break;
 
         default:
-            assert(0);
+            QCC_ASSERT(0);
         }
     }
 
@@ -378,7 +377,7 @@ void SLAPWritePacket::ControlPacket(ControlPacketType type, uint8_t* configField
     memcpy(m_payloadBuffer, LinkCtrlPacketNames[type], 4);
 
     if (type == NEGO_PKT || type == NEGO_RESP_PKT) {
-        assert(configField);
+        QCC_ASSERT(configField);
         memcpy(&m_payloadBuffer[4], configField, 3);
         m_payloadLen += 3;
         QCC_DbgPrintf(("SLAP Sending control packet %s. m_configField = %X %X %X", LinkCtrlPacketNames[type], configField[0], configField[1], configField[2]));

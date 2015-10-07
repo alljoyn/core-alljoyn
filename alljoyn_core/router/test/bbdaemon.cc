@@ -105,7 +105,7 @@ class LocalTestObject : public BusObject {
 
         /* Add the test interface to this object */
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
-        assert(regTestIntf);
+        QCC_ASSERT(regTestIntf);
         AddInterface(*regTestIntf);
         /* Add the values interface to this object */
         const InterfaceDescription* valuesIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::values::InterfaceName);
@@ -133,7 +133,7 @@ class LocalTestObject : public BusObject {
 
     void ObjectRegistered(void) {
         BusObject::ObjectRegistered();
-        assert(bus);
+        QCC_ASSERT(bus);
 
         /* Request a well-known name */
         /* Note that you cannot make a blocking method call here */

@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <qcc/Debug.h>
 #include <qcc/String.h>
@@ -80,7 +79,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
     QStatus status = ER_OK;
     InterfaceSecurityPolicy secPolicy;
 
-    assert(elem->GetName() == "interface");
+    QCC_ASSERT(elem->GetName() == "interface");
 
     qcc::String ifName = elem->GetAttribute("name");
     if (!IsLegalInterfaceName(ifName.c_str())) {
@@ -323,7 +322,7 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
 {
     QStatus status = ER_OK;
 
-    assert(root->GetName() == "node");
+    QCC_ASSERT(root->GetName() == "node");
 
     if (GetSecureAnnotation(root) == "true") {
         if (obj) {

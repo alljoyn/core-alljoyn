@@ -88,7 +88,7 @@ class PerfTest : public::testing::Test {
 
 
         status = serviceBus->CreateInterface(myService->getAlljoynInterfaceName(), regTestIntf);
-        assert(regTestIntf);
+        QCC_ASSERT(regTestIntf);
 
         /* Adding a signal to no */
         status = regTestIntf->AddSignal("my_signal", "s", NULL, 0);
@@ -108,7 +108,7 @@ class PerfTest : public::testing::Test {
 
         InterfaceDescription* valuesIntf = NULL;
         status = serviceBus->CreateInterface(myService->getAlljoynValuesInterfaceName(), valuesIntf);
-        assert(valuesIntf);
+        QCC_ASSERT(valuesIntf);
         EXPECT_EQ(ER_OK, status);
         status = valuesIntf->AddProperty("int_val", "i", PROP_ACCESS_RW);
         EXPECT_EQ(ER_OK, status);
@@ -154,7 +154,7 @@ class PerfTest : public::testing::Test {
         InterfaceDescription* regTestIntf2 = NULL;
         status = serviceBus->CreateInterface(myService->getServiceInterfaceName(), regTestIntf2);
         EXPECT_EQ(ER_OK, status);
-        assert(regTestIntf2);
+        QCC_ASSERT(regTestIntf2);
 
         /* Adding a signal to no */
         status = regTestIntf2->AddSignal("my_signal", "s", NULL, 0);
@@ -176,7 +176,7 @@ class PerfTest : public::testing::Test {
 
         InterfaceDescription* valuesIntf2 = NULL;
         status = serviceBus->CreateInterface(myService->getServiceValuesInterfaceName(), valuesIntf2);
-        assert(valuesIntf2);
+        QCC_ASSERT(valuesIntf2);
         EXPECT_EQ(ER_OK, status);
         status = valuesIntf2->AddProperty("int_val", "i", PROP_ACCESS_RW);
         EXPECT_EQ(ER_OK, status);

@@ -22,7 +22,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <limits>
 #include <map>
 #include <set>
@@ -197,7 +196,7 @@ QStatus AllJoynObj::Init()
         return status;
     }
     detachSessionSignal = daemonIface->GetMember("DetachSession");
-    assert(detachSessionSignal);
+    QCC_ASSERT(detachSessionSignal);
 
     /* Hook up the methods to their handlers */
     const MethodEntry daemonMethodEntries[] = {
@@ -625,7 +624,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
         /* Decide how to proceed based on the session endpoint existence/type */
         VirtualEndpoint vSessionEp;
 
-        assert(sessionHost);
+        QCC_ASSERT(sessionHost);
         QCC_DbgPrintf(("JoinSessionThread::RunJoin(): sessionHost=\"%s\"", sessionHost));
         BusEndpoint ep = ajObj.FindEndpoint(sessionHost);
         if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
@@ -1263,7 +1262,7 @@ void AllJoynObj::JoinSessionThread::GetBusAddrsFromSession(const char* sessionHo
         String controllerName = hostEp->GetControllerUniqueName();
         ProxyBusObject rObj(ajObj.bus, controllerName.c_str(), org::alljoyn::Daemon::ObjectPath, 0);
         const InterfaceDescription* intf = ajObj.bus.GetInterface(org::alljoyn::Daemon::InterfaceName);
-        assert(intf);
+        QCC_ASSERT(intf);
         rObj.AddInterface(*intf);
         QCC_DbgPrintf(("Calling GetSessionInfo(%s, %u, <%x, %x, %x>) on %s",
                        sendArgs[0].v_string.str,
@@ -1424,7 +1423,7 @@ uint32_t AllJoynObj::CheckLeaveSession(const SessionMapEntry*smEntry, const char
         }
         if (smEntry->sessionHost == sender) {
             senderWasSelfJoined = true;
-            assert(smEntry->IsSelfJoin());
+            QCC_ASSERT(smEntry->IsSelfJoin());
         }
         break;
 
@@ -1453,7 +1452,7 @@ void AllJoynObj::LeaveSessionCommon(const InterfaceDescription::Member* member, 
 
     /* Parse the message args */
     msg->GetArgs(numArgs, args);
-    assert(numArgs == 1);
+    QCC_ASSERT(numArgs == 1);
     SessionId id = static_cast<SessionId>(args[0].v_uint32);
 
     QCC_DbgTrace(("AllJoynObj::LeaveSession(%u)", id));
@@ -1514,7 +1513,7 @@ void AllJoynObj::RemoveSessionMember(const InterfaceDescription::Member* member,
     const MsgArg* args;
     /* Parse the message args */
     msg->GetArgs(numArgs, args);
-    assert(numArgs == 2);
+    QCC_ASSERT(numArgs == 2);
 
     SessionId id;
     const char* sessionMemberName;
@@ -1627,7 +1626,7 @@ void AllJoynObj::GetHostInfo(const InterfaceDescription::Member* member, Message
 
     /* Parse the message args */
     msg->GetArgs(numArgs, args);
-    assert(numArgs == 1);
+    QCC_ASSERT(numArgs == 1);
     SessionId id = static_cast<SessionId>(args[0].v_uint32);
 
     QCC_DbgPrintf(("AllJoynObj::GetHostInfo(%u)", id));
@@ -1700,7 +1699,7 @@ void AllJoynObj::ReloadConfig(const InterfaceDescription::Member* member, Messag
 }
 bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
 {
-    assert(ALLJOYN_ARRAY == arg.typeId);
+    QCC_ASSERT(ALLJOYN_ARRAY == arg.typeId);
     const MsgArg* items = arg.v_array.GetElements();
     const String& shortGuidStr = daemonGuid.ToShortString();
 
@@ -1727,7 +1726,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
             break;
         }
 
-        assert(items[i].typeId == ALLJOYN_STRUCT);
+        QCC_ASSERT(items[i].typeId == ALLJOYN_STRUCT);
         qcc::String uniqueName = items[i].v_struct.members[0].v_string.str;
         if (!IsLegalUniqueName(uniqueName.c_str())) {
             QCC_LogError(ER_FAIL, ("Invalid unique name \"%s\" in AttachSessionWithArgs/ExchangeNames message", uniqueName.c_str()));
@@ -1764,7 +1763,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
         const MsgArg* aliasItems = items[i].v_struct.members[1].v_array.GetElements();
         const size_t numAliases = items[i].v_struct.members[1].v_array.GetNumElements();
         for (size_t j = 0; j < numAliases; ++j) {
-            assert(ALLJOYN_STRING == aliasItems[j].typeId);
+            QCC_ASSERT(ALLJOYN_STRING == aliasItems[j].typeId);
             if (vep->IsValid()) {
                 ReleaseLocks();
                 madeChange = router.SetVirtualAlias(aliasItems[j].v_string.str, &vep, vep);
@@ -2872,7 +2871,7 @@ QStatus AllJoynObj::SendAcceptSession(SessionPort sessionPort,
     SetSessionOpts(inOpts, acceptArgs[3]);
     ProxyBusObject peerObj(bus, creatorName, org::alljoyn::Bus::Peer::ObjectPath, 0);
     const InterfaceDescription* sessionIntf = bus.GetInterface(org::alljoyn::Bus::Peer::Session::InterfaceName);
-    assert(sessionIntf);
+    QCC_ASSERT(sessionIntf);
     peerObj.AddInterface(*sessionIntf);
 
     QCC_DbgPrintf(("Calling AcceptSession(%d, %u, %s, <%x, %x, %x> to %s",
@@ -3053,7 +3052,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
 
     /* Parse message args */
     msg->GetArgs(numArgs, args);
-    assert(numArgs == 2);
+    QCC_ASSERT(numArgs == 2);
     SessionId id = args[0].v_uint32;
     const char* src = args[1].v_string.str;
 
@@ -4289,7 +4288,7 @@ void AllJoynObj::ExchangeNamesSignalHandler(const InterfaceDescription::Member* 
     size_t numArgs;
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
-    assert((1 == numArgs) && (ALLJOYN_ARRAY == args[0].typeId));
+    QCC_ASSERT((1 == numArgs) && (ALLJOYN_ARRAY == args[0].typeId));
 
     NamesHandler(msg, args[0]);
 
@@ -4305,7 +4304,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
     const MsgArg* args;
     msg->GetArgs(numArgs, args);
 
-    assert(daemonIface);
+    QCC_ASSERT(daemonIface);
 
     const qcc::String alias = args[0].v_string.str;
     const qcc::String oldOwner = args[1].v_string.str;
@@ -4871,7 +4870,7 @@ QStatus AllJoynObj::AddSessionRef(VirtualEndpoint vep, SessionId id, RemoteEndpo
 {
     QCC_DbgPrintf(("AllJoynObj::AddSessionRef(vep=%s, id=%u, b2bEp=%s)", vep->GetUniqueName().c_str(), id, b2bEp->GetUniqueName().c_str()));
 
-    assert(b2bEp->IsValid());
+    QCC_ASSERT(b2bEp->IsValid());
     AcquireLocks();
     QStatus status;
     VirtualEndpoint rnEp;
@@ -4933,7 +4932,7 @@ QStatus AllJoynObj::AddSessionRoute(SessionId id,
     QCC_DbgPrintf(("AllJoynObj::AddSessionRoute(%u, %s, %s, %s, %s)", id,
                    srcEp->GetUniqueName().c_str(), srcB2bEp ? (*srcB2bEp)->GetUniqueName().c_str() : "<none>",
                    destEp->GetUniqueName().c_str(), destB2bEp->GetUniqueName().c_str()));
-    assert(id != 0);
+    QCC_ASSERT(id != 0);
     QStatus status = ER_OK;
 
     bool srcIsVirt = srcEp->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL;
@@ -4950,7 +4949,7 @@ QStatus AllJoynObj::AddSessionRoute(SessionId id,
         }
     }
 
-    assert((srcIsVirt && (srcB2bEp != nullptr)) || (!srcIsVirt && (srcB2bEp == nullptr)));
+    QCC_ASSERT((srcIsVirt && (srcB2bEp != nullptr)) || (!srcIsVirt && (srcB2bEp == nullptr)));
 
     if (srcB2bEp) {
         if (srcIsVirt) {
@@ -5305,7 +5304,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
 {
     QCC_DbgPrintf(("AlarmTriggered"));
     if (alarm->GetContext() != NameMapEntry::truthiness) {
-        assert(alarm->GetContext());
+        QCC_ASSERT(alarm->GetContext());
 
         PingAlarmContext* ctx = static_cast<PingAlarmContext*>(alarm->GetContext());
         if (ctx->type == PingAlarmContext::TRANSPORT_CONTEXT) {
@@ -5316,7 +5315,7 @@ void AllJoynObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
             }
             ProxyBusObject peerObj(bus, ctx->name.c_str(), "/", 0);
             const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
-            assert(intf);
+            QCC_ASSERT(intf);
             peerObj.AddInterface(*intf);
 
             QStatus status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,
@@ -5554,7 +5553,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
         replyCode = ALLJOYN_PING_REPLY_FAILED;
         QCC_DbgTrace(("Ping(<bad_args>"));
     } else {
-        assert(name);
+        QCC_ASSERT(name);
         QCC_DbgTrace(("Ping(%s)", name));
 
         /* Decide how to proceed based on the endpoint existence/type */
@@ -5571,7 +5570,7 @@ void AllJoynObj::Ping(const InterfaceDescription::Member* member, Message& msg)
                 /* Ping is to a locally connected or remote in session attachment */
                 ProxyBusObject peerObj(bus, name, "/", 0);
                 const InterfaceDescription* intf = bus.GetInterface(org::freedesktop::DBus::Peer::InterfaceName);
-                assert(intf);
+                QCC_ASSERT(intf);
                 peerObj.AddInterface(*intf);
                 Message* ctx = new Message(msg);
                 status = peerObj.MethodCallAsync(org::freedesktop::DBus::Peer::InterfaceName,

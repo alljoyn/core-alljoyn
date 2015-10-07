@@ -34,7 +34,6 @@
 #include <new>
 
 #include <stdlib.h>
-#include <assert.h>
 
 #include <qcc/atomic.h>
 
@@ -461,7 +460,7 @@ class ManagedObj {
         IncrementAndFetch(&context->refCount);
 
 #ifndef NDEBUG
-        assert(refs != 1 && "IncRef(): Incrementing from zero reference count!");
+        QCC_ASSERT(refs != 1 && "IncRef(): Incrementing from zero reference count!");
 #endif
 
     }
@@ -488,7 +487,7 @@ class ManagedObj {
 
     ManagedObj<T>(ManagedCtx* context, T* object) : context(context), object(object)
     {
-        assert(context->magic == ManagedCtxMagic);
+        QCC_ASSERT(context->magic == ManagedCtxMagic);
         IncRef();
     }
 };

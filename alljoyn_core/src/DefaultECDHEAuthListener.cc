@@ -38,9 +38,9 @@ DefaultECDHEAuthListener::DefaultECDHEAuthListener() : AuthListener(), psk(NULL)
 
 DefaultECDHEAuthListener::DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize) : AuthListener()
 {
-    assert(pskSize >= 16);  /* psk size should be 128 bits or longer */
+    QCC_ASSERT(pskSize >= 16);  /* psk size should be 128 bits or longer */
     this->psk = new uint8_t[pskSize];
-    assert(this->psk);
+    QCC_ASSERT(this->psk);
     memcpy(this->psk, psk, pskSize);
     this->pskSize = pskSize;
 }

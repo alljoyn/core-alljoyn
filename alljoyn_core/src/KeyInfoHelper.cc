@@ -107,7 +107,7 @@ void KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(const KeyInfoNISTP256& keyInfo
     }
     if (ER_OK != status) {
         QCC_LogError(status, ("KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg failed"));
-        assert(false);
+        QCC_ASSERT(false);
     }
     /* copy the message arg for a deep copy of the array arguments */
     msgArg = localArg;
@@ -171,7 +171,7 @@ void KeyInfoHelper::KeyInfoKeyIdToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg&
     QStatus status = localArg.Set("ay", keyInfo.GetKeyIdLen(), keyInfo.GetKeyId());
     if (ER_OK != status) {
         QCC_LogError(status, ("KeyInfoHelper::KeyInfoKeyIdToMsgArg failed"));
-        assert(false);
+        QCC_ASSERT(false);
     }
     /* copy the message arg for a deep copy of the array arguments */
     msgArg = localArg;

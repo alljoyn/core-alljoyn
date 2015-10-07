@@ -189,7 +189,7 @@ class SLAPFuzzWritePacket {
         memcpy(m_payloadBuffer, LinkCtrlPacketNames[type], 4);
 
         if (type == NEGO_PKT || type == NEGO_RESP_PKT) {
-            assert(configField);
+            QCC_ASSERT(configField);
             memcpy(&m_payloadBuffer[4], configField, 3);
             m_payloadLen += 3;
 
@@ -386,7 +386,7 @@ void FuzzBuffer(Stream* link, uint8_t* buf, size_t& len, uint8_t recoverable_err
     size_t temp = len;
     uint8_t* bufPtr = buf;
     SLAPReadPacket readPkt(temp); //this is more than required but ok.
-    assert(len >= 4);
+    QCC_ASSERT(len >= 4);
     SLAPFuzzWritePacket writeFuzzPkt(len);
     //Calculate the offset of CRC.
     size_t offsetCRC = len - 3;
@@ -398,7 +398,7 @@ void FuzzBuffer(Stream* link, uint8_t* buf, size_t& len, uint8_t recoverable_err
     }
     readPkt.DeSlip(bufPtr, temp);
     readPkt.Validate();
-    assert(readPkt.GetPacketType() != -1);
+    QCC_ASSERT(readPkt.GetPacketType() != -1);
     writeFuzzPkt.CopyFromReadPacket(len, &readPkt);
 
     switch (test) {
@@ -525,7 +525,7 @@ class MyUARTStream : public UARTStream {
         return UARTStream::PullBytes(buf, numBytes, actualBytes, timeout);
     }
     QStatus PushBytes(const void* buf, size_t numBytes, size_t& actualBytes) {
-        assert(numBytes > 0);
+        QCC_ASSERT(numBytes > 0);
         /* Fuzz the data */
         uint8_t* bufPtr = new uint8_t[numBytes + 10];
         memcpy(bufPtr, buf, numBytes);

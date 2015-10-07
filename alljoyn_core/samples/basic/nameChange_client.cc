@@ -25,7 +25,6 @@
 
 #include <signal.h>
 #include <stdio.h>
-#include <assert.h>
 #include <vector>
 
 #include <qcc/String.h>

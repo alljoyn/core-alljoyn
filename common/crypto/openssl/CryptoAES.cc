@@ -23,7 +23,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <ctype.h>
 #include <math.h>
 

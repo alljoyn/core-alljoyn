@@ -639,7 +639,7 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
         } else {
             authVersion = (int32_t)AUTH_FALLBACK_VERSION;
         }
-        assert(0 <= authVersion);
+        QCC_ASSERT(0 <= authVersion);
 
         QCC_DbgHLPrintf(("Decrypting messge from %s", GetSender()));
         /*
@@ -934,7 +934,7 @@ QStatus _Message::InterpretHeader()
      * message reducing the places where we need to check for bufEOD when unmarshaling the body.
      */
     bufSize = sizeof(msgHeader) + ((pktSize + 7) & ~7) + sizeof(uint64_t);
-    assert(_msgBuf == nullptr);
+    QCC_ASSERT(_msgBuf == nullptr);
     _msgBuf = new uint8_t[bufSize + 7];
     msgBuf = (uint64_t*)((uintptr_t)(_msgBuf + 7) & ~7); /* Align to 8 byte boundary */
     /*

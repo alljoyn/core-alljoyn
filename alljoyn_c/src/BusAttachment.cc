@@ -18,7 +18,6 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#include <assert.h>
 
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn/InterfaceDescription.h>
@@ -49,7 +48,7 @@ alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(const cha
 void AJ_CALL alljoyn_busattachment_destroy(alljoyn_busattachment bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(bus != NULL && "NULL parameter passed to alljoyn_destroy_busattachment.");
+    QCC_ASSERT(bus != NULL && "NULL parameter passed to alljoyn_destroy_busattachment.");
 
     delete (ajn::BusAttachmentC*)bus;
 }

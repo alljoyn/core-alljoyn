@@ -64,7 +64,7 @@ class SessionTest : public testing::Test {
         InterfaceDescription* clienttestIntf = NULL;
         QStatus status = busClient.CreateInterface("org.test", clienttestIntf);
         EXPECT_EQ(ER_OK, status);
-        assert(NULL != clienttestIntf);
+        QCC_ASSERT(NULL != clienttestIntf);
         status = clienttestIntf->AddSignal("my_signal", "s", NULL, 0);
         EXPECT_EQ(ER_OK, status);
         clienttestIntf->Activate();
@@ -1049,7 +1049,7 @@ static::testing::AssertionResult MPJoinerLeavesAllNotificationsDone(SessionJoinT
 
 static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJoiner, BusAttachment& busJoiner2, const SessionAction*sa) {
 
-    assert(&busJoiner != &busJoiner2);         /* this would not make sense for this test */
+    QCC_ASSERT(&busJoiner != &busJoiner2);         /* this would not make sense for this test */
 
     QStatus status = ER_FAIL;
     bindMemberSessionId = 0;

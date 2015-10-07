@@ -23,7 +23,6 @@
  ******************************************************************************/
 
 #include <alljoyn/Status.h>
-#include <assert.h>
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
@@ -346,7 +345,7 @@ class ECCPublicKey {
      */
     inline const size_t GetCoordinateSize() const
     {
-        assert(sizeof(this->x) == sizeof(this->y));
+        QCC_ASSERT(sizeof(this->x) == sizeof(this->y));
 
         return sizeof(this->x);
     }

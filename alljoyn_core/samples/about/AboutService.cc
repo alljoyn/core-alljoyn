@@ -62,7 +62,7 @@ class MyBusObject : public BusObject {
         : BusObject(path) {
         QStatus status;
         const InterfaceDescription* iface = bus.GetInterface(INTERFACE_NAME);
-        assert(iface != NULL);
+        QCC_ASSERT(iface != NULL);
 
         // Here the value ANNOUNCED tells AllJoyn that this interface
         // should be announced

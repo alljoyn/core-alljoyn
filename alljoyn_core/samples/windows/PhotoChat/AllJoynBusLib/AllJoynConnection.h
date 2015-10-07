@@ -24,7 +24,6 @@
 #include <alljoyn/AllJoynStd.h>
 #include <qcc/Log.h>
 #include <qcc/String.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <share.h>

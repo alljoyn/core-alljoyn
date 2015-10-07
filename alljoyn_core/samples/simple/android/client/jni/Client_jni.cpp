@@ -24,7 +24,6 @@
 #include <qcc/String.h>
 #include <new>
 #include <android/log.h>
-#include <assert.h>
 
 #define LOG_TAG  "SimpleClient"
 

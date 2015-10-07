@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <windows.h>
 #include <bcrypt.h>
 
@@ -87,7 +86,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
     BCRYPT_KEY_DATA_BLOB_HEADER* kbh = NULL;
 
     // We depend on this being true
-    assert(sizeof(Block) == 16);
+    QCC_ASSERT(sizeof(Block) == 16);
 
     if (mode == CCM) {
         if (!cngCache.ccmHandle) {
@@ -260,7 +259,7 @@ QStatus Crypto_AES::Encrypt_CCM(const void* in, void* out, size_t& len, const Ke
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("CCM mode encryption failed NTSTATUS=%x", ntstatus));
     } else {
-        assert(len == clen);
+        QCC_ASSERT(len == clen);
         len += authLen;
     }
     return status;
@@ -328,7 +327,7 @@ QStatus Crypto_AES::Decrypt_CCM(const void* in, void* out, size_t& len, const Ke
         QCC_LogError(status, ("CCM mode decryption failed NTSTATUS=%x", ntstatus));
     } else {
         len -= authLen;
-        assert(len == clen);
+        QCC_ASSERT(len == clen);
     }
     return status;
 }

@@ -23,7 +23,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <ctype.h>
 #include <map>
 #include <stdio.h>
@@ -165,7 +164,7 @@ void DebugControl::WriteDebugMessage(DbgMsgType type, const char* module, const 
 
 void DebugControl::Register(QCC_DbgMsgCallback callback, void* cbContext)
 {
-    assert(cb != NULL);
+    QCC_ASSERT(cb != NULL);
     this->context = cbContext;
     this->cb = callback;
 }

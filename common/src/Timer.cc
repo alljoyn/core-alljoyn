@@ -381,7 +381,7 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
         /* Don't allow an infinite number of alarms to exist on this timer */
         while (maxAlarms && alarm->limitable && (numLimitableAlarms >= maxAlarms) && isRunning) {
             Thread* thread = Thread::GetThread();
-            assert(thread);
+            QCC_ASSERT(thread);
             addWaitQueue.push_front(thread);
             lock.Unlock();
             QStatus status1 = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);

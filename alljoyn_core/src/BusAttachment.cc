@@ -35,7 +35,6 @@
 #include <qcc/windows/NamedPipeWrapper.h>
 #endif
 
-#include <assert.h>
 #include <algorithm>
 
 #include <alljoyn/BusAttachment.h>
@@ -570,7 +569,7 @@ QStatus BusAttachment::RegisterSignalHandlers()
     if (!busInternal->GetRouter().IsDaemon()) {
         /* Register org.freedesktop.DBus signal handler */
         const InterfaceDescription* iface = GetInterface(org::freedesktop::DBus::InterfaceName);
-        assert(iface);
+        QCC_ASSERT(iface);
         status = RegisterSignalHandler(busInternal,
                                        static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                        iface->GetMember("NameOwnerChanged"),
@@ -584,28 +583,28 @@ QStatus BusAttachment::RegisterSignalHandlers()
         /* Register org.alljoyn.Bus signal handler */
         const InterfaceDescription* ajIface = GetInterface(org::alljoyn::Bus::InterfaceName);
         if (ER_OK == status) {
-            assert(ajIface);
+            QCC_ASSERT(ajIface);
             status = RegisterSignalHandler(busInternal,
                                            static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                            ajIface->GetMember("FoundAdvertisedName"),
                                            NULL);
         }
         if (ER_OK == status) {
-            assert(ajIface);
+            QCC_ASSERT(ajIface);
             status = RegisterSignalHandler(busInternal,
                                            static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                            ajIface->GetMember("LostAdvertisedName"),
                                            NULL);
         }
         if (ER_OK == status) {
-            assert(ajIface);
+            QCC_ASSERT(ajIface);
             status = RegisterSignalHandler(busInternal,
                                            static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                            ajIface->GetMember("SessionLostWithReasonAndDisposition"),
                                            NULL);
         }
         if (ER_OK == status) {
-            assert(ajIface);
+            QCC_ASSERT(ajIface);
             status = RegisterSignalHandler(busInternal,
                                            static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                            ajIface->GetMember("MPSessionChangedWithReason"),
@@ -613,9 +612,9 @@ QStatus BusAttachment::RegisterSignalHandlers()
         }
         const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
         if (ER_OK == status) {
-            assert(aboutIface);
+            QCC_ASSERT(aboutIface);
             const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
-            assert(announceSignalMember);
+            QCC_ASSERT(announceSignalMember);
             status = RegisterSignalHandler(busInternal,
                                            static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                            announceSignalMember,
@@ -623,9 +622,9 @@ QStatus BusAttachment::RegisterSignalHandlers()
         }
         const InterfaceDescription* applicationIface = GetInterface(org::alljoyn::Bus::Application::InterfaceName);
         if (ER_OK == status) {
-            assert(applicationIface);
+            QCC_ASSERT(applicationIface);
             const ajn::InterfaceDescription::Member* stateSignalMember = applicationIface->GetMember("State");
-            assert(stateSignalMember);
+            QCC_ASSERT(stateSignalMember);
             status = RegisterSignalHandler(busInternal,
                                            static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                            stateSignalMember,
@@ -735,7 +734,7 @@ void BusAttachment::UnregisterSignalHandlers()
         const InterfaceDescription* aboutIface = GetInterface(org::alljoyn::About::InterfaceName);
         if (aboutIface) {
             const ajn::InterfaceDescription::Member* announceSignalMember = aboutIface->GetMember("Announce");
-            assert(announceSignalMember);
+            QCC_ASSERT(announceSignalMember);
             UnregisterSignalHandler(busInternal,
                                     static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                     announceSignalMember,
@@ -744,7 +743,7 @@ void BusAttachment::UnregisterSignalHandlers()
         const InterfaceDescription* applicationIface = GetInterface(org::alljoyn::Bus::Application::InterfaceName);
         if (applicationIface) {
             const ajn::InterfaceDescription::Member* stateSignalMember = applicationIface->GetMember("State");
-            assert(stateSignalMember);
+            QCC_ASSERT(stateSignalMember);
             UnregisterSignalHandler(busInternal,
                                     static_cast<MessageReceiver::SignalHandler>(&BusAttachment::Internal::AllJoynSignalHandler),
                                     stateSignalMember,
@@ -1013,7 +1012,7 @@ QStatus BusAttachment::UnregisterAllHandlers(MessageReceiver* receiver)
 }
 
 bool BusAttachment::Internal::IsConnected() const {
-    assert(router);
+    QCC_ASSERT(router);
     return router->IsBusRunning();
 }
 
@@ -1913,7 +1912,7 @@ QStatus BusAttachment::GetJoinSessionResponse(Message& reply, SessionId& session
     const MsgArg* replyArgs;
     size_t na;
     reply->GetArgs(na, replyArgs);
-    assert(na == 3);
+    QCC_ASSERT(na == 3);
     uint32_t disposition = replyArgs[0].v_uint32;
     sessionId = replyArgs[1].v_uint32;
     status = GetSessionOpts(replyArgs[2], opts);
@@ -1973,7 +1972,7 @@ QStatus BusAttachment::JoinSession(const char* sessionHost, SessionPort sessionP
         return ER_BUS_BAD_BUS_NAME;
     }
 
-    assert(busInternal);
+    QCC_ASSERT(busInternal);
     return busInternal->JoinSession(sessionHost, sessionPort, listener, sessionId, opts);
 }
 
@@ -2347,7 +2346,7 @@ QStatus BusAttachment::GetLinkTimeoutResponse(Message& reply, uint32_t& timeout)
     const MsgArg* replyArgs;
     size_t na;
     reply->GetArgs(na, replyArgs);
-    assert(na == 2);
+    QCC_ASSERT(na == 2);
 
     switch (replyArgs[0].v_uint32) {
     case ALLJOYN_SETLINKTIMEOUT_REPLY_SUCCESS:

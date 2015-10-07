@@ -98,7 +98,7 @@ ChatResponder::ChatResponder(BusAttachment& bus) :
         ifc = bus.GetInterface(CHAT_SERVICE_INTERFACE_NAME);
     }
 
-    assert(ifc);
+    QCC_ASSERT(ifc);
 
     chat = ifc->GetMember("Chat");
 
@@ -141,7 +141,7 @@ void ChatResponder::HandleChat(const InterfaceDescription::Member* member, const
 void* ChatResponder::ResponderThreadWrapper(void* arg)
 {
     ChatResponder* cr = reinterpret_cast<ChatResponder*>(arg);
-    assert(cr);
+    QCC_ASSERT(cr);
     cr->ResponderThread();
     return NULL;
 }
