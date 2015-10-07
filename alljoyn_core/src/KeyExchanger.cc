@@ -36,6 +36,7 @@
 #include "AllJoynPeerObj.h"
 #include "CredentialAccessor.h"
 #include "KeyInfoHelper.h"
+#include "ConversationHash.h"
 
 #define QCC_MODULE "AUTH_KEY_EXCHANGER"
 
@@ -1032,7 +1033,12 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
         }
         peerState->AcquireConversationHashLock();
         peerState->UpdateHash(CONVERSATION_V1, peerPskName, peerPskNameLen);
+        /* Calling SetConversationHashSensitiveMode ensures the PSK won't end up in the log if conversation
+         * hash tracing is turned on.
+         */
+        peerState->SetConversationHashSensitiveMode(true);
         peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*) pskValue.data(), pskValue.length());
+        peerState->SetConversationHashSensitiveMode(false);
         peerState->ReleaseConversationHashLock();
     }
     if (remoteVerifierLen != AUTH_VERIFIER_LEN) {
@@ -1068,7 +1074,12 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     /* hash the handshake */
     peerState->AcquireConversationHashLock();
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskName.data(), pskName.length());
+    /* Calling SetConversationHashSensitiveMode ensures the PSK won't end up in the log if conversation
+     * hash tracing is turned on.
+     */
+    peerState->SetConversationHashSensitiveMode(true);
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskValue.data(), pskValue.length());
+    peerState->SetConversationHashSensitiveMode(false);
     peerState->ReleaseConversationHashLock();
 
     uint8_t verifier[AUTH_VERIFIER_LEN];
