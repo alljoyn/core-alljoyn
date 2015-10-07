@@ -349,7 +349,7 @@ QStatus UARTController::ReadCallback(Source& source, bool isTimedOut)
     QCC_UNUSED(isTimedOut);
     size_t actual;
     QStatus status = m_uartStream->PullBytes(RxBuffer, RX_BUFSIZE, actual);
-    assert(status == ER_OK);
+    QCC_ASSERT(status == ER_OK);
     m_readListener->ReadEventTriggered(RxBuffer, actual);
     m_iodispatch.EnableReadCallback(m_uartStream);
     return status;

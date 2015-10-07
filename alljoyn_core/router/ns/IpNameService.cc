@@ -21,7 +21,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 #include <ctype.h>
 
 #include <qcc/Debug.h>
@@ -135,9 +134,9 @@ IpNameService::~IpNameService()
 
 #define ASSERT_STATE(function) \
     { \
-        assert(m_constructed && "IpNameService::" # function "(): Singleton not constructed"); \
-        assert(!m_destroyed && "IpNameService::" # function "(): Singleton destroyed"); \
-        assert(m_pimpl && "IpNameService::" # function "(): Private impl is NULL"); \
+        QCC_ASSERT(m_constructed && "IpNameService::" # function "(): Singleton not constructed"); \
+        QCC_ASSERT(!m_destroyed && "IpNameService::" # function "(): Singleton destroyed"); \
+        QCC_ASSERT(m_pimpl && "IpNameService::" # function "(): Private impl is NULL"); \
     }
 
 void IpNameService::Acquire(const qcc::String& guid, bool loopback)
@@ -157,7 +156,7 @@ void IpNameService::Acquire(const qcc::String& guid, bool loopback)
     // The only way someone can get to us is if they call Instance() which will
     // cause the object to be constructed.
     //
-    assert(m_constructed && "IpNameService::Acquire(): Singleton not constructed");
+    QCC_ASSERT(m_constructed && "IpNameService::Acquire(): Singleton not constructed");
 
     ASSERT_STATE("Acquire");
     int32_t refs = qcc::IncrementAndFetch(&m_refCount);

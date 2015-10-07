@@ -397,7 +397,7 @@ QStatus _LocalEndpoint::PeerInterface(Message& message)
             return status;
         }
         status = message->ReplyMsg(message, NULL, 0);
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         return bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);
     }
@@ -412,7 +412,7 @@ QStatus _LocalEndpoint::PeerInterface(Message& message)
         replyArg.v_string.str = guidStr.c_str();
         replyArg.v_string.len = guidStr.size();
         status = message->ReplyMsg(message, &replyArg, 1);
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         return bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);
     }
@@ -882,7 +882,7 @@ QStatus _LocalEndpoint::GetAnnouncedObjectDescription(MsgArg& objectDescriptionA
         }
     }
     // If argCount and announcedObjectsCount don't match something has gone wrong
-    assert(argCount == announcedObjectsCount);
+    QCC_ASSERT(argCount == announcedObjectsCount);
 
     status = objectDescriptionArg.Set("a(oas)", announcedObjectsCount, announceObjectsArg);
     objectDescriptionArg.Stabilize();
@@ -971,7 +971,7 @@ _LocalEndpoint::ReplyContext* _LocalEndpoint::RemoveReplyHandler(uint32_t serial
     if (iter != replyMap.end()) {
         rc = iter->second;
         replyMap.erase(iter);
-        assert(rc->serial == serial);
+        QCC_ASSERT(rc->serial == serial);
     }
     return rc;
 }
@@ -1279,7 +1279,7 @@ QStatus _LocalEndpoint::HandleMethodCall(Message& message)
             break;
         }
         QStatus result = message->ErrorMsg(message, errStr.c_str(), errMsg.c_str());
-        assert(ER_OK == result);
+        QCC_ASSERT(ER_OK == result);
         QCC_UNUSED(result);
         BusEndpoint busEndpoint = BusEndpoint::wrap(this);
         status = bus->GetInternal().GetRouter().PushMessage(message, busEndpoint);

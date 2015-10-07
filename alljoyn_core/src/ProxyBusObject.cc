@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <map>
 #include <set>
 #include <vector>
@@ -478,7 +477,7 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
             const InterfaceDescription::Member* getAllProperties = propIface->GetMember("GetAll");
-            assert(getAllProperties);
+            QCC_ASSERT(getAllProperties);
             status = MethodCall(*getAllProperties, &arg, 1, reply, timeout, flags);
             if (ER_OK == status) {
                 value = *(reply->GetArg(0));
@@ -577,7 +576,7 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
             std::pair<void*, qcc::String>* wrappedContext = new std::pair<void*, qcc::String>(context, iface);
             CBContext<Listener::GetAllPropertiesCB>* ctx = new CBContext<Listener::GetAllPropertiesCB>(listener, callback, wrappedContext);
             const InterfaceDescription::Member* getAllProperties = propIface->GetMember("GetAll");
-            assert(getAllProperties);
+            QCC_ASSERT(getAllProperties);
             status = MethodCallAsync(*getAllProperties,
                                      this,
                                      static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetAllPropsMethodCB),
@@ -634,7 +633,7 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
             const InterfaceDescription::Member* getProperty = propIface->GetMember("Get");
-            assert(getProperty);
+            QCC_ASSERT(getProperty);
             status = MethodCall(*getProperty, inArgs, numArgs, reply, timeout, flags);
             if (ER_OK == status) {
                 value = *(reply->GetArg(0));
@@ -737,7 +736,7 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
             std::pair<void*, std::pair<qcc::String, qcc::String> >* wrappedContext = new std::pair<void*, std::pair<qcc::String, qcc::String> >(context, std::make_pair(qcc::String(iface), qcc::String(property)));
             CBContext<Listener::GetPropertyCB>* ctx = new CBContext<Listener::GetPropertyCB>(listener, callback, wrappedContext);
             const InterfaceDescription::Member* getProperty = propIface->GetMember("Get");
-            assert(getProperty);
+            QCC_ASSERT(getProperty);
             status = MethodCallAsync(*getProperty,
                                      this,
                                      static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetPropMethodCB),
@@ -778,7 +777,7 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
             const InterfaceDescription::Member* setProperty = propIface->GetMember("Set");
-            assert(setProperty);
+            QCC_ASSERT(setProperty);
             status = MethodCall(*setProperty,
                                 inArgs,
                                 numArgs,
@@ -1074,7 +1073,7 @@ QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
         } else {
             CBContext<Listener::SetPropertyCB>* ctx = new CBContext<Listener::SetPropertyCB>(listener, callback, context);
             const InterfaceDescription::Member* setProperty = propIface->GetMember("Set");
-            assert(setProperty);
+            QCC_ASSERT(setProperty);
             status = MethodCallAsync(*setProperty,
                                      this,
                                      static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SetPropMethodCB),
@@ -1133,7 +1132,7 @@ QStatus ProxyBusObject::AddInterface(const InterfaceDescription& iface) {
 
     if ((status == ER_OK) && !internal->hasProperties) {
         const InterfaceDescription* propIntf = internal->bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
-        assert(propIntf);
+        QCC_ASSERT(propIntf);
         if (iface == *propIntf) {
             internal->hasProperties = true;
         } else if (iface.GetProperties() > 0) {
@@ -1198,7 +1197,7 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
         it = r.first;
     }
 
-    assert(it != matchRuleBookKeeping.end());
+    QCC_ASSERT(it != matchRuleBookKeeping.end());
     ++it->second.refCount;
 
     if (!registeredPropChangedHandler) {
@@ -1210,7 +1209,7 @@ void ProxyBusObject::Internal::AddPropertiesChangedRule(const char* intf, bool b
     if (registerHandler) {
         QCC_DbgPrintf(("Registering signal handler"));
         const InterfaceDescription* propIntf = bus->GetInterface(::ajn::org::freedesktop::DBus::Properties::InterfaceName);
-        assert(propIntf);
+        QCC_ASSERT(propIntf);
         bus->RegisterSignalHandler(this,
                                    static_cast<MessageReceiver::SignalHandler>(&Internal::PropertiesChangedHandler),
                                    propIntf->GetMember("PropertiesChanged"),
@@ -1829,14 +1828,14 @@ QStatus ProxyBusObject::IntrospectRemoteObject(uint32_t timeout)
     const InterfaceDescription* introIntf = GetInterface(org::freedesktop::DBus::Introspectable::InterfaceName);
     if (!introIntf) {
         introIntf = internal->bus->GetInterface(org::freedesktop::DBus::Introspectable::InterfaceName);
-        assert(introIntf);
+        QCC_ASSERT(introIntf);
         AddInterface(*introIntf);
     }
 
     /* Attempt to retrieve introspection from the remote object using sync call */
     Message reply(*internal->bus);
     const InterfaceDescription::Member* introMember = introIntf->GetMember("Introspect");
-    assert(introMember);
+    QCC_ASSERT(introMember);
     QStatus status = MethodCall(*introMember, NULL, 0, reply, timeout);
 
     /* Parse the XML reply */
@@ -1862,13 +1861,13 @@ QStatus ProxyBusObject::IntrospectRemoteObjectAsync(ProxyBusObject::Listener* li
     const InterfaceDescription* introIntf = GetInterface(org::freedesktop::DBus::Introspectable::InterfaceName);
     if (!introIntf) {
         introIntf = internal->bus->GetInterface(org::freedesktop::DBus::Introspectable::InterfaceName);
-        assert(introIntf);
+        QCC_ASSERT(introIntf);
         AddInterface(*introIntf);
     }
 
     /* Attempt to retrieve introspection from the remote object using async call */
     const InterfaceDescription::Member* introMember = introIntf->GetMember("Introspect");
-    assert(introMember);
+    QCC_ASSERT(introMember);
     CBContext<Listener::IntrospectCB>* ctx = new CBContext<Listener::IntrospectCB>(listener, callback, context);
     QStatus status = MethodCallAsync(*introMember,
                                      this,

@@ -27,7 +27,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <map>
 

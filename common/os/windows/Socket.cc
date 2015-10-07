@@ -414,7 +414,7 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
     size_t ret;
 
     QCC_DbgTrace(("ERSend(sockfd = %d, *buf = <>, len = %lu, sent = <>)", sockfd, len));
-    assert(buf != NULL);
+    QCC_ASSERT(buf != NULL);
 
     QCC_DbgLocalData(buf, len);
 
@@ -444,7 +444,7 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
 
     QCC_DbgTrace(("SendTo(sockfd = %d, remoteAddr = %s, remotePort = %u, *buf = <>, len = %lu, sent = <>, flags = 0x%x)",
                   sockfd, remoteAddr.ToString().c_str(), remotePort, len, (int)flags));
-    assert(buf != NULL);
+    QCC_ASSERT(buf != NULL);
 
     QCC_DbgLocalData(buf, len);
 
@@ -478,7 +478,7 @@ QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received)
     size_t ret;
 
     QCC_DbgTrace(("Recv(sockfd = %d, buf = <>, len = %lu, received = <>)", sockfd, len));
-    assert(buf != NULL);
+    QCC_ASSERT(buf != NULL);
 
     ret = recv(static_cast<SOCKET>(sockfd), static_cast<char*>(buf), len, 0);
     if (ret == SOCKET_ERROR) {
@@ -560,7 +560,7 @@ QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& 
         }
     }
 
-    assert(buf != NULL);
+    QCC_ASSERT(buf != NULL);
 
     ret = WSARecvMsg(static_cast<SOCKET>(sockfd), &msg, &recv, NULL, NULL);
 
@@ -613,7 +613,7 @@ QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
     received = 0;
 
     QCC_DbgTrace(("RecvFrom(sockfd = %d, buf = <>, len = %lu, received = <>)", sockfd, len));
-    assert(buf != NULL);
+    QCC_ASSERT(buf != NULL);
 
     ret = recvfrom(static_cast<int>(sockfd), static_cast<char*>(buf), len, 0,
                    reinterpret_cast<sockaddr*>(&fromAddr), &addrLen);
@@ -1004,11 +1004,11 @@ QStatus MulticastGroupOpInternal(SocketFd sockFd, AddressFamily family, String m
      * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockFd != INVALID_SOCKET);
-    assert(family == AF_INET || family == AF_INET6);
-    assert(multicastGroup.size());
-    assert(iface.size());
-    assert(op == JOIN || op == LEAVE);
+    QCC_ASSERT(sockFd != INVALID_SOCKET);
+    QCC_ASSERT(family == AF_INET || family == AF_INET6);
+    QCC_ASSERT(multicastGroup.size());
+    QCC_ASSERT(iface.size());
+    QCC_ASSERT(op == JOIN || op == LEAVE);
     /*
      * Joining a multicast group requires a different approach based on the
      * address family of the socket.  There's no way to get the address family
@@ -1088,9 +1088,9 @@ QStatus SetMulticastInterface(SocketFd sockFd, AddressFamily family, qcc::String
      * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockFd != INVALID_SOCKET);
-    assert(family == AF_INET || family == AF_INET6);
-    assert(iface.size());
+    QCC_ASSERT(sockFd != INVALID_SOCKET);
+    QCC_ASSERT(family == AF_INET || family == AF_INET6);
+    QCC_ASSERT(iface.size());
 
     /*
      * Associating the multicast interface with a socket requires a different
@@ -1144,8 +1144,8 @@ QStatus SetMulticastHops(SocketFd sockFd, AddressFamily family, uint32_t hops)
      * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockFd != INVALID_SOCKET);
-    assert(family == AF_INET || family == AF_INET6);
+    QCC_ASSERT(sockFd != INVALID_SOCKET);
+    QCC_ASSERT(family == AF_INET || family == AF_INET6);
 
     /*
      * IPv4 and IPv6 are almost the same.  Of course, not quite, though.
@@ -1184,8 +1184,8 @@ QStatus SetRecvPktAncillaryData(SocketFd sockfd, AddressFamily addrFamily, bool 
      * We assume that no external API will be trying to call here and so asserts
      * are appropriate when checking for completely bogus parameters.
      */
-    assert(sockfd != INVALID_SOCKET);
-    assert(addrFamily == AF_INET || addrFamily == AF_INET6);
+    QCC_ASSERT(sockfd != INVALID_SOCKET);
+    QCC_ASSERT(addrFamily == AF_INET || addrFamily == AF_INET6);
 
     QStatus status = ER_OK;
     int arg = recv ? 1 : -0;

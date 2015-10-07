@@ -17,7 +17,6 @@
 #define _TEST_ServiceSetup_H
 
 #include <signal.h>
-#include <assert.h>
 #include <stdio.h>
 #include <vector>
 

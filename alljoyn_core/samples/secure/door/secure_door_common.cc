@@ -76,7 +76,7 @@ Door::Door(BusAttachment* ba) :
     BusObject(DOOR_OBJECT_PATH), autoSignal(false), open(false)
 {
     const InterfaceDescription* secPermIntf = ba->GetInterface(DOOR_INTERFACE);
-    assert(secPermIntf);
+    QCC_ASSERT(secPermIntf);
     AddInterface(*secPermIntf, ANNOUNCED);
 
     /* Register the method handlers with the door bus object */

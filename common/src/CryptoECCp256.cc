@@ -108,8 +108,8 @@ void ec_freecurve(ec_t* curve)
 /* Convert affine point Q = (x,y) to Jacobian P = (X:Y:1), where X=x, Y=y */
 void ec_affine_tojacobian(const ecpoint_t* Q, ecpoint_jacobian_t* P)
 {
-    assert(Q != NULL);
-    assert(P != NULL);
+    QCC_ASSERT(Q != NULL);
+    QCC_ASSERT(P != NULL);
 
     fpcopy_p256(Q->x, P->X);
     fpcopy_p256(Q->y, P->Y);
@@ -120,7 +120,7 @@ void ec_affine_tojacobian(const ecpoint_t* Q, ecpoint_jacobian_t* P)
 /* Set P to the generator of the curve.  */
 void ec_get_generator(ecpoint_t* P, ec_t* curve)
 {
-    assert(curve != NULL);
+    QCC_ASSERT(curve != NULL);
 
     memcpy(P->x, curve->generator.x, sizeof(digit256_t));
     memcpy(P->y, curve->generator.y, sizeof(digit256_t));
@@ -129,7 +129,7 @@ void ec_get_generator(ecpoint_t* P, ec_t* curve)
 /* Set the jacobian point P to zero (0,0,0). */
 static void ecpoint_jacobian_zero(ecpoint_jacobian_t* P)
 {
-    assert(P != NULL);
+    QCC_ASSERT(P != NULL);
     fpzero_p256(P->X);
     fpzero_p256(P->Y);
     fpzero_p256(P->Z);
@@ -138,8 +138,8 @@ static void ecpoint_jacobian_zero(ecpoint_jacobian_t* P)
 /* Copy Jacobian points, set src = dst. */
 static void ecpoint_jacobian_copy(ecpoint_jacobian_t* src, ecpoint_jacobian_t* dst)
 {
-    assert(src != NULL);
-    assert(dst != NULL);
+    QCC_ASSERT(src != NULL);
+    QCC_ASSERT(dst != NULL);
 
     fpcopy_p256(src->X, dst->X);
     fpcopy_p256(src->Y, dst->Y);
@@ -148,7 +148,7 @@ static void ecpoint_jacobian_copy(ecpoint_jacobian_t* src, ecpoint_jacobian_t* d
 
 static void ecpoint_chudnovsky_zero(ecpoint_chudnovsky_t* P)
 {
-    assert(P != NULL);
+    QCC_ASSERT(P != NULL);
     fpzero_p256(P->X);
     fpzero_p256(P->Y);
     fpzero_p256(P->Z);

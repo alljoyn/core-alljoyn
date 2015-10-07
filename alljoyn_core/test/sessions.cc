@@ -33,7 +33,6 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
-#include <cassert>
 #include <signal.h>
 #include <cstdio>
 
@@ -151,12 +150,12 @@ class SessionTestObject : public BusObject {
 
         /* Add the session test interface to this object */
         const InterfaceDescription* testIntf = bus.GetInterface(TEST_SERVICE_INTERFACE_NAME);
-        assert(testIntf);
+        QCC_ASSERT(testIntf);
         AddInterface(*testIntf);
 
         /* Store the Chat signal member away so it can be quickly looked up when signals are sent */
         chatSignalMember = testIntf->GetMember("Chat");
-        assert(chatSignalMember);
+        QCC_ASSERT(chatSignalMember);
 
         /* Register signal handler */
         status =  bus.RegisterSignalHandler(this,

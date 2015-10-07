@@ -23,7 +23,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <ctype.h>
 #include <math.h>
 
@@ -250,7 +249,7 @@ static void AJ_AES_CBC_128_ENCRYPT(const uint32_t* fkey, const uint8_t* in, uint
     uint32_t xorbuf[4];
     uint32_t ivt[4];
 
-    assert((len % 16) == 0);
+    QCC_ASSERT((len % 16) == 0);
 
     Pack32(ivt, iv);
     while (len) {

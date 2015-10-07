@@ -787,7 +787,7 @@ QStatus _Message::EncryptMessage()
             }
         }
 
-        assert(0 <= GetAuthVersion());
+        QCC_ASSERT(0 <= GetAuthVersion());
 
         size_t hdrLen = ROUNDUP8(sizeof(msgHeader) + msgHeader.headerLen);
         size_t bodyLen = msgHeader.bodyLen;
@@ -867,7 +867,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
         PeerState peerState = peerStateTable->GetPeerState(destination);
         if (encrypt && peerState->IsSecure() && !destination.empty()) {
             authVersion = (int32_t)(peerState->GetAuthVersion() >> 16);
-            assert(0 <= authVersion);
+            QCC_ASSERT(0 <= authVersion);
         }
     }
 
@@ -895,7 +895,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     /*
      * There should be a mapping for every field type
      */
-    assert(ArraySize(FieldTypeMapping) == ArraySize(hdrFields.field));
+    QCC_ASSERT(ArraySize(FieldTypeMapping) == ArraySize(hdrFields.field));
     /*
      * Set the serial number. This may be changed later if the message gets delayed.
      */
@@ -996,7 +996,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
      * Marshal the header fields
      */
     MarshalHeaderFields();
-    assert((bufPos - (uint8_t*)msgBuf) == static_cast<ptrdiff_t>(hdrLen));
+    QCC_ASSERT((bufPos - (uint8_t*)msgBuf) == static_cast<ptrdiff_t>(hdrLen));
     if (msgHeader.bodyLen == 0) {
         bufEOD = bufPos;
         bodyPtr = NULL;
@@ -1026,7 +1026,7 @@ QStatus _Message::MarshalMessage(const qcc::String& expectedSignature,
     /*
      * Assert that our two different body size computations agree
      */
-    assert((bufPos - bodyPtr) == (ptrdiff_t)argsLen);
+    QCC_ASSERT((bufPos - bodyPtr) == (ptrdiff_t)argsLen);
     bufEOD = bodyPtr + msgHeader.bodyLen;
 
     /* track the msgArgs so it can be used to check the ACLs for properties */
@@ -1134,7 +1134,7 @@ QStatus _Message::HelloReply(bool isBusToBus, const qcc::String& sender, const q
 {
     QStatus status;
 
-    assert(msgHeader.msgType == MESSAGE_METHOD_CALL);
+    QCC_ASSERT(msgHeader.msgType == MESSAGE_METHOD_CALL);
     /*
      * Clear any stale header fields
      */
@@ -1366,7 +1366,7 @@ QStatus _Message::ReplyMsg(const Message& call, const qcc::String& sender, const
      */
     qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
 
-    assert(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
+    QCC_ASSERT(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
 
     /*
      * Clear any stale header fields
@@ -1401,7 +1401,7 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, const
     qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
     SessionId sessionId = call->GetSessionId();
 
-    assert(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
+    QCC_ASSERT(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
 
     /*
      * Clear any stale header fields
@@ -1450,7 +1450,7 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStat
     qcc::String msg = QCC_StatusText(status);
     uint16_t msgStatus = status;
 
-    assert(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
+    QCC_ASSERT(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
     /*
      * Clear any stale header fields
      */
@@ -1475,9 +1475,9 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStat
 
 void _Message::ErrorMsg(const char* errorName, uint32_t replySerial)
 {
-    assert(bus->IsStarted());
+    QCC_ASSERT(bus->IsStarted());
     QStatus status = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), errorName, replySerial);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     QCC_UNUSED(status);
 }
 
@@ -1506,9 +1506,9 @@ QStatus _Message::ErrorMsg(const qcc::String& sender, const char* errorName, uin
 
 void _Message::ErrorMsg(QStatus status, uint32_t replySerial)
 {
-    assert(bus->IsStarted());
+    QCC_ASSERT(bus->IsStarted());
     QStatus result = ErrorMsg(bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), status, replySerial);
-    assert(ER_OK == result);
+    QCC_ASSERT(ER_OK == result);
     QCC_UNUSED(result);
 }
 

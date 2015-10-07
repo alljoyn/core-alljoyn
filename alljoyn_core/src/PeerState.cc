@@ -134,7 +134,7 @@ void _PeerState::InitializeConversationHash()
 
 void _PeerState::FreeConversationHash()
 {
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     delete hashUtil;
     hashUtil = NULL;
 }
@@ -149,7 +149,7 @@ void _PeerState::FreeConversationHash()
  */
 static inline bool ConversationVersionDoesNotApply(uint32_t conversationVersion, uint32_t currentAuthVersion)
 {
-    assert((CONVERSATION_V1 == conversationVersion) || (CONVERSATION_V4 == conversationVersion));
+    QCC_ASSERT((CONVERSATION_V1 == conversationVersion) || (CONVERSATION_V4 == conversationVersion));
 
     if (CONVERSATION_V4 == conversationVersion) {
         return ((currentAuthVersion >> 16) != CONVERSATION_V4);
@@ -174,7 +174,7 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
      * In release, it probably means we've gotten a message we weren't expecting.
      * Log this as unusual but do nothing.
      */
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
         QCC_LogError(ER_CRYPTO_ERROR, ("UpdateHash called when a conversation is not in progress"));
         return;
@@ -187,7 +187,7 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
 
 void _PeerState::UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize)
 {
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
         QCC_LogError(ER_CRYPTO_ERROR, ("UpdateHash called when a conversation is not in progress"));
         return;
@@ -218,7 +218,7 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, const Message& msg)
 
 void _PeerState::GetDigest(uint8_t* digest, bool keepAlive)
 {
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
         /* This should never happen, but if it does, return all zeroes. */
         QCC_LogError(ER_CRYPTO_ERROR, ("GetDigest called while conversation is not in progress"));
@@ -258,7 +258,7 @@ PeerState PeerStateTable::GetPeerState(const qcc::String& busName, bool createIf
 
 PeerState PeerStateTable::GetPeerState(const qcc::String& uniqueName, const qcc::String& aliasName)
 {
-    assert(uniqueName[0] == ':');
+    QCC_ASSERT(uniqueName[0] == ':');
     PeerState result;
     lock.Lock(MUTEX_CONTEXT);
     std::map<const qcc::String, PeerState>::iterator iter = peerMap.find(uniqueName);

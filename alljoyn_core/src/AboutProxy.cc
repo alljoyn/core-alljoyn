@@ -32,7 +32,7 @@ AboutProxy::AboutProxy(BusAttachment& bus, const char* busName, SessionId sessio
 {
     QCC_DbgTrace(("AboutProxy::%s", __FUNCTION__));
     const InterfaceDescription* p_InterfaceDescription = bus.GetInterface(org::alljoyn::About::InterfaceName);
-    assert(p_InterfaceDescription);
+    QCC_ASSERT(p_InterfaceDescription);
     AddInterface(*p_InterfaceDescription);
 }
 

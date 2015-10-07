@@ -23,7 +23,6 @@
 #include <alljoyn_c/AjAPI.h>
 
 #include <cstdarg>
-#include <assert.h>
 
 #include <stdio.h>
 
@@ -655,15 +654,15 @@ QStatus AJ_CALL alljoyn_msgarg_get_variant_array(const alljoyn_msgarg arg, const
 size_t AJ_CALL alljoyn_msgarg_get_array_numberofelements(const alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
+    QCC_ASSERT(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
     return ((ajn::MsgArgC*)arg)->v_array.GetNumElements();
 }
 
 void AJ_CALL alljoyn_msgarg_get_array_element(const alljoyn_msgarg arg, size_t index, alljoyn_msgarg* element)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
-    assert(index < ((ajn::MsgArgC*)arg)->v_array.GetNumElements());
+    QCC_ASSERT(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
+    QCC_ASSERT(index < ((ajn::MsgArgC*)arg)->v_array.GetNumElements());
     *element = (alljoyn_msgarg) & (((ajn::MsgArgC*)arg)->v_array.GetElements()[index]);
 }
 
@@ -671,14 +670,14 @@ const char* AJ_CALL alljoyn_msgarg_get_array_elementsignature(const alljoyn_msga
 {
     QCC_UNUSED(index);
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
+    QCC_ASSERT(ALLJOYN_ARRAY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
     return ((ajn::MsgArgC*)arg)->v_array.GetElemSig();
 }
 
 alljoyn_msgarg AJ_CALL alljoyn_msgarg_getkey(alljoyn_msgarg arg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(ALLJOYN_DICT_ENTRY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
+    QCC_ASSERT(ALLJOYN_DICT_ENTRY == (alljoyn_typeid)((ajn::MsgArgC*)arg)->typeId);
     return (alljoyn_msgarg)((ajn::MsgArgC*)arg)->v_dictEntry.key;
 }
 
@@ -693,7 +692,7 @@ alljoyn_msgarg AJ_CALL alljoyn_msgarg_getvalue(alljoyn_msgarg arg)
         return (alljoyn_msgarg)((ajn::MsgArgC*)arg)->v_dictEntry.val;
 
     default:
-        assert(0);
+        QCC_ASSERT(0);
         return NULL;
     }
 }

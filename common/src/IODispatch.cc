@@ -49,7 +49,7 @@ IODispatch::~IODispatch()
      * so, there should be no dispatch entries.
      * Just a sanity check.
      */
-    assert(dispatchEntries.size() == 0);
+    QCC_ASSERT(dispatchEntries.size() == 0);
 }
 
 QStatus IODispatch::Start(void* arg, ThreadListener* listener)
@@ -237,7 +237,7 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
     /* Only correct values of type are IO_READ, IO_READ_TIMEOUT,
      * IO_WRITE, IO_WRITE_TIMEOUT, IO_EXIT
      */
-    assert(ctxt->type >= IO_READ && ctxt->type <= IO_EXIT);
+    QCC_ASSERT(ctxt->type >= IO_READ && ctxt->type <= IO_EXIT);
 
     if (!isRunning && ctxt->type != IO_EXIT) {
         /* If IODispatch is being shut down, only service exit alarms.
@@ -252,7 +252,7 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
         /* If stream is not found(should never happen since the exit alarm ensures that
          * read and write alarms are removed before deleting the entry from the map)
          */
-        assert(false);
+        QCC_ASSERT(false);
         /*
          * asserts are compiled out so me must return to prevent segfaults in
          * release code.
@@ -350,7 +350,7 @@ void IODispatch::AlarmTriggered(const Alarm& alarm, QStatus reason)
             /* This should never happen - it means that the entry was deleted
              * while the exit callback was being made
              */
-            assert(false);
+            QCC_ASSERT(false);
             /*
              * since asserts are compiled out or release code we must add code
              * to handle this if it occurs.

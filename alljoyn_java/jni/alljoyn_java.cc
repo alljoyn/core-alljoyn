@@ -17,7 +17,6 @@
 
 #include <jni.h>
 #include <stdio.h>
-#include <assert.h>
 #include <map>
 #include <list>
 #include <algorithm>
@@ -801,7 +800,7 @@ static JNIEnv* GetEnv(jint* result = 0)
         ret = jvm->AttachCurrentThread((void**)&env, NULL);
 #endif
     }
-    assert(JNI_OK == ret);
+    QCC_ASSERT(JNI_OK == ret);
     return env;
 }
 
@@ -2571,7 +2570,7 @@ Message MessageContext::GetMessage()
     QCC_DbgPrintf(("MessageContext::GetMessage()"));
     gMessageMapLock.Lock();
     map<Thread*, Message>::iterator it = gMessageMap.find(Thread::GetThread());
-    assert(gMessageMap.end() != it);
+    QCC_ASSERT(gMessageMap.end() != it);
     Message m = it->second;
     gMessageMapLock.Unlock();
     return m;
@@ -2979,7 +2978,7 @@ void JBusListener::ListenerRegistered(BusAttachment* bus)
         QCC_LogError(ER_FAIL, ("JBusListener::ListenerRegistered(): Exception or NULL bus pointer"));
         return;
     }
-    assert(bus == busPtr);
+    QCC_ASSERT(bus == busPtr);
 
     /*
      * The weak global reference jbusListener cannot be directly used.  We have to get
@@ -4310,7 +4309,7 @@ JBusAttachment::~JBusAttachment()
      * bus attachment that would have prevented its reference count from
      * going to zero and thus kept the bus attachment alive.
      */
-    assert(busObjects.size() == 0);
+    QCC_ASSERT(busObjects.size() == 0);
 }
 
 /**
@@ -4964,7 +4963,7 @@ void JBusAttachment::UnregisterBusObject(jobject jbusObject)
          * The object we delete had better be the object we just told AllJoyn
          * about.
          */
-        assert(cppObjectToDelete == cppObject);
+        QCC_ASSERT(cppObjectToDelete == cppObject);
         delete cppObject;
         cppObject = NULL;
     }
@@ -5175,9 +5174,9 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_emitChangedSignal(
     if (jpropValue) {
         const BusAttachment& bus = busObject->GetBusAttachment();
         const InterfaceDescription* iface = bus.GetInterface(ifaceName.c_str());
-        assert(iface);
+        QCC_ASSERT(iface);
         const InterfaceDescription::Property* prop = iface->GetProperty(propName.c_str());
-        assert(prop);
+        QCC_ASSERT(prop);
         arg = Marshal(prop->signature.c_str(), jpropValue, &value);
     }
 
@@ -5454,7 +5453,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_registerBusListener(JN
         return;
     }
 
-    assert(listener);
+    QCC_ASSERT(listener);
     listener->Setup(thiz);
 
     /*
@@ -5494,7 +5493,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterBusListener(
         return;
     }
 
-    assert(listener);
+    QCC_ASSERT(listener);
 
     /*
      * Make the call into AllJoyn.
@@ -5526,7 +5525,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusListener_create(JNIEnv* env, jobj
 {
     QCC_DbgPrintf(("BusListener_create()"));
 
-    assert(GetHandle<JBusListener*>(thiz) == NULL);
+    QCC_ASSERT(GetHandle<JBusListener*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_create(): Exception"));
         return;
@@ -5554,7 +5553,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusListener_destroy(JNIEnv* env, job
         return;
     }
 
-    assert(jbl);
+    QCC_ASSERT(jbl);
     delete jbl;
 
     SetHandle(thiz, NULL);
@@ -6099,7 +6098,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_bindSessionPort(JNI
     SessionPort sessionPort;
     JLocalRef<jclass> clazz = env->GetObjectClass(jsessionPort);
     jfieldID spValueFid = env->GetFieldID(clazz, "value", "S");
-    assert(spValueFid);
+    QCC_ASSERT(spValueFid);
     sessionPort = env->GetShortField(jsessionPort, spValueFid);
 
     /*
@@ -6108,19 +6107,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_bindSessionPort(JNI
     SessionOpts sessionOpts;
     clazz = env->GetObjectClass(jsessionOpts);
     jfieldID fid = env->GetFieldID(clazz, "traffic", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.traffic = static_cast<SessionOpts::TrafficType>(env->GetByteField(jsessionOpts, fid));
 
     fid = env->GetFieldID(clazz, "isMultipoint", "Z");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.isMultipoint = env->GetBooleanField(jsessionOpts, fid);
 
     fid = env->GetFieldID(clazz, "proximity", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.proximity = env->GetByteField(jsessionOpts, fid);
 
     fid = env->GetFieldID(clazz, "transports", "S");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.transports = env->GetShortField(jsessionOpts, fid);
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
@@ -6172,7 +6171,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_bindSessionPort(JNI
         return NULL;
     }
 
-    assert(listener);
+    QCC_ASSERT(listener);
 
     /*
      * Make the AllJoyn call.
@@ -6340,7 +6339,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SessionPortListener_create(JNIEnv* e
 {
     QCC_DbgPrintf(("SessionPortListener_create()"));
 
-    assert(GetHandle<JSessionPortListener*>(thiz) == NULL);
+    QCC_ASSERT(GetHandle<JSessionPortListener*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("SessionPortListener_create(): Exception"));
         return;
@@ -6368,7 +6367,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SessionPortListener_destroy(JNIEnv* 
         return;
     }
 
-    assert(jspl);
+    QCC_ASSERT(jspl);
     delete jspl;
 
     SetHandle(thiz, NULL);
@@ -6427,19 +6426,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
     SessionOpts sessionOpts;
     JLocalRef<jclass> clazz = env->GetObjectClass(jsessionOpts);
     jfieldID fid = env->GetFieldID(clazz, "traffic", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.traffic = static_cast<SessionOpts::TrafficType>(env->GetByteField(jsessionOpts, fid));
 
     fid = env->GetFieldID(clazz, "isMultipoint", "Z");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.isMultipoint = env->GetBooleanField(jsessionOpts, fid);
 
     fid = env->GetFieldID(clazz, "proximity", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.proximity = env->GetByteField(jsessionOpts, fid);
 
     fid = env->GetFieldID(clazz, "transports", "S");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.transports = env->GetShortField(jsessionOpts, fid);
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
@@ -6480,7 +6479,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
         return NULL;
     }
 
-    assert(listener);
+    QCC_ASSERT(listener);
 
     /*
      * Make the AllJoyn call.
@@ -6542,7 +6541,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
      */
     clazz = env->GetObjectClass(jsessionId);
     fid = env->GetFieldID(clazz, "value", "I");
-    assert(fid);
+    QCC_ASSERT(fid);
     env->SetIntField(jsessionId, fid, sessionId);
 
     /*
@@ -6551,19 +6550,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSession(JNIEnv*
     clazz = env->GetObjectClass(jsessionOpts);
 
     fid = env->GetFieldID(clazz, "traffic", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     env->SetByteField(jsessionOpts, fid, sessionOpts.traffic);
 
     fid = env->GetFieldID(clazz, "isMultipoint", "Z");
-    assert(fid);
+    QCC_ASSERT(fid);
     env->SetBooleanField(jsessionOpts, fid, sessionOpts.isMultipoint);
 
     fid = env->GetFieldID(clazz, "proximity", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     env->SetByteField(jsessionOpts, fid, sessionOpts.proximity);
 
     fid = env->GetFieldID(clazz, "transports", "S");
-    assert(fid);
+    QCC_ASSERT(fid);
     env->SetShortField(jsessionOpts, fid, sessionOpts.transports);
 
     return JStatus(status);
@@ -6625,7 +6624,7 @@ static jobject leaveGenericSession(JNIEnv* env, jobject thiz,
 
     default:
         QCC_LogError(ER_FAIL, ("Exception unknown BusAttachmentSessionListenerIndex %d", index));
-        assert(0);
+        QCC_ASSERT(0);
     }
 
     /*
@@ -6855,7 +6854,7 @@ static jobject setGenericSessionListener(JNIEnv* env, jobject thiz,
             return NULL;
         }
 
-        assert(listener);
+        QCC_ASSERT(listener);
     }
 
     /*
@@ -6885,7 +6884,7 @@ static jobject setGenericSessionListener(JNIEnv* env, jobject thiz,
 
     default:
         QCC_LogError(ER_FAIL, ("Exception unknown BusAttachmentSessionListenerIndex %d", index));
-        assert(0);
+        QCC_ASSERT(0);
     }
 
     /*
@@ -7056,7 +7055,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SessionListener_create(JNIEnv* env, 
 {
     QCC_DbgPrintf(("SessionListener_create()"));
 
-    assert(GetHandle<JSessionListener*>(thiz) == NULL);
+    QCC_ASSERT(GetHandle<JSessionListener*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("SessionListener_create(): Exception"));
         return;
@@ -7084,7 +7083,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SessionListener_destroy(JNIEnv* env,
         return;
     }
 
-    assert(jsl);
+    QCC_ASSERT(jsl);
     delete jsl;
 
     SetHandle(thiz, NULL);
@@ -7163,7 +7162,7 @@ void JOnJoinSessionListener::JoinSessionCB(QStatus status, SessionId sessionId, 
      * objects involved in the transaction.  This must be there.
      */
     PendingAsyncJoin* paj = static_cast<PendingAsyncJoin*>(context);
-    assert(paj);
+    QCC_ASSERT(paj);
 
     /*
      * Translate the C++ formal parameters into their JNI counterparts.
@@ -7238,9 +7237,9 @@ exit:
              * Double check that the pointers are consistent and nothing got
              * changed out from underneath us.  That would be bad (TM).
              */
-            assert((*i)->jonJoinSessionListener == paj->jonJoinSessionListener);
-            assert((*i)->jsessionListener == paj->jsessionListener);
-            assert((*i)->jcontext == paj->jcontext);
+            QCC_ASSERT((*i)->jonJoinSessionListener == paj->jonJoinSessionListener);
+            QCC_ASSERT((*i)->jsessionListener == paj->jsessionListener);
+            QCC_ASSERT((*i)->jcontext == paj->jcontext);
 
             /*
              * If the join succeeded, we need to keep on holding the session
@@ -7281,7 +7280,7 @@ exit:
              * lifetime of its corresponding C++ object, which is what we are
              * executing in here.  We have got to make sure to do that last.
              */
-            assert((*i)->jonJoinSessionListener);
+            QCC_ASSERT((*i)->jonJoinSessionListener);
             jobject jcallback = (*i)->jonJoinSessionListener;
             (*i)->jonJoinSessionListener = NULL;
             busPtr->pendingAsyncJoins.erase(i);
@@ -7384,19 +7383,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSessionAsync(JN
     SessionOpts sessionOpts;
     JLocalRef<jclass> clazz = env->GetObjectClass(jsessionOpts);
     jfieldID fid = env->GetFieldID(clazz, "traffic", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.traffic = static_cast<SessionOpts::TrafficType>(env->GetByteField(jsessionOpts, fid));
 
     fid = env->GetFieldID(clazz, "isMultipoint", "Z");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.isMultipoint = env->GetBooleanField(jsessionOpts, fid);
 
     fid = env->GetFieldID(clazz, "proximity", "B");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.proximity = env->GetByteField(jsessionOpts, fid);
 
     fid = env->GetFieldID(clazz, "transports", "S");
-    assert(fid);
+    QCC_ASSERT(fid);
     sessionOpts.transports = env->GetShortField(jsessionOpts, fid);
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
@@ -7461,7 +7460,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSessionAsync(JN
         return NULL;
     }
 
-    assert(listener);
+    QCC_ASSERT(listener);
 
     /*
      * Get the C++ object that must be there backing the Java callback object
@@ -7472,7 +7471,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_joinSessionAsync(JN
         return NULL;
     }
 
-    assert(callback);
+    QCC_ASSERT(callback);
 
     /*
      * There is no C++ object backing the Java context object.  This is just an
@@ -7577,7 +7576,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnJoinSessionListener_create(JNIEnv*
 {
     QCC_DbgPrintf(("OnJoinSessionListener_create()"));
 
-    assert(GetHandle<JOnJoinSessionListener*>(thiz) == NULL);
+    QCC_ASSERT(GetHandle<JOnJoinSessionListener*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("OnJoinSessionListener_create(): Exception"));
         return;
@@ -7607,7 +7606,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnJoinSessionListener_destroy(JNIEnv
         return;
     }
 
-    assert(jojsl);
+    QCC_ASSERT(jojsl);
     delete jojsl;
 
     SetHandle(thiz, NULL);
@@ -7660,7 +7659,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getSessionFd(JNIEnv
      */
     JLocalRef<jclass> clazz = env->GetObjectClass(jsockfd);
     jfieldID fid = env->GetFieldID(clazz, "value", "I");
-    assert(fid);
+    QCC_ASSERT(fid);
     env->SetIntField(jsockfd, fid, sockfd);
 
     return JStatus(status);
@@ -7695,7 +7694,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setLinkTimeout(JNIE
      */
     JLocalRef<jclass> clazz = env->GetObjectClass(jLinkTimeout);
     jfieldID fid = env->GetFieldID(clazz, "value", "I");
-    assert(fid);
+    QCC_ASSERT(fid);
     uint32_t linkTimeout = env->GetIntField(jLinkTimeout, fid);
     QCC_DbgPrintf(("BusAttachment_setLinkTimeout(): Call SetLinkTimeout(%d, %d)", jsessionId, linkTimeout));
 
@@ -7768,7 +7767,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getPeerGUID(JNIEnv*
      */
     JLocalRef<jclass> clazz = env->GetObjectClass(jguid);
     jfieldID guidValueFid = env->GetFieldID(clazz, "value", "Ljava/lang/String;");
-    assert(guidValueFid);
+    QCC_ASSERT(guidValueFid);
 
     /*
      * We provided an empty C++ string to AllJoyn, and it has put the GUID in
@@ -7902,7 +7901,7 @@ void JOnPingListener::PingCB(QStatus status, void* context)
      * objects involved in the transaction.
      */
     PendingAsyncPing* pap = static_cast<PendingAsyncPing*>(context);
-    assert(pap);
+    QCC_ASSERT(pap);
 
     /*
      * Translate the C++ formal parameters into their JNI counterparts.
@@ -7949,8 +7948,8 @@ exit:
              * Double check that the pointers are consistent and nothing got
              * changed out from underneath us.  That would be bad (TM).
              */
-            assert((*i)->jonPingListener == pap->jonPingListener);
-            assert((*i)->jcontext == pap->jcontext);
+            QCC_ASSERT((*i)->jonPingListener == pap->jonPingListener);
+            QCC_ASSERT((*i)->jcontext == pap->jcontext);
 
             /*
              * We always release our hold on the user context object
@@ -7974,7 +7973,7 @@ exit:
              * lifetime of its corresponding C++ object, which is what we are
              * executing in here.  We have got to make sure to do that last.
              */
-            assert((*i)->jonPingListener);
+            QCC_ASSERT((*i)->jonPingListener);
             jobject jcallback = (*i)->jonPingListener;
             (*i)->jonPingListener = NULL;
             busPtr->pendingAsyncPings.erase(i);
@@ -8113,7 +8112,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_pingAsync(JNIEnv* e
         return NULL;
     }
 
-    assert(callback);
+    QCC_ASSERT(callback);
 
     /*
      * We need to provide a pointer to the bus attachment to the on ping
@@ -8212,7 +8211,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnPingListener_create(JNIEnv* env, j
 {
     QCC_DbgPrintf(("OnPingListener_create()"));
 
-    assert(GetHandle<JOnPingListener*>(thiz) == NULL);
+    QCC_ASSERT(GetHandle<JOnPingListener*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("OnPingListener_create(): Exception"));
         return;
@@ -8243,7 +8242,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_OnPingListener_destroy(JNIEnv* env, 
         return;
     }
 
-    assert(jopl);
+    QCC_ASSERT(jopl);
     delete jopl;
 
     SetHandle(thiz, NULL);
@@ -8678,14 +8677,14 @@ QStatus JBusObject::AddInterfaces(const jobjectArray jbusInterfaces)
             QCC_LogError(ER_FAIL, ("JBusObject::AddInterfaces(): Exception"));
             return ER_FAIL;
         }
-        assert(jbusInterface);
+        QCC_ASSERT(jbusInterface);
 
         const InterfaceDescription* intf = GetHandle<const InterfaceDescription*>(jbusInterface);
         if (env->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("JBusObject::AddInterfaces(): Exception"));
             return ER_FAIL;
         }
-        assert(intf);
+        QCC_ASSERT(intf);
 
         JLocalRef<jclass> clazz = env->GetObjectClass(jbusInterface);
         jmethodID announced_mid = env->GetMethodID(clazz, "isAnnounced", "()Z");
@@ -9491,7 +9490,7 @@ void JBusObject::SetDescriptions(jstring jlangTag, jstring jdescription, jobject
             QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
             return;
         }
-        assert(translator);
+        QCC_ASSERT(translator);
         SetDescriptionTranslator(translator);
     }
 }
@@ -10152,7 +10151,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getKeyExpiration(JN
      */
     JLocalRef<jclass> clazz = env->GetObjectClass(jtimeout);
     jfieldID timeoutValueFid = env->GetFieldID(clazz, "value", "I");
-    assert(timeoutValueFid);
+    QCC_ASSERT(timeoutValueFid);
 
     env->SetIntField(jtimeout, timeoutValueFid, timeout);
 
@@ -10290,7 +10289,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslat
         QCC_LogError(ER_FAIL, ("BusAttachment_setDescriptionTranslator(): Exception"));
         return;
     }
-    assert(busPtr);
+    QCC_ASSERT(busPtr);
 
     JTranslator* translator = NULL;
     if (jtranslator) {
@@ -10320,7 +10319,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslat
             return;
         }
 
-        assert(translator);
+        QCC_ASSERT(translator);
     }
     /*
      * Make the call into AllJoyn.
@@ -10368,7 +10367,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_create(JNIEn
          * addMember and addProperty.
          */
         intf = (InterfaceDescription*)busPtr->GetInterface(name.c_str());
-        assert(intf);
+        QCC_ASSERT(intf);
         if ((intf->GetSecurityPolicy() == static_cast<InterfaceSecurityPolicy>(securePolicy)) &&
             (intf->GetProperties() == (size_t)numProps) &&
             (intf->GetMembers() == (size_t)numMembers)) {
@@ -10421,7 +10420,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addAnnotatio
         QCC_LogError(ER_FAIL, ("InterfaceDescription_AddAnnotation(): Exception"));
         return NULL;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString annotation(jannotation);
     if (env->ExceptionCheck()) {
@@ -10449,7 +10448,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMember(JN
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addMember(): Exception"));
         return NULL;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString name(jname);
     if (env->ExceptionCheck()) {
@@ -10524,7 +10523,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMemberAnn
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addMemberAnnotation(): Exception"));
         return NULL;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString jName(member);
     if (env->ExceptionCheck()) {
@@ -10559,7 +10558,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty(
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addProperty(): Exception"));
         return NULL;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString name(jname);
     if (env->ExceptionCheck()) {
@@ -10621,7 +10620,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addPropertyA
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addPropertyAnnotation(): Exception"));
         return NULL;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString jName(property);
     if (env->ExceptionCheck()) {
@@ -10655,7 +10654,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionL
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionLanguage(): Exception"));
         return;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString jlanguage(language);
     if (env->ExceptionCheck()) {
@@ -10676,7 +10675,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescription(): Exception"));
         return;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString jdescription(description);
     if (env->ExceptionCheck()) {
@@ -10697,7 +10696,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionT
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionTranslator(): Exception"));
         return;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
     if (env->ExceptionCheck()) {
@@ -10743,7 +10742,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionT
             return;
         }
 
-        assert(translator);
+        QCC_ASSERT(translator);
     }
     /*
      * Make the call into AllJoyn.
@@ -10762,7 +10761,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescription(): Exception"));
         return NULL;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString member(jmember);
     if (env->ExceptionCheck()) {
@@ -10808,7 +10807,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyD
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescription(): Exception"));
         return NULL;
     }
-    assert(intf);
+    QCC_ASSERT(intf);
 
     JString propName(jpropName);
     if (env->ExceptionCheck()) {
@@ -10836,7 +10835,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_activate(JNIEnv
         return;
     }
 
-    assert(intf);
+    QCC_ASSERT(intf);
 
     intf->Activate();
 }
@@ -10851,7 +10850,7 @@ static QStatus AddInterfaceStatus(jobject thiz, JBusAttachment* busPtr, jstring 
         return ER_FAIL;
     }
 
-    assert(proxyBusObj);
+    QCC_ASSERT(proxyBusObj);
 
     JString interfaceName(jinterfaceName);
     if (env->ExceptionCheck()) {
@@ -10884,7 +10883,7 @@ static QStatus AddInterfaceStatus(jobject thiz, JBusAttachment* busPtr, jstring 
     QCC_DbgPrintf(("AddInterface(): Refcount on busPtr is %d", busPtr->GetRef()));
 
     const InterfaceDescription* intf = busPtr->GetInterface(interfaceName.c_str());
-    assert(intf);
+    QCC_ASSERT(intf);
 
     status = proxyBusObj->AddInterface(*intf);
     return status;
@@ -10914,7 +10913,7 @@ JProxyBusObject::JProxyBusObject(jobject pbo, JBusAttachment* jbap, const char* 
      * as we are.  We do this by bumping the reference count there.
      */
     busPtr = jbap;
-    assert(busPtr);
+    QCC_ASSERT(busPtr);
     QCC_DbgPrintf(("JProxyBusObject::JProxyBusObject(): Refcount on busPtr before is %d", busPtr->GetRef()));
     busPtr->IncRef();
     QCC_DbgPrintf(("JProxyBusObject::JProxyBusObject(): Refcount on busPtr after is %d", busPtr->GetRef()));
@@ -10933,7 +10932,7 @@ JProxyBusObject::~JProxyBusObject()
      * drop the reference count ourselves, but we have to rely on the object that called delete on
      * us.
      */
-    assert(busPtr);
+    QCC_ASSERT(busPtr);
     QCC_DbgPrintf(("JProxyBusObject::~JProxyBusObject(): Refcount on busPtr at destruction is %d", busPtr->GetRef()));
 
     JNIEnv* env = GetEnv();
@@ -11282,7 +11281,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_create(JNI
 {
     QCC_DbgPrintf(("PropertiesChangedListener_create()"));
 
-    assert(GetHandle<JPropertiesChangedListener*>(thiz) == NULL);
+    QCC_ASSERT(GetHandle<JPropertiesChangedListener*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("PropertiesChangedListener_create(): Exception"));
         return;
@@ -11312,7 +11311,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_PropertiesChangedListener_destroy(JN
         return;
     }
 
-    assert(jojcl);
+    QCC_ASSERT(jojcl);
     delete jojcl;
 
     SetHandle(thiz, NULL);
@@ -11410,7 +11409,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_methodCall(JNIEnv*
         return NULL;
     }
 
-    assert(proxyBusObj);
+    QCC_ASSERT(proxyBusObj);
 
     const InterfaceDescription::Member* member = NULL;
 
@@ -11423,7 +11422,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_methodCall(JNIEnv*
             return NULL;
         }
         intf = proxyBusObj->GetInterface(interfaceName.c_str());
-        assert(intf);
+        QCC_ASSERT(intf);
     }
 
     member = intf->GetMember(methodName.c_str());
@@ -11592,7 +11591,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_getProperty(JNIEnv
         return NULL;
     }
 
-    assert(proxyBusObj);
+    QCC_ASSERT(proxyBusObj);
 
     if (!proxyBusObj->ImplementsInterface(interfaceName.c_str())) {
         AddInterface(thiz, busPtr, jinterfaceName);
@@ -11669,7 +11668,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_getAllProperties(J
         return NULL;
     }
 
-    assert(proxyBusObj);
+    QCC_ASSERT(proxyBusObj);
 
     if (!proxyBusObj->ImplementsInterface(interfaceName.c_str())) {
         AddInterface(thiz, busPtr, jinterfaceName);
@@ -11758,7 +11757,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty(JNIEnv* e
         return;
     }
 
-    assert(proxyBusObj);
+    QCC_ASSERT(proxyBusObj);
 
     if (!proxyBusObj->ImplementsInterface(interfaceName.c_str())) {
         AddInterface(thiz, busPtr, jinterfaceName);
@@ -11964,7 +11963,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_Signature_split(JNIEnv* env,
             if (ER_OK != status) {
                 return NULL;
             }
-            assert(i < count);
+            QCC_ASSERT(i < count);
 
             ptrdiff_t len = next - prev;
             String type(prev, len);
@@ -12006,7 +12005,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Variant_setMsgArg(JNIEnv* env, jobje
     // QCC_DbgPrintf(("Variant_setMsgArg()"));
 
     MsgArg* arg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_VARIANT == arg->typeId);
+    QCC_ASSERT(ALLJOYN_VARIANT == arg->typeId);
     MsgArg* argCopy = new MsgArg(*arg->v_variant.val);
     if (!argCopy) {
         Throw("java/lang/OutOfMemoryError", NULL);
@@ -12035,7 +12034,7 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getNumElements(JNIEnv* env, j
     // QCC_DbgPrintf(("MsgArg_getNumElements()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_ARRAY == msgArg->typeId);
     return msgArg->v_array.GetNumElements();
 }
 
@@ -12046,8 +12045,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getElement(JNIEnv* env, jcla
     // QCC_DbgPrintf(("MsgArg_getElement()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_ARRAY == msgArg->typeId);
-    assert(index < (jint)msgArg->v_array.GetNumElements());
+    QCC_ASSERT(ALLJOYN_ARRAY == msgArg->typeId);
+    QCC_ASSERT(index < (jint)msgArg->v_array.GetNumElements());
     return (jlong) & msgArg->v_array.GetElements()[index];
 }
 
@@ -12057,7 +12056,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getElemSig(JNIEnv* env, jc
     // QCC_DbgPrintf(("MsgArg_getElementSig()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_ARRAY == msgArg->typeId);
     return env->NewStringUTF(msgArg->v_array.GetElemSig());
 }
 
@@ -12076,7 +12075,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getVal(JNIEnv* env, jclass c
         return (jlong)msgArg->v_dictEntry.val;
 
     default:
-        assert(0);
+        QCC_ASSERT(0);
         return 0;
     }
 }
@@ -12088,7 +12087,7 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getNumMembers(JNIEnv* env, jc
     // QCC_DbgPrintf(("MsgArg_getNumMembers()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_STRUCT == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_STRUCT == msgArg->typeId);
     return msgArg->v_struct.numMembers;
 }
 
@@ -12099,8 +12098,8 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getMember(JNIEnv* env, jclas
     // QCC_DbgPrintf(("MsgArg_getMember()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_STRUCT == msgArg->typeId);
-    assert(index < (jint)msgArg->v_struct.numMembers);
+    QCC_ASSERT(ALLJOYN_STRUCT == msgArg->typeId);
+    QCC_ASSERT(index < (jint)msgArg->v_struct.numMembers);
     return (jlong) & msgArg->v_struct.members[index];
 }
 
@@ -12111,7 +12110,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getKey(JNIEnv* env, jclass c
     // QCC_DbgPrintf(("MsgArg_getKey()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_DICT_ENTRY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_DICT_ENTRY == msgArg->typeId);
     return (jlong)msgArg->v_dictEntry.key;
 }
 
@@ -12121,7 +12120,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_bus_MsgArg_getByteArray(JNIEnv* en
     // QCC_DbgPrintf(("MsgArg_getKey()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_BYTE_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_BYTE_ARRAY == msgArg->typeId);
     jbyteArray jarray = env->NewByteArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
         return NULL;
@@ -12140,7 +12139,7 @@ JNIEXPORT jshortArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt16Array(JNIEnv* 
     // QCC_DbgPrintf(("MsgArg_getInt16Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_INT16_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_INT16_ARRAY == msgArg->typeId);
 
     jshortArray jarray = env->NewShortArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12162,7 +12161,7 @@ JNIEXPORT jshortArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint16Array(JNIEnv*
     // QCC_DbgPrintf(("MsgArg_getUint16Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_UINT16_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_UINT16_ARRAY == msgArg->typeId);
 
     jshortArray jarray = env->NewShortArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12184,7 +12183,7 @@ JNIEXPORT jbooleanArray JNICALL Java_org_alljoyn_bus_MsgArg_getBoolArray(JNIEnv*
     // QCC_DbgPrintf(("MsgArg_getBoolArray()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_BOOLEAN_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_BOOLEAN_ARRAY == msgArg->typeId);
 
     jbooleanArray jarray = env->NewBooleanArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12206,7 +12205,7 @@ JNIEXPORT jintArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint32Array(JNIEnv* e
     // QCC_DbgPrintf(("MsgArg_getUint32Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_UINT32_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_UINT32_ARRAY == msgArg->typeId);
 
     jintArray jarray = env->NewIntArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12228,7 +12227,7 @@ JNIEXPORT jintArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt32Array(JNIEnv* en
     // QCC_DbgPrintf(("MsgArg_getUint32Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_INT32_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_INT32_ARRAY == msgArg->typeId);
 
     jintArray jarray = env->NewIntArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12250,7 +12249,7 @@ JNIEXPORT jlongArray JNICALL Java_org_alljoyn_bus_MsgArg_getInt64Array(JNIEnv* e
     // QCC_DbgPrintf(("MsgArg_getInt64Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_INT64_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_INT64_ARRAY == msgArg->typeId);
 
     jlongArray jarray = env->NewLongArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12272,7 +12271,7 @@ JNIEXPORT jlongArray JNICALL Java_org_alljoyn_bus_MsgArg_getUint64Array(JNIEnv* 
     // QCC_DbgPrintf(("MsgArg_getUint64Array()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_UINT64_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_UINT64_ARRAY == msgArg->typeId);
 
     jlongArray jarray = env->NewLongArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12294,7 +12293,7 @@ JNIEXPORT jdoubleArray JNICALL Java_org_alljoyn_bus_MsgArg_getDoubleArray(JNIEnv
     // QCC_DbgPrintf(("MsgArg_getDoubleArray()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_DOUBLE_ARRAY == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_DOUBLE_ARRAY == msgArg->typeId);
 
     jdoubleArray jarray = env->NewDoubleArray(msgArg->v_scalarArray.numElements);
     if (!jarray) {
@@ -12327,7 +12326,7 @@ JNIEXPORT jbyte JNICALL Java_org_alljoyn_bus_MsgArg_getByte(JNIEnv* env, jclass 
     // QCC_DbgPrintf(("MsgArg_getByte()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_BYTE == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_BYTE == msgArg->typeId);
     return msgArg->v_byte;
 }
 
@@ -12338,7 +12337,7 @@ JNIEXPORT jshort JNICALL Java_org_alljoyn_bus_MsgArg_getInt16(JNIEnv* env, jclas
     // QCC_DbgPrintf(("MsgArg_getInt16()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_INT16 == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_INT16 == msgArg->typeId);
     return msgArg->v_int16;
 }
 
@@ -12349,7 +12348,7 @@ JNIEXPORT jshort JNICALL Java_org_alljoyn_bus_MsgArg_getUint16(JNIEnv* env, jcla
     // QCC_DbgPrintf(("MsgArg_getUint16()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_UINT16 == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_UINT16 == msgArg->typeId);
     return msgArg->v_uint16;
 }
 
@@ -12360,7 +12359,7 @@ JNIEXPORT jboolean JNICALL Java_org_alljoyn_bus_MsgArg_getBool(JNIEnv* env, jcla
     // QCC_DbgPrintf(("MsgArg_getBool()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_BOOLEAN == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_BOOLEAN == msgArg->typeId);
     return msgArg->v_bool;
 }
 
@@ -12371,7 +12370,7 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getUint32(JNIEnv* env, jclass
     // QCC_DbgPrintf(("MsgArg_getUint32()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_UINT32 == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_UINT32 == msgArg->typeId);
     return msgArg->v_uint32;
 }
 
@@ -12382,7 +12381,7 @@ JNIEXPORT jint JNICALL Java_org_alljoyn_bus_MsgArg_getInt32(JNIEnv* env, jclass 
     // QCC_DbgPrintf(("MsgArg_getInt32()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_INT32 == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_INT32 == msgArg->typeId);
     return msgArg->v_int32;
 }
 
@@ -12393,7 +12392,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getInt64(JNIEnv* env, jclass
     // QCC_DbgPrintf(("MsgArg_getInt64()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_INT64 == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_INT64 == msgArg->typeId);
     return msgArg->v_int64;
 }
 
@@ -12404,7 +12403,7 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_getUint64(JNIEnv* env, jclas
     // QCC_DbgPrintf(("MsgArg_getUint64()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_UINT64 == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_UINT64 == msgArg->typeId);
     return msgArg->v_uint64;
 }
 
@@ -12415,7 +12414,7 @@ JNIEXPORT jdouble JNICALL Java_org_alljoyn_bus_MsgArg_getDouble(JNIEnv* env, jcl
     // QCC_DbgPrintf(("MsgArg_getDouble()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_DOUBLE == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_DOUBLE == msgArg->typeId);
     return msgArg->v_double;
 }
 
@@ -12425,7 +12424,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getString(JNIEnv* env, jcl
     // QCC_DbgPrintf(("MsgArg_getString()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_STRING == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_STRING == msgArg->typeId);
 
     char* str = new char[msgArg->v_string.len + 1];
     if (!str) {
@@ -12447,7 +12446,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getObjPath(JNIEnv* env, jc
     // QCC_DbgPrintf(("MsgArg_getObjPath()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_OBJECT_PATH == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_OBJECT_PATH == msgArg->typeId);
 
     char* str = new char[msgArg->v_objPath.len + 1];
     if (!str) {
@@ -12469,7 +12468,7 @@ JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_MsgArg_getSignature__J(JNIEnv* en
     // QCC_DbgPrintf(("MsgArg_getsignature__J()"));
 
     MsgArg* msgArg = (MsgArg*)jmsgArg;
-    assert(ALLJOYN_SIGNATURE == msgArg->typeId);
+    QCC_ASSERT(ALLJOYN_SIGNATURE == msgArg->typeId);
 
     char* str = new char[msgArg->v_signature.len + 1];
     if (!str) {
@@ -12864,7 +12863,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_create(JNIEnv* env, jobje
 {
     QCC_DbgPrintf(("Translator_create()"));
 
-    assert(GetHandle<JTranslator*>(thiz) == NULL);
+    QCC_ASSERT(GetHandle<JTranslator*>(thiz) == NULL);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("Translator_create(): Exception"));
         return;
@@ -12892,7 +12891,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Translator_destroy(JNIEnv* env, jobj
         return;
     }
 
-    assert(jdt);
+    QCC_ASSERT(jdt);
     delete jdt;
 
     SetHandle(thiz, NULL);

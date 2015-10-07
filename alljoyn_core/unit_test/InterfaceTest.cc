@@ -279,7 +279,7 @@ TEST_F(InterfaceTest, AddSignalToInterface_AfterItIsActivated) {
     status = g_msgBus->CreateInterface(myService.getAlljoynDummyInterfaceName2(), regTestIntf);
     ASSERT_EQ(ER_OK, status);
 
-    assert(regTestIntf);
+    QCC_ASSERT(regTestIntf);
     regTestIntf->Activate();
 
     /* Adding a signal to the activated interface -- Error */
@@ -379,7 +379,7 @@ TEST_F(InterfaceTest, AddSamePropertyToInterface_AndActivateItLater) {
     ASSERT_TRUE(myService.getobjectRegistered());
 
     status = g_msgBus->CreateInterface(myService.getAlljoynValuesDummyInterfaceName3(), valuesIntf);
-    assert(valuesIntf);
+    QCC_ASSERT(valuesIntf);
 
     /* Adding properties to the interface */
     status = valuesIntf->AddProperty("int_val", "i", PROP_ACCESS_RW);

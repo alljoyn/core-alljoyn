@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <qcc/ThreadPool.h>
 
 #define QCC_MODULE "THREADPOOL"
@@ -56,7 +55,7 @@ ThreadPool::ThreadPool(const char* name, uint32_t poolsize)
 {
     QCC_DbgPrintf(("ThreadPool::ThreadPool()"));
 
-    assert(poolsize && "ThreadPool::ThreadPool(): Empty pools are no good for anyone");
+    QCC_ASSERT(poolsize && "ThreadPool::ThreadPool(): Empty pools are no good for anyone");
 
     /*
      * Start the dispatcher Timer.  The Timer is the code that will cause alarms
@@ -107,7 +106,7 @@ QStatus ThreadPool::Stop()
 QStatus ThreadPool::Join()
 {
     QCC_DbgPrintf(("ThreadPool::Join()"));
-    assert(m_stopping && "ThreadPool::Join(): must have previously Stop()ped");
+    QCC_ASSERT(m_stopping && "ThreadPool::Join(): must have previously Stop()ped");
     QStatus status = m_dispatcher.Join();
     return status;
 }
@@ -224,7 +223,7 @@ void ThreadPool::Release(Runnable* runnable)
     QCC_DbgPrintf(("ThreadPool::Release(): Got lock"));
 
     RunnableEntry::iterator i = m_closures.find(runnable);
-    assert(i != m_closures.end() && "ThreadPool::Release(): Cannot find closure to release");
+    QCC_ASSERT(i != m_closures.end() && "ThreadPool::Release(): Cannot find closure to release");
     m_closures.erase(i);
 
     /*

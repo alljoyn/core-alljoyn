@@ -23,8 +23,6 @@
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 
-#include <assert.h>
-
 #include "Bus.h"
 #include "DaemonRouter.h"
 #include "TransportList.h"

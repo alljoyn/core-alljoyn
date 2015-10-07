@@ -23,7 +23,6 @@
 #include <qcc/Util.h>
 #include <alljoyn/MsgArg.h>
 
-#include <assert.h>
 
 #include "SessionInternal.h"
 

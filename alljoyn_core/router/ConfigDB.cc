@@ -20,7 +20,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <sys/types.h>
 #if !defined(QCC_OS_GROUP_WINDOWS)
@@ -133,7 +132,7 @@ void ConfigDB::NameOwnerChanged(const String& alias,
 ConfigDB::ConfigDB(const String defaultXml, const String srcFileName) :
     defaultXml(defaultXml), fileName(srcFileName), db(new DB()), stopping(false)
 {
-    assert(!singleton);
+    QCC_ASSERT(!singleton);
     if (!singleton) {
         singleton = this;
     }

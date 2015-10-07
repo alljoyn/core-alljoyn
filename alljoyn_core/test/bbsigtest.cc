@@ -19,7 +19,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 
@@ -127,11 +126,11 @@ class LocalTestObject : public BusObject {
     LocalTestObject(const char*path) : BusObject(path)
     {
         const InterfaceDescription* Intf = g_msgBus->GetInterface(InterfaceName);
-        assert(Intf);
+        QCC_ASSERT(Intf);
         AddInterface(*Intf);
 
         my_signal_member = Intf->GetMember("large_signal");
-        assert(my_signal_member);
+        QCC_ASSERT(my_signal_member);
     }
 
     QStatus SendSignal(SessionId sessionId) {
@@ -310,7 +309,7 @@ int CDECL_CALL main(int argc, char** argv)
     g_msgBus->RegisterBusObject(testObj);
     /* Register the signal handler with the bus */
     const InterfaceDescription::Member* signal_member = testIntf->GetMember("large_signal");
-    assert(signal_member);
+    QCC_ASSERT(signal_member);
     status = g_msgBus->RegisterSignalHandler(&testObj,
                                              static_cast<MessageReceiver::SignalHandler>(&LocalTestObject::SignalHandler),
                                              signal_member,

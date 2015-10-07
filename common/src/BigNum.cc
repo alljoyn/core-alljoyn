@@ -14,7 +14,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <stdio.h>
 #include <algorithm>
 
@@ -88,7 +87,7 @@ class BigNum::Storage {
     {
         size_t mallocSz = sizeof(Storage) + (sz + extra) * sizeof(uint32_t);
         uint8_t* p = (uint8_t*)malloc(mallocSz);
-        assert(p);
+        QCC_ASSERT(p);
         if (NULL == p) {
             /* We could return NULL from this function, but right now nothing that calls
              * this function is designed to cope with that. Just abort. */
@@ -207,10 +206,10 @@ BigNum BigNum::clone(size_t extra) const
 
 BigNum& BigNum::zero_ext(size_t size)
 {
-    assert(size >= length);
+    QCC_ASSERT(size >= length);
     if (size != length) {
         if (storage) {
-            assert(digits == storage->buffer);
+            QCC_ASSERT(digits == storage->buffer);
             if (size <= storage->size) {
                 memset(digits + length, 0, (size - length) * sizeof(uint32_t));
             } else {
@@ -562,8 +561,8 @@ BigNum BigNum::operator-(const BigNum& n) const
 // Monadic substraction
 BigNum& BigNum::operator-=(const BigNum& n)
 {
-    assert(!haslz());
-    assert(!n.haslz());
+    QCC_ASSERT(!haslz());
+    QCC_ASSERT(!n.haslz());
     if ((this->length > n.length) && (this->neg == n.neg)) {
         return this->sub(n);
     } else {
@@ -582,7 +581,7 @@ BigNum BigNum::operator-() const
 // Subtract an integer from an BigNum
 BigNum BigNum::operator-(uint32_t i) const
 {
-    assert(!haslz());
+    QCC_ASSERT(!haslz());
     if (i == 0) {
         return *this;
     } else {
@@ -597,7 +596,7 @@ BigNum BigNum::operator-(uint32_t i) const
 // Subtract an integer from an BigNum
 BigNum& BigNum::operator-=(uint32_t i)
 {
-    assert(!haslz());
+    QCC_ASSERT(!haslz());
     BigNum n;
     n.length = 1;
     n.neg = false;
@@ -612,7 +611,7 @@ BigNum& BigNum::operator-=(uint32_t i)
 // multiple-precision multiplication by an integer
 BigNum & AJ_CALL BigNum::mul(BigNum& result, const BigNum& a, uint32_t b, bool bneg)
 {
-    assert(!result.storage || (result.storage != a.storage));
+    QCC_ASSERT(!result.storage || (result.storage != a.storage));
     if (b > 2) {
         result.reset(a.length + 1, a.neg ^ bneg);
         // single-precision multiplication
@@ -640,8 +639,8 @@ BigNum & AJ_CALL BigNum::mul(BigNum& result, const BigNum& a, uint32_t b, bool b
 // multiple-precision multiplication
 BigNum& BigNum::mul(BigNum& result, const BigNum& a, const BigNum& b)
 {
-    assert(!result.storage || (result.storage != a.storage));
-    assert(!result.storage || (result.storage != b.storage));
+    QCC_ASSERT(!result.storage || (result.storage != a.storage));
+    QCC_ASSERT(!result.storage || (result.storage != b.storage));
     // It is more efficient if the inner loop is the larger loop
     if (a.length > b.length) {
         return mul(result, b, a);
@@ -845,7 +844,7 @@ BigNum BigNum::operator/(const BigNum& n) const
 BigNum BigNum::operator/(uint32_t i) const
 {
     // TODO - check for power of 2 and shift
-    assert(i != 0);
+    QCC_ASSERT(i != 0);
     BigNum n;
     BigNum rem;
     n.digits = &i;
@@ -1039,7 +1038,7 @@ int AJ_CALL BigNum::compare(const BigNum& a, const BigNum& b)
 // Inplace subtraction. Assumes that the caller is handling the sign of the result.
 BigNum& BigNum::sub(const BigNum& n, size_t shift)
 {
-    assert(this->abs() >= n.abs());
+    QCC_ASSERT(this->abs() >= n.abs());
     size_t len = 0;
     uint64_t borrow = 0;
     uint32_t* l = digits + shift;
@@ -1114,8 +1113,8 @@ static uint32_t monty_rho(uint64_t b)
 BigNum& BigNum::monty_mul(BigNum& r, const BigNum& n, const BigNum& m, uint32_t rho) const
 {
     size_t len = m.length;
-    assert(length <= len);
-    assert(n.length <= len);
+    QCC_ASSERT(length <= len);
+    QCC_ASSERT(n.length <= len);
 
     // Zero pad inputs if needed
     BigNum x = (length < len) ? clone(len - length) : *this;
@@ -1152,7 +1151,7 @@ BigNum& BigNum::monty_mul(BigNum& r, const BigNum& n, const BigNum& m, uint32_t 
 // Modular exponentiation using Montgomery multiplication
 BigNum BigNum::monty_mod_exp(const BigNum& e, const BigNum& m) const
 {
-    assert(m.is_odd());
+    QCC_ASSERT(m.is_odd());
     uint32_t rho = monty_rho(m.digits[0]);
 
     BigNum R = 1;

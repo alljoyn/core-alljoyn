@@ -298,7 +298,7 @@ void SLAPStream::ProcessAckNum(uint8_t ack)
     while (!m_txSent.empty()) {
         pkt = m_txSent.front();
         if (SEQ_GT(ack, pkt->GetSeqNum())) {
-            assert(pkt->GetPacketType() == RELIABLE_DATA_PACKET);
+            QCC_ASSERT(pkt->GetPacketType() == RELIABLE_DATA_PACKET);
             m_txSent.pop_front();
             m_txFreeList.push_back(pkt);
             /* If there is space available in the m_txFreeList, set the sink event */
@@ -403,7 +403,7 @@ void SLAPStream::ReadEventTriggered(uint8_t* buffer, size_t bytes)
                 ProcessControlPacket();
                 break;
             }
-            assert(m_rxCurrent);
+            QCC_ASSERT(m_rxCurrent);
             m_rxCurrent->Clear();
         }
     }

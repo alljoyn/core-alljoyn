@@ -104,13 +104,13 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
 
     void SetEpStopping(void)
     {
-        assert(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING);
+        QCC_ASSERT(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING);
         m_epState = EP_STOPPING;
     }
 
     void SetEpDone(void)
     {
-        assert(m_epState == EP_FAILED || m_epState == EP_STOPPING);
+        QCC_ASSERT(m_epState == EP_FAILED || m_epState == EP_STOPPING);
         m_epState = EP_DONE;
     }
     AuthState GetAuthState(void) { return m_authState; }
@@ -395,7 +395,7 @@ DaemonSLAPTransport::DaemonSLAPTransport(BusAttachment& bus)
      * We know we are daemon code, so we'd better be running with a daemon
      * router.  This is assumed elsewhere.
      */
-    assert(bus.GetInternal().GetRouter().IsDaemon());
+    QCC_ASSERT(bus.GetInternal().GetRouter().IsDaemon());
 }
 
 
@@ -821,7 +821,7 @@ void DaemonSLAPTransport::Authenticated(DaemonSLAPEndpoint& conn)
     m_lock.Lock(MUTEX_CONTEXT);
 
     set<DaemonSLAPEndpoint>::iterator i = find(m_authList.begin(), m_authList.end(), conn);
-    assert(i != m_authList.end() && "DaemonSLAPTransport::Authenticated(): Conn not on m_authList");
+    QCC_ASSERT(i != m_authList.end() && "DaemonSLAPTransport::Authenticated(): Conn not on m_authList");
 
     /*
      * Note here that we have not yet marked the authState as AUTH_SUCCEEDED so

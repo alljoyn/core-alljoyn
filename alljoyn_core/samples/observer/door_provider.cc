@@ -55,29 +55,29 @@ static QStatus BuildInterface(BusAttachment& bus)
 
     InterfaceDescription* intf = NULL;
     status = bus.CreateInterface(INTF_NAME, intf);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddProperty("IsOpen", "b", PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddPropertyAnnotation("IsOpen", "org.freedesktop.DBus.Property.EmitsChangedSignal", "true");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddProperty("Location", "s", PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddPropertyAnnotation("Location", "org.freedesktop.DBus.Property.EmitsChangedSignal", "true");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddProperty("KeyCode", "u", PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddPropertyAnnotation("KeyCode", "org.freedesktop.DBus.Property.EmitsChangedSignal", "invalidates");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     status = intf->AddMethod("Open", "", "", "");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddMethod("Close", "", "", "");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = intf->AddMethod("KnockAndRun", "", "", "", MEMBER_ANNOTATE_NO_REPLY);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     status = intf->AddSignal("PersonPassedThrough", "s", "name", MEMBER_ANNOTATE_SESSIONCAST);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     intf->Activate();
 
@@ -88,14 +88,14 @@ static QStatus SetupBusAttachment(BusAttachment& bus, AboutData& aboutData)
 {
     QStatus status;
     status = bus.Start();
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = bus.Connect();
     if (status != ER_OK) {
         return status;
     }
 
     status = BuildInterface(bus);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
     bus.BindSessionPort(port, opts, g_session_port_listener);
@@ -143,7 +143,7 @@ class Door : public BusObject {
         bus(bus)
     {
         const InterfaceDescription* intf = bus.GetInterface(INTF_NAME);
-        assert(intf);
+        QCC_ASSERT(intf);
         AddInterface(*intf, ANNOUNCED);
 
         /** Register the method handlers with the object */
@@ -323,10 +323,10 @@ int CDECL_CALL main(int argc, char** argv)
 
     BusAttachment* bus = NULL;
     bus = new BusAttachment("door_provider", true);
-    assert(bus != NULL);
+    QCC_ASSERT(bus != NULL);
     AboutData aboutData("en");
     AboutObj* aboutObj = new AboutObj(*bus);
-    assert(aboutObj != NULL);
+    QCC_ASSERT(aboutObj != NULL);
 
     if (ER_OK != SetupBusAttachment(*bus, aboutData)) {
         delete aboutObj;

@@ -22,7 +22,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <errno.h>
 #include <pthread.h>
 #include <signal.h>
@@ -197,7 +196,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
 
     /* If this is an external thread, add it to the thread list here since Run will not be called */
     if (isExternal) {
-        assert(func == NULL);
+        QCC_ASSERT(func == NULL);
         threadListLock->Lock();
         (*threadList)[handle] = this;
         if (pthread_getspecific(cleanExternalThreadKey) == NULL) {
@@ -205,7 +204,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
             if (ret != 0) {
                 QCC_LogError(ER_OS_ERROR, ("Setting TLS key: %s", strerror(ret)));
             }
-            assert(ret == 0);
+            QCC_ASSERT(ret == 0);
         }
         threadListLock->Unlock();
     }
@@ -239,7 +238,7 @@ ThreadInternalReturn Thread::RunInternal(void* arg)
     sigemptyset(&newmask);
     sigaddset(&newmask, SIGUSR1);
 
-    assert(thread != NULL);
+    QCC_ASSERT(thread != NULL);
 
     /* Plug race condition between Start and Run. (pthread_create may not write handle before run is called) */
     thread->handle = pthread_self();
@@ -445,7 +444,7 @@ QStatus Thread::Join(void)
             hbjMutex.Unlock();
             int ret = 0;
             if (state != INITIAL) {
-                assert(handle);
+                QCC_ASSERT(handle);
                 ret = pthread_detach(handle);
             }
             if (ret == 0) {
@@ -477,7 +476,7 @@ QStatus Thread::Join(void)
             hasBeenJoined = true;
             hbjMutex.Unlock();
             if (state != INITIAL) {
-                assert(handle);
+                QCC_ASSERT(handle);
                 ret = pthread_join(handle, NULL);
             }
             handle = 0;
@@ -504,8 +503,8 @@ QStatus Thread::Join(void)
 ThreadReturn STDCALL Thread::Run(void* arg)
 {
     QCC_DbgTrace(("Thread::Run() [%s:%srunning]", funcName, IsRunning() ? " " : " not "));
-    assert(NULL != function);
-    assert(!isExternal);
+    QCC_ASSERT(NULL != function);
+    QCC_ASSERT(!isExternal);
     return (*function)(arg);
 }
 

@@ -63,6 +63,8 @@ class DiscoveryDynamicDeathTest : public testing::TestWithParam<DynamicParams> {
 };
 
 // This name should end in "DeathTest" so as to run before all other tests.
+// This test also depends on the QCC_ASSERT macro outputting a string matching the
+// regex "Assertion.*failed" on failure. See ASACORE-2386.
 TEST_P(DiscoveryStaticDeathTest, ComputeStaticScoreDeathTest)
 {
     // ComputeStaticScore using power_source, mobility, availability and node_type values
@@ -75,6 +77,8 @@ TEST_P(DiscoveryStaticDeathTest, ComputeStaticScoreDeathTest)
     ASSERT_DEATH(ajn::IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeConnection), "Assertion.*failed");
 }
 
+// This test also depends on the QCC_ASSERT macro outputting a string matching the
+// regex "Assertion.*failed" on failure. See ASACORE-2386.
 TEST_P(DiscoveryDynamicDeathTest, ComputeDynamicScoreDeathTest)
 {
     // ComputeDynamicScore using tcpAvail, tcpMax, udpAvail, udpMax, tclAvail and tclMax values

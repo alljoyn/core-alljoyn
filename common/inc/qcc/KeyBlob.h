@@ -26,7 +26,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <qcc/String.h>
 #include <qcc/GUID.h>
 #include <string.h>

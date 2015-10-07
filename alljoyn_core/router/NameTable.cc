@@ -23,7 +23,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
@@ -195,7 +194,7 @@ QStatus NameTable::AddAlias(const qcc::String& aliasName,
         const qcc::String* newOwner = NULL;
 
         if (wasIt != aliasNames.end()) {
-            assert(!wasIt->second.empty());
+            QCC_ASSERT(!wasIt->second.empty());
             const NameQueueEntry& primary = wasIt->second[0];
             if (primary.endpointName == uniqueName) {
                 /* Enpoint already owns this alias */
@@ -267,7 +266,7 @@ void NameTable::RemoveAlias(const qcc::String& aliasName,
     if (it != aliasNames.end()) {
         deque<NameQueueEntry>& queue = it->second;
 
-        assert(!queue.empty());
+        QCC_ASSERT(!queue.empty());
         if (queue[0].endpointName == ownerName) {
             /* Remove primary */
             if (queue.size() > 1) {
@@ -343,7 +342,7 @@ BusEndpoint NameTable::FindEndpoint(const qcc::String& busName) const
     } else {
         unordered_map<String, deque<NameQueueEntry>, Hash, Equal>::const_iterator it = aliasNames.find(busName);
         if (it != aliasNames.end()) {
-            assert(!it->second.empty());
+            QCC_ASSERT(!it->second.empty());
             ep = FindEndpoint(it->second[0].endpointName);
         }
         /* Fallback to virtual (remote) aliases if a suitable local one cannot be found */

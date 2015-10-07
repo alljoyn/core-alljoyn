@@ -139,7 +139,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorel
  * alljoyn_keystorelistener_getkeys(listener, keyStore, NULL, &sink_sz);
  * sink = (char*) malloc(sizeof(char) * sink_sz);
  * status = alljoyn_keystorelistener_getkeys(listener, keyStore, sink, &sink_sz);
- * assert(status == ER_OK);
+ * QCC_ASSERT(status == ER_OK);
  * @endcode
  *
  * @param listener  The alljoyn_keystorelistener from which to get the keys.

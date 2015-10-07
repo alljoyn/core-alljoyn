@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <pthread.h>
 #include <errno.h>
 
@@ -41,7 +40,7 @@ Condition::Condition()
     if (ret != 0) {
         QCC_LogError(ER_OS_ERROR, ("Condition::Condition(): Cannot initialize pthread condition variable (%d)", ret));
     }
-    assert(ret == 0 && "Condition::Condition(): Cannot initialize pthread condition variable");
+    QCC_ASSERT(ret == 0 && "Condition::Condition(): Cannot initialize pthread condition variable");
 }
 
 Condition::~Condition()
@@ -50,7 +49,7 @@ Condition::~Condition()
     if (ret != 0) {
         QCC_LogError(ER_OS_ERROR, ("Condition::Condition(): Cannot destroy pthread condition variable (%d)", ret));
     }
-    assert(ret == 0 && "Condition::Condition(): Cannot destroy pthread condition variable");
+    QCC_ASSERT(ret == 0 && "Condition::Condition(): Cannot destroy pthread condition variable");
 }
 
 QStatus Condition::Wait(qcc::Mutex& m)

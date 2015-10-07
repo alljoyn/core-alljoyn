@@ -763,7 +763,7 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
         break;
 
     default: /* Shouldn't ever happen. */
-        assert(false);
+        QCC_ASSERT(false);
         QCC_LogError(ER_FAIL, ("Encountered unknown type %u", type));
         return ER_FAIL;
     }

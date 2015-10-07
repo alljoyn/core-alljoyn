@@ -565,13 +565,13 @@ class _TCPEndpoint : public _RemoteEndpoint {
 
     void SetEpStopping(void)
     {
-        assert(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING || m_epState == EP_FAILED);
+        QCC_ASSERT(m_epState == EP_STARTING || m_epState == EP_STARTED || m_epState == EP_STOPPING || m_epState == EP_FAILED);
         m_epState = EP_STOPPING;
     }
 
     void SetEpDone(void)
     {
-        assert(m_epState == EP_FAILED || m_epState == EP_STOPPING);
+        QCC_ASSERT(m_epState == EP_FAILED || m_epState == EP_STOPPING);
         m_epState = EP_DONE;
     }
 
@@ -879,7 +879,7 @@ TCPTransport::TCPTransport(BusAttachment& bus)
      * We know we are daemon code, so we'd better be running with a daemon
      * router.  This is assumed elsewhere.
      */
-    assert(m_bus.GetInternal().GetRouter().IsDaemon());
+    QCC_ASSERT(m_bus.GetInternal().GetRouter().IsDaemon());
 }
 
 TCPTransport::~TCPTransport()
@@ -913,7 +913,7 @@ void TCPTransport::Authenticated(TCPEndpoint& conn)
     m_endpointListLock.Lock(MUTEX_CONTEXT);
 
     set<TCPEndpoint>::iterator i = find(m_authList.begin(), m_authList.end(), conn);
-    assert(i != m_authList.end() && "TCPTransport::Authenticated(): Conn not on m_authList");
+    QCC_ASSERT(i != m_authList.end() && "TCPTransport::Authenticated(): Conn not on m_authList");
 
     /*
      * Note here that we have not yet marked the authState as AUTH_SUCCEEDED so
@@ -1843,7 +1843,7 @@ void* TCPTransport::Run(void* arg)
                 QCC_DbgPrintf(("TCPTransport::Run(): maxConn == %d", maxConn));
                 QCC_DbgPrintf(("TCPTransport::Run(): mAuthList.size() == %d", m_authList.size()));
                 QCC_DbgPrintf(("TCPTransport::Run(): mEndpointList.size() == %d", m_endpointList.size()));
-                assert(m_authList.size() + m_endpointList.size() <= maxConn);
+                QCC_ASSERT(m_authList.size() + m_endpointList.size() <= maxConn);
 
                 /*
                  * Do we have a slot available for a new connection?  If so, use
@@ -2076,9 +2076,9 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * or responding to external daemons.
      */
     if (m_isListening == false) {
-        assert(m_isAdvertising == false);
-        assert(m_isDiscovering == false);
-        assert(m_isNsEnabled == false);
+        QCC_ASSERT(m_isAdvertising == false);
+        QCC_ASSERT(m_isDiscovering == false);
+        QCC_ASSERT(m_isNsEnabled == false);
     }
 
     /*
@@ -2090,8 +2090,8 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * on those interfaces) must be non-empty.
      */
     if (m_isNsEnabled && !m_stopping) {
-        assert(m_isListening);
-        assert(!m_listenPortMap.empty());
+        QCC_ASSERT(m_isListening);
+        QCC_ASSERT(!m_listenPortMap.empty());
     }
 
     /*
@@ -2102,10 +2102,10 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * better be enabled.
      */
     if (m_isAdvertising && !m_stopping) {
-        assert(!m_advertising.empty());
-        assert(m_isListening);
-        assert(!m_listenPortMap.empty());
-        assert(m_isNsEnabled);
+        QCC_ASSERT(!m_advertising.empty());
+        QCC_ASSERT(m_isListening);
+        QCC_ASSERT(!m_listenPortMap.empty());
+        QCC_ASSERT(m_isNsEnabled);
     }
 
     /*
@@ -2116,10 +2116,10 @@ void TCPTransport::RunListenMachine(ListenRequest& listenRequest)
      * enabled.
      */
     if (m_isDiscovering && !m_stopping) {
-        assert(!m_discovering.empty());
-        assert(m_isListening);
-        assert(!m_listenPortMap.empty());
-        assert(m_isNsEnabled);
+        QCC_ASSERT(!m_discovering.empty());
+        QCC_ASSERT(m_isListening);
+        QCC_ASSERT(!m_listenPortMap.empty());
+        QCC_ASSERT(m_isNsEnabled);
     }
 
     /*
@@ -2316,10 +2316,10 @@ void TCPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     /*
      * We think we're ready to send the advertisement.  Are we really?
      */
-    assert(m_isListening);
-    assert(!m_listenPortMap.empty());
-    assert(m_isNsEnabled);
-    assert(IpNameService::Instance().Started() && "TCPTransport::EnableAdvertisementInstance(): IpNameService not started");
+    QCC_ASSERT(m_isListening);
+    QCC_ASSERT(!m_listenPortMap.empty());
+    QCC_ASSERT(m_isNsEnabled);
+    QCC_ASSERT(IpNameService::Instance().Started() && "TCPTransport::EnableAdvertisementInstance(): IpNameService not started");
 
     QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestParamOpt, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
@@ -2397,7 +2397,7 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
             map<qcc::String, qcc::String> argMap;
             qcc::String spec;
             status = NormalizeListenSpec(i->c_str(), spec, argMap);
-            assert(status == ER_OK && "TCPTransport::DisableAdvertisementInstance(): Invalid TCP listen spec");
+            QCC_ASSERT(status == ER_OK && "TCPTransport::DisableAdvertisementInstance(): Invalid TCP listen spec");
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
@@ -2490,10 +2490,10 @@ void TCPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
     /*
      * We think we're ready to send the FindAdvertisement.  Are we really?
      */
-    assert(m_isListening);
-    assert(!m_listenPortMap.empty());
-    assert(m_isNsEnabled);
-    assert(IpNameService::Instance().Started() && "TCPTransport::EnableDiscoveryInstance(): IpNameService not started");
+    QCC_ASSERT(m_isListening);
+    QCC_ASSERT(!m_listenPortMap.empty());
+    QCC_ASSERT(m_isNsEnabled);
+    QCC_ASSERT(IpNameService::Instance().Started() && "TCPTransport::EnableDiscoveryInstance(): IpNameService not started");
 
     QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_TCP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
@@ -2555,7 +2555,7 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
             map<qcc::String, qcc::String> argMap;
             qcc::String spec;
             QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
-            assert(status == ER_OK && "TCPTransport::DisableDiscoveryInstance(): Invalid TCP listen spec");
+            QCC_ASSERT(status == ER_OK && "TCPTransport::DisableDiscoveryInstance(): Invalid TCP listen spec");
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
@@ -2890,7 +2890,7 @@ QStatus TCPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
      * the default addresses and fail if we find one.
      */
     map<qcc::String, qcc::String>::iterator i = argMap.find("addr");
-    assert(i != argMap.end());
+    QCC_ASSERT(i != argMap.end());
     if ((i->second == ADDR4_DEFAULT)) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
                      ("TCPTransport::NormalizeTransportSpec(): The addr may not be the default address."));
@@ -2965,7 +2965,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * deleted after it is joined, we must have a started name service or someone
      * isn't playing by the rules; so an assert is appropriate here.
      */
-    assert(IpNameService::Instance().Started() && "TCPTransport::Connect(): IpNameService not started");
+    QCC_ASSERT(IpNameService::Instance().Started() && "TCPTransport::Connect(): IpNameService not started");
 
     /*
      * Parse and normalize the connectArgs.  When connecting to the outside
@@ -2985,8 +2985,8 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * underlying network (even if it is Wi-Fi P2P) is assumed to be up and
      * functioning.
      */
-    assert(argMap.find("addr") != argMap.end() && "TCPTransport::Connect(): addr not present in argMap");
-    assert(argMap.find("port") != argMap.end() && "TCPTransport::Connect(): port not present in argMap");
+    QCC_ASSERT(argMap.find("addr") != argMap.end() && "TCPTransport::Connect(): addr not present in argMap");
+    QCC_ASSERT(argMap.find("port") != argMap.end() && "TCPTransport::Connect(): port not present in argMap");
 
     IPAddress ipAddr(argMap.find("addr")->second);
     uint16_t port = StringToU32(argMap["port"]);
@@ -3189,7 +3189,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         QCC_LogError(status, ("TCPTransport::Connect(): No slot for new connection"));
         /* Remove this thread from the m_activeEndpointsThreadList */
         set<Thread*>::iterator i = find(m_activeEndpointsThreadList.begin(), m_activeEndpointsThreadList.end(), thread);
-        assert(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
+        QCC_ASSERT(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
         m_activeEndpointsThreadList.erase(i);
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
         return status;
@@ -3278,7 +3278,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      */
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     set<Thread*>::iterator i = find(m_activeEndpointsThreadList.begin(), m_activeEndpointsThreadList.end(), thread);
-    assert(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
+    QCC_ASSERT(i != m_activeEndpointsThreadList.end() && "TCPTransport::Connect(): Thread* not on m_activeEndpointsThreadList");
     m_activeEndpointsThreadList.erase(i);
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
@@ -3395,7 +3395,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
      * up, and stopped when it is stopped, we must have a started name service or
      * someone isn't playing by the rules; so an assert is appropriate here.
      */
-    assert(IpNameService::Instance().Started() && "TCPTransport::DoStartListen(): IpNameService not started");
+    QCC_ASSERT(IpNameService::Instance().Started() && "TCPTransport::DoStartListen(): IpNameService not started");
 
     qcc::String interfaces = ConfigDB::GetConfigDB()->GetProperty("ns_interfaces");
     if (interfaces.size()) {
@@ -3410,7 +3410,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
     qcc::String spec;
     map<qcc::String, qcc::String> argMap;
     QStatus status = NormalizeListenSpec(normSpec.c_str(), spec, argMap);
-    assert(status == ER_OK && "TCPTransport::DoStartListen(): Invalid TCP listen spec");
+    QCC_ASSERT(status == ER_OK && "TCPTransport::DoStartListen(): Invalid TCP listen spec");
 
     qcc::String key = "";
     if (argMap.find("iface") != argMap.end()) {
@@ -3683,7 +3683,7 @@ void TCPTransport::DoStopListen(qcc::String& normSpec)
      * up, and stopped after it is stopped, we must have a started name service or
      * someone isn't playing by the rules; so an assert is appropriate here.
      */
-    assert(IpNameService::Instance().Started() && "TCPTransport::DoStopListen(): IpNameService not started");
+    QCC_ASSERT(IpNameService::Instance().Started() && "TCPTransport::DoStopListen(): IpNameService not started");
 
     /*
      * Find the (single) listen spec and remove it from the list of active FDs

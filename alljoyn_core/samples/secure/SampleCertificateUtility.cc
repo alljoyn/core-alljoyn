@@ -24,7 +24,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 #include <fcntl.h>

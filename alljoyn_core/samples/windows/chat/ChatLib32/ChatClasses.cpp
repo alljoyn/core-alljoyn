@@ -75,7 +75,7 @@ void ChatConnection::createMessageBus()
 void ChatConnection::Connect()
 {
     QStatus status = ER_OK;
-    assert(invariants());
+    QCC_ASSERT(invariants());
     createMessageBus();
     NotifyUser(MSG_STATUS, "Start the message bus.");
     /* Start the msg bus */
@@ -145,12 +145,12 @@ ChatObject::ChatObject(BusAttachment& bus, const char* path) : BusObject(bus, pa
 
     /* Add the chat interface to this object */
     const InterfaceDescription* chatIntf = bus.GetInterface(CHAT_SERVICE_INTERFACE_NAME);
-    assert(chatIntf);
+    QCC_ASSERT(chatIntf);
     AddInterface(*chatIntf);
 
     /* Store the Chat signal member away so it can be quickly looked up when signals are sent */
     chatSignalMember = chatIntf->GetMember("Chat");
-    assert(chatSignalMember);
+    QCC_ASSERT(chatSignalMember);
 
     /* Register signal handler */
     status =  bus.RegisterSignalHandler(this,

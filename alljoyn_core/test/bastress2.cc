@@ -84,7 +84,7 @@ class BasicSampleObject : public BusObject {
     {
         /** Add the test interface to this object */
         const InterfaceDescription* exampleIntf = bus.GetInterface(INTERFACE_NAME);
-        assert(exampleIntf);
+        QCC_ASSERT(exampleIntf);
         if (g_useAboutFeatureDiscovery) {
             AddInterface(*exampleIntf, ANNOUNCED);
         } else {

@@ -19,7 +19,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <qcc/Debug.h>
 #include <qcc/String.h>
@@ -338,8 +337,8 @@ QStatus _RemoteEndpoint::UntrustedClientStart() {
      * Note: It is required to set the listener only on the accepting end
      * i.e. for incoming endpoints.
      */
-    assert(internal);
-    assert(internal->listener);
+    QCC_ASSERT(internal);
+    QCC_ASSERT(internal->listener);
     return internal->listener->UntrustedClientStart();
 }
 QStatus _RemoteEndpoint::SetLinkTimeout(uint32_t idleTimeout, uint32_t probeTimeout, uint32_t maxIdleProbes)
@@ -415,7 +414,7 @@ uint32_t _RemoteEndpoint::GetIdleTimeout()
 
 QStatus _RemoteEndpoint::Start()
 {
-    assert(internal);
+    QCC_ASSERT(internal);
 
     if (minimalEndpoint) {
         if (internal->features.isBusToBus) {
@@ -424,7 +423,7 @@ QStatus _RemoteEndpoint::Start()
         return ER_OK;
     }
 
-    assert(internal->stream);
+    QCC_ASSERT(internal->stream);
     QCC_DbgPrintf(("_RemoteEndpoint::Start(%s, isBusToBus = %s, allowRemote = %s)", GetUniqueName().c_str(),
                    internal->features.isBusToBus ? "true" : "false",
                    internal->features.allowRemote ? "true" : "false"));
@@ -608,7 +607,7 @@ void _RemoteEndpoint::Exit()
 {
     QCC_DbgTrace(("_RemoteEndpoint::Exit(%s)", GetUniqueName().c_str()));
 
-    assert(minimalEndpoint == true && "_RemoteEndpoint::Exit(): You should have had ExitCallback() called for you!");
+    QCC_ASSERT(minimalEndpoint == true && "_RemoteEndpoint::Exit(): You should have had ExitCallback() called for you!");
     /* Ensure the endpoint is valid */
     if (!internal) {
         return;
@@ -638,7 +637,7 @@ void _RemoteEndpoint::Exited()
 
 void _RemoteEndpoint::ExitCallback()
 {
-    assert(minimalEndpoint == false && "_RemoteEndpoint::ExitCallback(): Where did a callback come from if no thread?");
+    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::ExitCallback(): Where did a callback come from if no thread?");
     /* Ensure the endpoint is valid */
     if (!internal) {
         return;
@@ -661,7 +660,7 @@ void _RemoteEndpoint::ExitCallback()
          * can occur only after _RemoteEndpoint::Establish() is successful, we assert
          * if the internal->listener is NULL.
          */
-        assert(internal->listener);
+        QCC_ASSERT(internal->listener);
         internal->listener->UntrustedClientExit();
     }
 
@@ -683,7 +682,7 @@ void _RemoteEndpoint::ExitCallback()
 QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 {
     QCC_UNUSED(source);
-    assert(minimalEndpoint == false && "_RemoteEndpoint::ReadCallback(): Where did a callback come from if no thread?");
+    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::ReadCallback(): Where did a callback come from if no thread?");
     /* Remote endpoints can be invalid if they were created with the default
      * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
      * endpoint was created with the default constructor. i.e. internal=NULL
@@ -890,7 +889,7 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
 QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
 {
     QCC_UNUSED(sink);
-    assert(minimalEndpoint == false && "_RemoteEndpoint::WriteCallback(): Where did a callback come from if no thread?");
+    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::WriteCallback(): Where did a callback come from if no thread?");
 
     /* Remote endpoints can be invalid if they were created with the default
      * constructor or being torn down. Return ER_BUS_NO_ENDPOINT only if the
@@ -1033,7 +1032,7 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
         } else {
             /* This thread will have to wait for room in the queue */
             Thread* thread = Thread::GetThread();
-            assert(thread);
+            QCC_ASSERT(thread);
 
             thread->AddAuxListener(this);
             internal->txWaitQueue.push_front(thread);
@@ -1147,7 +1146,7 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
     } else {
         /* This thread will have to wait for room in the queue */
         Thread* thread = Thread::GetThread();
-        assert(thread);
+        QCC_ASSERT(thread);
 
         thread->AddAuxListener(this);
         internal->txWaitQueue.push_front(thread);
@@ -1236,7 +1235,7 @@ QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
 }
 QStatus _RemoteEndpoint::PushMessage(Message& msg)
 {
-    assert(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
+    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
     QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
 
     QStatus status = ER_OK;
@@ -1327,7 +1326,7 @@ void _RemoteEndpoint::RegisterSessionId(uint32_t sessionId)
     if (internal) {
         QCC_DbgPrintf(("_RemoteEndpoint::RegisterSessionId (%s,%u)", GetUniqueName().c_str(), sessionId));
         internal->sessionIdSet.insert(sessionId);
-        assert(!internal->features.isBusToBus || (internal->sessionIdSet.size() == 1));
+        QCC_ASSERT(!internal->features.isBusToBus || (internal->sessionIdSet.size() == 1));
     }
 }
 
@@ -1350,7 +1349,7 @@ bool _RemoteEndpoint::IsInSession(SessionId sessionId)
 uint32_t _RemoteEndpoint::GetSessionId() const
 {
     if (internal) {
-        assert(internal->sessionIdSet.size() < 2);
+        QCC_ASSERT(internal->sessionIdSet.size() < 2);
         if (internal->sessionIdSet.size() == 1) {
             return *internal->sessionIdSet.begin();
         }

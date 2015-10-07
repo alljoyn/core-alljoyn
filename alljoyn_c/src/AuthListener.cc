@@ -22,7 +22,6 @@
 
 #include <alljoyn/AuthListener.h>
 #include <alljoyn_c/AuthListener.h>
-#include <assert.h>
 #include <stdio.h>
 #include <qcc/Debug.h>
 
@@ -49,7 +48,7 @@ class AuthListenerCallbackC : public AuthListener {
                                     const char* userName, uint16_t credMask, Credentials& credentials)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        assert(callbacks.request_credentials != NULL && "request_credentials callback must be specified");
+        QCC_ASSERT(callbacks.request_credentials != NULL && "request_credentials callback must be specified");
         bool ret = (callbacks.request_credentials(context, authMechanism, peerName, authCount, userName,
                                                   credMask, (alljoyn_credentials)(&credentials)) == QCC_TRUE ? true : false);
         return ret;
@@ -76,7 +75,7 @@ class AuthListenerCallbackC : public AuthListener {
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        assert(callbacks.authentication_complete != NULL && "authentication_complete callback must be specified");
+        QCC_ASSERT(callbacks.authentication_complete != NULL && "authentication_complete callback must be specified");
         callbacks.authentication_complete(context, authMechanism, peerName, (success == true ? QCC_TRUE : QCC_FALSE));
     }
   private:
@@ -98,7 +97,7 @@ class AuthListenerAsyncCallbackC : public AuthListener {
                                             void* authContext)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        assert(callbacks.request_credentials != NULL && "request_credentials callback must be specified");
+        QCC_ASSERT(callbacks.request_credentials != NULL && "request_credentials callback must be specified");
         QStatus ret = callbacks.request_credentials(context, (alljoyn_authlistener) this, authMechanism, authPeer, authCount, userName, credMask, authContext);
         return ret;
     }
@@ -124,7 +123,7 @@ class AuthListenerAsyncCallbackC : public AuthListener {
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        assert(callbacks.authentication_complete != NULL && "authentication_complete callback must be specified");
+        QCC_ASSERT(callbacks.authentication_complete != NULL && "authentication_complete callback must be specified");
         callbacks.authentication_complete(context, authMechanism, peerName, (success == true ? QCC_TRUE : QCC_FALSE));
     }
   private:
@@ -147,7 +146,7 @@ alljoyn_authlistener AJ_CALL alljoyn_authlistener_create(const alljoyn_authliste
 void AJ_CALL alljoyn_authlistener_destroy(alljoyn_authlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::AuthListenerCallbackC*)listener;
 }
 
@@ -160,7 +159,7 @@ alljoyn_authlistener AJ_CALL alljoyn_authlistenerasync_create(const alljoyn_auth
 void AJ_CALL alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::AuthListenerAsyncCallbackC*)listener;
 }
 
@@ -169,7 +168,7 @@ QStatus AJ_CALL alljoyn_authlistener_requestcredentialsresponse(alljoyn_authlist
     QCC_UNUSED(listener);
 
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     return ((ajn::AuthListenerAsyncCallbackC*)listener)->RequestCredentialsResponse(authContext, (accept == QCC_TRUE) ? true : false, *((ajn::AuthListener::Credentials*)credentials));
 }
 
@@ -178,7 +177,7 @@ QStatus AJ_CALL alljoyn_authlistener_verifycredentialsresponse(alljoyn_authliste
     QCC_UNUSED(listener);
 
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     return ((ajn::AuthListenerAsyncCallbackC*)listener)->VerifyCredentialsResponse(authContext, (accept == QCC_TRUE) ? true : false);
 }
 struct _alljoyn_credentials_handle {
@@ -194,7 +193,7 @@ alljoyn_credentials AJ_CALL alljoyn_credentials_create()
 void AJ_CALL alljoyn_credentials_destroy(alljoyn_credentials cred)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(cred != NULL && "cred parameter must not be NULL");
+    QCC_ASSERT(cred != NULL && "cred parameter must not be NULL");
     delete (ajn::AuthListener::Credentials*)cred;
 }
 

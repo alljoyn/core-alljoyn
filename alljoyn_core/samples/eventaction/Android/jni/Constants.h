@@ -24,7 +24,6 @@
 #include <alljoyn/AllJoynStd.h>
 #include <qcc/Log.h>
 #include <new>
-#include <assert.h>
 
 #ifndef LOGTHIS
 #if TARGET_ANDROID

@@ -23,7 +23,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <stdarg.h>
 #include <stdio.h>
 #if defined(QCC_OS_GROUP_WINDOWS)

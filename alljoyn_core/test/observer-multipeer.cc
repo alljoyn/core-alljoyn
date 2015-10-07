@@ -22,7 +22,6 @@
 #include <cstdio>
 #include <sstream>
 #include <sys/wait.h>
-#include <assert.h>
 #include <qcc/String.h>
 #include <qcc/Thread.h>
 #include <qcc/Debug.h>
@@ -72,16 +71,16 @@ class MultiPeerTestObject : public BusObject {
         BusObject(path.c_str()), bus(bus), path(path), interface(_interfaces) {
         busname = bus.GetUniqueName();
         const InterfaceDescription* intf = bus.GetInterface(interface.c_str());
-        assert(intf != NULL);
+        QCC_ASSERT(intf != NULL);
         AddInterface(*intf, ANNOUNCED);
 
         QStatus status;
 
         status = AddMethodHandler(intf->GetMember(METHOD), static_cast<MessageReceiver::MethodHandler>(&MultiPeerTestObject::HandleIdentify));
-        assert(status == ER_OK);
+        QCC_ASSERT(status == ER_OK);
         status = AddMethodHandler(intf->GetMember(METHOD_OBSUPDATER),
                                   static_cast<MessageReceiver::MethodHandler>(&MultiPeerTestObject::UpdateObservedSoFarBy));
-        assert(status == ER_OK);
+        QCC_ASSERT(status == ER_OK);
         QCC_UNUSED(status);
     }
 
@@ -91,7 +90,7 @@ class MultiPeerTestObject : public BusObject {
         QCC_UNUSED(member);
         MsgArg args[2] = { MsgArg("s", busname.c_str()), MsgArg("s", path.c_str()) };
         QStatus status = MethodReply(message, args, 2);
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         QCC_UNUSED(status);
     }
 
@@ -100,15 +99,15 @@ class MultiPeerTestObject : public BusObject {
         observedSoFarByLock.Lock(MUTEX_CONTEXT);
         const MsgArg* op = message->GetArg(0);
         const MsgArg* observerPID = message->GetArg(1);
-        assert(observerPID != NULL);
-        assert(op != NULL);
+        QCC_ASSERT(observerPID != NULL);
+        QCC_ASSERT(op != NULL);
         pid_t pid;
         observerPID->Get("u", &pid);
         char* option;
         op->Get("s", &option);
 
         if (strcmp(option, "insert") == 0) {
-            assert(observedSoFarBy.find(pid) == observedSoFarBy.end());     // Double observation sanity
+            QCC_ASSERT(observedSoFarBy.find(pid) == observedSoFarBy.end());     // Double observation sanity
             observedSoFarBy.insert(pid);
             QCC_DbgPrintf(("Object %s is observed (also) by %d", path.c_str(), (int)pid));
         } else {
@@ -149,12 +148,12 @@ class Participant : public SessionPortListener, public SessionListener {
         /* create interface */
         InterfaceDescription* intf = NULL;
         QStatus status = bus.CreateInterface(intfName.c_str(), intf);
-        assert(ER_OK == status);
-        assert(intf != NULL);
+        QCC_ASSERT(ER_OK == status);
+        QCC_ASSERT(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         status = intf->AddMethod(METHOD_OBSUPDATER, "su", "", "op,pid");
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         intf->Activate();
 
         QCC_UNUSED(status);
@@ -183,21 +182,21 @@ class Participant : public SessionPortListener, public SessionListener {
 
     void StartBus() {
         QStatus status = bus.Start();
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         qcc::String busAddress;
         busAddress = getConnectArg().c_str();
         QCC_DbgPrintf(("Fetched bus address is : %s", busAddress.c_str()));
         status = bus.Connect(busAddress.c_str());
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         status = bus.BindSessionPort(port, opts, *this);
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         uniqueBusName = bus.GetUniqueName();
         QCC_UNUSED(status);
     }
 
     void Announce() {
         QStatus status = aboutObj.Announce(port, aboutData);
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         QCC_UNUSED(status);
     }
 
@@ -207,11 +206,11 @@ class Participant : public SessionPortListener, public SessionListener {
 
     void StopBus() {
         QStatus status = bus.Disconnect();
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         status = bus.Stop();
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         status = bus.Join();
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         QCC_UNUSED(status);
     }
 
@@ -220,7 +219,7 @@ class Participant : public SessionPortListener, public SessionListener {
         MultiPeerTestObject* obj = NULL;
         obj = new MultiPeerTestObject(bus, path, interface);
         QStatus status = bus.RegisterBusObject(*obj);
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         QCC_UNUSED(status);
         return obj;
     }
@@ -259,7 +258,7 @@ class ObserverListener : public Observer::Listener {
 
     void ExpectInvocations(int newCounter) {
         /* first, check whether the counter was really 0 from last invocation */
-        assert(0 == counter);
+        QCC_ASSERT(0 == counter);
 
         event.ResetEvent();
         counter = newCounter;
@@ -277,7 +276,7 @@ class ObserverListener : public Observer::Listener {
 
     virtual void ObjectDiscovered(ProxyBusObject& proxy) {
         if (strict) {
-            assert(FindProxy(proxy) == proxies.end());
+            QCC_ASSERT(FindProxy(proxy) == proxies.end());
         }
         proxies.push_back(proxy);
 
@@ -286,21 +285,21 @@ class ObserverListener : public Observer::Listener {
 
         bus.EnableConcurrentCallbacks();
         status = proxy.MethodCall(intfName.c_str(), METHOD, NULL, 0, reply);
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(
                 reply->GetArg(1)->v_string.str);
             if (strict) {
-                assert(proxy.GetUniqueName() == ubn);
+                QCC_ASSERT(proxy.GetUniqueName() == ubn);
             }
-            assert(proxy.GetPath() == path);
+            QCC_ASSERT(proxy.GetPath() == path);
         }
 
         MsgArg updateArgs[2];
         updateArgs[0].Set("s", "insert");
         updateArgs[1].Set("u", (uint32_t)getpid());
         status = proxy.MethodCall(intfName.c_str(), METHOD_OBSUPDATER, updateArgs, 2); // Tell the object that it's being observed by me
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         QCC_UNUSED(status);
 
         if (--counter == 0) {
@@ -311,7 +310,7 @@ class ObserverListener : public Observer::Listener {
 
     virtual void ObjectLost(ProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
-        assert(it != proxies.end());
+        QCC_ASSERT(it != proxies.end());
         proxies.erase(it);
         if (--counter == 0) {
             event.SetEvent();
@@ -390,7 +389,7 @@ static int BeProvider(int objects, int observers, pid_t parentPID)
         char objName[20];
         snprintf(objName, sizeof(objName), "object%u", i);
         MultiPeerTestObject* obj = provider.CreateAndRegisterObject(objName, intfName);
-        assert(obj != NULL);
+        QCC_ASSERT(obj != NULL);
         myObjects.push_back(obj);
         QCC_DbgPrintf(("Object %s created with Intf : %s", objName, intfName));
 

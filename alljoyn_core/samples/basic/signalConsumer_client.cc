@@ -28,7 +28,6 @@
 
 #include <signal.h>
 #include <stdio.h>
-#include <assert.h>
 #include <vector>
 
 #include <qcc/String.h>
@@ -132,7 +131,7 @@ class SignalListeningObject : public BusObject {
             printf("Interface successfully added to the bus.\n");
             /* Register the signal handler 'nameChanged' with the bus*/
             nameChangedMember = intf->GetMember("nameChanged");
-            assert(nameChangedMember);
+            QCC_ASSERT(nameChangedMember);
         } else {
             printf("Failed to Add interface: %s.", INTERFACE_NAME);
         }
@@ -150,7 +149,7 @@ class SignalListeningObject : public BusObject {
     }
 
     QStatus SubscribeNameChangedSignal(void) {
-        assert(bus);
+        QCC_ASSERT(bus);
         return bus->AddMatch("type='signal',interface='org.alljoyn.Bus.signal_sample',member='nameChanged'");
     }
 

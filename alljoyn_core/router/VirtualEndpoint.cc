@@ -148,7 +148,7 @@ bool _VirtualEndpoint::AddBusToBusEndpoint(RemoteEndpoint& endpoint)
     m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
 
     /* Sanity check */
-    assert(m_epState == EP_STARTED);
+    QCC_ASSERT(m_epState == EP_STARTED);
     multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.begin();
     bool found = false;
     while ((it != m_b2bEndpoints.end()) && (it->first == 0)) {
@@ -257,7 +257,7 @@ QStatus _VirtualEndpoint::AddSessionRef(SessionId id, RemoteEndpoint& b2bEp)
 {
     QCC_DbgTrace(("_VirtualEndpoint::AddSessionRef(this=%s [%x], id=%u, b2b=%s)", GetUniqueName().c_str(), this, id, b2bEp->GetUniqueName().c_str()));
 
-    assert(id != 0);
+    QCC_ASSERT(id != 0);
 
     m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
 
@@ -277,7 +277,7 @@ QStatus _VirtualEndpoint::AddSessionRef(SessionId id, RemoteEndpoint& b2bEp)
 void _VirtualEndpoint::RemoveSessionRef(SessionId id)
 {
     QCC_DbgTrace(("_VirtualEndpoint::RemoveSessionRef(this=%s [%x], id=%u)", GetUniqueName().c_str(), this, id));
-    assert(id != 0);
+    QCC_ASSERT(id != 0);
     m_b2bEndpointsLock.Lock(MUTEX_CONTEXT);
     multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.find(id);
     if (it != m_b2bEndpoints.end()) {

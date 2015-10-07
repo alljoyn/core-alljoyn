@@ -65,7 +65,7 @@ static QStatus AddAclsToDefaultPolicy(PermissionPolicy& defaultPolicy, Permissio
     PermissionPolicy::Acl* newAcls = new PermissionPolicy::Acl[newCount];
     size_t idx = 0;
     for (size_t cnt = 0; cnt < defaultPolicy.GetAclsSize(); ++cnt) {
-        assert(idx < newCount);
+        QCC_ASSERT(idx < newCount);
         if (defaultPolicy.GetAcls()[cnt].GetPeersSize() > 0) {
             if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) {
                 if (keepCAentry) {
@@ -87,7 +87,7 @@ static QStatus AddAclsToDefaultPolicy(PermissionPolicy& defaultPolicy, Permissio
         }
     }
     for (size_t cnt = 0; cnt < count; ++cnt) {
-        assert(idx < newCount);
+        QCC_ASSERT(idx < newCount);
         newAcls[idx++] = acls[cnt];
     }
     defaultPolicy.SetAcls(newCount, newAcls);

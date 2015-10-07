@@ -19,8 +19,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
-
 #include <signal.h>
 #include <errno.h>
 #include <string.h>

@@ -19,7 +19,6 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#include <assert.h>
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
 #include <qcc/Debug.h>
@@ -60,7 +59,7 @@ QStatus Mutex::Lock(const char* file, uint32_t line)
     QCC_UNUSED(line);
     return Lock();
 #else
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     QStatus status;
     if (TryLock()) {
         status = ER_OK;
@@ -85,7 +84,7 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
     QCC_UNUSED(line);
     return Unlock();
 #else
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
     this->file = NULL;
     this->line = static_cast<uint32_t>(-1);

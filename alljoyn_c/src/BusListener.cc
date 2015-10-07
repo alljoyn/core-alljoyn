@@ -24,7 +24,6 @@
 #include <alljoyn/MsgArg.h>
 #include <alljoyn_c/BusListener.h>
 #include <string.h>
-#include <assert.h>
 #include "DeferredCallback.h"
 #include <qcc/Debug.h>
 
@@ -198,7 +197,7 @@ alljoyn_buslistener AJ_CALL alljoyn_buslistener_create(const alljoyn_buslistener
 void AJ_CALL alljoyn_buslistener_destroy(alljoyn_buslistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::BusListenerCallbackC*)listener;
 }
 

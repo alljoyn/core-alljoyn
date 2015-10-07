@@ -432,8 +432,8 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     // There should be no queued packets between IMPL_SHUTDOWN to
     // IMPL_INITIALIZING.
     //
-    assert(m_outbound.size() == 0);
-    assert(m_burstQueue.size() == 0);
+    QCC_ASSERT(m_outbound.size() == 0);
+    QCC_ASSERT(m_burstQueue.size() == 0);
 
     m_state = IMPL_INITIALIZING;
 
@@ -627,7 +627,7 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
         return OpenInterface(transportMask, addr);
     }
     uint32_t transportIndex = IndexFromBit(transportMask);
-    assert(transportIndex < 16 && "IpNameServiceImpl::OpenInterface(): Bad transport index");
+    QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::OpenInterface(): Bad transport index");
 
     if (transportIndex >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -681,7 +681,7 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     }
 
     uint32_t transportIndex = IndexFromBit(transportMask);
-    assert(transportIndex < 16 && "IpNameServiceImpl::OpenInterface(): Bad transport index");
+    QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::OpenInterface(): Bad transport index");
 
     if (transportIndex >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -775,7 +775,7 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
     }
 
     uint32_t transportIndex = IndexFromBit(transportMask);
-    assert(transportIndex < 16 && "IpNameServiceImpl::CloseInterface(): Bad transport index");
+    QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::CloseInterface(): Bad transport index");
 
     if (transportIndex >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -828,7 +828,7 @@ QStatus IpNameServiceImpl::CloseInterface(TransportMask transportMask, const qcc
     }
 
     uint32_t transportIndex = IndexFromBit(transportMask);
-    assert(transportIndex < 16 && "IpNameServiceImpl::CloseInterface(): Bad transport index");
+    QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::CloseInterface(): Bad transport index");
 
     if (transportIndex >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -1256,7 +1256,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         // It might be some crazy random GUID in Windows, but it will have
         // a name.
         //
-        assert(entries[i].m_name.size());
+        QCC_ASSERT(entries[i].m_name.size());
         QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces(): Checking out interface %s", entries[i].m_name.c_str()));
 
         //
@@ -1437,7 +1437,7 @@ void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& network
         qcc::SocketFd multicastsockFd = qcc::INVALID_SOCKET_FD;
 
         if (entries[i].m_family != qcc::QCC_AF_INET && entries[i].m_family != qcc::QCC_AF_INET6) {
-            assert(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
+            QCC_ASSERT(!"IpNameServiceImpl::LazyUpdateInterfaces(): Unexpected value in m_family (not AF_INET or AF_INET6");
             continue;
         }
 
@@ -1567,7 +1567,7 @@ QStatus IpNameServiceImpl::Enable(TransportMask transportMask,
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::Enable(): Bad callback index");
+    QCC_ASSERT(i < 16 && "IpNameServiceImpl::Enable(): Bad callback index");
 
     if (i >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -1796,12 +1796,15 @@ void IpNameServiceImpl::LoadStaticRouterParams(const ConfigDB* config)
     m_nodeConnection = LoadParam(config, "router_node_connection");
 }
 
+// ComputeStaticScore and ComputeDynamicScore are used by the DiscoveryDeathTest unit tests,
+// and those tests depend on QCC_ASSERT causing an abort and outputting a string matching the
+// regex "Assertion.*failed".
 uint32_t IpNameServiceImpl::ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection)
 {
-    assert(powerSource >= ROUTER_POWER_SOURCE_MIN && powerSource <= ROUTER_POWER_SOURCE_MAX);
-    assert(mobility >= ROUTER_MOBILITY_MIN && mobility <= ROUTER_MOBILITY_MAX);
-    assert(availability >= ROUTER_AVAILABILITY_MIN && availability <= ROUTER_AVAILABILITY_MAX);
-    assert(nodeConnection >= ROUTER_NODE_CONNECTION_MIN && nodeConnection <= ROUTER_NODE_CONNECTION_MAX);
+    QCC_ASSERT(powerSource >= ROUTER_POWER_SOURCE_MIN && powerSource <= ROUTER_POWER_SOURCE_MAX);
+    QCC_ASSERT(mobility >= ROUTER_MOBILITY_MIN && mobility <= ROUTER_MOBILITY_MAX);
+    QCC_ASSERT(availability >= ROUTER_AVAILABILITY_MIN && availability <= ROUTER_AVAILABILITY_MAX);
+    QCC_ASSERT(nodeConnection >= ROUTER_NODE_CONNECTION_MIN && nodeConnection <= ROUTER_NODE_CONNECTION_MAX);
     return (powerSource + mobility + availability + nodeConnection);
 
 }
@@ -1816,10 +1819,10 @@ uint32_t IpNameServiceImpl::ComputeDynamicScore(
     uint32_t availableUdpRemoteClients,
     uint32_t maximumUdpRemoteClients)
 {
-    assert(availableTcpConnections <= maximumTcpConnections);
-    assert(availableUdpConnections <= maximumUdpConnections);
-    assert(availableTcpRemoteClients <= maximumTcpRemoteClients);
-    assert(availableUdpRemoteClients <= maximumUdpRemoteClients);
+    QCC_ASSERT(availableTcpConnections <= maximumTcpConnections);
+    QCC_ASSERT(availableUdpConnections <= maximumUdpConnections);
+    QCC_ASSERT(availableTcpRemoteClients <= maximumTcpRemoteClients);
+    QCC_ASSERT(availableUdpRemoteClients <= maximumUdpRemoteClients);
     uint32_t tcpScore = 0;
     uint32_t udpScore = 0;
     uint32_t tclScore = 0;
@@ -1864,7 +1867,7 @@ uint16_t IpNameServiceImpl::GetCurrentPriority()
 QStatus IpNameServiceImpl::UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections, uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients)
 {
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::UpdateDynamicScore(): Bad index");
+    QCC_ASSERT(i < 16 && "IpNameServiceImpl::UpdateDynamicScore(): Bad index");
     m_dynamicParams[i].availableTransportConnections = availableTransportConnections;
     m_dynamicParams[i].maximumTransportConnections = maximumTransportConnections;
     m_dynamicParams[i].availableTransportRemoteClients = availableTransportRemoteClients;
@@ -1911,7 +1914,7 @@ QStatus IpNameServiceImpl::Enabled(TransportMask transportMask,
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::Enabled(): Bad callback index");
+    QCC_ASSERT(i < 16 && "IpNameServiceImpl::Enabled(): Bad callback index");
 
     if (i >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -1933,7 +1936,7 @@ void IpNameServiceImpl::TriggerTransmission(Packet packet)
 
     uint32_t nsVersion, msgVersion;
     packet->GetVersion(nsVersion, msgVersion);
-    assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
+    QCC_ASSERT(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
 
     //Queue one instance of the packet, the rest will be taken care of by the PacketScheduler thread
     //QueueProtocolMessage limits the maximum number of outstanding packets to MAX_IPNS_MESSAGES.
@@ -2298,7 +2301,7 @@ QStatus IpNameServiceImpl::SetCallback(TransportMask transportMask,
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
+    QCC_ASSERT(i < 16 && "IpNameServiceImpl::SetCallback(): Bad callback index");
     if (i >= 16) {
         return ER_BAD_TRANSPORT_MASK;
     }
@@ -2336,7 +2339,7 @@ QStatus IpNameServiceImpl::SetNetworkEventCallback(TransportMask transportMask,
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::SetNetworkEventCallback(): Bad callback index");
+    QCC_ASSERT(i < 16 && "IpNameServiceImpl::SetNetworkEventCallback(): Bad callback index");
     if (i >= 16) {
         return ER_BAD_TRANSPORT_MASK;
     }
@@ -2421,7 +2424,7 @@ size_t IpNameServiceImpl::NumAdvertisements(TransportMask transportMask)
     }
 
     uint32_t i = IndexFromBit(transportMask);
-    assert(i < 16 && "IpNameServiceImpl::NumAdvertisements(): Bad callback index");
+    QCC_ASSERT(i < 16 && "IpNameServiceImpl::NumAdvertisements(): Bad callback index");
     if (i >= 16) {
         return ER_BAD_TRANSPORT_MASK;
     }
@@ -2453,7 +2456,7 @@ QStatus IpNameServiceImpl::AdvertiseName(TransportMask transportMask, vector<qcc
     }
 
     uint32_t transportIndex = IndexFromBit(transportMask);
-    assert(transportIndex < 16 && "IpNameServiceImpl::AdvertiseName(): Bad transport index");
+    QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::AdvertiseName(): Bad transport index");
     if (transportIndex >= 16) {
         return ER_BAD_TRANSPORT_MASK;
     }
@@ -2792,7 +2795,7 @@ QStatus IpNameServiceImpl::CancelAdvertiseName(TransportMask transportMask, vect
     }
 
     uint32_t transportIndex = IndexFromBit(transportMask);
-    assert(transportIndex < 16 && "IpNameServiceImpl::CancelAdvertiseName(): Bad transport index");
+    QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::CancelAdvertiseName(): Bad transport index");
 
     if (transportIndex >= 16) {
         return ER_BAD_TRANSPORT_MASK;
@@ -3365,7 +3368,7 @@ void IpNameServiceImpl::QueueProtocolMessage(Packet packet)
 
     uint32_t nsVersion, msgVersion;
     packet->GetVersion(nsVersion, msgVersion);
-    assert(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
+    QCC_ASSERT(m_enableV1 || (msgVersion != 0 && msgVersion != 1));
 
     m_mutex.Lock();
     while (m_outbound.size() >= MAX_IPNS_MESSAGES) {
@@ -3649,7 +3652,7 @@ void IpNameServiceImpl::SendProtocolMessage(
             // don't flood out any more, just silently ignore the problem.
             //
             if (m_broadcast && interfaceAddressPrefixLen != static_cast<uint32_t>(-1)) {
-                assert(m_enableV1 != false);
+                QCC_ASSERT(m_enableV1 != false);
 
                 //
                 // In order to ensure that our broadcast goes to the correct
@@ -3878,7 +3881,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
                 isAt->SetVersion(1, 1);
 
                 uint32_t transportIndex = IndexFromBit(isAt->GetTransportMask());
-                assert(transportIndex < 16 && "IpNameServiceImpl::RewriteVersionSpecific(): Bad transport index in messageg");
+                QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::RewriteVersionSpecific(): Bad transport index in messageg");
                 if (transportIndex >= 16) {
                     return;
                 }
@@ -4021,7 +4024,7 @@ void IpNameServiceImpl::RewriteVersionSpecific(
         }
 
     default:
-        assert(false && "IpNameServiceImpl::RewriteVersionSpecific(): Bad message version");
+        QCC_ASSERT(false && "IpNameServiceImpl::RewriteVersionSpecific(): Bad message version");
         break;
     }
 
@@ -4126,7 +4129,7 @@ bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPA
         }
     }
 
-    assert(false && "IpNameServiceImpl::SameNetwork(): Not IPv4 or IPv6?");
+    QCC_ASSERT(false && "IpNameServiceImpl::SameNetwork(): Not IPv4 or IPv6?");
     return false;
 }
 
@@ -4156,7 +4159,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
     // If we are doing a quiet response, we'd better have a destination address
     // to use.
     //
-    assert(packet->DestinationSet() && "IpNameServiceImpl::SendOutboundMessageQuietly(): No destination IP address");
+    QCC_ASSERT(packet->DestinationSet() && "IpNameServiceImpl::SendOutboundMessageQuietly(): No destination IP address");
     qcc::IPEndpoint destination = packet->GetDestination();
 
     //
@@ -4703,10 +4706,10 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                 // and convert the mask into an index into the per-transport data.
                 //
                 TransportMask transportMask = whoHas->GetTransportMask();
-                assert(transportMask != TRANSPORT_NONE && "IpNameServiceImpl::SendOutboundMessageActively(): TransportMask must always be set");
+                QCC_ASSERT(transportMask != TRANSPORT_NONE && "IpNameServiceImpl::SendOutboundMessageActively(): TransportMask must always be set");
 
                 uint32_t transportIndex = IndexFromBit(transportMask);
-                assert(transportIndex < 16 && "IpNameServiceImpl::SendOutboundMessageActively(): Bad transport index");
+                QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::SendOutboundMessageActively(): Bad transport index");
                 if (transportIndex >= 16) {
                     return;
                 }
@@ -4729,10 +4732,10 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
                 nsPacket->GetAnswer(j, &isAt);
 
                 TransportMask transportMask = isAt->GetTransportMask();
-                assert(transportMask != TRANSPORT_NONE && "IpNameServiceImpl::SendOutboundMessageActively(): TransportMask must always be set");
+                QCC_ASSERT(transportMask != TRANSPORT_NONE && "IpNameServiceImpl::SendOutboundMessageActively(): TransportMask must always be set");
 
                 uint32_t transportIndex = IndexFromBit(transportMask);
-                assert(transportIndex < 16 && "IpNameServiceImpl::SendOutboundMessageActively(): Bad transport index");
+                QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::SendOutboundMessageActively(): Bad transport index");
                 if (transportIndex >= 16) {
                     return;
                 }
@@ -7273,7 +7276,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         }
 
         transportIndex = IndexFromBit(transportMask);
-        assert(transportIndex < 16 && "IpNameServiceImpl::HandleProtocolAnswer(): Bad callback index");
+        QCC_ASSERT(transportIndex < 16 && "IpNameServiceImpl::HandleProtocolAnswer(): Bad callback index");
         if (transportIndex >= 16) {
             return;
         }
@@ -8356,7 +8359,7 @@ QStatus IpNameServiceImpl::Start(void* arg, qcc::ThreadListener* listener)
 
     QCC_DbgPrintf(("IpNameServiceImpl::Start()"));
     m_mutex.Lock();
-    assert(IsRunning() == false);
+    QCC_ASSERT(IsRunning() == false);
     m_state = IMPL_RUNNING;
     QCC_DbgPrintf(("IpNameServiceImpl::Start(): Starting thread"));
     QStatus status = Thread::Start(this, listener);
@@ -8390,7 +8393,7 @@ QStatus IpNameServiceImpl::Join()
 {
     m_packetScheduler.Join();
     QCC_DbgPrintf(("IpNameServiceImpl::Join()"));
-    assert(m_state == IMPL_STOPPING || m_state == IMPL_SHUTDOWN);
+    QCC_ASSERT(m_state == IMPL_STOPPING || m_state == IMPL_SHUTDOWN);
     QCC_DbgPrintf(("IpNameServiceImpl::Join(): Joining thread"));
     QStatus status = Thread::Join();
     QCC_DbgPrintf(("IpNameServiceImpl::Join(): Joined"));
@@ -8472,7 +8475,7 @@ uint32_t IpNameServiceImpl::IndexFromBit(uint32_t data)
     // is count (index == number of trailing zero bits).
     //
     QCC_DbgPrintf(("IpNameServiceImpl::IndexFromBit(): Index is %d.", c));
-    assert(c < 16 && "IpNameServiceImpl::IndexFromBit(): Bad transport index");
+    QCC_ASSERT(c < 16 && "IpNameServiceImpl::IndexFromBit(): Bad transport index");
     return c;
 }
 
@@ -8854,7 +8857,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                 }
             } else if (m_impl.m_networkChangeScheduleCount < m_impl.m_retries) {
                 //adjust m_networkChangeTimeStamp
-                assert(m_impl.m_networkChangeScheduleCount < ArraySize(RETRY_INTERVALS));
+                QCC_ASSERT(m_impl.m_networkChangeScheduleCount < ArraySize(RETRY_INTERVALS));
                 m_impl.m_networkChangeTimeStamp += RETRY_INTERVALS[m_impl.m_networkChangeScheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
             } else {
                 m_impl.m_networkEvents.clear();
@@ -8897,7 +8900,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
                     (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 - BURST_RESPONSE_INTERVAL;
                 } else if ((*it).scheduleCount < m_impl.m_retries) {
                     subsequentBurstpackets.push_back((*it).packet);
-                    assert((*it).scheduleCount < ArraySize(RETRY_INTERVALS));
+                    QCC_ASSERT((*it).scheduleCount < ArraySize(RETRY_INTERVALS));
                     (*it).nextScheduleTime += RETRY_INTERVALS[(*it).scheduleCount] * 1000 + (BURST_RESPONSE_RETRIES) *BURST_RESPONSE_INTERVAL;
                 } else {
                     subsequentBurstpackets.push_back((*it).packet);

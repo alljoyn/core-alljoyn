@@ -22,7 +22,6 @@
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
-#include <assert.h>
 
 #include "Crypto.h"
 #include "OpenSsl.h"
@@ -87,7 +86,7 @@ OpenSsl_ScopedLock::OpenSsl_ScopedLock()
 
 OpenSsl_ScopedLock::~OpenSsl_ScopedLock()
 {
-    assert(mutex);
+    QCC_ASSERT(mutex);
     mutex->Unlock();
 }
 

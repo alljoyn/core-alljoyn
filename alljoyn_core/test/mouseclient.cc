@@ -29,7 +29,6 @@
 
 #include <signal.h>
 #include <stdio.h>
-#include <assert.h>
 #include <vector>
 
 #include <qcc/Environ.h>
@@ -191,26 +190,26 @@ class LocalTestObject : public BusObject {
         sensitivity(0)
     {
         const InterfaceDescription* regTestIntf = bus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
-        assert(regTestIntf);
+        QCC_ASSERT(regTestIntf);
         AddInterface(*regTestIntf);
 
         printf("Registering ADC_Update\n");
         const InterfaceDescription::Member* member = regTestIntf->GetMember("ADC_Update");
-        assert(member);
+        QCC_ASSERT(member);
         bus.RegisterSignalHandler(this,
                                   static_cast<MessageReceiver::SignalHandler>(&LocalTestObject::ADC_Update),
                                   member,
                                   NULL);
 
         member = regTestIntf->GetMember("Gyro_Update");
-        assert(member);
+        QCC_ASSERT(member);
         bus.RegisterSignalHandler(this,
                                   static_cast<MessageReceiver::SignalHandler>(&LocalTestObject::Gyro_Update),
                                   member,
                                   NULL);
 
         member = regTestIntf->GetMember("Button_Down");
-        assert(member);
+        QCC_ASSERT(member);
         bus.RegisterSignalHandler(this,
                                   static_cast<MessageReceiver::SignalHandler>(&LocalTestObject::Button_Down),
                                   member,
@@ -469,7 +468,7 @@ int CDECL_CALL main(int argc, char** argv)
         if (ER_OK == status) {
             remoteObj = ProxyBusObject(*g_msgBus, g_wellKnownName.c_str(), ::org::alljoyn::alljoyn_test::ObjectPath, g_busListener->GetSessionId());
             const InterfaceDescription* alljoynTestIntf = g_msgBus->GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
-            assert(alljoynTestIntf);
+            QCC_ASSERT(alljoynTestIntf);
             remoteObj.AddInterface(*alljoynTestIntf);
         }
     }
