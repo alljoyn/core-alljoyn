@@ -128,7 +128,7 @@ bool _PeerState::IsConversationHashInitialized()
 void _PeerState::InitializeConversationHash()
 {
     delete hashUtil;
-    hashUtil = new Crypto_SHA256();
+    hashUtil = new ConversationHash();
     QCC_VERIFY(ER_OK == hashUtil->Init());
 }
 
@@ -182,7 +182,7 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
     if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
         return;
     }
-    QCC_VERIFY(ER_OK == hashUtil->Update(&byte, sizeof(byte)));
+    QCC_VERIFY(ER_OK == hashUtil->Update(byte));
 }
 
 void _PeerState::UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize)
@@ -195,11 +195,8 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, const uint8_t* buf, si
     if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
         return;
     }
-    if (conversationVersion >= CONVERSATION_V4) {
-        uint32_t bufSizeLE = htole32(bufSize);
-        QCC_VERIFY(ER_OK == hashUtil->Update((const uint8_t*)&bufSizeLE, sizeof(bufSizeLE)));
-    }
-    QCC_VERIFY(ER_OK == hashUtil->Update(buf, bufSize));
+    bool includeSizeInHash = (conversationVersion >= CONVERSATION_V4);
+    QCC_VERIFY(ER_OK == hashUtil->Update(buf, bufSize, includeSizeInHash));
 }
 
 void _PeerState::UpdateHash(uint32_t conversationVersion, const qcc::String& str)
@@ -225,6 +222,16 @@ void _PeerState::GetDigest(uint8_t* digest, bool keepAlive)
         memset(digest, 0, Crypto_SHA256::DIGEST_SIZE);
     } else {
         QCC_VERIFY(ER_OK == hashUtil->GetDigest(digest, keepAlive));
+    }
+}
+
+void _PeerState::SetConversationHashSensitiveMode(bool mode)
+{
+    QCC_ASSERT(NULL != hashUtil);
+    if (NULL == hashUtil) {
+        QCC_LogError(ER_CRYPTO_ERROR, ("SetConversationHashSensitiveMode called while conversation is not in progress"));
+    } else {
+        hashUtil->SetSensitiveMode(mode);
     }
 }
 

@@ -45,6 +45,8 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/PermissionPolicy.h>
 
+#include "ConversationHash.h"
+
 namespace ajn {
 
 /* Conversation hash-related constants */
@@ -447,6 +449,16 @@ class _PeerState {
 
     void ReleaseConversationHashLock();
 
+    /** 
+     * Enable or disable "sensitive mode," where byte arrays that get hashed aren't
+     * logged verbatim. When enabled, calling the overload of Update that takes a byte array will
+     * log the size of the data, but then log secret data was hashed without showing the data.
+     *
+     * Logging for Update for a single byte or GetDigest is unaffected.
+     * @param[in] mode true to enable sensitive mode; false to disable it.
+     */
+    void SetConversationHashSensitiveMode(bool mode);
+
     /*
      * Destructor
      */
@@ -528,7 +540,7 @@ class _PeerState {
     /**
      * The conversation hash.
      */
-    qcc::Crypto_Hash* hashUtil;
+    ConversationHash* hashUtil;
 
     /**
      * Mutex to protect the conversation hash
