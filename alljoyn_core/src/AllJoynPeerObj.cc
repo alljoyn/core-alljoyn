@@ -239,11 +239,6 @@ QStatus AllJoynPeerObj::Join()
         ++iter;
     }
     conversations.clear();
-    std::map<qcc::String, KeyExchanger*>::iterator keyExIter = keyExConversations.begin();
-    while (keyExIter != keyExConversations.end()) {
-        delete keyExIter->second;
-        ++keyExIter;
-    }
     keyExConversations.clear();
     lock.Unlock(MUTEX_CONTEXT);
 
@@ -651,7 +646,7 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
         return;
     }
     PeerState peerState = peerStateTable->GetPeerState(sender);
-    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState, false, authMaskList, 1);
+    shared_ptr<KeyExchanger> keyExchanger = GetKeyExchangerInstance(peerState, false, authMaskList, 1);
     if (!keyExchanger) {
         lock.Unlock(MUTEX_CONTEXT);
         Message replyMsg(*bus);
@@ -671,16 +666,14 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
     }
 
     /* storing the key exchanger for the given sender  */
-    delete keyExConversations[sender];
     keyExConversations[sender] = keyExchanger;
 
     lock.Unlock(MUTEX_CONTEXT);
     keyExchanger->RespondToKeyExchange(msg, inVariant, authMask, effectiveAuthMask);
 } /* DoKeyExchange */
 
-QStatus AllJoynPeerObj::RecordMasterSecret(const qcc::String& sender, KeyExchanger*keyExchanger, PeerState peerState)
+QStatus AllJoynPeerObj::RecordMasterSecret(const qcc::String& sender, shared_ptr<KeyExchanger> keyExchanger, PeerState peerState)
 {
-
     qcc::String guidStr;
     bus->GetPeerGUID(sender.c_str(), guidStr);
     qcc::GUID128 remotePeerGuid(guidStr);
@@ -707,7 +700,7 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
      * Check for existing conversation and allocate a new SASL engine if we need one
      */
     lock.Lock(MUTEX_CONTEXT);
-    KeyExchanger* keyExchanger = keyExConversations[sender];
+    shared_ptr<KeyExchanger> keyExchanger = keyExConversations[sender];
     keyExConversations.erase(sender);
     lock.Unlock(MUTEX_CONTEXT);
 
@@ -736,7 +729,6 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
                     peerAuthListener.AuthenticationComplete(keyExchanger->GetSuiteName(), sender.c_str(), true /* success */);
                     /* compute the local verifier to send back */
                     keyExchanger->ReplyWithVerifier(msg);
-                    delete keyExchanger;
                     return;
                 }
             }
@@ -751,7 +743,6 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
     const char* suiteName;
     if (keyExchanger) {
         suiteName = keyExchanger->GetSuiteName();
-        delete keyExchanger;
     } else {
         suiteName = "Unknown";
     }
@@ -1408,7 +1399,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     QStatus status;
 
     QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange"));
-    KeyExchanger* keyExchanger = GetKeyExchangerInstance(peerState, true, requestingAuthList, requestingAuthCount);  /* initiator */
+    shared_ptr<KeyExchanger> keyExchanger = GetKeyExchangerInstance(peerState, true, requestingAuthList, requestingAuthCount);  /* initiator */
     if (!keyExchanger) {
         return ER_AUTH_FAIL;
     }
@@ -1430,7 +1421,6 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     } else if (status == ER_OK) {
         status = ER_AUTH_FAIL; /* remote auth mask is 0 */
     }
-    delete keyExchanger;  /* no longer needed */
 
     if (status == ER_OK) {
         return status;
@@ -1662,7 +1652,6 @@ void AllJoynPeerObj::NameOwnerChanged(const char* busName, const char* previousO
         lock.Lock(MUTEX_CONTEXT);
         delete conversations[busName];
         conversations.erase(busName);
-        delete keyExConversations[busName];
         keyExConversations.erase(busName);
         lock.Unlock(MUTEX_CONTEXT);
     }
@@ -1739,21 +1728,21 @@ void AllJoynPeerObj::SessionJoined(const InterfaceDescription::Member* member, c
     bus->GetInternal().CallJoinedListeners(sessionPort, sessionId, joiner);
 }
 
-KeyExchanger* AllJoynPeerObj::GetKeyExchangerInstance(PeerState peerState, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
+std::shared_ptr<KeyExchanger> AllJoynPeerObj::GetKeyExchangerInstance(PeerState peerState, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount)
 {
     for (size_t cnt = 0; cnt < requestingAuthCount; cnt++) {
         uint32_t suite = requestingAuthList[cnt];
         if ((suite & AUTH_SUITE_ECDHE_ECDSA) == AUTH_SUITE_ECDHE_ECDSA) {
-            return new KeyExchangerECDHE_ECDSA(initiator, this, *bus, peerAuthListener, peerState, (PermissionMgmtObj::TrustAnchorList*) &securityApplicationObj.GetTrustAnchors());
+            return make_shared<KeyExchangerECDHE_ECDSA>(initiator, this, *bus, peerAuthListener, peerState, (PermissionMgmtObj::TrustAnchorList*) &securityApplicationObj.GetTrustAnchors());
         }
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
-            return new KeyExchangerECDHE_PSK(initiator, this, *bus, peerAuthListener, peerState);
+            return make_shared<KeyExchangerECDHE_PSK>(initiator, this, *bus, peerAuthListener, peerState);
         }
         if ((suite & AUTH_SUITE_ECDHE_NULL) == AUTH_SUITE_ECDHE_NULL) {
-            return new KeyExchangerECDHE_NULL(initiator, this, *bus, peerAuthListener, peerState);
+            return make_shared<KeyExchangerECDHE_NULL>(initiator, this, *bus, peerAuthListener, peerState);
         }
     }
-    return NULL;
+    return shared_ptr<KeyExchanger>();
 }
 
 QStatus AllJoynPeerObj::HandleMethodReply(Message& msg, QStatus status)
