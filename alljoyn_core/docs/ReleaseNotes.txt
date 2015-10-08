@@ -119,6 +119,8 @@ ASACORE-1894 Race condition between alljoyn_busobject_signal and
              alljoyn_busobject_cancelsessionlessmessage
 ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
 ASACORE-1907 Permission Functionality in Android does not work correctly
+ASACORE-2592 InterfaceDescription's assignment constructor omits hasDescription,
+             causing introspection-related failures
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20AND%20status%20not%20in%20(closed%2C%20resolved)%20AND%20type%20not%20in%20(task%2C%20%22New%20Feature%22)%20%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20priority%20DESC%2C%20id%20ASC
