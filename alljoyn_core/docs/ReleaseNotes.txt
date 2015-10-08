@@ -83,6 +83,8 @@ ASACORE-2520 AuthenticationComplete not called when ALLJOYN_SRP_KEYX
              authentication fails
 ASACORE-2542 Auth fails between TCL “SecureClientECDHE.exe -e ECDHE_ECDSA” and
              SCL SampleServiceECDHE.exe
+ASACORE-2588 Applications built in Release mode cannot interop with Stadard Core
+             Library built in Debug mode, and the other way around
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20AND%20%28component%20in%20%28%22Router%2FSCL%22%2C%20SCONS%29%20OR%20component%20is%20EMPTY%29%20AND%20%28status%20%3D%20closed%20AND%20resolution%20%3D%20Postponed%20OR%20status%20not%20in%20%28closed%2C%20resolved%29%20AND%20issuetype%20%3D%20Bug%29%20ORDER%20BY%20Severity%20DESC%2C%20priority%20DESC%2C%20id%20ASC
