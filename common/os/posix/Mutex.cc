@@ -40,10 +40,8 @@ using namespace qcc;
 void Mutex::Init()
 {
     assert(!isInitialized);
-#ifndef NDEBUG
     file = NULL;
     line = static_cast<uint32_t>(-1);
-#endif
 
     pthread_mutexattr_t attr;
     int ret = pthread_mutexattr_init(&attr);
