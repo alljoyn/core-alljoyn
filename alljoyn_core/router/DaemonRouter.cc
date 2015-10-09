@@ -118,7 +118,7 @@ bool DaemonRouter::AddCompatibilityOverride(bool add,
              * DetachSession Hack Part 2: Ensure that the destination endpoint
              * gets the DetachSession message if and only if it is in this session.
              */
-            add = (b2bDest->GetSessionId() == detachId);
+            add = b2bDest->IsInSession(detachId);
         }
     } else if (isSessioncast) {
         if (!add) {
@@ -529,8 +529,12 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
              * done fetching all the updated sessionless messages.  Therefore,
              * get the sessionId from the endpoint if possible.
              */
-            RemoteEndpoint rep = RemoteEndpoint::cast(src);
-            sessionlessObj->RouteSessionlessMessage(rep->GetSessionId(), msg);
+            SessionId sessionId = 0;
+            if (src->GetEndpointType() != ENDPOINT_TYPE_MQTT) {
+                RemoteEndpoint rep = RemoteEndpoint::cast(src);
+                sessionId = rep->GetSessionId();
+            }
+            sessionlessObj->RouteSessionlessMessage(sessionId, msg);
             status = ER_OK;
         } else if (isBroadcast) {
             status = sessionlessObj->PushMessage(msg);

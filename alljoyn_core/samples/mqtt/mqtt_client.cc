@@ -43,7 +43,7 @@ using namespace ajn;
 static BusAttachment* g_msgBus = NULL;
 
 /*constants*/
-static const char* INTERFACE_NAME = "com.example.sample";
+static const char* INTERFACE_NAME = "com.example.Sample";
 static const char* SERVICE_NAME = "com.example.sample";
 static const char* SERVICE_PATH = "/sample";
 static const SessionPort SERVICE_PORT = 16;
@@ -59,40 +59,6 @@ static void CDECL_CALL SigIntHandler(int sig)
     QCC_UNUSED(sig);
     s_interrupt = true;
 }
-
-/** AllJoynListener receives discovery events from AllJoyn */
-class MyBusListener : public BusListener, public SessionListener {
-  public:
-    void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
-    {
-        if (0 == strcmp(name, SERVICE_NAME) && s_sessionHost.empty()) {
-            printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
-
-            /* We found a remote bus that is advertising basic service's well-known name so connect to it. */
-            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
-            s_sessionHost = name;
-            g_msgBus->EnableConcurrentCallbacks();
-            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = g_msgBus->JoinSession(name, SERVICE_PORT, this, s_sessionId, opts);
-            if (ER_OK == status) {
-                printf("JoinSession SUCCESS (Session id=%d).\n", s_sessionId);
-            } else {
-                printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
-            }
-            s_joinComplete = true;
-        }
-    }
-
-    void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
-    {
-        if (newOwner && (0 == strcmp(busName, SERVICE_NAME))) {
-            printf("NameOwnerChanged: name='%s', oldOwner='%s', newOwner='%s'.\n",
-                   busName,
-                   previousOwner ? previousOwner : "<none>",
-                   newOwner ? newOwner : "<none>");
-        }
-    }
-};
 
 /** Create the interface, report the result to stdout, and return the result status. */
 QStatus CreateInterface(void)
@@ -140,15 +106,6 @@ QStatus ConnectToBus(void)
     return status;
 }
 
-/** Register a bus listener in order to get discovery indications and report the event to stdout. */
-void RegisterBusListener(void)
-{
-    /* Static bus listener */
-    static MyBusListener s_busListener;
-
-    g_msgBus->RegisterBusListener(s_busListener);
-    printf("BusListener Registered.\n");
-}
 /*
  * Print out the fields found in the AboutData. Only fields with known signatures
  * are printed out.  All others will be treated as an unknown field.
@@ -229,7 +186,7 @@ class MyAboutListener : public AboutListener, public SessionListener {
         printf("*********************************************************************************\n");
         if (g_msgBus != NULL) {
             SessionId sessionId;
-            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+            SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_MQTT);
             g_msgBus->EnableConcurrentCallbacks();
             s_sessionHost = busName;
             QStatus status = g_msgBus->JoinSession(busName, port, this, sessionId, opts);
@@ -354,7 +311,6 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     }
 
     if (ER_OK == status) {
-        RegisterBusListener();
         status = FindAbout();
     }
 

@@ -44,7 +44,7 @@ class _MQTTEndpoint : public _RemoteEndpoint, public mosqpp::mosquittopp {
     friend class MQTTTransport;
   public:
     _MQTTEndpoint(MQTTTransport* transport,
-                  BusAttachment& bus, qcc::String uqn);
+                  BusAttachment& bus, qcc::String uqn, qcc::IPEndpoint ipaddr);
 
     _MQTTEndpoint() { }
     virtual ~_MQTTEndpoint();
@@ -56,18 +56,28 @@ class _MQTTEndpoint : public _RemoteEndpoint, public mosqpp::mosquittopp {
     QStatus PushMessage(Message& msg);
     int Publish(int*mid, const char*topic, int payloadlen = 0, const void*payload = NULL, int qos = 0, bool retain = false);
     int Subscribe(int*mid, const char*sub, int qos = 0);
+    int Unsubscribe(int*mid, const char*sub);
     void SubscribeToSessionless(qcc::String iface, qcc::String member);
     void SubscribeToPresence(qcc::String name);
+    void UnsubscribeToPresence(qcc::String name);
     void PublishPresence(qcc::String name, bool isPresent);
     void SubscribeForDestination(qcc::String name);
-    void SubscribeToSession(qcc::String sessionHost, SessionId id);
+    void SubscribeToSession(qcc::String sessionHost, SessionId id, bool isMultipoint);
     void PublishToDestination(qcc::String name, Message& msg);
     void CancelMessage(qcc::String sender, qcc::String iface, qcc::String member);
+    struct SessionHostEntry {
+        qcc::String m_sessionHost;
+        bool m_isMultipoint;
+        SessionHostEntry(qcc::String sessionHost = "", bool isMultipoint = false) : m_sessionHost(sessionHost), m_isMultipoint(isMultipoint) { }
+
+    };
   private:
     MQTTTransport* m_transport;
-    bool started;
-    qcc::String clientId;
-    std::map<SessionId, qcc::String> sessionHostMap;
+    bool m_started;
+    qcc::String m_clientId;
+    std::map<SessionId, SessionHostEntry> m_sessionHostMap;
+    bool m_connected;
+    bool m_reconnected;
 };
 
 typedef qcc::ManagedObj<_MQTTEndpoint> MQTTEndpoint;
@@ -135,7 +145,7 @@ class MQTTTransport : public Transport, public _RemoteEndpoint::EndpointListener
      *
      * @return ER_OK if successful.
      */
-    QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const { QCC_UNUSED(inSpec); QCC_UNUSED(outSpec); QCC_UNUSED(argMap); return ER_OK; };
+    QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const;
 
     /**
      * Connect to a specified remote AllJoyn/DBus address.
@@ -143,7 +153,7 @@ class MQTTTransport : public Transport, public _RemoteEndpoint::EndpointListener
      * @param connectSpec    Transport specific key/value args used to configure the client-side endpoint.
      *                       The form of this string is @c "<transport>:<key1>=<val1>,<key2>=<val2>..."
      * @param opts           Requested sessions opts.
-     * @param newep          [OUT] Endpoint created as a result of successful connect.
+     * @param[out] newep     Endpoint created as a result of successful connect.
      * @return
      *      - ER_OK if successful.
      *      - an error status otherwise.
@@ -236,9 +246,9 @@ class MQTTTransport : public Transport, public _RemoteEndpoint::EndpointListener
 
     MQTTTransport(const MQTTTransport& other);
     MQTTTransport& operator =(const MQTTTransport& other);
-    MQTTEndpoint m_Ep;
+    MQTTEndpoint m_ep;
     BusAttachment& m_bus;                                          /**< The message bus for this transport */
-    struct mosquitto* mosq;
+
 };
 
 } // namespace ajn

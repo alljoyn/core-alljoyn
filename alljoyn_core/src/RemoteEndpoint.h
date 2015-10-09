@@ -454,6 +454,9 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @return  the session id that this endpoint is a part of.
      */
     virtual uint32_t GetSessionId() const;
+    virtual std::set<SessionId> GetSessionIdSet() const;
+    virtual bool HasCommonSession(RemoteEndpoint rep) const;
+    virtual bool HasCommonSession(std::set<SessionId> sessionIds) const;
 
 
     /**

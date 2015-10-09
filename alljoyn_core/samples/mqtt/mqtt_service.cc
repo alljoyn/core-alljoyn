@@ -2,8 +2,8 @@
  * @file
  * @brief Sample implementation of an AllJoyn service.
  *
- * This sample will show how to set up an AllJoyn service that will registered with the
- * wellknown name 'org.alljoyn.Bus.method_sample'.  The service will register a method call
+ * This sample will show how to set up an AllJoyn service that will announce itself.
+ * The service will register a method call
  * with the name 'cat'  this method will take two input strings and return a
  * Concatenated version of the two strings.
  *
@@ -49,7 +49,7 @@ using namespace qcc;
 using namespace ajn;
 
 /*constants*/
-static const char* INTERFACE_NAME = "com.example.sample";
+static const char* INTERFACE_NAME = "com.example.Sample";
 static const char* SERVICE_NAME = "com.example.sample";
 static const char* SERVICE_PATH = "/sample";
 static const SessionPort SERVICE_PORT = 16;
@@ -315,18 +315,19 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
             status = RegisterBusObject(testObj);
         }
 
-        // Setup the about data
-        // The default language is specified in the constructor. If the default language
-        // is not specified any Field that should be localized will return an error
+        /* Set up the about data
+         * The default language is specified in the constructor. If the default language
+         * is not specified any Field that should be localized will return an error
+         */
         AboutData aboutData("en");
-        //AppId is a 128bit uuid
+        /* AppId is a 128bit uuid */
         uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
                             0x1E, 0x82, 0x11, 0xE4,
                             0x86, 0x51, 0xD1, 0x56,
                             0x1D, 0x5D, 0x46, 0xB0 };
         status = aboutData.SetAppId(appId, 16);
         status = aboutData.SetDeviceName("My Device Name");
-        //DeviceId is a string encoded 128bit UUID
+        /* DeviceId is a string encoded 128bit UUID */
         status = aboutData.SetDeviceId("93c06771-c725-48c2-b1ff-6a2a59d445b8");
         status = aboutData.SetAppName("Application");
         status = aboutData.SetManufacturer("Manufacturer");
@@ -341,17 +342,18 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
             status = ConnectBusAttachment();
         }
 
-        const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_ANY;
+        const TransportMask SERVICE_TRANSPORT_TYPE = TRANSPORT_MQTT;
         if (ER_OK == status) {
             status = CreateSession(SERVICE_TRANSPORT_TYPE);
         }
 
         if (ER_OK == status) {
-            // Announce about signal
+            /* Announce about signal */
             AboutObj* aboutObj = new AboutObj(*s_msgBus);
-            // Note the ObjectDescription that is part of the Announce signal is found
-            // automatically by introspecting the BusObjects registered with the bus
-            // attachment.
+            /* Note the ObjectDescription that is part of the Announce signal is found
+             * automatically by introspecting the BusObjects registered with the bus
+             * attachment.
+             */
             status = aboutObj->Announce(SERVICE_PORT, aboutData);
             if (ER_OK == status) {
                 printf("AboutObj Announce Succeeded.\n");

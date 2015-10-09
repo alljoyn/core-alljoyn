@@ -158,7 +158,7 @@ static const char internalConfig[] =
 #endif
     "  <listen>tcp:iface=*,port=9955</listen>"
     "  <listen>udp:iface=*,port=9955</listen>"
-    "  <listen>mqtt:</listen>"
+    "  <listen>mqtt:addr=127.0.0.1,port=1883</listen>"
     "</busconfig>";
 
 static const char versionPreamble[] =

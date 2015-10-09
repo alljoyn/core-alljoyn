@@ -126,7 +126,7 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     virtual void RouteSessionlessMessage(uint32_t sid, Message& msg);
 
-    void RegisterMQTTEndpoint(MQTTEndpoint ep) { mqttEp = ep; };
+    void RegisterMQTTEndpoint(MQTTEndpoint ep);
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.
@@ -708,6 +708,13 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         qcc::String name;
         qcc::String oldOwner;
         NameOwnerChangedWork(SessionlessObj& slObj, const qcc::String& name, const qcc::String& oldOwner);
+        virtual void Run();
+    };
+
+    class RegisterMQTTEpWork : public Work {
+      public:
+        MQTTEndpoint ep;
+        RegisterMQTTEpWork(SessionlessObj& slObj, MQTTEndpoint ep);
         virtual void Run();
     };
 

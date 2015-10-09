@@ -274,8 +274,19 @@ QStatus AllJoynObj::Init()
         }
     }
 
-    /* Make this object implement org.alljoyn.MQTT */
-    mqttIface = bus.GetInterface(org::alljoyn::MQTT::InterfaceName);
+    /* Register a signal handler for SessionLostWithReason */
+    if (ER_OK == status) {
+        status = bus.RegisterSignalHandler(this,
+                                           static_cast<MessageReceiver::SignalHandler>(&AllJoynObj::SessionLostWithReasonSignalHandler),
+                                           sessionLostWithReasonSignal,
+                                           NULL);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to register SessionLostWithReasonSignal"));
+        }
+    }
+
+    /* Make this object implement org.alljoyn.Mqtt */
+    mqttIface = bus.GetInterface(org::alljoyn::Mqtt::InterfaceName);
     if (!mqttIface) {
         status = ER_BUS_NO_SUCH_INTERFACE;
         QCC_LogError(status, ("Failed to get %s interface", org::alljoyn::Daemon::InterfaceName));
@@ -2305,7 +2316,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     SetSessionOpts(optsOut, replyArgs[2]);
 
     if (srcB2BEp->GetEndpointType() == ENDPOINT_TYPE_MQTT) {
-        MQTTEndpoint::cast(srcB2BEp)->SubscribeToSession(sessionHost, id);
+        MQTTEndpoint::cast(srcB2BEp)->SubscribeToSession(sessionHost, id, optsOut.isMultipoint);
     }
 
     if (attachSessionWithNames) {
@@ -2470,7 +2481,7 @@ void AllJoynObj::AddAdvNameAlias(const String& guid, const TransportMask mask, c
 
 bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSessionLost, LeaveSessionType lst)
 {
-    QCC_DbgTrace(("AllJoynObj::RemoveSessionRefs(%s, %u, %u)", epName, id, sendSessionLost));
+    QCC_DbgTrace(("AllJoynObj::RemoveSessionRefs(%s, %u, %u, %u)", epName, id, sendSessionLost, lst));
 
     AcquireLocks();
 
@@ -2599,7 +2610,6 @@ bool AllJoynObj::RemoveSessionRefs(const char* epName, SessionId id, bool sendSe
                         }
                     }
                 }
-
                 if ((lst == LEAVE_SESSION && endPointIsMember == false) || lst == LEAVE_HOSTED_SESSION) {
                     if (endpoint == FindEndpoint(it->second.sessionHost)) {
                         /* Modify entry to remove matching sessionHost */
@@ -2981,7 +2991,7 @@ QStatus AllJoynObj::SendAttachSession(SessionPort sessionPort,
                 QCC_DbgPrintf(("Got JoinSession/AttachSession response over MQTT replyCode %d id %u opts %s", replyCode, id, optsOut.ToString().c_str()));
 
                 MQTTEndpoint mqttEp = MQTTEndpoint::cast(b2bEp);
-                mqttEp->SubscribeToSession(sessionHost, id);
+                mqttEp->SubscribeToSession(sessionHost, id, optsOut.isMultipoint);
             }
             if (IsThinLeaf(remoteControllerName.c_str())) {
                 members.Set("as", 1, &src);
@@ -3216,6 +3226,24 @@ QStatus AllJoynObj::ShutdownEndpoint(RemoteEndpoint& b2bEp, SocketFd& sockFd)
     return status;
 }
 
+void AllJoynObj::SessionLostWithReasonSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg)
+{
+    QCC_UNUSED(member);
+    QCC_UNUSED(sourcePath);
+
+    size_t numArgs;
+
+    const MsgArg* args;
+
+    /* Parse message args */
+    msg->GetArgs(numArgs, args);
+    assert(numArgs == 2);
+    SessionId id = static_cast<SessionId>(args[0].v_uint32);
+    QCC_DbgPrintf(("SessionLostWithReasonSignalHandler %u %u, sender %s", id, args[1].v_uint32, msg->GetSender()));
+    /* Remove session info from sessionmapentry, send a SessionLost to the member being removed. */
+    RemoveSessionRefs(msg->GetSender(), id, true);
+}
+
 void AllJoynObj::MPSessionChangedSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg)
 {
     QCC_UNUSED(member);
@@ -3229,12 +3257,17 @@ void AllJoynObj::MPSessionChangedSignalHandler(const InterfaceDescription::Membe
     msg->GetArgs(numArgs, args);
     assert(numArgs == 4);
     SessionId id = static_cast<SessionId>(args[0].v_uint32);
-    unsigned int reason = args[3].v_uint32;
     const char* memberStr = args[1].v_string.str;
     bool isAdd = args[2].v_bool;
-    QCC_DbgTrace(("MPSessionChangedSignalHandler %u %s %u: isAdd %u", id, memberStr, reason, isAdd));
+    QCC_DbgPrintf(("MPSessionChangedSignalHandler %u %s %u: isAdd %u", id, memberStr, args[3].v_uint32, isAdd));
     if (isAdd) {
         AcquireLocks();
+        map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+        if (bit != b2bEndpoints.end()) {
+            assert(bit->second->GetEndpointType() == ENDPOINT_TYPE_MQTT);
+            MQTTEndpoint mqttEp = MQTTEndpoint::cast(bit->second);
+            mqttEp->SubscribeToPresence(memberStr);
+        }
         SessionMapType::iterator it = sessionMap.begin();
         while (it != sessionMap.end()) {
             if (it->first.second == id) {
@@ -3276,6 +3309,7 @@ void AllJoynObj::DetachSessionSignalHandler(const InterfaceDescription::Member* 
     /* Remove session info from sessionmapentry, send a SessionLost to the member being removed. */
     RemoveSessionRefs(src, id, true);
 }
+
 void AllJoynObj::PresenceSignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg)
 {
     QCC_UNUSED(member);
@@ -3296,7 +3330,10 @@ void AllJoynObj::PresenceSignalHandler(const InterfaceDescription::Member* membe
     } else {
         AcquireLocks();
         map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+
         if (bit != b2bEndpoints.end()) {
+            RemoteEndpoint tempEp = bit->second;
+            assert(tempEp->GetEndpointType() == ENDPOINT_TYPE_MQTT);
             VirtualEndpoint vep = FindVirtualEndpoint(name);
             if (vep->IsValid()) {
                 bool madeChanges = vep->CanUseRoute(bit->second);
@@ -3320,6 +3357,12 @@ void AllJoynObj::PresenceSignalHandler(const InterfaceDescription::Member* membe
             } else {
                 ReleaseLocks();
             }
+
+            if (tempEp->GetEndpointType() == ENDPOINT_TYPE_MQTT) {
+                MQTTEndpoint mqttEp = MQTTEndpoint::cast(tempEp);
+                mqttEp->UnsubscribeToPresence(name);
+            }
+
         } else {
             ReleaseLocks();
         }
@@ -3484,6 +3527,7 @@ void AllJoynObj::SetLinkTimeout(const InterfaceDescription::Member* member, Mess
     QCC_DbgTrace(("AllJoynObj::SetLinkTimeout(%u, %d) (status=%s, disp=%d, lto=%d)", id, reqLinkTimeout,
                   QCC_StatusText(status), disposition, actLinkTimeout));
 }
+
 void AllJoynObj::SetIdleTimeouts(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
@@ -3530,6 +3574,7 @@ void AllJoynObj::SetIdleTimeouts(const InterfaceDescription::Member* member, Mes
     QCC_DbgPrintf(("SetIdleTimeouts(%u,%u) (disposition=%u, actIdleTo=%u, actProbeTo=%u)",
                    reqIdleTimeout, reqProbeTimeout, disposition, actIdleTimeout, actProbeTimeout));
 }
+
 void AllJoynObj::AliasUnixUser(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
@@ -3614,13 +3659,15 @@ void AllJoynObj::OnAppResume(const InterfaceDescription::Member* member, Message
     }
 }
 
-TransportMask AllJoynObj::GetCompleteTransportMaskFilter() {
+TransportMask AllJoynObj::GetCompleteTransportMaskFilter()
+{
     Transport* tcpTransport = GetTransport("tcp:");
     Transport* udpTransport = GetTransport("udp:");
     TransportMask filterComplete = (tcpTransport && tcpTransport->IsRunning()) ? TRANSPORT_TCP : 0;
     filterComplete |= (udpTransport && udpTransport->IsRunning()) ? TRANSPORT_UDP : 0;
     return filterComplete;
 }
+
 void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
@@ -4298,7 +4345,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
                  */
                 while ((it2 != b2bEndpoints.end()) && (it != virtualEndpoints.end())) {
                     bool sendInfo = ((it2->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) ||
-                                     (endpoint->GetSessionId() == it2->second->GetSessionId()));
+                                     (endpoint->HasCommonSession(it2->second)));
                     if ((it2->second != endpoint) && (it2->second->GetRemoteGUID() != otherSideGuid) && sendInfo) {
                         Message sigMsg(bus);
                         MsgArg args[3];
@@ -4584,7 +4631,14 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
 
     /* Ignore a NameChange for non-local names from routers that predate the DAEMON_NAMES(now SLS_NAMES) flag */
     AcquireLocks();
+
     map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+    RemoteEndpoint tempEp;
+    bool tempEpWasValid = false;
+    if (bit != b2bEndpoints.end()) {
+        tempEp = bit->second;
+        tempEpWasValid = true;
+    }
     if (bit != b2bEndpoints.end() && (bit->second->GetFeatures().nameTransfer == SessionOpts::SLS_NAMES)) {
         qcc::GUID128 otherGuid = bit->second->GetRemoteGUID();
         const String& shortOtherGuidStr = otherGuid.ToShortString();
@@ -4594,10 +4648,10 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
             return;
         }
     }
-    SessionId sessionId = (bit != b2bEndpoints.end()) ? bit->second->GetSessionId() : 0;
     ReleaseLocks();
 
     if (alias[0] == ':') {
+
         AcquireLocks();
         bit = b2bEndpoints.find(msg->GetRcvEndpointName());
         if (bit != b2bEndpoints.end()) {
@@ -4625,8 +4679,17 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
                             }
                             ReleaseLocks();
                             RemoveVirtualEndpoint(vep->GetUniqueName());
+                            if (tempEp->GetEndpointType() == ENDPOINT_TYPE_MQTT) {
+                                MQTTEndpoint mqttEp = MQTTEndpoint::cast(tempEp);
+                                mqttEp->UnsubscribeToPresence(vep->GetUniqueName());
+                            }
+
                             for (vector<String>::iterator it = vepNames.begin(); it != vepNames.end(); ++it) {
                                 RemoveVirtualEndpoint(*it);
+                                if (tempEp->GetEndpointType() == ENDPOINT_TYPE_MQTT) {
+                                    MQTTEndpoint mqttEp = MQTTEndpoint::cast(tempEp);
+                                    mqttEp->UnsubscribeToPresence(*it);
+                                }
                             }
                         } else {
                             /* Need to hit NameTable here since name ownership of a vep alias may have changed */
@@ -4684,7 +4747,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
              * if the session Id of the endpoint over which we received the message matches this session id.
              */
             bool sendInfo = ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) ||
-                             (it->second->GetSessionId() == sessionId));
+                             (!tempEpWasValid || it->second->HasCommonSession(tempEp)));
 
 
             if (sendInfo && ((cBit == b2bEndpoints.end()) || (cBit->second->GetRemoteGUID() != it->second->GetRemoteGUID()))) {
@@ -5001,20 +5064,34 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                      * the unique name of the routing node.
                      */
                     sendInfo = (alias == localEndpoint->GetUniqueName())
-                               || sessionsChanged.find(it->second->GetSessionId()) != sessionsChanged.end();
+                               || it->second->HasCommonSession(sessionsChanged);
                 } else {
                     /* NameChanged for well known names need to be sent out if the old or
                      * new owner of the name is in the session that this bus-to-bus endpoint
                      * is set up for or if this is routing node info.
                      */
                     if (oldOwner && (0 == ::strncmp(shortGuidStr.c_str(), oldOwner->c_str() + 1, shortGuidStr.size()))) {
-                        sendInfo = (*oldOwner == localEndpoint->GetUniqueName())
-                                   || SessionMapFind(*oldOwner, it->second->GetSessionId()) != NULL;
+                        sendInfo = (*oldOwner == localEndpoint->GetUniqueName());
+                        set<SessionId> tempSet = it->second->GetSessionIdSet();
+                        for (set<SessionId>::iterator tempSetIterator = tempSet.begin();
+                             !sendInfo && (tempSetIterator != tempSet.end());
+                             ++tempSetIterator) {
+                            sendInfo = SessionMapFind(*oldOwner, *tempSetIterator) != NULL;
+                        }
+
                     }
-                    if (newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size()))) {
-                        sendInfo = sendInfo || (*newOwner == localEndpoint->GetUniqueName());
-                        sendInfo = sendInfo || SessionMapFind(*newOwner, it->second->GetSessionId()) != NULL;
+
+
+                    if (!sendInfo && newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size()))) {
+                        sendInfo = (*newOwner == localEndpoint->GetUniqueName());
+                        set<SessionId> tempSet = it->second->GetSessionIdSet();
+                        for (set<SessionId>::iterator tempSetIterator = tempSet.begin();
+                             !sendInfo && (tempSetIterator != tempSet.end());
+                             ++tempSetIterator) {
+                            sendInfo = SessionMapFind(*newOwner, *tempSetIterator) != NULL;
+                        }
                     }
+
                 }
                 break;
 
@@ -5035,7 +5112,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                          * the unique name of the routing node.
                          */
                         sendInfo = (alias == localEndpoint->GetUniqueName())
-                                   || sessionsChanged.find(it->second->GetSessionId()) != sessionsChanged.end();
+                                   || it->second->HasCommonSession(sessionsChanged);
                     }
                 } else {
                     /* NameChanged for well known names need to be sent out if the old or
@@ -5044,12 +5121,22 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                      */
 
                     if (oldOwner && (0 == ::strncmp(shortGuidStr.c_str(), oldOwner->c_str() + 1, shortGuidStr.size()))) {
-                        sendInfo = (*oldOwner == localEndpoint->GetUniqueName())
-                                   || SessionMapFind(*oldOwner, it->second->GetSessionId()) != NULL;
+                        sendInfo = (*oldOwner == localEndpoint->GetUniqueName());
+                        set<SessionId> tempSet = it->second->GetSessionIdSet();
+                        for (set<SessionId>::iterator tempSetIterator = tempSet.begin();
+                             !sendInfo && (tempSetIterator != tempSet.end());
+                             ++tempSetIterator) {
+                            sendInfo = SessionMapFind(*oldOwner, *tempSetIterator) != NULL;
+                        }
                     }
-                    if (newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size()))) {
-                        sendInfo = sendInfo || (*newOwner == localEndpoint->GetUniqueName());
-                        sendInfo = sendInfo || SessionMapFind(*newOwner, it->second->GetSessionId()) != NULL;
+                    if (!sendInfo && newOwner && (0 == ::strncmp(shortGuidStr.c_str(), newOwner->c_str() + 1, shortGuidStr.size()))) {
+                        sendInfo = (*newOwner == localEndpoint->GetUniqueName());
+                        set<SessionId> tempSet = it->second->GetSessionIdSet();
+                        for (set<SessionId>::iterator tempSetIterator = tempSet.begin();
+                             !sendInfo && (tempSetIterator != tempSet.end());
+                             ++tempSetIterator) {
+                            sendInfo = SessionMapFind(*newOwner, *tempSetIterator) != NULL;
+                        }
                     }
                 }
                 break;

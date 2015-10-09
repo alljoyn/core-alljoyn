@@ -149,7 +149,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_exponential", 32),
             ConfigDB::GetConfigDB()->GetLimit("sls_backoff_max", 15 * 60))
 {
-    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY | TRANSPORT_MQTT);
+    sessionOpts.transports = ConfigDB::GetConfigDB()->GetLimit("sls_preferred_transports", TRANSPORT_ANY);
 }
 
 SessionlessObj::~SessionlessObj()
@@ -468,6 +468,41 @@ QStatus SessionlessObj::PushMessage(Message& msg)
 
     ScheduleWork(new PushMessageWork(*this, msg));
     return ER_OK;
+}
+
+SessionlessObj::RegisterMQTTEpWork::RegisterMQTTEpWork(SessionlessObj& slObj, MQTTEndpoint ep)
+    : Work(slObj), ep(ep)
+{
+}
+
+void SessionlessObj::RegisterMQTTEpWork::Run()
+{
+    slObj.router.LockNameTable();
+    slObj.lock.Lock();
+    slObj.mqttEp = ep;
+    if (!slObj.mqttEp->IsValid()) {
+        slObj.lock.Unlock();
+        slObj.router.UnlockNameTable();
+        return;
+    }
+    LocalCache tempLocal = slObj.localCache;
+    slObj.lock.Unlock();
+    slObj.router.UnlockNameTable();
+
+    /* Send all messages currently in local cache */
+    LocalCache::iterator it = tempLocal.begin();
+    for (LocalCache::iterator it = tempLocal.begin(); it != tempLocal.end() && slObj.mqttEp->IsValid(); ++it) {
+        Message msg = it->second.second;
+        slObj.mqttEp->PublishPresence(msg->GetSender(), true);
+        slObj.mqttEp->SubscribeForDestination(msg->GetSender());
+        slObj.mqttEp->PushMessage(msg);
+    }
+}
+
+void SessionlessObj::RegisterMQTTEndpoint(MQTTEndpoint ep)
+{
+    QCC_DbgPrintf(("RegisterMQTTEndpoint"));
+    ScheduleWork(new RegisterMQTTEpWork(*this, ep));
 }
 
 void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)

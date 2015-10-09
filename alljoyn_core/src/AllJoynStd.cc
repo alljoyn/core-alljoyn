@@ -82,11 +82,11 @@ const char* org::allseen::Introspectable::IntrospectDocType =
     "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\""
     ">\n";
 
-/** org.alljoyn.mqtt interface definitions */
-const char* org::alljoyn::MQTT::ErrorName = "org.alljoyn.MQTT.ErStatus";
-const char* org::alljoyn::MQTT::ObjectPath = "/org/alljoyn/Bus";
-const char* org::alljoyn::MQTT::InterfaceName = "org.alljoyn.MQTT";
-const char* org::alljoyn::MQTT::WellKnownName = "org.alljoyn.MQTT";
+/** org.alljoyn.Mqtt interface definitions */
+const char* org::alljoyn::Mqtt::ErrorName = "org.alljoyn.Mqtt.ErStatus";
+const char* org::alljoyn::Mqtt::ObjectPath = "/org/alljoyn/Bus";
+const char* org::alljoyn::Mqtt::InterfaceName = "org.alljoyn.Mqtt";
+const char* org::alljoyn::Mqtt::WellKnownName = "org.alljoyn.Mqtt";
 
 QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
 {
@@ -358,9 +358,9 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
     {
         /* Create the MQTT interface */
         InterfaceDescription* ifc = NULL;
-        status = bus.CreateInterface(org::alljoyn::MQTT::InterfaceName, ifc);
+        status = bus.CreateInterface(org::alljoyn::Mqtt::InterfaceName, ifc);
         if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to create %s interface", org::alljoyn::MQTT::InterfaceName));
+            QCC_LogError(status, ("Failed to create %s interface", org::alljoyn::Mqtt::InterfaceName));
             return status;
         }
         ifc->AddSignal("Presence", "sb", "name,info", 0);

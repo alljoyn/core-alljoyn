@@ -1350,6 +1350,7 @@ bool _RemoteEndpoint::IsInSession(SessionId sessionId)
 uint32_t _RemoteEndpoint::GetSessionId() const
 {
     if (internal) {
+        assert(endpointType != ENDPOINT_TYPE_MQTT);
         assert(internal->sessionIdSet.size() < 2);
         if (internal->sessionIdSet.size() == 1) {
             return *internal->sessionIdSet.begin();
@@ -1358,6 +1359,34 @@ uint32_t _RemoteEndpoint::GetSessionId() const
     return 0;
 
 }
+
+set<SessionId> _RemoteEndpoint::GetSessionIdSet() const
+{
+    if (internal) {
+        return internal->sessionIdSet;
+    } else {
+        static set<SessionId> emptySessionSet;
+        return emptySessionSet;
+    }
+}
+
+bool _RemoteEndpoint::HasCommonSession(RemoteEndpoint rep) const
+{
+    if (rep->internal) {
+        return HasCommonSession(rep->internal->sessionIdSet);
+    }
+    return false;
+}
+bool _RemoteEndpoint::HasCommonSession(std::set<SessionId> sessionIds) const
+{
+    if (internal) {
+        set<SessionId> set_common;
+        set_intersection(internal->sessionIdSet.begin(), internal->sessionIdSet.end(), sessionIds.begin(), sessionIds.end(), std::inserter(set_common, set_common.end()));
+        return (set_common.size() > 0);
+    }
+    return false;
+}
+
 
 bool _RemoteEndpoint::IsSessionRouteSetUp()
 {

@@ -57,7 +57,7 @@ static const char bundledConfig[] =
     "  <type>alljoyn_bundled</type>"
     "  <listen>tcp:iface=*,port=0</listen>"
     "  <listen>udp:iface=*,port=0</listen>"
-    "  <listen>mqtt:</listen>"
+    "  <listen>mqtt:addr=127.0.0.1,port=1883</listen>"
     "  <limit name=\"auth_timeout\">20000</limit>"
     "  <limit name=\"max_incomplete_connections\">4</limit>"
     "  <limit name=\"max_completed_connections\">16</limit>"

@@ -115,8 +115,8 @@ extern const char* ObjectPath;                    /**< Object path */
 extern const char* InterfaceName;                 /**< Interface name */
 }
 }
-/** Interface definitions for org.alljoyn.MQTT */
-namespace MQTT {
+/** Interface definitions for org.alljoyn.Mqtt */
+namespace Mqtt {
 
 extern const char* ErrorName;                     /**< Standard MQTT error name */
 extern const char* ObjectPath;                    /**< Object path */
