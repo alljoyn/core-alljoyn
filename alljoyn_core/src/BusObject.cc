@@ -823,6 +823,9 @@ QStatus BusObject::SignalInternal(const char* destination,
                      * not need to authorize the message again.
                      */
                     msg->authorizationChecked = true;
+                } else if (((destination == NULL) || (strlen(destination) == 0)) && (sessionId == 0)) {
+                    /* broadcast signal */
+                    msg->authorizationChecked = true; /* skip authorization check */
                 } else if (!bus->GetInternal().GetRouter().IsDaemon()) {
                     /* do an earlier permission authorization to make sure this
                      * signal is allowed to send to the router for delivery.

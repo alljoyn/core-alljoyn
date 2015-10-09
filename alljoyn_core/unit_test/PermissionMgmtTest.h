@@ -159,7 +159,12 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
 
     void TVDown(const InterfaceDescription::Member* member, Message& msg);
     void TVChannel(const InterfaceDescription::Member* member, Message& msg);
-    void TVChannelChanged(const InterfaceDescription::Member* member, Message& msg, bool sendBroadcastSignal);
+    typedef enum {
+        SEND_SIGNAL_UNICAST = 0,
+        SEND_SIGNAL_SESSIONCAST = 1,
+        SEND_SIGNAL_BROADCAST = 2
+    } SignalSendMethod;
+    void TVChannelChanged(const InterfaceDescription::Member* member, Message& msg, SignalSendMethod sendMethod);
     void TVMute(const InterfaceDescription::Member* member, Message& msg);
     void TVInputSource(const InterfaceDescription::Member* member, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
