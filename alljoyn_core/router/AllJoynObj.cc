@@ -1822,7 +1822,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
                 ReleaseLocks();
                 QStatus status = ep->PushMessage(exchangeMsg);
                 if (ER_OK != status) {
-                    QCC_LogError(status, ("Failed to forward ExchangeNames to %s", ep->GetUniqueName().c_str()));
+                    QCC_DbgHLPrintf(("Failed to forward ExchangeNames to %s: %s", ep->GetUniqueName().c_str(), QCC_StatusText(status)));
                 }
                 AcquireLocks();
                 it = b2bEndpoints.upper_bound(key);
@@ -4420,7 +4420,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
                 ReleaseLocks();
                 QStatus status = ep->PushMessage(msg);
                 if (ER_OK != status) {
-                    QCC_LogError(status, ("Failed to forward NameChanged to %s", ep->GetUniqueName().c_str()));
+                    QCC_DbgHLPrintf(("Failed to forward NameChanged to %s: %s", ep->GetUniqueName().c_str(), QCC_StatusText(status)));
                 }
                 AcquireLocks();
                 cBit = b2bEndpoints.find(msg->GetRcvEndpointName());
