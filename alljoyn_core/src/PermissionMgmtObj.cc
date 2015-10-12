@@ -1388,7 +1388,7 @@ QStatus PermissionMgmtObj::StoreMembership(const qcc::CertificateX509* certChain
     }
     if (!sameKey) {
         QCC_DbgPrintf(("PermissionMgmtObj::StoreMembership failed since certificate subject public key is not the same as target public key"));
-        return ER_UNKNOWN_CERTIFICATE;
+        return ER_INVALID_CERTIFICATE;
     }
     status = ValidateMembershipCertificateChain(certChain, count, NULL);
     if (ER_OK != status) {
