@@ -34,6 +34,14 @@ env['OBJDIR_COMMON'] = env['OBJDIR'] + '/common'
 # All AllJoyn subprojects have access to common so add the include path to the global environment
 env.Append(CPPPATH = [env.Dir('inc')])
 
+if 'MOSQUITTO_SRC' in ARGUMENTS:
+    vars = Variables()
+    vars.Add(PathVariable('MOSQUITTO_SRC', 'Base Mosquitto directory', os.environ.get('MOSQUITTO_SRC')))
+    vars.Update(env)
+    env.Append(CPPPATH = ['$MOSQUITTO_SRC'])
+    env.Append(LIBPATH = ['$MOSQUITTO_SRC'])
+    env.AppendUnique(LIBS =['mosquitto','mosquittopp'])
+
 commonenv = env.Clone()
 
 # Variant settings

@@ -88,7 +88,6 @@ class BasicSampleObject : public BusObject {
         printf("ObjectRegistered has been called.\n");
     }
 
-
     void Cat(const InterfaceDescription::Member* member, Message& msg)
     {
         QCC_UNUSED(member);
@@ -108,6 +107,9 @@ class BasicSampleObject : public BusObject {
 class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
   public:
     MyBusListener(BusAttachment& bus) : bus(bus) { }
+
+    MyBusListener& operator=(const MyBusListener&);
+
     void NameOwnerChanged(const char* busName, const char* previousOwner, const char* newOwner)
     {
         if (newOwner && (0 == strcmp(busName, SERVICE_NAME))) {
@@ -117,6 +119,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
                    newOwner ? newOwner : "<none>");
         }
     }
+
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts)
     {
         if (sessionPort != SERVICE_PORT) {
@@ -127,6 +130,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
                joiner, opts.proximity, opts.traffic, opts.transports);
         return true;
     }
+
     void SessionJoined(SessionPort sessionPort, SessionId sessionId, const char* joiner)
     {
         QCC_UNUSED(sessionPort);
@@ -137,6 +141,7 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
     void SessionLost(SessionId sessionId, SessionLostReason reason) {
         printf("SessionLost(%08x) was called. Reason = %u.\n", sessionId, reason);
     }
+
   private:
     BusAttachment& bus;
 };

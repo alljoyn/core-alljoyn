@@ -27,7 +27,15 @@
 #error Only include MQTTTransport.h in C++ code.
 #endif
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+/* Disabling warning C 4100. Function doesnt use all passed in parameters */
+#pragma warning(push)
+#pragma warning(disable: 4100)
+#endif
 #include <mosquittopp.h>
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
 
 #include <qcc/SocketStream.h>
 #include <qcc/Thread.h>
@@ -234,7 +242,7 @@ class MQTTTransport : public Transport, public _RemoteEndpoint::EndpointListener
      */
     void EndpointExit(RemoteEndpoint& endpoint) { QCC_UNUSED(endpoint); };
 
-    void* Run(void* arg);
+    void* STDCALL Run(void* arg);
 
   private:
     /**
