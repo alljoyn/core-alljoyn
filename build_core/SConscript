@@ -65,7 +65,7 @@ elif platform.system() == 'Darwin':
 
     # Darwin maps both 32-bit and 64-bit x86 CPUs to "x86"
     default_target_cpu = 'x86'
-    allowed_target_cpus = ('x86', 'arm', 'armv7', 'armv7s', 'arm64', 'openwrt')
+    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'armv7', 'armv7s', 'arm64', 'openwrt')
 
     default_msvc_version = None
 

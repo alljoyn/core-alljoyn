@@ -31,10 +31,3 @@ elif env['OS_GROUP'] == 'windows':
     env.Install('$CPP_DISTDIR/bin/samples', progs )
     env.Install(clientDistDir, env.Glob('*.cc'))
     env.InstallAs(clientDistDir + '/README.txt', 'README.windows.txt')
-    #install Visual Studio solution files
-    env.Install(clientDistDir+'/VC2008Win7', 'VC2008Win7/VC2008Win7.sln')
-    env.Install(clientDistDir+'/VC2008Win7/mqtt_client', 'VC2008Win7/mqtt_client/mqtt_client.vcproj')
-    env.Install(clientDistDir+'/VC2008Win7/mqtt_service', 'VC2008Win7/mqtt_service/mqtt_service.vcproj')
-    env.Install(clientDistDir+'/VC2008Win7/nameChange_client', 'VC2008Win7/nameChange_client/nameChange_client.vcproj')
-    env.Install(clientDistDir+'/VC2008Win7/signal_service', 'VC2008Win7/signal_service/signal_service.vcproj')
-    env.Install(clientDistDir+'/VC2008Win7/signalConsumer_client', 'VC2008Win7/signalConsumer_client/signalConsumer_client.vcproj')

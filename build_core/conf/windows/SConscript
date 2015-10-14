@@ -103,8 +103,13 @@ env.Append(CXXFLAGS=['/EHsc'])
 # Enabling __stdcall calling convention on x86 results in smaller output EXE
 # files. This calling convention is also used by typical Windows APIs.
 if env['CPU'] == 'x86':
-    env.Append(CFLAGS=['/Gz'])
-    env.Append(CXXFLAGS=['/Gz'])
+    if 'USE_CDECL' in ARGUMENTS:
+        env.Append(CPPDEFINES=['AJ_CALL=__cdecl'])
+        env.Append(CFLAGS=['/Gd'])
+        env.Append(CXXFLAGS=['/Gd'])
+    else:
+        env.Append(CFLAGS=['/Gz'])
+        env.Append(CXXFLAGS=['/Gz'])
 
 # Lib setup
 env.Append(LFLAGS=['/NODEFAULTLIB:libcmt.lib'])

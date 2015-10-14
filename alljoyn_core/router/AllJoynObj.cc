@@ -1946,12 +1946,10 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
         dest = sessionHost;
         srcB2B = msg->GetRcvEndpointName();
         src = msg->GetSender();
-
+        busAddr = "";
     } else {
         status = MsgArg::Get(args, 6, "qsssss", &sessionPort, &src, &sessionHost, &dest, &srcB2B, &busAddr);
         srcB2B = msg->GetRcvEndpointName();
-
-
     }
     ajObj.AcquireLocks();
     BusEndpoint tempEp1 = ajObj.FindEndpoint(srcB2B);
