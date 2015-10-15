@@ -290,6 +290,8 @@ static bool CanBeCAForIdentity(PermissionMgmtObj::TrustAnchorType taType)
 static PermissionMgmtObj::TrustAnchorList LocateTrustAnchor(PermissionMgmtObj::TrustAnchorList& trustAnchors, const qcc::String& aki)
 {
     PermissionMgmtObj::TrustAnchorList retList;
+    trustAnchors.Lock(MUTEX_CONTEXT);
+
     for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
         if (!CanBeCAForIdentity((*it)->use)) {
             continue;
@@ -299,43 +301,53 @@ static PermissionMgmtObj::TrustAnchorList LocateTrustAnchor(PermissionMgmtObj::T
             retList.push_back(*it);
         }
     }
+
+    trustAnchors.Unlock(MUTEX_CONTEXT);
     return retList;
 }
 
 bool PermissionMgmtObj::IsTrustAnchor(const ECCPublicKey* publicKey)
 {
+    bool isTrustAnchor = false;
+    trustAnchors.Lock(MUTEX_CONTEXT);
+
     for (TrustAnchorList::iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
         if (CanBeCAForIdentity((*it)->use) &&
             (*((*it)->keyInfo.GetPublicKey()) == *publicKey)) {
-            return true;
+            isTrustAnchor = true;
+            break;
         }
     }
-    return false;
+
+    trustAnchors.Unlock(MUTEX_CONTEXT);
+    return isTrustAnchor;
 }
 
-void PermissionMgmtObj::ClearTrustAnchorList(TrustAnchorList& list)
+static bool AddTrustAnchorIfNotDuplicate(std::shared_ptr<PermissionMgmtObj::TrustAnchor> ta, PermissionMgmtObj::TrustAnchorList& trustAnchors)
 {
-    for (TrustAnchorList::iterator it = list.begin(); it != list.end(); it++) {
-        delete *it;
-    }
-    list.clear();
-}
+    bool duplicate = false;
+    trustAnchors.Lock(MUTEX_CONTEXT);
 
-static bool HasDuplicateTrustAnchor(const PermissionMgmtObj::TrustAnchor& ta, const PermissionMgmtObj::TrustAnchorList& trustAnchors)
-{
     /* check for duplicate trust anchor */
     for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
-        if ((*it)->use != ta.use) {
+        if ((*it)->use != ta->use) {
             continue;
         }
         if (((*it)->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) &&
-            ((*it)->securityGroupId != ta.securityGroupId)) {
+            ((*it)->securityGroupId != ta->securityGroupId)) {
             continue;
         }
-        if (*(*it)->keyInfo.GetPublicKey() == *(ta.keyInfo.GetPublicKey())) {
-            return true;  /* duplicate */
+        if (*(*it)->keyInfo.GetPublicKey() == *(ta->keyInfo.GetPublicKey())) {
+            duplicate = true;
+            break;
         }
     }
+
+    if (!duplicate) {
+        trustAnchors.push_back(ta);
+    }
+
+    trustAnchors.Unlock(MUTEX_CONTEXT);
     return false;
 }
 
@@ -348,18 +360,21 @@ static void LoadSGAuthoritiesAndCAs(const PermissionPolicy& policy, PermissionMg
             if (((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) ||
                  (peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY)) && peers[idx].GetKeyInfo()) {
                 if (KeyInfoHelper::InstanceOfKeyInfoNISTP256(*peers[idx].GetKeyInfo())) {
-                    PermissionMgmtObj::TrustAnchor* ta = new PermissionMgmtObj::TrustAnchor((peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP ? PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY : PermissionMgmtObj::TRUST_ANCHOR_CA), *(KeyInfoNISTP256*) peers[idx].GetKeyInfo());
+                    std::shared_ptr<PermissionMgmtObj::TrustAnchor> ta;
+                    if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+                        ta = std::make_shared<PermissionMgmtObj::TrustAnchor>(PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY, *(KeyInfoNISTP256*)peers[idx].GetKeyInfo());
+                    } else {
+                        ta = std::make_shared<PermissionMgmtObj::TrustAnchor>(PermissionMgmtObj::TRUST_ANCHOR_CA, *(KeyInfoNISTP256*)peers[idx].GetKeyInfo());
+                    }
+
                     if (ta->keyInfo.GetKeyIdLen() == 0) {
                         KeyInfoHelper::GenerateKeyId(ta->keyInfo);
                     }
                     if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
                         ta->securityGroupId = peers[idx].GetSecurityGroupId();
                     }
-                    if (!HasDuplicateTrustAnchor(*ta, taList)) {
-                        taList.push_back(ta);
-                    } else {
-                        delete ta;
-                    }
+
+                    AddTrustAnchorIfNotDuplicate(ta, taList);
                 }
             }
         }
@@ -368,10 +383,10 @@ static void LoadSGAuthoritiesAndCAs(const PermissionPolicy& policy, PermissionMg
 
 void PermissionMgmtObj::ClearTrustAnchors()
 {
-    ClearTrustAnchorList(trustAnchors);
+    trustAnchors.Lock(MUTEX_CONTEXT);
+    trustAnchors.clear();
+    trustAnchors.Unlock(MUTEX_CONTEXT);
 }
-
-
 
 QStatus PermissionMgmtObj::StoreDSAKeys(CredentialAccessor* ca, const ECCPrivateKey* privateKey, const ECCPublicKey* publicKey)
 {
@@ -788,8 +803,11 @@ QStatus PermissionMgmtObj::StateChanged()
 
 static QStatus ValidateCertificateWithTrustAnchors(const CertificateX509& cert, PermissionMgmtObj::TrustAnchorList* taList)
 {
+    QStatus status = ER_UNKNOWN_CERTIFICATE;
+    taList->Lock(MUTEX_CONTEXT);
+
     for (PermissionMgmtObj::TrustAnchorList::iterator it = taList->begin(); it != taList->end(); it++) {
-        PermissionMgmtObj::TrustAnchor* ta = *it;
+        std::shared_ptr<PermissionMgmtObj::TrustAnchor> ta = *it;
         bool qualified = false;
         if (cert.GetType() == CertificateX509::MEMBERSHIP_CERTIFICATE) {
             if ((ta->use == PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY) &&
@@ -800,10 +818,13 @@ static QStatus ValidateCertificateWithTrustAnchors(const CertificateX509& cert, 
             qualified = true;
         }
         if (qualified && (cert.Verify(ta->keyInfo.GetPublicKey()) == ER_OK)) {
-            return ER_OK;  /* cert is verified */
+            status = ER_OK;  /* cert is verified */
+            break;
         }
     }
-    return ER_UNKNOWN_CERTIFICATE;
+
+    taList->Unlock(MUTEX_CONTEXT);
+    return status;
 }
 
 static bool ValidateAKIInCertChain(const qcc::CertificateX509* certChain, size_t count)
@@ -1127,6 +1148,7 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertificateId(qcc::String& serial, qc
         /* The identity cert is a single cert.  Locate the trust anchors that
          * might sign this leaf cert */
         TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, leafCert.GetAuthorityKeyId());
+
         if (anchors.empty()) {
             status = ER_UNKNOWN_CERTIFICATE;
             goto Exit;
@@ -1768,6 +1790,7 @@ QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
              * the list of trust anchors using the cert's aki.
              */
             TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, leafCert->GetAuthorityKeyId());
+
             for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
                 if (ER_OK == leafCert->Verify((*it)->keyInfo.GetPublicKey())) {
                     issuerKeyInfo.SetPublicKey((*it)->keyInfo.GetPublicKey());
@@ -1840,6 +1863,7 @@ bool PermissionMgmtObj::IsRelevantMembershipCert(std::vector<MsgArg*>& membershi
     }
 
     TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, cert.GetAuthorityKeyId());
+
     if (anchors.size() == 0) {
         QCC_DbgPrintf(("PermissionMgmtObj::IsRelevantMembershipCert: Membership certificate present, but no trust anchors are installed"));
         return false;
@@ -2038,6 +2062,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
                 /* build the vector of certs to verify.  The membership cert is the leaf node -- first item on the vector */
                 /* check membership cert chain against the security group trust anchors */
                 status = ValidateMembershipCertificateChain(metadata->certChain, &trustAnchors);
+
                 if (ER_OK != status) {
                     /* remove this membership cert since it is not valid */
                     QCC_DbgPrintf(("PermissionMgmtObj::ParseSendMemberships invalidated peer's membership guild thus removing it from peer's guild list"));
@@ -2134,6 +2159,7 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
     bus.GetInternal().GetKeyStore().Reload();
     KeyStore::Key key;
     QStatus status;
+
     ClearTrustAnchors();
     if (!keepForClaim) {
         ca->GetLocalKey(KeyBlob::DSA_PRIVATE, key);
@@ -2459,6 +2485,7 @@ bool PermissionMgmtObj::ValidateCertChain(bool verifyIssuerChain, bool validateT
                 }
             } else {
                 TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, certChain[0].GetAuthorityKeyId());
+
                 if (!anchors.empty()) {
                     for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
                         valid = (ER_OK == certChain[0].Verify((*it)->keyInfo.GetPublicKey()));
@@ -2644,6 +2671,14 @@ QStatus PermissionMgmtObj::GetClaimCapabilityAdditionalInfo(PermissionConfigurat
 {
     additionalInfo = claimCapabilityAdditionalInfo;
     return ER_OK;
+}
+
+bool PermissionMgmtObj::HasTrustAnchors()
+{
+    trustAnchors.Lock(MUTEX_CONTEXT);
+    bool hasTrustAnchors = !trustAnchors.empty();
+    trustAnchors.Unlock(MUTEX_CONTEXT);
+    return hasTrustAnchors;
 }
 
 } /* namespace ajn */
