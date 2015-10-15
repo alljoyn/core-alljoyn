@@ -490,13 +490,17 @@ void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
 
 bool KeyExchangerECDHE_ECDSA::IsTrustAnchor(const ECCPublicKey* publicKey)
 {
-    for (PermissionMgmtObj::TrustAnchorList::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
+    bool isTrustAnchor = false;
+    trustAnchorList->Lock(MUTEX_CONTEXT);
 
+    for (std::vector<std::shared_ptr<PermissionMgmtObj::TrustAnchor> >::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
         if (*(*it)->keyInfo.GetPublicKey() == *publicKey) {
-            return true;
+            isTrustAnchor = true;
         }
     }
-    return false;
+
+    trustAnchorList->Unlock(MUTEX_CONTEXT);
+    return isTrustAnchor;
 }
 
 QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
@@ -1276,7 +1280,7 @@ static void ExtractIssuerPublicKeys(const CertificateX509* certs, size_t numCert
         if (aki.size() == 0) {
             return;
         }
-        for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
+        for (std::vector<std::shared_ptr<PermissionMgmtObj::TrustAnchor> >::const_iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
             if ((aki.size() == (*it)->keyInfo.GetKeyIdLen()) &&
                 (memcmp(aki.data(), (*it)->keyInfo.GetKeyId(), aki.size()) == 0) &&
                 (ER_OK == certs[0].Verify((*it)->keyInfo.GetPublicKey()))) {
@@ -1454,7 +1458,11 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         if (certs[0].GetDigestSize() == Crypto_SHA256::DIGEST_SIZE) {
             memcpy(peerManifestDigest, certs[0].GetDigest(), Crypto_SHA256::DIGEST_SIZE);
         }
+
+        trustAnchorList->Lock(MUTEX_CONTEXT);
         ExtractIssuerPublicKeys(certs, numCerts, trustAnchorList, peerIssuerPubKeys);
+        trustAnchorList->Unlock(MUTEX_CONTEXT);
+
         CalculateSecretExpiration(certs[0], secretExpiration);
     } else {
         QCC_DbgPrintf(("Not authorized by VerifyCredential callback"));
