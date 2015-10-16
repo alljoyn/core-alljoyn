@@ -98,6 +98,13 @@ Version 15.09:
 * Language tag matching uses prefix matching and also will return the default
   language if there is no match where previously it would return an
   error. (ASACORE-2209)
+* Claimed 15.09 apps/devices (A/D using Security 2.0) cannot interact securely
+  with pre-15.09 A/D using ECDHE_ECDSA key exchange; further, if the A/D only
+  exposes interfaces/objects requiring security it will not be possible to
+  interact with the A/D. This is because once an A/D is claimed, it expects to
+  receive a manifest from the ECDHE_ECDSA peer, and pre-15.09 A/D do not support
+  sending manifests (which were introduced as part Security 2.0 in the 15.09
+  release).
 
 More details on these changes can be found on the release plan page:
 https://wiki.allseenalliance.org/core/core_15.09_release_plan#compatibility_with_previous_releases
