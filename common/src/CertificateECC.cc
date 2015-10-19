@@ -425,18 +425,18 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
     if (localTime < 0) {
         return ER_FAIL;
     }
-    struct tm* gtm = ConvertTimeToStructure(&localTime);
-    if (!gtm) {
+    struct tm gtm;
+    if (ER_OK != ConvertTimeToStructure(&localTime, &gtm)) {
         return ER_FAIL;
     }
     /* figure the time zone offset */
-    int32_t tzDiff = gtm->tm_hour - originalTmHour;
+    int32_t tzDiff = gtm.tm_hour - originalTmHour;
     /* some time zones are at 30 minute or 45 minute boundary */
-    int32_t minuteDiff = gtm->tm_min - tm.tm_min;
+    int32_t minuteDiff = gtm.tm_min - tm.tm_min;
     if (tzDiff < -12) {
         tzDiff += 24;
     } else if (tzDiff > 12) {
-        if (gtm->tm_mday == originalTmDay) {
+        if (gtm.tm_mday == originalTmDay) {
             /* same day */
             tzDiff = 24 - tzDiff;
         } else {
@@ -498,8 +498,8 @@ QStatus CertificateX509::DecodeCertificateTime(const qcc::String& time)
 
 static QStatus EncodeTime(uint64_t epoch, qcc::String& t)
 {
-    struct tm* ptm = ConvertTimeToStructure((int64_t*)&epoch);
-    if (!ptm) {
+    struct tm ptm;
+    if (ER_OK != ConvertTimeToStructure((int64_t*)&epoch, &ptm)) {
         return ER_FAIL;
     }
     /**
@@ -508,10 +508,10 @@ static QStatus EncodeTime(uint64_t epoch, qcc::String& t)
      *      validity date in the year 2050 or later as UTC time YYYYMMDDHHMMSSZ
      * The value 150 means 2050 - 1900 where tm_year is based.
      */
-    const char* format = (ptm->tm_year < 150) ? "%y%m%d%H%M%SZ" : "%Y%m%d%H%M%SZ";
+    const char* format = (ptm.tm_year < 150) ? "%y%m%d%H%M%SZ" : "%Y%m%d%H%M%SZ";
     char buf[16];
     size_t ret;
-    ret = FormatTime(buf, sizeof(buf), format, ptm);
+    ret = FormatTime(buf, sizeof(buf), format, &ptm);
     if (!ret) {
         return ER_FAIL;
     }
