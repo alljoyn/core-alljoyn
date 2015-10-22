@@ -558,6 +558,9 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
     if (status == ER_OK) {
         status = sasl->Advance(msg->GetArg(0)->v_string.str, outStr, authState);
     }
+
+    mech = sasl->GetMechanism();
+
     /*
      * If auth conversation was sucessful store the master secret in the key store.
      */
@@ -567,7 +570,6 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
         KeyBlob masterSecret;
         KeyStore& keyStore = bus->GetInternal().GetKeyStore();
         status = sasl->GetMasterSecret(masterSecret);
-        mech = sasl->GetMechanism();
         if (status == ER_OK) {
             qcc::GUID128 remotePeerGuid(sasl->GetRemoteId());
             /* Tag the master secret with the auth mechanism used to generate it */
