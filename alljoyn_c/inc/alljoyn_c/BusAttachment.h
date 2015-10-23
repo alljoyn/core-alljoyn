@@ -294,8 +294,39 @@ extern AJ_API const char* AJ_CALL alljoyn_busattachment_getconnectspec(alljoyn_b
  * Allow the currently executing method/signal handler to enable concurrent callbacks
  * during the scope of the handler's execution.
  *
- * @param bus    The alljoyn_busattachment to enable concurrent callbacks on
+ * This member function can ONLY be called from within the body of a signal
+ * handler, method handler or other AllJoyn callback. It allows AllJoyn to
+ * dispatch a single (additional) callback while the current one is still
+ * executing. This method is typically used when a method, signal handler or
+ * other AllJoyn callback needs to execute for a long period of time or when
+ * the callback needs to make any kind of blocking call.
  *
+ * This function MUST be called prior to making any non-asynchronous AllJoyn
+ * remote procedure calls from within an AllJoyn callback. This includes
+ * calls such as alljoyn_busattachment_joinsession(),
+ * alljoyn_busattachment_advertisename(),
+ * alljoyn_busattachment_canceladvertisename(),
+ * alljoyn_busattachment_findadvertisedname(),
+ * alljoyn_busattachment_canceladvertisename(),
+ * alljoyn_busattachment_setlinktimeout(), etc.
+ *
+ * alljoyn_busattachment_enableconcurrentcallbacks doesn't take effect when a
+ * alljoyn_busattachment is created with just one thread. If the
+ * alljoyn_busattachment is created with just one thread,
+ * i.e.`alljoyn_busattachment_create_concurrency(appName, true, 1)`, and the
+ * application developer attempts to make a blocking method call in a callback
+ * after invoking alljoyn_busattachment_enableconcurrentcallbacks(), the
+ * application will deadlock.
+ *
+ * For the same reason that alljoyn_busattachment_enableconcurrentcallbacks
+ * cannot be used with just one thread, the maximum number of concurrent
+ * callbacks is limited to the value specified when creating the BusAttachment.
+ * If no concurrency value was chosen the default is 4. It is the application
+ * developers responsibility to make sure the maximum number of concurrent
+ * callbacks is not exceeded. If the maximum number is exceeded the application
+ * will deadlock.
+ *
+ * @param bus    The alljoyn_busattachment to enable concurrent callbacks on
  */
 extern AJ_API void AJ_CALL alljoyn_busattachment_enableconcurrentcallbacks(alljoyn_busattachment bus);
 
