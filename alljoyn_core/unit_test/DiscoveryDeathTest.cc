@@ -25,6 +25,15 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+/* Windows's _ASSERT macro doesn't output anything on failure, since it pops up
+ * a dialog box in an interactive session.
+ */
+#if (QCC_ASSERT == _ASSERT)
+#define ASSERTION_FAILED_REGEX ""
+#else
+#define ASSERTION_FAILED_REGEX "Assertion.*failed"
+#endif
+
 using namespace qcc;
 using namespace ajn;
 
@@ -64,7 +73,7 @@ class DiscoveryDynamicDeathTest : public testing::TestWithParam<DynamicParams> {
 
 // This name should end in "DeathTest" so as to run before all other tests.
 // This test also depends on the QCC_ASSERT macro outputting a string matching the
-// regex "Assertion.*failed" on failure. See ASACORE-2386.
+// regex ASSERTION_FAILED_REGEX on failure. See ASACORE-2386.
 TEST_P(DiscoveryStaticDeathTest, ComputeStaticScoreDeathTest)
 {
     // ComputeStaticScore using power_source, mobility, availability and node_type values
@@ -74,11 +83,11 @@ TEST_P(DiscoveryStaticDeathTest, ComputeStaticScoreDeathTest)
     uint32_t mobility = tp.mobility;
     uint32_t availability = tp.availability;
     uint32_t nodeConnection = tp.nodeConnection;
-    ASSERT_DEATH(ajn::IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeConnection), "Assertion.*failed");
+    ASSERT_DEATH(ajn::IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeConnection), ASSERTION_FAILED_REGEX);
 }
 
 // This test also depends on the QCC_ASSERT macro outputting a string matching the
-// regex "Assertion.*failed" on failure. See ASACORE-2386.
+// regex ASSERTION_FAILED_REGEX on failure. See ASACORE-2386.
 TEST_P(DiscoveryDynamicDeathTest, ComputeDynamicScoreDeathTest)
 {
     // ComputeDynamicScore using tcpAvail, tcpMax, udpAvail, udpMax, tclAvail and tclMax values
@@ -90,7 +99,7 @@ TEST_P(DiscoveryDynamicDeathTest, ComputeDynamicScoreDeathTest)
     uint32_t udpMax = tp.udpMax;
     uint32_t tclAvail = tp.tclAvail;
     uint32_t tclMax = tp.tclMax;
-    ASSERT_DEATH(ajn::IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, tclAvail, tclMax), "Assertion.*failed");
+    ASSERT_DEATH(ajn::IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, tclAvail, tclMax), ASSERTION_FAILED_REGEX);
 }
 
 INSTANTIATE_TEST_CASE_P(DiscoveryStaticDeath, DiscoveryStaticDeathTest,
