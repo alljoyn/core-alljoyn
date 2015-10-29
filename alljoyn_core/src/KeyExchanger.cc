@@ -328,9 +328,9 @@ void KeyExchanger::ShowCurrentDigest(const char* ref)
     QCC_UNUSED(ref);
 
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    peerState->AcquireConversationHashLock();
-    peerState->GetDigest(digest, true);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->GetDigest(IsInitiator(), digest, true);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     QCC_DbgHLPrintf(("Current digest %s ref[%s]: %s\n", IsInitiator() ? "I" : "R", ref, BytesToHexString(digest, sizeof(digest)).c_str()));
 }
 
@@ -340,11 +340,11 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
 
     QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange"));
     /* hash the handshake data */
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(remoteAuthMask, 16, 2 * sizeof(remoteAuthMask), '0')));
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, HexStringToByteString(U32ToString(remoteAuthMask, 16, 2 * sizeof(remoteAuthMask), '0')));
 
-    peerState->UpdateHash(CONVERSATION_V4, msg);
-    peerState->ReleaseConversationHashLock();
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, msg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     QStatus status;
     MsgArg outVariant;
@@ -372,9 +372,9 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
         goto Exit;
     }
     /* hash the handshake data */
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof(authMask), '0')));
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof(authMask), '0')));
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     if (IsLegacyPeer()) {
         KeyExchangeGenLegacyKey(outVariant);
@@ -385,14 +385,14 @@ QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, u
     args[1].Set("v", &outVariant);
 
 Exit:
-    peerState->AcquireConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
     if (ER_OK == status) {
         status = peerObj->HandleMethodReply(msg, replyMsg, args, ArraySize(args));
     } else {
         status = peerObj->HandleMethodReply(msg, replyMsg, status);
     }
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     return status;
 }
@@ -406,9 +406,9 @@ void KeyExchangerECDHE::KeyExchangeGenLegacyKey(MsgArg& variant)
     memcpy(&buf[1], oldenc.data, sizeof(oldenc.data));
     MsgArg localArg("ay", sizeof(buf), buf);
     variant = localArg;
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, buf, sizeof(buf));
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, buf, sizeof(buf));
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
      * RespondToKeyExchange. So no hashing is done here for that version.
@@ -434,9 +434,9 @@ QStatus KeyExchangerECDHE::KeyExchangeReadLegacyKey(MsgArg& variant)
     memcpy(oldenc.data, &replyPubKey[1], sizeof(oldenc.data));
     Crypto_ECC_OldEncoding::ReEncode(&oldenc, &peerPubKey);
     /* hash the handshake data */
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, replyPubKey, replyPubKeyLen);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, replyPubKey, replyPubKeyLen);
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
      * RespondToKeyExchange. So no hashing is done here for that version.
@@ -456,9 +456,9 @@ void KeyExchangerECDHE::KeyExchangeGenKeyInfo(MsgArg& variant)
     uint8_t* exportedPublicKey = new uint8_t[exportedPublicKeySize];
     QCC_VERIFY(ER_OK == publicKey->Export(exportedPublicKey, &exportedPublicKeySize));
 
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     delete[] exportedPublicKey;
 }
@@ -477,10 +477,10 @@ void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
 
         /* The MsgArg takes ownership of exportedPublicKey and will delete it on destruction. */
         variant.SetOwnershipFlags(MsgArg::OwnsArgs | MsgArg::OwnsData, true);
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, &curveType, sizeof(curveType));
-        peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, &curveType, sizeof(curveType));
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
+        peerState->ReleaseConversationHashLock(IsInitiator());
 
         /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
          * RespondToKeyExchange. So no hashing is done here for that version.
@@ -513,9 +513,9 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
     size_t exportedPublicKeySize = peerPubKey.GetSize();
     uint8_t* exportedPublicKey = new uint8_t [exportedPublicKeySize];
     QCC_VERIFY(ER_OK == peerPubKey.Export(exportedPublicKey, &exportedPublicKeySize));
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, exportedPublicKey, exportedPublicKeySize);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     delete[] exportedPublicKey;
     return ER_OK;
 }
@@ -535,10 +535,10 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKey(MsgArg& variant)
         }
         QCC_VERIFY(ER_OK == peerPubKey.Import(replyPubKey, replyPubKeyLen));
         /* hash the handshake data */
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, &eccCurveID, sizeof(eccCurveID));
-        peerState->UpdateHash(CONVERSATION_V1, replyPubKey, replyPubKeyLen);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, &eccCurveID, sizeof(eccCurveID));
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, replyPubKey, replyPubKeyLen);
+        peerState->ReleaseConversationHashLock(IsInitiator());
 
         /* In CONVERSATION_V4, this content is hashed one level up in ExecKeyExchange or
          * RespondToKeyExchange. So no hashing is done here for that version.
@@ -559,9 +559,9 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     /* Hash the handshake data for version 1. This has to happen here instead of with the
      * hashing for version 4 because in version 1, KeyExchangeGen(Legacy)Key also hash data.
      */
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof(authMask), '0')));
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, HexStringToByteString(U32ToString(authMask, 16, 2 * sizeof(authMask), '0')));
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     MsgArg variant;
     if (IsLegacyPeer()) {
@@ -579,11 +579,11 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
         return status;
     }
 
-    peerState->AcquireConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
     status = callback.SendKeyExchange(args, ArraySize(args), &sentMsg, &replyMsg);
-    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, sentMsg);
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     if (status != ER_OK) {
         QCC_DbgHLPrintf(("KeyExchangerECDHE::ExecKeyExchange send KeyExchange fails status 0x%x\n", status));
         return status;
@@ -597,9 +597,9 @@ QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& ca
     }
 
     /* hash the handshake data */
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, HexStringToByteString(U32ToString(*remoteAuthMask, 16, 2 * sizeof(*remoteAuthMask), '0')));
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, HexStringToByteString(U32ToString(*remoteAuthMask, 16, 2 * sizeof(*remoteAuthMask), '0')));
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     if (IsLegacyPeer()) {
         status = KeyExchangeReadLegacyKey(*outVariant);
@@ -624,9 +624,9 @@ QStatus KeyExchangerECDHE::GenerateLocalVerifier(uint8_t* verifier, size_t verif
         label.assign("server finished");
     }
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    peerState->AcquireConversationHashLock();
-    peerState->GetDigest(digest, true);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->GetDigest(IsInitiator(), digest, true);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     QStatus status = GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
     return status;
 }
@@ -640,9 +640,9 @@ QStatus KeyExchangerECDHE::GenerateRemoteVerifier(uint8_t* verifier, size_t veri
         label.assign("client finished");
     }
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    peerState->AcquireConversationHashLock();
-    peerState->GetDigest(digest, true);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->GetDigest(IsInitiator(), digest, true);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
 }
 
@@ -669,9 +669,9 @@ QStatus KeyExchanger::ValidateRemoteVerifierVariant(const char* peerName, MsgArg
     }
     *authorized = (Crypto_Compare(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, remoteVerifier, remoteVerifierLen);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, remoteVerifier, remoteVerifierLen);
+        peerState->ReleaseConversationHashLock(IsInitiator());
         /* In CONVERSATION_V4, the whole reply message including the variant is hashed one level up
          * in either this->KeyAuthentication or AllJoynPeerObj::DoKeyAuthentication.
          */
@@ -844,10 +844,10 @@ QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
     variant.Set("ay", sizeof(verifier), verifier);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    peerState->AcquireConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
     status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     return status;
 }
 
@@ -886,29 +886,29 @@ QStatus KeyExchangerECDHE_NULL::KeyAuthentication(KeyExchangerCB& callback, cons
     MsgArg verifierArg("ay", sizeof(verifier), verifier);
     MsgArg verifierMsg("v", &verifierArg);
 
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, verifier, sizeof(verifier));
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, verifier, sizeof(verifier));
     status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
-    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, sentMsg);
     if (status != ER_OK) {
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+        peerState->ReleaseConversationHashLock(IsInitiator());
         return status;
     }
-    peerState->ReleaseConversationHashLock();
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     MsgArg* variant;
     status = replyMsg->GetArg(0)->Get("v", &variant);
     if (status != ER_OK) {
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+        peerState->ReleaseConversationHashLock(IsInitiator());
         return status;
     }
     status = ValidateRemoteVerifierVariant(peerName, variant, authorized);
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     return status;
 }
 
@@ -924,10 +924,10 @@ QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
     variant.Set("(ayay)", pskName.length(), pskName.data(), sizeof(verifier), verifier);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    peerState->AcquireConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
     status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     return status;
 
 }
@@ -971,9 +971,9 @@ QStatus KeyExchangerECDHE_PSK::GenerateLocalVerifier(uint8_t* verifier, size_t v
         label.assign("server finished");
     }
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    peerState->AcquireConversationHashLock();
-    peerState->GetDigest(digest, true);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->GetDigest(IsInitiator(), digest, true);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     if (GetPeerAuthVersion() >= CONVERSATION_V4) {
         qcc::String seed((const char*)digest, sizeof(digest));
         seed += pskName;
@@ -995,9 +995,9 @@ QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* peerPskName, size
         label.assign("client finished");
     }
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    peerState->AcquireConversationHashLock();
-    peerState->GetDigest(digest, true);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->GetDigest(IsInitiator(), digest, true);
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     /* In CONVERSATION_V4, the hash captures the entire conversation for its protection, and so
      * the PSK cannot be hashed into it, because if the PSK between the peers mismatches the digests will never
@@ -1031,15 +1031,15 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
         if (status != ER_OK) {
             return status;
         }
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, peerPskName, peerPskNameLen);
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, peerPskName, peerPskNameLen);
         /* Calling SetConversationHashSensitiveMode ensures the PSK won't end up in the log if conversation
          * hash tracing is turned on.
          */
-        peerState->SetConversationHashSensitiveMode(true);
-        peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*) pskValue.data(), pskValue.length());
-        peerState->SetConversationHashSensitiveMode(false);
-        peerState->ReleaseConversationHashLock();
+        peerState->SetConversationHashSensitiveMode(IsInitiator(), true);
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, (const uint8_t*) pskValue.data(), pskValue.length());
+        peerState->SetConversationHashSensitiveMode(IsInitiator(), false);
+        peerState->ReleaseConversationHashLock(IsInitiator());
     }
     if (remoteVerifierLen != AUTH_VERIFIER_LEN) {
         return ER_INVALID_DATA;
@@ -1051,9 +1051,9 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
     }
     *authorized = (Crypto_Compare(remoteVerifier, computedRemoteVerifier, sizeof(computedRemoteVerifier)) == 0);
     if (!IsInitiator()) {
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, remoteVerifier, remoteVerifierLen);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, remoteVerifier, remoteVerifierLen);
+        peerState->ReleaseConversationHashLock(IsInitiator());
     }
     return ER_OK;
 }
@@ -1072,15 +1072,15 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     }
 
     /* hash the handshake */
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskName.data(), pskName.length());
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, (const uint8_t*)pskName.data(), pskName.length());
     /* Calling SetConversationHashSensitiveMode ensures the PSK won't end up in the log if conversation
      * hash tracing is turned on.
      */
-    peerState->SetConversationHashSensitiveMode(true);
-    peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskValue.data(), pskValue.length());
-    peerState->SetConversationHashSensitiveMode(false);
-    peerState->ReleaseConversationHashLock();
+    peerState->SetConversationHashSensitiveMode(IsInitiator(), true);
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, (const uint8_t*)pskValue.data(), pskValue.length());
+    peerState->SetConversationHashSensitiveMode(IsInitiator(), false);
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     uint8_t verifier[AUTH_VERIFIER_LEN];
     GenerateLocalVerifier(verifier, sizeof(verifier));
@@ -1093,29 +1093,29 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     }
     MsgArg verifierMsg("v", &verifierArg);
 
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, verifier, sizeof(verifier));
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, verifier, sizeof(verifier));
 
     status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
-    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, sentMsg);
     if (status != ER_OK) {
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+        peerState->ReleaseConversationHashLock(IsInitiator());
         return status;
     }
-    peerState->ReleaseConversationHashLock();
+    peerState->ReleaseConversationHashLock(IsInitiator());
     MsgArg* variant;
     status = replyMsg->GetArg(0)->Get("v", &variant);
     if (status != ER_OK) {
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+        peerState->ReleaseConversationHashLock(IsInitiator());
         return status;
     }
     status = ValidateRemoteVerifierVariant(peerName, variant, authorized);
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     return status;
 }
 
@@ -1379,10 +1379,10 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     }
 
     /* Hashing for CONVERSATION_V4 is done one level up in KeyAuthentication. */
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, rCoord, rCoordLen);
-    peerState->UpdateHash(CONVERSATION_V1, sCoord, sCoordLen);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, rCoord, rCoordLen);
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, sCoord, sCoordLen);
+    peerState->ReleaseConversationHashLock(IsInitiator());
 
     /* handle the certChain variant */
     MsgArg* chainArg;
@@ -1392,9 +1392,9 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         QCC_LogError(status, ("Error retrieving peer's certificate chain"));
         return status;
     }
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V1, &certChainEncoding, sizeof(certChainEncoding));
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, &certChainEncoding, sizeof(certChainEncoding));
+    peerState->ReleaseConversationHashLock(IsInitiator());
     if (numCerts == 0) {
         /* no cert chain to validate.  So it's not authorized */
         QCC_DbgPrintf(("Peer's certificate chain is empty.  Not authorized"));
@@ -1425,9 +1425,9 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
             delete [] certs;
             return status;
         }
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, encoded, encodedLen);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, encoded, encodedLen);
+        peerState->ReleaseConversationHashLock(IsInitiator());
     }
     /* verify signature */
     Crypto_ECC cryptoEcc;
@@ -1483,10 +1483,10 @@ QStatus KeyExchangerECDHE_ECDSA::ReplyWithVerifier(Message& msg)
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    peerState->AcquireConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
     status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     return status;
 }
 
@@ -1525,10 +1525,10 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
 
     sigInfo.SetSignature(&sig);
     if (updateHash) {
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, sigInfo.GetRCoord(), sigInfo.GetRSize());
-        peerState->UpdateHash(CONVERSATION_V1, sigInfo.GetSCoord(), sigInfo.GetSSize());
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, sigInfo.GetRCoord(), sigInfo.GetRSize());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, sigInfo.GetSCoord(), sigInfo.GetSSize());
+        peerState->ReleaseConversationHashLock(IsInitiator());
         /* Hashing for CONVERSATION_V4 is handled one level up in KeyAuthentication. */
     }
 
@@ -1536,9 +1536,9 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
     size_t certArgsCount = 0;
     uint8_t encoding = CertificateX509::ENCODING_X509_DER;
     if (updateHash) {
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V1, &encoding, sizeof(encoding));
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, &encoding, sizeof(encoding));
+        peerState->ReleaseConversationHashLock(IsInitiator());
     }
     if (certChainLen > 0) {
         certArgsCount = certChainLen;
@@ -1555,9 +1555,9 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
             certArgs[cnt].Set("(ay)", der.size(), (const uint8_t*) der.data());
             certArgs[cnt].Stabilize();
             if (updateHash) {
-                peerState->AcquireConversationHashLock();
-                peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*) der.data(), der.size());
-                peerState->ReleaseConversationHashLock();
+                peerState->AcquireConversationHashLock(IsInitiator());
+                peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, (const uint8_t*) der.data(), der.size());
+                peerState->ReleaseConversationHashLock(IsInitiator());
             }
         }
     }
@@ -1602,27 +1602,27 @@ QStatus KeyExchangerECDHE_ECDSA::KeyAuthentication(KeyExchangerCB& callback, con
 
     Message sentMsg(bus);
     Message replyMsg(bus);
-    peerState->AcquireConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
     status = callback.SendKeyAuthentication(&verifierMsg, &sentMsg, &replyMsg);
-    peerState->UpdateHash(CONVERSATION_V4, sentMsg);
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, sentMsg);
     if (status != ER_OK) {
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+        peerState->ReleaseConversationHashLock(IsInitiator());
         return status;
     }
-    peerState->ReleaseConversationHashLock();
+    peerState->ReleaseConversationHashLock(IsInitiator());
     MsgArg* remoteVariant;
     status = replyMsg->GetArg(0)->Get("v", &remoteVariant);
     if (status != ER_OK) {
-        peerState->AcquireConversationHashLock();
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        peerState->AcquireConversationHashLock(IsInitiator());
+        peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+        peerState->ReleaseConversationHashLock(IsInitiator());
         return status;
     }
     status = ValidateRemoteVerifierVariant(peerName, remoteVariant, authorized);
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    peerState->AcquireConversationHashLock(IsInitiator());
+    peerState->UpdateHash(IsInitiator(), CONVERSATION_V4, replyMsg);
+    peerState->ReleaseConversationHashLock(IsInitiator());
     return status;
 }
 
