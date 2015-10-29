@@ -469,10 +469,20 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *  conversation hash state. The authentication protocol version is also
      *  hashed (before the GUIDs).
      *
+     *  @param initiatorFlag   The desired conversation hash to use
      *  @param peerState   The state of the peer.
      *  @param localFirst  If true compute Hash(local||remote), if false compute Hash(remote||local).
      */
-    void HashGUIDs(PeerState& peerState, bool localFirst);
+    void HashGUIDs(bool initiatorFlag, PeerState& peerState, bool localFirst);
+
+    /**
+     * determine whether the local peer needs to yield to the remote peer in a
+     * concurrent key exchange.  This call needs to protected for thread safe
+     * access.
+     *  @param initiatorFlag   is the key exchange started as an initiator or responder
+     *  @param peerState   The state of the peer.
+     */
+    bool NeedToYieldToPeer(bool initiatorFlag, PeerState& peerState);
 
     /**
      * The peer-to-peer authentication mechanisms available to this object
