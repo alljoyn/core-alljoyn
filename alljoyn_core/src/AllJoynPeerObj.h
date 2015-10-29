@@ -469,10 +469,11 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *  conversation hash state. The authentication protocol version is also
      *  hashed (before the GUIDs).
      *
+     *  @param initiatorFlag   The desired conversation hash to use
      *  @param peerState   The state of the peer.
      *  @param localFirst  If true compute Hash(local||remote), if false compute Hash(remote||local).
      */
-    void HashGUIDs(PeerState& peerState, bool localFirst);
+    void HashGUIDs(bool initiatorFlag, PeerState& peerState, bool localFirst);
 
     /**
      * The peer-to-peer authentication mechanisms available to this object

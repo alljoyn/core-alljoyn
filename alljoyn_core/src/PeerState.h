@@ -91,6 +91,10 @@ class _PeerState {
 
   public:
 
+    const static uint8_t KEY_EXCHANGE_NONE = 0x00;  /* no key exchange */
+    const static uint8_t KEY_EXCHANGE_INITIATOR = 0x01;  /* in a key exchange as an initiator */
+    const static uint8_t KEY_EXCHANGE_RESPONDER = 0x02;  /* in a key exchange as as responder */
+
     PermissionPolicy::Rule* manifest;
     size_t manifestSize;
 
@@ -113,6 +117,145 @@ class _PeerState {
 
     typedef std::map<const qcc::String, GuildMetadata*> GuildMap;
 
+    class Conversation {
+      public:
+        Conversation(bool initiator) : initiator(initiator), hashUtil(NULL), holder(NULL)
+        {
+        }
+
+        ~Conversation();
+
+        /**
+         * Update the conversation hash with a single byte
+         * InitializeConversationHash must first be called before calling this method.
+         * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+         * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+         * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+         * @param[in] byte Byte with which to update the hash.
+         */
+        void UpdateHash(uint32_t conversationVersion, uint8_t byte);
+
+        /**
+         * Update the conversation hash with a byte array.
+         * InitializeConversationHash must first be called before calling this method.
+         * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+         * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+         * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+         * @param[in] buf Data with which to update the hash.
+         * @param[in] bufSize Size of buf.
+         */
+        void UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize);
+
+        /**
+         * Update the conversation hash with a string. String will be converted to its
+         * underlying byte array and used to update.
+         * InitializeConversationHash must first be called before calling this method.
+         * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+         * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+         * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+         * @param[in] str String with data with which to update the hash.
+         */
+        void UpdateHash(uint32_t conversationVersion, const qcc::String& str);
+
+        /**
+         * Update the conversation hash with a Message. This extracts the raw message buffer
+         * from the Message and updates the hash with that.
+         * InitializeConversationHash must first be called before calling this method.
+         * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+         * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+         * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
+         * @param[in] msg A Message object whose arguments will be added to the hash.
+         */
+        void UpdateHash(uint32_t conversationVersion, const Message& msg);
+
+        /**
+         * Initialize the conversation hash to start a new conversation. Any previous
+         * conversation hash is lost. This must be called before any calls to UpdateHash or GetDigest.
+         * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+         * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+         */
+        void InitializeConversationHash();
+
+        /**
+         * Returns true if the conversation hash has been initalized, false otherwise.
+         * @see void InitializeConversationHash()
+         */
+        bool IsConversationHashInitialized();
+
+        /**
+         * Free the conversation hash when it's no longer needed. After this, any new calls
+         * to UpdateHash or GetDigest must be preceded by a call to InitializeConversationHash.
+         * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+         * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+         * @see void InitializeConversationHash()
+         */
+        void FreeConversationHash();
+
+        /**
+         * Get the current conversation hash digest.
+         * InitializeConversationHash must first be called before calling this method.
+         * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
+         * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+         * @param[out] digest A buffer of appropriate size to receive the digest. Currently
+         *                    only SHA-256 is used, and so 32 bytes will be returned.
+         * @param[in] keepAlive Whether or not to keep the hash alive for continuing hash.
+         */
+        void GetDigest(uint8_t* digest, bool keepAlive = false);
+
+        /**
+         * Acquire the lock to conversation hash with the intention to call
+         * UpdateHash, GetDigest, InitializeConversationHash, or
+         * FreeConversationHash.
+         * In some cases like in MethodReply() with a reply message, the issuer of
+         * ReplyMethod wishes to aquire an early lock to the conversation hash to
+         * prevent any other thread from updating the conversation hash while it
+         * is waiting for the MethodRely() to return.
+         */
+
+        void AcquireConversationHashLock();
+
+        /**
+         * release the conversation hash lock.
+         */
+
+        void ReleaseConversationHashLock();
+
+        /**
+         * Enable or disable "sensitive mode," where byte arrays that get hashed aren't
+         * logged verbatim. When enabled, calling the overload of Update that takes a byte array will
+         * log the size of the data, but then log secret data was hashed without showing the data.
+         *
+         * Logging for Update for a single byte or GetDigest is unaffected.
+         * @param[in] mode true to enable sensitive mode; false to disable it.
+         */
+        void SetConversationHashSensitiveMode(bool mode);
+
+        /**
+         * Set the holder of this conversation hash
+         */
+        void SetHolder(_PeerState* holder);
+
+      private:
+        /* initiator or responder */
+        bool initiator;
+
+        /**
+         * The hash.
+         */
+        ConversationHash* hashUtil;
+
+        /**
+         * Mutex to protect the hash
+         */
+        qcc::Mutex hashLock;
+
+        /**
+         * The holder of this conversation hash
+         */
+        _PeerState* holder;
+
+    }; /* ConversationHash */
+
     /**
      * Default constructor
      */
@@ -127,10 +270,14 @@ class _PeerState {
         expectedSerial(0),
         isSecure(false),
         authEvent(NULL),
-        hashUtil(NULL)
+        initiatorConversation(true),
+        responderConversation(false),
+        keyExchangeMode(KEY_EXCHANGE_NONE)
     {
         ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
+        initiatorConversation.SetHolder(this);
+        responderConversation.SetHolder(this);
     }
 
     /**
@@ -247,6 +394,8 @@ class _PeerState {
      */
     void SetAuthEvent(qcc::Event* event) { authEvent = event; }
 
+    void NotifyAuthEvent();
+
     /**
      * Tests if this peer is the local peer.
      *
@@ -354,115 +503,52 @@ class _PeerState {
      */
     uint8_t guildArgsSentCount;
 
-    /**
-     * Update the conversation hash with a single byte
-     * InitializeConversationHash must first be called before calling this method.
-     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
-     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
-     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
-     * @param[in] byte Byte with which to update the hash.
-     */
-    void UpdateHash(uint32_t conversationVersion, uint8_t byte);
-
-    /**
-     * Update the conversation hash with a byte array.
-     * InitializeConversationHash must first be called before calling this method.
-     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
-     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
-     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
-     * @param[in] buf Data with which to update the hash.
-     * @param[in] bufSize Size of buf.
-     */
-    void UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize);
-
-    /**
-     * Update the conversation hash with a string. String will be converted to its
-     * underlying byte array and used to update.
-     * InitializeConversationHash must first be called before calling this method.
-     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
-     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
-     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
-     * @param[in] str String with data with which to update the hash.
-     */
-    void UpdateHash(uint32_t conversationVersion, const qcc::String& str);
-
-    /**
-     * Update the conversation hash with a Message. This extracts the raw message buffer
-     * from the Message and updates the hash with that.
-     * InitializeConversationHash must first be called before calling this method.
-     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
-     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
-     * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
-     * @param[in] msg A Message object whose arguments will be added to the hash.
-     */
-    void UpdateHash(uint32_t conversationVersion, const Message& msg);
-
-    /**
-     * Initialize the conversation hash to start a new conversation. Any previous
-     * conversation hash is lost. This must be called before any calls to UpdateHash or GetDigest.
-     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
-     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
-     */
-    void InitializeConversationHash();
-
-    /**
-     * Returns true if the conversation hash has been initalized, false otherwise.
-     * @see void InitializeConversationHash()
-     */
-    bool IsConversationHashInitialized();
-
-    /**
-     * Free the conversation hash when it's no longer needed. After this, any new calls
-     * to UpdateHash or GetDigest must be preceded by a call to InitializeConversationHash.
-     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
-     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
-     * @see void InitializeConversationHash()
-     */
-    void FreeConversationHash();
-
-    /**
-     * Get the current conversation hash digest.
-     * InitializeConversationHash must first be called before calling this method.
-     * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
-     * The hash lock must be released via ReleaseConversationHashLock after calling this method.
-     * @param[out] digest A buffer of appropriate size to receive the digest. Currently
-     *                    only SHA-256 is used, and so 32 bytes will be returned.
-     * @param[in] keepAlive Whether or not to keep the hash alive for continuing hash.
-     */
-    void GetDigest(uint8_t* digest, bool keepAlive = false);
-
-    /**
-     * Acquire the lock to conversation hash with the intention to call
-     * UpdateHash, GetDigest, InitializeConversationHash, or
-     * FreeConversationHash.
-     * In some cases like in MethodReply() with a reply message, the issuer of
-     * ReplyMethod wishes to aquire an early lock to the conversation hash to
-     * prevent any other thread from updating the conversation hash while it
-     * is waiting for the MethodRely() to return.
-     */
-
-    void AcquireConversationHashLock();
-
-    /**
-     * release the conversation hash lock.
-     */
-
-    void ReleaseConversationHashLock();
-
-    /**
-     * Enable or disable "sensitive mode," where byte arrays that get hashed aren't
-     * logged verbatim. When enabled, calling the overload of Update that takes a byte array will
-     * log the size of the data, but then log secret data was hashed without showing the data.
-     *
-     * Logging for Update for a single byte or GetDigest is unaffected.
-     * @param[in] mode true to enable sensitive mode; false to disable it.
-     */
-    void SetConversationHashSensitiveMode(bool mode);
-
     /*
      * Destructor
      */
     ~_PeerState();
+
+    /**
+     * Retrieve the conversation hash
+     * @param initiator flag asking for the initiator conversation hash instead
+     *                  of the responder conversation hash
+     * @return the conversation hash
+     */
+    Conversation& GetConversation(bool initiatorFlag);
+
+    /**
+     * Get the key exchange mode.  A peer can be in a key exchange as an initiator or a responder or both.
+     * @return the key exchange mode
+     */
+    uint8_t GetKeyExchangeMode() const;
+
+    /**
+     * Set the key exchange mode. A peer can be in a key exchange as an
+     * initiator or a responder or both.
+     * @param mode the key exchange mode.
+     */
+    void SetKeyExchangeMode(uint8_t mode);
+
+    /**
+     * Enable the key exchange mode mask. A peer can be in a key exchange as
+     * an initiator or a responder or both.
+     * @param mask the mask to enable in the key exchange mode.
+     */
+    void AddKeyExchangeModeMask(uint8_t mask);
+
+    /**
+     * Clear the key exchange mode mask. A peer can be in a key exchange as
+     * an initiator or a responder or both.
+     * @param mask the mask to clear in the key exchange mode.
+     */
+    void ClearKeyExchangeModeMask(uint8_t mask);
+
+    /*
+     * Is the peer in this key exchange mode?
+     * @param mask the key exchange code mask
+     * @return true if so; false, otherwise.
+     */
+    bool IsInKeyExchangeMode(uint8_t mask) const;
 
   private:
     /**
@@ -538,14 +624,19 @@ class _PeerState {
     uint32_t window[128];
 
     /**
-     * The conversation hash.
+     * The initiator conversation hash.
      */
-    ConversationHash* hashUtil;
+    Conversation initiatorConversation;
 
     /**
-     * Mutex to protect the conversation hash
+     * The responder conversation hash.
      */
-    qcc::Mutex hashLock;
+    Conversation responderConversation;
+
+    /**
+     * The key exchange mode
+     */
+    uint8_t keyExchangeMode;
 };
 
 

@@ -28,6 +28,7 @@
 #include <qcc/Crypto.h>
 #include <qcc/time.h>
 #include <qcc/Util.h>
+#include <qcc/Thread.h>
 
 #include "PeerState.h"
 #include "AllJoynCrypto.h"
@@ -120,23 +121,33 @@ bool _PeerState::IsValidSerial(uint32_t serial, bool secure, bool unreliable)
 
 }
 
-bool _PeerState::IsConversationHashInitialized()
+bool _PeerState::Conversation::IsConversationHashInitialized()
 {
     return hashUtil != NULL;
 }
 
-void _PeerState::InitializeConversationHash()
+void _PeerState::Conversation::InitializeConversationHash()
 {
     delete hashUtil;
     hashUtil = new ConversationHash();
     QCC_VERIFY(ER_OK == hashUtil->Init());
+    if (initiator) {
+        holder->AddKeyExchangeModeMask(_PeerState::KEY_EXCHANGE_INITIATOR);
+    } else {
+        holder->AddKeyExchangeModeMask(_PeerState::KEY_EXCHANGE_RESPONDER);
+    }
 }
 
-void _PeerState::FreeConversationHash()
+void _PeerState::Conversation::FreeConversationHash()
 {
     QCC_ASSERT(NULL != hashUtil);
     delete hashUtil;
     hashUtil = NULL;
+    if (initiator) {
+        holder->ClearKeyExchangeModeMask(_PeerState::KEY_EXCHANGE_INITIATOR);
+    } else {
+        holder->ClearKeyExchangeModeMask(_PeerState::KEY_EXCHANGE_RESPONDER);
+    }
 }
 
 /**
@@ -158,17 +169,17 @@ static inline bool ConversationVersionDoesNotApply(uint32_t conversationVersion,
     }
 }
 
-void _PeerState::AcquireConversationHashLock()
+void _PeerState::Conversation::AcquireConversationHashLock()
 {
     hashLock.Lock(MUTEX_CONTEXT);
 }
 
-void _PeerState::ReleaseConversationHashLock()
+void _PeerState::Conversation::ReleaseConversationHashLock()
 {
     hashLock.Unlock(MUTEX_CONTEXT);
 }
 
-void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
+void _PeerState::Conversation::UpdateHash(uint32_t conversationVersion, uint8_t byte)
 {
     /* In debug builds, a NULL hashUtil is probably a caller bug, so assert.
      * In release, it probably means we've gotten a message we weren't expecting.
@@ -179,41 +190,41 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
         QCC_LogError(ER_CRYPTO_ERROR, ("UpdateHash called when a conversation is not in progress"));
         return;
     }
-    if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
+    if (ConversationVersionDoesNotApply(conversationVersion, holder->GetAuthVersion())) {
         return;
     }
     QCC_VERIFY(ER_OK == hashUtil->Update(byte));
 }
 
-void _PeerState::UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize)
+void _PeerState::Conversation::UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize)
 {
     QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
         QCC_LogError(ER_CRYPTO_ERROR, ("UpdateHash called when a conversation is not in progress"));
         return;
     }
-    if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
+    if (ConversationVersionDoesNotApply(conversationVersion, holder->GetAuthVersion())) {
         return;
     }
     bool includeSizeInHash = (conversationVersion >= CONVERSATION_V4);
     QCC_VERIFY(ER_OK == hashUtil->Update(buf, bufSize, includeSizeInHash));
 }
 
-void _PeerState::UpdateHash(uint32_t conversationVersion, const qcc::String& str)
+void _PeerState::Conversation::UpdateHash(uint32_t conversationVersion, const qcc::String& str)
 {
     UpdateHash(conversationVersion, (const uint8_t*)str.data(), str.size());
 }
 
-void _PeerState::UpdateHash(uint32_t conversationVersion, const Message& msg)
+void _PeerState::Conversation::UpdateHash(uint32_t conversationVersion, const Message& msg)
 {
-    if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
+    if (ConversationVersionDoesNotApply(conversationVersion, holder->GetAuthVersion())) {
         return;
     }
 
     UpdateHash(conversationVersion, msg->GetBuffer(), msg->GetBufferSize());
 }
 
-void _PeerState::GetDigest(uint8_t* digest, bool keepAlive)
+void _PeerState::Conversation::GetDigest(uint8_t* digest, bool keepAlive)
 {
     QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
@@ -225,7 +236,7 @@ void _PeerState::GetDigest(uint8_t* digest, bool keepAlive)
     }
 }
 
-void _PeerState::SetConversationHashSensitiveMode(bool mode)
+void _PeerState::Conversation::SetConversationHashSensitiveMode(bool mode)
 {
     QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
@@ -240,7 +251,6 @@ _PeerState::~_PeerState()
     ClearGuildMap(guildMap);
     ClearGuildArgs(guildArgs);
     delete [] manifest;
-    delete hashUtil;
 }
 
 PeerStateTable::PeerStateTable()
@@ -362,6 +372,60 @@ _PeerState::GuildMetadata* _PeerState::GetGuildMetadata(const qcc::String& seria
     }
 
     return NULL;
+}
+
+_PeerState::Conversation& _PeerState::GetConversation(bool initiatorFlag)
+{
+    if (initiatorFlag) {
+        return initiatorConversation;
+    }
+    return responderConversation;
+}
+
+_PeerState::Conversation::~Conversation()
+{
+    delete hashUtil;
+}
+
+void _PeerState::Conversation::SetHolder(_PeerState* holder)
+{
+    this->holder = holder;
+}
+
+void _PeerState::NotifyAuthEvent()
+{
+    if (GetAuthEvent() == NULL) {
+        return;
+    }
+    while (GetAuthEvent()->GetNumBlockedThreads() > 0) {
+        GetAuthEvent()->SetEvent();
+        qcc::Sleep(10);
+    }
+}
+
+uint8_t _PeerState::GetKeyExchangeMode() const
+{
+    return keyExchangeMode;
+}
+
+void _PeerState::SetKeyExchangeMode(uint8_t mode)
+{
+    keyExchangeMode = mode;
+}
+
+bool _PeerState::IsInKeyExchangeMode(uint8_t mask) const
+{
+    return (keyExchangeMode & mask) == mask;
+}
+
+void _PeerState::AddKeyExchangeModeMask(uint8_t mask)
+{
+    SetKeyExchangeMode(GetKeyExchangeMode() | mask);
+}
+
+void _PeerState::ClearKeyExchangeModeMask(uint8_t mask)
+{
+    SetKeyExchangeMode(GetKeyExchangeMode() & ~mask);
 }
 
 }

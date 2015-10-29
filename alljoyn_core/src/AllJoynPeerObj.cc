@@ -177,6 +177,29 @@ static void SetRights(PeerState& peerState, bool mutual, bool challenger)
     }
 }
 
+/**
+ * determine whether the local peer needs to yield to the remote peer in a
+ * concurrent key exchange.
+ */
+static bool NeedToYieldToPeer(BusAttachment& bus, bool initiatorFlag, PeerState& peerState)
+{
+    /* Is the remote peer started a key exchange with this local peer? */
+    if (initiatorFlag) {
+        if (!peerState->IsInKeyExchangeMode(_PeerState::KEY_EXCHANGE_RESPONDER)) {
+            return false;  /* no need to yield */
+        }
+    } else {
+        if (!peerState->IsInKeyExchangeMode(_PeerState::KEY_EXCHANGE_INITIATOR)) {
+            return false;  /* no need to yield */
+        }
+    }
+
+    qcc::GUID128 localGuid(0);
+    bus.GetInternal().GetKeyStore().GetGuid(localGuid);
+    /* The peer smaller guid value will yield */
+    return (localGuid < peerState->GetGuid());
+}
+
 AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
     BusObject(org::alljoyn::Bus::Peer::ObjectPath, false),
     AlarmListener(),
@@ -340,6 +363,11 @@ void AllJoynPeerObj::ExchangeGroupKeys(const InterfaceDescription::Member* membe
                 replyArg.Set("ay", key.GetSize(), key.GetData());
             }
             MethodReply(msg, &replyArg, 1);
+            /* notify any potential waiters on this key exchange */
+            lock.Lock(MUTEX_CONTEXT);
+            peerState->NotifyAuthEvent();
+            peerState->SetAuthEvent(NULL);
+            lock.Unlock(MUTEX_CONTEXT);
         }
     } else {
         status = ER_BUS_NO_PEER_GUID;
@@ -470,6 +498,7 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
 {
     QCC_UNUSED(member);
     QCC_ASSERT(bus);
+    bool initiatorFlag = false;
 
     QStatus status;
     PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
@@ -479,20 +508,21 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
      * The hash state may have been previously initialized by ExchangeSuites. If so,
      * ExchangeSuites will also hash the GUIDs.
      */
-    peerState->AcquireConversationHashLock();
-    if (!peerState->IsConversationHashInitialized()) {
-        peerState->InitializeConversationHash();
-        this->HashGUIDs(peerState, false);
+    _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
+    conversation.AcquireConversationHashLock();
+    if (!conversation.IsConversationHashInitialized()) {
+        conversation.InitializeConversationHash();
+        this->HashGUIDs(initiatorFlag, peerState, false);
     }
-    peerState->UpdateHash(CONVERSATION_V4, msg);
-    peerState->ReleaseConversationHashLock();
+    conversation.UpdateHash(CONVERSATION_V4, msg);
+    conversation.ReleaseConversationHashLock();
 
     qcc::GUID128 remotePeerGuid(msg->GetArg(0)->v_string.str);
     qcc::GUID128 localPeerGuid(msg->GetArg(1)->v_string.str);
     /*
      * Check that target GUID is our GUID.
      */
-    peerState->AcquireConversationHashLock();
+    conversation.AcquireConversationHashLock();
     if (bus->GetInternal().GetKeyStore().GetGuid() != localPeerGuid.ToString()) {
         status = ER_BUS_NO_PEER_GUID;
         MethodReply(msg, status, &replyMsg);
@@ -514,11 +544,11 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
 
     if (status == ER_OK) {
         /* Key has been established successfully. */
-        peerState->FreeConversationHash();
+        conversation.FreeConversationHash();
     } else {
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
+        conversation.UpdateHash(CONVERSATION_V4, replyMsg);
     }
-    peerState->ReleaseConversationHashLock();
+    conversation.ReleaseConversationHashLock();
 }
 
 void AllJoynPeerObj::AuthAdvance(Message& msg)
@@ -545,6 +575,8 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
     if (!sasl) {
         sasl = new SASLEngine(*bus, ajn::AuthMechanism::CHALLENGER, peerAuthMechanisms.c_str(), sender.c_str(), peerAuthListener);
         qcc::String localGuidStr = bus->GetInternal().GetKeyStore().GetGuid();
+        PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(sender);
+        peerState->AddKeyExchangeModeMask(_PeerState::KEY_EXCHANGE_RESPONDER);
         if (!localGuidStr.empty()) {
             sasl->SetLocalId(localGuidStr);
         } else {
@@ -563,18 +595,46 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
     /*
      * If auth conversation was sucessful store the master secret in the key store.
      */
+
+    mech = sasl->GetMechanism();
+    if ((status == ER_OK) && (authState == SASLEngine::ALLJOYN_WAIT_FOR_BEGIN)) {
+        PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(sender);
+        /* Is there any concurrent key exchange between the two peers?
+         * If so, does this peer need to yield?
+         */
+        if (NeedToYieldToPeer(*bus, false, peerState)) {
+            lock.Lock(MUTEX_CONTEXT);
+            if (peerState->GetAuthEvent()) {
+                QCC_DbgHLPrintf(("AuthAdvance yield to peer %s", peerState->GetGuid().ToString().c_str()));
+                Event::Wait(*peerState->GetAuthEvent(), lock);
+                status = peerState->IsSecure() ? ER_OK : ER_AUTH_FAIL;
+            } else {
+                lock.Unlock(MUTEX_CONTEXT);
+            }
+        }
+    }
     if ((status == ER_OK) && (authState == SASLEngine::ALLJOYN_AUTH_SUCCESS)) {
         PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(sender);
-        SetRights(peerState, sasl->AuthenticationIsMutual(), true /*challenger*/);
-        KeyBlob masterSecret;
-        KeyStore& keyStore = bus->GetInternal().GetKeyStore();
-        status = sasl->GetMasterSecret(masterSecret);
-        if (status == ER_OK) {
-            qcc::GUID128 remotePeerGuid(sasl->GetRemoteId());
-            /* Tag the master secret with the auth mechanism used to generate it */
-            masterSecret.SetTag(mech, KeyBlob::RESPONDER);
-            KeyStore::Key key(KeyStore::Key::REMOTE, remotePeerGuid);
-            status = keyStore.AddKey(key, masterSecret, peerState->authorizations);
+        /* In case this peer yielded to the peer in a concurrent key exchange,
+         * it needs to check whether the master secret was already accepted by
+         * the other key exchange sequence before storing the master secret.
+         */
+        bool storeMasterSecret = true;
+        if (peerState->IsSecure() && (peerState->IsInKeyExchangeMode(_PeerState::KEY_EXCHANGE_INITIATOR))) {
+            storeMasterSecret = false;
+        }
+        if (storeMasterSecret) {
+            SetRights(peerState, sasl->AuthenticationIsMutual(), true /*challenger*/);
+            KeyBlob masterSecret;
+            KeyStore& keyStore = bus->GetInternal().GetKeyStore();
+            status = sasl->GetMasterSecret(masterSecret);
+            if (status == ER_OK) {
+                qcc::GUID128 remotePeerGuid(sasl->GetRemoteId());
+                /* Tag the master secret with the auth mechanism used to generate it */
+                masterSecret.SetTag(mech, KeyBlob::RESPONDER);
+                KeyStore::Key key(KeyStore::Key::REMOTE, remotePeerGuid);
+                status = keyStore.AddKey(key, masterSecret, peerState->authorizations);
+            }
         }
         /*
          * Report the succesful authentication to allow application to clear UI etc.
@@ -591,6 +651,11 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
          * Report the failed authentication to allow application to clear UI etc.
          */
         peerAuthListener.AuthenticationComplete(mech.c_str(), sender.c_str(), false /* failure */);
+        /* notify the waiters */
+        PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(sender);
+        peerState->NotifyAuthEvent();
+        peerState->SetAuthEvent(NULL);
+
         /*
          * Let remote peer know the authentication failed.
          */
@@ -645,24 +710,26 @@ void AllJoynPeerObj::DoKeyExchange(Message& msg)
         MethodReply(msg, status);
         return;
     }
+    bool initiatorFlag = false;
     PeerState peerState = peerStateTable->GetPeerState(sender);
-    shared_ptr<KeyExchanger> keyExchanger = GetKeyExchangerInstance(peerState, false, authMaskList, 1);
+    _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
+    shared_ptr<KeyExchanger> keyExchanger = GetKeyExchangerInstance(peerState, initiatorFlag, authMaskList, 1);
     if (!keyExchanger) {
         lock.Unlock(MUTEX_CONTEXT);
         Message replyMsg(*bus);
         status = ER_AUTH_FAIL;
-        peerState->AcquireConversationHashLock();
+        conversation.AcquireConversationHashLock();
         MethodReply(msg, status, &replyMsg);
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        conversation.UpdateHash(CONVERSATION_V4, replyMsg);
+        conversation.ReleaseConversationHashLock();
         return;
     }
     if ((peerState->GetAuthVersion() >> 16) < CONVERSATION_V4) {
         /* any peer with auth version smaller than 4 need to start the hash at
          * the KeyExchange call */
-        peerState->AcquireConversationHashLock();
-        peerState->InitializeConversationHash();
-        peerState->ReleaseConversationHashLock();
+        conversation.AcquireConversationHashLock();
+        conversation.InitializeConversationHash();
+        conversation.ReleaseConversationHashLock();
     }
 
     /* storing the key exchanger for the given sender  */
@@ -707,6 +774,8 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
     if (!keyExchanger) {
         status = ER_AUTH_FAIL;
     }
+    bool initiatorFlag = false;
+    _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
     if (status == ER_OK) {
         bool authorized = false;
         MsgArg* variant;
@@ -715,16 +784,43 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
             status = keyExchanger->ValidateRemoteVerifierVariant(sender.c_str(), variant, (uint8_t*) &authorized);
 
             /* Hash the received message after ValidateRemoteVerifierVariant so the verifier is correctly computed. */
-            peerState->AcquireConversationHashLock();
-            peerState->UpdateHash(CONVERSATION_V4, msg);
-            peerState->ReleaseConversationHashLock();
+            conversation.AcquireConversationHashLock();
+            conversation.UpdateHash(CONVERSATION_V4, msg);
+            conversation.ReleaseConversationHashLock();
 
             if ((status == ER_OK) && authorized) {
                 SetRights(peerState, true, true /*challenger*/);
-                status = RecordMasterSecret(sender, keyExchanger, peerState);
-                /*
-                 * Report the succesful authentication to allow application to clear UI etc.
+                /* Is there any concurrent key exchange between the two peers?
+                 * If so, does this peer need to yield?
                  */
+                bool yield = NeedToYieldToPeer(*bus, initiatorFlag, peerState);
+                if (yield) {
+                    lock.Lock(MUTEX_CONTEXT);
+                    if (peerState->GetAuthEvent()) {
+                        QCC_DbgHLPrintf(("DoKeyAuthentication yield to peer %s", peerState->GetGuid().ToString().c_str()));
+                        Event::Wait(*peerState->GetAuthEvent(), lock);
+                        status = peerState->IsSecure() ? ER_OK : ER_AUTH_FAIL;
+                    } else {
+                        lock.Unlock(MUTEX_CONTEXT);
+                    }
+                }
+                bool storeMasterSecret = true;
+                if (yield && peerState->IsSecure()) {
+                    storeMasterSecret = false;
+                }
+                if (storeMasterSecret) {
+                    /**
+                     * In case this peer yielded to the peer in a concurrent
+                     * key exchange, it needs to check whether the master
+                     * secret was already accepted by the other key exchange
+                     * sequence before storing the master secret.
+                     */
+                    status = RecordMasterSecret(sender, keyExchanger, peerState);
+                    QCC_DbgHLPrintf(("DoKeyAuthentication records master secret for peer %s", peerState->GetGuid().ToString().c_str()));
+                    /*
+                     * Report the succesful authentication to allow application to clear UI etc.
+                     */
+                }
                 if (status == ER_OK) {
                     peerAuthListener.AuthenticationComplete(keyExchanger->GetSuiteName(), sender.c_str(), true /* success */);
                     /* compute the local verifier to send back */
@@ -747,15 +843,20 @@ void AllJoynPeerObj::DoKeyAuthentication(Message& msg)
         suiteName = "Unknown";
     }
     peerAuthListener.AuthenticationComplete(suiteName, sender.c_str(), false /* failure */);
+    /* notify the waiters */
+    lock.Lock(MUTEX_CONTEXT);
+    peerState->NotifyAuthEvent();
+    peerState->SetAuthEvent(NULL);
+    lock.Unlock(MUTEX_CONTEXT);
 
     /*
      * Let remote peer know the authentication failed.
      */
     Message replyMsg(*bus);
-    peerState->AcquireConversationHashLock();
+    conversation.AcquireConversationHashLock();
     MethodReply(msg, status, &replyMsg);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    conversation.UpdateHash(CONVERSATION_V4, replyMsg);
+    conversation.ReleaseConversationHashLock();
 }
 
 void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
@@ -778,7 +879,7 @@ void AllJoynPeerObj::AuthChallenge(const ajn::InterfaceDescription::Member* memb
     }
 }
 
-void AllJoynPeerObj::HashGUIDs(PeerState& peerState, bool localFirst)
+void AllJoynPeerObj::HashGUIDs(bool initiatorFlag, PeerState& peerState, bool localFirst)
 {
     /* Hash the authentication version and both GUIDs */
     qcc::GUID128 remotePeerGuid = peerState->GetGuid();
@@ -787,17 +888,18 @@ void AllJoynPeerObj::HashGUIDs(PeerState& peerState, bool localFirst)
     qcc::GUID128 localPeerGuid(guidStr);
     uint32_t authVersionLE = htole32(peerState->GetAuthVersion());
 
-    peerState->AcquireConversationHashLock();
-    QCC_ASSERT(peerState->IsConversationHashInitialized());
-    peerState->UpdateHash(CONVERSATION_V4, (uint8_t*)&authVersionLE, sizeof(uint32_t));
+    _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
+    conversation.AcquireConversationHashLock();
+    QCC_ASSERT(conversation.IsConversationHashInitialized());
+    conversation.UpdateHash(CONVERSATION_V4, (uint8_t*)&authVersionLE, sizeof(uint32_t));
     if (localFirst) {
-        peerState->UpdateHash(CONVERSATION_V4, localPeerGuid.GetBytes(), qcc::GUID128::SIZE);
-        peerState->UpdateHash(CONVERSATION_V4, remotePeerGuid.GetBytes(), qcc::GUID128::SIZE);
+        conversation.UpdateHash(CONVERSATION_V4, localPeerGuid.GetBytes(), qcc::GUID128::SIZE);
+        conversation.UpdateHash(CONVERSATION_V4, remotePeerGuid.GetBytes(), qcc::GUID128::SIZE);
     } else {
-        peerState->UpdateHash(CONVERSATION_V4, remotePeerGuid.GetBytes(), qcc::GUID128::SIZE);
-        peerState->UpdateHash(CONVERSATION_V4, localPeerGuid.GetBytes(), qcc::GUID128::SIZE);
+        conversation.UpdateHash(CONVERSATION_V4, remotePeerGuid.GetBytes(), qcc::GUID128::SIZE);
+        conversation.UpdateHash(CONVERSATION_V4, localPeerGuid.GetBytes(), qcc::GUID128::SIZE);
     }
-    peerState->ReleaseConversationHashLock();
+    conversation.ReleaseConversationHashLock();
 }
 
 void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
@@ -812,28 +914,30 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
     PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
     PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
 
+    bool initiatorFlag = false;
     /*
      * The hash state may have been previously initialized by GenSessionKey.
      * If so, GenSessionKey will also hash the GUIDs.
      */
-    peerState->AcquireConversationHashLock();
-    if (!peerState->IsConversationHashInitialized()) {
-        peerState->InitializeConversationHash();
-        this->HashGUIDs(peerState, false);
+    _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
+    conversation.AcquireConversationHashLock();
+    if (!conversation.IsConversationHashInitialized()) {
+        conversation.InitializeConversationHash();
+        this->HashGUIDs(initiatorFlag, peerState, false);
     }
-    peerState->ReleaseConversationHashLock();
+    conversation.ReleaseConversationHashLock();
 
     QStatus status = msg->GetArg(0)->Get("au", &remoteSuitesLen, &remoteSuites);
     if (status != ER_OK) {
-        peerState->AcquireConversationHashLock();
+        conversation.AcquireConversationHashLock();
         MethodReply(msg, status, &replyMsg);
-        peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-        peerState->ReleaseConversationHashLock();
+        conversation.UpdateHash(CONVERSATION_V4, replyMsg);
+        conversation.ReleaseConversationHashLock();
         return;
     }
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V4, msg);
-    peerState->ReleaseConversationHashLock();
+    conversation.AcquireConversationHashLock();
+    conversation.UpdateHash(CONVERSATION_V4, msg);
+    conversation.ReleaseConversationHashLock();
     size_t effectiveAuthSuitesCount = 0;
     if (supportedAuthSuitesCount == 0) {
         effectiveAuthSuitesCount = 1;
@@ -874,10 +978,10 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
 
     MsgArg replyArg;
     replyArg.Set("au", effectiveAuthSuitesCount, effectiveAuthSuites);
-    peerState->AcquireConversationHashLock();
+    conversation.AcquireConversationHashLock();
     MethodReply(msg, &replyArg, 1, &replyMsg);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    conversation.UpdateHash(CONVERSATION_V4, replyMsg);
+    conversation.ReleaseConversationHashLock();
     delete [] effectiveAuthSuites;
 }
 
@@ -1105,13 +1209,24 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
     lock.Unlock(MUTEX_CONTEXT);
 
     KeyStore& keyStore = bus->GetInternal().GetKeyStore();
+    bool needGenGroupKey = false;
     bool authTried = false;
     bool firstPass = true;
     bool useKeyExchanger = UseKeyExchanger(authVersion, supportedAuthSuites, supportedAuthSuitesCount);
-    peerState->AcquireConversationHashLock();
-    peerState->InitializeConversationHash();
-    this->HashGUIDs(peerState, true);
-    peerState->ReleaseConversationHashLock();
+    bool initiatorFlag = true;
+    _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
+    conversation.AcquireConversationHashLock();
+    conversation.InitializeConversationHash();
+    this->HashGUIDs(initiatorFlag, peerState, true);
+    conversation.ReleaseConversationHashLock();
+
+    /**
+     * The two peers can initiate a key exchange against each other.  Each key
+     * exchange sequence will have its own conversation hash and master secret.
+     * At the end, one of the peers will give up its master secret and use only
+     * one master secret between the two peers.
+     * However, most of the time, there only one initiator in the key exchange.
+     */
     do {
         /*
          * Try to load the master secret for the remote peer. It is possible that the master secret
@@ -1149,20 +1264,23 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
 
             const InterfaceDescription::Member* genSessionKeyMember = ifc->GetMember("GenSessionKey");
             QCC_ASSERT(genSessionKeyMember);
-            peerState->AcquireConversationHashLock();
+            conversation.AcquireConversationHashLock();
             status = remotePeerObj.MethodCall(*genSessionKeyMember, msgArgs, ArraySize(msgArgs), replyMsg, DEFAULT_TIMEOUT, 0, &callMsg);
-            peerState->UpdateHash(CONVERSATION_V4, callMsg);
-            peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-            peerState->ReleaseConversationHashLock();
+            conversation.UpdateHash(CONVERSATION_V4, callMsg);
+            conversation.UpdateHash(CONVERSATION_V4, replyMsg);
+            conversation.ReleaseConversationHashLock();
             if (status == ER_OK) {
                 qcc::String verifier;
                 /*
                  * The response completes the seed string so we can generate the session key.
                  */
                 status = KeyGen(peerState, nonce + replyMsg->GetArg(0)->v_string.str, verifier, KeyBlob::INITIATOR);
-                QCC_DbgHLPrintf(("Initiator KeyGen after receiving response from sender %s", busName.c_str()));
+                QCC_DbgHLPrintf(("Initiator KeyGen after receiving response from sender %s status %x", busName.c_str(), status));
                 if ((status == ER_OK) && (verifier != replyMsg->GetArg(1)->v_string.str)) {
                     status = ER_AUTH_FAIL;
+                }
+                if (status == ER_OK) {
+                    needGenGroupKey = true;
                 }
             }
         }
@@ -1184,19 +1302,24 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
         }
         authTried = true;
         firstPass = false;
+        if (peerState->IsSecure()) {
+            status = ER_OK;
+            break;  /* there is a concurrent key exchange that completes */
+        }
     } while (status == ER_OK);
     /*
      * At this point, the authentication conversation is over and we no longer need
      * to keep the conversation hash.
      */
-    peerState->AcquireConversationHashLock();
-    peerState->FreeConversationHash();
-    peerState->ReleaseConversationHashLock();
+    conversation.AcquireConversationHashLock();
+    conversation.FreeConversationHash();
+    conversation.ReleaseConversationHashLock();
+
     /*
      * Exchange group keys with the remote peer. This method call is encrypted using the session key
      * that we just established.
      */
-    if (status == ER_OK) {
+    if ((status == ER_OK) && needGenGroupKey) {
         uint8_t keyGenVersion = authVersion & 0xFF;
         uint16_t authV = authVersion >> 16;
         uint8_t sendKeyBlob = (authV <= 1) && (keyGenVersion == 0);
@@ -1273,11 +1396,8 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
      * Release any other threads waiting on the result of this authentication.
      */
     lock.Lock(MUTEX_CONTEXT);
+    peerState->NotifyAuthEvent();
     peerState->SetAuthEvent(NULL);
-    while (authEvent.GetNumBlockedThreads() > 0) {
-        authEvent.SetEvent();
-        qcc::Sleep(10);
-    }
     lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
@@ -1293,6 +1413,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
      */
     SASLEngine sasl(*bus, ajn::AuthMechanism::RESPONDER, peerAuthMechanisms, busName.c_str(), peerAuthListener);
     sasl.SetLocalId(localGuidStr);
+    peerState->AddKeyExchangeModeMask(_PeerState::KEY_EXCHANGE_INITIATOR);
     /*
      * This will let us know if we need to make an AuthenticationComplete callback below.
      */
@@ -1315,9 +1436,10 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
             }
             inStr = qcc::String(replyMsg->GetArg(0)->v_string.str);
             status = sasl.Advance(inStr, outStr, authState);
-            if (authState == SASLEngine::ALLJOYN_AUTH_SUCCESS) {
+
+            mech = sasl.GetMechanism();
+            if ((authState == SASLEngine::ALLJOYN_AUTH_SUCCESS) && (!peerState->IsSecure())) {
                 KeyBlob masterSecret;
-                mech = sasl.GetMechanism();
                 status = sasl.GetMasterSecret(masterSecret);
                 if (status == ER_OK) {
                     SetRights(peerState, sasl.AuthenticationIsMutual(), false /*responder*/);
@@ -1374,10 +1496,12 @@ QStatus AllJoynPeerObj::AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObjec
     if (status != ER_OK) {
         return status;
     }
-    peerState->AcquireConversationHashLock();
-    peerState->UpdateHash(CONVERSATION_V4, callMsg);
-    peerState->UpdateHash(CONVERSATION_V4, replyMsg);
-    peerState->ReleaseConversationHashLock();
+    bool initiatorFlag = true;
+    _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
+    conversation.AcquireConversationHashLock();
+    conversation.UpdateHash(CONVERSATION_V4, callMsg);
+    conversation.UpdateHash(CONVERSATION_V4, replyMsg);
+    conversation.ReleaseConversationHashLock();
     uint32_t* remoteSuites;
     size_t remoteSuitesLen;
 
@@ -1399,7 +1523,8 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     QStatus status;
 
     QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange"));
-    shared_ptr<KeyExchanger> keyExchanger = GetKeyExchangerInstance(peerState, true, requestingAuthList, requestingAuthCount);  /* initiator */
+    bool initiatorFlag = true;
+    shared_ptr<KeyExchanger> keyExchanger = GetKeyExchangerInstance(peerState, initiatorFlag, requestingAuthList, requestingAuthCount);  /* initiator */
     if (!keyExchanger) {
         return ER_AUTH_FAIL;
     }
@@ -1413,8 +1538,13 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
         uint8_t authorized = false;
         status = keyExchanger->KeyAuthentication(kxCB, busName.c_str(), &authorized);
         if (authorized) {
-            SetRights(peerState, true, false /*responder*/);
-            status = RecordMasterSecret(busName, keyExchanger, peerState);
+            if (!peerState->IsSecure()) {
+                SetRights(peerState, true, false /*responder*/);
+                status = RecordMasterSecret(busName, keyExchanger, peerState);
+                QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange records master secret for peer %s", peerState->GetGuid().ToString().c_str()));
+            } else {
+                QCC_DbgHLPrintf(("AuthenticatePeerUsingKeyExchange does not record master secret for peer %s", peerState->GetGuid().ToString().c_str()));
+            }
         } else {
             status = ER_AUTH_FAIL;
         }
@@ -1447,9 +1577,10 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     if ((peerState->GetAuthVersion() >> 16) < CONVERSATION_V4) {
         /* any peer with auth version smaller than 4 need to start the hash at
          * the KeyExchange call */
-        peerState->AcquireConversationHashLock();
-        peerState->InitializeConversationHash();
-        peerState->ReleaseConversationHashLock();
+        _PeerState::Conversation& conversation = peerState->GetConversation(initiatorFlag);
+        conversation.AcquireConversationHashLock();
+        conversation.InitializeConversationHash();
+        conversation.ReleaseConversationHashLock();
     }
     status = AuthenticatePeerUsingKeyExchange(smallerSuites, smallerCount, busName, peerState, localGuidStr, remotePeerObj, ifc, mech);
     delete [] smallerSuites;
