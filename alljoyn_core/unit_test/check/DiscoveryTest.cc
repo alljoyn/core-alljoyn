@@ -96,7 +96,8 @@ TEST_P(DiscoveryTest, ComputeStaticScore)
     uint32_t mobility = tp.staticParams.mobility;
     uint32_t availability = tp.staticParams.availability;
     uint32_t nodeConnection = tp.staticParams.nodeConnection;
-    uint32_t staticScore = ajn::IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeConnection);
+    uint32_t staticScore = 0;
+    ASSERT_EQ(ER_OK, ajn::IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeConnection, &staticScore));
     ASSERT_EQ(tp.staticParams.staticScore, staticScore);
 }
 
@@ -110,7 +111,8 @@ TEST_P(DiscoveryTest, ComputeDynamicScore)
     uint32_t udpMax = tp.dynamicParams.udpMax;
     uint32_t tclAvail = tp.dynamicParams.tclAvail;
     uint32_t tclMax = tp.dynamicParams.tclMax;
-    uint16_t dynamicScore = ajn::IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, tclAvail, tclMax);
+    uint32_t dynamicScore = 0;
+    ASSERT_EQ(ER_OK, ajn::IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, tclAvail, tclMax, &dynamicScore));
     ASSERT_EQ(tp.dynamicParams.dynamicScore, dynamicScore);
 }
 

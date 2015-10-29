@@ -394,7 +394,12 @@ int CDECL_CALL main(int argc, char** argv)
     uint32_t mobility = 4;
     uint32_t availability = 8;
     uint32_t nodeType = 1;
-    uint16_t staticScore = IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeType);
+    uint32_t staticScore = 0;
+    status = IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeType, &staticScore);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("ComputeStaticScore failed"));
+        ERROR_EXIT;
+    }
     printf("Static score computed from power source=%d mobility=%d availability=%d nodeType=%d is %d\n", powerSource, mobility, availability, nodeType, staticScore);
 
     // ComputeDynamicScore using tcpAvail, tcpMax, udpAvail, udpMax, tclAvail and tclMax values
@@ -404,7 +409,12 @@ int CDECL_CALL main(int argc, char** argv)
     uint32_t udpMax = 16;
     uint32_t tclAvail = 10;
     uint32_t tclMax = 50;
-    uint16_t dynamicScore = IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, 0, 0);
+    uint32_t dynamicScore = 0;
+    status = IpNameServiceImpl::ComputeDynamicScore(tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, 0, 0, &dynamicScore);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("ComputeDynamicScore failed"));
+        ERROR_EXIT;
+    }
     printf("Dynamic score computed from tcpAvail=%d tcpMax=%d udpAvail=%d udpMax=%d tclAvail=%d tclMax=%d is %d\n", tcpAvail, tcpMax, udpAvail, udpMax, tclAvail, tclMax, dynamicScore);
 
     // ComputePriority using staticRank and dynamicRank values
