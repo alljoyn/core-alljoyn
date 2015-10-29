@@ -134,8 +134,8 @@ else:
 
     ajtest_src = unittest_env.Glob('*.cc')
     if unittest_env['BR'] != 'on':
-        # need to remove DiscoveryDeathTest.cc from sources
-        ajtest_src = [l for l in unittest_env.Glob('*.cc') if not l.path.endswith('DiscoveryDeathTest.cc')]
+        # need to remove DiscoveryTest.cc from sources
+        ajtest_src = [l for l in unittest_env.Glob('*.cc') if not l.path.endswith('DiscoveryTest.cc')]
 
     ajtest_obj = unittest_env.Object(ajtest_src);
     ajtest_prog = unittest_env.Program('ajtest', ajtest_obj)

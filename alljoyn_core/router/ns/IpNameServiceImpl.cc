@@ -418,6 +418,8 @@ IpNameServiceImpl::IpNameServiceImpl()
 
 QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
 {
+    QStatus status = ER_OK;
+
     QCC_DbgHLPrintf(("IpNameServiceImpl::Init()"));
 
     //
@@ -453,23 +455,26 @@ QStatus IpNameServiceImpl::Init(const qcc::String& guid, bool loopback)
     m_enableIPv6 = !config->GetFlag("ns_disable_ipv6");
 
     LoadStaticRouterParams(config);
-    m_staticScore = ComputeStaticScore(m_powerSource, m_mobility, m_availability, m_nodeConnection);
+    status = ComputeStaticScore(m_powerSource, m_mobility, m_availability, m_nodeConnection, &m_staticScore);
+    if (ER_OK == status) {
 
-    if (m_enableV1) {
-        m_broadcast = !config->GetFlag("ns_disable_directed_broadcast");
-    } else {
-        //
-        // V2 doesn't require broadcast.
-        //
-        m_broadcast = false;
+        if (m_enableV1) {
+            m_broadcast = !config->GetFlag("ns_disable_directed_broadcast");
+        } else {
+            //
+            // V2 doesn't require broadcast.
+            //
+            m_broadcast = false;
+        }
+
+        m_guid = guid;
+        m_loopback = loopback;
+        m_terminal = false;
+
+        m_networkChangeScheduleCount = ArraySize(RETRY_INTERVALS);
     }
 
-    m_guid = guid;
-    m_loopback = loopback;
-    m_terminal = false;
-
-    m_networkChangeScheduleCount = ArraySize(RETRY_INTERVALS);
-    return ER_OK;
+    return status;
 }
 
 //
@@ -1795,22 +1800,38 @@ void IpNameServiceImpl::LoadStaticRouterParams(const ConfigDB* config)
     m_mobility = LoadParam(config, "router_mobility");
     m_availability = LoadParam(config, "router_availability");
     m_nodeConnection = LoadParam(config, "router_node_connection");
+
+    QCC_ASSERT(m_powerSource >= ROUTER_POWER_SOURCE_MIN && m_powerSource <= ROUTER_POWER_SOURCE_MAX);
+    QCC_ASSERT(m_mobility >= ROUTER_MOBILITY_MIN && m_mobility <= ROUTER_MOBILITY_MAX);
+    QCC_ASSERT(m_availability >= ROUTER_AVAILABILITY_MIN && m_availability <= ROUTER_AVAILABILITY_MAX);
+    QCC_ASSERT(m_nodeConnection >= ROUTER_NODE_CONNECTION_MIN && m_nodeConnection <= ROUTER_NODE_CONNECTION_MAX);
 }
 
-// ComputeStaticScore and ComputeDynamicScore are used by the DiscoveryDeathTest unit tests,
-// and those tests depend on QCC_ASSERT causing an abort and outputting a string matching the
-// regex "Assertion.*failed".
-uint32_t IpNameServiceImpl::ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection)
+QStatus IpNameServiceImpl::ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection, uint32_t* staticScore)
 {
-    QCC_ASSERT(powerSource >= ROUTER_POWER_SOURCE_MIN && powerSource <= ROUTER_POWER_SOURCE_MAX);
-    QCC_ASSERT(mobility >= ROUTER_MOBILITY_MIN && mobility <= ROUTER_MOBILITY_MAX);
-    QCC_ASSERT(availability >= ROUTER_AVAILABILITY_MIN && availability <= ROUTER_AVAILABILITY_MAX);
-    QCC_ASSERT(nodeConnection >= ROUTER_NODE_CONNECTION_MIN && nodeConnection <= ROUTER_NODE_CONNECTION_MAX);
-    return (powerSource + mobility + availability + nodeConnection);
+    if (!((powerSource >= ROUTER_POWER_SOURCE_MIN) && (powerSource <= ROUTER_POWER_SOURCE_MAX))) {
+        QCC_LogError(ER_BAD_ARG_1, ("powerSource has invalid value %u", powerSource));
+        return ER_BAD_ARG_1;
+    }
+    if (!((mobility >= ROUTER_MOBILITY_MIN) && (mobility <= ROUTER_MOBILITY_MAX))) {
+        QCC_LogError(ER_BAD_ARG_2, ("mobility has invalid value %u", mobility));
+        return ER_BAD_ARG_2;
+    }
+    if (!((availability >= ROUTER_AVAILABILITY_MIN) && (availability <= ROUTER_AVAILABILITY_MAX))) {
+        QCC_LogError(ER_BAD_ARG_3, ("availability has invalid value %u", availability));
+        return ER_BAD_ARG_3;
+    }
+    if (!((nodeConnection >= ROUTER_NODE_CONNECTION_MIN) && (nodeConnection <= ROUTER_NODE_CONNECTION_MAX))) {
+        QCC_LogError(ER_BAD_ARG_4, ("nodeConnection has invalid value %u", nodeConnection));
+        return ER_BAD_ARG_4;
+    }
 
+    *staticScore = (powerSource + mobility + availability + nodeConnection);
+
+    return ER_OK;
 }
 
-uint32_t IpNameServiceImpl::ComputeDynamicScore(
+QStatus IpNameServiceImpl::ComputeDynamicScore(
     uint32_t availableTcpConnections,
     uint32_t maximumTcpConnections,
     uint32_t availableUdpConnections,
@@ -1818,12 +1839,29 @@ uint32_t IpNameServiceImpl::ComputeDynamicScore(
     uint32_t availableTcpRemoteClients,
     uint32_t maximumTcpRemoteClients,
     uint32_t availableUdpRemoteClients,
-    uint32_t maximumUdpRemoteClients)
+    uint32_t maximumUdpRemoteClients,
+    uint32_t* dynamicScore)
 {
-    QCC_ASSERT(availableTcpConnections <= maximumTcpConnections);
-    QCC_ASSERT(availableUdpConnections <= maximumUdpConnections);
-    QCC_ASSERT(availableTcpRemoteClients <= maximumTcpRemoteClients);
-    QCC_ASSERT(availableUdpRemoteClients <= maximumUdpRemoteClients);
+    /* For the following four pairs, either argument might be invalid, so we always return the
+     * error to indicate the first of each pair is bad.
+     */
+    if (!(availableTcpConnections <= maximumTcpConnections)) {
+        QCC_LogError(ER_BAD_ARG_1, ("availableTcpConnections(%u) is not <= maximumTcpConnections(%u)", availableTcpConnections, maximumTcpConnections));
+        return ER_BAD_ARG_1;
+    }
+    if (!(availableUdpConnections <= maximumUdpConnections)) {
+        QCC_LogError(ER_BAD_ARG_3, ("availableUdpConnections(%u) is not <= maximumUdpConnections(%u)", availableUdpConnections, maximumUdpConnections));
+        return ER_BAD_ARG_3;
+    }
+    if (!(availableTcpRemoteClients <= maximumTcpRemoteClients)) {
+        QCC_LogError(ER_BAD_ARG_5, ("availableTcpRemoteClients(%u) is not <= maximumTcpRemoteClients(%u)", availableTcpRemoteClients, maximumTcpRemoteClients));
+        return ER_BAD_ARG_5;
+    }
+    if (!(availableUdpRemoteClients <= maximumUdpRemoteClients)) {
+        QCC_LogError(ER_BAD_ARG_7, ("availableUdpRemoteClients(%u) is not <= maximumUdpRemoteClients(%u)", availableUdpRemoteClients, maximumUdpRemoteClients));
+        return ER_BAD_ARG_7;
+    }
+
     uint32_t tcpScore = 0;
     uint32_t udpScore = 0;
     uint32_t tclScore = 0;
@@ -1853,11 +1891,13 @@ uint32_t IpNameServiceImpl::ComputeDynamicScore(
     }
 
     if (transports == 2) {
-        return ((tcpScore + udpScore + tclScore) / (4u));
+        *dynamicScore = ((tcpScore + udpScore + tclScore) / (4u));
     } else if (transports == 3) {
-        return ((tcpScore + udpScore + tclScore) / (6u));
+        *dynamicScore = ((tcpScore + udpScore + tclScore) / (6u));
+    } else {
+        *dynamicScore = 0;
     }
-    return 0;
+    return ER_OK;
 }
 
 uint16_t IpNameServiceImpl::GetCurrentPriority()
@@ -1867,6 +1907,7 @@ uint16_t IpNameServiceImpl::GetCurrentPriority()
 
 QStatus IpNameServiceImpl::UpdateDynamicScore(TransportMask transportMask, uint32_t availableTransportConnections, uint32_t maximumTransportConnections, uint32_t availableTransportRemoteClients, uint32_t maximumTransportRemoteClients)
 {
+    QStatus status = ER_OK;
     uint32_t i = IndexFromBit(transportMask);
     QCC_ASSERT(i < 16 && "IpNameServiceImpl::UpdateDynamicScore(): Bad index");
     m_dynamicParams[i].availableTransportConnections = availableTransportConnections;
@@ -1874,7 +1915,7 @@ QStatus IpNameServiceImpl::UpdateDynamicScore(TransportMask transportMask, uint3
     m_dynamicParams[i].availableTransportRemoteClients = availableTransportRemoteClients;
     m_dynamicParams[i].maximumTransportRemoteClients = maximumTransportRemoteClients;
 
-    m_dynamicScore = ComputeDynamicScore(
+    status = ComputeDynamicScore(
         m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportConnections,
         m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportConnections,
         m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportConnections,
@@ -1882,10 +1923,14 @@ QStatus IpNameServiceImpl::UpdateDynamicScore(TransportMask transportMask, uint3
         m_dynamicParams[TRANSPORT_INDEX_TCP].availableTransportRemoteClients,
         m_dynamicParams[TRANSPORT_INDEX_TCP].maximumTransportRemoteClients,
         m_dynamicParams[TRANSPORT_INDEX_UDP].availableTransportRemoteClients,
-        m_dynamicParams[TRANSPORT_INDEX_UDP].maximumTransportRemoteClients);
+        m_dynamicParams[TRANSPORT_INDEX_UDP].maximumTransportRemoteClients,
+        &m_dynamicScore);
 
-    m_priority = ComputePriority(m_staticScore, m_dynamicScore);
-    return ER_OK;
+    if (status == ER_OK) {
+        m_priority = ComputePriority(m_staticScore, m_dynamicScore);
+    }
+
+    return status;
 }
 
 qcc::String IpNameServiceImpl::ToLowerCase(const qcc::String& str)

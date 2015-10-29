@@ -535,13 +535,14 @@ class IpNameServiceImpl : public qcc::Thread {
 
     static uint16_t ComputePriority(uint32_t staticScore, uint32_t dynamicScore);
 
-    static uint32_t ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection);
+    static QStatus ComputeStaticScore(uint32_t powerSource, uint32_t mobility, uint32_t availability, uint32_t nodeConnection, uint32_t* staticScore);
 
-    static uint32_t ComputeDynamicScore(
+    static QStatus ComputeDynamicScore(
         uint32_t availableTcpConnections, uint32_t maximumTcpConnections,
         uint32_t availableUdpConnections, uint32_t maximumUdpConnections,
         uint32_t availableTcpRemoteClients, uint32_t maximumTcpRemoteClients,
-        uint32_t availableUdpRemoteClients, uint32_t maximumUdpRemoteClients);
+        uint32_t availableUdpRemoteClients, uint32_t maximumUdpRemoteClients,
+        uint32_t* dynamicScore);
 
     static qcc::String ToLowerCase(const qcc::String& str);
 
