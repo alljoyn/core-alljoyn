@@ -16,8 +16,8 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.allseen.sample.eventaction"
-    android:versionCode="15090000"
-    android:versionName="15.09.00">
+    android:versionCode="15090097"
+    android:versionName="15.09.00a">
 
     <uses-sdk android:minSdkVersion="16" />
 

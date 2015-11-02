@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="org.alljoyn.bus.samples.properties_client"
-      android:versionCode="15090000"
-      android:versionName="15.09.00">
+      android:versionCode="15090097"
+      android:versionName="15.09.00a">
     <!-- Permission required to use the TCP transport -->
     <uses-permission android:name="android.permission.INTERNET"></uses-permission>
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE"></uses-permission>
