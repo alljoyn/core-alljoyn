@@ -1885,20 +1885,22 @@ QStatus ProxyBusObject::IntrospectRemoteObjectAsync(ProxyBusObject::Listener* li
 void ProxyBusObject::IntrospectMethodCB(Message& msg, void* context)
 {
     QStatus status;
-    if (NULL != msg->GetArg(0)) {
-        QCC_DbgPrintf(("Introspection XML: %s", msg->GetArg(0)->v_string.str));
-    }
     CBContext<Listener::IntrospectCB>* ctx = reinterpret_cast<CBContext<Listener::IntrospectCB>*>(context);
 
     if (msg->GetType() == MESSAGE_METHOD_RET) {
         /* Parse the XML reply to update this ProxyBusObject instance (plus any new interfaces) */
-        qcc::String ident = msg->GetSender();
-        if (internal->uniqueName.empty()) {
-            internal->uniqueName = ident;
+        char* xml;
+        status = msg->GetArgs("s", &xml);
+        if (ER_OK == status) {
+            QCC_DbgPrintf(("Introspection XML: %s", xml));
+            qcc::String ident = msg->GetSender();
+            if (internal->uniqueName.empty()) {
+                internal->uniqueName = ident;
+            }
+            ident += " : ";
+            ident += msg->GetObjectPath();
+            status = ParseXml(xml, ident.c_str());
         }
-        ident += " : ";
-        ident += msg->GetObjectPath();
-        status = ParseXml(msg->GetArg(0)->v_string.str, ident.c_str());
     } else if (msg->GetErrorName() != NULL && ::strcmp("org.freedesktop.DBus.Error.ServiceUnknown", msg->GetErrorName()) == 0) {
         status = ER_BUS_NO_SUCH_SERVICE;
     } else {
