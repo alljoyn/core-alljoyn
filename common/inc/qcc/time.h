@@ -34,15 +34,14 @@ namespace qcc {
  */
 static const uint64_t END_OF_TIME = static_cast<uint64_t>(-1);
 
-typedef enum {
-    TIME_ABSOLUTE,
-    TIME_RELATIVE
-} TimeBase;
-
 /*
  * Forward declaration.
  */
+template <typename TimeBase>
 struct Timespec;
+
+struct EpochTime; /**< Time relative to Epoch. */
+struct MonotonicTime; /**< Time relative to some unspecified starting time. */
 
 /**
  * Granularity of GetTimestamp64(), GetTimestamp() and GetTimeNow().
@@ -58,44 +57,29 @@ struct Timespec;
 #endif
 
 /**
- * Get the current time.
- * @param ts  [OUT] Timespec filled with current time.
+ * Gets the current time, relative to some unspecified starting time.
+ *
+ * @param[out] ts Timespec filled with current time, relative to some
+ *                unspecified starting time.
  */
-void GetTimeNow(Timespec* ts);
+void GetTimeNow(Timespec<MonotonicTime>* ts);
 
 /** Timespec */
+template <typename TimeBase>
 struct Timespec {
 
-    static const Timespec Zero;
-
-    uint64_t seconds;       /**< Number of seconds since EPOCH */
-    uint16_t mseconds;      /**< Milliseconds in EPOCH */
+    uint64_t seconds;       /**< The number of seconds. */
+    uint16_t mseconds;      /**< The number of milliseconds. */
 
     Timespec() : seconds(0), mseconds(0) { }
 
     /**
-     * Construct a Timespec that refers to an absolute (EPOCH based) time expressed in milliseconds
-     * or a future time relative to the current time now.
+     * Constructs a Timespec that refers to an Epoch based time or a
+     * future time relative to the current time.
      *
-     * @param millis   Time in milliseconds.
-     * @param base     Indicates if time is relative to now or absolute.
+     * @param millis The time in milliseconds.
      */
-    Timespec(uint64_t millis, TimeBase base = TIME_ABSOLUTE) {
-        if (base == TIME_ABSOLUTE) {
-            seconds = millis / 1000;
-            mseconds = (uint16_t)(millis % 1000);
-        } else {
-            GetTimeNow(this);
-            seconds += (millis + mseconds) / 1000;
-            mseconds = (uint16_t)((mseconds + millis) % 1000);
-        }
-    }
-
-    Timespec& operator+=(const Timespec& other) {
-        seconds += other.seconds + (mseconds + other.mseconds) / 1000;
-        mseconds = ((mseconds + other.mseconds) % 1000);
-        return *this;
-    }
+    explicit Timespec(uint64_t millis);
 
     Timespec& operator+=(uint32_t ms) {
         seconds += (ms + mseconds) / 1000;
@@ -119,84 +103,111 @@ struct Timespec {
         return !(*this == other);
     }
 
-    uint64_t GetAbsoluteMillis() const { return (seconds * 1000) + (uint64_t)mseconds; }
-
+    /**
+     * Gets the value of this Timespec in milliseconds.
+     *
+     * @return The value of this Timespec in milliseconds.
+     */
+    uint64_t GetMillis() const {
+        return (seconds * 1000) + (uint64_t)mseconds;
+    }
 };
 
-/**
- * Return (non-absolute) timestamp in milliseconds.
- * Deprecated due to rollover every 8 days.
- * @return  timestamp in milliseconds.
- */
-uint32_t GetTimestamp(void);
+template <> inline
+Timespec<EpochTime>::Timespec(uint64_t millis)
+{
+    seconds = millis / 1000;
+    mseconds = (uint16_t)(millis % 1000);
+}
+
+template <> inline
+Timespec<MonotonicTime>::Timespec(uint64_t millis)
+{
+    GetTimeNow(this);
+    seconds += (millis + mseconds) / 1000;
+    mseconds = (uint16_t)((mseconds + millis) % 1000);
+}
 
 /**
- * Return (non-absolute) timestamp in milliseconds.
- * @return  timestamp in milliseconds.
- */
-uint64_t GetTimestamp64(void);
-
-/**
- * Return (non-absolute) timestamp in milliseconds since Epoch.
- * @return  timestamp in milliseconds.
- */
-uint64_t GetEpochTimestamp(void);
-
-/**
- * Return a formatted string for current UTC date and time. Format conforms to RFC 1123
- * e.g. "Tue, 30 Aug 2011 17:01:45 GMT"
+ * Gets the current time in milliseconds, relative to the first call of
+ * GetTimestamp() or GetTimestamp64().
  *
- * @return  The formatted date/time string.
+ * @deprecated due to rollover every 8 days.
+ *
+ * @return The time in milliseconds.
+ */
+uint32_t GetTimestamp();
+
+/**
+ * Gets the current time in milliseconds, relative to the first call of
+ * GetTimestamp() or GetTimestamp64().
+ *
+ * @return The time in milliseconds.
+ */
+uint64_t GetTimestamp64();
+
+/**
+ * Gets the current time in milliseconds since the Epoch.
+ *
+ * @return The time in milliseconds.
+ */
+uint64_t GetEpochTimestamp();
+
+/**
+ * Returns a formatted string for current UTC date and time. Format conforms to
+ * RFC 1123 e.g. "Tue, 30 Aug 2011 17:01:45 GMT".
+ *
+ * @return The formatted date/time string.
  */
 qcc::String UTCTime();
 
 /**
- * Wrapper for mktime
- * @return  timestamp in seconds
+ * Wrapper for mktime.
+ *
+ * @return The time in seconds.
  */
 int64_t ConvertStructureToTime(struct tm* timeptr);
 
 /**
- * Wrapper for gmtime
- * @param timer calendar time value to be formated into a tm structure
- * @param tm set to the Time in a tm structure
- * @return ER_OK if success else ER_FAIL
+ * Wrapper for gmtime.
+ *
+ * @param[in] timer The calendar time value to be formated into a tm structure.
+ * @param tm set to the time in a tm structure.
+ *
+ * @return ER_OK if success else ER_FAIL.
  */
 QStatus ConvertTimeToStructure(const int64_t* timer, struct tm* tm);
 
 /**
  * Wrapper for localtime
+ *
  * @param timer calendar time value to be formated into a tm structure
  * @param tm set to the Time in a tm structure
- * @return ER_OK if success else ER_FAIL
+ *
+ * @return ER_OK if success else ER_FAIL.
  */
 QStatus ConvertToLocalTime(const int64_t* timer, struct tm* tm);
 
 /**
  * Wrapper for strftime
- * @return  Number of characters placed in dest
+ *
+ * @return Number of characters placed in dest.
  */
 size_t FormatTime(char* dest, size_t destSize, const char* format, const struct tm* timeptr);
 
 }
 
-inline qcc::Timespec operator+(const qcc::Timespec& tsa, const qcc::Timespec& tsb)
+template <typename T>
+inline qcc::Timespec<T> operator+(const qcc::Timespec<T>& ts, uint32_t ms)
 {
-    qcc::Timespec ret;
-    ret.seconds = tsa.seconds + tsb.seconds + (tsa.mseconds + tsb.mseconds) / 1000;
-    ret.mseconds = (tsa.mseconds + tsb.mseconds) % 1000;
-    return ret;
-}
-
-inline qcc::Timespec operator+(const qcc::Timespec& ts, uint32_t ms)
-{
-    qcc::Timespec ret;
+    qcc::Timespec<T> ret;
     ret.seconds = ts.seconds + (ts.mseconds + ms) / 1000;
     ret.mseconds = (uint16_t)((ts.mseconds + ms) % 1000);
     return ret;
 }
 
-inline int64_t operator-(const qcc::Timespec& ts1, const qcc::Timespec& ts2)
+template <typename T>
+inline int64_t operator-(const qcc::Timespec<T>& ts1, const qcc::Timespec<T>& ts2)
 {
     int64_t t1 = (int64_t) ts1.seconds;
     t1 *= 1000;
@@ -208,6 +219,5 @@ inline int64_t operator-(const qcc::Timespec& ts1, const qcc::Timespec& ts2)
 
     return t1 - t2;
 }
-
 
 #endif

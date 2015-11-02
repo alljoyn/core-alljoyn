@@ -920,7 +920,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
     QStatus status = ER_OK;
 
     if (reason == ER_OK) {
-        Timespec tilExpire;
+        Timespec<MonotonicTime> tilExpire;
         uint32_t expire;
 
         /* Send name service responses if needed */
@@ -948,7 +948,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         /* Look for new/failed joinsessions to try/retry (after backoff) */
         router.LockNameTable();
         lock.Lock();
-        Timespec now;
+        Timespec<MonotonicTime> now;
         GetTimeNow(&now);
         RemoteCaches::iterator cit = remoteCaches.begin();
         while (cit != remoteCaches.end()) {
@@ -995,7 +995,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                         cache.state = RemoteCacheWork::IDLE;
                         /* Retry with a random backoff */
                         ScheduleWork(cache, false);
-                        if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
+                        if ((tilExpire == Timespec<MonotonicTime>()) || (cache.nextJoinTime < tilExpire)) {
                             tilExpire = cache.nextJoinTime;
                         }
                     }
@@ -1011,7 +1011,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         router.UnlockNameTable();
 
         /* Rearm alarm */
-        if (tilExpire != Timespec::Zero) {
+        if (tilExpire != Timespec<MonotonicTime>()) {
             SessionlessObj* slObj = this;
             timer.AddAlarm(Alarm(tilExpire, slObj));
         }
@@ -1456,13 +1456,14 @@ QStatus SessionlessObj::ScheduleWork(RemoteCacheWork& cache, bool addAlarm, bool
  * The actual join time is randomly distributed over the retry interval above.
  */
 QStatus SessionlessObj::GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
-                                        uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime)
+                                        uint32_t retries, qcc::Timespec<qcc::MonotonicTime>& firstJoinTime,
+                                        qcc::Timespec<qcc::MonotonicTime>& nextJoinTime)
 {
     if (retries == 0) {
         GetTimeNow(&firstJoinTime);
     }
 
-    qcc::Timespec startTime;
+    qcc::Timespec<qcc::MonotonicTime> startTime;
     uint32_t delayMs = 1;
     for (uint32_t m = 0, i = 0; i <= retries; ++i) {
         if (i == 0) {

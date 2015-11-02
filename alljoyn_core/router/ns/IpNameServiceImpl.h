@@ -1585,8 +1585,8 @@ class IpNameServiceImpl : public qcc::Thread {
         ~_BurstResponseHeader() { }
         Packet packet;
         uint32_t scheduleCount;
-        qcc::Timespec nextScheduleTime;
-    }BurstResponseHeader;
+        qcc::Timespec<qcc::MonotonicTime> nextScheduleTime;
+    } BurstResponseHeader;
 
     qcc::SocketFd m_ipv6QuietSockFd;
 
@@ -1611,7 +1611,7 @@ class IpNameServiceImpl : public qcc::Thread {
 
     struct MDNSPacketTrackerEntry {
         uint16_t burstId;
-        qcc::Timespec timeStamp;
+        qcc::Timespec<qcc::MonotonicTime> timeStamp;
         MDNSPacketTrackerEntry(uint16_t burstId = 0) : burstId(burstId) { GetTimeNow(&timeStamp); };
     };
 
@@ -1638,8 +1638,8 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     struct PeerInfo {
         qcc::IPEndpoint unicastInfo;
-        mutable qcc::Timespec lastQueryTimeStamp;
-        mutable qcc::Timespec lastResponseTimeStamp;
+        mutable qcc::Timespec<qcc::MonotonicTime> lastQueryTimeStamp;
+        mutable qcc::Timespec<qcc::MonotonicTime> lastResponseTimeStamp;
 
         PeerInfo(const qcc::IPEndpoint& ipEndpoint) :
             unicastInfo(ipEndpoint)
@@ -1674,7 +1674,7 @@ class IpNameServiceImpl : public qcc::Thread {
     uint32_t m_networkChangeScheduleCount;
     bool m_doNetworkCallback[N_TRANSPORTS];
     qcc::NetworkEventSet m_networkEvents;
-    qcc::Timespec m_networkChangeTimeStamp;
+    qcc::Timespec<qcc::MonotonicTime> m_networkChangeTimeStamp;
     uint32_t m_staticScore;
     uint32_t m_dynamicScore;
     uint16_t m_priority;

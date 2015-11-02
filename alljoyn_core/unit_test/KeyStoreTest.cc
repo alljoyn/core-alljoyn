@@ -73,7 +73,7 @@ TEST(KeyStoreTest, basic_store_load) {
         /*
          * Set expiration and write again
          */
-        qcc::Timespec expires(1000, qcc::TIME_RELATIVE);
+        qcc::Timespec<qcc::EpochTime> expires(GetEpochTimestamp() + 1000);
         key.SetExpiration(expires);
         status = key.Store(sink);
         ASSERT_EQ(ER_OK, status) << " Failed to store key with expiration";

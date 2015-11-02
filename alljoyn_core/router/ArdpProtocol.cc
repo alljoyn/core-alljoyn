@@ -277,7 +277,7 @@ struct ARDP_HANDLE {
 #endif
     bool accepting;          /* If true the ArdpProtocol is accepting inbound connections */
     ListNode conns;          /* List of currently active connections */
-    qcc::Timespec tbase;     /* Baseline time */
+    qcc::Timespec<qcc::MonotonicTime> tbase; /* Baseline time */
     ListNode dataTimers;     /* List of currently scheduled retransmit timers */
     uint32_t msnext;         /* To inform upper layer when to call into the protocol next time */
     bool trafficJam;         /* "Socket Write Block" indicator */
@@ -405,9 +405,9 @@ static inline void SetState(ArdpConnRecord* conn, ArdpState state)
     conn->state = state;
 }
 
-static uint32_t TimeNow(qcc::Timespec base)
+static uint32_t TimeNow(qcc::Timespec<qcc::MonotonicTime> base)
 {
-    qcc::Timespec now;
+    qcc::Timespec<qcc::MonotonicTime> now;
     qcc::GetTimeNow(&now);
     return 1000 * (now.seconds - base.seconds) + (now.mseconds - base.mseconds);
 }

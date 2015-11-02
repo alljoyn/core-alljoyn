@@ -383,7 +383,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @internal
      * @brief Manage the list of endpoints for the transport.
      */
-    void ManageEndpoints(qcc::Timespec authTimeout, qcc::Timespec sessionSetupTimeout);
+    void ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTimeout);
 
     /**
      * @internal

@@ -475,7 +475,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
         m_sideState(SIDE_INITIALIZED),
         m_authState(AUTH_INITIALIZED),
         m_epState(EP_INITIALIZED),
-        m_tStart(qcc::Timespec(0)),
+        m_tStart(qcc::Timespec<qcc::MonotonicTime>(0)),
         m_authThread(this),
         m_stream(sock),
         m_ipAddr(ipAddr),
@@ -492,7 +492,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
         m_sideState(SIDE_INITIALIZED),
         m_authState(AUTH_INITIALIZED),
         m_epState(EP_INITIALIZED),
-        m_tStart(qcc::Timespec(0)),
+        m_tStart(qcc::Timespec<qcc::MonotonicTime>(0)),
         m_authThread(this),
         m_stream(family, type),
         m_ipAddr(ipAddr),
@@ -515,8 +515,8 @@ class _TCPEndpoint : public _RemoteEndpoint {
         return ER_OK;
     };
 
-    void SetStartTime(qcc::Timespec tStart) { m_tStart = tStart; }
-    qcc::Timespec GetStartTime(void) { return m_tStart; }
+    void SetStartTime(qcc::Timespec<qcc::MonotonicTime> tStart) { m_tStart = tStart; }
+    qcc::Timespec<qcc::MonotonicTime> GetStartTime(void) { return m_tStart; }
     QStatus Authenticate(void);
     void AuthStop(void);
     void AuthJoin(void);
@@ -540,7 +540,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
 
     void SetAuthDone(void)
     {
-        Timespec tNow;
+        Timespec<MonotonicTime> tNow;
         GetTimeNow(&tNow);
         SetStartTime(tNow);
         m_authState = AUTH_DONE;
@@ -649,7 +649,7 @@ class _TCPEndpoint : public _RemoteEndpoint {
     volatile SideState m_sideState;   /**< Is this an active or passive connection */
     volatile AuthState m_authState;   /**< The state of the endpoint authentication process */
     volatile EndpointState m_epState; /**< The state of the endpoint authentication process */
-    qcc::Timespec m_tStart;           /**< Timestamp indicating when the authentication process started */
+    qcc::Timespec<qcc::MonotonicTime> m_tStart; /**< Timestamp indicating when the authentication process started */
     AuthThread m_authThread;          /**< Thread used to do blocking calls during startup */
     qcc::SocketStream m_stream;       /**< Stream used by authentication code */
     qcc::IPAddress m_ipAddr;          /**< Remote IP address. */
@@ -1524,7 +1524,7 @@ void TCPTransport::EndpointExit(RemoteEndpoint& ep)
     Alert();
 }
 
-void TCPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTimeout)
+void TCPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTimeout)
 {
     bool managed = false;
     m_endpointListLock.Lock(MUTEX_CONTEXT);
@@ -1556,7 +1556,7 @@ void TCPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             continue;
         }
 
-        Timespec tNow;
+        Timespec<MonotonicTime> tNow;
         GetTimeNow(&tNow);
 
         if (ep->GetStartTime() + authTimeout < tNow) {
@@ -1625,7 +1625,7 @@ void TCPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          */
         if (authState == _TCPEndpoint::AUTH_DONE) {
 
-            Timespec tNow;
+            Timespec<MonotonicTime> tNow;
             GetTimeNow(&tNow);
             if ((ep->GetFeatures().isBusToBus && !ep->IsSessionRouteSetUp()) && (ep->GetStartTime() + sessionSetupTimeout < tNow)) {
                 /* This is a connection that timedout waiting for routing to be set up. Kill it */
@@ -1701,14 +1701,14 @@ void* TCPTransport::Run(void* arg)
      * mess about while they should be authenticating.  If they take longer
      * than this time, we feel free to disconnect them as deniers of service.
      */
-    Timespec authTimeout = config->GetLimit("auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
+    uint32_t authTimeout = config->GetLimit("auth_timeout", ALLJOYN_AUTH_TIMEOUT_DEFAULT);
 
     /*
      * sessionSetupTimeout is the maximum amount of time we allow incoming connections to
      * mess about while they should be sending messages to set up the session routes.
      * If they take longer than this time, we feel free to disconnect them as deniers of service.
      */
-    Timespec sessionSetupTimeout = config->GetLimit("session_setup_timeout", ALLJOYN_SESSION_SETUP_TIMEOUT_DEFAULT);
+    uint32_t sessionSetupTimeout = config->GetLimit("session_setup_timeout", ALLJOYN_SESSION_SETUP_TIMEOUT_DEFAULT);
 
     /*
      * maxAuth is the maximum number of incoming connections that can be in
@@ -1855,7 +1855,7 @@ void* TCPTransport::Run(void* arg)
                     TCPTransport* ptr = this;
                     TCPEndpoint conn(ptr, m_bus, truthiness, TCPTransport::TransportName, newSock, remoteAddr, remotePort);
                     conn->SetPassive();
-                    Timespec tNow;
+                    Timespec<MonotonicTime> tNow;
                     GetTimeNow(&tNow);
                     conn->SetStartTime(tNow);
                     /*

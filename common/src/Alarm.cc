@@ -35,8 +35,8 @@ _Alarm::_Alarm() : listener(NULL), periodMs(0), context(NULL), id(IncrementAndFe
 {
 }
 
-_Alarm::_Alarm(Timespec absoluteTime, AlarmListener* listener, void* context, uint32_t periodMs, bool limitable)
-    : alarmTime(absoluteTime), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
+_Alarm::_Alarm(Timespec<MonotonicTime> relativeTime, AlarmListener* listener, void* context, uint32_t periodMs, bool limitable)
+    : alarmTime(relativeTime), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
 {
 }
 
@@ -44,7 +44,7 @@ _Alarm::_Alarm(uint32_t relativeTime, AlarmListener* listener, void* context, ui
     : alarmTime(), listener(listener), periodMs(periodMs), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
 {
     if (relativeTime == WAIT_FOREVER) {
-        alarmTime = END_OF_TIME;
+        alarmTime = Timespec<MonotonicTime>(END_OF_TIME);
     } else {
         GetTimeNow(&alarmTime);
         alarmTime += relativeTime;
@@ -52,7 +52,7 @@ _Alarm::_Alarm(uint32_t relativeTime, AlarmListener* listener, void* context, ui
 }
 
 _Alarm::_Alarm(AlarmListener* listener, void* context, bool limitable)
-    : alarmTime(0, TIME_RELATIVE), listener(listener), periodMs(0), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
+    : alarmTime(0), listener(listener), periodMs(0), context(context), id(IncrementAndFetch(&nextId)), limitable(limitable)
 {
 }
 
@@ -68,7 +68,7 @@ void _Alarm::SetContext(void* c) const
 
 uint64_t _Alarm::GetAlarmTime() const
 {
-    return alarmTime.GetAbsoluteMillis();
+    return alarmTime.GetMillis();
 }
 
 bool _Alarm::operator<(const _Alarm& other) const

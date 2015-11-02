@@ -420,7 +420,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @internal
      * @brief Manage the list of endpoints for the transport.
      */
-    void ManageEndpoints(qcc::Timespec authTimeout, qcc::Timespec sessionSetupTimeout);
+    void ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTimeout);
 
     /**
      * @internal
@@ -823,14 +823,14 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * mess about while they should be authenticating.  If they take longer
      * than this time, we feel free to disconnect them as deniers of service.
      */
-    qcc::Timespec m_authTimeout;
+    uint32_t m_authTimeout;
 
     /**
      * sessionSetupTimeout is the maximum amount of time we allow incoming connections to
      * mess about while they should be sending messages to set up the session routes.
      * If they take longer than this time, we feel free to disconnect them as deniers of service.
      */
-    qcc::Timespec m_sessionSetupTimeout;
+    uint32_t m_sessionSetupTimeout;
 
     /**
      * m_maxAuth is the maximum number of incoming connections that can be in

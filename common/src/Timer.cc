@@ -265,7 +265,7 @@ class TimerImpl : public ThreadListener {
     std::vector<TimerThread*> timerThreads;
     bool isRunning;
     int32_t controllerIdx;
-    qcc::Timespec yieldControllerTime;
+    qcc::Timespec<qcc::MonotonicTime> yieldControllerTime;
     bool preventReentrancy;
     Mutex reentrancyLock;
     qcc::String nameStr;
@@ -706,7 +706,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
 
     while (!IsStopping()) {
         QCC_DbgPrintf(("TimerThread::Run(): Looping."));
-        Timespec now;
+        Timespec<MonotonicTime> now;
         GetTimeNow(&now);
         bool isController = (timer->controllerIdx == index);
 
