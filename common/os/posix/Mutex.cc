@@ -27,6 +27,7 @@
 
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
 #include <Status.h>
@@ -39,7 +40,8 @@ using namespace qcc;
 void Mutex::Init()
 {
     QCC_ASSERT(!isInitialized);
-    file = NULL;
+    mutexInternal = new Internal;
+    file = nullptr;
     line = static_cast<uint32_t>(-1);
 
     pthread_mutexattr_t attr;
@@ -66,6 +68,8 @@ void Mutex::Destroy()
         isInitialized = false;
         // Can't use QCC_LogError() since it uses mutexes under the hood.
         QCC_VERIFY(pthread_mutex_destroy(&mutex) == 0);
+        delete mutexInternal;
+        mutexInternal = nullptr;
     }
 }
 
@@ -82,6 +86,8 @@ QStatus Mutex::Lock()
     if (ret != 0) {
         return ER_OS_ERROR;
     }
+
+    mutexInternal->LockAcquired();
     return ER_OK;
 }
 
@@ -92,6 +98,7 @@ QStatus Mutex::Unlock()
         return ER_INIT_FAILED;
     }
 
+    mutexInternal->ReleasingLock();
     int ret = pthread_mutex_unlock(&mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
     QCC_ASSERT(ret == 0);
@@ -103,9 +110,14 @@ QStatus Mutex::Unlock()
 
 bool Mutex::TryLock(void)
 {
+    bool locked = false;
     QCC_ASSERT(isInitialized);
-    if (!isInitialized) {
-        return false;
+    if (isInitialized) {
+        locked = (pthread_mutex_trylock(&mutex) == 0);
+        if (locked) {
+            mutexInternal->LockAcquired();
+        }
     }
-    return pthread_mutex_trylock(&mutex) == 0;
+
+    return locked;
 }

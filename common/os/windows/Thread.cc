@@ -448,4 +448,9 @@ ThreadReturn STDCALL Thread::Run(void* arg)
     return (*function)(arg);
 }
 
+ThreadId Thread::GetCurrentThreadId()
+{
+    return ::GetCurrentThreadId();
+}
+
 }    /* namespace */

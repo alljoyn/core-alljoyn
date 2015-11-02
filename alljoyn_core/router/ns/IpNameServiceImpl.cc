@@ -1151,6 +1151,7 @@ QStatus CreateMulticastSocket(IfConfigEntry entry, const char* ipv4_multicast_gr
 void IpNameServiceImpl::LazyUpdateInterfaces(const qcc::NetworkEventSet& networkEvents)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::LazyUpdateInterfaces()"));
+    m_mutex.AssertOwnedByCurrentThread();
 
     //
     // However desirable it may be, the decision to simply use an existing
@@ -4136,6 +4137,8 @@ bool IpNameServiceImpl::SameNetwork(uint32_t interfaceAddressPrefixLen, qcc::IPA
 void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageQuietly()"));
+    m_mutex.AssertOwnedByCurrentThread();
+
     //
     // Sending messages quietly is a "new thing" so we don't bother to send
     // down-version messages quietly since nobody will have a need for them.
@@ -4584,6 +4587,7 @@ void IpNameServiceImpl::SendOutboundMessageQuietly(Packet packet)
 void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IPAddress& localAddress)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively()"));
+    m_mutex.AssertOwnedByCurrentThread();
 
     //
     // Make a note of what version this message is on, since there is a
@@ -5261,6 +5265,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
 void IpNameServiceImpl::SendOutboundMessages(void)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessages()"));
+    m_mutex.AssertOwnedByCurrentThread();
     int count = m_outbound.size();
     //
     // Send any messages we have queued for transmission.  We expect to be
