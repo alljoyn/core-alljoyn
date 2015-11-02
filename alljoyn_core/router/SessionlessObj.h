@@ -252,7 +252,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @return ER_FAIL if the total retry time is exhausted, ER_OK otherwise
      */
     static QStatus GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
-                                   uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime);
+                                   uint32_t retries,
+                                   qcc::Timespec<qcc::MonotonicTime>& firstJoinTime,
+                                   qcc::Timespec<qcc::MonotonicTime>& nextJoinTime);
 
     class RemoteCache {
       public:
@@ -405,8 +407,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
             IN_PROGRESS
         } state;
         uint32_t retries;
-        qcc::Timespec firstJoinTime;
-        qcc::Timespec nextJoinTime;
+        qcc::Timespec<qcc::MonotonicTime> firstJoinTime;
+        qcc::Timespec<qcc::MonotonicTime> nextJoinTime;
         SessionId sid;
         std::list<RoutedMessage> routedMessages;
     };

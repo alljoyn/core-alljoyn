@@ -1989,7 +1989,7 @@ void IpNameServiceImpl::TriggerTransmission(Packet packet)
     //Limiting m_burstQueue size could posssibly lead to stalls of up to 18 seconds (RETRY_INTERVALS).
     QueueProtocolMessage(packet);
     m_mutex.Lock();
-    Timespec now;
+    Timespec<MonotonicTime> now;
     GetTimeNow(&now);
 
     brh.nextScheduleTime = now + BURST_RESPONSE_INTERVAL;
@@ -2257,7 +2257,7 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
         // The check here is because we could be in a session with a name and there could be no valid peer info for it
         // The name will be removed by layer above when we are no longer in a session with that name and it is no longer advertised
         if (!it->second.empty()) {
-            Timespec now;
+            Timespec<MonotonicTime> now;
             GetTimeNow(&now);
             QCC_DbgPrintf(("Entry found in Peer Info Map. Setting unicast destination"));
 
@@ -5394,7 +5394,7 @@ void* IpNameServiceImpl::Run(void* arg)
     qcc::Event* networkEvent = new Event(true);
 #endif
 
-    qcc::Timespec tNow, tLastLazyUpdate;
+    qcc::Timespec<qcc::MonotonicTime> tNow, tLastLazyUpdate;
     GetTimeNow(&tLastLazyUpdate);
 
     m_mutex.Lock();
@@ -7767,7 +7767,7 @@ bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPE
         for (std::set<PeerInfo>::iterator pit = it->second.begin(); !foundEntry && pit != it->second.end(); ++pit) {
             if (pit->unicastInfo == ipEndpoint) {
                 foundEntry = true;
-                Timespec now;
+                Timespec<MonotonicTime> now;
                 GetTimeNow(&now);
                 (*pit).lastResponseTimeStamp = now;
             }
@@ -7808,7 +7808,7 @@ bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
 const uint32_t MDNS_PACKET_TRACKER_PURGE_TIMEOUT = 5 * 1000; /* 5 seconds */
 void IpNameServiceImpl::PurgeMDNSPacketTracker()
 {
-    Timespec now;
+    Timespec<MonotonicTime> now;
     GetTimeNow(&now);
     m_mutex.Lock();
     unordered_map<pair<String, IPEndpoint>, MDNSPacketTrackerEntry, HashPacketTracker, EqualPacketTracker>::iterator it = m_mdnsPacketTracker.begin();
@@ -8752,7 +8752,7 @@ ThreadReturn STDCALL IpNameServiceImpl::PacketScheduler::Run(void* arg) {
 
     m_impl.m_mutex.Lock();
     while (!IsStopping()) {
-        Timespec now;
+        Timespec<MonotonicTime> now;
         GetTimeNow(&now);
         uint32_t timeToSleep = (uint32_t) Event::WAIT_FOREVER;
         //Step 1: Collect all packets

@@ -895,7 +895,7 @@ class ArdpStream : public qcc::Stream {
          * when ARDP is not doing what we expect it to.
          */
         uint32_t timeout;
-        Timespec tStart;
+        Timespec<MonotonicTime> tStart;
 
         m_transport->m_ardpLock.Lock();
         timeout = 2 * ARDP_GetDataTimeout(m_handle, m_conn);
@@ -938,7 +938,7 @@ class ArdpStream : public qcc::Stream {
             /*
              * Check the watchdog to make sure it has not timed out.
              */
-            Timespec tNow;
+            Timespec<MonotonicTime> tNow;
             GetTimeNow(&tNow);
             int32_t tRemaining = tStart + timeout - tNow;
             QCC_DbgPrintf(("ArdpStream::PushBytes(): tRemaining is %d.", tRemaining));
@@ -2153,10 +2153,10 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_registered(false),
         m_sideState(SIDE_INITIALIZED),
         m_epState(EP_INITIALIZED),
-        m_tStart(qcc::Timespec(0)),
-        m_tStop(qcc::Timespec(0)),
-        m_tWaitStart(qcc::Timespec(0)),
-        m_tStall(qcc::Timespec(0)),
+        m_tStart(qcc::Timespec<qcc::MonotonicTime>(0)),
+        m_tStop(qcc::Timespec<qcc::MonotonicTime>(0)),
+        m_tWaitStart(qcc::Timespec<qcc::MonotonicTime>(0)),
+        m_tStall(qcc::Timespec<qcc::MonotonicTime>(0)),
         m_remoteExited(false),
         m_exitScheduled(false),
         m_disconnected(false),
@@ -3752,7 +3752,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     /**
      * Set the time at which authentication was started.
      */
-    void SetStartTime(qcc::Timespec tStart)
+    void SetStartTime(qcc::Timespec<qcc::MonotonicTime> tStart)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetStartTime()"));
         m_tStart = tStart;
@@ -3761,7 +3761,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     /**
      * Get the time at which authentication was started.
      */
-    qcc::Timespec GetStartTime(void)
+    qcc::Timespec<qcc::MonotonicTime> GetStartTime(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::GetStartTime(): => %" PRIu64 ".%03d.", m_tStart.seconds, m_tStart.mseconds));
         return m_tStart;
@@ -3770,7 +3770,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     /**
      * Set the time at which the stop process for the endpoint was begun.
      */
-    void SetStopTime(qcc::Timespec tStop)
+    void SetStopTime(qcc::Timespec<qcc::MonotonicTime> tStop)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetStopTime()"));
         m_tStop = tStop;
@@ -3779,7 +3779,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     /**
      * Get the time at which the stop process for the endpoint was begun.
      */
-    qcc::Timespec GetStopTime(void)
+    qcc::Timespec<qcc::MonotonicTime> GetStopTime(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::GetStopTime(): => %" PRIu64 ".%03d.", m_tStop.seconds, m_tStop.mseconds));
         return m_tStop;
@@ -3789,7 +3789,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      * Set the time at which the shutdown (EP_WAITING) process for the endpoint
      * was begun.
      */
-    void SetWaitStartTime(qcc::Timespec tWaitStart)
+    void SetWaitStartTime(qcc::Timespec<qcc::MonotonicTime> tWaitStart)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetWaitStartTime()"));
         m_tWaitStart = tWaitStart;
@@ -3799,7 +3799,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
      * Get the time at which the shutdown (EP_WAITING) process for the endpoint
      * was begun.
      */
-    qcc::Timespec GetWaitStartTime(void)
+    qcc::Timespec<qcc::MonotonicTime> GetWaitStartTime(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::GetWaitStartTime(): => %" PRIu64 ".%03d.", m_tWaitStart.seconds, m_tWaitStart.mseconds));
         return m_tWaitStart;
@@ -3808,7 +3808,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     /**
      * Set the time at which the last stall warning was emitted.
      */
-    void SetStallTime(qcc::Timespec tStall)
+    void SetStallTime(qcc::Timespec<qcc::MonotonicTime> tStall)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetStallTime()"));
         m_tStall = tStall;
@@ -3817,7 +3817,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     /**
      * Get the time at which the lst stall warning was emitted.
      */
-    qcc::Timespec GetStallTime(void)
+    qcc::Timespec<qcc::MonotonicTime> GetStallTime(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::GetStallTime(): => %" PRIu64 ".%03d.", m_tStall.seconds, m_tStall.mseconds));
         return m_tStall;
@@ -3964,7 +3964,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          */
         QCC_ASSERT(m_epState != EP_JOINED || m_epState == EP_DONE);
 
-        Timespec tNow;
+        Timespec<MonotonicTime> tNow;
         GetTimeNow(&tNow);
         SetStopTime(tNow);
         SetStallTime(tNow);
@@ -4178,10 +4178,10 @@ class _UDPEndpoint : public _RemoteEndpoint {
     bool m_registered;                /**< If true, a call-out to the daemon has been made to register this endpoint */
     volatile SideState m_sideState;   /**< Is this an active or passive connection */
     volatile EndpointState m_epState; /**< The state of the endpoint itself */
-    qcc::Timespec m_tStart;           /**< Timestamp indicating when the authentication process started */
-    qcc::Timespec m_tStop;            /**< Timestamp indicating when the stop process for the endpoint was begun */
-    qcc::Timespec m_tWaitStart;       /**< Timestamp indicating when the endpoint went into EP_WAITING state */
-    qcc::Timespec m_tStall;           /**< Timestamp indicating when the last stall warning was logged */
+    qcc::Timespec<qcc::MonotonicTime> m_tStart; /**< Timestamp indicating when the authentication process started */
+    qcc::Timespec<qcc::MonotonicTime> m_tStop; /**< Timestamp indicating when the stop process for the endpoint was begun */
+    qcc::Timespec<qcc::MonotonicTime> m_tWaitStart; /**< Timestamp indicating when the endpoint went into EP_WAITING state */
+    qcc::Timespec<qcc::MonotonicTime> m_tStall; /**< Timestamp indicating when the last stall warning was logged */
     bool m_remoteExited;              /**< Indicates if the remote endpoint exit function has been run.  Cannot delete until true. */
     bool m_exitScheduled;             /**< Indicates if the remote endpoint exit function has been scheduled. */
     volatile bool m_disconnected;     /**< Indicates an interlocked handling of the ARDP_Disconnect has happened */
@@ -4456,7 +4456,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     /*
      * User configured UDP-specific values trump defaults if longer.
      */
-    qcc::Timespec t = Timespec(ardpConfig.connectTimeout * ardpConfig.connectRetries);
+    uint32_t t = ardpConfig.connectTimeout * ardpConfig.connectRetries;
     if (m_authTimeout < t) {
         m_authTimeout = m_sessionSetupTimeout = t;
     }
@@ -5871,9 +5871,9 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
     bool threadSetEmpty = stream->ThreadSetEmpty();
     bool disconnected = stream->GetDisconnected();
 
-    Timespec tNow;
+    Timespec<MonotonicTime> tNow;
     GetTimeNow(&tNow);
-    Timespec tStop = ep->GetStopTime();
+    Timespec<MonotonicTime> tStop = ep->GetStopTime();
     int32_t tRemaining = tStop + UDP_WATCHDOG_TIMEOUT - tNow;
 
     /*
@@ -5886,7 +5886,7 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
          * management loop, so we limit ourselves to logging errors every few
          * seconds
          */
-        Timespec tStalled = ep->GetStallTime();
+        Timespec<MonotonicTime> tStalled = ep->GetStallTime();
         int32_t tDelay = tStalled + UDP_STALL_REPORT_INTERVAL - tNow;
 
         if (tDelay > 0) {
@@ -5937,7 +5937,7 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
  * for things to happen, since we would block the protocol (as it stands now there
  * is one thread managing endpoints and driving ARDP).
  */
-void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTimeout)
+void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTimeout)
 {
     QCC_UNUSED(sessionSetupTimeout);
 
@@ -6045,7 +6045,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
         ep->PrintEpState("UDPTransport::ManageEndpoints(): Managing m_authList");
 #endif
 
-        Timespec tNow;
+        Timespec<MonotonicTime> tNow;
         GetTimeNow(&tNow);
 
         if (ep->GetStartTime() + authTimeout < tNow) {
@@ -6198,9 +6198,9 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          * never does, we have bigger problems than a stalled endpoint.
          */
         if (ep->IsEpActiveStarted() || ep->IsEpPassiveStarted()) {
-            Timespec tNow;
+            Timespec<MonotonicTime> tNow;
             GetTimeNow(&tNow);
-            Timespec tStart = ep->GetStartTime();
+            Timespec<MonotonicTime> tStart = ep->GetStartTime();
             if (tNow - tStart > UDP_WATCHDOG_TIMEOUT) {
                 QCC_LogError(ER_UDP_ENDPOINT_STALLED,
                              ("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d stalled (\"%s\")",
@@ -6286,7 +6286,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             if (ep->IsEpStopping()) {
                 if (ep->IsEpWaitEnabled()) {
                     QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): Endpoint with conn ID == %d. entering EP_WAITING", ep->GetConnId()));
-                    Timespec tNow;
+                    Timespec<MonotonicTime> tNow;
                     GetTimeNow(&tNow);
                     ep->SetWaitStartTime(tNow);
                     ep->SetEpWaiting();
@@ -6354,9 +6354,9 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): EP_WAITING with push message count %d", ep->GetPushMessageCount()));
                 QCC_DbgHLPrintf(("UDPTransport::ManageEndpoints(): EP_WAITING with sends outstanding %d.", stream->GetSendsOutstanding()));
 
-                Timespec tNow;
+                Timespec<MonotonicTime> tNow;
                 GetTimeNow(&tNow);
-                Timespec tWaitStart = ep->GetWaitStartTime();
+                Timespec<MonotonicTime> tWaitStart = ep->GetWaitStartTime();
                 int32_t tRemaining = tWaitStart + UDP_WAIT_WATCHDOG_TIMEOUT - tNow;
 
                 if (tRemaining < 0) {
@@ -7062,7 +7062,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
      *
      * Set a timestamp in case this never comes for some reason.
      */
-    Timespec tNow;
+    Timespec<MonotonicTime> tNow;
     GetTimeNow(&tNow);
     udpEp->SetStartTime(tNow);
     udpEp->SetStopTime(tNow);
@@ -7842,7 +7842,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
          * Make a note of when we started this process in case something
          * goes wrong.
          */
-        Timespec tNow;
+        Timespec<MonotonicTime> tNow;
         GetTimeNow(&tNow);
         udpEp->SetStartTime(tNow);
         udpEp->SetStopTime(tNow);
@@ -8426,7 +8426,7 @@ void* UDPTransport::Run(void* arg)
     checkEvents.push_back(&ardpTimerEvent);
     checkEvents.push_back(&maintenanceTimerEvent);
 
-    Timespec tLastManage;
+    Timespec<MonotonicTime> tLastManage;
     GetTimeNow(&tLastManage);
 
     QStatus status = ER_OK;
@@ -8538,7 +8538,7 @@ void* UDPTransport::Run(void* arg)
          * this resource management exercise every time throught the socket read
          * loop, so limit the number of times it will be called.
          */
-        Timespec tNow;
+        Timespec<MonotonicTime> tNow;
         GetTimeNow(&tNow);
 
         int32_t tMin = tLastManage + UDP_ENDPOINT_MANAGEMENT_MIN - tNow;

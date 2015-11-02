@@ -733,7 +733,7 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
     pBuf += MASTER_SECRET_SIZE;
     /* recopy other fields from rec */
     masterSecret.SetTag(rec.GetTag(), rec.GetRole());
-    Timespec expiration;
+    Timespec<EpochTime> expiration;
     if (rec.GetExpiration(expiration)) {
         masterSecret.SetExpiration(expiration);
     }

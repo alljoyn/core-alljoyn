@@ -2985,8 +2985,7 @@ QStatus BusAttachment::SetKeyExpiration(const qcc::String& guid, uint32_t timeou
     } else {
         qcc::GUID128 g(guid);
         KeyStore::Key key(KeyStore::Key::REMOTE, g);
-        uint64_t millis = 1000ull * timeout;
-        Timespec expiration(millis, TIME_RELATIVE);
+        Timespec<EpochTime> expiration(GetEpochTimestamp() + (1000ull * timeout));
         return busInternal->keyStore.SetKeyExpiration(key, expiration);
     }
 }
@@ -2998,10 +2997,11 @@ QStatus BusAttachment::GetKeyExpiration(const qcc::String& guid, uint32_t& timeo
     } else {
         qcc::GUID128 g(guid);
         KeyStore::Key key(KeyStore::Key::REMOTE, g);
-        Timespec expiration;
+        Timespec<EpochTime> expiration;
         QStatus status = busInternal->keyStore.GetKeyExpiration(key, expiration);
         if (status == ER_OK) {
-            int64_t deltaMillis = expiration - Timespec(0, TIME_RELATIVE);
+            Timespec<EpochTime> now(GetEpochTimestamp());
+            int64_t deltaMillis = expiration - now;
             if (deltaMillis < 0) {
                 timeout = 0;
             } else if (deltaMillis > (0xFFFFFFFFll * 1000)) {

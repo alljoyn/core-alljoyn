@@ -418,8 +418,7 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
         String tag = peerSecret.GetTag();
         if (tag == "ALLJOYN_ECDHE_NULL") {
             /* expires the ECDHE_NULL after first use */
-            Timespec now;
-            GetTimeNow(&now);
+            Timespec<EpochTime> now(GetEpochTimestamp());
             keyStore.SetKeyExpiration(key, now);
         }
     }

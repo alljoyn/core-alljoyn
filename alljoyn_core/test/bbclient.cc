@@ -899,7 +899,7 @@ int CDECL_CALL main(int argc, char** argv)
                 char buf[80];
 
                 if (roundtrip) {
-                    Timespec now;
+                    Timespec<MonotonicTime> now;
                     GetTimeNow(&now);
                     pingMethod = ifc->GetMember("time_ping");
                     pingArgs[0].Set("u", now.seconds);
@@ -936,7 +936,7 @@ int CDECL_CALL main(int argc, char** argv)
                     status = remoteObj.MethodCall(*pingMethod, pingArgs, (roundtrip || (pingDelay > 0)) ? 2 : 1, reply, pingDelay + 50000);
                     if (ER_OK == status) {
                         if (roundtrip) {
-                            Timespec now;
+                            Timespec<MonotonicTime> now;
                             GetTimeNow(&now);
                             uint64_t delta = ((static_cast<uint64_t>(now.seconds) * 1000ULL + now.mseconds) -
                                               (static_cast<uint64_t>(reply->GetArg(0)->v_uint32) * 1000ULL + reply->GetArg(1)->v_uint16));

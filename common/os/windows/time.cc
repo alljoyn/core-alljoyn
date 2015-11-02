@@ -29,8 +29,6 @@
 
 #include <qcc/time.h>
 
-const qcc::Timespec qcc::Timespec::Zero;
-
 uint32_t qcc::GetTimestamp(void)
 {
     return (uint32_t)GetTimestamp64();
@@ -55,7 +53,7 @@ uint64_t qcc::GetEpochTimestamp(void)
     return ret_val;
 }
 
-void qcc::GetTimeNow(Timespec* ts)
+void qcc::GetTimeNow(Timespec<MonotonicTime>* ts)
 {
     /* Don't start from zero, and return values relative to an unspecified base, to match the Posix implementation */
     uint64_t current_count = ::GetTickCount64();

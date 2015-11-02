@@ -265,7 +265,7 @@ class KeyStore {
      * @param expiration  Time to expire the key
      * return ER_OK
      */
-    QStatus SetKeyExpiration(const Key& key, const qcc::Timespec& expiration);
+    QStatus SetKeyExpiration(const Key& key, const qcc::Timespec<qcc::EpochTime>& expiration);
 
     /**
      * Get expiration time on a key blob from the key store
@@ -274,7 +274,7 @@ class KeyStore {
      * @param expiration  Time the key will expire
      * return ER_OK
      */
-    QStatus GetKeyExpiration(const Key& key, qcc::Timespec& expiration);
+    QStatus GetKeyExpiration(const Key& key, qcc::Timespec<qcc::EpochTime>& expiration);
 
     /**
      * Test is there is a requested key blob in the key store

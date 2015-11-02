@@ -811,7 +811,7 @@ QStatus KeyStore::DelKey(const Key& key)
     return ER_OK;
 }
 
-QStatus KeyStore::SetKeyExpiration(const Key& key, const Timespec& expiration)
+QStatus KeyStore::SetKeyExpiration(const Key& key, const Timespec<qcc::EpochTime>& expiration)
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
@@ -833,7 +833,7 @@ QStatus KeyStore::SetKeyExpiration(const Key& key, const Timespec& expiration)
     return status;
 }
 
-QStatus KeyStore::GetKeyExpiration(const Key& key, Timespec& expiration)
+QStatus KeyStore::GetKeyExpiration(const Key& key, Timespec<EpochTime>& expiration)
 {
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
