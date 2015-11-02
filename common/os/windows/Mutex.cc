@@ -27,6 +27,7 @@
 
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/windows/utility.h>
 
 /** @internal */
@@ -37,7 +38,8 @@ using namespace qcc;
 void Mutex::Init()
 {
     QCC_ASSERT(!isInitialized);
-    file = NULL;
+    mutexInternal = new Internal;
+    file = nullptr;
     line = static_cast<uint32_t>(-1);
     InitializeCriticalSection(&mutex);
     isInitialized = true;
@@ -48,6 +50,8 @@ void Mutex::Destroy()
     if (isInitialized) {
         isInitialized = false;
         DeleteCriticalSection(&mutex);
+        delete mutexInternal;
+        mutexInternal = nullptr;
     }
 }
 
@@ -57,7 +61,9 @@ QStatus Mutex::Lock()
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
     EnterCriticalSection(&mutex);
+    mutexInternal->LockAcquired();
     return ER_OK;
 }
 
@@ -67,6 +73,8 @@ QStatus Mutex::Unlock()
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
+    mutexInternal->ReleasingLock();
     LeaveCriticalSection(&mutex);
     return ER_OK;
 }
@@ -74,8 +82,14 @@ QStatus Mutex::Unlock()
 bool Mutex::TryLock()
 {
     QCC_ASSERT(isInitialized);
-    if (!isInitialized) {
-        return false;
+    bool locked = false;
+
+    if (isInitialized) {
+        locked = TryEnterCriticalSection(&mutex);
+        if (locked) {
+            mutexInternal->LockAcquired();
+        }
     }
-    return TryEnterCriticalSection(&mutex);
+
+    return locked;
 }
