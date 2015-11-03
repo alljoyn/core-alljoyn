@@ -1815,20 +1815,10 @@ TEST_F(SecurityOther2Test, security2_to_security1_over_ECDHE_NULL_acl_peer_ANY_T
                                                     NULL));
 
     MsgArg signalArg("s", CHIRP_STRING);
-    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
-                                           sessionId,
-                                           *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
-                                           &signalArg, 1));
-
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
-        if (chirpSignalReceiver.signalReceivedFlag) {
-            break;
-        }
-        qcc::Sleep(WAIT_MSECS);
-    }
-
-    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+    EXPECT_EQ(ER_PERMISSION_DENIED, peer2BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
+                                                          sessionId,
+                                                          *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
+                                                          &signalArg, 1));
 }
 
 /*
@@ -2445,20 +2435,10 @@ TEST_F(SecurityOther2Test, security2_to_security1_over_ECDHE_NULL_acl_peer_FROM_
                                                     NULL));
 
     MsgArg signalArg("s", CHIRP_STRING);
-    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
-                                           sessionId,
-                                           *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
-                                           &signalArg, 1));
-
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
-        if (chirpSignalReceiver.signalReceivedFlag) {
-            break;
-        }
-        qcc::Sleep(WAIT_MSECS);
-    }
-
-    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+    EXPECT_EQ(ER_PERMISSION_DENIED, peer2BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
+                                                          sessionId,
+                                                          *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
+                                                          &signalArg, 1));
 }
 
 /*
@@ -2577,20 +2557,10 @@ TEST_F(SecurityOther2Test, security2_to_security1_over_SRP_KEYX_acl_peer_FROM_CE
                                                     NULL));
 
     MsgArg signalArg("s", CHIRP_STRING);
-    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
-                                           sessionId,
-                                           *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
-                                           &signalArg, 1));
-
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
-        if (chirpSignalReceiver.signalReceivedFlag) {
-            break;
-        }
-        qcc::Sleep(WAIT_MSECS);
-    }
-
-    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+    EXPECT_EQ(ER_PERMISSION_DENIED, peer2BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
+                                                          sessionId,
+                                                          *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
+                                                          &signalArg, 1));
 }
 
 /*
@@ -2709,20 +2679,10 @@ TEST_F(SecurityOther2Test, security2_to_security1_over_ECDHE_PSK_acl_peer_FROM_C
                                                     NULL));
 
     MsgArg signalArg("s", CHIRP_STRING);
-    EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
-                                           sessionId,
-                                           *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
-                                           &signalArg, 1));
-
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
-        if (chirpSignalReceiver.signalReceivedFlag) {
-            break;
-        }
-        qcc::Sleep(WAIT_MSECS);
-    }
-
-    EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
+    EXPECT_EQ(ER_PERMISSION_DENIED, peer2BusObject.Signal(peer1Bus.GetUniqueName().c_str(),
+                                                          sessionId,
+                                                          *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
+                                                          &signalArg, 1));
 }
 
 /*
