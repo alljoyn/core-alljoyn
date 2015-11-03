@@ -168,11 +168,11 @@ class DefaultKeyStoreListener : public KeyStoreListener {
                 numSent = numBytes;
                 return ER_OK;
             }
-            const std::vector<uint8_t>& GetBuffer() const { return sbuf; }
-            void SecureClear() { ClearMemory(sbuf.data(), sbuf.size()); }
+            const std::vector<uint8_t, SecureAllocator<uint8_t> >& GetBuffer() const { return sbuf; }
+            void SecureClear() { sbuf.clear(); sbuf.shrink_to_fit(); }
 
           private:
-            std::vector<uint8_t> sbuf;    /**< storage for byte stream */
+            std::vector<uint8_t, SecureAllocator<uint8_t> > sbuf;    /**< storage for byte stream */
         };
 
 

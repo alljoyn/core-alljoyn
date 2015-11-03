@@ -501,7 +501,7 @@ qcc::String AJ_CALL qcc::StringVectorToString(const vector<qcc::String>* list, c
 }
 
 
-void AJ_CALL qcc::AppendStringToVector(const qcc::String& str, vector<uint8_t>& v)
+void AJ_CALL qcc::AppendStringToVector(const qcc::String& str, vector<uint8_t, SecureAllocator<uint8_t> >& v)
 {
     auto begin = reinterpret_cast<const uint8_t*>(str.data());
     auto end = begin + str.size();

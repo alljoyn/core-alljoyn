@@ -149,7 +149,7 @@ TEST(SRPTest, Basic_API) {
         qcc::String clientRand = RandHexString(64);
         uint8_t masterSecret[48];
 
-        vector<uint8_t> seed;
+        vector<uint8_t, SecureAllocator<uint8_t> > seed;
         seed.reserve(clientRand.size() + serverRand.size());
         AppendStringToVector(serverRand, seed);
         AppendStringToVector(clientRand, seed);
@@ -201,7 +201,7 @@ TEST(SRPTest, Basic_API) {
         qcc::String clientRand = RandHexString(64);
         uint8_t masterSecret[48];
 
-        vector<uint8_t> seed;
+        vector<uint8_t, SecureAllocator<uint8_t> > seed;
         seed.reserve(clientRand.size() + serverRand.size());
         AppendStringToVector(serverRand, seed);
         AppendStringToVector(clientRand, seed);

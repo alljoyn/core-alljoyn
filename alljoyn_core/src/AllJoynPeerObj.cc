@@ -401,7 +401,7 @@ void AllJoynPeerObj::ExchangeGuids(const InterfaceDescription::Member* member, M
  */
 #define SESSION_KEY_EXPIRATION (60 * 60 * 24 * 2)
 
-QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, const vector<uint8_t>& seed, qcc::String& verifier, KeyBlob::Role role)
+QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, const vector<uint8_t, SecureAllocator<uint8_t> >& seed, qcc::String& verifier, KeyBlob::Role role)
 {
     QCC_ASSERT(bus);
     QStatus status;
@@ -502,7 +502,7 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
         qcc::String verifier;
         auto str = reinterpret_cast<const uint8_t*>(msg->GetArg(2)->v_string.str);
         auto len = msg->GetArg(2)->v_string.len;
-        vector<uint8_t> seed;
+        vector<uint8_t, SecureAllocator<uint8_t> > seed;
         seed.reserve(len + nonce.size());
         seed.insert(seed.end(), str, str + len);
         AppendStringToVector(nonce, seed);
@@ -1168,7 +1168,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                  */
                 auto str = reinterpret_cast<const uint8_t*>(replyMsg->GetArg(0)->v_string.str);
                 auto len = replyMsg->GetArg(0)->v_string.len;
-                vector<uint8_t> seed;
+                vector<uint8_t, SecureAllocator<uint8_t> > seed;
                 seed.reserve(len + nonce.size());
                 AppendStringToVector(nonce, seed);
                 seed.insert(seed.end(), str, str + len);

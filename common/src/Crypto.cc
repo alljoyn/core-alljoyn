@@ -37,7 +37,7 @@ using namespace qcc;
 
 namespace qcc {
 
-QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const vector<uint8_t>& seed, uint8_t* out, size_t outLen)
+QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const vector<uint8_t, SecureAllocator<uint8_t> >& seed, uint8_t* out, size_t outLen)
 {
     if (!label) {
         return ER_BAD_ARG_2;

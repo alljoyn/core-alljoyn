@@ -356,7 +356,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param seed       A seed string negotiated by the peers.
      * @param verifier   A verifier string that used to verify the session key.
      */
-    QStatus KeyGen(PeerState& peerState, const std::vector<uint8_t>& seed, qcc::String& verifier, qcc::KeyBlob::Role role);
+    QStatus KeyGen(PeerState& peerState, const std::vector<uint8_t, SecureAllocator<uint8_t> >& seed, qcc::String& verifier, qcc::KeyBlob::Role role);
 
     /**
      * Get a property from this object

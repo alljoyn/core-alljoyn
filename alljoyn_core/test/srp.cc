@@ -198,7 +198,7 @@ int CDECL_CALL main(int argc, char** argv)
 
             printf("testing pseudo random function\n");
 
-            vector<uint8_t> seed;
+            vector<uint8_t, SecureAllocator<uint8_t> > seed;
             seed.reserve(clientRand.size() + serverRand.size());
             AppendStringToVector(serverRand, seed);
             AppendStringToVector(clientRand, seed);
