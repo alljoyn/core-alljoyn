@@ -1850,11 +1850,31 @@ public class BusAttachment {
      * This method is typically used when a method, signal handler or other
      * AllJoyn callback needs to execute for a long period of time or when the
      * callback needs to make any kind of blocking call.
+     * </p>
      * <p>
      * This method MUST be called prior to making any non-asynchronous AllJoyn
      * remote procedure calls from within an AllJoyn callback. This includes
      * calls such as joinSession(), advertiseName(), cancelAdvertisedName(),
      * findAdvertisedName(), cancelFindAdvertisedName(), setLinkTimeout(), etc.
+     * </p>
+     * <p>
+     * enableConcurrentCallbacks doesn't take effect when a BusAttachment is
+     * created with just one thread. If the BusAttachment is created with just
+     * one thread,
+     * i.e. `BusAttachment busAttachment(appName, RemoteMessage.Receive, 1)` and
+     * the application developer attempts to make a blocking method call in a
+     * callback after invoking EnableConcurrentCallbacks(), the application will
+     * deadlock.
+     * </p>
+     * <p>
+     * For the same reason that enableConcurrentCallbacks cannot be used with
+     * just one thread, the maximum number of concurrent callbacks is limited
+     * to the value specified when creating the BusAttachment. If no concurrency
+     * value was chosen the DEFAULT_CONCURRENCY = 4. It is the application
+     * developers responsibility to make sure the maximum number of concurrent
+     * callbacks is not exceeded. If the maximum number is exceeded the
+     * application will deadlock.
+     * </p>
      */
     public native void enableConcurrentCallbacks();
 

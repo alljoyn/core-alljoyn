@@ -575,6 +575,32 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * Allow the currently executing method/signal handler to enable concurrent callbacks
  * during the scope of the handler's execution.
  *
+ * This member function can ONLY be called from within the body of a signal
+ * handler, method handler or other AllJoyn callback. It allows AllJoyn to
+ * dispatch a single (additional) callback while the current one is still
+ * executing. This method is typically used when a method, signal handler or
+ * other AllJoyn callback needs to execute for a long period of time or when
+ * the callback needs to make any kind of blocking call.
+ *
+ * This method MUST be called prior to making any non-asynchronous AllJoyn
+ * remote procedure calls from within an AllJoyn callback. This includes
+ * calls such as joinSessionWithName, advertiseName, cancelAdvertisedName,
+ * findAdvertisedName, cancelFindAdvertisedName, setLinkTimeout, etc.
+ *
+ * enableConcurrentCallbacks doesn't take effect when a BusAttachment is
+ * created with just one thread. If the BusAttachment is created with just
+ * one thread, i.e. `[[AJNBusAttachment alloc] initWithApplicationName:@"appName" allowRemoteMessages:YES maximumConcurrentOperations:1];`
+ * and the application developer attempts to make a blocking method call in a
+ * callback after invoking enableConcurrentCallbacks, the application will
+ * deadlock.
+ *
+ * For the same reason that enableConcurrentCallbacks cannot be used with
+ * just one thread, the maximum number of concurrent callbacks is limited
+ * to the value specified when creating the AJNBusAttachment. If no concurrency
+ * value was chosen the default is 4. It is the application developers
+ * responsibility to make sure the maximum number of concurrent callbacks is
+ * not exceeded. If the maximum number is exceeded the application will
+ * deadlock.
  */
 - (void)enableConcurrentCallbacks;
 
