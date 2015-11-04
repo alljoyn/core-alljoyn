@@ -107,6 +107,16 @@ class MsgArgTableTranslator : public LookupTableTranslator {
  */
 class AboutData::Internal {
     friend class AboutData;
+  public:
+    AboutData::Internal& operator=(const AboutData::Internal& other) {
+        aboutFields = other.aboutFields;
+        propertyStore = other.propertyStore;
+        defaultTranslator = other.defaultTranslator;
+        translator = other.translator;
+        keyLanguage = other.keyLanguage;
+        return *this;
+    }
+
   private:
     /**
      * A std::map that maps the field name to its FieldDetails.
