@@ -21,6 +21,7 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
 /** @internal */
@@ -60,18 +61,13 @@ QStatus Mutex::Lock(const char* file, uint32_t line)
     return Lock();
 #else
     QCC_ASSERT(isInitialized);
-    QStatus status;
-    if (TryLock()) {
-        status = ER_OK;
-    } else {
-        status = Lock();
-    }
+    QStatus status = Lock();
     if (status == ER_OK) {
         QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
         this->file = file;
         this->line = line;
     } else {
-        QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
+        QCC_LogError(status, ("Mutex::Lock %s:%u failed", file, line));
     }
     return status;
 #endif
@@ -92,3 +88,7 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
 #endif
 }
 
+void Mutex::AssertOwnedByCurrentThread() const
+{
+    mutexInternal->AssertOwnedByCurrentThread();
+}

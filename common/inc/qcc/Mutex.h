@@ -140,6 +140,11 @@ class Mutex {
      */
     Mutex& operator=(const Mutex& other);
 
+    /**
+     * Assert that current thread owns this Mutex.
+     */
+    void AssertOwnedByCurrentThread() const;
+
   private:
 
 #if defined(QCC_OS_GROUP_POSIX)
@@ -175,6 +180,18 @@ class Mutex {
      * builds too.
      */
     const char* file;
+
+    /**
+     * @internal
+     * Represents the non-public functionality of the Mutex class.
+     */
+    class Internal;
+
+    /**
+     * @internal
+     * Contains the non-public functionality of the Mutex class.
+     */
+    Internal* mutexInternal;
 
     /* The condition variable class needs access to the underlying private mutex */
     friend class Condition;
