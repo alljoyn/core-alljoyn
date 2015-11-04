@@ -15,4 +15,13 @@
 
 Import('env')
 
-env.Program('usingmsgarg',  ['usingmsgarg.cpp'])
+snippets_env = env.Clone()
+
+if snippets_env['BR'] == 'on':
+    # Build apps with bundled daemon support
+    snippets_env.Prepend(LIBS = [snippets_env['ajrlib']])
+
+snippets_env.Program('usingmsgarg',  ['usingmsgarg.cpp'])
+snippets_env.Program('create_interface_from_xml_interface', ['create_interface_from_xml_interface.cpp'])
+snippets_env.Program('create_interface_from_xml_node', ['create_interface_from_xml_node.cpp'])
+snippets_env.Program('create_interface_using_code', ['create_interface_using_code.cpp'])
