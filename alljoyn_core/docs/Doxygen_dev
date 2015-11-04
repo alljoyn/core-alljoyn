@@ -660,14 +660,10 @@ WARN_LOGFILE           =
 # directories like "/usr/src/myproject". Separate the files or directories
 # with spaces.
 
-INPUT                  = $(CPP_DISTDIR)/inc/alljoyn/Status.h \
-                         ../inc/alljoyn/ \
-                         allJoynDocumentation \
-                         ../src/ \
-                         ../router/ \
-                         ../../common/inc/qcc/ \
-                         ../../common/os/ \
-                         ../../services/about/cpp/inc/alljoyn/
+INPUT                  = $(CPP_DISTDIR)/inc/alljoyn \
+                         $(CPP_DISTDIR)/inc/qcc \
+                         ../../services/about/cpp/inc/alljoyn/ \
+                         ./pages
 
 # This tag can be used to specify the character encoding of the source files
 # that doxygen parses. Internally doxygen uses the UTF-8 encoding, which is
@@ -730,7 +726,7 @@ EXCLUDE_SYMBOLS        =
 # directories that contain example code fragments that are included (see
 # the \include command).
 
-EXAMPLE_PATH           =
+EXAMPLE_PATH           = ./snippets
 
 # If the value of the EXAMPLE_PATH tag contains directories, you can use the
 # EXAMPLE_PATTERNS tag to specify one or more wildcard pattern (like *.cpp
@@ -795,7 +791,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want reuse the introduction page also for the doxygen output.
 
-USE_MDFILE_AS_MAINPAGE =
+USE_MDFILE_AS_MAINPAGE = AllJoynDocumentation.md
 
 #---------------------------------------------------------------------------
 # configuration options related to source browsing
