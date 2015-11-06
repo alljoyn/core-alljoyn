@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <pthread.h>
 #include <errno.h>
 
@@ -30,6 +29,7 @@
 
 #include <qcc/Debug.h>
 #include <qcc/Condition.h>
+#include <qcc/MutexInternal.h>
 
 #define QCC_MODULE "CONDITION"
 
@@ -41,7 +41,7 @@ Condition::Condition()
     if (ret != 0) {
         QCC_LogError(ER_OS_ERROR, ("Condition::Condition(): Cannot initialize pthread condition variable (%d)", ret));
     }
-    assert(ret == 0 && "Condition::Condition(): Cannot initialize pthread condition variable");
+    QCC_ASSERT(ret == 0 && "Condition::Condition(): Cannot initialize pthread condition variable");
 }
 
 Condition::~Condition()
@@ -50,12 +50,15 @@ Condition::~Condition()
     if (ret != 0) {
         QCC_LogError(ER_OS_ERROR, ("Condition::Condition(): Cannot destroy pthread condition variable (%d)", ret));
     }
-    assert(ret == 0 && "Condition::Condition(): Cannot destroy pthread condition variable");
+    QCC_ASSERT(ret == 0 && "Condition::Condition(): Cannot destroy pthread condition variable");
 }
 
 QStatus Condition::Wait(qcc::Mutex& m)
 {
+    m.mutexInternal->ReleasingLock();
     int ret = pthread_cond_wait(&c, &m.mutex);
+    m.mutexInternal->LockAcquired();
+
     if (ret != 0) {
         QCC_LogError(ER_OS_ERROR, ("Condition::Wait(): Cannot wait on pthread condition variable (%d)", ret));
         return ER_OS_ERROR;
@@ -84,7 +87,10 @@ QStatus Condition::TimedWait(qcc::Mutex& m, uint32_t ms)
     tsTimeout.tv_nsec %= 1000000000;
     tsTimeout.tv_sec += tsNow.tv_sec;
 
+    m.mutexInternal->ReleasingLock();
     int ret = pthread_cond_timedwait(&c, &m.mutex, &tsTimeout);
+    m.mutexInternal->LockAcquired();
+
     if (ret == 0) {
         return ER_OK;
     }

@@ -21,7 +21,6 @@
 #include <algorithm>
 #include <memory>
 #include <set>
-#include <cassert>
 
 #define PING_TIMEOUT 5000
 
@@ -276,7 +275,7 @@ void AutoPingerInternal::Resume()
 {
     globalPingerLock->Lock(MUTEX_CONTEXT);
 
-    assert(timer.IsRunning());
+    QCC_ASSERT(timer.IsRunning());
     if (true == pausing) {
         // re-add all Alarm objects
         std::map<qcc::String, PingGroup*>::const_iterator it = pingGroups.begin();

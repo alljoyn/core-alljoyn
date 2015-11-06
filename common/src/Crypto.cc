@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 
 #include <qcc/platform.h>
 #include <qcc/Debug.h>
@@ -76,8 +75,8 @@ int Crypto_Compare(const void* buf1, const void* buf2, size_t count)
 {
     uint8_t different = 0;
 
-    assert(buf1 != NULL);
-    assert(buf2 != NULL);
+    QCC_ASSERT(buf1 != NULL);
+    QCC_ASSERT(buf2 != NULL);
 
     /* This loop uses the same number of cycles for any two buffers of size count. */
     for (size_t i = 0; i < count; i++) {

@@ -175,6 +175,13 @@ class NamedPipeDaemonTransport : public DaemonTransport {
     uint32_t GetAuthTimeout() { return m_authTimeout; }
 
     /**
+     * Callback for NamedPipeDaemonEndpoint (RemoteEndpoint) exit.
+     *
+     * @param endpoint   NamedPipeDaemonEndpoint instance that has exited.
+     */
+    void EndpointExit(RemoteEndpoint& endpoint);
+
+    /**
      * @internal
      * @brief The default timeout for client authentication.
      *

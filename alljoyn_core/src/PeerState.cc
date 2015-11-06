@@ -128,13 +128,13 @@ bool _PeerState::IsConversationHashInitialized()
 void _PeerState::InitializeConversationHash()
 {
     delete hashUtil;
-    hashUtil = new Crypto_SHA256();
+    hashUtil = new ConversationHash();
     QCC_VERIFY(ER_OK == hashUtil->Init());
 }
 
 void _PeerState::FreeConversationHash()
 {
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     delete hashUtil;
     hashUtil = NULL;
 }
@@ -149,7 +149,7 @@ void _PeerState::FreeConversationHash()
  */
 static inline bool ConversationVersionDoesNotApply(uint32_t conversationVersion, uint32_t currentAuthVersion)
 {
-    assert((CONVERSATION_V1 == conversationVersion) || (CONVERSATION_V4 == conversationVersion));
+    QCC_ASSERT((CONVERSATION_V1 == conversationVersion) || (CONVERSATION_V4 == conversationVersion));
 
     if (CONVERSATION_V4 == conversationVersion) {
         return ((currentAuthVersion >> 16) != CONVERSATION_V4);
@@ -174,7 +174,7 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
      * In release, it probably means we've gotten a message we weren't expecting.
      * Log this as unusual but do nothing.
      */
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
         QCC_LogError(ER_CRYPTO_ERROR, ("UpdateHash called when a conversation is not in progress"));
         return;
@@ -182,12 +182,12 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, uint8_t byte)
     if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
         return;
     }
-    QCC_VERIFY(ER_OK == hashUtil->Update(&byte, sizeof(byte)));
+    QCC_VERIFY(ER_OK == hashUtil->Update(byte));
 }
 
 void _PeerState::UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize)
 {
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
         QCC_LogError(ER_CRYPTO_ERROR, ("UpdateHash called when a conversation is not in progress"));
         return;
@@ -195,11 +195,8 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, const uint8_t* buf, si
     if (ConversationVersionDoesNotApply(conversationVersion, authVersion)) {
         return;
     }
-    if (conversationVersion >= CONVERSATION_V4) {
-        uint32_t bufSizeLE = htole32(bufSize);
-        QCC_VERIFY(ER_OK == hashUtil->Update((const uint8_t*)&bufSizeLE, sizeof(bufSizeLE)));
-    }
-    QCC_VERIFY(ER_OK == hashUtil->Update(buf, bufSize));
+    bool includeSizeInHash = (conversationVersion >= CONVERSATION_V4);
+    QCC_VERIFY(ER_OK == hashUtil->Update(buf, bufSize, includeSizeInHash));
 }
 
 void _PeerState::UpdateHash(uint32_t conversationVersion, const qcc::String& str)
@@ -218,13 +215,23 @@ void _PeerState::UpdateHash(uint32_t conversationVersion, const Message& msg)
 
 void _PeerState::GetDigest(uint8_t* digest, bool keepAlive)
 {
-    assert(NULL != hashUtil);
+    QCC_ASSERT(NULL != hashUtil);
     if (NULL == hashUtil) {
         /* This should never happen, but if it does, return all zeroes. */
         QCC_LogError(ER_CRYPTO_ERROR, ("GetDigest called while conversation is not in progress"));
         memset(digest, 0, Crypto_SHA256::DIGEST_SIZE);
     } else {
         QCC_VERIFY(ER_OK == hashUtil->GetDigest(digest, keepAlive));
+    }
+}
+
+void _PeerState::SetConversationHashSensitiveMode(bool mode)
+{
+    QCC_ASSERT(NULL != hashUtil);
+    if (NULL == hashUtil) {
+        QCC_LogError(ER_CRYPTO_ERROR, ("SetConversationHashSensitiveMode called while conversation is not in progress"));
+    } else {
+        hashUtil->SetSensitiveMode(mode);
     }
 }
 
@@ -258,7 +265,7 @@ PeerState PeerStateTable::GetPeerState(const qcc::String& busName, bool createIf
 
 PeerState PeerStateTable::GetPeerState(const qcc::String& uniqueName, const qcc::String& aliasName)
 {
-    assert(uniqueName[0] == ':');
+    QCC_ASSERT(uniqueName[0] == ':');
     PeerState result;
     lock.Lock(MUTEX_CONTEXT);
     std::map<const qcc::String, PeerState>::iterator iter = peerMap.find(uniqueName);

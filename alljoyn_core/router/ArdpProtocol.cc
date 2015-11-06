@@ -651,8 +651,8 @@ static void DelConnRecord(ArdpHandle* handle, ArdpConnRecord* conn, bool forced)
     if (!forced && conn->state != CLOSED && conn->state != CLOSE_WAIT) {
         QCC_LogError(ER_ARDP_INVALID_STATE, ("DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT conn %p state %s",
                                              conn, State2Text(conn->state)));
-        assert((conn->state == CLOSED || conn->state == CLOSE_WAIT)  &&
-               "DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT");
+        QCC_ASSERT((conn->state == CLOSED || conn->state == CLOSE_WAIT)  &&
+                   "DelConnRecord(): Delete while not CLOSED or CLOSE-WAIT");
 
     }
 
@@ -690,7 +690,7 @@ static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* s
     /* Mark all SND buffers associated with the message as available */
     do {
         if (sBuf->timer.retry != 0) {
-            assert(conn->state != OPEN);
+            QCC_ASSERT(conn->state != OPEN);
             DeList((ListNode*) (&sBuf->timer));
         }
 
@@ -701,7 +701,7 @@ static void FlushMessage(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSndBuf* s
         sBuf = sBuf->next;
         conn->snd.pending--;
         QCC_DbgPrintf(("FlushMessage(fcnt = %d): pending = %d", fcnt, conn->snd.pending));
-        assert((conn->snd.pending < conn->snd.SEGMAX) && "Invalid number of pending segments in send queue!");
+        QCC_ASSERT((conn->snd.pending < conn->snd.SEGMAX) && "Invalid number of pending segments in send queue!");
         h = (ArdpHeader*) sBuf->hdr;
         fcnt--;
     } while (fcnt > 0);
@@ -899,10 +899,10 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
          * in order to wait on RCV queue to drain.
          */
         reason = ER_ARDP_INVALID_CONNECTION;
-        conn->connectTimer.context  = (void*) reason;
+        conn->connectTimer.context = (void*) reason;
     }
 
-    /* Check if there are any received buffers delivered to the upper layer that haven't been comsumed yet */
+    /* Check if there are any received buffers delivered to the upper layer that haven't been consumed yet */
     if (IsRcvQueueEmpty(handle, conn)) {
         DelConnRecord(handle, conn, false);
     } else {
@@ -911,7 +911,6 @@ static void DisconnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
                        handle, conn));
         UpdateTimer(handle, conn, &conn->connectTimer, ARDP_DISCONNECT_RETRY_TIMEOUT, ARDP_DISCONNECT_RETRY);
     }
-
 }
 
 static void ConnectTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, void* context)
@@ -1099,7 +1098,7 @@ static QStatus Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, QStatus reas
     }
 
     /* Is there a nice macro that would wrap integer into pointer? Just to avoid nasty surprises... */
-    assert(sizeof(QStatus) <=  sizeof(void*));
+    QCC_ASSERT(sizeof(QStatus) <=  sizeof(void*));
 
     SetState(conn, CLOSE_WAIT);
 
@@ -1210,7 +1209,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
 
     QCC_DbgTrace(("RetransmitTimerHandler: handle=%p conn=%p context=%p", handle, conn, context));
 
-    assert(sBuf->inUse && "RetransmitTimerHandler: trying to resend flushed buffer");
+    QCC_ASSERT(sBuf->inUse && "RetransmitTimerHandler: trying to resend flushed buffer");
 
     sBuf->retransmits++;
 
@@ -1269,7 +1268,7 @@ static void RetransmitTimerHandler(ArdpHandle* handle, ArdpConnRecord* conn, voi
                  * update our "thin" accounting.
                  */
                 if (SEQ32_LET(conn->snd.thinNXT, ntohl(((ArdpHeader*)sBuf->hdr)->seq))) {
-                    assert(conn->snd.thinWindow != 0);
+                    QCC_ASSERT(conn->snd.thinWindow != 0);
                     conn->snd.thinWindow--;
                     conn->snd.thinNXT++;
                 }
@@ -1529,7 +1528,7 @@ uint32_t ARDP_GetConnPending(ArdpHandle* handle, ArdpConnRecord* conn)
     QCC_DbgTrace(("ARDP_GetConnPending(handle=%p, conn=%p)", handle, conn));
     if (!IsConnValid(handle, conn)) {
         QCC_LogError(ER_ARDP_INVALID_CONNECTION, ("ARDP_GetConnPending(handle=%p), context = %p", handle, handle->context));
-        assert(false && "Connection not found");
+        QCC_ASSERT(false && "Connection not found");
         return 0;
     }
     return conn->snd.pending;
@@ -1720,7 +1719,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         QCC_DbgPrintf(("SendData(): Large buffer %d, partitioning into %d segments", len, fcnt));
     }
 
-    assert(fcnt != 0);
+    QCC_ASSERT(fcnt != 0);
 
     /* Check if receiver's window is wide enough to accept FCNT number of segments */
     if (fcnt > conn->window) {
@@ -1766,7 +1765,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
         status = ER_OK;
 
         QCC_DbgPrintf(("SendData: Segment %d, snd.NXT=%u, snd.UNA=%u", i, conn->snd.NXT, conn->snd.UNA));
-        assert((conn->snd.NXT - conn->snd.UNA) < conn->snd.SEGMAX);
+        QCC_ASSERT((conn->snd.NXT - conn->snd.UNA) < conn->snd.SEGMAX);
 
         h->som = som;
         h->fcnt = htons(fcnt);
@@ -1835,7 +1834,7 @@ static QStatus SendData(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, 
 
             EnList(handle->dataTimers.bwd, (ListNode*) &sBuf->timer);
             conn->snd.pending++;
-            assert(((conn->snd.pending) <= conn->snd.SEGMAX) && "Number of pending segments in send queue exceeds MAX!");
+            QCC_ASSERT(((conn->snd.pending) <= conn->snd.SEGMAX) && "Number of pending segments in send queue exceeds MAX!");
             conn->snd.NXT++;
         } else {
             /* Something irrevocably bad happened on the socket. Disconnect. */
@@ -2167,7 +2166,7 @@ static void AddRcvMsk(ArdpConnRecord* conn, uint32_t delta)
     uint32_t bin32 = (delta - 1) / 32;
     uint32_t offset = (uint32_t)32 - (delta - (bin32 << 5));
 
-    assert(bin32 < (uint32_t) (conn->rcv.eack.fixedSz >> 2));
+    QCC_ASSERT(bin32 < (uint32_t) (conn->rcv.eack.fixedSz >> 2));
     conn->rcv.eack.mask[bin32] = conn->rcv.eack.mask[bin32] | ((uint32_t)1 << offset);
     QCC_DbgPrintf(("AddRcvMsk: bin = %d, offset=%d, mask = 0x%f", bin32, offset, conn->rcv.eack.mask[bin32]));
     if (conn->rcv.eack.sz < bin32 + 1) {
@@ -2204,7 +2203,7 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
 
     if (fcnt == 0) {
         QCC_DbgHLPrintf(("Invalid fragment count %u", fcnt));
-        assert((fcnt > 0) && "fcnt cannot be zero");
+        QCC_ASSERT((fcnt > 0) && "fcnt cannot be zero");
         return ER_FAIL;
     }
 
@@ -2215,7 +2214,7 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
         } else {
             QCC_LogError(ER_OK, ("conn %p, Consumed message %u is not first in rcv queue (%u)", conn, seq, conn->rcv.LCS + 1));
             DumpRcvQueue(conn);
-            assert(0 && "Consumed message is not first in rcv queue");
+            QCC_ASSERT(0 && "Consumed message is not first in rcv queue");
             return ER_FAIL;
         }
     }
@@ -2224,7 +2223,7 @@ static QStatus ReleaseRcvBuffers(ArdpHandle* handle, ArdpConnRecord* conn, uint3
     if (reason != ER_ARDP_TTL_EXPIRED) {
         if (conn->rcv.buf[index].seq != seq) {
             QCC_DbgHLPrintf(("ReleaseRcvBuffers: released buffer seq=%u does not match rcv %u", seq, conn->rcv.buf[index].seq));
-            assert(0 && "ReleaseRcvBuffers: Buffer sequence validation failed");
+            QCC_ASSERT(0 && "ReleaseRcvBuffers: Buffer sequence validation failed");
             return ER_FAIL;
         }
     }
@@ -2287,7 +2286,7 @@ static void AdvanceRcvQueue(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf
     do {
         uint32_t tNow = TimeNow(handle->tbase);
         QCC_DbgPrintf(("AdvanceRcvQueue: segment %u (%p)", seq, current));
-        assert((seq - conn->rcv.LCS) <= conn->rcv.SEGMAX);
+        QCC_ASSERT((seq - conn->rcv.LCS) <= conn->rcv.SEGMAX);
 
         ShiftRcvMsk(conn);
 
@@ -2410,7 +2409,7 @@ static void FlushExpiredRcvMessages(ArdpHandle* handle, ArdpConnRecord* conn, ui
 
     /* Mark all the segments with sequence numbers up to ACKNXT as expired */
     do {
-        assert(!(current->flags & ARDP_BUFFER_DELIVERED));
+        QCC_ASSERT(!(current->flags & ARDP_BUFFER_DELIVERED));
         QCC_DbgPrintf(("FlushExpiredRcvMessages: seq = %u", seq));
 
         current->ttl = ARDP_TTL_EXPIRED;
@@ -2460,7 +2459,7 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
 
     QCC_DbgPrintf(("AddRcvBuffer: seg->SEQ = %u, first=%u", seg->SEQ, conn->rcv.LCS + 1));
 
-    assert(buf != NULL && len != 0);
+    QCC_ASSERT(buf != NULL && len != 0);
 
     if (current->seq == seg->SEQ) {
         QCC_DbgPrintf(("AddRcvBuffer: duplicate segment %u, acknowledge", seg->SEQ));
@@ -2470,8 +2469,8 @@ static QStatus AddRcvBuffer(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* s
     if (current->flags & ARDP_BUFFER_IN_USE) {
         QCC_DbgHLPrintf(("AddRcvBuffer: attempt to overwrite buffer that has not been released( in use %u seg->seq %u)",
                          current->seq, seg->SEQ));
-        assert(!(current->flags & ARDP_BUFFER_IN_USE) &&
-               "AddRcvBuffer: attempt to overwrite buffer that has not been released");
+        QCC_ASSERT(!(current->flags & ARDP_BUFFER_IN_USE) &&
+                   "AddRcvBuffer: attempt to overwrite buffer that has not been released");
         return ER_FAIL;
     }
 
@@ -2717,7 +2716,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                 status = InitSnd(handle, conn);
 
-                assert(status == ER_OK && "ArdpMachine():SYN_SENT: Failed to initialize Send queue");
+                QCC_ASSERT(status == ER_OK && "ArdpMachine():SYN_SENT: Failed to initialize Send queue");
 
                 if (status == ER_OK) {
 
@@ -2767,7 +2766,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                         if ((handle->cb.ConnectCb) && (status == ER_OK)) {
                             QCC_DbgPrintf(("ArdpMachine(): SYN_SENT->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
-                            assert(!conn->passive);
+                            QCC_ASSERT(!conn->passive);
                             uint8_t* data = &buf[ARDP_SYN_HEADER_SIZE];
 #if ARDP_STATS
                             ++handle->stats.connectCbs;
@@ -2875,7 +2874,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
 
                     if (handle->cb.ConnectCb) {
                         QCC_DbgPrintf(("ArdpMachine(): SYN_RCVD->OPEN: ConnectCb(handle=%p, conn=%p", handle, conn));
-                        assert(conn->passive);
+                        QCC_ASSERT(conn->passive);
                         uint8_t* data = &buf[ARDP_SYN_HEADER_SIZE];
 #if ARDP_STATS
                         ++handle->stats.connectCbs;
@@ -3066,7 +3065,7 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
         }
 
     default:
-        assert(0 && "ArdpMachine(): unexpected conn->state %d");
+        QCC_ASSERT(0 && "ArdpMachine(): unexpected conn->state %d");
         break;
     }
 
@@ -3188,7 +3187,7 @@ QStatus ARDP_Disconnect(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t connI
 QStatus ARDP_RecvReady(ArdpHandle* handle, ArdpConnRecord* conn, ArdpRcvBuf* rcv)
 {
     QCC_DbgTrace(("ARDP_RecvReady(handle=%p, conn=%p, rcv=%p)", handle, conn, rcv));
-    assert(rcv != NULL);
+    QCC_ASSERT(rcv != NULL);
     if (!IsConnValid(handle, conn)) {
         return ER_ARDP_INVALID_CONNECTION;
     }
@@ -3277,7 +3276,7 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
             /* The receiver's window in simple mode */
 
             conn->snd.thinWindow = ((conn->snd.thinNXT - (seg.LCS + 1)) < conn->snd.thinSEGMAX) ? conn->snd.thinSEGMAX - (conn->snd.thinNXT - (seg.LCS + 1)) : 0;
-            assert((conn->snd.thinWindow <= conn->snd.thinSEGMAX) && "Incorrect send window update in Simple Connection Mode");
+            QCC_ASSERT((conn->snd.thinWindow <= conn->snd.thinSEGMAX) && "Incorrect send window update in Simple Connection Mode");
             QCC_DbgPrintf(("Receive(): Update thinWindow %u", conn->snd.thinWindow));
         }
 
@@ -3329,7 +3328,7 @@ static QStatus Receive(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf,
 QStatus Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* rxbuf, uint16_t len)
 {
     QCC_DbgTrace(("Accept(handle=%p, conn=%p, buf=%p, len=%d)", handle, conn, rxbuf, len));
-    assert(conn->state == CLOSED && "Accept(): ConnRecord in invalid state");
+    QCC_ASSERT(conn->state == CLOSED && "Accept(): ConnRecord in invalid state");
 
     if (!(rxbuf[FLAGS_OFFSET] & ARDP_FLAG_SYN) || (rxbuf[FLAGS_OFFSET] & ARDP_FLAG_RST)) {
         return ER_ARDP_INVALID_CONNECTION;

@@ -266,6 +266,13 @@ class Thread {
      */
     void RemoveAuxListener(ThreadListener* listener);
 
+    /**
+     * Get the platform-specific thread ID.
+     *
+     * @return Current thread's ID.
+     */
+    static ThreadId GetCurrentThreadId();
+
   protected:
 
     Event stopEvent;            ///< Event that indicates a stop request when set.

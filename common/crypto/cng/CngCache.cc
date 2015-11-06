@@ -20,7 +20,6 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <windows.h>
 #include <bcrypt.h>
 #include <capi.h>
@@ -38,11 +37,11 @@ namespace qcc {
 
 CngCache::CngCache() : ccmHandle(NULL), ecbHandle(NULL)
 {
-    assert(sizeof(algHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ALGORITHM_COUNT * 2));
+    QCC_ASSERT(sizeof(algHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ALGORITHM_COUNT * 2));
     memset(&algHandles, 0, sizeof(algHandles));
-    assert(sizeof(ecdsaHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ECDSA_ALGORITHM_COUNT));
+    QCC_ASSERT(sizeof(ecdsaHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ECDSA_ALGORITHM_COUNT));
     memset(&ecdsaHandles, 0, sizeof(ecdsaHandles));
-    assert(sizeof(ecdhHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ECDH_ALGORITHM_COUNT));
+    QCC_ASSERT(sizeof(ecdhHandles) == (sizeof(BCRYPT_ALG_HANDLE) * ECDH_ALGORITHM_COUNT));
     memset(&ecdhHandles, 0, sizeof(ecdhHandles));
 }
 

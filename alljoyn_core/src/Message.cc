@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <ctype.h>
 #include <limits>
 
@@ -380,7 +379,7 @@ _Message::_Message(const _Message& other) :
     authorizationChecked(other.authorizationChecked)
 {
     if (bufSize > 0) {
-        assert(other.msgBuf != NULL);
+        QCC_ASSERT(other.msgBuf != NULL);
         _msgBuf = new uint8_t[bufSize + 7];
         msgBuf = (uint64_t*)((uintptr_t)(_msgBuf + 7) & ~7);
         bufEOD = ((uint8_t*)msgBuf) + (other.bufEOD - ((uint8_t*)other.msgBuf));
@@ -392,7 +391,7 @@ _Message::_Message(const _Message& other) :
         ::memcpy(msgBuf, other.msgBuf, bufSize);
         ::memset(bufEOD, 0, (uint8_t*)msgBuf + bufSize - bufEOD);
     } else {
-        assert(other.msgBuf == NULL);
+        QCC_ASSERT(other.msgBuf == NULL);
         _msgBuf = NULL;
         msgBuf = NULL;
         bufEOD = NULL;
@@ -473,7 +472,7 @@ QStatus _Message::ReMarshal(const char* senderName)
      * Marshal the header fields
      */
     MarshalHeaderFields();
-    assert(((size_t)bufPos & 7) == 0);
+    QCC_ASSERT(((size_t)bufPos & 7) == 0);
     /*
      * Copy in the body if there was one
      */
@@ -486,7 +485,7 @@ QStatus _Message::ReMarshal(const char* senderName)
     /*
      * Zero fill the pad at the end of the buffer
      */
-    assert((size_t)(bufEOD - (uint8_t*)msgBuf) < bufSize);
+    QCC_ASSERT((size_t)(bufEOD - (uint8_t*)msgBuf) < bufSize);
     memset(bufEOD, 0, (uint8_t*)msgBuf + bufSize - bufEOD);
     delete [] _savBuf;
     return ER_OK;

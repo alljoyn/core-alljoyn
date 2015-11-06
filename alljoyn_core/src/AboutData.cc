@@ -23,7 +23,6 @@
 #include <qcc/StringSource.h>
 
 #include <stdio.h>
-#include <assert.h>
 
 #include "AboutDataInternal.h"
 
@@ -177,7 +176,7 @@ QStatus AboutData::CreateFromXml(const qcc::String& aboutDataXml)
                         continue;
                     }
                 } else {
-                    assert(aboutDataInternal->aboutFields[it->first].signature == "s");
+                    QCC_ASSERT(aboutDataInternal->aboutFields[it->first].signature == "s");
                     arg.Set("s", root->GetChild(it->first)->GetContent().c_str());
                     status = SetField(it->first.c_str(), arg);
                     if (status != ER_OK) {
@@ -838,7 +837,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
     char* defaultLanguage = NULL;
     GetDefaultLanguage(&defaultLanguage);
     // A default language must exist or IsValid would have been false above.
-    assert(defaultLanguage != NULL);
+    QCC_ASSERT(defaultLanguage != NULL);
 
     qcc::String defaultLang(defaultLanguage);
     qcc::String bestLanguage;
@@ -846,7 +845,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
 
     // At least a default language must exist or IsValid would have been
     // false above.
-    assert(bestLanguage.c_str() != NULL);
+    QCC_ASSERT(bestLanguage.c_str() != NULL);
 
     size_t dictionarySize = 0;
     typedef std::map<qcc::String, FieldDetails>::iterator it_aboutFields;
@@ -901,7 +900,7 @@ QStatus AboutData::GetAboutData(MsgArg* msgArg, const char* language)
             return status;
         }
     }
-    assert(dictionarySize == count);
+    QCC_ASSERT(dictionarySize == count);
 
     msgArg->Set("a{sv}", dictionarySize, aboutDictionary);
     msgArg->Stabilize();
@@ -978,7 +977,7 @@ QStatus AboutData::GetAnnouncedAboutData(MsgArg* msgArg)
         }
     }
 
-    assert(dictionarySize == count);
+    QCC_ASSERT(dictionarySize == count);
 
     msgArg->Set("a{sv}", dictionarySize, announceDictionary);
     msgArg->Stabilize();

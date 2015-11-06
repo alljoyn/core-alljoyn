@@ -100,7 +100,7 @@ void ServiceObject::ObjectRegistered()
 
 QStatus ServiceObject::AddInterfaceToObject(const InterfaceDescription* intf)
 {
-    assert(intf);
+    QCC_ASSERT(intf);
     QStatus status = AddInterface(*intf);
     return status;
 }
@@ -110,11 +110,11 @@ void ServiceObject::PopulateSignalMembers()
     /* Register the signal handler with the bus */
     const InterfaceDescription* regTestIntf = myBus.GetInterface(
         ::org::alljoyn::alljoyn_test::InterfaceName);
-    assert(regTestIntf);
+    QCC_ASSERT(regTestIntf);
     my_signal_member = regTestIntf->GetMember("my_signal");
-    assert(my_signal_member);
+    QCC_ASSERT(my_signal_member);
     my_signal_member_2 = regTestIntf->GetMember("my_signal_string");
-    assert(my_signal_member_2);
+    QCC_ASSERT(my_signal_member_2);
 }
 
 void ServiceObject::NameAcquiredCB(Message& msg, void* context)
@@ -136,7 +136,7 @@ void ServiceObject::NameAcquiredCB(Message& msg, void* context)
 
 void ServiceObject::RequestName(const char* name)
 {
-    assert(name);
+    QCC_ASSERT(name);
     /* Request a well-known name */
     /* Note that you cannot make a blocking method call here */
     const ProxyBusObject& dbusObj = myBus.GetDBusProxyObj();
@@ -158,7 +158,7 @@ void ServiceObject::RequestName(const char* name)
 QStatus ServiceObject::InstallMethodHandlers()
 {
     const InterfaceDescription* regTestIntf = myBus.GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
-    assert(regTestIntf);
+    QCC_ASSERT(regTestIntf);
     /* Register the method handlers with the object */
     const MethodEntry methodEntries[] = {
         { regTestIntf->GetMember("my_ping"), static_cast<MessageReceiver::MethodHandler>(&ServiceObject::Ping) },

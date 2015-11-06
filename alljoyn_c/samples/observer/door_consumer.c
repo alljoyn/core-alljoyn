@@ -21,7 +21,6 @@
  */
 
 #include <stdlib.h>
-#include <assert.h>
 #include <string.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -274,29 +273,29 @@ static QStatus build_interface(alljoyn_busattachment bus)
 
     alljoyn_interfacedescription intf = NULL;
     status = alljoyn_busattachment_createinterface(bus, INTF_NAME, &intf);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addproperty(intf, "IsOpen", "b", ALLJOYN_PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addpropertyannotation(intf, "IsOpen", "org.freedesktop.DBus.Property.EmitsChangedSignal", "true");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addproperty(intf, "Location", "s", ALLJOYN_PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addpropertyannotation(intf, "Location", "org.freedesktop.DBus.Property.EmitsChangedSignal", "true");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addproperty(intf, "KeyCode", "u", ALLJOYN_PROP_ACCESS_READ);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addpropertyannotation(intf, "KeyCode", "org.freedesktop.DBus.Property.EmitsChangedSignal", "invalidates");
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     status = alljoyn_interfacedescription_addmethod(intf, "Open", "", "", "", 0, NULL);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addmethod(intf, "Close", "", "", "", 0, NULL);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_interfacedescription_addmethod(intf, "KnockAndRun", "", "", "", ALLJOYN_MEMBER_ANNOTATE_NO_REPLY, NULL);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     status = alljoyn_interfacedescription_addsignal(intf, "PersonPassedThrough", "s", "name", 0, NULL);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     alljoyn_interfacedescription_activate(intf);
 
@@ -307,12 +306,12 @@ static QStatus setup_busattachment(alljoyn_busattachment bus)
 {
     QStatus status;
     status = alljoyn_busattachment_start(bus);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
     status = alljoyn_busattachment_connect(bus, NULL);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     status = build_interface(bus);
-    assert(ER_OK == status);
+    QCC_ASSERT(ER_OK == status);
 
     return status;
 }

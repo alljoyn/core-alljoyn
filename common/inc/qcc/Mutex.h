@@ -140,6 +140,11 @@ class Mutex {
      */
     Mutex& operator=(const Mutex& other);
 
+    /**
+     * Assert that current thread owns this Mutex.
+     */
+    void AssertOwnedByCurrentThread() const;
+
   private:
 
 #if defined(QCC_OS_GROUP_POSIX)
@@ -154,10 +159,39 @@ class Mutex {
     void Init();            ///< Initialize the underlying OS mutex.
     void Destroy();         ///< Destroy the underlying OS mutex.
 
-#ifndef NDEBUG
-    const char* file;
+    /**
+     * Source code line number where this Mutex has been acquired.
+     *
+     * That information is available only on Debug builds and only for those Mutex objects
+     * locked using MUTEX_CONTEXT. However, the size of Mutex objects must be the same
+     * across Debug and Release builds, thus allowing the interop of Release applications
+     * with Debug AllJoyn Core libraries. Therefore this class member is present on Release
+     * builds too.
+     */
     uint32_t line;
-#endif
+
+    /**
+     * Source code file name where this Mutex has been acquired.
+     *
+     * That information is available only on Debug builds and only for those Mutex objects
+     * locked using MUTEX_CONTEXT. However, the size of Mutex objects must be the same
+     * across Debug and Release builds, thus allowing the interop of Release applications
+     * with Debug AllJoyn Core libraries. Therefore this class member is present on Release
+     * builds too.
+     */
+    const char* file;
+
+    /**
+     * @internal
+     * Represents the non-public functionality of the Mutex class.
+     */
+    class Internal;
+
+    /**
+     * @internal
+     * Contains the non-public functionality of the Mutex class.
+     */
+    Internal* mutexInternal;
 
     /* The condition variable class needs access to the underlying private mutex */
     friend class Condition;

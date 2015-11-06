@@ -16,6 +16,7 @@
 
 #include "secure_door_common.h"
 
+#include <qcc/Thread.h>
 #include <alljoyn/PermissionPolicy.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -36,6 +37,7 @@ void DoorCommonPCL::PolicyChanged()
     PermissionConfigurator::ApplicationState appState;
     if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState))) {
         if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
+            qcc::Sleep(250); // Allow SecurityMgmtObj to send method reply (see ASACORE-2331)
             // Upon a policy update, existing connections are invalidated
             // and one needs to make them valid again.
             if (ER_OK != (status = ba.SecureConnectionAsync(nullptr, true))) {
@@ -76,7 +78,7 @@ Door::Door(BusAttachment* ba) :
     BusObject(DOOR_OBJECT_PATH), autoSignal(false), open(false)
 {
     const InterfaceDescription* secPermIntf = ba->GetInterface(DOOR_INTERFACE);
-    assert(secPermIntf);
+    QCC_ASSERT(secPermIntf);
     AddInterface(*secPermIntf, ANNOUNCED);
 
     /* Register the method handlers with the door bus object */
@@ -274,14 +276,6 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
         if (status != ER_OK) {
             printf("Failed to SetClaimCapabilityAdditionalInfo - status(%s)\n", QCC_StatusText(status));
         }
-        PermissionConfigurator::ApplicationState state;
-        if (ER_OK == ba->GetPermissionConfigurator().GetApplicationState(state)) {
-            if (PermissionConfigurator::CLAIMABLE == state) {
-                printf("Door provider is not claimed.\n");
-                printf("The provider can be claimed using PSK with an application generated secret.\n");
-                printf("PSK = (%s)\n", psk.ToString().c_str());
-            }
-        }
     }
 
     PermissionPolicy::Rule manifestRule;
@@ -310,6 +304,17 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     status = ba->GetPermissionConfigurator().SetPermissionManifest(&manifestRule, 1);
     if (status != ER_OK) {
         return status;
+    }
+
+    if (provider) {
+        PermissionConfigurator::ApplicationState state;
+        if (ER_OK == ba->GetPermissionConfigurator().GetApplicationState(state)) {
+            if (PermissionConfigurator::CLAIMABLE == state) {
+                printf("Door provider is not claimed.\n");
+                printf("The provider can be claimed using PSK with an application generated secret.\n");
+                printf("PSK = (%s)\n", psk.ToString().c_str());
+            }
+        }
     }
 
     status = HostSession();

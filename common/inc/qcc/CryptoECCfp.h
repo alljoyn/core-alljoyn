@@ -22,7 +22,6 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 
-#include <assert.h>
 #include <stdio.h>
 #include <string.h>
 

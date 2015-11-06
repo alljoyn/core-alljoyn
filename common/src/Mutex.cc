@@ -19,9 +19,9 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#include <assert.h>
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
 /** @internal */
@@ -60,19 +60,14 @@ QStatus Mutex::Lock(const char* file, uint32_t line)
     QCC_UNUSED(line);
     return Lock();
 #else
-    assert(isInitialized);
-    QStatus status;
-    if (TryLock()) {
-        status = ER_OK;
-    } else {
-        status = Lock();
-    }
+    QCC_ASSERT(isInitialized);
+    QStatus status = Lock();
     if (status == ER_OK) {
         QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
         this->file = file;
         this->line = line;
     } else {
-        QCC_LogError(status, ("Mutex::Lock %s:%d failed", file, line));
+        QCC_LogError(status, ("Mutex::Lock %s:%u failed", file, line));
     }
     return status;
 #endif
@@ -85,7 +80,7 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
     QCC_UNUSED(line);
     return Unlock();
 #else
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
     this->file = NULL;
     this->line = static_cast<uint32_t>(-1);
@@ -93,3 +88,7 @@ QStatus Mutex::Unlock(const char* file, uint32_t line)
 #endif
 }
 
+void Mutex::AssertOwnedByCurrentThread() const
+{
+    mutexInternal->AssertOwnedByCurrentThread();
+}

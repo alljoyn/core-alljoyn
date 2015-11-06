@@ -381,7 +381,7 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
         /* Don't allow an infinite number of alarms to exist on this timer */
         while (maxAlarms && alarm->limitable && (numLimitableAlarms >= maxAlarms) && isRunning) {
             Thread* thread = Thread::GetThread();
-            assert(thread);
+            QCC_ASSERT(thread);
             addWaitQueue.push_front(thread);
             lock.Unlock();
             QStatus status1 = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);
@@ -758,7 +758,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     for (size_t i = 0; i < timer->timerThreads.size(); ++i) {
                         if (i != static_cast<size_t>(index) && timer->timerThreads[i] != NULL) {
 
-                            while ((timer->timerThreads[i]->state != TimerThread::STOPPED || timer->timerThreads[i]->IsRunning()) && timer->isRunning && status == ER_TIMEOUT && delay > WORKER_IDLE_TIMEOUT_MS) {
+                            while ((timer->timerThreads[i]->state != TimerThread::STOPPED) && timer->isRunning && status == ER_TIMEOUT && delay > WORKER_IDLE_TIMEOUT_MS) {
                                 timer->lock.Unlock();
                                 status = Event::Wait(Event::neverSet, WORKER_IDLE_TIMEOUT_MS);
                                 timer->lock.Lock();
@@ -1031,7 +1031,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                 for (size_t i = 0; i < timer->timerThreads.size(); ++i) {
                     if (i != static_cast<size_t>(index) && timer->timerThreads[i] != NULL) {
 
-                        while ((timer->timerThreads[i]->state != TimerThread::STOPPED || timer->timerThreads[i]->IsRunning()) && timer->isRunning && status == ER_TIMEOUT) {
+                        while ((timer->timerThreads[i]->state != TimerThread::STOPPED) && timer->isRunning && status == ER_TIMEOUT) {
                             timer->lock.Unlock();
                             status = Event::Wait(Event::neverSet, WORKER_IDLE_TIMEOUT_MS);
                             timer->lock.Lock();

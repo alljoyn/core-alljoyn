@@ -92,6 +92,29 @@
 #include <algorithm>
 #endif
 #endif
+
+/**
+ * Map QCC_ASSERT to _ASSERT if not already defined.
+ *
+ * _ASSERT allows the developer to break into a debugger instead of aborting.
+ */
+#ifndef QCC_ASSERT
+
+/* <crtdbg.h> keys off of the presence of _DEBUG, not the absence of NDEBUG.
+ * Make sure _DEBUG is defined if NDEBUG is not so _ASSERT is correctly defined
+ * for both build variants. This must be done before <crtdbg.h> is included.
+ */
+#ifndef NDEBUG
+#ifndef _DEBUG
+#define _DEBUG
+#endif
+#endif
+
+#include <crtdbg.h>
+
+#define QCC_ASSERT(expr) _ASSERT(expr)
+
+#endif /* QCC_ASSERT */
 /// @endcond
 
 /**

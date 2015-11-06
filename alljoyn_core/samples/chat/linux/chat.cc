@@ -23,7 +23,6 @@
 #include <alljoyn/ProxyBusObject.h>
 #include <qcc/Log.h>
 #include <qcc/String.h>
-#include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <signal.h>
@@ -89,12 +88,12 @@ class ChatObject : public BusObject {
 
         /* Add the chat interface to this object */
         const InterfaceDescription* chatIntf = bus.GetInterface(CHAT_SERVICE_INTERFACE_NAME);
-        assert(chatIntf);
+        QCC_ASSERT(chatIntf);
         AddInterface(*chatIntf);
 
         /* Store the Chat signal member away so it can be quickly looked up when signals are sent */
         chatSignalMember = chatIntf->GetMember("Chat");
-        assert(chatSignalMember);
+        QCC_ASSERT(chatSignalMember);
 
         /* Register signal handler */
         status =  bus.RegisterSignalHandler(this,

@@ -154,7 +154,7 @@
  * Macro used to avoid the need for a local variable just for an assert. Using a local
  * variable just for assert, instead of this macro, can cause compiler warnings on
  * NDEBUG builds.
- * Example: QCC_VERIFY(foo() == 0); instead of {int local = foo(); assert(local == 0);}
+ * Example: QCC_VERIFY(foo() == 0); instead of {int local = foo(); QCC_ASSERT(local == 0);}
  *
  * @param _cmd  Statement to be executed on both types of builds, and asserted just
  *              on non-NDEBUG builds.
@@ -162,7 +162,7 @@
 #if defined(NDEBUG)
 #define QCC_VERIFY(_cmd) ((void)(_cmd))
 #else
-#define QCC_VERIFY(_cmd) assert(_cmd)
+#define QCC_VERIFY(_cmd) QCC_ASSERT(_cmd)
 #endif
 
 /**

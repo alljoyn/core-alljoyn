@@ -28,6 +28,17 @@ using namespace std;
 using namespace ajn;
 using namespace qcc;
 
+static QStatus GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+{
+    KeyInfoNISTP256 keyInfo;
+    QStatus status = bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    if (ER_OK != status) {
+        return status;
+    }
+    publicKey = *keyInfo.GetPublicKey();
+    return status;
+}
+
 TestSecurityManager::TestSecurityManager(string appName) :
     bus(appName.c_str()),
     opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
@@ -206,7 +217,7 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
 
     ECCPublicKey appPublicKey;
-    status = peerProxy.GetEccPublicKey(appPublicKey);
+    status = GetAppPublicKey(peerBus, appPublicKey);
     if (ER_OK != status) {
         return status;
     }
@@ -233,7 +244,7 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     return status;
 }
 
-QStatus TestSecurityManager::UpdateIdentity(const BusAttachment& peerBus,
+QStatus TestSecurityManager::UpdateIdentity(BusAttachment& peerBus,
                                             const PermissionPolicy::Acl& manifest)
 {
     QStatus status = ER_FAIL;
@@ -255,7 +266,7 @@ QStatus TestSecurityManager::UpdateIdentity(const BusAttachment& peerBus,
     SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
 
     ECCPublicKey appPublicKey;
-    status = peerProxy.GetEccPublicKey(appPublicKey);
+    status = GetAppPublicKey(peerBus, appPublicKey);
     if (ER_OK != status) {
         return status;
     }
@@ -277,7 +288,7 @@ QStatus TestSecurityManager::UpdateIdentity(const BusAttachment& peerBus,
     return bus.LeaveSession(sessionId);
 }
 
-QStatus TestSecurityManager::InstallMembership(const BusAttachment& peerBus, const GUID128& group)
+QStatus TestSecurityManager::InstallMembership(BusAttachment& peerBus, const GUID128& group)
 {
     QStatus status = ER_FAIL;
 
@@ -298,7 +309,7 @@ QStatus TestSecurityManager::InstallMembership(const BusAttachment& peerBus, con
     SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
 
     ECCPublicKey appPublicKey;
-    status = peerProxy.GetEccPublicKey(appPublicKey);
+    status = GetAppPublicKey(peerBus, appPublicKey);
     if (ER_OK != status) {
         return status;
     }

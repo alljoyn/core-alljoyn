@@ -25,7 +25,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
@@ -403,7 +402,7 @@ static MsgArg* ParseCallArgToken(deque<AllJoynTypeId>& sigTokens, deque<const To
         exit(1);
 
     default:
-        assert(sig < 256);  // should be impossible for the parser to allow this to happen
+        QCC_ASSERT(sig < 256);  // should be impossible for the parser to allow this to happen
     }
 
     if (!typeOK) {
@@ -591,7 +590,7 @@ static MsgArg* ParseCallArgToken(deque<AllJoynTypeId>& sigTokens, deque<const To
             }
             arg = new MsgArg(sig);
             arg->v_variant.val = ParseCallArgToken(vsigTokens, vargTokens);
-            assert(vsigTokens.empty());
+            QCC_ASSERT(vsigTokens.empty());
             while (argTokens.size() > vargTokens.size()) {
                 argTokens.pop_front();
             }

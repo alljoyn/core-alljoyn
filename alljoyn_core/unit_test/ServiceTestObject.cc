@@ -37,7 +37,7 @@ void ServiceTestObject::RegisterForNameAcquiredSignals()
 {
     QStatus status = ER_OK;
     const InterfaceDescription* intf = myBus.GetInterface("org.freedesktop.DBus");
-    assert(intf);
+    QCC_ASSERT(intf);
     /* register the signal handler for the the 'NameAcquired' signal */
     status =  myBus.RegisterSignalHandler(this,
                                           static_cast<MessageReceiver::SignalHandler>(&ServiceTestObject::NameAcquiredSignalHandler),
@@ -52,14 +52,14 @@ void ServiceTestObject::RegisterForNameAcquiredSignals()
 void ServiceTestObject::PopulateSignalMembers(const char*interface_name) {
     /* Register the signal handler with the bus */
     const InterfaceDescription* regTestIntf = myBus.GetInterface(interface_name);
-    assert(regTestIntf);
+    QCC_ASSERT(regTestIntf);
     my_signal_member = regTestIntf->GetMember("my_signal");
-    assert(my_signal_member);
+    QCC_ASSERT(my_signal_member);
 }
 
 QStatus ServiceTestObject::InstallMethodHandlers(const char*interface_name) {
     const InterfaceDescription* regTestIntf = myBus.GetInterface(interface_name);
-    assert(regTestIntf);
+    QCC_ASSERT(regTestIntf);
     /* Register the method handlers with the object */
     const MethodEntry methodEntries[] = {
         { regTestIntf->GetMember("my_ping"), static_cast<MessageReceiver::MethodHandler>(&ServiceTestObject::Ping) },
@@ -76,7 +76,7 @@ QStatus ServiceTestObject::InstallMethodHandlers(const char*interface_name) {
 
 
 QStatus ServiceTestObject::AddInterfaceToObject(const InterfaceDescription* intf) {
-    assert(intf);
+    QCC_ASSERT(intf);
     QStatus status = AddInterface(*intf);
     return status;
 }

@@ -24,10 +24,10 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
 #include <Status.h>
@@ -39,16 +39,15 @@ using namespace qcc;
 
 void Mutex::Init()
 {
-    assert(!isInitialized);
-#ifndef NDEBUG
-    file = NULL;
+    QCC_ASSERT(!isInitialized);
+    mutexInternal = new Internal;
+    file = nullptr;
     line = static_cast<uint32_t>(-1);
-#endif
 
     pthread_mutexattr_t attr;
     int ret = pthread_mutexattr_init(&attr);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
-    assert(ret == 0);
+    QCC_ASSERT(ret == 0);
     if (ret != 0) {
         return;
     }
@@ -57,7 +56,7 @@ void Mutex::Init()
     pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
     isInitialized = (pthread_mutex_init(&mutex, &attr) == 0);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
 
     // Don't need the attribute once it has been assigned to a mutex.
     pthread_mutexattr_destroy(&attr);
@@ -69,35 +68,40 @@ void Mutex::Destroy()
         isInitialized = false;
         // Can't use QCC_LogError() since it uses mutexes under the hood.
         QCC_VERIFY(pthread_mutex_destroy(&mutex) == 0);
+        delete mutexInternal;
+        mutexInternal = nullptr;
     }
 }
 
 QStatus Mutex::Lock()
 {
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
 
     int ret = pthread_mutex_lock(&mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
-    assert(ret == 0);
+    QCC_ASSERT(ret == 0);
     if (ret != 0) {
         return ER_OS_ERROR;
     }
+
+    mutexInternal->LockAcquired();
     return ER_OK;
 }
 
 QStatus Mutex::Unlock()
 {
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
 
+    mutexInternal->ReleasingLock();
     int ret = pthread_mutex_unlock(&mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
-    assert(ret == 0);
+    QCC_ASSERT(ret == 0);
     if (ret != 0) {
         return ER_OS_ERROR;
     }
@@ -106,9 +110,14 @@ QStatus Mutex::Unlock()
 
 bool Mutex::TryLock(void)
 {
-    assert(isInitialized);
-    if (!isInitialized) {
-        return false;
+    bool locked = false;
+    QCC_ASSERT(isInitialized);
+    if (isInitialized) {
+        locked = (pthread_mutex_trylock(&mutex) == 0);
+        if (locked) {
+            mutexInternal->LockAcquired();
+        }
     }
-    return pthread_mutex_trylock(&mutex) == 0;
+
+    return locked;
 }

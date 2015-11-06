@@ -41,7 +41,6 @@
  *
  */
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 
@@ -123,7 +122,7 @@ PropTesterObject::PropTesterObject(BusAttachment& bus, const char* path, Session
         bus.CreateInterfacesFromXml(propStressTestInterfaceXML);
         ifc = bus.GetInterface(interfaceName);
     }
-    assert(ifc);
+    QCC_ASSERT(ifc);
 
     AddInterface(*ifc);
 }
@@ -195,7 +194,7 @@ _PropTesterProxyObject::_PropTesterProxyObject(BusAttachment& bus, const String&
         bus.CreateInterfacesFromXml(propStressTestInterfaceXML);
         ifc = bus.GetInterface(interfaceName);
     }
-    assert(ifc);
+    QCC_ASSERT(ifc);
 
     AddInterface(*ifc);
     Register();

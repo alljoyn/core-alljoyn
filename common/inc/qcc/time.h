@@ -22,6 +22,7 @@
 #ifndef _QCC_TIME_H
 #define _QCC_TIME_H
 
+#include <alljoyn/Status.h>
 #include <qcc/platform.h>
 #include <qcc/String.h>
 
@@ -157,15 +158,19 @@ int64_t ConvertStructureToTime(struct tm* timeptr);
 
 /**
  * Wrapper for gmtime
- * @return  Time in a tm structure
+ * @param timer calendar time value to be formated into a tm structure
+ * @param tm set to the Time in a tm structure
+ * @return ER_OK if success else ER_FAIL
  */
-struct tm* ConvertTimeToStructure(const int64_t* timer);
+QStatus ConvertTimeToStructure(const int64_t* timer, struct tm* tm);
 
 /**
  * Wrapper for localtime
- * @return  Time in a tm structure
+ * @param timer calendar time value to be formated into a tm structure
+ * @param tm set to the Time in a tm structure
+ * @return ER_OK if success else ER_FAIL
  */
-struct tm* ConvertToLocalTime(const int64_t* timer);
+QStatus ConvertToLocalTime(const int64_t* timer, struct tm* tm);
 
 /**
  * Wrapper for strftime

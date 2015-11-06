@@ -23,7 +23,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <set>
 #include <map>
 
@@ -65,7 +64,7 @@ class ConfigDB {
      *
      * @return  A pointer to the ConfigDB singleton object.
      */
-    static ConfigDB* GetConfigDB() { assert(singleton); return singleton; }
+    static ConfigDB* GetConfigDB() { QCC_ASSERT(singleton); return singleton; }
 
     /**
      * Constructor.  This must be called before any other code can call

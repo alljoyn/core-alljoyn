@@ -28,7 +28,6 @@
 #include <qcc/Debug.h>
 #include <qcc/Event.h>
 #include <qcc/String.h>
-#include <assert.h>
 #include <string.h>
 
 #include <qcc/SocketTypes.h>

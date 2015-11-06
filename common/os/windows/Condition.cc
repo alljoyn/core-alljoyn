@@ -20,11 +20,11 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include <assert.h>
 #include <windows.h>
 
 #include <qcc/Debug.h>
 #include <qcc/Condition.h>
+#include <qcc/MutexInternal.h>
 
 #define QCC_MODULE "CONDITION"
 
@@ -46,7 +46,10 @@ QStatus Condition::Wait(qcc::Mutex& m)
 
 QStatus Condition::TimedWait(qcc::Mutex& m, uint32_t ms)
 {
+    m.mutexInternal->ReleasingLock();
     bool ret = SleepConditionVariableCS(&c, &m.mutex, ms);
+    m.mutexInternal->LockAcquired();
+
     if (ret == true) {
         return ER_OK;
     }

@@ -26,7 +26,6 @@
 #endif
 #include <alljoyn_c/AjAPI.h>
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -304,7 +303,7 @@ int CDECL_CALL main(void)
 
         alljoyn_proxybusobject remoteObj = alljoyn_proxybusobject_create(g_msgBus, OBJECT_NAME, OBJECT_PATH, s_sessionId);
         const alljoyn_interfacedescription alljoynTestIntf = alljoyn_busattachment_getinterface(g_msgBus, INTERFACE_NAME);
-        assert(alljoynTestIntf);
+        QCC_ASSERT(alljoynTestIntf);
         alljoyn_proxybusobject_addinterface(remoteObj, alljoynTestIntf);
 
         /*

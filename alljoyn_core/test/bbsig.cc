@@ -22,7 +22,6 @@
 
 #include <signal.h>
 #include <stdio.h>
-#include <assert.h>
 
 #include <vector>
 
@@ -240,7 +239,7 @@ class LocalTestObject : public BusObject {
         /* Get my_signal member */
         if (ER_OK == status) {
             my_signal_member = testIntf->GetMember("my_signal");
-            assert(my_signal_member);
+            QCC_ASSERT(my_signal_member);
 
             status =  bus.RegisterSignalHandler(this,
                                                 static_cast<MessageReceiver::SignalHandler>(&LocalTestObject::SignalHandler),
@@ -264,7 +263,7 @@ class LocalTestObject : public BusObject {
 
     QStatus SendSignal() {
         uint8_t flags = ALLJOYN_FLAG_GLOBAL_BROADCAST;
-        assert(my_signal_member);
+        QCC_ASSERT(my_signal_member);
         MsgArg arg("a{ys}", 0, NULL);
         if (encryption) {
             flags |= ALLJOYN_FLAG_ENCRYPTED;
@@ -296,7 +295,7 @@ class LocalTestObject : public BusObject {
 
     void RegisterSignalHandler()
     {
-        assert(bus);
+        QCC_ASSERT(bus);
         QStatus status = bus->AddMatch("type='signal',interface='org.alljoyn.alljoyn_test',member='my_signal'");
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to register Match rule for 'org.alljoyn.alljoyn_test.my_signal'"));
@@ -306,7 +305,7 @@ class LocalTestObject : public BusObject {
 
     void ObjectRegistered(void)
     {
-        assert(bus);
+        QCC_ASSERT(bus);
         BusObject::ObjectRegistered();
 
         /* Request a well-known name */
@@ -330,7 +329,7 @@ class LocalTestObject : public BusObject {
     {
         QCC_UNUSED(context);
 
-        assert(bus);
+        QCC_ASSERT(bus);
         /* Check name acquired result */
         size_t numArgs;
         const MsgArg* args;

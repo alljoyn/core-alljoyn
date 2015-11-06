@@ -1335,7 +1335,7 @@ boolean_t in_curveP(affine_point_t const* P)
  */
 void digit256_to_bigval(digit256_tc src, bigval_t* dst)
 {
-    assert((BIGLEN - 1) * sizeof(uint32_t) == sizeof(digit256_t));
+    QCC_ASSERT((BIGLEN - 1) * sizeof(uint32_t) == sizeof(digit256_t));
 
     memcpy(dst->data, src, sizeof(digit256_t));
     dst->data[BIGLEN - 1] = 0;
@@ -1355,7 +1355,7 @@ void digit256_to_bigval(digit256_tc src, bigval_t* dst)
  */
 bool bigval_to_digit256(const bigval_t* src, digit256_t dst)
 {
-    assert((BIGLEN - 1) * sizeof(uint32_t) == sizeof(digit256_t));
+    QCC_ASSERT((BIGLEN - 1) * sizeof(uint32_t) == sizeof(digit256_t));
 
     /* Fail on negative inputs, since any negative value received in the
      * bigval_t format is invalid.

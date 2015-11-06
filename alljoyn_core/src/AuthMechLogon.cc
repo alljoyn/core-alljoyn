@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
@@ -213,7 +212,7 @@ static void UserNameToGuid(qcc::GUID128& guid, qcc::String userName)
     static const char labelStr[] = "SRP Logon Verifier";
     Crypto_SHA1 sha1;
     uint8_t digest[Crypto_SHA1::DIGEST_SIZE];
-    assert(Crypto_SHA1::DIGEST_SIZE >= qcc::GUID128::SIZE);
+    QCC_ASSERT(Crypto_SHA1::DIGEST_SIZE >= qcc::GUID128::SIZE);
     /*
      * The label makes the generated Guid unique for this authentication mechanism.
      */

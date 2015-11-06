@@ -529,4 +529,23 @@ class InterfaceDescription {
         }
         return Signature.typeSig(type, null);
     }
+
+    /**
+     * Get the member timeout value.
+     * The default value is -1.
+     * The value -1 means use the implementation dependent default timeout.
+     *
+     * @param method The method.
+     */
+    public static int getTimeout(Method method) {
+        BusMethod busMethod = method.getAnnotation(BusMethod.class);
+        if (busMethod != null) {
+            return busMethod.timeout();
+        }
+        BusProperty busProperty = method.getAnnotation(BusProperty.class);
+        if (busProperty != null) {
+            return busProperty.timeout();
+        }
+        return -1;
+    }
 }

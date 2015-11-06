@@ -300,7 +300,7 @@ uint64_t software_umul128(uint64_t u, uint64_t v, uint64_t* high)
 /* Zero of a 256-bit field element, a = 0 */
 void fpzero_p256(digit256_t a)
 {
-    assert(a != NULL);
+    QCC_ASSERT(a != NULL);
 
     ClearMemory((void*)a, sizeof(digit256_t));
 }
@@ -311,7 +311,7 @@ bool fpiszero_p256(digit256_t a)
     size_t i;
     digit_t c;
 
-    assert(a != NULL);
+    QCC_ASSERT(a != NULL);
 
     c = a[0];
     for (i = 1; i < P256_DIGITS; i++) {
@@ -326,8 +326,8 @@ boolean_t validate_256(digit256_tc a, digit256_tc modulus)
     boolean_t valid = B_FALSE;
     digit256_t t1;
 
-    assert(a != NULL);
-    assert(modulus != NULL);
+    QCC_ASSERT(a != NULL);
+    QCC_ASSERT(modulus != NULL);
 
     QCC_UNUSED(modulus);
 
@@ -345,14 +345,14 @@ boolean_t validate_256(digit256_tc a, digit256_tc modulus)
  * Returns = True if 0 <= a < modulus, else returns False.*/
 boolean_t fpvalidate_p256(digit256_tc a)
 {
-    assert(a != NULL);
+    QCC_ASSERT(a != NULL);
     return validate_256(a, P256_MODULUS);
 }
 
 /* Set a = p256 (the prime that defines this finite field). */
 void fpgetprime_p256(digit256_t a)
 {
-    assert(a != NULL);
+    QCC_ASSERT(a != NULL);
     memcpy(a, P256_MODULUS, sizeof(P256_MODULUS));
 }
 
@@ -365,9 +365,9 @@ static void mul_p256(
 {
     digit_t A, t;
 
-    assert(a != NULL);
-    assert(b != NULL);
-    assert(c != NULL);
+    QCC_ASSERT(a != NULL);
+    QCC_ASSERT(b != NULL);
+    QCC_ASSERT(c != NULL);
 
     A = a[0];
     mul(c[0], c[1], A, b[0]);
@@ -412,8 +412,8 @@ static void reduce_p256(
     digit_t q0, q1, q2, q3, q4;
     digit_t t;
 
-    assert(a != NULL);
-    assert(c != NULL);
+    QCC_ASSERT(a != NULL);
+    QCC_ASSERT(c != NULL);
 
     c0 = a[0]; c1 = a[1]; c2 = a[2]; c3 = a[3];
     c4 = a[4]; c5 = a[5]; c6 = a[6]; c7 = a[7];
@@ -504,10 +504,10 @@ void fpmul_p256(
     digit256_t product,
     digit_t*  temps)
 {
-    assert(multiplier != NULL);
-    assert(multiplicand != NULL);
-    assert(product != NULL);
-    assert(temps != NULL);
+    QCC_ASSERT(multiplier != NULL);
+    QCC_ASSERT(multiplicand != NULL);
+    QCC_ASSERT(product != NULL);
+    QCC_ASSERT(temps != NULL);
 
     mul_p256(multiplier, multiplicand, temps);
     reduce_p256(temps, product);
@@ -518,9 +518,9 @@ void fpsqr_p256(
     digit256_t product,
     digit_t*    temps)
 {
-    assert(multiplier != NULL);
-    assert(product != NULL);
-    assert(temps != NULL);
+    QCC_ASSERT(multiplier != NULL);
+    QCC_ASSERT(product != NULL);
+    QCC_ASSERT(temps != NULL);
 
     fpmul_p256(multiplier, multiplier, product, temps);
 }
@@ -534,9 +534,9 @@ void fpadd_p256(
     digit_t borrow = 0;
     digit_t mask;
 
-    assert(addend1 != NULL);
-    assert(addend2 != NULL);
-    assert(pSum != NULL);
+    QCC_ASSERT(addend1 != NULL);
+    QCC_ASSERT(addend2 != NULL);
+    QCC_ASSERT(pSum != NULL);
 
     /* (carry,sum) = a1 + a2    */
     ADD(carry, pSum[0], addend1[0], addend2[0]);
@@ -553,7 +553,7 @@ void fpadd_p256(
     borrow = borrow ^ carry;        /* bit-level subtraction. Don't use - */
 
     /* both carry from addition and borrow can't happen, since a1<m and a2<m, and (a1+a2)>m => (a1+a2-m)>0. */
-    assert((carry & borrow) == 0);
+    QCC_ASSERT((carry & borrow) == 0);
 
     /* Conditional correction without conditional branches */
     /* If there is a borrow bit, revert the subtration by adding back the modulus.
@@ -571,7 +571,7 @@ void fpadd_p256(
      * If there was an addition (borrow=1,mask=~0), then carry=1
      * so that the high-order all-1 digits produced after the ill-conceived subtraction
      * would go back to being zero when added 1.*/
-    assert(carry == borrow);
+    QCC_ASSERT(carry == borrow);
 }
 
 void fpsub_p256(
@@ -583,9 +583,9 @@ void fpsub_p256(
     digit_t carry = 0;
     digit_t mask = 0;
 
-    assert(minuend != NULL);
-    assert(subtrahend != NULL);
-    assert(pDifference != NULL);
+    QCC_ASSERT(minuend != NULL);
+    QCC_ASSERT(subtrahend != NULL);
+    QCC_ASSERT(pDifference != NULL);
 
     /* Constant time reduction: subtract the modulus, and move only if there is a carry out.
      * Trade-off: instead of conditional mode and using more memory, add the modulus back conditionally. */
@@ -608,7 +608,7 @@ void fpsub_p256(
      * If there was an addition (borrow=1,mask=~0), then carry=1
      * so that the high-order all-1 digits produced after the ill-conceived subtraction
      * would go back to being zero when added 1.*/
-    assert(carry == borrow);
+    QCC_ASSERT(carry == borrow);
 }
 
 /* Negate a
@@ -618,7 +618,7 @@ boolean_t fpneg_p256(
 {
     digit_t i, res, carry = 0, borrow = 0;
 
-    assert(a != NULL);
+    QCC_ASSERT(a != NULL);
 
     for (i = 0; i < P256_DIGITS; i++) {
         res = P256_MODULUS[i] - a[i];
@@ -638,9 +638,9 @@ void fpdiv2_p256(
     /* Division by two is done by multiplication by 1/2. The constant "half" is 1/2 (mod P256): */
     digit256_tc half = { 0x0000000000000000ULL, 0x0000000080000000ULL, 0x8000000000000000ULL, 0x7FFFFFFF80000000ULL };
 
-    assert(numerator != NULL);
-    assert(quotient != NULL);
-    assert(temps != NULL);
+    QCC_ASSERT(numerator != NULL);
+    QCC_ASSERT(quotient != NULL);
+    QCC_ASSERT(temps != NULL);
 
     fpmul_p256(half, numerator, quotient, temps);
 }
@@ -655,8 +655,8 @@ boolean_t fpequal_p256(digit256_tc f1, digit256_tc f2)
     digit_t temp = 0;
     boolean_t equal;
 
-    assert(f1 != NULL);
-    assert(f2 != NULL);
+    QCC_ASSERT(f1 != NULL);
+    QCC_ASSERT(f2 != NULL);
 
     temp |= (f1[0] ^ f2[0]);
     temp |= (f1[1] ^ f2[1]);
@@ -671,7 +671,7 @@ boolean_t fpequal_p256(digit256_tc f1, digit256_tc f2)
 /* Set a to the single digit dig0. */
 void fpset_p256(digit_t dig0, digit256_t a)
 {
-    assert(a != NULL);
+    QCC_ASSERT(a != NULL);
 
     memset(a, 0x00, P256_DIGITS * sizeof(digit_t));
     a[0] = dig0;
@@ -715,7 +715,7 @@ void fpdigitswap_p256(digit256_t a)
 {
     size_t i;
 
-    assert(sizeof(digit_t) == 8);
+    QCC_ASSERT(sizeof(digit_t) == 8);
 
     for (i = 0; i < P256_DIGITS; i++) {
         a[i] = EndianSwap64(a[i]);

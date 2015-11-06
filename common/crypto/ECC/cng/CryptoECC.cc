@@ -602,7 +602,7 @@ static QStatus Crypto_ECC_GenerateKeyPair(
 
     QCC_DbgTrace(("Crypto_ECC_GenerateKeyPair"));
 
-    assert(NULL != hAlg);
+    QCC_ASSERT(NULL != hAlg);
 
     switch (CurveType) {
     case Crypto_ECC::ECC_NIST_P256:
@@ -842,7 +842,7 @@ QStatus Crypto_ECC::GenerateDHKeyPair() {
 
     QCC_DbgTrace(("Crypto_ECC::GenerateDHKeyPair"));
 
-    assert(NULL != cngCache.ecdhHandles[CurveType]);
+    QCC_ASSERT(NULL != cngCache.ecdhHandles[CurveType]);
 
     return Crypto_ECC_GenerateKeyPair(CurveType,
                                       cngCache.ecdhHandles[CurveType],
@@ -998,7 +998,7 @@ QStatus Crypto_ECC::GenerateDSAKeyPair()
 
     QCC_DbgTrace(("Crypto_ECC::GenerateDSAKeyPair"));
 
-    assert(NULL != cngCache.ecdsaHandles[CurveType]);
+    QCC_ASSERT(NULL != cngCache.ecdsaHandles[CurveType]);
 
     return Crypto_ECC_GenerateKeyPair(CurveType,
                                       cngCache.ecdsaHandles[CurveType],
@@ -1048,7 +1048,7 @@ QStatus Crypto_ECC::DSASignDigest(const uint8_t* digest, uint16_t len, ECCSignat
         goto Exit;
     }
 
-    assert(bytesReceived == cngSignatureSize);
+    QCC_ASSERT(bytesReceived == cngSignatureSize);
 #endif
 
     /* The type of the buffer input to BCryptSignHash is not marked const, but the function
@@ -1062,7 +1062,7 @@ QStatus Crypto_ECC::DSASignDigest(const uint8_t* digest, uint16_t len, ECCSignat
         goto Exit;
     }
 
-    assert(bytesReceived == cngSignatureSize);
+    QCC_ASSERT(bytesReceived == cngSignatureSize);
 
 
     err = memcpy_s(sig->r, sizeof(sig->r), cngSignature, cngSignatureElementSize);

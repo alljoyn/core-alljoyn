@@ -38,6 +38,15 @@
  * Note: ensure this portion matches the C++ binding <qcc/platform.h>
  */
 
+/**
+ * Platform-independent assertion macro. If this is not defined in the
+ * platform-specific header file or by other preprocessor define, it defaults
+ * to assert.
+ */
+#ifndef QCC_ASSERT
+#include <assert.h>
+#define QCC_ASSERT(expr) assert(expr)
+#endif
 
 #if defined(__GNUC__)
 

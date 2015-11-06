@@ -23,7 +23,6 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <signal.h>
 #include <stdio.h>
 
@@ -373,7 +372,7 @@ QStatus MakeMethodCall(void)
     ProxyBusObject remoteObj(*g_msgBus, SERVICE_NAME, SERVICE_PATH, s_sessionId);
     const InterfaceDescription* alljoynTestIntf = g_msgBus->GetInterface(INTERFACE_NAME);
 
-    assert(alljoynTestIntf);
+    QCC_ASSERT(alljoynTestIntf);
     remoteObj.AddInterface(*alljoynTestIntf);
 
     Message reply(*g_msgBus);

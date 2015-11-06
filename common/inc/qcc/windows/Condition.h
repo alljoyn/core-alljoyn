@@ -104,7 +104,7 @@ class Condition {
      * AllJoyn a lock is a Mutex.  According to Mesa Semantics, a call to Wait()
      * will enqueue the currenly executing thread on the condition variable
      * (suspending its execution) and Unlock() the associated Mutex in a single
-     * atomic action.  When the thread resumes exucution the condition variable
+     * atomic action.  When the thread resumes execution the condition variable
      * will Lock() the associated mutex and return.
      *
      * @param m  The Mutex associated with the condition variable

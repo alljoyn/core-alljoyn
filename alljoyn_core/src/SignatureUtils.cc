@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <cstdarg>
 #include <string>
 
@@ -396,9 +395,9 @@ typedef struct {
  */
 QStatus SignatureUtils::ParseContainerSignature(MsgArg& container, const char*& sigPtr)
 {
-    assert((container.typeId == ALLJOYN_STRUCT) ||
-           (container.typeId == ALLJOYN_DICT_ENTRY) ||
-           (container.typeId == ALLJOYN_ARRAY));
+    QCC_ASSERT((container.typeId == ALLJOYN_STRUCT) ||
+               (container.typeId == ALLJOYN_DICT_ENTRY) ||
+               (container.typeId == ALLJOYN_ARRAY));
 
     QStatus status = ER_OK;
     ContainerStack containerStack[64];
@@ -407,7 +406,7 @@ QStatus SignatureUtils::ParseContainerSignature(MsgArg& container, const char*& 
     uint8_t arrayDepth = 0;
 
 #define PushContainer(t)  do {                  \
-        assert(outer < &containerStack[64]);        \
+        QCC_ASSERT(outer < &containerStack[64]);        \
         outer++;                                    \
         outer->typeId = (t);                        \
         outer->members = 0;                         \

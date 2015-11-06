@@ -24,7 +24,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 #include <string.h>
 #include <stdarg.h>
 
@@ -85,7 +84,7 @@ class Crypto_AES {
          * Null pad end of block
          */
         void Pad(size_t padLen) {
-            assert(padLen <= 16);
+            QCC_ASSERT(padLen <= 16);
             if (padLen > 0) { memset(&data[16 - padLen], 0, padLen); }
         }
     };

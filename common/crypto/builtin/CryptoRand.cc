@@ -156,7 +156,7 @@ void Crypto_DRBG::Update(uint8_t* data)
         if (status != ER_OK) {
             QCC_LogError(status, ("Encryption failed"));
         }
-        assert(ER_OK == status);
+        QCC_ASSERT(ER_OK == status);
         memcpy(t, block.data, OUTLEN);
         t += OUTLEN;
     }

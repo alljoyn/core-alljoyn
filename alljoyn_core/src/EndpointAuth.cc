@@ -217,7 +217,7 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
                 if (status != ER_OK) {
                     QCC_DbgPrintf(("Untrusted client is being rejected"));
                     QStatus result = hello->ErrorMsg(hello, UntrustedError, "");
-                    assert(ER_OK == result);
+                    QCC_ASSERT(ER_OK == result);
                     QCC_UNUSED(result);
                     hello->Deliver(endpoint);
                     return status;

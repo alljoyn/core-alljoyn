@@ -41,7 +41,7 @@ AboutObj::AboutObj(ajn::BusAttachment& bus, AnnounceFlag isAboutIntfAnnounced) :
     const InterfaceDescription* aboutIntf = NULL;
 
     aboutIntf = m_busAttachment->GetInterface(org::alljoyn::About::InterfaceName);
-    assert(aboutIntf);
+    QCC_ASSERT(aboutIntf);
 
 
     QStatus status = AddInterface(*aboutIntf, isAboutIntfAnnounced);
@@ -116,7 +116,7 @@ QStatus AboutObj::Announce(SessionPort sessionPort, ajn::AboutDataListener& abou
     }
 
     const ajn::InterfaceDescription::Member* announceSignalMember = aboutIntf->GetMember("Announce");
-    assert(announceSignalMember);
+    QCC_ASSERT(announceSignalMember);
 
     if (announceSignalMember == NULL) {
         return ER_FAIL;

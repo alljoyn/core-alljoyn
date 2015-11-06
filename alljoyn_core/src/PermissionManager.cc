@@ -156,7 +156,7 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
          *     Need to check to see it is authorized for all properties in
          *     this interface.  So a rule with member name = * is required.
          * otherwise,
-         *     Allowed when at least one property is allowed
+         *     Allowed
          */
         bool allowed = false;
         for (size_t cnt = 0; cnt < rule.GetMembersSize(); cnt++) {
@@ -183,14 +183,7 @@ static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& req
                     allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
                 }
             } else if (!strictGetAllProperties) {
-                if (members[cnt].GetMemberType() != PermissionPolicy::Rule::Member::PROPERTY) {
-                    continue;  /* only interested in PROPERTY_TYPE when name is specified */
-
-                }
-                /* now check the action mask for at least one allowed */
-                if (!allowed) {
-                    allowed = IsActionAllowed(members[cnt].GetActionMask(), requiredAuth);
-                }
+                allowed = true;
             }
             if (allowed && !scanForDenied) {
                 return allowed;
@@ -614,42 +607,48 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
     if (!mbrName) {
         return false;  /* not handled */
     }
-    if (strncmp(mbrName, "Version", 7) == 0) {
-        authorized = true;
-        return true;  /* handled */
-    }
 
     if (strcmp(iName, org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName) == 0) {
+        if (strncmp(mbrName, "Version", 7) == 0) {
+            authorized = true;
+            return true;  /* handled */
+        }
         if (strncmp(mbrName, "Claim", 5) == 0) {
             /* only allowed when there is no trust anchor */
             authorized = (!permissionMgmtObj->HasTrustAnchors());
             return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
-        if (
-            (strncmp(mbrName, "Identity", 8) == 0) ||
-            (strncmp(mbrName, "Manifest", 8) == 0) ||
-            (strncmp(mbrName, "IdentityCertificateId", 8) == 0) ||
-            (strncmp(mbrName, "DefaultPolicy", 13) == 0)
-            ) {
-            authorized = true;
-            return true;  /* handled */
-        } else if (!permissionMgmtObj->HasTrustAnchors()) {
+        if (!permissionMgmtObj->HasTrustAnchors()) {
+            /* not claimed */
             authorized = false;
+            return true;  /* handled */
+        }
+        if (strncmp(mbrName, "Version", 7) == 0) {
+            authorized = true;
             return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::Application::InterfaceName) == 0) {
         if (
-            (strncmp(mbrName, "ApplicationState", 16) == 0) ||
-            (strncmp(mbrName, "ManifestTemplateDigest", 22) == 0) ||
-            (strncmp(mbrName, "EccPublicKey", 12) == 0) ||
-            (strncmp(mbrName, "ManufacturerCertificate", 23) == 0) ||
-            (strncmp(mbrName, "ManifestTemplate", 16) == 0) ||
-            (strncmp(mbrName, "ClaimCapabilities", 17) == 0) ||
-            (strncmp(mbrName, "ClaimCapabilityAdditionalInfo", 29) == 0)
+            (strncmp(mbrName, "Version", 7) == 0) ||
+            (strncmp(mbrName, "ApplicationState", 16) == 0)
             ) {
             authorized = true;
             return true;  /* handled */
+        }
+        if (!permissionMgmtObj->HasTrustAnchors()) {
+            /* not claimed */
+            if (
+                (strncmp(mbrName, "ManifestTemplateDigest", 22) == 0) ||
+                (strncmp(mbrName, "EccPublicKey", 12) == 0) ||
+                (strncmp(mbrName, "ManufacturerCertificate", 23) == 0) ||
+                (strncmp(mbrName, "ManifestTemplate", 16) == 0) ||
+                (strncmp(mbrName, "ClaimCapabilities", 17) == 0) ||
+                (strncmp(mbrName, "ClaimCapabilityAdditionalInfo", 29) == 0)
+                ) {
+                authorized = true;
+                return true;  /* handled */
+            }
         }
     }
     return false;  /* not handled */

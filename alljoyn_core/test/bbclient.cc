@@ -25,7 +25,6 @@
 
 #include <signal.h>
 #include <stdio.h>
-#include <assert.h>
 #include <vector>
 
 #include <qcc/Environ.h>
@@ -861,11 +860,11 @@ int CDECL_CALL main(int argc, char** argv)
                     }
                 } else {
                     const InterfaceDescription* alljoynTestIntf = g_msgBus->GetInterface(::org::alljoyn::alljoyn_test::InterfaceName);
-                    assert(alljoynTestIntf);
+                    QCC_ASSERT(alljoynTestIntf);
                     remoteObj.AddInterface(*alljoynTestIntf);
 
                     const InterfaceDescription* alljoynTestValuesIntf = g_msgBus->GetInterface(::org::alljoyn::alljoyn_test::values::InterfaceName);
-                    assert(alljoynTestValuesIntf);
+                    QCC_ASSERT(alljoynTestValuesIntf);
                     remoteObj.AddInterface(*alljoynTestValuesIntf);
                 }
                 /* Enable security if it is needed */

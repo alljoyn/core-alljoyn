@@ -24,7 +24,6 @@
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <windows.h>
-#include <assert.h>
 #include <qcc/windows/NamedPipeWrapper.h>
 
 #if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
@@ -48,8 +47,8 @@ HMODULE NamedPipeWrapper::dllHandle = nullptr;
 
 void NamedPipeWrapper::Init()
 {
-    assert(NamedPipeWrapper::dllHandle == nullptr);
-    assert(NamedPipeWrapper::apisAreAvailable == false);
+    QCC_ASSERT(NamedPipeWrapper::dllHandle == nullptr);
+    QCC_ASSERT(NamedPipeWrapper::apisAreAvailable == false);
 
 #if (_WIN32_WINNT > _WIN32_WINNT_WINBLUE)
 
@@ -105,7 +104,7 @@ void NamedPipeWrapper::Init()
                                                   (NamedPipeWrapper::AllJoynReceiveFromBus != nullptr) &&
                                                   (NamedPipeWrapper::AllJoynSendToBus != nullptr));
 
-            assert(NamedPipeWrapper::apisAreAvailable);
+            QCC_ASSERT(NamedPipeWrapper::apisAreAvailable);
         }
     }
 
@@ -128,13 +127,13 @@ void NamedPipeWrapper::Shutdown()
 
     // When compiling for Windows 10, avoid calling FreeLibrary and similar APIs,
     // because those calls are not allowed in Universal apps.
-    assert(NamedPipeWrapper::dllHandle == nullptr);
-    assert(NamedPipeWrapper::apisAreAvailable == true);
+    QCC_ASSERT(NamedPipeWrapper::dllHandle == nullptr);
+    QCC_ASSERT(NamedPipeWrapper::apisAreAvailable == true);
 
 #else
 
     if (NamedPipeWrapper::dllHandle != nullptr) {
-        assert(NamedPipeWrapper::apisAreAvailable == true);
+        QCC_ASSERT(NamedPipeWrapper::apisAreAvailable == true);
         QCC_VERIFY(::FreeLibrary(NamedPipeWrapper::dllHandle));
         NamedPipeWrapper::dllHandle = nullptr;
     }

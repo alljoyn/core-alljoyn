@@ -36,6 +36,7 @@
 #include "AllJoynPeerObj.h"
 #include "CredentialAccessor.h"
 #include "KeyInfoHelper.h"
+#include "ConversationHash.h"
 
 #define QCC_MODULE "AUTH_KEY_EXCHANGER"
 
@@ -847,8 +848,8 @@ QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
     variant.Set("ay", sizeof(verifier), verifier);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->AcquireConversationHashLock();
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     peerState->ReleaseConversationHashLock();
     return status;
@@ -927,8 +928,8 @@ QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
     variant.Set("(ayay)", pskName.length(), pskName.data(), sizeof(verifier), verifier);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->AcquireConversationHashLock();
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     peerState->ReleaseConversationHashLock();
     return status;
@@ -1040,7 +1041,12 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
         }
         peerState->AcquireConversationHashLock();
         peerState->UpdateHash(CONVERSATION_V1, peerPskName, peerPskNameLen);
+        /* Calling SetConversationHashSensitiveMode ensures the PSK won't end up in the log if conversation
+         * hash tracing is turned on.
+         */
+        peerState->SetConversationHashSensitiveMode(true);
         peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*) pskValue.data(), pskValue.length());
+        peerState->SetConversationHashSensitiveMode(false);
         peerState->ReleaseConversationHashLock();
     }
     if (remoteVerifierLen != AUTH_VERIFIER_LEN) {
@@ -1076,7 +1082,12 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     /* hash the handshake */
     peerState->AcquireConversationHashLock();
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskName.data(), pskName.length());
+    /* Calling SetConversationHashSensitiveMode ensures the PSK won't end up in the log if conversation
+     * hash tracing is turned on.
+     */
+    peerState->SetConversationHashSensitiveMode(true);
     peerState->UpdateHash(CONVERSATION_V1, (const uint8_t*)pskValue.data(), pskValue.length());
+    peerState->SetConversationHashSensitiveMode(false);
     peerState->ReleaseConversationHashLock();
 
     uint8_t verifier[AUTH_VERIFIER_LEN];
@@ -1480,8 +1491,8 @@ QStatus KeyExchangerECDHE_ECDSA::ReplyWithVerifier(Message& msg)
     variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     MsgArg replyArg("v", &variant);
     Message replyMsg(bus);
-    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->AcquireConversationHashLock();
+    status = peerObj->HandleMethodReply(msg, replyMsg, &replyArg, 1);
     peerState->UpdateHash(CONVERSATION_V4, replyMsg);
     peerState->ReleaseConversationHashLock();
     return status;
@@ -1516,7 +1527,7 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
         status = cryptoEcc.DSAVerifyDigest(verifier, sizeof(verifier), &sig);
         if (status != ER_OK) {
             QCC_DbgPrintf(("KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg failed to verify the signature just created, the key exchange protocol will fail."));
-            assert(false);
+            QCC_ASSERT(false);
         }
         );
 

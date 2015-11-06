@@ -22,7 +22,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <algorithm>
 #include <map>
@@ -295,7 +294,7 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
 {
     QCC_DbgTrace(("BusObject::EmitPropChanged(ifcName = \"%s\", propName = \"%s\", val = <>, id = %u)",
                   ifcName, propName, id));
-    assert(bus);
+    QCC_ASSERT(bus);
     const InterfaceDescription* ifc = bus->GetInterface(ifcName);
 
     qcc::String emitsChanged;
@@ -342,7 +341,7 @@ void BusObject::EmitPropChanged(const char* ifcName, const char* propName, MsgAr
 
 QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, size_t numProps, SessionId id, uint8_t flags)
 {
-    assert(bus);
+    QCC_ASSERT(bus);
     qcc::String emitsChanged;
     QStatus status = ER_OK;
 
@@ -393,9 +392,9 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
         }
         if (status == ER_OK) {
             const InterfaceDescription* bus_ifc = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
-            assert(bus_ifc);
+            QCC_ASSERT(bus_ifc);
             const InterfaceDescription::Member* propChanged = bus_ifc->GetMember("PropertiesChanged");
-            assert(propChanged);
+            QCC_ASSERT(propChanged);
 
             MsgArg args[3];
             args[0].Set("s", ifcName);
@@ -657,14 +656,14 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
 
     /* Add the standard DBus interfaces */
     const InterfaceDescription* introspectable = bus->GetInterface(org::freedesktop::DBus::Introspectable::InterfaceName);
-    assert(introspectable);
+    QCC_ASSERT(introspectable);
     pair<const InterfaceDescription*, bool> comp = make_pair(introspectable, false);
     if (find(components->ifaces.begin(), components->ifaces.end(), comp) == components->ifaces.end()) {
         components->ifaces.push_back(comp);
     }
 
     const InterfaceDescription* allseenIntrospectable = bus->GetInterface(org::allseen::Introspectable::InterfaceName);
-    assert(allseenIntrospectable);
+    QCC_ASSERT(allseenIntrospectable);
     comp = make_pair(allseenIntrospectable, false);
     if (find(components->ifaces.begin(), components->ifaces.end(), comp) == components->ifaces.end()) {
         components->ifaces.push_back(comp);
@@ -686,7 +685,7 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
 
             /* Add the org::freedesktop::DBus::Properties interface to this list of interfaces implemented by this obj */
             const InterfaceDescription* propIntf = bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
-            assert(propIntf);
+            QCC_ASSERT(propIntf);
             comp = make_pair(propIntf, false);
             if (find(components->ifaces.begin(), components->ifaces.end(), comp) == components->ifaces.end()) {
                 components->ifaces.push_back(comp);
@@ -984,7 +983,7 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status, Message* repl
         } else {
             Message error(*bus);
             QStatus result = error->ErrorMsg(msg, status);
-            assert(ER_OK == result);
+            QCC_ASSERT(ER_OK == result);
             QCC_UNUSED(result);
             if (NULL != replyMsg) {
                 *replyMsg = error;
@@ -1007,7 +1006,7 @@ QStatus BusObject::RemoveChild(BusObject& child)
     QStatus status = ER_BUS_NO_SUCH_OBJECT;
     vector<BusObject*>::iterator it = find(components->children.begin(), components->children.end(), &child);
     if (it != components->children.end()) {
-        assert(*it == &child);
+        QCC_ASSERT(*it == &child);
         child.parent = NULL;
         QCC_DbgPrintf(("RemoveChild %s from object with path = \"%s\"", child.GetPath(), GetPath()));
         components->children.erase(it);

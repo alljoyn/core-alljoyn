@@ -23,7 +23,6 @@
 #include <qcc/Log.h>
 #include <new>
 //#include <set>
-#include <assert.h>
 #include <android/log.h>
 
 #define LOG_TAG  "SimpleService"
@@ -119,7 +118,7 @@ class ServiceObject : public BusObject {
 
         /* Add the service interface to this object */
         const InterfaceDescription* regTestIntf = bus.GetInterface(SIMPLE_SERVICE_INTERFACE_NAME);
-        assert(regTestIntf);
+        QCC_ASSERT(regTestIntf);
         AddInterface(*regTestIntf);
 
         /* Register the method handlers with the object */

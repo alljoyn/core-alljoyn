@@ -40,6 +40,13 @@ using namespace std;
  * most of the tests are related to backward compatibility.
  */
 
+static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
+{
+    KeyInfoNISTP256 keyInfo;
+    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
+    publicKey = *keyInfo.GetPublicKey();
+}
+
 class SecurityOtherTestSessionPortListener : public SessionPortListener {
   public:
     virtual bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
@@ -168,7 +175,7 @@ QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultP
 
     }
     for (size_t cnt = 0; cnt < policy.GetAclsSize(); ++cnt) {
-        assert(idx <= count);
+        QCC_ASSERT(idx <= count);
         acls[idx++] = policy.GetAcls()[cnt];
     }
     policy.SetAcls(count, acls);
@@ -437,7 +444,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                             "  <property name='Prop2' type='i' access='readwrite'/>"
                             "</interface>"
                             "<interface name='org.allseen.test.security.other.insecure'>"
-                            "<annotation name='org.alljoyn.Bus.Secure' value='false'/>"
+                            "<annotation name='org.alljoyn.Bus.Secure' value='off'/>"
                             "  <method name='Echo'>"
                             "    <arg name='shout' type='s' direction='in'/>"
                             "    <arg name='reply' type='s' direction='out'/>"
@@ -553,7 +560,7 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
 
 
     ECCPublicKey managerPublicKey;
-    sapWithManager.GetEccPublicKey(managerPublicKey);
+    GetAppPublicKey(managerBus, managerPublicKey);
     ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
     //Create peer1 identityCert

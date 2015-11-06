@@ -25,6 +25,7 @@
 #include <qcc/platform.h>
 
 #include <map>
+#include <memory>
 #include <deque>
 
 #include <qcc/GUID.h>
@@ -198,8 +199,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param requestingAuthCount the length of the auth mask list
      * @return an instance of the KeyExchanger; NULL if none of the masks in the list is satisfied.
      */
-
-    KeyExchanger* GetKeyExchangerInstance(PeerState peerState, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
+    std::shared_ptr<KeyExchanger> GetKeyExchangerInstance(PeerState peerState, bool initiator, const uint32_t* requestingAuthList, size_t requestingAuthCount);
 
     /**
      * Allow a KeyExchanger to send a reply message.
@@ -409,8 +409,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param keyExchanger the key exchanger module
      * @param peerState the peer state
      */
-
-    QStatus RecordMasterSecret(const qcc::String& sender, KeyExchanger*keyExchanger, PeerState peerState);
+    QStatus RecordMasterSecret(const qcc::String& sender, std::shared_ptr<KeyExchanger> keyExchanger, PeerState peerState);
 
     /**
      * Ask for remote authentication suites.
@@ -421,7 +420,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param remoteAuthCount the buffer to receive the number of suites stored in remoteAuthSuites
      * @param peerState the remote peer's PeerState object
      */
-
     QStatus AskForAuthSuites(uint32_t peerAuthVersion, ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, uint32_t** remoteAuthSuites, size_t* remoteAuthCount, PeerState peerState);
 
     /**
@@ -494,7 +492,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * Peer endpoints currently in an key exchange conversation
      */
-    std::map<qcc::String, KeyExchanger*> keyExConversations;
+    std::map<qcc::String, std::shared_ptr<KeyExchanger> > keyExConversations;
 
     /** Short term lock to protect the peer object. */
     qcc::Mutex lock;

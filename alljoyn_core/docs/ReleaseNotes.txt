@@ -1,104 +1,56 @@
-AllJoyn Version 15.04a Release Notes
-=====================================
+AllJoyn Version 15.09 Release Notes
+===================================
 
 Fully Validated Platforms
 -------------------------
- 1) Linux Ubuntu 14.04 LTS (64 bit)
- 2) Android JellyBean 4.1 (ARM7)
- 3) Windows 7/8.1 (64 bit)
- 4) Windows 10 Insider Preview (64 bit)
- 5) iOS 8.1
- 6) OSX 10.9 Lion
- 7) OpenWRT Barrier Breaker and Chaos Calmer branches
+1) Linux Ubuntu 14.04 LTS (64 bit)
+2) Android JellyBean 4.1 (ARM7)
+3) OpenWRT Barrier Breaker and Chaos Calmer branches
+
+For information on AllJoyn support in Windows 10 see link below:
+https://msdn.microsoft.com/en-us/library/windows/apps/windows.devices.alljoyn.aspx
 
 See the release review page for other platforms that have not been fully
 verified, but may work:
-wiki.allseenalliance.org/core/core_15.04_release_review?&#regression_test
+https://wiki.allseenalliance.org/core/core_15.09_release_review#regression_test
 
 
-Features added in Version 15.04a
---------------------------------
-* Property cache feature which adds a simple, optional cache to ProxyBusObject
-  that keeps track of property values as received in GetProperty,
-  GetAllProperties calls and PropertiesChanged signals. (ASACORE-1569)
-* Support for X.509 ECDSA digital certificates, which replace the X.509 RSA
-  certificates. (ASACORE-1561)
-* Remove excessive name transfer for all sessions. This limits the names
-  exchanged to just the routing node and host/joiners as a part of an effort to
-  reduce network traffic. (ASACORE-1392)
-* Observer Functionality: this feature simplifies interface based discovery of
-  bus objects by filtering such that listeners only trigger if something
-  relevant has changed in an About Announcement. It also enables automatic
-  session setup and takes care of proxy bus object creation and life-cycle
-  management. (ASACORE-1383)
-* It is now possible to build for Android without requiring OpenSSL from the
-  platform, this greatly simplifies making Android builds. (ASACORE-1248)
-* Add to About C API: a second announce_using_datalistener method was added that
-  takes as argument an AboutDataListener instead of AboutData. (ASACORE-1363)
-* Add support for detecting idle RNs allowing the RN to shut down automatically
-  if no LNs have used its services for a while. (ASACORE-1186)
-* Support for iOS 8.1 (ASACORE-936)
+Features added in Version 15.09
+-------------------------------
+* Security 2.0 was added as a Developer Preview Feature (ASACORE-1393)
+* The ARDP/UDP transport between TC and RN (Thin Client to Routing Node version
+  of a UDP-based transport) is product ready (ASACORE-1404/ASACORE-1686).
+* Change Win7 LN SC Application to connect to the Win10 named pipe, when running
+  on Win10 (ASACORE-1813)
+* Add About feature to JavaScript binding (ASACORE-2029)
+* SC/TC: Expand conversation hash to include all parts of auth conversation
+  (ASACORE-2068)
 
 
-Issues Addressed in Version 15.04a
-----------------------------------
-ASACORE-370  AllJoyn does not build with Android 4.4 (KitKat) sources
-ASACORE-732  Duplicate About announcements received while running large number
-             of About based applications
-ASACORE-1046 iOS: 14.12 app coming into foreground after suspension causes 1
-             thread with 100% CPU usage
-ASACORE-1253 C++ sample apps discover and join session twice, print errors upon
-             exit.
-ASACORE-1300 After performing wireless interface up/down outstanding
-             advertisement and discovery queries are sent out on IPv6 only
-ASACORE-1391 C-style exports in C++ API headers needs AJ_CALL annotation
-ASACORE-1396 Crash if WSARecvMsg returns an error
-ASACORE-1557 A routing node should not respond to a Thin Client if it doesn't
-             have any available TCP slots.
-ASACORE-1603 Invoking AboutData::CreateFromXml() results in a seg fault when a
-             required About field is missing in the XML data that is passed in
-ASACORE-1853 NGNS query responses for openly advertised names are sent as
-             multicast
-ASACORE-1917 Objective-C AJNObserver may deadlock upon dealloc
-ASACORE-1920 Potential Buffer Overflow error in windows Event::Wait code
-ASACORE-1921 NGNS sends duplicate mDNS packets
-ASACORE-1929 ASN.1 parsing error cause core dump
-ASACORE-1934 Race condition in Thread::Join can cause use-after-free
-ASACORE-1946 Windows Readme is inaccurate.
-ASACORE-1954 alljoyn_aboutdata_setappid_fromstring missing from Windows C API
-             DLL exports
-ASACORE-1959 Memory leak with EnablePeerSecurity
-ASACORE-1960 Secure samples are missing from 15.04 SDKs
-ASACORE-1961 About samples for C Binding are broken (need alljoyn_init)
-ASACORE-1975 Unable to send message from chat sample
-ASACORE-1977 assertion error in IpNameServiceImpl::ComputeDynamicScore
-ASACORE-1978 AllJoyn returns the incorrect error if connecting to the named pipe
-             fails
-ASACORE-2000 Windows Daemon and SCL are using reserved TCP port 9956
-ASACORE-2018 NGNS unicast responses to ephemeral ports is problematic for
-             firewall settings
-ASACORE-2032 Reduce error traces in "happy" path
-ASACORE-2035 Fix memory leaks in AboutData and AboutObjectDescription
-ASACORE-2048 SessionLost callback cannot be used reliably for destroying
-             SessionListener object
-
-For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20fixVersion%20in%20%28%2215.04%22%2C%20%2215.04a%22%29%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
-
-
-Known Issues in Version 15.04a
-------------------------------
-ASACORE-49   Multipoint session lost on joiner side and not binder side
-             prevents joiner from rejoining
+Issues Addressed in Version 15.09
+---------------------------------
 ASACORE-181  Memory leak on repeated registration/unregistration of the same
              BusObject: note this is an unusual use case
+ASACORE-1394 AllJoyn Signal sent on an non-existent session id should not
+             return ER_OK
+ASACORE-1865 Lost advertisement packets for quietly advertised names are sent
+             out actively.
+ASACORE-1886 Deadlock in UDPTransport shutdown
+ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
+
+For a complete list of fixed issues:
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20%20and%20component%20%3D%20%22Router%2FSCL%22%20and%20issuetype%20%3D%20Bug%20AND%20fixVersion%20in%20%28%2215.09%22%29%20AND%20status%20in%20%28Closed%2C%20Resolved%29%20and%20resolution%3DFixed%20%20ORDER%20BY%20key%20ASC
+
+
+Known Issues in Version 15.09
+-----------------------------
+ASACORE-49   Multipoint session lost on joiner side and not binder side
+             prevents joiner from rejoining
 ASACORE-367  Router AJ objects that don't call BusController::ObjectRegister()
              due to a failure will cause the program to lockup in a fast
              spinning while/sleep loop
 ASACORE-1244 Legacy About service truncates the AppID to 16 bytes
 ASACORE-1286 FindAdvertisedName does not work with certain config options
-ASACORE-1394 AllJoyn Signal sent on an non-existent session id should not
-             return ER_OK
 ASACORE-1493 Ping in AboutListener::Announced fails
 ASACORE-1600 iOS AboutService sample can not inter-operate with Java AboutClient
              sample
@@ -106,106 +58,70 @@ ASACORE-1714 ECDSA Certificate generation APIs should be implemented for
              language bindings.
 ASACORE-1715 Private key protection support for using pass-phrase not applicable
              for ECDHE_ECDSA mechanism.
+ASACORE-1738 Multipoint session member attach does not work in some backward
+             compatibility scenarios
 ASACORE-1827 GetTimestamp() function on Darwin is not monotonic
-ASACORE-1865 Lost advertisement packets for quietly advertised names are sent
-             out actively.
 ASACORE-1867 TRANSPORT_LOCAL SessionOpts does not work
-ASACORE-1886 Deadlock in UDPTransport shutdown
-ASACORE-1892 'iface' parameters in config file can't use Interface GUID from
-             Windows command line
 ASACORE-1893 Interface org.allseen.Introspectable cannot be marked as ANNOUNCED
              until RegisterBusObject is called
-ASACORE-1894 Race condition between alljoyn_busobject_signal and
-             alljoyn_busobject_cancelsessionlessmessage
-ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
-ASACORE-1907 Permission Functionality in Android does not work correctly
+ASACORE-2331 Automated retry of method and getproperty calls after security
+             updates
+ASACORE-2367 [Security 2.0] Unable to send sessioncast signals
+ASACORE-2379 Android DONE softkey is missing on sample Java apps
+ASACORE-2426 Simultaneous authentication of two peers doesn't work
+ASACORE-2432 Sending of signals does not generate a new master secret
+ASACORE-2444 Crash on BusAttachment destructor if application bus object
+             registered at object path '/'
+ASACORE-2479 Automation test: Windows7 TC service and SC client authentication
+             fail
+ASACORE-2481 DefaultKeyStoreListener implementation uses faulty algorithm to
+             derive keystore filename
+ASACORE-2512 [Security2.0] authentication should try all auth mechanisms before
+             falling back on ECDHE_NULL
+ASACORE-2516 aping tool hangs with apparent deadlock
+ASACORE-2520 AuthenticationComplete not called when ALLJOYN_SRP_KEYX
+             authentication fails
+ASACORE-2542 Auth fails between TCL "SecureClientECDHE.exe -e ECDHE_ECDSA" and
+             SCL SampleServiceECDHE.exe
+ASACORE-2588 Applications built in Release mode cannot interop with Standard
+             Core Library built in Debug mode, and vice versa
+ASACORE-2592 InterfaceDescription's assignment constructor omits hasDescription,
+             causing introspection-related failures
 
 For a complete list of open issues:
-https://jira.allseenalliance.org/issues/?jql=project%3D%22Core%20SW%22%20and%20status%20not%20in%20%28closed%2C%20resolved%29%20and%20type%20not%20in%20%28task%2C%20%22New%20Feature%22%29%20%20and%20component%20not%20in%20%28%22Thin%20Core%20Library%22%2C%20%22About%20TC%22%29%20order%20by%20priority%20DESC%2C%20id%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20AND%20%28component%20in%20%28%22Router%2FSCL%22%2C%20SCONS%29%20OR%20component%20is%20EMPTY%29%20AND%20%28status%20%3D%20closed%20AND%20resolution%20%3D%20Postponed%20OR%20status%20not%20in%20%28closed%2C%20resolved%29%20AND%20issuetype%20%3D%20Bug%29%20ORDER%20BY%20Severity%20DESC%2C%20priority%20DESC%2C%20id%20ASC
 
 
 Compatibility
 -------------
-Version 15.04:
-* The AllJoyn Protocol Version changed from 11 to 12. While routers will support
-  applications using older versions, the reverse is not true; i.e. applications
-  requiring version 12 router features of will not work with older routers.
-* Uncrustify (white space checker) was migrated from v0.57 to v0.61; not
-  updating the tool chain will cause the builds to break (ASACORE-1026)
-* Applications are now required to call AllJoynInit() before any other AllJoyn
-  calls,and AllJoynShutdown() after all other AllJoyn calls are complete
-  (ASACORE-1342); as such, it is a change to the developer APIs, not to the wire
-  protocol and will not impact inter-version inter-operability.
-* The names that are exchanged between Routers have changed (ASACORE-1392);
-  specifically the number of names exchanged between 15.04 nodes has been
-  greatly reduced, but is not expected to create inter-version compatibility
-  issues as the original behavior is executed when interacting with older
-  routers.  The change also has some API changes that *may* have an impact on
-  developers.
-* The handling of ProxyBusObjects has changed to make them more sharable. Public
-  APIs were deprecated and new calls were added. PropertyChangedListener
-  callbacks get passed a new instance of ProxyBusObject that references the
-  state information of the ProxyBusObject the listener was registered with.  If
-  a derived class was registered instead, the PropertyChangedListener cannot
-  cast the returned ProxyBusObject instance back into the derived class.  If
-  information from the derived class needs to be delivered to the callback, then
-  it must be passed in as a context pointer. More details can be found in
-  ASACORE-1522.
-* Header compression support was removed (ASACORE-1534).  This will only be an
-  issue in the case where some applications are enabling header
-  compression. This is unlikely as the feature was added to support sending
-  small signals over BT carriers, and BT hasn't been a supported transport since
-  pre-AllSeen AllJoyn releases.
-* The removal of PIN_KEYX from Standard Core Library (ASACORE-1641) will
-  introduce inter-version inter-operability issues in the following scenarios:
-  1) Pre-14.06 TC applications will not be able to connect to secured 15.04
-     Routing Nodes.
-  2) Any pre-15.04 applications that expose or use secure interfaces and only
-     support PIN_KEYX will no longer work with their 15.04 or later peers.
-* Support for DBUS_COOKIE_SHA1 authentication was removed (ASACORE-1713) - this
-  means that as of 15.04 it will not be possible to use the Standard Core
-  Library with the D-Bus Daemon if that authentication method is required.
-* Support for RSA authentication has been removed (ASACORE-1716); X.509-based
-  certificate authentication is instead supported with ECDSA (ASACORE-1561).
-* Support for SPKI certificates for ECDHE_ECDSA was removed; as there were no
-  public APIs exposing this functionality the impact of this change is expected
-  to be minimal.
-* Multipoint session member attach does not work in some backward compatibility
-  scenarios (ASACORE-1738)
-* The default configuration of the Windows Routing Node (daemonlib.dll) has
-  changed to accept connections on TCP port 9955 instead of TCP port 9956
-  (ASACORE-2000); the default bus connect spec on Windows has been changed
-  accordingly. Older Windows apps (using the older default bus connect spec)
-  will no longer be able to connect to a 15.04a routing node. These apps should
-  be recompiled using the new default connect spec. They may also require
-  changes to your firewall settings.
-* Another impact of ASACORE-2000 is 15.04a Bundled Routers now only accept
-  connections on ephemeral TCP and UDP ports and don’t accept any connections
-  using other transports. This means that applications using the default bus
-  connect spec can no longer connect to a 15.04a Bundled Router on the local
-  machine that is using the default bundledConfig settings.
-* The SessionListener::SessionLost(SessionId sessionId) callback (which has been
-  deprecated since before 14.02) has been removed (ASACORE-2048). Applications
-  should instead use:
-  SessionListener::SessionLost(SessionId sessionId, SessionLostReason reason)
-  By example the following sample source code has been updated with this change:
-  * alljoyn_core/samples/eventaction/SimpleRulesEngine/Rule.cc
-  * services/about/cpp/samples/AboutClientSample/AboutClientSessionListener.cc
-  Existing applications recompiled with this release will notice that their
-  SessionLost(SessionId sessionId) callback will no longer be called.
-
+Version 15.09:
+* Language tag matching uses prefix matching and also will return the default
+  language if there is no match where previously it would return an
+  error. (ASACORE-2209)
+* Claimed 15.09 apps/devices (A/D using Security 2.0) cannot interact securely
+  with pre-15.09 A/D using ECDHE_ECDSA key exchange; further, if the A/D only
+  exposes interfaces/objects requiring security it will not be possible to
+  interact with the A/D. This is because once an A/D is claimed, it expects to
+  receive a manifest from the ECDHE_ECDSA peer, and pre-15.09 A/D do not support
+  sending manifests (which were introduced as part Security 2.0 in the 15.09
+  release).
 
 More details on these changes can be found on the release plan page:
-https://wiki.allseenalliance.org/core/core_15.04_release_plan#compatibility_with_previous_releases
+https://wiki.allseenalliance.org/core/core_15.09_release_plan#compatibility_with_previous_releases
 
 For details of previous releases/release families please see the release notes:
+15.04: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.04/
 14.12: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB14.12
 14.06: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB14.06
 14.02: https://git.allseenalliance.org/cgit/core/alljoyn.git/tree/alljoyn_core/docs/ReleaseNotes.txt?id=v14.02
 
 
 Change history
--------------
+--------------
+15.09  - Bug fixes, Security2.0 feature, productization of TC <-> RN ARDP/UDP
+         feature, About feature supported in Javascript binding, Windows desktop
+         applications will use named pipe when running on Windows 10
+15.04b - Bug fixes: ASACORE-2247, ASACORE-2270
 15.04a - Bug fixes: ASACORE-1917, ASACORE-1920, ASACORE-1921, ASACORE-1929,
          ASACORE-1934, ASACORE-1946, ASACORE-1954, ASACORE-1959, ASACORE-1960,
          ASACORE-1961, ASACORE-1975, ASACORE-1977, ASACORE-1978, ASACORE-2000,

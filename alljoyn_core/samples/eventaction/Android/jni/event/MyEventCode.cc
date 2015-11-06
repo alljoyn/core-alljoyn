@@ -193,14 +193,14 @@ char* MyEventCode::introspectWithDescriptions(const char* sessionName, const cha
     const InterfaceDescription* introIntf = remoteObj.GetInterface(ifcName);
     if (!introIntf) {
         introIntf = mBusAttachment->GetInterface(ifcName);
-        assert(introIntf);
+        QCC_ASSERT(introIntf);
         remoteObj.AddInterface(*introIntf);
     }
 
     /* Attempt to retrieve introspection from the remote object using sync call */
     Message reply(*mBusAttachment);
     const InterfaceDescription::Member* introMember = introIntf->GetMember("IntrospectWithDescription");
-    assert(introMember);
+    QCC_ASSERT(introMember);
 
     MsgArg inputs[1];
     inputs[0].Set("s", "en");

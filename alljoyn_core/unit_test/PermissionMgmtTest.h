@@ -60,6 +60,22 @@ class TestPermissionConfigurationListener : public PermissionConfigurationListen
     bool policyChangedReceived;
 };
 
+class TestPortListener : public SessionPortListener {
+  public:
+    qcc::String lastJoiner;
+    bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(joiner);
+        QCC_UNUSED(opts);
+        return true;
+    }
+    void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
+        QCC_UNUSED(sessionPort);
+        QCC_UNUSED(id);
+        lastJoiner = joiner;
+    }
+};
+
 class BasePermissionMgmtTest : public testing::Test, public BusObject,
     public ProxyBusObject::PropertiesChangedListener {
   public:
@@ -73,6 +89,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
     BasePermissionMgmtTest(const char* path) : BusObject(path),
         adminBus("PermissionMgmtTestAdmin", false),
         serviceBus("PermissionMgmtTestService", false),
+        servicePort(0),
         consumerBus("PermissionMgmtTestConsumer", false),
         remoteControlBus("PermissionMgmtTestRemoteControl", false),
         adminAdminGroupGUID("00112233445566778899AABBCCDDEEFF"),
@@ -113,6 +130,8 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
 
     BusAttachment adminBus;
     BusAttachment serviceBus;
+    SessionPort servicePort;
+    TestPortListener servicePortListener;
     BusAttachment consumerBus;
     BusAttachment remoteControlBus;
     qcc::GUID128 adminAdminGroupGUID;
@@ -159,6 +178,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
     bool canTestStateSignalReception;
     QStatus SetupBus(BusAttachment& bus);
     QStatus TeardownBus(BusAttachment& bus);
+    QStatus JoinSessionWithService(BusAttachment& initiator, SessionId& sessionId);
 
   private:
     void RegisterKeyStoreListeners();
@@ -175,12 +195,12 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
 class PermissionMgmtTestHelper {
   public:
     static QStatus CreateIdentityCertChain(BusAttachment& caBus, BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate* certChain, size_t chainCount, uint8_t* digest, size_t digestSize);
-    static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, uint8_t* digest, size_t digestSize);
+    static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, uint8_t* digest, size_t digestSize, bool setEmptyAKI = false);
     static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::String& der);
 
     static QStatus CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::String& alias, qcc::String& der);
 
-    static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::MembershipCertificate& cert);
+    static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::MembershipCertificate& cert, bool setEmptyAKI = false);
     static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, uint32_t expiredInSecs, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, bool delegate, qcc::String& der);
     static QStatus CreateMembershipCert(const qcc::String& serial, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild, qcc::String& der);
@@ -192,23 +212,23 @@ class PermissionMgmtTestHelper {
 
     static QStatus LoadCertificateBytes(Message& msg, qcc::CertificateX509& cert);
     static QStatus InstallMembership(const qcc::String& serial, BusAttachment& bus, const qcc::String& remoteObjName, BusAttachment& signingBus, const qcc::String& subject, const qcc::ECCPublicKey* subjectPubKey, const qcc::GUID128& guild);
-    static QStatus InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const qcc::String& serial0, const qcc::String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const qcc::ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const qcc::ECCPublicKey* targetPubKey, const qcc::GUID128& guild);
+    static QStatus InstallMembershipChain(BusAttachment& topBus, BusAttachment& secondBus, const qcc::String& serial0, const qcc::String& serial1, const qcc::String& remoteObjName, const qcc::String& secondSubject, const qcc::ECCPublicKey* secondPubKey, const qcc::String& targetSubject, const qcc::ECCPublicKey* targetPubKey, const qcc::GUID128& guild, bool setEmptyAKI = false);
     static QStatus InstallMembershipChain(BusAttachment& caBus, BusAttachment& intermediateBus, BusAttachment& targetBus, qcc::String& leafSerial, const qcc::GUID128& sgID);
     static QStatus RetrievePublicKeyFromMsgArg(MsgArg& arg, qcc::ECCPublicKey* pubKey);
     static QStatus GetPeerPublicKey(BusAttachment& bus, ProxyBusObject& remoteObj, qcc::ECCPublicKey* pubKey);
-    static QStatus ExcerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus ExcerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus ExcerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus ExcerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus ExcerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus ExcerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj);
-    static QStatus ExcerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExerciseOn(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExerciseOff(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExerciseTVUp(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExerciseTVDown(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExerciseTVChannel(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExerciseTVMute(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus ExerciseTVInputSource(BusAttachment& bus, ProxyBusObject& remoteObj);
     static QStatus JoinPeerSession(BusAttachment& initiator, BusAttachment& responder, SessionId& sessionId);
     static QStatus GetGUID(BusAttachment& bus, qcc::GUID128& guid);
     static QStatus GetPeerGUID(BusAttachment& bus, qcc::String& peerName, qcc::GUID128& peerGuid);
     static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
-    static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj);
+    static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj, size_t& propertyCount);
 };
 
 }

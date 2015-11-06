@@ -56,7 +56,7 @@ InternalAnnounceHandler::~InternalAnnounceHandler() {
         announceHandlerLock.Lock(MUTEX_CONTEXT);
         pahit = announceHandlerList.begin();
     }
-    assert(announceHandlerList.empty());
+    QCC_ASSERT(announceHandlerList.empty());
     announceHandlerLock.Unlock(MUTEX_CONTEXT);
 }
 

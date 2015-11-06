@@ -31,7 +31,6 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
-#include <assert.h>
 
 #include <qcc/RWLock.h>
 
@@ -73,7 +72,7 @@ RWLock::~RWLock()
         fflush(stdout);
         // Can't use QCC_LogError() since it uses mutexes under the hood.
         printf("***** RWLock destruction failure: %d - %s\n", ret, strerror(ret));
-        assert(false);
+        QCC_ASSERT(false);
     }
 }
 
@@ -88,7 +87,7 @@ QStatus RWLock::RDLock()
         fflush(stdout);
         // Can't use QCC_LogError() since it uses mutexes under the hood.
         printf("***** RWLock lock failure: %d - %s\n", ret, strerror(ret));
-        assert(false);
+        QCC_ASSERT(false);
         return ER_OS_ERROR;
     }
     return ER_OK;
@@ -105,7 +104,7 @@ QStatus RWLock::WRLock()
         fflush(stdout);
         // Can't use QCC_LogError() since it uses mutexes under the hood.
         printf("***** RWLock lock failure: %d - %s\n", ret, strerror(ret));
-        assert(false);
+        QCC_ASSERT(false);
         return ER_OS_ERROR;
     }
     return ER_OK;
@@ -122,7 +121,7 @@ QStatus RWLock::Unlock()
         fflush(stdout);
         // Can't use QCC_LogError() since it uses mutexes under the hood.
         printf("***** RWLock unlock failure: %d - %s\n", ret, strerror(ret));
-        assert(false);
+        QCC_ASSERT(false);
         return ER_OS_ERROR;
     }
     return ER_OK;

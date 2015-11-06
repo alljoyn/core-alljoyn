@@ -33,7 +33,7 @@ SecurityApplicationProxy::SecurityApplicationProxy(BusAttachment& bus, const cha
     {
         /* Add org.alljoyn.Bus.Security.Application interface */
         const InterfaceDescription* intf = bus.GetInterface(org::alljoyn::Bus::Security::Application::InterfaceName);
-        assert(intf);
+        QCC_ASSERT(intf);
         status = AddInterface(*intf);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to add the %s interface to the %s", org::alljoyn::Bus::Security::Application::InterfaceName, __FUNCTION__));
@@ -42,7 +42,7 @@ SecurityApplicationProxy::SecurityApplicationProxy(BusAttachment& bus, const cha
     {
         /* Add org.alljoyn.Bus.Security.ClaimableApplication interface */
         const InterfaceDescription* intf = bus.GetInterface(org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName);
-        assert(intf);
+        QCC_ASSERT(intf);
         status = AddInterface(*intf);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to add the %s interface to the %s", org::alljoyn::Bus::Security::ClaimableApplication::InterfaceName, __FUNCTION__));
@@ -51,7 +51,7 @@ SecurityApplicationProxy::SecurityApplicationProxy(BusAttachment& bus, const cha
     {
         /* Add org.alljoyn.Bus.Security.ManagedApplication interface */
         const InterfaceDescription* intf = bus.GetInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
-        assert(intf);
+        QCC_ASSERT(intf);
         status = AddInterface(*intf);
         if (status != ER_OK) {
             QCC_LogError(status, ("Failed to add the %s interface to the %s", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, __FUNCTION__));

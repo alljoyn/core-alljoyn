@@ -65,7 +65,7 @@ static QStatus AddAclsToDefaultPolicy(PermissionPolicy& defaultPolicy, Permissio
     PermissionPolicy::Acl* newAcls = new PermissionPolicy::Acl[newCount];
     size_t idx = 0;
     for (size_t cnt = 0; cnt < defaultPolicy.GetAclsSize(); ++cnt) {
-        assert(idx < newCount);
+        QCC_ASSERT(idx < newCount);
         if (defaultPolicy.GetAcls()[cnt].GetPeersSize() > 0) {
             if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) {
                 if (keepCAentry) {
@@ -87,7 +87,7 @@ static QStatus AddAclsToDefaultPolicy(PermissionPolicy& defaultPolicy, Permissio
         }
     }
     for (size_t cnt = 0; cnt < count; ++cnt) {
-        assert(idx < newCount);
+        QCC_ASSERT(idx < newCount);
         newAcls[idx++] = acls[cnt];
     }
     defaultPolicy.SetAcls(newCount, newAcls);
@@ -1173,12 +1173,16 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         delete [] rules;
     }
 
-    QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus)
+    QStatus InvokeClaim(bool useAdminSG, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail, BusAttachment* caBus = NULL, IdentityCertificate** copyCertChain = NULL, size_t* copyCertChainCount = NULL)
     {
         SecurityApplicationProxy saProxy(claimerBus, claimedBus.GetUniqueName().c_str());
         /* retrieve public key from to-be-claimed app to create identity cert */
         ECCPublicKey claimedPubKey;
-        EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+        if (expectClaimToFail) {
+            GetAppPublicKey(claimedBus, claimedPubKey);
+        } else {
+            EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
+        }
         qcc::GUID128 guid;
         PermissionMgmtTestHelper::GetGUID(claimedBus, guid);
         IdentityCertificate identityCertChain[3];
@@ -1207,12 +1211,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             return status;
         }
         EXPECT_EQ(ER_OK, status) << "Claim failed.";
-        return VerifyIdentity(claimerBus, claimedBus, identityCertChain, certChainCount);
-    }
-
-    QStatus InvokeClaim(bool useAdminCA, BusAttachment& claimerBus, BusAttachment& claimedBus, qcc::String serial, qcc::String alias, bool expectClaimToFail)
-    {
-        return InvokeClaim(useAdminCA, claimerBus, claimedBus, serial, alias, expectClaimToFail, NULL);
+        if (copyCertChain) {
+            *copyCertChainCount = certChainCount;
+            *copyCertChain = new IdentityCertificate[certChainCount];
+            for (size_t cnt = 0; cnt < certChainCount; cnt++) {
+                (*copyCertChain)[cnt] = identityCertChain[cnt];
+            }
+        }
+        return status;
     }
 
     /**
@@ -1286,6 +1292,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* try claiming with state claimable.  Expect to succeed */
         SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", false)) << " InvokeClaim failed.";
+        /* sleep a max of 1 second to see whether the claimed app issues the
+           PolicyChanged callback after the InvokeClaim is returned.
+         */
+        for (int cnt = 0; cnt < 100; cnt++) {
+            if (GetPolicyChangedReceived()) {
+                break;
+            }
+            qcc::Sleep(10);
+        }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
         /* try to claim one more time */
@@ -1294,9 +1309,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_FALSE(GetPolicyChangedReceived());
 
         ECCPublicKey claimedPubKey2;
-        /* retrieve public key from claimed app to validate that it is not changed */
-        EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey2)) << "GetPeerPublicKey failed.";
-        EXPECT_EQ(memcmp(&claimedPubKey2, &claimedPubKey, sizeof(ECCPublicKey)), 0) << "  The public key of the claimed app has changed.";
+        /* Get public key is no longer available on anonymous connection after claim */
+        EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.GetEccPublicKey(claimedPubKey2)) << "GetPeerPublicKey is not supposed to succeed.";
 
         TestStateSignalReception();
     }
@@ -1324,6 +1338,15 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         SetApplicationStateSignalReceived(false);
         SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(false, adminBus, consumerBus, "3030303", "Consumer", false, &adminBus)) << " InvokeClaim failed.";
+        /* sleep a max of 1 second to see whether the claimed app issues the
+           PolicyChanged callback after the InvokeClaim is returned.
+         */
+        for (int cnt = 0; cnt < 100; cnt++) {
+            if (GetPolicyChangedReceived()) {
+                break;
+            }
+            qcc::Sleep(10);
+        }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
         /* try to claim a second time */
@@ -1360,10 +1383,23 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, status) << "  JoinSession failed.  Actual Status: " << QCC_StatusText(status);
         SetApplicationStateSignalReceived(false);
         SetPolicyChangedReceived(false);
-        EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus)) << " InvokeClaim failed.";
+        IdentityCertificate* identityCertChain = NULL;
+        size_t certChainCount = 0;
+        EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus, &identityCertChain, &certChainCount)) << " InvokeClaim failed.";
+        /* sleep a max of 1 second to see whether the claimed app issues the
+           PolicyChanged callback after the InvokeClaim is returned.
+         */
+        for (int cnt = 0; cnt < 100; cnt++) {
+            if (GetPolicyChangedReceived()) {
+                break;
+            }
+            qcc::Sleep(10);
+        }
         EXPECT_TRUE(GetPolicyChangedReceived());
-
         TestStateSignalReception();
+        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+        EXPECT_EQ(ER_OK, VerifyIdentity(consumerBus, remoteControlBus, identityCertChain, certChainCount)) << "Verify identity cert chain failed after claim";
+        delete [] identityCertChain;
     }
 
     void Claims(bool usePSK, bool claimRemoteControl)
@@ -1384,6 +1420,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         if (claimRemoteControl) {
             ConsumerClaimsRemoteControl();
         }
+        EnableSecurity("ALLJOYN_ECDHE_ECDSA");
     }
 
     void Claims(bool usePSK)
@@ -1476,7 +1513,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /*
      *  Replace service app Identity Certificate
      */
-    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const PermissionPolicy::Rule* manifest, size_t manifestSize, bool generateRandomSubjectKey, bool setWrongManifestDigest)
+    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const PermissionPolicy::Rule* manifest, size_t manifestSize, bool generateRandomSubjectKey, bool setWrongManifestDigest, bool setEmptyAKI = false)
     {
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         /* retrieve the current identity cert */
@@ -1510,11 +1547,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         } else {
             EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(bus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
         }
-        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, subjectPublicKey, "Service Provider", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, subjectPublicKey, "Service Provider", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE, setEmptyAKI);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.";
 
         status = saProxy.UpdateIdentity(identityCertChain, 1, manifest, manifestSize);
-        if (generateRandomSubjectKey || setWrongManifestDigest) {
+        if (generateRandomSubjectKey || setWrongManifestDigest || setEmptyAKI) {
             EXPECT_NE(ER_OK, status) << "InstallIdentity did not fail.";
         } else {
             EXPECT_EQ(ER_OK, status) << "InstallIdentity failed.";
@@ -1532,12 +1569,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, false);
     }
 
-    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, bool generateRandomSubjectKey, bool setWrongManifestDigest)
+    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, bool generateRandomSubjectKey, bool setWrongManifestDigest, bool setEmptyAKI = false)
     {
         PermissionPolicy::Rule* manifest = NULL;
         size_t manifestSize = 0;
         GenerateAllowAllManifest(&manifest, &manifestSize);
-        ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, setWrongManifestDigest);
+        ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, setWrongManifestDigest, setEmptyAKI);
         delete [] manifest;
     }
 
@@ -1655,7 +1692,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install Membership chain to a consumer
      */
-    void InstallMembershipChainToTarget(BusAttachment& topBus, BusAttachment& middleBus, BusAttachment& targetBus, const char* serial0, const char* serial1, qcc::GUID128& guildID)
+    void InstallMembershipChainToTarget(BusAttachment& topBus, BusAttachment& middleBus, BusAttachment& targetBus, const char* serial0, const char* serial1, qcc::GUID128& guildID, bool setEmptyAKI = false)
     {
         ECCPublicKey targetPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(targetBus, &targetPubKey);
@@ -1671,7 +1708,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = tca.GetGuid(targetGUID);
         qcc::String middleCN(middleGUID.ToString());
         qcc::String targetCN(targetGUID.ToString());
-        status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, targetBus.GetUniqueName().c_str(), middleCN, &secondPubKey, targetCN, &targetPubKey, guildID);
+        status = PermissionMgmtTestHelper::InstallMembershipChain(topBus, middleBus, serial0, serial1, targetBus.GetUniqueName().c_str(), middleCN, &secondPubKey, targetCN, &targetPubKey, guildID, setEmptyAKI);
+        if (setEmptyAKI) {
+            EXPECT_EQ(ER_INVALID_CERTIFICATE, status) << "  InstallMembershipChainToTarget did not fail.";
+            return;
+        }
         EXPECT_EQ(ER_OK, status) << "  InstallMembershipChainToTarget failed.  Actual Status: " << QCC_StatusText(status);
 
         /* retrieve the membership summaries to verify the issuer public key is provided */
@@ -1762,8 +1803,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void AppCanCallOn(BusAttachment& bus, BusAttachment& targetBus)
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AppCanCallOn ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AppCanCallOn ExerciseOn failed.  Actual Status: " << QCC_StatusText(status);
         //bus.LeaveSession(clientProxyObject.GetSessionId());
     }
 
@@ -1773,8 +1814,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void AppCannotCallOn(BusAttachment& bus, BusAttachment& targetBus)
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallOn ExcerciseOn did not fail.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallOn ExerciseOn did not fail.  Actual Status: " << QCC_StatusText(status);
         //bus.LeaveSession(clientProxyObject.GetSessionId());
     }
 
@@ -1785,9 +1826,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(bus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseOff(bus, clientProxyObject);
         EXPECT_NE(ER_OK, status) << "  AnyUserCanCallOnAndNotOff ExcersizeOff did not fail.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1798,9 +1839,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCanCallOnAndOff ExcerciseOn failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseOff(consumerBus, clientProxyObject);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(consumerBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanCallOnAndOff ExerciseOn failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseOff(consumerBus, clientProxyObject);
         EXPECT_EQ(ER_OK, status) << "  ConsumerCanCallOnAndOff ExcersizeOff failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1811,24 +1852,24 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOn(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOn ExcerciseOn should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOn(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOn ExerciseOn should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void AppCannotCallTVDown(BusAttachment& bus, BusAttachment& targetBus)
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVDown(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVDown ExcerciseTVDown should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVDown(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVDown ExerciseTVDown should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void AppCanCallTVUp(BusAttachment& bus, BusAttachment& targetBus)
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVUp ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVUp(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVUp ExerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -1837,8 +1878,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void AppCannotCallTVOff(BusAttachment& bus, BusAttachment& targetBus)
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOff ExcerciseOff should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOff(bus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  AppCannotCallTVOff ExerciseOff should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     void AppCanSetTVVolume(BusAttachment& bus, BusAttachment& targetBus, uint32_t tvVolume, bool listenToPropertiesChanged = false, bool getVolume = true)
@@ -1873,14 +1914,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVInputSource(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCannotCallTVInputSource ExcerciseTVInputSource should have failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVInputSource(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCannotCallTVInputSource ExerciseTVInputSource should have failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
      *  App gets the Security interfaces' version number
      */
-    void AppGetVersionNumber(BusAttachment& bus, BusAttachment& targetBus)
+    void AppGetVersionNumber(BusAttachment& bus, BusAttachment& targetBus, bool expectFailToGetManagedAppVersion)
     {
         uint16_t versionNum = 0;
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
@@ -1888,8 +1929,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
         EXPECT_EQ(ER_OK, saProxy.GetClaimableApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
         EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
-        EXPECT_EQ(ER_OK, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
-        EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
+        if (expectFailToGetManagedAppVersion) {
+            EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion is supposed to fail.";
+        } else {
+            EXPECT_EQ(ER_OK, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
+            EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
+        }
     }
 
     /**
@@ -1899,8 +1944,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseOff(bus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVOff ExcerciseOff failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseOff(bus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  AppCanCallTVOff ExerciseOff failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
@@ -1916,14 +1961,13 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
      */
     void ConsumerCanTVUpAndDownAndNotChannel()
     {
-
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseTVDown(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
-        status = PermissionMgmtTestHelper::ExcerciseTVChannel(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExcerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVUp(consumerBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseTVDown(consumerBus, clientProxyObject);
+        EXPECT_EQ(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExerciseTVDown failed.  Actual Status: " << QCC_StatusText(status);
+        status = PermissionMgmtTestHelper::ExerciseTVChannel(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCanTVUpAndDownAndNotChannel ExerciseTVChannel did not fail.  Actual Status: " << QCC_StatusText(status);
 
         uint32_t tvVolume = 35;
         status = PermissionMgmtTestHelper::SetTVVolume(consumerBus, clientProxyObject, tvVolume);
@@ -1941,19 +1985,27 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::ExcerciseTVUp(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCannotTurnTVUp ExcerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
+        QStatus status = PermissionMgmtTestHelper::ExerciseTVUp(consumerBus, clientProxyObject);
+        EXPECT_NE(ER_OK, status) << "  ConsumerCannotTurnTVUp ExerciseTVUp failed.  Actual Status: " << QCC_StatusText(status);
     }
 
     /**
-     *  consumer cannot get the TV caption
+     *  consumer tries to get the TV caption
      */
-    void ConsumerCannotGetTVCaption()
+    QStatus ConsumerGetTVCaption(size_t& propertyCount)
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject);
-        EXPECT_NE(ER_OK, status) << "  ConsumerCannotGetTVCaption GetTVCaption did not fail.  Actual Status: " << QCC_StatusText(status);
+        return PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject, propertyCount);
+    }
+
+    /**
+     *  consumer tries to get the TV caption
+     */
+    QStatus ConsumerGetTVCaption()
+    {
+        size_t propertyCount = 0;
+        return ConsumerGetTVCaption(propertyCount);
     }
 
     /**
@@ -1963,8 +2015,9 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        QStatus status = PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject);
-        EXPECT_EQ(ER_OK, status) << "  ConsumerCannotGetTVCaption GetTVCaption failed.  Actual Status: " << QCC_StatusText(status);
+        size_t propertyCount = 0;
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::GetTVCaption(consumerBus, clientProxyObject, propertyCount)) << "  ConsumerCanGetTVCaption GetTVCaption failed.";
+        ASSERT_GT(propertyCount, static_cast<size_t>(0)) << " property count is not greater than zero";
     }
 
     /**
@@ -1974,7 +2027,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(adminBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        status = PermissionMgmtTestHelper::ExcerciseTVChannel(adminBus, clientProxyObject);
+        status = PermissionMgmtTestHelper::ExerciseTVChannel(adminBus, clientProxyObject);
         EXPECT_EQ(ER_OK, status) << "  AdminCanChangeChannel failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -1985,7 +2038,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
 
         ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
-        status = PermissionMgmtTestHelper::ExcerciseTVChannel(consumerBus, clientProxyObject);
+        status = PermissionMgmtTestHelper::ExerciseTVChannel(consumerBus, clientProxyObject);
         EXPECT_EQ(ER_OK, status) << "  ConsumerCanChangeChannel failed.  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -2211,7 +2264,7 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     AnyUserCanCallOnAndNotOff(consumerBus);
     /* join session to retrieve sessioncast signal */
     SessionId sessionId;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     SetChannelChangedSignalReceived(false);
     ConsumerCanTVUpAndDownAndNotChannel();
     /* sleep a second to see whether the ChannelChanged signal is received */
@@ -2226,11 +2279,12 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     SetManifestTemplateOnServiceProvider();
 
     RetrieveServicePublicKey();
+    AppGetVersionNumber(consumerBus, serviceBus, false);
     RemoveMembershipFromServiceProvider();
     RemoveMembershipFromConsumer();
     FailResetServiceByConsumer();
     SuccessfulResetServiceByAdmin();
-    AppGetVersionNumber(consumerBus, serviceBus);
+    AppGetVersionNumber(consumerBus, serviceBus, true);
 }
 
 /*
@@ -2413,6 +2467,18 @@ TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithBadManifestDigest)
 {
     Claims(false);
     ReplaceIdentityCertWithBadManifestDigest(adminBus, serviceBus);
+}
+
+TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithEmptyAKI)
+{
+    Claims(false);
+    ReplaceIdentityCert(adminBus, serviceBus, false, false, true);
+}
+
+TEST_F(PermissionMgmtUseCaseTest, InstallMembershipWithEmptyAKI)
+{
+    Claims(false);
+    InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1, true);
 }
 
 TEST_F(PermissionMgmtUseCaseTest, TurnStateFromNeedUpdateToClaimed)
@@ -2670,7 +2736,9 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInManifestUsingDe
 
     AnyUserCanCallOnAndNotOff(consumerBus);
     ConsumerCannotTurnTVUp();
-    ConsumerCannotGetTVCaption();
+    size_t propertyCount = 0;
+    EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, ConsumerGetTVCaption(propertyCount));
+    ASSERT_EQ(static_cast<size_t>(0), propertyCount) << " property count is not zero";
 }
 
 TEST_F(PermissionMgmtUseCaseTest, AllowEverything)
@@ -3352,7 +3420,7 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByOutgoingPolicy)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    EXPECT_EQ(ER_PERMISSION_DENIED, ConsumerGetTVCaption());
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesAllowed)
@@ -3424,7 +3492,9 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesNotAllowedByProviderPolicy)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    size_t propertyCount = 0;
+    EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, ConsumerGetTVCaption(propertyCount));
+    ASSERT_EQ(static_cast<size_t>(0), propertyCount) << " property count is not zero";
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByProviderManifest)
@@ -3451,7 +3521,7 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByProviderManifest)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    EXPECT_EQ(ER_PERMISSION_DENIED, ConsumerGetTVCaption());
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByConsumerManifest)
@@ -3478,7 +3548,9 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByConsumerManifest)
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
 
-    ConsumerCannotGetTVCaption();
+    size_t propertyCount = 0;
+    EXPECT_EQ(ER_BUS_ELEMENT_NOT_FOUND, ConsumerGetTVCaption(propertyCount));
+    ASSERT_EQ(static_cast<size_t>(0), propertyCount) << " property count is not zero";
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetEmptyManifestTemplateBeforeClaim)
@@ -3499,14 +3571,13 @@ TEST_F(PermissionMgmtUseCaseTest, GetEmptyManifestTemplateDigestBeforeClaim)
     EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, 0)) << "SetPermissionManifest GetManifestTemplateDigest failed.";
 }
 
-TEST_F(PermissionMgmtUseCaseTest, GetEmptyCertificateIdBeforeClaim)
+TEST_F(PermissionMgmtUseCaseTest, CertificateIdNotAvailableBeforeClaim)
 {
     EnableSecurity("ALLJOYN_ECDHE_NULL");
     SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
     qcc::String serialNum;
     KeyInfoNISTP256 keyInfo;
-    EXPECT_EQ(ER_OK, saProxy.GetIdentityCertificateId(serialNum, keyInfo));
-    EXPECT_TRUE(keyInfo.GetPublicKey()->empty());
+    EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.GetIdentityCertificateId(serialNum, keyInfo));
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
@@ -3532,7 +3603,7 @@ TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
 
     /* join session to retrieve sessioncast signal */
     SessionId sessionId;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     AppCanSetTVVolume(consumerBus, serviceBus, 14, true);
     /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {
@@ -3585,7 +3656,7 @@ TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
 
     /* join session to retrieve sessioncast signal */
     SessionId sessionId;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::JoinPeerSession(consumerBus, serviceBus, sessionId));
+    EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     AppCanSetTVVolume(consumerBus, serviceBus, 14, true, false);
     /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {

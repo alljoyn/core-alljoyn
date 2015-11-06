@@ -23,7 +23,6 @@
 #include <alljoyn/KeyStoreListener.h>
 #include <alljoyn_c/KeyStoreListener.h>
 #include <string.h>
-#include <assert.h>
 #include <qcc/Debug.h>
 
 #define QCC_MODULE "ALLJOYN_C"
@@ -46,14 +45,14 @@ class KeyStoreListenerCallbackC : public KeyStoreListener {
     virtual QStatus LoadRequest(KeyStore& keyStore)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        assert(callbacks.load_request != NULL && "load_request callback required.");
+        QCC_ASSERT(callbacks.load_request != NULL && "load_request callback required.");
         return callbacks.load_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
     }
 
     virtual QStatus StoreRequest(KeyStore& keyStore)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        assert(callbacks.store_request != NULL && "store_request callback required.");
+        QCC_ASSERT(callbacks.store_request != NULL && "store_request callback required.");
         return callbacks.store_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
     }
   protected:
@@ -70,15 +69,15 @@ struct _alljoyn_keystorelistener_handle {
 alljoyn_keystorelistener AJ_CALL alljoyn_keystorelistener_create(const alljoyn_keystorelistener_callbacks* callbacks, const void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(callbacks->load_request != NULL && "load_request callback required.");
-    assert(callbacks->store_request != NULL && "store_request callback required.");
+    QCC_ASSERT(callbacks->load_request != NULL && "load_request callback required.");
+    QCC_ASSERT(callbacks->store_request != NULL && "store_request callback required.");
     return (alljoyn_keystorelistener) new ajn::KeyStoreListenerCallbackC(callbacks, context);
 }
 
 void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelistener listener)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    assert(listener != NULL && "listener parameter must not be NULL");
+    QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::KeyStoreListenerCallbackC*)listener;
 }
 

@@ -22,7 +22,6 @@
 
 #include <alljoyn_c/AjAPI.h>
 
-#include <assert.h>
 #include <ctype.h>
 
 #include <alljoyn/Message.h>

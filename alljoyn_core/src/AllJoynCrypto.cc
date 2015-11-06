@@ -126,7 +126,7 @@ QStatus Crypto::Encrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
             if (MIN_AUTH_VERSION_USE_CRYPTO_VALUE <= message.GetAuthVersion()) {
                 extraNonceLen = GetExtraNonceLength(message);
 
-                assert(extraNonceLen <= (MaxNonceLength - PreviousNonceLength));
+                QCC_ASSERT(extraNonceLen <= (MaxNonceLength - PreviousNonceLength));
                 if (MaxNonceLength < (extraNonceLen + PreviousNonceLength)) {
                     status = ER_CRYPTO_ILLEGAL_PARAMETERS;
                     break;
@@ -139,7 +139,7 @@ QStatus Crypto::Encrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
             }
             KeyBlob nonce(nd, min(sizeof(nd), GetNonceLength(message)), KeyBlob::GENERIC);
 
-            assert(0 <= message.GetAuthVersion());
+            QCC_ASSERT(0 <= message.GetAuthVersion());
 
             // Patch up the body length in header before encrypting
             _Message::MessageHeader* msgHdr = (_Message::MessageHeader*)msgBuf;
@@ -194,7 +194,7 @@ QStatus Crypto::Decrypt(const _Message& message, const KeyBlob& keyBlob, uint8_t
             if (MIN_AUTH_VERSION_USE_CRYPTO_VALUE <= message.GetAuthVersion()) {
                 extraNonceLen = GetExtraNonceLength(message);
 
-                assert(extraNonceLen <= (MaxNonceLength - PreviousNonceLength));
+                QCC_ASSERT(extraNonceLen <= (MaxNonceLength - PreviousNonceLength));
                 if (MaxNonceLength < (extraNonceLen + PreviousNonceLength)) {
                     status = ER_CRYPTO_ILLEGAL_PARAMETERS;
                     break;

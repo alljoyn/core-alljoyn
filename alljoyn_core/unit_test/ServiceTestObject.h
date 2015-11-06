@@ -22,7 +22,6 @@
 #include <qcc/platform.h>
 
 #include <signal.h>
-#include <assert.h>
 #include <stdio.h>
 #include <vector>
 

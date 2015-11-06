@@ -87,12 +87,18 @@ int64_t qcc::ConvertStructureToTime(struct tm* timeptr)
     return _mktime64(timeptr);
 }
 
-struct tm* qcc::ConvertTimeToStructure(const int64_t* timer) {
-    return _gmtime64((__time64_t*)timer);
+QStatus qcc::ConvertTimeToStructure(const int64_t* timer, struct tm* tm) {
+    if (_gmtime64_s(tm, (__time64_t*)timer) == 0) {
+        return ER_OK;
+    }
+    return ER_FAIL;
 }
 
-struct tm* qcc::ConvertToLocalTime(const int64_t* timer) {
-    return _localtime64((__time64_t*)timer);
+QStatus qcc::ConvertToLocalTime(const int64_t* timer, struct tm* tm) {
+    if (_localtime64_s(tm, (__time64_t*)timer) == 0) {
+        return ER_OK;
+    }
+    return ER_FAIL;
 }
 
 size_t qcc::FormatTime(char* strDest, size_t maxSize, const char* format, const struct tm* timeptr)

@@ -27,7 +27,6 @@
 #include <qcc/platform.h>
 
 #include <algorithm>
-#include <assert.h>
 #include <list>
 #include <string.h>
 
@@ -361,7 +360,7 @@ class ScatterGatherList {
         QCC_DbgTrace(("ScatterGatherList::CopyToBuffer(*buf, bufSize = %u)", bufSize));
         QCC_DbgPrintf(("bufSize = %u  dataSize = %u  copyCnt = %u", bufSize, dataSize, copyCnt));
 
-        assert(buf != NULL);
+        QCC_ASSERT(buf != NULL);
 
         while (copyCnt > 0 && src != sg.end()) {
             size_t copyLen = (std::min)(copyCnt, (size_t)(src->len));
@@ -396,7 +395,7 @@ class ScatterGatherList {
         QCC_DbgTrace(("ScatterGatherList::CopyFromBuffer(*buf, bufSize = %u)", bufSize));
         QCC_DbgPrintf(("bufSize = %u  maxDataSize = %u  copyCnt = %u", bufSize, maxDataSize, copyCnt));
 
-        assert(buf != NULL);
+        QCC_ASSERT(buf != NULL);
 
         while (copyCnt > 0 && dest != sg.end()) {
             size_t copyLen = (std::min)(copyCnt, static_cast<size_t>(dest->len));

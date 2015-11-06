@@ -220,7 +220,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
             status = ER_OK;
         }
     } else {
-        assert(msg->bus == &routerBus);
+        QCC_ASSERT(msg->bus == &routerBus);
         /*
          * Register the endpoint with the client router if needed
          */
@@ -252,7 +252,7 @@ NullTransport::~NullTransport()
     /* Only one ref to the NullEndpoint must remain,
      * held by NullTransport::endpoint
      */
-    assert(endpoint.GetRefCount() == 1);
+    QCC_ASSERT(endpoint.GetRefCount() == 1);
 }
 
 QStatus NullTransport::Start()
@@ -288,7 +288,7 @@ QStatus NullTransport::LinkBus(BusAttachment* otherBus)
 {
     QCC_DbgHLPrintf(("Linking leaf node and routing node busses"));
 
-    assert(otherBus);
+    QCC_ASSERT(otherBus);
 
     /*
      * Initialize the null endpoint
@@ -341,7 +341,7 @@ QStatus NullTransport::Disconnect(const char* connectSpec)
 
     if (endpoint->IsValid()) {
         NullEndpoint ep = NullEndpoint::cast(endpoint);
-        assert(routerLauncher);
+        QCC_ASSERT(routerLauncher);
         ep->clientBus.GetInternal().GetRouter().UnregisterEndpoint(ep->GetUniqueName(), ep->GetEndpointType());
         ep->routerBus.GetInternal().GetRouter().UnregisterEndpoint(ep->GetUniqueName(), ep->GetEndpointType());
         ep->Invalidate();

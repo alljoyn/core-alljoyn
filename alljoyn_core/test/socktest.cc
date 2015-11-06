@@ -26,7 +26,6 @@
 #include <errno.h>
 #include <stdio.h>
 #include <fcntl.h>
-#include <assert.h>
 #include <vector>
 
 #include <qcc/Environ.h>
@@ -114,7 +113,7 @@ class SockService : public BusObject {
 
     void ObjectRegistered(void)
     {
-        assert(bus);
+        QCC_ASSERT(bus);
         BusObject::ObjectRegistered();
         const ProxyBusObject& dbusObj = bus->GetDBusProxyObj();
         MsgArg args[2];

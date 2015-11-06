@@ -23,11 +23,11 @@
 #include <qcc/platform.h>
 
 #include <windows.h>
-#include <assert.h>
 #include <stdio.h>
 
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/MutexInternal.h>
 #include <qcc/windows/utility.h>
 
 /** @internal */
@@ -37,11 +37,10 @@ using namespace qcc;
 
 void Mutex::Init()
 {
-    assert(!isInitialized);
-#ifndef NDEBUG
-    file = NULL;
+    QCC_ASSERT(!isInitialized);
+    mutexInternal = new Internal;
+    file = nullptr;
     line = static_cast<uint32_t>(-1);
-#endif
     InitializeCriticalSection(&mutex);
     isInitialized = true;
 }
@@ -51,34 +50,46 @@ void Mutex::Destroy()
     if (isInitialized) {
         isInitialized = false;
         DeleteCriticalSection(&mutex);
+        delete mutexInternal;
+        mutexInternal = nullptr;
     }
 }
 
 QStatus Mutex::Lock()
 {
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
     EnterCriticalSection(&mutex);
+    mutexInternal->LockAcquired();
     return ER_OK;
 }
 
 QStatus Mutex::Unlock()
 {
-    assert(isInitialized);
+    QCC_ASSERT(isInitialized);
     if (!isInitialized) {
         return ER_INIT_FAILED;
     }
+
+    mutexInternal->ReleasingLock();
     LeaveCriticalSection(&mutex);
     return ER_OK;
 }
 
 bool Mutex::TryLock()
 {
-    assert(isInitialized);
-    if (!isInitialized) {
-        return false;
+    QCC_ASSERT(isInitialized);
+    bool locked = false;
+
+    if (isInitialized) {
+        locked = TryEnterCriticalSection(&mutex);
+        if (locked) {
+            mutexInternal->LockAcquired();
+        }
     }
-    return TryEnterCriticalSection(&mutex);
+
+    return locked;
 }

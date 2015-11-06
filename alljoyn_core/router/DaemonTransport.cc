@@ -51,7 +51,7 @@ DaemonTransport::DaemonTransport(BusAttachment& bus)
      * We know we are daemon code, so we'd better be running with a daemon
      * router.  This is assumed elsewhere.
      */
-    assert(bus.GetInternal().GetRouter().IsDaemon());
+    QCC_ASSERT(bus.GetInternal().GetRouter().IsDaemon());
 }
 
 DaemonTransport::~DaemonTransport()

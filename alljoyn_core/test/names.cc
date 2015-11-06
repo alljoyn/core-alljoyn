@@ -24,7 +24,6 @@
 
 #include <qcc/platform.h>
 
-#include <assert.h>
 
 #include <qcc/Debug.h>
 #include <qcc/String.h>
@@ -159,7 +158,7 @@ int CDECL_CALL main(int argc, char** argv)
      * Maximum length checks - should all pass
      */
     PadTo(buf, ":1.0.", 255, '0');
-    assert(strlen(buf) == 255);
+    QCC_ASSERT(strlen(buf) == 255);
     if (!IsLegalUniqueName(buf)) {
         printf("failed max IsLegalUniqueName");
         return 1;
@@ -191,7 +190,7 @@ int CDECL_CALL main(int argc, char** argv)
      * Beyond maximum length checks - should all fail
      */
     PadTo(buf, ":1.0.", 256, '0');
-    assert(strlen(buf) == 256);
+    QCC_ASSERT(strlen(buf) == 256);
     if (IsLegalUniqueName(buf)) {
         printf("failed too long IsLegalUniqueName");
         return 1;

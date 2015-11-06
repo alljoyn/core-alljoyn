@@ -560,7 +560,7 @@ static void SealBuffer(uint8_t* p)
 
 static void CheckSeal(uint8_t* p)
 {
-    assert(*p++ == 'S' && *p++ == 'E' && *p++ == 'A' && *p++ == 'L' && "CheckSeal(): Seal blown");
+    QCC_ASSERT(*p++ == 'S' && *p++ == 'E' && *p++ == 'A' && *p++ == 'L' && "CheckSeal(): Seal blown");
 }
 #endif
 
@@ -731,7 +731,7 @@ class ArdpStream : public qcc::Stream {
 
         m_lock.Lock(MUTEX_CONTEXT);
         set<ThreadEntry>::iterator i = m_threads.find(entry);
-        assert(i != m_threads.end() && "ArdpStream::RemoveCurrentThread(): Thread not on m_threads");
+        QCC_ASSERT(i != m_threads.end() && "ArdpStream::RemoveCurrentThread(): Thread not on m_threads");
         m_threads.erase(i);
         m_lock.Unlock(MUTEX_CONTEXT);
     }
@@ -1105,7 +1105,7 @@ class ArdpStream : public qcc::Stream {
              */
             if (status == ER_ARDP_BACKPRESSURE) {
                 QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Condition::Wait()."));
-                assert(m_writeCondition && "ArdpStream::PushBytes(): m_writeCondition must be set");
+                QCC_ASSERT(m_writeCondition && "ArdpStream::PushBytes(): m_writeCondition must be set");
                 status = m_writeCondition->TimedWait(m_transport->m_cbLock, tRemaining);
 
                 /*
@@ -1133,7 +1133,7 @@ class ArdpStream : public qcc::Stream {
                 }
 
                 QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure loop"));
-                assert(done == false && "ArdpStream::PushBytes(): loop error");
+                QCC_ASSERT(done == false && "ArdpStream::PushBytes(): loop error");
             }
 
             /*
@@ -1197,7 +1197,7 @@ class ArdpStream : public qcc::Stream {
         QCC_UNUSED(timeout);
         QCC_DbgTrace(("ArdpStream::PullBytes(buf=%p, reqBytes=%d., actualBytes=%d., timeout=%d.)",
                       buf, reqBytes, actualBytes, timeout));
-        assert(0 && "ArdpStream::PullBytes(): Should never be called");
+        QCC_ASSERT(0 && "ArdpStream::PullBytes(): Should never be called");
         return ER_FAIL;
     }
 
@@ -1283,10 +1283,10 @@ class ArdpStream : public qcc::Stream {
          */
 #ifndef NDEBUG
         if (status == ER_OK) {
-            assert(sudden == false);
+            QCC_ASSERT(sudden == false);
         }
         if (sudden) {
-            assert(status != ER_OK);
+            QCC_ASSERT(status != ER_OK);
         }
 #endif
 
@@ -1308,7 +1308,7 @@ class ArdpStream : public qcc::Stream {
                      * the ARDP_Disconnect() the disconnect status is updated
                      * to the reason we couldn't send it.
                      */
-                    assert(status == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
+                    QCC_ASSERT(status == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
 
                     m_transport->m_ardpLock.Lock();
                     QCC_DbgPrintf(("ArdpStream::Disconnect(): ARDP_Disconnect()"));
@@ -1344,8 +1344,8 @@ class ArdpStream : public qcc::Stream {
                      * disconnect status to have been set to
                      * ER_UDP_LOCAL_DISCONNECT by us.
                      */
-                    assert(status == ER_OK && "ArdpStream::Disconnect(): Unexpected status");
-                    assert(m_discStatus == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
+                    QCC_ASSERT(status == ER_OK && "ArdpStream::Disconnect(): Unexpected status");
+                    QCC_ASSERT(m_discStatus == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
                     m_disc = true;
                     m_conn = NULL;
 
@@ -1369,8 +1369,8 @@ class ArdpStream : public qcc::Stream {
                      *
                      * The connection should already be gone.
                      */
-                    assert(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    assert(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
+                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
                 } else {
                     /*
                      * sudden = false, m_disc = true, m_discSent == true
@@ -1384,8 +1384,8 @@ class ArdpStream : public qcc::Stream {
                      *
                      * The connection should already be gone.
                      */
-                    assert(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    assert(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
+                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
                 }
             }
         } else {
@@ -1433,8 +1433,8 @@ class ArdpStream : public qcc::Stream {
                      *
                      * The connection should already be gone.
                      */
-                    assert(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    assert(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
+                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
                 } else {
                     /*
                      * sudden = true, m_disc = true, m_discSent == true
@@ -1449,15 +1449,15 @@ class ArdpStream : public qcc::Stream {
                      *
                      * The connection should already be gone.
                      */
-                    assert(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    assert(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
+                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
                 }
             }
         }
 
 #ifndef NDEBUG
         if (sudden) {
-            assert(m_disc == true);
+            QCC_ASSERT(m_disc == true);
         }
 #endif
 
@@ -1617,9 +1617,9 @@ class MessagePump {
             m_transport->m_ardpLock.Unlock();
         }
 
-        assert(m_queue.empty() && "MessagePump::~MessagePump(): Message queue must be empty here");
-        assert(m_activeThread == NULL && "MessagePump::~MessagePump(): Active thread must be gone here");
-        assert(m_pastThreads.empty() && "MessagePump::~MessagePump(): Past threads must be gone here");
+        QCC_ASSERT(m_queue.empty() && "MessagePump::~MessagePump(): Message queue must be empty here");
+        QCC_ASSERT(m_activeThread == NULL && "MessagePump::~MessagePump(): Active thread must be gone here");
+        QCC_ASSERT(m_pastThreads.empty() && "MessagePump::~MessagePump(): Past threads must be gone here");
 
         QCC_DbgTrace(("MessagePump::~MessagePump(): Done"));
     }
@@ -1722,7 +1722,7 @@ class MessagePump {
         m_lock.Lock();
         while (m_spawnedThreads) {
             QCC_DbgPrintf(("MessagePump::DoJoin(): m_spawnedThreads=%d.", m_spawnedThreads));
-            assert((m_activeThread ? 1 : 0) + m_pastThreads.size() == m_spawnedThreads && "MessagePump::DoJoin(): m_spawnedThreads count inconsistent");
+            QCC_ASSERT((m_activeThread ? 1 : 0) + m_pastThreads.size() == m_spawnedThreads && "MessagePump::DoJoin(): m_spawnedThreads count inconsistent");
 
             if (m_pastThreads.size()) {
                 PumpThread* pt = m_pastThreads.front();
@@ -1757,7 +1757,7 @@ class MessagePump {
                      * TODO: use condition variable and thread exit routine
                      * instead of sleeping/polling.
                      */
-                    assert(m_stopping == true && "MessagePump::DoJoin(): m_stopping must be true if both=true)");
+                    QCC_ASSERT(m_stopping == true && "MessagePump::DoJoin(): m_stopping must be true if both=true)");
 
                     m_lock.Unlock();
                     qcc::Sleep(10);
@@ -1788,9 +1788,9 @@ class MessagePump {
         }
 #ifndef NDEBUG
         if (both) {
-            assert(m_spawnedThreads == 0 && "MessagePump::DoJoin(): m_spawnedThreads must be 0 after DoJoin(true)");
+            QCC_ASSERT(m_spawnedThreads == 0 && "MessagePump::DoJoin(): m_spawnedThreads must be 0 after DoJoin(true)");
         } else {
-            assert(m_spawnedThreads <= 1 && "MessagePump::DoJoin(): m_spawnedThreads must be 0 or 1 after DoJoin(false)");
+            QCC_ASSERT(m_spawnedThreads <= 1 && "MessagePump::DoJoin(): m_spawnedThreads must be 0 or 1 after DoJoin(false)");
         }
 #endif
         m_lock.Unlock();
@@ -1804,7 +1804,7 @@ class MessagePump {
     {
         QCC_DbgTrace(("MessagePump::RecvCb(handle=%p, conn=%p, connId=%d., rcv=%p, status=%s)", handle, conn, connId, rcv, QCC_StatusText(status)));
 
-        assert(status == ER_OK && "MessagePump::RecvCb(): Asked to dispatch an error!?");
+        QCC_ASSERT(status == ER_OK && "MessagePump::RecvCb(): Asked to dispatch an error!?");
 
         /*
          * We always want to pump the message in the callback so create a queue
@@ -1872,7 +1872,7 @@ class MessagePump {
         }
 
         QCC_DbgPrintf(("MessagePump::RecvCb(): m_spawnedThreads=%d.", m_spawnedThreads));
-        assert(m_activeThread && "MessagePump::RecvCb(): Expecting an active thread at this time.");
+        QCC_ASSERT(m_activeThread && "MessagePump::RecvCb(): Expecting an active thread at this time.");
 
         /*
          * It may be the case that the active thread is stopping but it has not
@@ -2111,7 +2111,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         default:
             QCC_DbgPrintf(("%s: Bad state", prefix));
-            assert(false && "_Endpoint::PrintEpState(): Bad state");
+            QCC_ASSERT(false && "_Endpoint::PrintEpState(): Bad state");
             break;
         }
     }
@@ -2187,8 +2187,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
         _RemoteEndpoint::Exited();
         _RemoteEndpoint::Join();
 
-        assert(IncrementAndFetch(&m_refCount) == 1 && "_UDPEndpoint::~_UDPEndpoint(): non-zero reference count");
-        assert(IncrementAndFetch(&m_pushCount) == 1 && "_UDPEndpoint::~_UDPEndpoint(): non-zero PushMessage count");
+        QCC_ASSERT(IncrementAndFetch(&m_refCount) == 1 && "_UDPEndpoint::~_UDPEndpoint(): non-zero reference count");
+        QCC_ASSERT(IncrementAndFetch(&m_pushCount) == 1 && "_UDPEndpoint::~_UDPEndpoint(): non-zero PushMessage count");
 
         /*
          * Make sure that the endpoint isn't in a condition where a thread might
@@ -2206,8 +2206,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
              * and the ARDP connection is/was disconnected.
              */
 
-            assert(m_stream->ThreadSetEmpty() != false && "_UDPEndpoint::~_UDPEndpoint(): Threads present during destruction");
-            assert(m_stream->GetDisconnected() && "_UDPEndpoint::~_UDPEndpoint(): Not disconnected");
+            QCC_ASSERT(m_stream->ThreadSetEmpty() != false && "_UDPEndpoint::~_UDPEndpoint(): Threads present during destruction");
+            QCC_ASSERT(m_stream->GetDisconnected() && "_UDPEndpoint::~_UDPEndpoint(): Not disconnected");
         }
 
         DestroyStream();
@@ -2282,7 +2282,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
 
         if (m_stream) {
             bool empty = m_stream->ThreadSetEmpty();
-            assert(empty && "_UDPEndpoint::Start(): Threads present during Start()");
+            QCC_ASSERT(empty && "_UDPEndpoint::Start(): Threads present during Start()");
             if (empty == false) {
                 QCC_LogError(ER_FAIL, ("_UDPEndpoint::Start(): Threads present during Start()"));
                 m_stateLock.Unlock(MUTEX_CONTEXT);
@@ -2319,13 +2319,13 @@ class _UDPEndpoint : public _RemoteEndpoint {
             }
         }
 
-        assert(found == 1 && "_UDPEndpoint::Start(): Endpoint not on exactly one pending list");
+        QCC_ASSERT(found == 1 && "_UDPEndpoint::Start(): Endpoint not on exactly one pending list");
 #endif
 
         /*
          * No threads to Start(), so we jump right to started state.
          */
-        assert((IsEpPassiveStarted() || IsEpActiveStarted()) && "_UDPEndpoint::Start(): Endpoint not pre-started corrrectly");
+        QCC_ASSERT((IsEpPassiveStarted() || IsEpActiveStarted()) && "_UDPEndpoint::Start(): Endpoint not pre-started corrrectly");
         SetEpStarted();
 
         /*
@@ -2403,7 +2403,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         if (IsEpInitialized() || IsEpActiveStarted() || IsEpPassiveStarted()) {
             QCC_DbgPrintf(("_UDPEndpoint::Stop(): Never Start()ed"));
             if (m_stream) {
-                assert(m_stream->ThreadSetEmpty() == true && "_UDPEndpoint::Stop(): Inactive endpoint with threads?");
+                QCC_ASSERT(m_stream->ThreadSetEmpty() == true && "_UDPEndpoint::Stop(): Inactive endpoint with threads?");
                 m_stream->EarlyExit();
             }
 
@@ -2444,7 +2444,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * By a process of elimination, the only possible state we could be in
          * is EP_STARTED.  Did someone add a state and forget to handle it here?
          */
-        assert(IsEpStarted() == true && "_UDPEndpoint::Stop(): Endpoint expected to be in EP_STARTED state at this point");
+        QCC_ASSERT(IsEpStarted() == true && "_UDPEndpoint::Stop(): Endpoint expected to be in EP_STARTED state at this point");
         QCC_DbgPrintf(("_UDPEndpoint::Stop(): Stopping while IsEpStarted()"));
 
 #ifndef NDEBUG
@@ -2469,7 +2469,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             }
         }
 
-        assert(found == 1 && "_UDPEndpoint::Stop(): Endpoint not on exactly one pending list");
+        QCC_ASSERT(found == 1 && "_UDPEndpoint::Stop(): Endpoint not on exactly one pending list");
 #endif
         /*
          * Set the state of the endpoint to stopping.  This will prevent any
@@ -2532,7 +2532,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             QCC_DbgPrintf(("_UDPEndpoint::Join(): Never Start()ed"));
             if (m_stream) {
                 m_stream->EarlyExit();
-                assert(m_stream->ThreadSetEmpty() == true && "_UDPEndpoint::Join(): Inactive endpoint with threads?");
+                QCC_ASSERT(m_stream->ThreadSetEmpty() == true && "_UDPEndpoint::Join(): Inactive endpoint with threads?");
             }
             SetEpJoined();
 
@@ -2572,7 +2572,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * without first calling Stop().  Calling Stop() will put us in either
          * EP_STOPPING or EP_WAITING state.
          */
-        assert((IsEpStopping() || IsEpWaiting()) && "_UDPEndpoint::Join(): Stop() not previously called or unexpected state");
+        QCC_ASSERT((IsEpStopping() || IsEpWaiting()) && "_UDPEndpoint::Join(): Stop() not previously called or unexpected state");
         QCC_DbgPrintf(("_UDPEndpoint::Join(): Join() from IsEpStopping() or IsEpWaiting()"));
 
         /*
@@ -2805,7 +2805,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgHLPrintf(("_UDPEndpoint::CreateStream(handle=%p, conn=%p)", handle, conn));
 
         m_transport->m_ardpLock.Lock();
-        assert(m_stream == NULL && "_UDPEndpoint::CreateStream(): stream already exists");
+        QCC_ASSERT(m_stream == NULL && "_UDPEndpoint::CreateStream(): stream already exists");
 
         /*
          * The stream for a UDP endpoint is basically just a convenient place to
@@ -2848,7 +2848,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         IncrementAndFetch(&m_refCount);
         QCC_DbgHLPrintf(("_UDPEndpoint::DestroyStream()"));
         if (m_stream) {
-            assert(m_stream->GetConn() == NULL && "_UDPEndpoint::DestroyStream(): Cannot destroy stream unless stream's m_conn is NULL");
+            QCC_ASSERT(m_stream->GetConn() == NULL && "_UDPEndpoint::DestroyStream(): Cannot destroy stream unless stream's m_conn is NULL");
             m_stream->SetHandle(NULL);
             delete m_stream;
         }
@@ -3063,7 +3063,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
-                assert(connId == GetConnId() && "_UDPEndpoint::DisconnectCb(): Inconsistent connId");
+                QCC_ASSERT(connId == GetConnId() && "_UDPEndpoint::DisconnectCb(): Inconsistent connId");
                 QCC_DbgPrintf(("_UDPEndpoint::DisconnectCb(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
                 ++found;
             }
@@ -3073,7 +3073,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * In case when there are simultaneous local and remote disconnect requests queued up for the came connection ID,
          * we may find ourselves in a situation when the endpoint is not present. If this is the case, there is nothing for us to do, just return.
          */
-        //assert(found == 1 && "_UDPEndpoint::DisconnectCb(): Endpoint is gone");
+        //QCC_ASSERT(found == 1 && "_UDPEndpoint::DisconnectCb(): Endpoint is gone");
         if (found == 0) {
             QCC_DbgHLPrintf(("_UDPEndpoint::DisconnectCb(): endpoint with conn ID == %d. not found on on m_endpointList", connId));
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -3139,7 +3139,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * become "more disconnected."
          */
         if (m_stream) {
-            assert(m_stream->GetDisconnected() && "_UDPEndpoint::DisconnectCb(): Stream not playing by the rules of the game");
+            QCC_ASSERT(m_stream->GetDisconnected() && "_UDPEndpoint::DisconnectCb(): Stream not playing by the rules of the game");
         }
 #endif
 
@@ -3221,7 +3221,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
-                assert(connId == GetConnId() && "_UDPEndpoint::RecvCb(): Inconsistent connId");
+                QCC_ASSERT(connId == GetConnId() && "_UDPEndpoint::RecvCb(): Inconsistent connId");
                 QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
                 ++found;
             }
@@ -3233,17 +3233,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
             return;
         }
 
-        /*
-         * Our contract with ARDP says that it will provide us with valid data
-         * if it calls us back.
-         */
-        assert(rcv != NULL && rcv->data != NULL && rcv->datalen != 0 && "_UDPEndpoint::RecvCb(): No data from ARDP in RecvCb()");
-
-
         if (IsEpStarted() == false) {
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Not accepting inbound messages"));
-
-#if RETURN_ORPHAN_BUFS
 
             QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): ARDP_RecvReady()"));
             m_transport->m_ardpLock.Lock();
@@ -3281,24 +3272,16 @@ class _UDPEndpoint : public _RemoteEndpoint {
 #endif
             m_transport->m_ardpLock.Unlock();
 
-#else // not RETURN_ORPHAN_BUFS
-
-            /*
-             * Since we are getting an indication that the endpoint is going
-             * down, we assume that the endpoint will continue the process and
-             * be destroyed.  In this case, we assume that ARDP is going to
-             * particpate in closing down the connection and released any
-             * pending buffers.  This means that we can just ignore the buffer
-             * here.  We'll just print a message saying that's what we did.
-             */
-            QCC_DbgPrintf(("UDPEndpoint::RecvCb(): Orphaned RECV_CB for conn ID == %d. ignored", connId));
-
-#endif // not RETURN_ORPHAN_BUFS
-
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
             DecrementAndFetch(&m_refCount);
             return;
         }
+
+        /*
+         * Our contract with ARDP says that it will provide us with valid data
+         * if it calls us back.
+         */
+        QCC_ASSERT(rcv != NULL && rcv->data != NULL && rcv->datalen != 0 && "_UDPEndpoint::RecvCb(): No data from ARDP in RecvCb()");
 
         if (rcv->fcnt == 0) {
             QCC_LogError(ER_UDP_INVALID, ("_UDPEndpoint::RecvCb(): Unexpected rcv->fcnt==%d.", rcv->fcnt));
@@ -3315,7 +3298,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
             m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
             DecrementAndFetch(&m_refCount);
-            assert(false && "_UDPEndpoint::RecvCb(): unexpected rcv->fcnt");
+            QCC_ASSERT(false && "_UDPEndpoint::RecvCb(): unexpected rcv->fcnt");
             return;
         }
 
@@ -3351,7 +3334,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
                     m_transport->m_ardpLock.Unlock();
 
                     DecrementAndFetch(&m_refCount);
-                    assert(false && "_UDPEndpoint::RecvCb(): unexpected rcv->fcnt");
+                    QCC_ASSERT(false && "_UDPEndpoint::RecvCb(): unexpected rcv->fcnt");
                     return;
                 }
 
@@ -3582,12 +3565,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
         for (set<UDPEndpoint>::iterator i = m_transport->m_endpointList.begin(); i != m_transport->m_endpointList.end(); ++i) {
             UDPEndpoint ep = *i;
             if (GetConnId() == ep->GetConnId()) {
-                assert(connId == GetConnId() && "_UDPEndpoint::SendCb(): Inconsistent connId");
+                QCC_ASSERT(connId == GetConnId() && "_UDPEndpoint::SendCb(): Inconsistent connId");
                 QCC_DbgPrintf(("_UDPEndpoint::SendCb(): found endpoint with conn ID == %d. on m_endpointList", GetConnId()));
                 ++found;
             }
         }
-        assert(found == 1 && "_UDPEndpoint::SendCb(): Endpoint is gone");
+        QCC_ASSERT(found == 1 && "_UDPEndpoint::SendCb(): Endpoint is gone");
 #endif
 
         /*
@@ -3891,7 +3874,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void SetEpActiveStarted(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpActiveStarted()"));
-        assert(m_epState == EP_INITIALIZED);
+        QCC_ASSERT(m_epState == EP_INITIALIZED);
         m_epState = EP_ACTIVE_STARTED;
     }
 
@@ -3910,7 +3893,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void SetEpPassiveStarted(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpPassiveStarted()"));
-        assert(m_epState == EP_INITIALIZED);
+        QCC_ASSERT(m_epState == EP_INITIALIZED);
         m_epState = EP_PASSIVE_STARTED;
     }
 
@@ -3929,7 +3912,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void SetEpStarted(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpStarted()"));
-        assert(m_epState == EP_ACTIVE_STARTED || m_epState == EP_PASSIVE_STARTED);
+        QCC_ASSERT(m_epState == EP_ACTIVE_STARTED || m_epState == EP_PASSIVE_STARTED);
         m_epState = EP_STARTED;
     }
 
@@ -3979,7 +3962,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         /*
          * Don't allow backward progress.
          */
-        assert(m_epState != EP_JOINED || m_epState == EP_DONE);
+        QCC_ASSERT(m_epState != EP_JOINED || m_epState == EP_DONE);
 
         Timespec tNow;
         GetTimeNow(&tNow);
@@ -4004,7 +3987,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void SetEpWaiting(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpWaiting()"));
-        assert(m_epState == EP_STOPPING);
+        QCC_ASSERT(m_epState == EP_STOPPING);
         m_epState = EP_WAITING;
     }
 
@@ -4027,12 +4010,12 @@ class _UDPEndpoint : public _RemoteEndpoint {
         /*
          * It is illegal to set Join()ed directly from a started state without calling Stop() first.
          */
-        assert(m_epState != EP_STARTED);
+        QCC_ASSERT(m_epState != EP_STARTED);
 
         /*
          * Don't allow backward progress.
          */
-        assert(m_epState != EP_DONE);
+        QCC_ASSERT(m_epState != EP_DONE);
 
         m_epState = EP_JOINED;
     }
@@ -4052,7 +4035,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
     void SetEpDone(void)
     {
         QCC_DbgTrace(("_UDPEndpoint::SetEpDone()"));
-        assert(m_epState == EP_JOINED);
+        QCC_ASSERT(m_epState == EP_JOINED);
         m_epState = EP_DONE;
     }
 
@@ -4216,7 +4199,7 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
     QCC_UNUSED(arg);
 
     QCC_DbgTrace(("MessagePump::PumpThread::Run()"));
-    assert(m_pump && "MessagePump::PumpThread::Run(): pointer to enclosing pump must be specified");
+    QCC_ASSERT(m_pump && "MessagePump::PumpThread::Run(): pointer to enclosing pump must be specified");
 
     /*
      * We need to implement a classic condition variable idiom.  Here the mutex
@@ -4366,7 +4349,7 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
      */
     QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Exiting"));
     PumpThread* i = (PumpThread*)GetThread();
-    assert(m_pump->m_activeThread == i && "MessagePump::PumpThread::Run(): I should be the active thread");
+    QCC_ASSERT(m_pump->m_activeThread == i && "MessagePump::PumpThread::Run(): I should be the active thread");
     m_pump->m_pastThreads.push(i);
     m_pump->m_activeThread = NULL;
     m_pump->m_lock.Unlock();
@@ -4429,7 +4412,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
      * We know we are daemon code, so we'd better be running with a daemon
      * router.  This is assumed elsewhere.
      */
-    assert(m_bus.GetInternal().GetRouter().IsDaemon());
+    QCC_ASSERT(m_bus.GetInternal().GetRouter().IsDaemon());
 
     /*
      * We need to find the defaults for our connection limits.  These limits
@@ -4531,7 +4514,7 @@ UDPTransport::~UDPTransport()
     Join();
 
     for (uint32_t i = 0; i < N_PUMPS; ++i) {
-        assert(m_messagePumps[i]->IsActive() == false && "UDPTransport::~UDPTransport(): Destroying with active message pump");
+        QCC_ASSERT(m_messagePumps[i]->IsActive() == false && "UDPTransport::~UDPTransport(): Destroying with active message pump");
         delete m_messagePumps[i];
         m_messagePumps[i] = NULL;
     }
@@ -4541,9 +4524,9 @@ UDPTransport::~UDPTransport()
 
     QCC_DbgPrintf(("UDPTransport::~UDPTransport(): m_mAuthList.size() == %d", m_authList.size()));
     QCC_DbgPrintf(("UDPTransport::~UDPTransport(): m_mEndpointList.size() == %d", m_endpointList.size()));
-    assert(m_preList.size() + m_authList.size() + m_endpointList.size() == 0 &&
-           "UDPTransport::~UDPTransport(): Destroying with enlisted endpoints");
-    //assert(IncrementAndFetch(&m_refCount) == 1 && "UDPTransport::~UDPTransport(): non-zero reference count");
+    QCC_ASSERT(m_preList.size() + m_authList.size() + m_endpointList.size() == 0 &&
+               "UDPTransport::~UDPTransport(): Destroying with enlisted endpoints");
+    //QCC_ASSERT(IncrementAndFetch(&m_refCount) == 1 && "UDPTransport::~UDPTransport(): non-zero reference count");
 }
 
 /**
@@ -4763,7 +4746,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                                      * us while we are running at least.
                                      */
                                     MessagePump* mp = m_transport->m_messagePumps[entry.m_connId % N_PUMPS];
-                                    assert(mp != NULL && "UDPTransport::DispatcherThread::Run(): Pumps array not initialized");
+                                    QCC_ASSERT(mp != NULL && "UDPTransport::DispatcherThread::Run(): Pumps array not initialized");
                                     mp->RecvCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_rcv, entry.m_status);
                                     break;
                                 }
@@ -4777,7 +4760,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
 
                             default:
                                 {
-                                    assert(false && "UDPTransport::DispatcherThread::Run(): Unexpected command");
+                                    QCC_ASSERT(false && "UDPTransport::DispatcherThread::Run(): Unexpected command");
                                     break;
                                 }
 
@@ -4791,7 +4774,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
                              * request.
                              */
                             ep->DecrementRefs();
-                            assert(haveLock == false && "UDPTransport::DispatcherThread::Run(): Should not have m_endpointListLock here");
+                            QCC_ASSERT(haveLock == false && "UDPTransport::DispatcherThread::Run(): Should not have m_endpointListLock here");
                             break;
                         } // if (entry.m_connId == ep->GetConnId())
                     } // for (set<UDPEndpoint>::iterator i ...
@@ -4988,7 +4971,7 @@ ThreadReturn STDCALL UDPTransport::ExitDispatcherThread::Run(void* arg)
 
                             default:
                                 {
-                                    assert(false && "UDPTransport::ExitDispatcherThread::Run(): Unexpected command");
+                                    QCC_ASSERT(false && "UDPTransport::ExitDispatcherThread::Run(): Unexpected command");
                                     break;
                                 }
                             }
@@ -5000,7 +4983,7 @@ ThreadReturn STDCALL UDPTransport::ExitDispatcherThread::Run(void* arg)
                              * trusted.
                              */
                             ep->DecrementRefs();
-                            assert(haveLock == false && "UDPTransport::ExitDispatcherThread::Run(): Should not have m_endpointListLock here");
+                            QCC_ASSERT(haveLock == false && "UDPTransport::ExitDispatcherThread::Run(): Should not have m_endpointListLock here");
                             break;
                         } // if (entry.m_connId == ep->GetConnId())
                     } // for (set<UDPEndpoint>::iterator i ...
@@ -5883,7 +5866,7 @@ void UDPTransport::EmitStallWarnings(UDPEndpoint& ep)
     QCC_DbgTrace(("UDPTransport::EmitStallWarnings()"));
 
     ArdpStream* stream = ep->GetStream();
-    assert(stream && "UDPTransport::EmitStallWarnings(): stream must exist");
+    QCC_ASSERT(stream && "UDPTransport::EmitStallWarnings(): stream must exist");
 
     bool threadSetEmpty = stream->ThreadSetEmpty();
     bool disconnected = stream->GetDisconnected();
@@ -6198,13 +6181,13 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
          *
          * These are our expectations, so we assert that it is all true.
          */
-        assert((ep->IsEpPassiveStarted() ||
-                ep->IsEpActiveStarted() ||
-                ep->IsEpStarted() ||
-                ep->IsEpStopping() ||
-                ep->IsEpWaiting() ||
-                ep->IsEpJoined() ||
-                ep->IsEpDone()) && "UDPTransport::ManageEndpoints(): Endpoint in unexpected state");
+        QCC_ASSERT((ep->IsEpPassiveStarted() ||
+                    ep->IsEpActiveStarted() ||
+                    ep->IsEpStarted() ||
+                    ep->IsEpStopping() ||
+                    ep->IsEpWaiting() ||
+                    ep->IsEpJoined() ||
+                    ep->IsEpDone()) && "UDPTransport::ManageEndpoints(): Endpoint in unexpected state");
 
         /*
          * If the current endpoint is starting becuase of either an active or
@@ -6268,7 +6251,7 @@ void UDPTransport::ManageEndpoints(Timespec authTimeout, Timespec sessionSetupTi
             EmitStallWarnings(ep);
 
             ArdpStream* stream = ep->GetStream();
-            assert(stream && "UDPTransport::ManageEndpoints(): stream must exist in states EP_STOPPING, EP_WAITING and EP_JOINED");
+            QCC_ASSERT(stream && "UDPTransport::ManageEndpoints(): stream must exist in states EP_STOPPING, EP_WAITING and EP_JOINED");
 
             /*
              * If we are in state EP_STOPPING, not too surprisingly, Stop() must
@@ -7199,7 +7182,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
     m_preListLock.Lock(MUTEX_CONTEXT);
 
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): Adding endpoint with conn ID == %d. to m_preList", udpEp->GetConnId()));
-    assert(udpEp->IsEpInitialized() && "UDPTransport::AcceptCb(): Unexpected endpoint state");
+    QCC_ASSERT(udpEp->IsEpInitialized() && "UDPTransport::AcceptCb(): Unexpected endpoint state");
 
     /*
      * Set the endpoint state to indicate that it is starting up becuase of a
@@ -7251,7 +7234,7 @@ void UDPTransport::DebugAuthListCheck(UDPEndpoint uep)
         UDPEndpoint ep = *i;
         if (uep->GetConnId() == ep->GetConnId()) {
             QCC_DbgPrintf(("UDPTransport::DebugAuthListCheck(): Endpoint with conn ID == %d. already on m_authList", uep->GetConnId()));
-            assert(0 && "UDPTransport::DebugAuthListCheck(): Endpoint already on m_authList");
+            QCC_ASSERT(0 && "UDPTransport::DebugAuthListCheck(): Endpoint already on m_authList");
         }
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -7265,7 +7248,7 @@ void UDPTransport::DebugEndpointListCheck(UDPEndpoint uep)
         UDPEndpoint ep = *i;
         if (uep->GetConnId() == ep->GetConnId()) {
             QCC_DbgPrintf(("UDPTransport::DebugEndpointListCheck(): Endpoint with conn ID == %d. already on m_endpointList", uep->GetConnId()));
-            assert(0 && "UDPTransport::DebugAuthListCheck(): Endpoint already on m_endpointList");
+            QCC_ASSERT(0 && "UDPTransport::DebugAuthListCheck(): Endpoint already on m_endpointList");
         }
     }
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -7505,7 +7488,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
                      * again.
                      */
                     ArdpStream* stream = ep->GetStream();
-                    assert(stream && "UDPTransport::DoConnectCb(): must have a stream at this point");
+                    QCC_ASSERT(stream && "UDPTransport::DoConnectCb(): must have a stream at this point");
                     QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Disconnect() stream for endpoint with conn ID == %d.", connId));
                     stream->Disconnect(false, ER_UDP_LOCAL_DISCONNECT);
 
@@ -7597,9 +7580,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
          */
         if (connValid == false) {
             QCC_LogError(status, ("UDPTransport::DoConnectCb(): Provided connection no longer valid"));
-            m_ardpLock.Lock();
-            ARDP_ReleaseConnection(ardpHandle, conn);
-            m_ardpLock.Unlock();
 
             m_connLock.Lock(MUTEX_CONTEXT);
             --m_currAuth;
@@ -7617,7 +7597,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
          * be there, but since we put the event in, we assert that it (at least)
          * is still there.
          */
-        assert(event && "UDPTransport::DoConnectCb(): Connection context did not provide an event");
+        QCC_ASSERT(event && "UDPTransport::DoConnectCb(): Connection context did not provide an event");
 
         /*
          * Is there still a thread with an event on its stack waiting for us
@@ -7631,7 +7611,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
         bool eventValid = false;
         for (set<ConnectEntry>::iterator j = m_connectThreads.begin(); j != m_connectThreads.end(); ++j) {
             if (j->m_connId == connId) {
-                assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
+                QCC_ASSERT(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
                 eventValid = true;
                 break;
             }
@@ -8004,7 +7984,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
                  * through the connection.  If it is not, our assumption that
                  * the connection ID is sufficient is broken.
                  */
-                assert(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
+                QCC_ASSERT(j->m_event == event && "UDPTransport::DoConnectCb(): event != j->m_event");
                 eventValid = true;
                 break;
             }
@@ -9074,9 +9054,9 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
     /*
      * We think we're ready to send the advertisement.  Are we really?
      */
-    assert(!m_listenPortMap.empty());
-    assert(m_isNsEnabled);
-    assert(IpNameService::Instance().Started() && "UDPTransport::EnableAdvertisementInstance(): IpNameService not started");
+    QCC_ASSERT(!m_listenPortMap.empty());
+    QCC_ASSERT(m_isNsEnabled);
+    QCC_ASSERT(IpNameService::Instance().Started() && "UDPTransport::EnableAdvertisementInstance(): IpNameService not started");
 
     QStatus status = IpNameService::Instance().AdvertiseName(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestParamOpt, listenRequest.m_requestTransportMask);
     if (status != ER_OK) {
@@ -9159,7 +9139,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
             map<qcc::String, qcc::String> argMap;
             qcc::String spec;
             status = NormalizeListenSpec(i->c_str(), spec, argMap);
-            assert(status == ER_OK && "UDPTransport::DisableAdvertisementInstance(): Invalid UDP listen spec");
+            QCC_ASSERT(status == ER_OK && "UDPTransport::DisableAdvertisementInstance(): Invalid UDP listen spec");
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
@@ -9247,9 +9227,9 @@ void UDPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
     /*
      * We think we're ready to send the FindAdvertisement.  Are we really?
      */
-    assert(!m_listenPortMap.empty());
-    assert(m_isNsEnabled);
-    assert(IpNameService::Instance().Started() && "UDPTransport::EnableDiscoveryInstance(): IpNameService not started");
+    QCC_ASSERT(!m_listenPortMap.empty());
+    QCC_ASSERT(m_isNsEnabled);
+    QCC_ASSERT(IpNameService::Instance().Started() && "UDPTransport::EnableDiscoveryInstance(): IpNameService not started");
 
     QCC_DbgPrintf(("UDPTransport::EnableDiscoveryInstance(): Explicit FindAdvertisement"));
     QStatus status = IpNameService::Instance().FindAdvertisement(TRANSPORT_UDP, listenRequest.m_requestParam, listenRequest.m_requestTransportMask);
@@ -9317,7 +9297,7 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
             map<qcc::String, qcc::String> argMap;
             qcc::String spec;
             QStatus status = NormalizeListenSpec(i->c_str(), spec, argMap);
-            assert(status == ER_OK && "UDPTransport::DisableDiscoveryInstance(): Invalid UDP listen spec");
+            QCC_ASSERT(status == ER_OK && "UDPTransport::DisableDiscoveryInstance(): Invalid UDP listen spec");
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
@@ -9625,7 +9605,7 @@ QStatus UDPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
      * the default addresses and fail if we find one.
      */
     map<qcc::String, qcc::String>::iterator i = argMap.find("addr");
-    assert(i != argMap.end());
+    QCC_ASSERT(i != argMap.end());
     if ((i->second == ADDR4_DEFAULT)) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
                      ("UDPTransport::NormalizeTransportSpec(): The addr may not be the default address"));
@@ -9683,7 +9663,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * deleted after it is joined, we must have a started name service or someone
      * isn't playing by the rules; so an assert is appropriate here.
      */
-    assert(IpNameService::Instance().Started() && "UDPTransport::Connect(): IpNameService not started");
+    QCC_ASSERT(IpNameService::Instance().Started() && "UDPTransport::Connect(): IpNameService not started");
 
     /*
      * UDP Transport does not support raw sockets of any flavor.
@@ -9715,8 +9695,8 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * underlying network (even if it is Wi-Fi P2P) is assumed to be up and
      * functioning.
      */
-    assert(argMap.find("addr") != argMap.end() && "UDPTransport::Connect(): addr not present in argMap");
-    assert(argMap.find("port") != argMap.end() && "UDPTransport::Connect(): port not present in argMap");
+    QCC_ASSERT(argMap.find("addr") != argMap.end() && "UDPTransport::Connect(): addr not present in argMap");
+    QCC_ASSERT(argMap.find("port") != argMap.end() && "UDPTransport::Connect(): port not present in argMap");
 
     IPAddress ipAddr(argMap.find("addr")->second);
     uint16_t ipPort = StringToU32(argMap["port"]);
@@ -10161,7 +10141,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * callback (see note below).
      */
     if (status != ER_OK) {
-        assert(conn == NULL && "UDPTransport::Connect(): ARDP_Connect() failed but returned ArdpConnRecord");
+        QCC_ASSERT(conn == NULL && "UDPTransport::Connect(): ARDP_Connect() failed but returned ArdpConnRecord");
         QCC_LogError(status, ("UDPTransport::Connect(): ARDP_Connect() failed"));
         m_ardpLock.Unlock();
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
@@ -10189,7 +10169,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      */
     Thread* thread = GetThread();
     QCC_DbgPrintf(("UDPTransport::Connect(): Add thread=%p to m_connectThreads", thread));
-    assert(thread && "UDPTransport::Connect(): GetThread() returns NULL");
+    QCC_ASSERT(thread && "UDPTransport::Connect(): GetThread() returns NULL");
     uint32_t cid = ARDP_GetConnId(m_handle, conn);
     ConnectEntry entry(thread, conn, cid, &event);
 
@@ -10271,7 +10251,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
 
     QCC_DbgPrintf(("UDPTransport::Connect(): Removing thread=%p from m_connectThreads", thread));
     set<ConnectEntry>::iterator j = m_connectThreads.find(entry);
-    assert(j != m_connectThreads.end() && "UDPTransport::Connect(): Thread not on m_connectThreads");
+    QCC_ASSERT(j != m_connectThreads.end() && "UDPTransport::Connect(): Thread not on m_connectThreads");
     m_connectThreads.erase(j);
 
     /*
@@ -10507,7 +10487,7 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
      * up, and stopped when it is stopped, we must have a started name service or
      * someone isn't playing by the rules; so an assert is appropriate here.
      */
-    assert(IpNameService::Instance().Started() && "UDPTransport::DoStartListen(): IpNameService not started");
+    QCC_ASSERT(IpNameService::Instance().Started() && "UDPTransport::DoStartListen(): IpNameService not started");
 
     qcc::String interfaces = ConfigDB::GetConfigDB()->GetProperty("ns_interfaces");
     if (interfaces.size()) {
@@ -10522,7 +10502,7 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
     qcc::String spec;
     map<qcc::String, qcc::String> argMap;
     QStatus status = NormalizeListenSpec(normSpec.c_str(), spec, argMap);
-    assert(status == ER_OK && "UDPTransport::DoStartListen(): Invalid UDP listen spec");
+    QCC_ASSERT(status == ER_OK && "UDPTransport::DoStartListen(): Invalid UDP listen spec");
 
     qcc::String key = "";
     if (argMap.find("iface") != argMap.end()) {
@@ -10755,7 +10735,7 @@ void UDPTransport::DoStopListen(qcc::String& normSpec)
      * up, and stopped after it is stopped, we must have a started name service or
      * someone isn't playing by the rules; so an assert is appropriate here.
      */
-    assert(IpNameService::Instance().Started() && "UDPTransport::DoStopListen(): IpNameService not started");
+    QCC_ASSERT(IpNameService::Instance().Started() && "UDPTransport::DoStopListen(): IpNameService not started");
 
     /*
      * Find the (single) listen spec and mark it as should-be-removed
