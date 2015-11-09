@@ -198,6 +198,17 @@ LoggerSetting* AJ_CALL LoggerSetting::GetLoggerSetting(const char* name, int lev
     return singleton;
 }
 
+LoggerSetting* AJ_CALL LoggerSetting::GetLoggerSetting()
+{
+    if (!singleton) {
+        singleton = new LoggerSetting(LOGGERSETTING_DEFAULT_NAME,
+                                      LOG_DEBUG,
+                                      LOGGERSETTING_DEFAULT_SYSLOG,
+                                      LOGGERSETTING_DEFAULT_FILE);
+    }
+    return singleton;
+}
+
 void LoggerSetting::Init()
 {
 }
