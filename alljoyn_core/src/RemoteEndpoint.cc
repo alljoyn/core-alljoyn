@@ -955,8 +955,10 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
             internal->getNextMsg = true;
             if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
                 if (IsControlMessage(internal->currentWriteMsg)) {
+                    QCC_ASSERT(internal->numControlMessages > 0);
                     internal->numControlMessages--;
                 } else {
+                    QCC_ASSERT(internal->numDataMessages > 0);
                     internal->numDataMessages--;
                 }
             }
@@ -1050,12 +1052,13 @@ QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
                     while (it != internal->txQueue.end()) {
                         uint32_t expMs;
                         if ((*it)->IsExpired(&expMs)) {
-                            if (IsControlMessage(internal->currentWriteMsg)) {
+                            if (IsControlMessage(*it)) {
+                                QCC_ASSERT(internal->numControlMessages > 0);
                                 internal->numControlMessages--;
                             } else {
+                                QCC_ASSERT(internal->numDataMessages > 0);
                                 internal->numDataMessages--;
                             }
-
                             internal->txQueue.erase(it);
                             break;
                         } else {
