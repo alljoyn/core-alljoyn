@@ -24,34 +24,79 @@
 #include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
-/** @internal */
 #define QCC_MODULE "MUTEX"
 
 using namespace qcc;
 
-Mutex::Mutex() : isInitialized(false)
+Mutex::Mutex() : m_mutexInternal(new Internal)
 {
-    Init();
 }
 
 Mutex::~Mutex()
 {
-    Destroy();
+    delete m_mutexInternal;
 }
 
 QStatus Mutex::Lock(const char* file, uint32_t line)
 {
+    return m_mutexInternal->Lock(file, line);
+}
+
+QStatus Mutex::Lock()
+{
+    return m_mutexInternal->Lock();
+}
+
+QStatus Mutex::Unlock(const char* file, uint32_t line)
+{
+    return m_mutexInternal->Unlock(file, line);
+}
+
+QStatus Mutex::Unlock()
+{
+    return m_mutexInternal->Unlock();
+}
+
+void Mutex::AssertOwnedByCurrentThread() const
+{
+    m_mutexInternal->AssertOwnedByCurrentThread();
+}
+
+Mutex::Internal::Internal()
+{
+#ifndef NDEBUG
+    m_file = nullptr;
+    m_line = static_cast<uint32_t>(-1);
+    m_ownerThread = 0;
+    m_recursionCount = 0;
+#endif
+
+    m_initialized = PlatformSpecificInit();
+    QCC_ASSERT(m_initialized);
+}
+
+Mutex::Internal::~Internal()
+{
+    if (m_initialized) {
+        PlatformSpecificDestroy();
+        m_initialized = false;
+    }
+}
+
+QStatus Mutex::Internal::Lock(const char* file, uint32_t line)
+{
+    QCC_ASSERT(m_initialized);
+
 #ifdef NDEBUG
     QCC_UNUSED(file);
     QCC_UNUSED(line);
     return Lock();
 #else
-    QCC_ASSERT(isInitialized);
     QStatus status = Lock();
     if (status == ER_OK) {
         QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
-        this->file = file;
-        this->line = line;
+        m_file = file;
+        m_line = line;
     } else {
         QCC_LogError(status, ("Mutex::Lock %s:%u failed", file, line));
     }
@@ -59,22 +104,74 @@ QStatus Mutex::Lock(const char* file, uint32_t line)
 #endif
 }
 
-QStatus Mutex::Unlock(const char* file, uint32_t line)
+QStatus Mutex::Internal::Unlock(const char* file, uint32_t line)
 {
+    QCC_ASSERT(m_initialized);
+
 #ifdef NDEBUG
     QCC_UNUSED(file);
     QCC_UNUSED(line);
-    return Unlock();
 #else
-    QCC_ASSERT(isInitialized);
-    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
-    this->file = NULL;
-    this->line = static_cast<uint32_t>(-1);
+    QCC_DbgPrintf(("Lock Released: %s:%u (acquired at %s:%u)", file, line, m_file, m_line));
+    m_file = file;
+    m_line = line;
+#endif
+
     return Unlock();
+}
+
+/**
+ * Called immediately after current thread acquired this Mutex.
+ */
+void Mutex::Internal::LockAcquired()
+{
+#ifndef NDEBUG
+    /* Use GetCurrentThreadId rather than GetThread, because GetThread acquires a Mutex */
+    ThreadId currentThread = Thread::GetCurrentThreadId();
+    QCC_ASSERT(currentThread != 0);
+
+    if (m_ownerThread == currentThread) {
+        QCC_ASSERT(m_recursionCount != 0);
+    } else {
+        QCC_ASSERT(m_ownerThread == 0);
+        QCC_ASSERT(m_recursionCount == 0);
+        m_ownerThread = currentThread;
+    }
+
+    m_recursionCount++;
 #endif
 }
 
-void Mutex::AssertOwnedByCurrentThread() const
+/**
+ * Called immediately before current thread releases this Mutex.
+ */
+void Mutex::Internal::ReleasingLock()
 {
-    mutexInternal->AssertOwnedByCurrentThread();
+#ifndef NDEBUG
+    /* Use GetCurrentThreadId rather than GetThread, because GetThread acquires a Mutex */
+    ThreadId currentThread = Thread::GetCurrentThreadId();
+    QCC_ASSERT(currentThread != 0);
+    QCC_ASSERT(m_ownerThread == currentThread);
+    QCC_ASSERT(m_recursionCount != 0);
+
+    m_recursionCount--;
+
+    if (m_recursionCount == 0) {
+        m_ownerThread = 0;
+    }
+#endif
+}
+
+/**
+ * Assert that current thread owns this Mutex.
+ */
+void Mutex::Internal::AssertOwnedByCurrentThread() const
+{
+#ifndef NDEBUG
+    /* Use GetCurrentThreadId rather than GetThread, because GetThread acquires a Mutex */
+    ThreadId currentThread = Thread::GetCurrentThreadId();
+    QCC_ASSERT(currentThread != 0);
+    QCC_ASSERT(m_ownerThread == currentThread);
+    QCC_ASSERT(m_recursionCount != 0);
+#endif
 }
