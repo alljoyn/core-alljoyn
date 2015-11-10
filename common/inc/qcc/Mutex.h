@@ -131,21 +131,14 @@ class Mutex {
     bool TryLock();
 
     /**
-     * Mutex copy constructor creates a new mutex.
-     */
-    Mutex(const Mutex& other);
-
-    /**
-     * Mutex assignment operator.
-     */
-    Mutex& operator=(const Mutex& other);
-
-    /**
      * Assert that current thread owns this Mutex.
      */
     void AssertOwnedByCurrentThread() const;
 
   private:
+
+    Mutex(const Mutex& other);
+    Mutex& operator=(const Mutex& other);
 
 #if defined(QCC_OS_GROUP_POSIX)
     pthread_mutex_t mutex;  ///< The Linux mutex implementation uses pthread mutex's.

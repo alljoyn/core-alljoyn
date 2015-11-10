@@ -28,6 +28,12 @@ namespace ajn {
  */
 class AboutObjectDescription::Internal {
     friend class AboutObjectDescription;
+  public:
+    AboutObjectDescription::Internal& operator=(const AboutObjectDescription::Internal& other) {
+        announceObjectsMap = other.announceObjectsMap;
+        return *this;
+    }
+
   private:
     /**
      * Mutex that protects the announceObjectsMap

@@ -34,23 +34,9 @@ Mutex::Mutex() : isInitialized(false)
     Init();
 }
 
-Mutex::Mutex(const Mutex& other) : isInitialized(false)
-{
-    QCC_UNUSED(other);
-    Init();
-}
-
 Mutex::~Mutex()
 {
     Destroy();
-}
-
-Mutex& Mutex::operator=(const Mutex& other)
-{
-    QCC_UNUSED(other);
-    Destroy();
-    Init();
-    return *this;
 }
 
 QStatus Mutex::Lock(const char* file, uint32_t line)
