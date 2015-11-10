@@ -20,86 +20,53 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <qcc/platform.h>
-
-#include <pthread.h>
-#include <stdio.h>
-#include <string.h>
-
-#include <qcc/Thread.h>
-#include <qcc/Mutex.h>
 #include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
-#include <Status.h>
-
-/** @internal */
 #define QCC_MODULE "MUTEX"
 
 using namespace qcc;
 
-void Mutex::Init()
+bool Mutex::Internal::PlatformSpecificInit()
 {
-    QCC_ASSERT(!isInitialized);
-    mutexInternal = new Internal;
-    file = nullptr;
-    line = static_cast<uint32_t>(-1);
-
+    bool success;
     pthread_mutexattr_t attr;
-    int ret = pthread_mutexattr_init(&attr);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
-    QCC_ASSERT(ret == 0);
-    if (ret != 0) {
-        return;
+    QCC_VERIFY(success = (pthread_mutexattr_init(&attr) == 0));
+
+    if (success) {
+        // We want entities to be able to lock a mutex multiple times without deadlocking or reporting an error.
+        pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+        QCC_VERIFY(success = (pthread_mutex_init(&m_mutex, &attr) == 0));
+
+        // Don't need the attribute once it has been assigned to a mutex.
+        pthread_mutexattr_destroy(&attr);
     }
 
-    // We want entities to be able to lock a mutex multiple times without deadlocking or reporting an error.
-    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-    isInitialized = (pthread_mutex_init(&mutex, &attr) == 0);
-    // Can't use QCC_LogError() since it uses mutexes under the hood.
-    QCC_ASSERT(isInitialized);
-
-    // Don't need the attribute once it has been assigned to a mutex.
-    pthread_mutexattr_destroy(&attr);
+    return success;
 }
 
-void Mutex::Destroy()
+void Mutex::Internal::PlatformSpecificDestroy()
 {
-    if (isInitialized) {
-        isInitialized = false;
-        // Can't use QCC_LogError() since it uses mutexes under the hood.
-        QCC_VERIFY(pthread_mutex_destroy(&mutex) == 0);
-        delete mutexInternal;
-        mutexInternal = nullptr;
-    }
+    // Can't use QCC_LogError() since it uses mutexes under the hood.
+    QCC_VERIFY(pthread_mutex_destroy(&m_mutex) == 0);
 }
 
-QStatus Mutex::Lock()
+QStatus Mutex::Internal::PlatformSpecificLock()
 {
-    QCC_ASSERT(isInitialized);
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-
-    int ret = pthread_mutex_lock(&mutex);
+    int ret = pthread_mutex_lock(&m_mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
     QCC_ASSERT(ret == 0);
     if (ret != 0) {
         return ER_OS_ERROR;
     }
 
-    mutexInternal->LockAcquired();
     return ER_OK;
 }
 
-QStatus Mutex::Unlock()
+QStatus Mutex::Internal::PlatformSpecificUnlock()
 {
-    QCC_ASSERT(isInitialized);
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-
-    mutexInternal->ReleasingLock();
-    int ret = pthread_mutex_unlock(&mutex);
+    int ret = pthread_mutex_unlock(&m_mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
     QCC_ASSERT(ret == 0);
     if (ret != 0) {
@@ -108,16 +75,7 @@ QStatus Mutex::Unlock()
     return ER_OK;
 }
 
-bool Mutex::TryLock(void)
+bool Mutex::Internal::PlatformSpecificTryLock()
 {
-    bool locked = false;
-    QCC_ASSERT(isInitialized);
-    if (isInitialized) {
-        locked = (pthread_mutex_trylock(&mutex) == 0);
-        if (locked) {
-            mutexInternal->LockAcquired();
-        }
-    }
-
-    return locked;
+    return (pthread_mutex_trylock(&m_mutex) == 0);
 }
