@@ -156,11 +156,11 @@ class SessionOpts {
      *
      * If traffic is equal then Proximity takes next level of precedence.
      *
-     * PROXIMITY_PHYSICAL \< PROXIMITY_NETWORK \< PROXIMITY_ANY
+     * #PROXIMITY_PHYSICAL \< #PROXIMITY_NETWORK \< #PROXIMITY_ANY
      *
      * last transports.
      *
-     * #TRANSPORT_LOCAL \< #TRANSPORT_WLAN \< #TRANSPORT_WWAN \< #TRANSPORT_ANY
+     * #TRANSPORT_LOCAL \< #TRANSPORT_TCP \< #TRANSPORT_UDP \< #TRANSPORT_IP \< #TRANSPORT_ANY
      *
      *
      * @param other the SessionOpts being compared against
