@@ -37,7 +37,7 @@ static ThreadReturn STDCALL ServerAccept(void* arg)
     return reinterpret_cast<ThreadReturn>(clientFd);
 }
 
-class SocketStreamTestErrors : public testing::Test {
+class SocketStreamTest : public testing::Test {
   public:
     SocketFd serverFd;
     IPAddress serverAddr;
@@ -86,6 +86,9 @@ class SocketStreamTestErrors : public testing::Test {
             sockFd = INVALID_SOCKET_FD;
         }
     }
+};
+
+class SocketStreamTestErrors : public SocketStreamTest {
 };
 
 TEST_F(SocketStreamTestErrors, PullBytesZero)
@@ -286,4 +289,37 @@ TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsAfterAbortiveRelease)
     client.Close();
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
     EXPECT_EQ(ER_OS_ERROR, connected.PushBytesAndFds(buf, 1, numBytes, fds, numFds, GetPid()));
+}
+
+TEST_F(SocketStreamTest, DetachedShutdown)
+{
+    SocketFd dupFd;
+    EXPECT_EQ(ER_OK, SocketDup(clientFd, dupFd));
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+
+    client.DetachSocketFd();
+    EXPECT_EQ(ER_OK, client.Shutdown());
+
+    /* Verify underlying connection not shutdown by sending to it */
+    EXPECT_EQ(ER_OK, Send(dupFd, buf, 1, numBytes));
+    Close(dupFd);
+}
+
+TEST_F(SocketStreamTest, DetachedAbort)
+{
+    /* No cross-platform way to verify linger is not set currently. */
+}
+
+TEST_F(SocketStreamTest, DetachedClose)
+{
+    SocketFd dupFd;
+    EXPECT_EQ(ER_OK, SocketDup(clientFd, dupFd));
+    SocketStream client(clientFd); clientFd = INVALID_SOCKET_FD;
+
+    client.DetachSocketFd();
+    client.Close();
+
+    /* Verify underlying connection not closed by sending to it */
+    EXPECT_EQ(ER_OK, Send(dupFd, buf, 1, numBytes));
+    Close(dupFd);
 }

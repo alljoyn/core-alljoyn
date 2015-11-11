@@ -206,12 +206,10 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     /**
      * Request endpoint to stop AFTER the endpoint's txqueue empties out.
      *
-     * @param[in] maxWaitMS    Max number of ms to wait before stopping or 0 for wait indefinitely.
-     *
      * @return
      *     - ER_OK if successful.
      */
-    QStatus StopAfterTxEmpty(uint32_t maxWaitMs = 0);
+    QStatus StopAfterTxEmpty();
 
     /**
      * Request endpoint to pause receiving (wihtout stopping) AFTER next METHOD_REPLY is received.
@@ -234,7 +232,18 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      *
      * @return ER_OK if successful.
      */
-    virtual QStatus Join(void);
+    virtual QStatus Join();
+
+    /**
+     * Join the endpoint.
+     * Block the caller until the endpoint is stopped.
+     *
+     * @param[in] maxWaitMs    Max number of ms to wait before abortively stopping the endpoint.
+     *
+     * @return
+     *     - ER_OK if successful.
+     */
+    QStatus Join(uint32_t maxWaitMs);
 
     /**
      * Set the listener for this endpoint.
@@ -394,22 +403,11 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
     virtual QStatus SetIdleTimeouts(uint32_t& reqIdleTimeout, uint32_t& reqProbeTimeout);
 
     /**
-     * Set the endpoint started state variable.  Provided for endpoints that do
+     * Set the endpoint started state.  Provided for endpoints that do
      * not use the standard sockets and IODispatch mechanism and therefore
      * override Start() and Stop().
-     *
-     * @param[in] value Logical value of endpoint started (or not).
      */
-    void SetStarted(bool value);
-
-    /**
-     * Set the endpoint stopping state variable.  Provided for endpoints that do
-     * not use the standard sockets and IODispatch mechanism and therefore
-     * override Start() and Stop().
-     *
-     * @param[in] value Logical value of whether or not the endpoint is stopping.
-     */
-    void SetStopping(bool value);
+    void SetStarted();
 
     /**
      * Return the features for this BusEndpoint
@@ -556,6 +554,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Internal method used to return the value of Idle timeout.
      */
     uint32_t GetIdleTimeout();
+
   private:
 
     class Internal;
@@ -571,6 +570,29 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Assignment operator is undefined - _RemoteEndpoints cannot be assigned.
      */
     _RemoteEndpoint& operator=(const _RemoteEndpoint& other);
+
+    /**
+     * Helper for common behavior of Start() and Start(uint32_t, uint32_t, uint32_t, uint32_t).
+     *
+     * @param[in] enableIdleTimeouts true to enable the timeout callback for the idle timeouts.
+     * @param[in] idleTimeout Idle Timeout for the link. i.e. time after which the Routing node must send
+     *                        the DBus ping in case of inactivity.  Only used if enableIdleTimeouts is
+     *                        true.
+     * @param[in] probeTimeout Probe timeout. The time from the Routing node sending the DBus ping to the
+     *                         expected response.  Only used if enableIdleTimeouts is true.
+     * @param[in] numProbes Number of probes sent before the leaf node is declared dead.  Only used if
+     *                      enableIdleTimeouts is true.
+     */
+    QStatus Start(bool enableIdleTimeouts, uint32_t idleTimeout, uint32_t probeTimeout, uint32_t numProbes);
+
+    /**
+     * Helper for Stop() and StopAfterTxEmpty().
+     *
+     * @param stopAfterTxEmpty true to immediately stop IODispatch handling of
+     *                         the stream after the txQueue is empty rather than
+     *                         wait for an orderly shutdown from the other side.
+     */
+    QStatus Stop(bool stopAfterTxEmpty);
 
     /**
      * Utility function used to generate an idle probe (req or ack)
@@ -615,9 +637,9 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * Internal callback used to indicate that the Stream for this endpoint has been removed
      * from the IODispatch.
      * RemoteEndpoint users should not call this method.
-     *
      */
     void ExitCallback();
+
     /**
      * Send an outgoing message.
      *
@@ -628,6 +650,7 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      *      - An error status otherwise
      */
     virtual QStatus PushMessageRouter(Message& msg, size_t& count);
+
     /**
      * Send an outgoing message.
      *

@@ -2334,7 +2334,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * this object is on exactly one of our endpoint lists, we'll get a reference
          * to a valid object here.
          */
-        SetStarted(true);
+        SetStarted();
         BusEndpoint bep = BusEndpoint::wrap(this);
 
         /*
