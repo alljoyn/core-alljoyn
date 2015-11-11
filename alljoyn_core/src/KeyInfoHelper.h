@@ -42,22 +42,6 @@ class KeyInfoHelper {
     static bool InstanceOfKeyInfoNISTP256(const qcc::KeyInfoECC& keyInfo);
 
     /**
-     * Helper function to generate a MsgArg for KeyInfoNISTP256 object.
-     * @param keyInfo the KeyInfoNISTP256 object
-     * @param[out] variant the output message arg.
-     */
-
-    static void KeyInfoNISTP256ToMsgArg(const qcc::KeyInfoNISTP256& keyInfo, MsgArg& variant);
-
-    /**
-     * Helper function to load a KeyInfoNISTP256 object using data from the message arg.
-     * @param variant the input message arg.
-     * @param[out] keyInfo the output KeyInfoNISTP256 object
-     * @return ER_OK if successful; otherwise, error code.
-     */
-    static QStatus MsgArgToKeyInfoNISTP256(const MsgArg& variant, qcc::KeyInfoNISTP256& keyInfo);
-
-    /**
      * Helper function to generate a MsgArg for KeyInfoNISTP256 public key.
      * @param keyInfo the KeyInfoNISTP256 object
      * @param[out] msgArg the output message arg.

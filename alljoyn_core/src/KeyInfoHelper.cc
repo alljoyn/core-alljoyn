@@ -65,22 +65,6 @@ QStatus KeyInfoHelper::ExportCoordinates(const qcc::ECCPublicKey& publicKey, uin
     return status;
 }
 
-void KeyInfoHelper::KeyInfoNISTP256ToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& variant)
-{
-    uint8_t* xData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
-    uint8_t* yData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
-    ExportCoordinates(*keyInfo.GetPublicKey(), xData, keyInfo.GetPublicKey()->GetCoordinateSize(), yData, keyInfo.GetPublicKey()->GetCoordinateSize());
-
-    MsgArg coordArg("(ayay)", keyInfo.GetPublicKey()->GetCoordinateSize(), xData, keyInfo.GetPublicKey()->GetCoordinateSize(), yData);
-
-    variant.Set("(yv)", KeyInfo::FORMAT_ALLJOYN,
-                new MsgArg("(ayyyv)", keyInfo.GetKeyIdLen(), keyInfo.GetKeyId(), KeyInfo::USAGE_SIGNING, KeyInfoECC::KEY_TYPE,
-                           new MsgArg("(yyv)", keyInfo.GetAlgorithm(), keyInfo.GetCurve(), new MsgArg(coordArg))));
-    variant.SetOwnershipFlags(MsgArg::OwnsArgs, true);
-    delete [] xData;
-    delete [] yData;
-}
-
 void KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg& msgArg, bool setKeyId)
 {
     uint8_t* xData = new uint8_t[keyInfo.GetPublicKey()->GetCoordinateSize()];
@@ -175,62 +159,6 @@ void KeyInfoHelper::KeyInfoKeyIdToMsgArg(const KeyInfoNISTP256& keyInfo, MsgArg&
     }
     /* copy the message arg for a deep copy of the array arguments */
     msgArg = localArg;
-}
-
-QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256(const MsgArg& variant, KeyInfoNISTP256& keyInfo)
-{
-    QStatus status;
-    uint8_t keyFormat;
-    MsgArg* variantArg;
-    status = variant.Get("(yv)", &keyFormat, &variantArg);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if (keyFormat != KeyInfo::FORMAT_ALLJOYN) {
-        return ER_INVALID_DATA;
-    }
-    uint8_t* kid;
-    size_t kidLen;
-    uint8_t keyUsageType;
-    uint8_t keyType;
-    MsgArg* keyVariantArg;
-    status = variantArg->Get("(ayyyv)", &kidLen, &kid, &keyUsageType, &keyType, &keyVariantArg);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if ((keyUsageType != KeyInfo::USAGE_SIGNING) && (keyUsageType != KeyInfo::USAGE_ENCRYPTION)) {
-        return ER_INVALID_DATA;
-    }
-    if (keyType != KeyInfoECC::KEY_TYPE) {
-        return ER_INVALID_DATA;
-    }
-    uint8_t algorithm;
-    uint8_t curve;
-    MsgArg* curveVariant;
-    status = keyVariantArg->Get("(yyv)", &algorithm, &curve, &curveVariant);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if (curve != Crypto_ECC::ECC_NIST_P256) {
-        return ER_INVALID_DATA;
-    }
-
-    uint8_t* xCoord;
-    size_t xLen;
-    uint8_t* yCoord;
-    size_t yLen;
-    status = curveVariant->Get("(ayay)", &xLen, &xCoord, &yLen, &yCoord);
-    if (ER_OK != status) {
-        return ER_INVALID_DATA;
-    }
-    if ((xLen != ECC_COORDINATE_SZ) || (yLen != ECC_COORDINATE_SZ)) {
-        return ER_INVALID_DATA;
-    }
-    ECCPublicKey publicKey;
-    publicKey.Import(xCoord, xLen, yCoord, yLen);
-    keyInfo.SetPublicKey(&publicKey);
-    keyInfo.SetKeyId(kid, kidLen);
-    return ER_OK;
 }
 
 QStatus KeyInfoHelper::GenerateKeyId(KeyInfoNISTP256& keyInfo)
