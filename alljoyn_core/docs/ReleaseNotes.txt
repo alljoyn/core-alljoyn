@@ -1,5 +1,5 @@
-AllJoyn Version 15.09 Release Notes
-===================================
+AllJoyn Version 15.09a Release Notes
+====================================
 
 Fully Validated Platforms
 -------------------------
@@ -15,8 +15,8 @@ verified, but may work:
 https://wiki.allseenalliance.org/core/core_15.09_release_review#regression_test
 
 
-Features added in Version 15.09
--------------------------------
+Features added in Version 15.09a
+--------------------------------
 * Security 2.0 was added as a Developer Preview Feature (ASACORE-1393)
 * The ARDP/UDP transport between TC and RN (Thin Client to Routing Node version
   of a UDP-based transport) is product ready (ASACORE-1404/ASACORE-1686).
@@ -27,8 +27,8 @@ Features added in Version 15.09
   (ASACORE-2068)
 
 
-Issues Addressed in Version 15.09
----------------------------------
+Issues Addressed in Version 15.09a
+----------------------------------
 ASACORE-181  Memory leak on repeated registration/unregistration of the same
              BusObject: note this is an unusual use case
 ASACORE-1394 AllJoyn Signal sent on an non-existent session id should not
@@ -37,13 +37,16 @@ ASACORE-1865 Lost advertisement packets for quietly advertised names are sent
              out actively.
 ASACORE-1886 Deadlock in UDPTransport shutdown
 ASACORE-1904 javascript NPAPI plug-in crashes Firefox.
+ASACORE-2539 keyExchanger use-after-free in AllJoynPeerObj
+ASACORE-2575 Time-out when changing security configuration of SecureDoor sample
+ASACORE-2590 Local time conversion on Linux is not thread safe
 
 For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20%20and%20component%20%3D%20%22Router%2FSCL%22%20and%20issuetype%20%3D%20Bug%20AND%20fixVersion%20in%20%28%2215.09%22%29%20AND%20status%20in%20%28Closed%2C%20Resolved%29%20and%20resolution%3DFixed%20%20ORDER%20BY%20key%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20issuetype%20%3D%20Bug%20AND%20status%20in%20%28Closed%2C%20Resolved%29%20AND%20resolution%20%3D%20Fixed%20AND%20fixVersion%20in%20%2815.09%2C%2015.09a%29%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
 
 
-Known Issues in Version 15.09
------------------------------
+Known Issues in Version 15.09a
+------------------------------
 ASACORE-49   Multipoint session lost on joiner side and not binder side
              prevents joiner from rejoining
 ASACORE-367  Router AJ objects that don't call BusController::ObjectRegister()
@@ -94,7 +97,7 @@ https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20A
 
 Compatibility
 -------------
-Version 15.09:
+Version 15.09a:
 * Language tag matching uses prefix matching and also will return the default
   language if there is no match where previously it would return an
   error. (ASACORE-2209)
