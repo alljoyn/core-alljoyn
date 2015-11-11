@@ -71,6 +71,8 @@ class GUID128 {
      * Compare a GUID with a string (case insensitive)
      *
      * @param other   The other GUID to compare with
+     * @return True if the other string represents the same set of bytes stored
+     *              in the GUID128 class.
      */
     bool Compare(const qcc::String& other);
 
@@ -101,6 +103,8 @@ class GUID128 {
      * The mapping of GUID128 to "shortened string" is therefore many to one.
      *
      * This representation does NOT have the full 128 bits of randomness
+     *
+     * @return The shortened and compressed representation of the GUID128
      */
     const qcc::String& ToShortString() const;
 
@@ -142,7 +146,7 @@ class GUID128 {
     /**
      * Set the GUID raw bytes.
      *
-     * @param rawBytes  Pointer to 16 raw (binary) bytes for guid
+     * @param buf Pointer to 16 raw (binary) bytes for guid
      */
     void SetBytes(const uint8_t* buf);
 

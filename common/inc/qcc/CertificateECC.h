@@ -121,6 +121,9 @@ class CertificateX509 {
         ENCODING_X509_DER_PEM = 1  ///< X.509 DER PEM format
     } EncodingType;
 
+    /**
+     * Certificate type
+     */
     typedef enum {
         UNRESTRICTED_CERTIFICATE,  ///< Unrestricted certificate
         IDENTITY_CERTIFICATE,      ///< identity certificate
@@ -475,6 +478,10 @@ class CertificateX509 {
      */
     QStatus GenerateAuthorityKeyId(const qcc::ECCPublicKey* issuerPubKey);
 
+    /**
+     * Get the Authority Key Identifier
+     * @return the Authority Key Identifier
+     */
     const qcc::String& GetAuthorityKeyId() const
     {
         return aki;
@@ -545,7 +552,7 @@ class CertificateX509 {
     /**
      * Set the digest of the external data.
      * @param digest the digest of the external data
-     * @param count the size of the digest.
+     * @param size the size of the digest.
      */
     void SetDigest(const uint8_t* digest, size_t size)
     {
@@ -554,7 +561,7 @@ class CertificateX509 {
 
     /**
      * Get the digest of the external data.
-     * @param digest the digest of the external data
+     * @return The digest of the external data
      */
     const uint8_t* GetDigest() const
     {
@@ -639,6 +646,10 @@ class CertificateX509 {
         delete [] serial;
     }
 
+    /**
+     * Get the certificate type.
+     * @return Certificate type
+     */
     const CertificateType GetType() const
     {
         return type;
@@ -671,6 +682,7 @@ class CertificateX509 {
      * Assign operator for CertificateX509
      *
      * @param[in] other    CertificateX509 to assign from
+     * @return copy of the CertificateX509
      */
     CertificateX509& operator=(const CertificateX509& other) {
         if (&other != this) {

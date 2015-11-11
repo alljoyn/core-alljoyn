@@ -67,6 +67,7 @@ class ECCPrivateKey {
      * the assign operator for the ECCPrivateKey
      *
      * @param[in] other the ECCPrivate key to assign
+     * @return copy of the ECCPrivateKey
      */
     ECCPrivateKey& operator=(const ECCPrivateKey& other)
     {
@@ -146,6 +147,11 @@ class ECCPrivateKey {
         return this->d;
     }
 
+    /**
+     * Get the size of the private key value
+     *
+     * @return Size of the private key in bytes
+     */
     const size_t GetDSize() const
     {
         return this->GetSize();
@@ -257,7 +263,8 @@ class ECCPublicKey {
     /**
      * Assign operator for ECCPublicKey
      *
-     * @param[in] other the ECCPublic key to assign
+     * @param[in] other the ECCPublicKey to assign
+     * @return copy of the ECCPublicKey
      */
     ECCPublicKey& operator=(const ECCPublicKey& other)
     {
@@ -338,7 +345,7 @@ class ECCPublicKey {
         return this->y;
     }
 
-    /*
+    /**
      * Get the size of a single coordinate
      *
      * @return The size of a single coordinate
@@ -448,6 +455,7 @@ struct ECCSignature {
     /**
      * The ECCSignature assign operator
      * @param[in] other the ECC signature to assign
+     * @return copy of the ECC Signature
      */
     ECCSignature& operator=(const ECCSignature& other)
     {

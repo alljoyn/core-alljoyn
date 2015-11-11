@@ -35,6 +35,10 @@ class SigInfo {
 
   public:
 
+    /**
+     * Used to specify the ECDSA SHA-256 Algorithm when specifying the
+     * SigInfo algorithm.
+     */
     static const size_t ALGORITHM_ECDSA_SHA_256 = 0;
 
     /**
@@ -167,6 +171,7 @@ class SigInfoECC : public SigInfo {
 
     /**
      * Set the signature.  The signature is copied into the internal buffer.
+     * @param[in] sig the ECCSignature to copy into the internal buffer.
      */
     void SetSignature(const ECCSignature* sig)
     {
@@ -250,11 +255,21 @@ class KeyInfoECC : public KeyInfo {
         return curve;
     }
 
+    /**
+     * Virtual member function that must be implemented so it returns
+     * a pointer to the ECCPublicKey that was set.
+     */
     virtual const ECCPublicKey* GetPublicKey() const
     {
         return NULL;
     }
 
+    /**
+     * Virtual member function that must be implemented so the public key is
+     * assigned a value.
+     *
+     * @param[in] key public ECC key
+     */
     virtual void SetPublicKey(const ECCPublicKey* key)
     {
         QCC_UNUSED(key);
@@ -264,7 +279,6 @@ class KeyInfoECC : public KeyInfo {
      * The required size of the exported byte array.
      * @return the required size of the exported byte array
      */
-
     const size_t GetExportSize() const;
 
     /**
@@ -296,6 +310,7 @@ class KeyInfoECC : public KeyInfo {
     /**
      * Comparison operators equality
      * @param[in] other right hand side KeyInfoECC
+     * @return true if the compared KeyInfoECC classes are equal.
      */
     bool operator==(const KeyInfoECC& other) const
     {
@@ -309,6 +324,7 @@ class KeyInfoECC : public KeyInfo {
     /**
      * Comparison operators non-equality
      * @param[in] other right hand side KeyInfoECC
+     * @return return true if the two KeyInfoECC classes are not equal.
      */
     bool operator!=(const KeyInfoECC& other) const
     {
@@ -352,26 +368,47 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     {
     }
 
+    /**
+     * Get the public key context
+     * @return the public key context
+     */
     const uint8_t* GetPublicCtx() const
     {
         return (const uint8_t*) &pubkey;
     }
 
+    /**
+     * Get the ECCPublicKey from the KeyInfo
+     * @return pointer to the KeyInfo ECCPublicKey
+     */
     const ECCPublicKey* GetPublicKey() const
     {
         return &pubkey.key;
     }
 
+    /**
+     * Get the size of the public key in bytes.
+     * @return the size of the public key in bytes.
+     */
     size_t GetPublicSize() const
     {
         return sizeof (pubkey);
     }
 
+    /**
+     * Set the public key context
+     * @param[in] ctx the public key context
+     */
     void SetPublicCtx(const uint8_t* ctx)
     {
         memcpy((uint8_t*) &pubkey, ctx, sizeof (pubkey));
     }
 
+    /**
+     * Set the ECCPublicKey
+     *
+     * @param[in] key the ECCPublicKey
+     */
     void SetPublicKey(const ECCPublicKey* key)
     {
         /* using uncompressed */
@@ -453,6 +490,8 @@ class KeyInfoNISTP256 : public KeyInfoECC {
      * Assign operator for KeyInfoNISTP256
      *
      * @param[in] other the KeyInfoNISTP256 to assign
+     *
+     * @return the assigned KeyInfoNISTP256
      */
 
     KeyInfoNISTP256& operator=(const KeyInfoNISTP256& other)
