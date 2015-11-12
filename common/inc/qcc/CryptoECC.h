@@ -156,18 +156,18 @@ class ECCPrivateKey {
 /**
  * The ECC public key
  *
- * At the moment, because the code only supports one curve, private keys
+ * At the moment, because the code only supports one curve, public keys
  * are not innately tied to a particular curve. In the future, if the code
- * supports more than one curve, a private key should store its curve also.
+ * supports more than one curve, a public key should store its curve also.
  */
 class ECCPublicKey {
 
     /**
-     * The x coordinate of the elliptic curve
+     * The x coordinate of the elliptic curve point
      */
     uint8_t x[ECC_COORDINATE_SZ];
     /**
-     * The y coordinate of the elliptic curve
+     * The y coordinate of the elliptic curve point
      */
     uint8_t y[ECC_COORDINATE_SZ];
 
