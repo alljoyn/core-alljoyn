@@ -644,6 +644,27 @@ QStatus ECCPublicKey::Export(uint8_t* data, size_t* size) const
     return ER_OK;
 }
 
+static bool EC_point_validation(affine_point_t const* pubkey)
+{
+    bool status;
+    QStatus ajstatus;
+    ec_t curve;
+    ecpoint_t Q;
+
+    ajstatus = ec_getcurve(&curve, NISTP256r1);
+    if (ER_OK != ajstatus) {
+        return false;
+    }
+
+    status = bigval_to_digit256(&(pubkey->x), Q.x);
+    status = status && bigval_to_digit256(&(pubkey->y), Q.y);
+    status = status && ecpoint_validation(&Q, &curve);
+
+    ec_freecurve(&curve);
+
+    return status;
+}
+
 QStatus ECCPublicKey::Import(const uint8_t* data, size_t size)
 {
     if (NULL == data) {
@@ -655,10 +676,7 @@ QStatus ECCPublicKey::Import(const uint8_t* data, size_t size)
 
     const size_t coordinateSize = GetCoordinateSize();
 
-    memcpy(x, data, coordinateSize);
-    memcpy(y, data + coordinateSize, coordinateSize);
-
-    return ER_OK;
+    return this->Import(data, coordinateSize, data + coordinateSize, coordinateSize);
 }
 
 QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uint8_t* yData, const size_t ySize)
@@ -674,6 +692,18 @@ QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uin
     }
     if (this->GetCoordinateSize() != ySize) {
         return ER_BAD_ARG_4;
+    }
+
+    /* Verify that this public key is valid. */
+    affine_point_t pub;
+
+    pub.infinity = 0;
+    binary_to_bigval(xData, &pub.x, xSize);
+    binary_to_bigval(yData, &pub.y, ySize);
+
+    if (!EC_point_validation(&pub)) {
+        QCC_LogError(ER_CORRUPT_KEYBLOB, ("Failed to import ECCPublicKey."));
+        return ER_CORRUPT_KEYBLOB;
     }
 
     memcpy(x, xData, xSize);
