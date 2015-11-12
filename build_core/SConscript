@@ -70,7 +70,7 @@ elif platform.system() == 'Darwin':
     default_msvc_version = None
 
     default_crypto = 'openssl'
-    allowed_crypto = ('openssl',)
+    allowed_crypto = ('openssl', 'builtin')
 
 vars = Variables()
 
@@ -105,6 +105,9 @@ target_cpu = ARGUMENTS.get('CPU', default_target_cpu)
 
 if target_os == 'android':
     default_crypto = 'builtin'
+if target_os == 'darwin' and target_cpu in ['x86', 'x86_64']:
+    default_crypto = 'builtin'
+
 vars.Add(EnumVariable('CRYPTO', 'Crypto implementation', default_crypto, allowed_values = allowed_crypto))
 
 if target_os in ['win10', 'win7']:
