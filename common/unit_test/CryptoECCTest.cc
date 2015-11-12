@@ -342,3 +342,36 @@ TEST_F(CryptoECCTest, ECDHE_ECDSA)
     }
 }
 
+/**
+ * Test detection of invalid public keys on import.
+ */
+TEST_F(CryptoECCTest, ECCPublicKeyImportInvalid)
+{
+    Crypto_ECC ecc;
+
+    EXPECT_EQ(ER_OK, ecc.GenerateDHKeyPair()) << "Failed to generate DH key pair";
+
+    ECCPublicKey key(*ecc.GetDHPublicKey());
+    size_t size = key.GetSize();
+    size_t coordinateSize = key.GetCoordinateSize();
+    std::vector<uint8_t> data(size);
+    uint8_t* y = data.data() + coordinateSize;
+
+    EXPECT_EQ(ER_OK, key.Export(data.data(), &size)) << "Could not export public key";
+    EXPECT_EQ(size, key.GetSize()) << "Exported data was an unexpected size " << size;
+
+    std::vector<uint8_t> originalY(data.begin() + coordinateSize, data.end());
+
+    /* Generate random values for the y-coordinate, and so long as we don't manage to randomly
+     * re-generate the same y coordinate (which might indicate a problem with the RNG), make sure
+     * it doesn't import with the same x coordinate.
+     */
+    for (int trials = 0; trials < 20; trials++) {
+        EXPECT_EQ(ER_OK, Crypto_GetRandomBytes(y, coordinateSize));
+        EXPECT_NE(0, memcmp(originalY.data(), y, coordinateSize)) << "Failed to generate a new Y; RNG may be broken";
+        EXPECT_NE(ER_OK, key.Import(data.data(), size)) << "Imported key succeeded when it shouldn't have";
+        /* Verify that the key remains unchanged by verifying the original Y value is still present. */
+        EXPECT_EQ(ER_OK, key.Export(data.data(), &size)) << "Could not re-export key";
+        EXPECT_EQ(0, memcmp(originalY.data(), y, coordinateSize)) << "Key data was modified despite failed import";
+    }
+}
