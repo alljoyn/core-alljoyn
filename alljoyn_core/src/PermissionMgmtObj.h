@@ -178,7 +178,45 @@ class PermissionMgmtObj : public BusObject {
     /**
      * The list of trust anchors
      */
-    class TrustAnchorList : public std::vector<std::shared_ptr<TrustAnchor> >, public qcc::Mutex {
+    class TrustAnchorList : public std::vector<std::shared_ptr<TrustAnchor> > {
+      public:
+        TrustAnchorList()
+        {
+        }
+
+        TrustAnchorList(const TrustAnchorList& other) : std::vector<std::shared_ptr<TrustAnchor> >(other)
+        {
+        }
+
+        TrustAnchorList& operator=(const TrustAnchorList& other)
+        {
+            std::vector<std::shared_ptr<TrustAnchor> >::operator=(other);
+            return *this;
+        }
+
+        QStatus Lock()
+        {
+            return lock.Lock();
+        }
+
+        QStatus Lock(const char* file, uint32_t line)
+        {
+            return lock.Lock(file, line);
+        }
+
+        QStatus Unlock()
+        {
+            return lock.Unlock();
+        }
+
+        QStatus Unlock(const char* file, uint32_t line)
+        {
+            return lock.Unlock(file, line);
+        }
+
+      private:
+        /* Use a member variable instead of inheriting from qcc::Mutex because copying qcc::Mutex objects is not supported */
+        qcc::Mutex lock;
     };
 
     /**
