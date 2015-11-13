@@ -433,14 +433,11 @@ OptParse::ParseResultCode OptParse::ParseResult()
             }
             configService = true;
 #endif
-        } else if (arg.compare(0, sizeof("--print-address") - 1,
-                               "--print-address") == 0) {
-            if (arg[sizeof("--print-address") - 1] == '=') {
-                printAddressFd = StringToI32(arg.substr(
-                                                 sizeof("--print-address")), 10, -2);
+        } else if (arg.compare(0, sizeof("--print-address") - 1, "--print-address") == 0) {
+            if ((arg.size() > sizeof("--print-address") - 1) && (arg[sizeof("--print-address") - 1] == '=')) {
+                printAddressFd = StringToI32(arg.substr(sizeof("--print-address")), 10, -2);
             } else {
-                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i
-                                                                           + 1][1] == '-'))) {
+                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i + 1][1] == '-'))) {
                     printAddressFd = STDERR_FILENO;
                 } else {
                     ++i;
@@ -451,14 +448,12 @@ OptParse::ParseResultCode OptParse::ParseResult()
                 result = PR_INVALID_OPTION;
                 goto exit;
             }
-        } else if (arg.substr(0, sizeof("--print-pid") - 1).compare(
-                       "--print-pid") == 0) {
-            if (arg[sizeof("--print-pid") - 1] == '=') {
-                printPidFd = StringToI32(arg.substr(sizeof("--print-pid")), 10,
-                                         -2);
+        } else if (arg.compare(0, sizeof("--print-pid") - 1, "--print-pid") == 0) {
+            if ((arg.size() > sizeof("--print-pid") - 1) &&
+                (arg[sizeof("--print-pid") - 1] == '=')) {
+                printPidFd = StringToI32(arg.substr(sizeof("--print-pid")), 10, -2);
             } else {
-                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i
-                                                                           + 1][1] == '-'))) {
+                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i + 1][1] == '-'))) {
                     printPidFd = STDERR_FILENO;
                 } else {
                     ++i;
