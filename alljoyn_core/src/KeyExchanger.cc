@@ -491,13 +491,18 @@ void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
 
 bool KeyExchangerECDHE_ECDSA::IsTrustAnchor(const ECCPublicKey* publicKey)
 {
-    for (PermissionMgmtObj::TrustAnchorList::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
+    bool isTrustAnchor = false;
+    trustAnchorList->Lock(MUTEX_CONTEXT);
 
+    for (std::vector<std::shared_ptr<PermissionMgmtObj::TrustAnchor> >::iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
         if (*(*it)->keyInfo.GetPublicKey() == *publicKey) {
-            return true;
+            isTrustAnchor = true;
+            break;
         }
     }
-    return false;
+
+    trustAnchorList->Unlock(MUTEX_CONTEXT);
+    return isTrustAnchor;
 }
 
 QStatus KeyExchangerECDHE::KeyExchangeReadKeyInfo(MsgArg& variant)
@@ -689,6 +694,9 @@ static QStatus DoStoreMasterSecret(BusAttachment& bus, const qcc::GUID128& guid,
         secretBlob.SetTag(tagStr, initiator ? KeyBlob::INITIATOR : KeyBlob::RESPONDER);
         KeyStore::Key key(KeyStore::Key::REMOTE, guid);
         status = keyStore.AddKey(key, secretBlob, accessRights);
+        if (ER_OK == status) {
+            status = keyStore.Store();
+        }
     }
     return status;
 }
@@ -1271,7 +1279,7 @@ bool KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(const CertificateX509* c
 /**
  * Extract the list of issuer keys from the cert chain
  */
-static void ExtractIssuerPublicKeys(const CertificateX509* certs, size_t numCerts, const PermissionMgmtObj::TrustAnchorList* trustAnchorList, std::vector<ECCPublicKey>& issuerKeys)
+static void ExtractIssuerPublicKeys(const CertificateX509* certs, size_t numCerts, PermissionMgmtObj::TrustAnchorList* trustAnchorList, std::vector<ECCPublicKey>& issuerKeys)
 {
     if ((numCerts == 0) || !certs) {
         return;
@@ -1284,13 +1292,18 @@ static void ExtractIssuerPublicKeys(const CertificateX509* certs, size_t numCert
         if (aki.size() == 0) {
             return;
         }
-        for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
+
+        trustAnchorList->Lock(MUTEX_CONTEXT);
+
+        for (std::vector<std::shared_ptr<PermissionMgmtObj::TrustAnchor> >::const_iterator it = trustAnchorList->begin(); it != trustAnchorList->end(); it++) {
             if ((aki.size() == (*it)->keyInfo.GetKeyIdLen()) &&
                 (memcmp(aki.data(), (*it)->keyInfo.GetKeyId(), aki.size()) == 0) &&
                 (ER_OK == certs[0].Verify((*it)->keyInfo.GetPublicKey()))) {
                 issuerKeys.push_back(*(*it)->keyInfo.GetPublicKey());
             }
         }
+
+        trustAnchorList->Unlock(MUTEX_CONTEXT);
     }
     /* Skip the end-entity cert[0], go through the issuer certs to collect
      * the issuers' public key.
@@ -1462,6 +1475,7 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         if (certs[0].GetDigestSize() == Crypto_SHA256::DIGEST_SIZE) {
             memcpy(peerManifestDigest, certs[0].GetDigest(), Crypto_SHA256::DIGEST_SIZE);
         }
+
         ExtractIssuerPublicKeys(certs, numCerts, trustAnchorList, peerIssuerPubKeys);
         CalculateSecretExpiration(certs[0], secretExpiration);
     } else {

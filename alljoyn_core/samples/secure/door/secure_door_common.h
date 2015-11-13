@@ -63,7 +63,7 @@ class DoorCommonPCL : public PermissionConfigurationListener {
 
     void PolicyChanged();
 
-    bool WaitForClaimedState();
+    QStatus WaitForClaimedState();
 
   private:
     BusAttachment& ba;
@@ -90,9 +90,11 @@ class Door :
   public:
     Door(BusAttachment* ba);
 
+    QStatus Init();
+
     ~Door() { }
 
-    void SendDoorEvent();
+    QStatus SendDoorEvent();
 
     bool autoSignal; // Automatically send signals on door state changes when set.
 
@@ -108,6 +110,8 @@ class Door :
   private:
     bool open; // open = true, close = false
 
+    const BusAttachment* busAttachment; // no ownership
+
     const InterfaceDescription::Member* stateSignal;
 
     void Open(const InterfaceDescription::Member* member,
@@ -118,7 +122,6 @@ class Door :
 
     void GetState(const InterfaceDescription::Member* member,
                   Message& msg);
-
 };
 
 /* DoorCommon encapsulates the common setup needed for both door consumer and provider */
@@ -135,7 +138,7 @@ class DoorCommon {
 
     QStatus Init(bool provider, PermissionConfigurationListener* pcl = nullptr);
 
-    QStatus Fini();
+    void Fini();
 
     const InterfaceDescription::Member* GetDoorSignal()
     {
@@ -149,14 +152,12 @@ class DoorCommon {
 
     QStatus AnnounceAbout();
 
-    void UpdateManifest(const PermissionPolicy::Acl& manifest);
+    QStatus UpdateManifest(const PermissionPolicy::Acl& manifest);
 
   private:
     QStatus CreateInterface();
 
-    QStatus AdvertiseApplication();
-
-    QStatus SetAboutData();
+    void SetAboutData();
 
     QStatus HostSession();
 
