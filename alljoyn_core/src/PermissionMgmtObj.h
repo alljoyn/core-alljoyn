@@ -26,6 +26,8 @@
 #error Only include PermissionMgmtObj.h in C++ code.
 #endif
 
+#include <memory>
+
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
@@ -176,7 +178,46 @@ class PermissionMgmtObj : public BusObject {
     /**
      * The list of trust anchors
      */
-    typedef std::vector<TrustAnchor*> TrustAnchorList;
+    class TrustAnchorList : public std::vector<std::shared_ptr<TrustAnchor> > {
+      public:
+        TrustAnchorList()
+        {
+        }
+
+        TrustAnchorList(const TrustAnchorList& other) : std::vector<std::shared_ptr<TrustAnchor> >(other)
+        {
+        }
+
+        TrustAnchorList& operator=(const TrustAnchorList& other)
+        {
+            std::vector<std::shared_ptr<TrustAnchor> >::operator=(other);
+            return *this;
+        }
+
+        QStatus Lock()
+        {
+            return lock.Lock();
+        }
+
+        QStatus Lock(const char* file, uint32_t line)
+        {
+            return lock.Lock(file, line);
+        }
+
+        QStatus Unlock()
+        {
+            return lock.Unlock();
+        }
+
+        QStatus Unlock(const char* file, uint32_t line)
+        {
+            return lock.Unlock(file, line);
+        }
+
+      private:
+        /* Use a member variable instead of inheriting from qcc::Mutex because copying qcc::Mutex objects is not supported */
+        qcc::Mutex lock;
+    };
 
     /**
      * Constructor
@@ -238,26 +279,16 @@ class PermissionMgmtObj : public BusObject {
      * Is there any trust anchor installed?
      * @return true if there is at least one trust anchors installed; false, otherwise.
      */
-    bool HasTrustAnchors()
-    {
-        return !trustAnchors.empty();
-    }
+    bool HasTrustAnchors();
 
     /**
      * Retrieve the list of trust anchors.
      * @return the list of trust anchors
      */
-
     const TrustAnchorList& GetTrustAnchors()
     {
         return trustAnchors;
     }
-
-    /**
-     * Helper function to release the allocated memory for the trust anchor list.
-     * @param list the list to be clear of allocated memory.
-     */
-    static void ClearTrustAnchorList(TrustAnchorList& list);
 
     /**
      * Help function to store DSA keys in the key store.
@@ -266,7 +297,6 @@ class PermissionMgmtObj : public BusObject {
      * @param publicKey the DSA public key
      * @return ER_OK if successful; otherwise, error code.
      */
-
     static QStatus StoreDSAKeys(CredentialAccessor* ca, const qcc::ECCPrivateKey* privateKey, const qcc::ECCPublicKey* publicKey);
 
     /**

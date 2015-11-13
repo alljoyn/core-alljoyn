@@ -554,7 +554,7 @@ void BasePermissionMgmtTest::TVUp(const InterfaceDescription::Member* member, Me
     QCC_UNUSED(member);
     currentTVChannel++;
     MethodReply(msg, ER_OK);
-    TVChannelChanged(member, msg, true);
+    TVChannelChanged(member, msg, SEND_SIGNAL_SESSIONCAST);
 }
 
 void BasePermissionMgmtTest::TVDown(const InterfaceDescription::Member* member, Message& msg)
@@ -564,7 +564,7 @@ void BasePermissionMgmtTest::TVDown(const InterfaceDescription::Member* member, 
         currentTVChannel--;
     }
     MethodReply(msg, ER_OK);
-    TVChannelChanged(member, msg, true);
+    TVChannelChanged(member, msg, SEND_SIGNAL_BROADCAST);
 }
 
 void BasePermissionMgmtTest::TVChannel(const InterfaceDescription::Member* member, Message& msg)
@@ -572,17 +572,20 @@ void BasePermissionMgmtTest::TVChannel(const InterfaceDescription::Member* membe
     QCC_UNUSED(member);
     MethodReply(msg, ER_OK);
     /* emit a signal */
-    TVChannelChanged(member, msg, false);
+    TVChannelChanged(member, msg, SEND_SIGNAL_UNICAST);
 }
 
-void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member* member, Message& msg, bool sendSessioncastSignal)
+void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member* member, Message& msg, SignalSendMethod sendMethod)
 {
     QCC_UNUSED(msg);
     /* emit a signal */
     MsgArg args[1];
     args[0].Set("u", currentTVChannel);
-    if (sendSessioncastSignal) {
+    if (sendMethod == SEND_SIGNAL_SESSIONCAST) {
         Signal(NULL, SESSION_ID_ALL_HOSTED, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+    } else if (sendMethod == SEND_SIGNAL_BROADCAST) {
+        /* sending a broadcast signal */
+        Signal(NULL, 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
     } else {
         Signal(consumerBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
         Signal(remoteControlBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);

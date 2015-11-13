@@ -183,6 +183,12 @@ class KeyStore {
 
     /**
      * Requests the key store listener to store the contents of the key store
+     * For consistency protection, the Store method will request for
+     * for a consistency lock.  Once the lock is acquired,
+     * the persistent data is loaded, merge with the cached keys, and then asks
+     * the KeyStoreListener to persist the merged data.
+     * The consistency lock is released once the data is persisted.
+     * @return ER_OK if successful; otherwise, error code.
      */
     QStatus Store();
 
@@ -531,7 +537,8 @@ class KeyStore {
      */
     class KeyRecord {
       public:
-        KeyRecord() : revision(0) { }
+        KeyRecord() : persisted(false), revision(0) { }
+        bool persisted;          /// currently persisted in storage
         uint32_t revision;       ///< Revision number when this key was added
         qcc::KeyBlob keyBlob;        ///< The key blob for the key
         uint8_t accessRights[4]; ///< Access rights associated with this record (see PeerState)
@@ -543,9 +550,38 @@ class KeyStore {
     typedef std::map<Key, KeyRecord> KeyMap;
 
     /**
+     * Internal function to load the persistent keys
+     */
+    QStatus LoadPersistentKeys();
+
+    /**
      * In memory copy of the key store
      */
     KeyMap* keys;
+
+    /**
+     * The hash map for the persistent keys to be used by the Pull method
+     * Once the pull is complete, the persistent keys will be merged with the
+     * keys.
+     */
+    KeyMap* persistentKeys;
+
+    /**
+     * Mutex to protect the persistent keys.  This lock is used to synchronize
+     * the loading of the persistence data from the KeyStoreListener.
+     * The KeyStore lock is no longer used in this process to allows for
+     * concurrent access to the keys cache and the KeyStore properties.
+     * During the merge of the key cache and the persistent keys, both locks
+     * have to be acquired in this order: the persistent key lock first, and
+     * then the keystore lock.  They must be released in the reverse order to
+     * prevent deadlock.
+     */
+    qcc::Mutex persistentKeysLock;
+
+    /**
+     * Mutex to protect the consistency of the store process.
+     */
+    qcc::Mutex consistencyLock;
 
     /**
      * GUID for keys that have been deleted
@@ -582,6 +618,10 @@ class KeyStore {
      */
     uint32_t revision;
 
+    /**
+     * Revision number for the persistent data store
+     */
+    uint32_t persistentRevision;
     /**
      * Indicates if the key store is shared between multiple applications.
      */
