@@ -21,75 +21,36 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
-
-#include <windows.h>
-#include <stdio.h>
-
-#include <qcc/Thread.h>
-#include <qcc/Mutex.h>
 #include <qcc/MutexInternal.h>
-#include <qcc/windows/utility.h>
 
-/** @internal */
 #define QCC_MODULE "MUTEX"
 
 using namespace qcc;
 
-void Mutex::Init()
+bool Mutex::Internal::PlatformSpecificInit()
 {
-    QCC_ASSERT(!isInitialized);
-    mutexInternal = new Internal;
-    file = nullptr;
-    line = static_cast<uint32_t>(-1);
-    InitializeCriticalSection(&mutex);
-    isInitialized = true;
+    InitializeCriticalSection(&m_mutex);
+    return true;
 }
 
-void Mutex::Destroy()
+void Mutex::Internal::PlatformSpecificDestroy()
 {
-    if (isInitialized) {
-        isInitialized = false;
-        DeleteCriticalSection(&mutex);
-        delete mutexInternal;
-        mutexInternal = nullptr;
-    }
+    DeleteCriticalSection(&m_mutex);
 }
 
-QStatus Mutex::Lock()
+QStatus Mutex::Internal::PlatformSpecificLock()
 {
-    QCC_ASSERT(isInitialized);
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-
-    EnterCriticalSection(&mutex);
-    mutexInternal->LockAcquired();
+    EnterCriticalSection(&m_mutex);
     return ER_OK;
 }
 
-QStatus Mutex::Unlock()
+QStatus Mutex::Internal::PlatformSpecificUnlock()
 {
-    QCC_ASSERT(isInitialized);
-    if (!isInitialized) {
-        return ER_INIT_FAILED;
-    }
-
-    mutexInternal->ReleasingLock();
-    LeaveCriticalSection(&mutex);
+    LeaveCriticalSection(&m_mutex);
     return ER_OK;
 }
 
-bool Mutex::TryLock()
+bool Mutex::Internal::PlatformSpecificTryLock()
 {
-    QCC_ASSERT(isInitialized);
-    bool locked = false;
-
-    if (isInitialized) {
-        locked = TryEnterCriticalSection(&mutex);
-        if (locked) {
-            mutexInternal->LockAcquired();
-        }
-    }
-
-    return locked;
+    return (TryEnterCriticalSection(&m_mutex) != FALSE);
 }
