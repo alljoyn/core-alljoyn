@@ -91,6 +91,13 @@ class _PeerState {
 
   public:
 
+    /**
+     * Key Exchange mode masks
+     */
+    const static uint8_t KEY_EXCHANGE_NONE = 0x00;       /* no key exchange */
+    const static uint8_t KEY_EXCHANGE_INITIATOR = 0x01;  /* in a key exchange as an initiator */
+    const static uint8_t KEY_EXCHANGE_RESPONDER = 0x02;  /* in a key exchange as as responder */
+
     PermissionPolicy::Rule* manifest;
     size_t manifestSize;
 
@@ -127,7 +134,11 @@ class _PeerState {
         expectedSerial(0),
         isSecure(false),
         authEvent(NULL),
-        hashUtil(NULL)
+        initiatorHash(NULL),
+        responderHash(NULL),
+        initiatorHashLock(),
+        responderHashLock(),
+        keyExchangeMode(KEY_EXCHANGE_NONE)
     {
         ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
@@ -137,7 +148,7 @@ class _PeerState {
      * Get the (estimated) timestamp for this remote peer converted to local host time. The estimate
      * is updated based on the timestamp recently received.
      *
-     * @param remoteTime  The timestamp received in a message from the remote peer.
+     * @param[in] remoteTime  The timestamp received in a message from the remote peer.
      *
      * @return   The estimated timestamp for the remote peer.
      */
@@ -149,9 +160,9 @@ class _PeerState {
      * have additional checks for replay attacks. Unreliable messages are checked for in-order
      * arrival.
      *
-     * @param serial      The serial number being checked.
-     * @param secure      The message was flagged as secure
-     * @param unreliable  The message is flagged as unreliable.
+     * @param[in] serial      The serial number being checked.
+     * @param[in] secure      The message was flagged as secure
+     * @param[in] unreliable  The message is flagged as unreliable.
      *
      * @return  Returns true if the serial number is valid.
      */
@@ -182,8 +193,8 @@ class _PeerState {
     /**
      * Sets the session key for this peer
      *
-     * @param key        The session key to set.
-     * @param keyType    Indicate if this is the unicast or broadcast key.
+     * @param[in] key        The session key to set.
+     * @param[in] keyType    Indicate if this is the unicast or broadcast key.
      */
     void SetKey(const qcc::KeyBlob& key, PeerKeyType keyType) {
         keys[keyType] = key;
@@ -193,7 +204,7 @@ class _PeerState {
     /**
      * Gets the session key for this peer.
      *
-     * @param key    [out]Returns the session key.
+     * @param[in] key    [out]Returns the session key.
      *
      * @return  - ER_OK if there is a session key set for this peer.
      *          - ER_BUS_KEY_UNAVAILABLE if no session key has been set for this peer.
@@ -243,9 +254,15 @@ class _PeerState {
      * is being authenticated and is used to prevent multiple threads from attempting to
      * simultaneously authenticate the same peer.
      *
-     * @param event  The event to set or NULL if the event is being cleared.
+     * @param[in] event  The event to set or NULL if the event is being cleared.
      */
     void SetAuthEvent(qcc::Event* event) { authEvent = event; }
+
+    /**
+     * Notify all the waiting threads on auth event.
+     */
+
+    void NotifyAuthEvent();
 
     /**
      * Tests if this peer is the local peer.
@@ -268,8 +285,8 @@ class _PeerState {
      * Check if the peer is authorized to send or or receive a message of the specified
      * type.
      *
-     * @param msgType  The type of message that is being authorized.
-     * @param access   The access type being checked
+     * @param[in] msgType  The type of message that is being authorized.
+     * @param[in] access   The access type being checked
      *
      * @return Return true if the message type is authorized.
      */
@@ -284,8 +301,8 @@ class _PeerState {
     /**
      * Set or clear an authorization.
      *
-     * @param msgType  The type of message that is being authorized.
-     * @param access   The access type to authorize, zero to clear.
+     * @param[in] msgType  The type of message that is being authorized.
+     * @param[in] access   The access type to authorize, zero to clear.
      */
     void SetAuthorization(AllJoynMessageType msgType, uint8_t access) {
         if (msgType != MESSAGE_INVALID) {
@@ -300,16 +317,16 @@ class _PeerState {
 
     /**
      * Set the guild metadata indexed by the serial number and the issuer.
-     * @param serial the membership certificate serial number
-     * @param issuerAki the membership certificate issuer authority key id
-     * @param guild the guild metadata
+     * @param[in] serial the membership certificate serial number
+     * @param[in] issuerAki the membership certificate issuer authority key id
+     * @param[in] guild the guild metadata
      */
     void SetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki,        GuildMetadata* guild);
 
     /**
      * Retrieve the guild metadata indexed by the serial number and the issuer.
-     * @param serial the membership certificate serial number
-     * @param issuerAki the membership certificate issuer authority key id
+     * @param[in] serial the membership certificate serial number
+     * @param[in] issuerAki the membership certificate issuer authority key id
      * @return the guild metadata
      */
     GuildMetadata* GetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki);
@@ -359,21 +376,23 @@ class _PeerState {
      * InitializeConversationHash must first be called before calling this method.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
      * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+     * @param[in] initiator key exchange started as initiator
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] byte Byte with which to update the hash.
      */
-    void UpdateHash(uint32_t conversationVersion, uint8_t byte);
+    void UpdateHash(bool initiator, uint32_t conversationVersion, uint8_t byte);
 
     /**
      * Update the conversation hash with a byte array.
      * InitializeConversationHash must first be called before calling this method.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
      * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+     * @param[in] initiator key exchange started as initiator
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] buf Data with which to update the hash.
      * @param[in] bufSize Size of buf.
      */
-    void UpdateHash(uint32_t conversationVersion, const uint8_t* buf, size_t bufSize);
+    void UpdateHash(bool initiator, uint32_t conversationVersion, const uint8_t* buf, size_t bufSize);
 
     /**
      * Update the conversation hash with a string. String will be converted to its
@@ -381,10 +400,11 @@ class _PeerState {
      * InitializeConversationHash must first be called before calling this method.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
      * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+     * @param[in] initiator key exchange started as initiator
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] str String with data with which to update the hash.
      */
-    void UpdateHash(uint32_t conversationVersion, const qcc::String& str);
+    void UpdateHash(bool initiator, uint32_t conversationVersion, const qcc::String& str);
 
     /**
      * Update the conversation hash with a Message. This extracts the raw message buffer
@@ -392,44 +412,49 @@ class _PeerState {
      * InitializeConversationHash must first be called before calling this method.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
      * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+     * @param[in] initiator key exchange started as initiator
      * @param[in] conversationVersion The minimum auth version required for this to be included in the hash.
      * @param[in] msg A Message object whose arguments will be added to the hash.
      */
-    void UpdateHash(uint32_t conversationVersion, const Message& msg);
+    void UpdateHash(bool initiator, uint32_t conversationVersion, const Message& msg);
 
     /**
      * Initialize the conversation hash to start a new conversation. Any previous
      * conversation hash is lost. This must be called before any calls to UpdateHash or GetDigest.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
      * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+     * @param[in] initiator key exchange started as initiator
      */
-    void InitializeConversationHash();
+    void InitializeConversationHash(bool initiator);
 
     /**
      * Returns true if the conversation hash has been initalized, false otherwise.
+     * @param[in] initiator key exchange started as initiator
      * @see void InitializeConversationHash()
      */
-    bool IsConversationHashInitialized();
+    bool IsConversationHashInitialized(bool initiator);
 
     /**
      * Free the conversation hash when it's no longer needed. After this, any new calls
      * to UpdateHash or GetDigest must be preceded by a call to InitializeConversationHash.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
      * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+     * @param[in] initiator key exchange started as initiator
      * @see void InitializeConversationHash()
      */
-    void FreeConversationHash();
+    void FreeConversationHash(bool initiator);
 
     /**
      * Get the current conversation hash digest.
      * InitializeConversationHash must first be called before calling this method.
      * The hash lock must be acquired via AcquireConversationHashLock prior to calling this method.
      * The hash lock must be released via ReleaseConversationHashLock after calling this method.
+     * @param[in] initiator key exchange started as initiator
      * @param[out] digest A buffer of appropriate size to receive the digest. Currently
      *                    only SHA-256 is used, and so 32 bytes will be returned.
      * @param[in] keepAlive Whether or not to keep the hash alive for continuing hash.
      */
-    void GetDigest(uint8_t* digest, bool keepAlive = false);
+    void GetDigest(bool initiator, uint8_t* digest, bool keepAlive = false);
 
     /**
      * Acquire the lock to conversation hash with the intention to call
@@ -439,15 +464,17 @@ class _PeerState {
      * ReplyMethod wishes to aquire an early lock to the conversation hash to
      * prevent any other thread from updating the conversation hash while it
      * is waiting for the MethodRely() to return.
+     * @param[in] initiator key exchange started as initiator
      */
 
-    void AcquireConversationHashLock();
+    void AcquireConversationHashLock(bool initiator);
 
     /**
      * release the conversation hash lock.
+     * @param[in] initiator key exchange started as initiator
      */
 
-    void ReleaseConversationHashLock();
+    void ReleaseConversationHashLock(bool initiator);
 
     /**
      * Enable or disable "sensitive mode," where byte arrays that get hashed aren't
@@ -455,9 +482,44 @@ class _PeerState {
      * log the size of the data, but then log secret data was hashed without showing the data.
      *
      * Logging for Update for a single byte or GetDigest is unaffected.
+     * @param[in] initiator key exchange started as initiator
      * @param[in] mode true to enable sensitive mode; false to disable it.
      */
-    void SetConversationHashSensitiveMode(bool mode);
+    void SetConversationHashSensitiveMode(bool initiator, bool mode);
+
+    /**
+     * Get the key exchange mode.  A peer can be in a key exchange as an initiator or a responder or both.
+     * @return the key exchange mode
+     */
+    uint8_t GetKeyExchangeMode() const;
+
+    /**
+     * Set the key exchange mode. A peer can be in a key exchange as an
+     * initiator or a responder or both.
+     * @param[in] mode the key exchange mode.
+     */
+    void SetKeyExchangeMode(uint8_t mode);
+
+    /**
+     * Enable the key exchange mode mask. A peer can be in a key exchange as
+     * an initiator or a responder or both.
+     * @param[in] mask the mask to enable in the key exchange mode.
+     */
+    void AddKeyExchangeModeMask(uint8_t mask);
+
+    /**
+     * Clear the key exchange mode mask. A peer can be in a key exchange as
+     * an initiator or a responder or both.
+     * @param[in] mask the mask to clear in the key exchange mode.
+     */
+    void ClearKeyExchangeModeMask(uint8_t mask);
+
+    /*
+     * Is the peer in this key exchange mode?
+     * @param[in] mask the key exchange code mask
+     * @return true if so; false, otherwise.
+     */
+    bool IsInKeyExchangeMode(uint8_t mask) const;
 
     /*
      * Destructor
@@ -474,6 +536,18 @@ class _PeerState {
      * private copy constructor to prevent double freeing of memory
      */
     _PeerState(const _PeerState& other);
+
+    /**
+     * Get the conversation hash
+     * @param[in] initiator key exchange started as initiator
+     */
+    ConversationHash* GetConversationHash(bool initiator) const;
+
+    /**
+     * Get the conversation hash lock
+     * @param[in] initiator key exchange started as initiator
+     */
+    qcc::Mutex& GetConversationHashLock(bool initiator);
 
     /**
      * True if this peer state is for the local peer.
@@ -538,14 +612,29 @@ class _PeerState {
     uint32_t window[128];
 
     /**
-     * The conversation hash.
+     * The initiator conversation hash.
      */
-    ConversationHash* hashUtil;
+    ConversationHash* initiatorHash;
 
     /**
-     * Mutex to protect the conversation hash
+     * The responder conversation hash.
      */
-    qcc::Mutex hashLock;
+    ConversationHash* responderHash;
+
+    /**
+     * Mutex to protect the initiator conversation hash
+     */
+    qcc::Mutex initiatorHashLock;
+
+    /**
+     * Mutex to protect the responder conversation hash
+     */
+    qcc::Mutex responderHashLock;
+
+    /**
+     * The key exchange mode
+     */
+    uint8_t keyExchangeMode;
 };
 
 
@@ -564,8 +653,8 @@ class PeerStateTable {
     /**
      * Get the peer state for given a bus name.
      *
-     * @param busName         The bus name for a remote connection
-     * @param createIfUnknown true to create a PeerState if the peer is unknown
+     * @param[in] busName         The bus name for a remote connection
+     * @param[in] createIfUnknown true to create a PeerState if the peer is unknown
      *
      * @return  The peer state.
      */
@@ -574,7 +663,7 @@ class PeerStateTable {
     /**
      * Fnd out if the bus name is for a known peer.
      *
-     * @param busName   The bus name for a remote connection
+     * @param[in] busName   The bus name for a remote connection
      *
      * @return  Returns true if the peer is known.
      */
@@ -588,8 +677,8 @@ class PeerStateTable {
     /**
      * Get the peer state looking the peer state up by a unique name or a known alias for the peer.
      *
-     * @param uniqueName  The bus name for a remote connection
-     * @param aliasName   An alias bus name for a remote connection
+     * @param[in] uniqueName  The bus name for a remote connection
+     * @param[in] aliasName   An alias bus name for a remote connection
      *
      * @return  The peer state.
      */
@@ -598,8 +687,8 @@ class PeerStateTable {
     /**
      * Are two bus names known to refer to the same peer.
      *
-     * @param name1  The first bus name
-     * @param name1  The second bus name
+     * @param[in] name1  The first bus name
+     * @param[in] name2  The second bus name
      *
      * @return  Returns true if the two bus names are known to refer to the same peer.
      */
@@ -610,7 +699,7 @@ class PeerStateTable {
     /**
      * Delete peer state for a busName that is no longer in use
      *
-     * @param busName  The bus name that may was been previously associated with peer state.
+     * @param[in] busName  The bus name that may was been previously associated with peer state.
      */
     void DelPeerState(const qcc::String& busName);
 
@@ -618,7 +707,7 @@ class PeerStateTable {
      * Gets the group (broadcast) key for the local peer. This is used to encrypt
      * broadcast messages sent by this peer.
      *
-     * @param key   [out]Returns the broadcast key.
+     * @param[in] key   [out]Returns the broadcast key.
      */
     void GetGroupKey(qcc::KeyBlob& key);
 

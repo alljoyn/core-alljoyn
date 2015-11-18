@@ -18,6 +18,7 @@
 #include <gtest/gtest.h>
 #include <qcc/GUID.h>
 #include <qcc/StringUtil.h>
+#include <qcc/Thread.h>
 
 #include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/Status.h>
@@ -409,6 +410,53 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         qcc::String chosenMechanism;
       private:
         bool server;
+    };
+
+    class SRPKeyXListener : public AuthListener {
+      public:
+        SRPKeyXListener()
+        {
+            pwd = "1a5dc770e6654144a9fac34281d3dc51";
+        }
+
+        bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
+        {
+            QCC_UNUSED(authPeer);
+            QCC_UNUSED(authCount);
+            QCC_UNUSED(userId);
+
+            if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
+                if (credMask & AuthListener::CRED_PASSWORD) {
+                    creds.SetPassword(pwd);
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        bool VerifyCredentials(const char* authMechanism, const char* authPeer, const Credentials& creds)
+        {
+            QCC_UNUSED(authPeer);
+
+            /* only the ECDHE_ECDSA calls for peer credential verification */
+            if (strcmp(authMechanism, "ALLJOYN_SRP_KEYX") == 0) {
+                return (creds.GetPassword() == pwd);
+            }
+            return false;
+        }
+
+        void AuthenticationComplete(const char* authMechanism, const char* authPeer, bool success)
+        {
+            QCC_UNUSED(authPeer);
+            authComplete = success;
+            chosenMechanism = authMechanism;
+        }
+
+        bool authComplete;
+        qcc::String chosenMechanism;
+      private:
+        bool server;
+        const char* pwd;
     };
 
     AuthListenerECDHETest() : BusObject("/AuthListenerECDHETest"),
@@ -1068,4 +1116,154 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_TestExpiredSessionKey)
     EXPECT_EQ(ER_OK, ExerciseOn(true)); /* `true' parameter will use secondClientBus. */
     EXPECT_TRUE(clientAuthListener.authComplete);
     EXPECT_TRUE(serverAuthListener.authComplete);
+}
+
+class PeerThread : public Thread {
+  public:
+    PeerThread(String name, BusAttachment& srcBus, BusAttachment& targetBus, const char* objectPath) : Thread(name), srcBus(srcBus), targetBus(targetBus), objectPath(objectPath)
+    {
+    }
+    ~PeerThread()
+    {
+    }
+    const QStatus GetResult() const
+    {
+        return result;
+    }
+  protected:
+    ThreadReturn STDCALL Run(void* arg) {
+        QCC_UNUSED(arg);
+        ProxyBusObject proxy(srcBus, targetBus.GetUniqueName().c_str(), objectPath, 0, false);
+        result = proxy.SecureConnection();
+        return static_cast<ThreadReturn>(0);
+    }
+  private:
+    BusAttachment& srcBus;
+    BusAttachment& targetBus;
+    const char* objectPath;
+    QStatus result;
+};
+
+/**
+ * Test the concurrent key exchange initiation between sets of peers.
+ */
+TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
+{
+    const char* mechanism = "ALLJOYN_ECDHE_ECDSA";
+    EXPECT_EQ(ER_OK, EnableSecurity(true, mechanism));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, mechanism));
+    /* setup the second bus not sharing the same key store as client bus */
+    InMemoryKeyStoreListener secondClientKeyStoreListener;
+    ECDHEKeyXListener secondClientAuthListener(false);
+    EXPECT_EQ(ER_OK, secondClientBus.UnregisterKeyStoreListener());
+    EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(secondClientKeyStoreListener));
+    EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity(mechanism, &secondClientAuthListener, NULL, false));
+
+    String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
+    PeerThread thread1(name, clientBus, serverBus, GetPath());
+    name = "thread2: server bus " + serverBus.GetUniqueName() + " to clientBus " + clientBus.GetUniqueName();
+    PeerThread thread2(name, serverBus, clientBus, GetPath());
+    name = "thread3: second bus " + secondClientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
+    PeerThread thread3(name, secondClientBus, serverBus, GetPath());
+    name = "thread4: server bus " + serverBus.GetUniqueName() + " to second Bus " + secondClientBus.GetUniqueName();
+    PeerThread thread4(name, serverBus, secondClientBus, GetPath());
+
+    thread1.Start();
+    thread2.Start();
+    thread3.Start();
+    thread4.Start();
+    thread1.Join();
+    thread2.Join();
+    thread3.Join();
+    thread4.Join();
+    EXPECT_EQ(ER_OK, thread1.GetResult());
+    EXPECT_EQ(ER_OK, thread2.GetResult());
+    EXPECT_EQ(ER_OK, thread3.GetResult());
+    EXPECT_EQ(ER_OK, thread4.GetResult());
+
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_EQ(ER_OK, ExerciseOn(true)); /* `true' parameter will use secondClientBus. */
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_TRUE(secondClientAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), mechanism);
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), mechanism);
+    EXPECT_STREQ(secondClientAuthListener.chosenMechanism.c_str(), mechanism);
+}
+
+TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_2Threads_NULL)
+{
+    const char* mechanism = "ALLJOYN_ECDHE_NULL";
+    EXPECT_EQ(ER_OK, EnableSecurity(true, mechanism));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, mechanism));
+
+    String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
+    PeerThread thread1(name, clientBus, serverBus, GetPath());
+    name = "thread2: server bus " + serverBus.GetUniqueName() + " to clientBus " + clientBus.GetUniqueName();
+    PeerThread thread2(name, serverBus, clientBus, GetPath());
+
+    thread1.Start();
+    thread2.Start();
+    thread1.Join();
+    thread2.Join();
+    EXPECT_EQ(ER_OK, thread1.GetResult());
+    EXPECT_EQ(ER_OK, thread2.GetResult());
+
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), mechanism);
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), mechanism);
+}
+
+TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_2Threads_PSK)
+{
+    const char* mechanism = "ALLJOYN_ECDHE_PSK";
+    EXPECT_EQ(ER_OK, EnableSecurity(true, mechanism));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, mechanism));
+
+    String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
+    PeerThread thread1(name, clientBus, serverBus, GetPath());
+    name = "thread2: server bus " + serverBus.GetUniqueName() + " to clientBus " + clientBus.GetUniqueName();
+    PeerThread thread2(name, serverBus, clientBus, GetPath());
+
+    thread1.Start();
+    thread2.Start();
+    thread1.Join();
+    thread2.Join();
+    EXPECT_EQ(ER_OK, thread1.GetResult());
+    EXPECT_EQ(ER_OK, thread2.GetResult());
+
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+    EXPECT_STREQ(clientAuthListener.chosenMechanism.c_str(), mechanism);
+    EXPECT_STREQ(serverAuthListener.chosenMechanism.c_str(), mechanism);
+}
+
+TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_2Threads_SRP)
+{
+    const char* mechanism = "ALLJOYN_SRP_KEYX";
+    SRPKeyXListener serverListener;
+    EXPECT_EQ(ER_OK, serverBus.EnablePeerSecurity(mechanism, &serverListener, NULL, false));
+    SRPKeyXListener clientListener;
+    EXPECT_EQ(ER_OK, clientBus.EnablePeerSecurity(mechanism, &clientListener, NULL, false));
+
+    String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
+    PeerThread thread1(name, clientBus, serverBus, GetPath());
+    name = "thread2: server bus " + serverBus.GetUniqueName() + " to clientBus " + clientBus.GetUniqueName();
+    PeerThread thread2(name, serverBus, clientBus, GetPath());
+
+    thread1.Start();
+    thread2.Start();
+    thread1.Join();
+    thread2.Join();
+    EXPECT_EQ(ER_OK, thread1.GetResult());
+    EXPECT_EQ(ER_OK, thread2.GetResult());
+
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientListener.authComplete);
+    EXPECT_TRUE(serverListener.authComplete);
+    EXPECT_STREQ(clientListener.chosenMechanism.c_str(), mechanism);
+    EXPECT_STREQ(serverListener.chosenMechanism.c_str(), mechanism);
 }
