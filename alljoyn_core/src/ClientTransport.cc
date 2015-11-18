@@ -101,7 +101,7 @@ QStatus ClientTransport::Disconnect(const char* connectSpec)
     if (ER_OK != status) {
         QCC_LogError(status, ("ClientTransport::Disconnect(): Invalid connect spec \"%s\"", connectSpec));
     } else {
-        m_endpoint->Stop();
+        m_endpoint->StopAfterTxEmpty();
         m_endpoint->Join();
         m_endpoint = RemoteEndpoint();
     }
