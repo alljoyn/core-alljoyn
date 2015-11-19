@@ -269,6 +269,9 @@ def _doxygen_scanner(node, env, path):
         image_path = _doxygen_expand_environment_vars(image_path, env)
         image_path = _doxygen_replace_start_hash_if_found(image_path, env)
         if image_path:
+            # relative paths are relative to the location of the config file
+            if not os.path.isabs(image_path):
+                image_path = os.path.join(config_file_path, image_path)
             for filename in os.listdir(os.path.abspath(image_path)):
                 if os.path.isfile(os.path.join(image_path, filename)):
                     source.append(os.path.abspath(os.path.join(image_path, filename)))
