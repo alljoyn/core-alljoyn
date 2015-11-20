@@ -1343,10 +1343,33 @@ QStatus ECCPublicKey::Export(uint8_t* data, size_t* size) const
     return ER_OK;
 }
 
+static QStatus ECCPublicKey_Validate(ECCPublicKey* pubKey)
+{
+    /* Attempt to import the key into a CNG handle. CNG will verify the point lies on
+     * the curve, and so success here means that it does.
+     */
+    QStatus status;
+    uint8_t CurveType = Crypto_ECC::ECC_NIST_P256;
+    BCRYPT_KEY_HANDLE keyHandle = nullptr;
+
+    status = Crypto_ECC_SetPublicKey(CurveType,
+                                     CNG_ECC_ALG_DSA,
+                                     pubKey,
+                                     cngCache.ecdsaHandles[CurveType],
+                                     &keyHandle);
+
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to import ECCPublicKey."));
+    } else {
+        /* Only if the import succeeded does keyHandle need to be freed. */
+        QCC_VERIFY(BCRYPT_SUCCESS(BCryptDestroyKey(keyHandle)));
+    }
+
+    return status;
+}
+
 QStatus ECCPublicKey::Import(const uint8_t* data, const size_t size)
 {
-    errno_t err;
-
     if (NULL == data) {
         return ER_BAD_ARG_1;
     }
@@ -1356,25 +1379,11 @@ QStatus ECCPublicKey::Import(const uint8_t* data, const size_t size)
 
     const size_t coordinateSize = GetCoordinateSize();
 
-    err = memcpy_s(x, sizeof(x), data, coordinateSize);
-    if (0 != err) {
-        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into x; err is %d", err));
-        return ER_FAIL;
-    }
-
-    err = memcpy_s(y, sizeof(y), data + coordinateSize, coordinateSize);
-    if (0 != err) {
-        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into y; err is %d", err));
-        return ER_FAIL;
-    }
-
-    return ER_OK;
+    return this->Import(data, coordinateSize, data + coordinateSize, coordinateSize);
 }
 
 QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uint8_t* yData, const size_t ySize)
 {
-    errno_t err;
-
     if (NULL == xData) {
         return ER_BAD_ARG_1;
     }
@@ -1388,15 +1397,25 @@ QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uin
         return ER_BAD_ARG_4;
     }
 
-    err = memcpy_s(x, sizeof(x), xData, xSize);
-    if (0 != err) {
-        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into x; err is %d", err));
-        return ER_FAIL;
-    }
-    err = memcpy_s(y, sizeof(y), yData, ySize);
-    if (0 != err) {
-        QCC_LogError(ER_FAIL, ("Failed to memcpy_s into y; err is %d", err));
-        return ER_FAIL;
+    /* Save the old values just in case the import fails, to not leave the object clobbered. */
+    std::vector<uint8_t> xBackup(GetCoordinateSize());
+    std::vector<uint8_t> yBackup(GetCoordinateSize());
+
+    memcpy(xBackup.data(), x, xSize);
+    memcpy(yBackup.data(), y, ySize);
+
+    /* Copy in new data and validate. */
+    QCC_ASSERT(sizeof(x) >= xSize);
+    QCC_ASSERT(sizeof(y) >= ySize);
+    memcpy(x, xData, xSize);
+    memcpy(y, yData, ySize);
+
+    if (ER_OK != ECCPublicKey_Validate(this)) {
+        /* Restore previous values. */
+        memcpy(x, xBackup.data(), xSize);
+        memcpy(y, yBackup.data(), ySize);
+
+        return ER_CORRUPT_KEYBLOB;
     }
 
     return ER_OK;
