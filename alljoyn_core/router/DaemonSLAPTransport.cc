@@ -73,7 +73,7 @@ class _DaemonSLAPEndpoint : public _RemoteEndpoint {
     _DaemonSLAPEndpoint(DaemonSLAPTransport* transport, BusAttachment& bus, bool incoming, const qcc::String connectSpec, UARTFd fd, uint32_t packetSize, uint32_t baudrate) :
         _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, DaemonSLAPTransport::TransportName),
         m_transport(transport), m_authThread(this), m_fd(fd), m_authState(AUTH_INITIALIZED), m_epState(EP_INITIALIZED),
-        m_timer("SLAPEp", true, 1, false, 10),
+        m_timer("SLAPEp", true, 1, false),
         m_rawStream(fd),
         m_stream(&m_rawStream, m_timer, packetSize, 4, baudrate),
         m_uartController(&m_rawStream, bus.GetInternal().GetIODispatch(), &m_stream)

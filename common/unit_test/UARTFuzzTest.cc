@@ -552,10 +552,10 @@ class MyUARTStream : public UARTStream {
 TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_recoverable)
 {
     //This test introduces some recoverable fuzzing errors in the sent packets.
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
+    Timer timer0("SLAPtimer0", true, 1, false);
     timer0.Start();
 
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
+    Timer timer1("SLAPtimer1", true, 1, false);
     timer1.Start();
 
     uint8_t rxBuffer[1600];
@@ -635,9 +635,9 @@ TEST(UARTFuzzTest, DISABLED_uart_fuzz_test_unrecoverable)
 {
     //This test introduces some unrecoverable fuzzing errors in the sent packets.
     //This is just to make sure that the program doesnt crash.
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
+    Timer timer0("SLAPtimer0", true, 1, false);
     timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
+    Timer timer1("SLAPtimer1", true, 1, false);
     timer1.Start();
 
     uint8_t rxBuffer[1600];

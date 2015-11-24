@@ -29,7 +29,7 @@ using namespace std;
 volatile int32_t IODispatch::iodispatchCnt = 0;
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
-    timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false, 96),
+    timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false),
     reload(false),
     isRunning(false),
     numAlarmsInProgress(0),
@@ -188,7 +188,7 @@ QStatus IODispatch::StopStream(Stream* stream)
             Alarm exitAlarm = Alarm(when, listener, it->second.exitCtxt);
             lock.Unlock();
             /* At this point, the IODispatch::Run thread will not add any more alarms since it
-             * has been told to stop, so it is ok to call the blocking version of AddAlarm
+             * has been told to stop.
              */
             timer.AddAlarm(exitAlarm);
         } else {
@@ -448,22 +448,8 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                 while (it != dispatchEntries.end() && isRunning) {
                     if (it->second.stopping_state == IO_STOPPING) {
                         Alarm exitAlarm = Alarm(when, listener, it->second.exitCtxt);
-                        Stream* lookup = it->first;
-                        QStatus status = ER_TIMER_FULL;
-                        while (isRunning && status == ER_TIMER_FULL && it != dispatchEntries.end() && it->second.stopping_state != IO_STOPPED) {
-                            /* Call the non-blocking version of AddAlarm, while holding the
-                             * locks to ensure that the state of the dispatchEntry is valid.
-                             */
-                            status = timer.AddAlarmNonBlocking(exitAlarm);
-
-                            if (status == ER_TIMER_FULL) {
-                                lock.Unlock();
-                                qcc::Sleep(2);
-                                lock.Lock();
-                            }
-                            it = dispatchEntries.find(lookup);
-                        }
-                        if (status == ER_OK && it != dispatchEntries.end()) {
+                        QStatus status = timer.AddAlarm(exitAlarm);
+                        if (status == ER_OK) {
                             it->second.stopping_state = IO_STOPPED;
                             it++;
                         }
@@ -478,12 +464,10 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                 lock.Lock();
                 it = dispatchEntries.begin();
                 while (it != dispatchEntries.end()) {
-
                     Stream* stream = it->first;
 
                     if (it->second.stopping_state == IO_RUNNING) {
                         if (&stream->GetSourceEvent() == *i) {
-
                             if (it->second.readEnable && !it->second.readInProgress) {
                                 /* If the source event for a particular stream has been signalled,
                                  * add a readAlarm to fire now, and set readInProgress to true.
@@ -499,27 +483,14 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                                 it = dispatchEntries.find(stream);
                                 if (it != dispatchEntries.end()) {
                                     it->second.mainAddingRead = false;
-                                }
 
-                                QStatus status = ER_TIMER_FULL;
-                                while (isRunning && status == ER_TIMER_FULL && it != dispatchEntries.end() && it->second.stopping_state == IO_RUNNING) {
-                                    /* Call the non-blocking version of AddAlarm, while holding the
-                                     * locks to ensure that the state of the dispatchEntry is valid.
-                                     */
-                                    status = timer.AddAlarmNonBlocking(readAlarm);
-
-                                    if (status == ER_TIMER_FULL) {
-                                        lock.Unlock();
-                                        qcc::Sleep(2);
-                                        lock.Lock();
+                                    if (isRunning && it->second.stopping_state == IO_RUNNING) {
+                                        QStatus status = timer.AddAlarm(readAlarm);
+                                        if (status == ER_OK) {
+                                            it->second.readAlarm = readAlarm;
+                                        }
                                     }
-
-                                    it = dispatchEntries.find(stream);
                                 }
-                                if (status == ER_OK && it != dispatchEntries.end()) {
-                                    it->second.readAlarm = readAlarm;
-                                }
-
                                 break;
                             }
 
@@ -539,25 +510,13 @@ ThreadReturn STDCALL IODispatch::Run(void* arg) {
                                 it = dispatchEntries.find(stream);
                                 if (it != dispatchEntries.end()) {
                                     it->second.mainAddingWrite = false;
-                                }
 
-                                QStatus status = ER_TIMER_FULL;
-                                while (isRunning && status == ER_TIMER_FULL && it != dispatchEntries.end() && it->second.stopping_state == IO_RUNNING) {
-                                    /* Call the non-blocking version of AddAlarm, while holding the
-                                     * locks to ensure that the state of the dispatchEntry is valid.
-                                     */
-                                    status = timer.AddAlarmNonBlocking(writeAlarm);
-
-                                    if (status == ER_TIMER_FULL) {
-                                        lock.Unlock();
-                                        qcc::Sleep(2);
-                                        lock.Lock();
+                                    if (isRunning && it->second.stopping_state == IO_RUNNING) {
+                                        QStatus status = timer.AddAlarm(writeAlarm);
+                                        if (status == ER_OK) {
+                                            it->second.writeAlarm = writeAlarm;
+                                        }
                                     }
-
-                                    it = dispatchEntries.find(stream);
-                                }
-                                if (status == ER_OK && it != dispatchEntries.end()) {
-                                    it->second.writeAlarm = writeAlarm;
                                 }
 
                                 break;
@@ -606,24 +565,9 @@ QStatus IODispatch::EnableReadCallback(const Source* source, uint32_t timeout)
         /* If timeout is non-zero, add a timeout alarm */
         uint32_t temp = timeout * 1000;
         AlarmListener* listener = this;
-
         Alarm readAlarm = Alarm(temp, listener, it->second.readTimeoutCtxt);
-        QStatus status = ER_TIMER_FULL;
-        while (isRunning && status == ER_TIMER_FULL &&  it != dispatchEntries.end() && it->second.stopping_state == IO_RUNNING) {
-            /* Call the non-blocking version of AddAlarm, while holding the
-             * locks to ensure that the state of the dispatchEntry is valid.
-             */
-            status = timer.AddAlarmNonBlocking(readAlarm);
-
-            if (status == ER_TIMER_FULL) {
-                lock.Unlock();
-                qcc::Sleep(2);
-                lock.Lock();
-            }
-
-            it = dispatchEntries.find(lookup);
-        }
-        if (status == ER_OK && it != dispatchEntries.end()) {
+        QStatus status = timer.AddAlarm(readAlarm);
+        if (status == ER_OK) {
             it->second.readAlarm = readAlarm;
             /* Set readInProgress to false only after adding the alarm
              * This is to ensure that there is no race condition due to the main thread
@@ -680,23 +624,8 @@ QStatus IODispatch::EnableTimeoutCallback(const Source* source, uint32_t timeout
         /* Remove previous read timeout alarm if any */
         timer.RemoveAlarm(prevAlarm, false);
 
-        QStatus status = ER_TIMER_FULL;
-        it = dispatchEntries.find(lookup);
-        while (isRunning && status == ER_TIMER_FULL &&  it != dispatchEntries.end() && !it->second.readInProgress && it->second.stopping_state == IO_RUNNING) {
-            /* Call the non-blocking version of AddAlarm, while holding the
-             * locks to ensure that the state of the dispatchEntry is valid.
-             */
-            status = timer.AddAlarmNonBlocking(readAlarm);
-
-            if (status == ER_TIMER_FULL) {
-                lock.Unlock();
-                qcc::Sleep(2);
-                lock.Lock();
-            }
-
-            it = dispatchEntries.find(lookup);
-        }
-        if (status == ER_OK && it != dispatchEntries.end()) {
+        QStatus status = timer.AddAlarm(readAlarm);
+        if (status == ER_OK) {
             it->second.readAlarm = readAlarm;
         }
 
@@ -765,15 +694,7 @@ QStatus IODispatch::EnableWriteCallbackNow(Sink* sink)
     /* Add a write alarm to fire now, there is data ready to be written */
     it->second.writeAlarm = Alarm(when, listener, it->second.writeCtxt);
     Alarm writeAlarm = it->second.writeAlarm;
-    QStatus status = timer.AddAlarmNonBlocking(writeAlarm);
-    if (status == ER_TIMER_FULL) {
-        /* Since the timer is full, just alert the main thread, so that
-         * it can add a write alarm for this stream when possible.
-         * Do not block here, since it can create deadlocks.
-         */
-        it->second.writeInProgress = false;
-        Thread::Alert();
-    }
+    timer.AddAlarm(writeAlarm);
     lock.Unlock();
     return ER_OK;
 }
@@ -806,27 +727,10 @@ QStatus IODispatch::EnableWriteCallback(Sink* sink, uint32_t timeout)
 
         /* Add a write alarm to fire by default if there is no sink event after this amount of time */
         Alarm writeAlarm = Alarm(when, listener, it->second.writeTimeoutCtxt);
-        QStatus status = ER_TIMER_FULL;
-
-        map<Stream*, IODispatchEntry>::iterator dispatchEntriesIt = dispatchEntries.find(lookup);
-        while (isRunning && status == ER_TIMER_FULL &&  dispatchEntriesIt != dispatchEntries.end() && dispatchEntriesIt->second.stopping_state == IO_RUNNING) {
-            /* Call the non-blocking version of AddAlarm, while holding the
-             * locks to ensure that the state of the dispatchEntry is valid.
-             */
-            status = timer.AddAlarmNonBlocking(writeAlarm);
-
-            if (status == ER_TIMER_FULL) {
-                lock.Unlock();
-                qcc::Sleep(2);
-                lock.Lock();
-            }
-
-            dispatchEntriesIt = dispatchEntries.find(lookup);
-        }
-        if (status == ER_OK && dispatchEntriesIt != dispatchEntries.end()) {
-
-            dispatchEntriesIt->second.writeAlarm = writeAlarm;
-            dispatchEntriesIt->second.writeInProgress = false;
+        QStatus status = timer.AddAlarm(writeAlarm);
+        if (status == ER_OK) {
+            it->second.writeAlarm = writeAlarm;
+            it->second.writeInProgress = false;
         }
     } else {
         it->second.writeInProgress = false;

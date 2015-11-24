@@ -47,7 +47,6 @@ using namespace qcc;
 using namespace ajn;
 
 const uint32_t SLEEP_TIME = 2000;
-const uint32_t BACKPRESSURE_TEST_NUM_SIGNALS = 12;
 
 class TestObject : public BusObject {
   public:
@@ -757,32 +756,6 @@ TEST_F(SignalTest, Rules) {
     recvBy.verify_recv();
     recvAn.verify_norecv();
     recvBn.verify_norecv();
-}
-
-/* This is a blocking test. The idea is to send out 12 signals, the first signal handler
-   will sleep for SLEEP_TIME, as a result of which the SendSignal should block for approx
-   SLEEP_TIME ms until that signal handler returns.
- */
-TEST_F(SignalTest, BackPressure) {
-    Participant A("null:");
-    Participant B("null:");
-
-    if (A.inited && B.inited) {
-        // Set blocking to true.
-        PathReceiver recvBy("/signals/test", true);
-        recvBy.Register(&B);
-
-        B.JoinSession(A, false);
-        uint64_t start_time = qcc::GetTimestamp64();
-        for (uint32_t i = 0; i < BACKPRESSURE_TEST_NUM_SIGNALS; i++) {
-            A.busobj->SendSignal(NULL, B.GetJoinedSessionId(A, false), 0);
-        }
-        uint64_t elapsed = qcc::GetTimestamp64() - start_time;
-
-        EXPECT_GE(elapsed, SLEEP_TIME - QCC_TIMESTAMP_GRANULARITY);
-        wait_for_signal();
-        recvBy.verify_recv(BACKPRESSURE_TEST_NUM_SIGNALS);
-    }
 }
 
 QStatus SetMemberDescription(InterfaceDescription* intf)

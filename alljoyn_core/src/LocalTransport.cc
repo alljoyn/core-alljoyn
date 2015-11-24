@@ -57,7 +57,7 @@ static const uint32_t LOCAL_ENDPOINT_CONCURRENCY = 4;
 class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener {
   public:
     Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) :
-        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, 10),
+        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true),
         AlarmListener(), endpoint(endpoint), pendingWork(),
         needDeferredCallbacks(false), needObserverWork(false),
         needCachedPropertyReplyWork(false)
@@ -425,8 +425,7 @@ QStatus _LocalEndpoint::Dispatcher::DispatchMessage(Message& msg)
     uint32_t zero = 0;
     void* context = new Message(msg);
     qcc::AlarmListener* localEndpointListener = this;
-    bool limitable = (endpoint->GetUniqueName() != msg->GetSender());
-    Alarm alarm(zero, localEndpointListener, context, zero, limitable);
+    Alarm alarm(zero, localEndpointListener, context, zero);
 
     QStatus status = AddAlarm(alarm);
     if (status != ER_OK) {
@@ -463,17 +462,7 @@ void _LocalEndpoint::Dispatcher::TriggerDeferredCallbacks()
     }
     needDeferredCallbacks = true;
     workLock.Unlock(MUTEX_CONTEXT);
-
-    /*
-     * Don't block while adding the alarm.
-     * First, we may be calling this method from within the context of a
-     * triggered Alarm. In this case a blocking AddAlarm is an instant
-     * deadlock.
-     * Second, AddAlarm would only block if the our alarm queue is already
-     * full. The work will be picked up by the first existing alarm that
-     * triggers anyway.
-     */
-    AddAlarmNonBlocking(pendingWork);
+    AddAlarm(pendingWork);
 }
 
 void _LocalEndpoint::Dispatcher::TriggerObserverWork()
@@ -485,17 +474,7 @@ void _LocalEndpoint::Dispatcher::TriggerObserverWork()
     }
     needObserverWork = true;
     workLock.Unlock(MUTEX_CONTEXT);
-
-    /*
-     * Don't block while adding the alarm.
-     * First, we may be calling this method from within the context of a
-     * triggered Alarm. In this case a blocking AddAlarm is an instant
-     * deadlock.
-     * Second, AddAlarm would only block if the our alarm queue is already
-     * full. The work will be picked up by the first existing alarm that
-     * triggers anyway.
-     */
-    AddAlarmNonBlocking(pendingWork);
+    AddAlarm(pendingWork);
 }
 
 void _LocalEndpoint::Dispatcher::TriggerCachedPropertyReplyWork()
@@ -507,17 +486,7 @@ void _LocalEndpoint::Dispatcher::TriggerCachedPropertyReplyWork()
     }
     needCachedPropertyReplyWork = true;
     workLock.Unlock(MUTEX_CONTEXT);
-
-    /*
-     * Don't block while adding the alarm.
-     * First, we may be calling this method from within the context of a
-     * triggered Alarm. In this case a blocking AddAlarm is an instant
-     * deadlock.
-     * Second, AddAlarm would only block if the our alarm queue is already
-     * full. The work will be picked up by the first existing alarm that
-     * triggers anyway.
-     */
-    AddAlarmNonBlocking(pendingWork);
+    AddAlarm(pendingWork);
 }
 
 void _LocalEndpoint::Dispatcher::PerformDeferredCallbacks()
