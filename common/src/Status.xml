@@ -83,7 +83,7 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_THREADPOOL_EXHAUSTED" value="0x101f" comment="A thread pool has reached its specified concurrency"/>
   <status name="ER_THREADPOOL_STOPPING" value="0x1020" comment="Cannot execute a closure on a stopping thread pool"/>
   <status name="ER_INVALID_STREAM" value="0x1021" comment="Attempt to reference non-existent stream entry"/>
-  <status name="ER_TIMER_FULL" value="0x1022" comment="Attempt to reference non-existent stream entry"/>
+  <status name="ER_TIMER_FULL" value="0x1022" comment="Too many alarms"/>
   <status name="ER_IODISPATCH_STOPPING" value="0x1023" comment="Cannot execute a read or write command on an IODispatch thread because it is stopping."/>
   <status name="ER_SLAP_INVALID_PACKET_LEN" value="0x1024" comment="Length of SLAP packet is invalid."/>
   <status name="ER_SLAP_HDR_CHECKSUM_ERROR" value="0x1025" comment="SLAP packet header checksum error."/>

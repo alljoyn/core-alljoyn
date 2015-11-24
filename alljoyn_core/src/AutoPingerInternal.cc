@@ -280,7 +280,7 @@ void AutoPingerInternal::Resume()
         // re-add all Alarm objects
         std::map<qcc::String, PingGroup*>::const_iterator it = pingGroups.begin();
         for (; it != pingGroups.end(); ++it) {
-            timer.AddAlarmNonBlocking((*it).second->alarm);
+            timer.AddAlarm((*it).second->alarm);
         }
 
         pausing = false;
@@ -312,7 +312,7 @@ void AutoPingerInternal::AddPingGroup(const qcc::String& group, PingListener& li
             // Alarm is a managed object (auto cleanup when overwritten)
             qcc::AlarmListener* alarmListener = (qcc::AlarmListener*)this;
             (*it).second->alarm = qcc::Alarm(intervalMillisec, alarmListener, context, intervalMillisec);
-            timer.AddAlarmNonBlocking((*it).second->alarm);
+            timer.AddAlarm((*it).second->alarm);
         }
     } else {
         // Create a new group element
@@ -321,7 +321,7 @@ void AutoPingerInternal::AddPingGroup(const qcc::String& group, PingListener& li
         void* context = (void*)(new qcc::String(group));
         PingGroup* pingGroup = new PingGroup(intervalMillisec, this, context, listener);
         pingGroups.insert(std::pair<qcc::String, PingGroup*>(group, pingGroup));
-        timer.AddAlarmNonBlocking(pingGroup->alarm);
+        timer.AddAlarm(pingGroup->alarm);
     }
 
     globalPingerLock->Unlock(MUTEX_CONTEXT);
@@ -371,7 +371,7 @@ QStatus AutoPingerInternal::SetPingInterval(const qcc::String& group, uint32_t p
             uint32_t intervalMillisec = pingInterval * 1000;
             qcc::AlarmListener* alarmListener = (qcc::AlarmListener*)this;
             (*it).second->alarm = qcc::Alarm(intervalMillisec, alarmListener, context, intervalMillisec);
-            timer.AddAlarmNonBlocking((*it).second->alarm);
+            timer.AddAlarm((*it).second->alarm);
 
             status = ER_OK;
         }

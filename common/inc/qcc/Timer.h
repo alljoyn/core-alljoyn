@@ -26,7 +26,6 @@
 #include <qcc/Debug.h>
 #include <qcc/atomic.h>
 #include <set>
-#include <deque>
 
 #include <qcc/Mutex.h>
 #include <qcc/time.h>
@@ -53,9 +52,8 @@ class Timer {
      * @param expireOnExit       If true call all pending alarms when this thread exits.
      * @param concurrency         Dispatch up to this number of alarms concurently (using multiple threads).
      * @param prevenReentrancy   Prevent re-entrant call of AlarmTriggered.
-     * @param maxAlarms          Maximum number of outstanding alarms allowed before blocking calls to AddAlarm or 0 for infinite.
      */
-    Timer(qcc::String name, bool expireOnExit = false, uint32_t concurrency = 1, bool preventReentrancy = false, uint32_t maxAlarms = 0);
+    Timer(qcc::String name, bool expireOnExit = false, uint32_t concurrency = 1, bool preventReentrancy = false);
 
     /**
      * Destructor.
@@ -99,17 +97,6 @@ class Timer {
      *         ER_TIMER_EXITING if timer is exiting
      */
     QStatus AddAlarm(const Alarm& alarm);
-
-    /**
-     * Associate an alarm with a timer.
-     * Non-blocking version.
-     *
-     * @param alarm     Alarm to add.
-     * @return ER_OK if alarm was added
-     *         ER_TIMER_FULL if timer has maximum allowed alarms
-     *         ER_TIMER_EXITING if timer is exiting
-     */
-    QStatus AddAlarmNonBlocking(const Alarm& alarm);
 
     /**
      * Disassociate an alarm from a timer.
