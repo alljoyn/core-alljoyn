@@ -44,14 +44,11 @@ $DIST/c/lib/liballjoyn_c.a
 $DIST/c/lib/liballjoyn_c.so
 $DIST/c/samples/about/about_client.cc
 $DIST/c/samples/about/about_service.cc
-$DIST/cpp/bin/aclient
 $DIST/cpp/bin/advtunnel
 $DIST/cpp/bin/ajxmlcop
 $DIST/cpp/bin/alljoyn-daemon
 $DIST/cpp/bin/ardp
 $DIST/cpp/bin/ardptest
-$DIST/cpp/bin/aservice
-$DIST/cpp/bin/bastress
 $DIST/cpp/bin/bastress2
 $DIST/cpp/bin/bbclient
 $DIST/cpp/bin/bbjoin
@@ -60,9 +57,6 @@ $DIST/cpp/bin/bbsig
 $DIST/cpp/bin/bbsigtest
 $DIST/cpp/bin/eventsactionservice
 $DIST/cpp/bin/init
-$DIST/cpp/bin/marshal
-$DIST/cpp/bin/propstresstest
-$DIST/cpp/bin/proptester
 $DIST/cpp/bin/rawclient
 $DIST/cpp/bin/rawservice
 $DIST/cpp/bin/samples/AboutClient
