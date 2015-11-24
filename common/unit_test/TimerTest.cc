@@ -228,42 +228,6 @@ TEST(TimerTest, TestReplaceTimer) {
     ASSERT_TRUE(testNextAlarm(ts + 5000, 0));
 }
 
-TEST(TimerTest, TestBackPressure) {
-    uint32_t delay = 2000;
-    MyAlarmListener2 alarmListener(delay);
-    AlarmListener* al = &alarmListener;
-    QStatus status;
-    Timer t3("testTimer", true, 4, true, 2);
-    status = t3.Start();
-    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
-
-
-    uint32_t timeout = 0;
-    Alarm ar1(timeout, al);
-    timeout = 0;
-    Alarm ar2(timeout, al);
-    timeout = 0;
-    Alarm ar3(timeout, al);
-    timeout = 0;
-    Alarm ar4(timeout, al);
-
-    uint64_t start_time = qcc::GetTimestamp64();
-    status = t3.AddAlarm(ar1);
-    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
-    status = t3.AddAlarm(ar2);
-    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
-    status = t3.AddAlarm(ar3);
-    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
-    status = t3.AddAlarm(ar4);
-    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
-    uint64_t elapsed = qcc::GetTimestamp64() - start_time;
-
-    EXPECT_GE(elapsed + QCC_TIMESTAMP_GRANULARITY, delay);
-    t3.Stop();
-    t3.Join();
-
-}
-
 /*
  * This test verifies Timer's ability to stop by validating the number of callbacks made per following:
  *
@@ -284,7 +248,7 @@ TEST(TimerTest, TestStopTimer) {
     QStatus status;
     MyAlarmListener alarmListener(0);
     AlarmListener* al = &alarmListener;
-    Timer timer("testTimer", true, maxAlarms, false, maxAlarms);
+    Timer timer("testTimer", true, maxAlarms, false);
     status = timer.Start();
     ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
 
@@ -381,9 +345,9 @@ TEST(TimerTest, TestReentrancy) {
     Alarm a3(t2, al0);
 
     /* Schedule all 3 alarms together. */
-    ASSERT_EQ(ER_OK, timer.AddAlarmNonBlocking(a1));
-    ASSERT_EQ(ER_OK, timer.AddAlarmNonBlocking(a2));
-    ASSERT_EQ(ER_OK, timer.AddAlarmNonBlocking(a3));
+    ASSERT_EQ(ER_OK, timer.AddAlarm(a1));
+    ASSERT_EQ(ER_OK, timer.AddAlarm(a2));
+    ASSERT_EQ(ER_OK, timer.AddAlarm(a3));
 
     /* Wait a tad bit and see how many callbacks are made; expecting 1 callbacks (sitting in MyAlarmListener callback) */
     qcc::Sleep(jitter);
@@ -404,87 +368,3 @@ TEST(TimerTest, TestReentrancy) {
     triggeredAlarmsLock.Unlock();
 }
 
-/*
- * This test verifies maxAlarms parameter in Timer.
- * 1. Timer's maxAlarms is set to 1.
- * 2. First  Alarm (a1) is scheduled to fire at (t2).
- * 3. Second Alarm (a2) is scheduled to fire at (t1).
- *    3a. Make sure (t2) has elapsed in main thread.
- *    3b. Expect both (a1) and (a2) to fire at (t2).
- * 4. Third  Alarm (a3) is scheduled to fire 1s at (t3).
- *    4a. Make sure current time in main thread is between (t2) and (t3).
- *    4b. Expect (a3) to fire after (t3).
- */
-TEST(TimerTest, TestMaxAlarms) {
-    const uint32_t maxAlarms = 1;
-    const uint32_t t0 = 0;
-    const uint32_t t1 = 1000;
-    const uint32_t t2 = 2000;
-    const uint32_t t3 = 3000;
-    const uint32_t jitter = 500;
-    /* Reset the counts */
-    triggeredAlarmsLock.Lock();
-    triggeredAlarms.clear();
-    triggeredAlarmsLock.Unlock();
-
-    MyAlarmListener listener(t0);
-    AlarmListener* al = &listener;
-
-    Timespec<MonotonicTime> baseTimespec;
-    GetTimeNow(&baseTimespec);
-
-    QStatus status;
-    Timer timer("testTimer", true, 8, true, maxAlarms);
-    status = timer.Start();
-    ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
-
-    /* Schedule alarm 1 */
-    Alarm a1(t2, al);
-    ASSERT_EQ(ER_OK, timer.AddAlarm(a1));
-
-    /* Schedule alarm 2 */
-    Alarm a2(t1, al);
-    ASSERT_EQ(ER_TIMER_FULL, timer.AddAlarmNonBlocking(a2));
-    ASSERT_EQ(ER_OK, timer.AddAlarm(a2));
-
-    /* Make sure t2 has elapsed */
-    Timespec<MonotonicTime> ts2;
-    uint32_t delta2;
-    GetTimeNow(&ts2);
-    delta2 = ts2.GetMillis() - baseTimespec.GetMillis();
-    ASSERT_GE(delta2 + QCC_TIMESTAMP_GRANULARITY, t2);
-    ASSERT_LE(delta2, (t2 + jitter));
-
-    /* Wait a tad bit for alarms to complete fully */
-    qcc::Sleep(jitter);
-
-    /* Make sure 2 alarms (a1) and (a2) fired */
-    triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), (size_t)2);
-    triggeredAlarmsLock.Unlock();
-
-    /* Schedule alarm 3 */
-    Alarm a3(t1, al);
-    ASSERT_EQ(ER_OK, timer.AddAlarm(a3));
-
-    /* Make sure current time in main thread is between (t2) and (t3) */
-    Timespec<MonotonicTime> ts3;
-    uint32_t delta3;
-    GetTimeNow(&ts3);
-    delta3 = ts3.GetMillis() - baseTimespec.GetMillis();
-    ASSERT_GE(delta3, t2);
-    ASSERT_LE(delta3, t3);
-
-    /* Make sure still 2 alarms fired */
-    triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), (size_t)2);
-    triggeredAlarmsLock.Unlock();
-
-    /* Wait for (t3) to pass */
-    qcc::Sleep((t3 - t2) + jitter);
-
-    /* Make sure all 3 alarms fired */
-    triggeredAlarmsLock.Lock();
-    ASSERT_EQ(triggeredAlarms.size(), (size_t)3);
-    triggeredAlarmsLock.Unlock();
-}

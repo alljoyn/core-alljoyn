@@ -33,9 +33,9 @@ using namespace qcc;
 
 TEST(UARTTest, DISABLED_uart_large_buffer_test)
 {
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
+    Timer timer0("SLAPtimer0", true, 1, false);
     timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
+    Timer timer1("SLAPtimer1", true, 1, false);
     timer1.Start();
     UARTFd fd0;
     UARTFd fd1;
@@ -101,9 +101,9 @@ TEST(UARTTest, DISABLED_uart_large_buffer_test)
 }
 TEST(UARTTest, DISABLED_uart_codisco_test)
 {
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
+    Timer timer0("SLAPtimer0", true, 1, false);
     timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
+    Timer timer1("SLAPtimer1", true, 1, false);
     timer1.Start();
     UARTFd fd0;
     UARTFd fd1;
@@ -163,9 +163,9 @@ TEST(UARTTest, DISABLED_uart_codisco_test)
 }
 TEST(UARTTest, DISABLED_uart_small_buffer_test)
 {
-    Timer timer0("SLAPtimer0", true, 1, false, 10);
+    Timer timer0("SLAPtimer0", true, 1, false);
     timer0.Start();
-    Timer timer1("SLAPtimer1", true, 1, false, 10);
+    Timer timer1("SLAPtimer1", true, 1, false);
     timer1.Start();
     UARTFd fd0;
     UARTFd fd1;
@@ -262,7 +262,7 @@ TEST(UARTTest, DISABLED_uart_small_buffer_test)
  * The tests are to be run side by side and both ends send and receive data.
  */
 TEST(UARTTest, DISABLED_serial_testrecv) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
+    Timer timer("SLAPtimer", true, 1, false);
     timer.Start();
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, '\0', sizeof(rxBuffer));
@@ -351,7 +351,7 @@ TEST(UARTTest, DISABLED_serial_testrecv) {
 }
 
 TEST(UARTTest, DISABLED_serial_testsend) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
+    Timer timer("SLAPtimer", true, 1, false);
     timer.Start();
     uint8_t rxBuffer[1600];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));
@@ -408,8 +408,7 @@ TEST(UARTTest, DISABLED_serial_testsend) {
 }
 
 TEST(UARTTest, DISABLED_serial_testrecv_ajtcl) {
-
-    Timer timer("SLAPtimer", true, 1, false, 10);
+    Timer timer("SLAPtimer", true, 1, false);
     timer.Start();
 
     uint8_t rxBuffer[1600];
@@ -463,8 +462,7 @@ TEST(UARTTest, DISABLED_serial_testrecv_ajtcl) {
 
 TEST(UARTTest, DISABLED_serial_testsend_ajtcl)
 {
-
-    Timer timer("SLAPtimer", true, 1, false, 10);
+    Timer timer("SLAPtimer", true, 1, false);
     timer.Start();
 
     uint8_t rxBuffer[1600];
@@ -512,7 +510,7 @@ TEST(UARTTest, DISABLED_serial_testsend_ajtcl)
     delete s1;
 }
 TEST(UARTTest, DISABLED_serial_testrandomecho) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
+    Timer timer("SLAPtimer", true, 1, false);
     timer.Start();
     uint8_t rxBuffer[RANDOM_BYTES_MAX];
     memset(&rxBuffer, '\0', sizeof(rxBuffer));
@@ -566,7 +564,7 @@ TEST(UARTTest, DISABLED_serial_testrandomecho) {
     delete s1;
 }
 TEST(UARTTest, DISABLED_serial_testsendrecv) {
-    Timer timer("SLAPtimer", true, 1, false, 10);
+    Timer timer("SLAPtimer", true, 1, false);
     timer.Start();
     uint8_t rxBuffer[RANDOM_BYTES_MAX];
     memset(&rxBuffer, 'R', sizeof(rxBuffer));

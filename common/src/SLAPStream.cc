@@ -237,10 +237,8 @@ void SLAPStream::ProcessDataSeqNum(uint8_t seq)
         uint32_t when = 0;
 
         ackAlarm = Alarm(when, listener, m_ackCtxt);
-        /* Call the non-blocking version of AddAlarm, while holding the
-         * locks to ensure that the state of the dispatchEntry is valid.
-         */
-        status = m_timer.AddAlarmNonBlocking(ackAlarm);
+        /* Call AddAlarm while holding the locks, to ensure that the state of the dispatchEntry is valid */
+        status = m_timer.AddAlarm(ackAlarm);
 
         if (status == ER_TIMER_FULL) {
             m_streamLock.Unlock();
@@ -266,10 +264,8 @@ void SLAPStream::ProcessDataSeqNum(uint8_t seq)
         uint32_t when = (m_pendingAcks == m_linkParams.windowSize) ? 0 : m_linkParams.ackTimeout;
 
         ackAlarm = Alarm(when, listener, m_ackCtxt);
-        /* Call the non-blocking version of AddAlarm, while holding the
-         * locks to ensure that the state of the dispatchEntry is valid.
-         */
-        status = m_timer.AddAlarmNonBlocking(ackAlarm);
+        /* Call AddAlarm while holding the locks to ensure that the state of the dispatchEntry is valid */
+        status = m_timer.AddAlarm(ackAlarm);
 
         if (status == ER_TIMER_FULL) {
             m_streamLock.Unlock();
@@ -315,10 +311,8 @@ void SLAPStream::ProcessAckNum(uint8_t ack)
         uint32_t when = m_linkParams.resendTimeout;
 
         resendAlarm = Alarm(when, listener, m_resendDataCtxt);
-        /* Call the non-blocking version of AddAlarm, while holding the
-         * locks to ensure that the state of the dispatchEntry is valid.
-         */
-        status = m_timer.AddAlarmNonBlocking(resendAlarm);
+        /* Call AddAlarm while holding the locks, to ensure that the state of the dispatchEntry is valid */
+        status = m_timer.AddAlarm(resendAlarm);
 
         if (status == ER_TIMER_FULL) {
             m_streamLock.Unlock();
@@ -643,10 +637,8 @@ void SLAPStream::TransmitToLink()
         uint32_t when = m_linkParams.resendTimeout;
 
         resendAlarm = Alarm(when, listener, m_resendDataCtxt);
-        /* Call the non-blocking version of AddAlarm, while holding the
-         * locks to ensure that the state of the dispatchEntry is valid.
-         */
-        status = m_timer.AddAlarmNonBlocking(resendAlarm);
+        /* Call AddAlarm while holding the locks, to ensure that the state of the dispatchEntry is valid */
+        status = m_timer.AddAlarm(resendAlarm);
 
         if (status == ER_TIMER_FULL) {
             m_streamLock.Unlock();
@@ -721,10 +713,8 @@ QStatus SLAPStream::ScheduleLinkControlPacket() {
 
 
             ctrlAlarm = Alarm(when, listener, m_resendControlCtxt);
-            /* Call the non-blocking version of AddAlarm, while holding the
-             * locks to ensure that the state of the dispatchEntry is valid.
-             */
-            status = m_timer.AddAlarmNonBlocking(ctrlAlarm);
+            /* Call AddAlarm while holding the locks, to ensure that the state of the dispatchEntry is valid */
+            status = m_timer.AddAlarm(ctrlAlarm);
 
             if (status == ER_TIMER_FULL) {
                 m_streamLock.Unlock();
@@ -807,10 +797,8 @@ QStatus SLAPStream::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
             uint32_t when = 0;
 
             sendAlarm = Alarm(when, listener, m_sendDataCtxt);
-            /* Call the non-blocking version of AddAlarm, while holding the
-             * locks to ensure that the state of the dispatchEntry is valid.
-             */
-            alarmStatus = m_timer.AddAlarmNonBlocking(sendAlarm);
+            /* Call AddAlarm while holding the locks, to ensure that the state of the dispatchEntry is valid */
+            alarmStatus = m_timer.AddAlarm(sendAlarm);
 
             if (alarmStatus == ER_TIMER_FULL) {
                 m_streamLock.Unlock();
@@ -867,10 +855,8 @@ void SLAPStream::EnqueueCtrl(ControlPacketType type, uint8_t* config)
         uint32_t when = 0;
 
         sendAlarm = Alarm(when, listener, m_sendDataCtxt);
-        /* Call the non-blocking version of AddAlarm, while holding the
-         * locks to ensure that the state of the dispatchEntry is valid.
-         */
-        status = m_timer.AddAlarmNonBlocking(sendAlarm);
+        /* Call AddAlarm while holding the locks, to ensure that the state of the dispatchEntry is valid */
+        status = m_timer.AddAlarm(sendAlarm);
 
         if (status == ER_TIMER_FULL) {
             m_streamLock.Unlock();
