@@ -841,7 +841,7 @@ TEST(MsgArgTest, SetOwnershipFlags_struct) {
     astr1[1] = "sea";
     astr1[2] = "is";
     astr1[3] = "amazing";
-    arg.Set("(sas)", str1.c_str(), SIZE, astr1);
+    arg.Set("(sa$)", str1.c_str(), SIZE, astr1);
     arg.SetOwnershipFlags(MsgArg::OwnsData | MsgArg::OwnsArgs);
 }
 

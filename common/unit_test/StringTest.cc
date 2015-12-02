@@ -85,7 +85,7 @@ TEST(StringTest, copyConstructor) {
     /* test copy constructor */
     qcc::String s2 = "abcdefg";
     qcc::String t2 = s2;
-    ASSERT_EQ(s2.c_str(), t2.c_str());
+    ASSERT_TRUE(t2 == s2);
     ASSERT_TRUE(t2 == "abcdefg");
 }
 
@@ -268,17 +268,12 @@ TEST(StringTest, secure_clear) {
     const char* secret = "secret data";
     const char* clear =  "\0\0\0\0\0\0\0\0\0\0\0";
     qcc::String s1(secret);
-    qcc::String s2(s1);
     auto secretSize = s1.size();
     ASSERT_EQ(0, memcmp(s1.data(), secret, s1.size()));
-    ASSERT_TRUE(s1.data() == s2.data());
 
     s1.secure_clear();
     ASSERT_EQ(secretSize, s1.size());
     ASSERT_EQ(0, memcmp(s1.data(), clear, s1.size()));
-    ASSERT_NE(0, memcmp(s2.data(), secret, s2.size()));
-    ASSERT_TRUE(s1 == s2);
-    ASSERT_TRUE(s1.data() == s2.data());
 }
 #if defined(QCC_OS_GROUP_WINDOWS)
 #pragma warning(pop)
@@ -327,16 +322,12 @@ TEST(StringTest, stdStringIop) {
     std::string tss = qs1;
     ASSERT_STREQ(qs1.c_str(), tqs.c_str());  // verify contents
     ASSERT_STREQ(ss1.c_str(), tss.c_str());  // verify contents
-    ASSERT_EQ(qs1.data(), tss.data());  // verify pointer
-    ASSERT_EQ(ss1.data(), tqs.data());  // verify pointer
 
     // Mixed assignment
     tqs = ss2;
     tss = qs2;
     ASSERT_STREQ(qs2.c_str(), tqs.c_str());  // verify contents
     ASSERT_STREQ(ss2.c_str(), tss.c_str());  // verify contents
-    ASSERT_EQ(qs2.data(), tss.data());  // verify pointer
-    ASSERT_EQ(ss2.data(), tqs.data());  // verify pointer
 
     // Mixed append
     tqs.append(ss1);

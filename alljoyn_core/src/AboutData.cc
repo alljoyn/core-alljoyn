@@ -601,15 +601,20 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
 
 size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
 {
-    size_t numTargetLanguages = aboutDataInternal->translator->NumTargetLanguages();
+    return aboutDataInternal->GetSupportedLanguages(languageTags, num);
+}
+
+size_t AboutData::Internal::GetSupportedLanguages(const char** languageTags, size_t num)
+{
+    size_t numTargetLanguages = translator->NumTargetLanguages();
     if (!languageTags) {
         return numTargetLanguages;
     }
-    qcc::String language;
+    supportedLanguages.resize(numTargetLanguages);
     size_t count;
     for (count = 0; (count < numTargetLanguages) && (count < num); count++) {
-        aboutDataInternal->translator->GetTargetLanguage(count, language);
-        languageTags[count] = language.c_str();
+        translator->GetTargetLanguage(count, supportedLanguages[count]);
+        languageTags[count] = supportedLanguages[count].c_str();
     }
     return count;
 }
@@ -625,6 +630,7 @@ QStatus AboutData::SetDescription(const char* description, const char* language)
     status = SetField(DESCRIPTION, arg, language);
     return status;
 }
+
 QStatus AboutData::GetDescription(char** description, const char* language)
 {
     QStatus status;

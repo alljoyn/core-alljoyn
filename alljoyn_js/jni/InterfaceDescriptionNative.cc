@@ -308,9 +308,7 @@ QStatus InterfaceDescriptionNative::CreateInterface(Plugin& plugin, BusAttachmen
                     }
                 }
 
-                status = interface->AddProperty(name.empty() ? 0 : name.c_str(),
-                                                signature.empty() ? 0 : signature.c_str(),
-                                                accessFlags);
+                status = interface->AddProperty(name.c_str(), signature.c_str(), accessFlags);
                 for (AnnotationsMap::const_iterator it = annotations.begin();
                      (ER_OK == status) && (it != annotations.end()); ++it) {
                     status = interface->AddPropertyAnnotation(name, it->first, it->second);

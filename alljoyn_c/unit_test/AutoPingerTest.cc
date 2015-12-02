@@ -203,7 +203,7 @@ TEST_F(AutoPingerTest, Multibus)
 {
     const size_t G = 2;
     TestPingListener tpl[G];
-    qcc::String groupNames[G] = {   "evengroup", "oddgroup" };
+    qcc::String groupNames[G] = { "evengroup", "oddgroup" };
     alljoyn_pinglistener pl[G];
 
     for (size_t i = 0; i < G; ++i) {

@@ -96,18 +96,22 @@ class DefaultKeyStoreListener : public KeyStoreListener {
                 /**
                  * CryptUnprotectData will return an invalid argument error if called with a 0 byte buffer. This happens after
                  * AllJoyn creates the KeyStore file, but hasn't yet written any keys to the store. In this case, just skip
-                 * the CryptUnprotectData step and pass the empty buffer into the KeyStore.
+                 * the CryptUnprotectData step and pass an empty buffer into the KeyStore.
                  */
-                if ((status == ER_OK) && (fileSize > 0)) {
-                    if (!CryptUnprotectData(&dataIn, NULL, NULL, NULL, NULL, 0, &dataOut)) {
-                        status = ER_BUS_CORRUPT_KEYSTORE;
-                        QCC_LogError(status, ("CryptUnprotectData reading keystore failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
-                    }
-                }
-
                 if (status == ER_OK) {
-                    StringSource bufferSource(dataOut.pbData, dataOut.cbData);
-                    status = keyStore.Pull(bufferSource, fileName);
+                    if (fileSize > 0) {
+                        if (CryptUnprotectData(&dataIn, NULL, NULL, NULL, NULL, 0, &dataOut)) {
+                            StringSource bufferSource(dataOut.pbData, dataOut.cbData);
+                            status = keyStore.Pull(bufferSource, fileName);
+                        } else {
+                            status = ER_BUS_CORRUPT_KEYSTORE;
+                            QCC_LogError(status, ("CryptUnprotectData reading keystore failed error=(0x%08X) status=(0x%08X)", ::GetLastError(), status));
+                        }
+                    } else {
+                        String empty;
+                        StringSource bufferSource(empty);
+                        status = keyStore.Pull(bufferSource, fileName);
+                    }
                 }
 
                 if (status == ER_OK) {

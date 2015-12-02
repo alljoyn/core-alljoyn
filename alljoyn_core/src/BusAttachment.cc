@@ -457,7 +457,7 @@ QStatus BusAttachment::Start()
 QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSpec)
 {
     QStatus status;
-    Transport* trans = transportList.GetTransport(requestedConnectSpec);
+    Transport* trans = requestedConnectSpec ? transportList.GetTransport(requestedConnectSpec) : nullptr;
     if (trans) {
         SessionOpts emptyOpts;
         BusEndpoint tempEp;
@@ -1064,7 +1064,7 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     if (status == ER_OK) {
         AllJoynPeerObj* peerObj = busInternal->localEndpoint->GetPeerObj();
         if (peerObj) {
-            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? authListener : NULL, *this);
+            peerObj->SetupPeerAuthentication(authMechanisms ? String(authMechanisms) : String(), authMechanisms ? authListener : NULL, *this);
         } else {
             return ER_BUS_SECURITY_NOT_ENABLED;
         }

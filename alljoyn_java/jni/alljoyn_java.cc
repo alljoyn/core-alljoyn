@@ -1108,18 +1108,18 @@ JScopedEnv::~JScopedEnv()
 class JString {
   public:
     JString(jstring s);
-    ~JString();
+    virtual ~JString();
     const char* c_str() { return str; }
+  protected:
+    jstring jstr;
+    const char* str;
   private:
     JString(const JString& other);
     JString& operator =(const JString& other);
-
-    jstring jstr;
-    const char* str;
 };
 
 /**
- * Construct a representation of a string with wraped StringUTFChars.
+ * Construct a representation of a string with wrapped StringUTFChars.
  *
  * @param s the string to wrap.
  */
@@ -1147,6 +1147,33 @@ static void Throw(const char* name, const char* msg)
     JLocalRef<jclass> clazz = env->FindClass(name);
     if (clazz) {
         env->ThrowNew(clazz, msg);
+    }
+}
+
+/**
+ * Helper function to wrap StringUTFChars to ensure proper release of resource.
+ *
+ * This will throw an exception if a null String is used.
+ */
+class JSafeString : public JString {
+  public:
+    JSafeString(jstring s);
+    virtual ~JSafeString() { }
+  private:
+    JSafeString(const JString& other);
+    JSafeString& operator =(const JString& other);
+};
+
+/**
+ * Construct a representation of a string with wrapped StringUTFChars.
+ *
+ * @param s the string to wrap.
+ */
+JSafeString::JSafeString(jstring s)
+    : JString(s)
+{
+    if (!jstr) {
+        Throw("java/lang/NullPointerException", "null String");
     }
 }
 
@@ -5150,7 +5177,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_emitChangedSignal(
         return;
     }
 
-    JString propName(jpropName);
+    JSafeString propName(jpropName);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_emitChangedSignal(): Exception"));
         return;
@@ -6774,7 +6801,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_removeSessionMember
     /*
      * Load the C++ session host string from the java parameter
      */
-    JString sessionMemberName(jsessionMemberName);
+    JSafeString sessionMemberName(jsessionMemberName);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_removeSessionMember(): Exception"));
         return NULL;
@@ -8310,7 +8337,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setLogLevels(JNIEnv*en
     /*
      * Load the C++ environment string with the Java environment string.
      */
-    JString logEnv(jlogEnv);
+    JSafeString logEnv(jlogEnv);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_setLogLevels(): Exception"));
         return;
@@ -9356,7 +9383,7 @@ String JBusObject::GenerateIntrospection(const char* languageTag, bool deep, siz
             return BusObject::GenerateIntrospection(languageTag, deep, indent);
         }
 
-        JString introspection(jintrospection);
+        JSafeString introspection(jintrospection);
         if (env->ExceptionCheck()) {
             return BusObject::GenerateIntrospection(languageTag, deep, indent);
         }
@@ -9402,7 +9429,7 @@ String JBusObject::GenerateIntrospection(bool deep, size_t indent) const
             return BusObject::GenerateIntrospection(deep, indent);
         }
 
-        JString introspection(jintrospection);
+        JSafeString introspection(jintrospection);
         if (env->ExceptionCheck()) {
             return BusObject::GenerateIntrospection(deep, indent);
         }
@@ -9627,7 +9654,9 @@ QStatus JSignalHandler::Register(BusAttachment& bus, const char* ifaceName, cons
     if (!member) {
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
-    ancillary_data = ancillary;
+    if (ancillary) {
+        ancillary_data = ancillary;
+    }
     return ER_OK;
 }
 
@@ -10026,7 +10055,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_clearKeys(JNIEnv* e
     /*
      * Load the C++ guid string from the java parameter
      */
-    JString guid(jguid);
+    JSafeString guid(jguid);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_clearKeys(): Exception"));
         return NULL;
@@ -10068,7 +10097,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_setKeyExpiration(JN
     /*
      * Load the C++ guid string from the java parameter
      */
-    JString guid(jguid);
+    JSafeString guid(jguid);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_setKeyExpiration(): Exception"));
         return NULL;
@@ -10110,7 +10139,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getKeyExpiration(JN
     /*
      * Load the C++ guid string from the java parameter.
      */
-    JString guid(jguid);
+    JSafeString guid(jguid);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_getKeyExpiration(): Exception"));
         return NULL;
@@ -10422,13 +10451,13 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addAnnotatio
     }
     QCC_ASSERT(intf);
 
-    JString annotation(jannotation);
+    JSafeString annotation(jannotation);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_AddAnnotation(): Exception"));
         return NULL;
     }
 
-    JString value(jvalue);
+    JSafeString value(jvalue);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_AddAnnotation(): Exception"));
         return NULL;
@@ -10450,7 +10479,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMember(JN
     }
     QCC_ASSERT(intf);
 
-    JString name(jname);
+    JSafeString name(jname);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addMember(): Exception"));
         return NULL;
@@ -10531,13 +10560,13 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addMemberAnn
         return NULL;
     }
 
-    JString jAnnotation(annotation);
+    JSafeString jAnnotation(annotation);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addMemberAnnotation(): Exception"));
         return NULL;
     }
 
-    JString jValue(value);
+    JSafeString jValue(value);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addMemberAnnotation(): Exception"));
         return NULL;
@@ -10560,7 +10589,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addProperty(
     }
     QCC_ASSERT(intf);
 
-    JString name(jname);
+    JSafeString name(jname);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addProperty(): Exception"));
         return NULL;
@@ -10622,19 +10651,19 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addPropertyA
     }
     QCC_ASSERT(intf);
 
-    JString jName(property);
+    JSafeString jName(property);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addPropertyAnnotation(): Exception"));
         return NULL;
     }
 
-    JString jAnnotation(annotation);
+    JSafeString jAnnotation(annotation);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addPropertyAnnotation(): Exception"));
         return NULL;
     }
 
-    JString jValue(value);
+    JSafeString jValue(value);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_addPropertyAnnotation(): Exception"));
         return NULL;
@@ -10656,7 +10685,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionL
     }
     QCC_ASSERT(intf);
 
-    JString jlanguage(language);
+    JSafeString jlanguage(language);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionLanguage(): Exception"));
         return;
@@ -10677,7 +10706,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
     }
     QCC_ASSERT(intf);
 
-    JString jdescription(description);
+    JSafeString jdescription(description);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescription(): Exception"));
         return;
@@ -10959,7 +10988,7 @@ QStatus JProxyBusObject::RegisterPropertiesChangedListener(jstring jifaceName,
 {
     JNIEnv* env = GetEnv();
 
-    JString ifaceName(jifaceName);
+    JSafeString ifaceName(jifaceName);
     if (env->ExceptionCheck()) {
         return ER_FAIL;
     }
@@ -11348,13 +11377,13 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_methodCall(JNIEnv*
 {
     QCC_DbgPrintf(("ProxyBusObject_methodCall()"));
 
-    JString interfaceName(jinterfaceName);
+    JSafeString interfaceName(jinterfaceName);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("ProxyBusObjexct_methodCall(): Exception"));
         return NULL;
     }
 
-    JString methodName(jmethodName);
+    JSafeString methodName(jmethodName);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("ProxyBusObjexct_methodCall(): Exception"));
         return NULL;
@@ -11538,7 +11567,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_getProperty(JNIEnv
 {
     QCC_DbgPrintf(("ProxyBusObject_getProperty()"));
 
-    JString interfaceName(jinterfaceName);
+    JSafeString interfaceName(jinterfaceName);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("ProxyBusObjexct_getProperty(): Exception"));
         return NULL;
@@ -11621,7 +11650,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_getAllProperties(J
 {
     QCC_DbgPrintf(("ProxyBusObject_getAllProperties()"));
 
-    JString interfaceName(jinterfaceName);
+    JSafeString interfaceName(jinterfaceName);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("ProxyBusObjexct_getAllProperties(): Exception"));
         return NULL;
@@ -11703,7 +11732,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty(JNIEnv* e
 {
     QCC_DbgPrintf(("ProxyBusObject_setProperty()"));
 
-    JString interfaceName(jinterfaceName);
+    JSafeString interfaceName(jinterfaceName);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("ProxyBusObjexct_setProperty(): Exception"));
         return;
@@ -12831,7 +12860,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials(JN
     /*
      * Load the C++ authMechanism Java authMechanism.
      */
-    JString jauthMechanism(authMechanism);
+    JSafeString jauthMechanism(authMechanism);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("PasswordManager_setCredentials(): Exception"));
         return NULL;
@@ -12840,7 +12869,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials(JN
     /*
      * Load the C++ password Java password.
      */
-    JString jpassword(password);
+    JSafeString jpassword(password);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("PasswordManager_setCredentials(): Exception"));
         return NULL;

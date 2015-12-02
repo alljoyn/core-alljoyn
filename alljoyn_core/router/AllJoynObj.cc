@@ -1852,9 +1852,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
     /* Parse message args */
     SessionPort sessionPort;
-    const char* src;
+    const char* src = nullptr;
     const char* sessionHost;
-    const char* dest;
+    const char* dest = nullptr;
     const char* srcB2B;
     const char* busAddr;
     SessionOpts optsIn;
@@ -1875,7 +1875,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                    sessionPort, src, sessionHost, dest, srcB2B, busAddr));
 
     bool sendSessionJoined = false;
-    srcStr = src;
+    if (src) {
+        srcStr = src;
+    }
     bool attachSessionWithNames = false;
     bool isHostAttach = false;
 
@@ -1898,7 +1900,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     } else {
         QCC_DbgPrintf(("AllJoynObj::RunAttach(): Good request.  Starting."));
 
-        destStr = dest;
+        if (dest) {
+            destStr = dest;
+        }
 
         ajObj.AcquireLocks();
         /*

@@ -1301,7 +1301,7 @@ public class PropChangedTest
 
         // 5
         assertEquals(Status.BUS_NO_SUCH_INTERFACE,
-                     mProxy.registerPropertiesChangedListener(null, okProps, listener));
+                     mProxy.registerPropertiesChangedListener("", okProps, listener));
 
         // 6
         assertEquals(Status.BUS_NO_SUCH_INTERFACE,

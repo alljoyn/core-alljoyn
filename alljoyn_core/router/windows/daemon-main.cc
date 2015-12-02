@@ -394,13 +394,13 @@ DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
 
     ConfigDB config(configStr, opts.GetConfigFile());
     if (!config.LoadConfig()) {
-        const char* errsrc;
+        String errsrc;
         if (opts.UseInternalConfig()) {
             errsrc = "internal default config";
         } else {
-            errsrc = opts.GetConfigFile().c_str();
+            errsrc = opts.GetConfigFile();
         }
-        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc);
+        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc.c_str());
         return DAEMON_EXIT_CONFIG_ERROR;
     }
 

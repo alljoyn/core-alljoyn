@@ -659,12 +659,14 @@ static QStatus GenerateMemberArgs(MsgArg* retArgs, const PermissionPolicy::Rule:
         return ER_OK;
     }
     for (size_t cnt = 0; cnt < count; cnt++) {
+        String memberName = members[cnt].GetMemberName();
         QStatus status = retArgs[cnt].Set("(syy)",
-                                          members[cnt].GetMemberName().c_str(), members[cnt].GetMemberType(),
+                                          memberName.c_str(), members[cnt].GetMemberType(),
                                           members[cnt].GetActionMask());
         if (ER_OK != status) {
             return status;
         }
+        retArgs[cnt].Stabilize();
     }
     return ER_OK;
 }
@@ -687,9 +689,11 @@ static QStatus GenerateRuleArgs(MsgArg** retArgs, const PermissionPolicy::Rule* 
                 goto exit;
             }
         }
+        String objPath = rules[cnt].GetObjPath();
+        String interfaceName = rules[cnt].GetInterfaceName();
         status = (*retArgs)[cnt].Set("(ssa(syy))",
-                                     rules[cnt].GetObjPath().c_str(),
-                                     rules[cnt].GetInterfaceName().c_str(),
+                                     objPath.c_str(),
+                                     interfaceName.c_str(),
                                      rules[cnt].GetMembersSize(), ruleMembersArgs);
         if (ER_OK != status) {
             delete [] ruleMembersArgs;

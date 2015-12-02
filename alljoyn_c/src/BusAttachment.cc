@@ -80,7 +80,7 @@ uint32_t AJ_CALL alljoyn_busattachment_getconcurrency(alljoyn_busattachment bus)
 const char* AJ_CALL alljoyn_busattachment_getconnectspec(alljoyn_busattachment bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return ((ajn::BusAttachmentC*)bus)->GetConnectSpec().c_str();
+    return ((ajn::BusAttachmentC*)bus)->GetConnectSpec();
 }
 
 void AJ_CALL alljoyn_busattachment_enableconcurrentcallbacks(alljoyn_busattachment bus)
@@ -342,7 +342,7 @@ const alljoyn_proxybusobject AJ_CALL alljoyn_busattachment_getalljoyndebugobj(al
 const char* AJ_CALL alljoyn_busattachment_getuniquename(const alljoyn_busattachment bus)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    return ((const ajn::BusAttachmentC*)bus)->GetUniqueName().c_str();
+    return ((ajn::BusAttachmentC*)bus)->GetUniqueName();
 }
 
 const char* AJ_CALL alljoyn_busattachment_getglobalguidstring(const alljoyn_busattachment bus)

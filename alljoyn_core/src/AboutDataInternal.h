@@ -108,6 +108,8 @@ class MsgArgTableTranslator : public LookupTableTranslator {
 class AboutData::Internal {
     friend class AboutData;
   private:
+    size_t GetSupportedLanguages(const char** languageTags, size_t num);
+
     /**
      * A std::map that maps the field name to its FieldDetails.
      */
@@ -138,6 +140,8 @@ class AboutData::Internal {
 
     MsgArgTableTranslator defaultTranslator;
     Translator* translator;
+
+    std::vector<qcc::String> supportedLanguages;
 
     /**
      * The pseudo-language of a Field Name.  Currently this is always the

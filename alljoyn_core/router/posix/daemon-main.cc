@@ -754,13 +754,13 @@ int CDECL_CALL main(int argc, char** argv, char** env)
 
     config = new ConfigDB(configStr, opts.GetConfigFile());
     if (!config->LoadConfig()) {
-        const char* errsrc;
+        String errsrc;
         if (opts.GetInternalConfig()) {
             errsrc = "internal default config";
         } else {
-            errsrc = opts.GetConfigFile().c_str();
+            errsrc = opts.GetConfigFile();
         }
-        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc);
+        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc.c_str());
         ret = DAEMON_EXIT_CONFIG_ERROR;
         goto exit;
     }

@@ -31,7 +31,7 @@ volatile int32_t IODispatch::activeStreamsCnt = 0;
 volatile uint64_t IODispatch::stopStreamTimestamp = 0;
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
-    timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false, 96),
+    timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt))), true, concurrency, false, 96),
     reload(false),
     isRunning(false),
     numAlarmsInProgress(0),

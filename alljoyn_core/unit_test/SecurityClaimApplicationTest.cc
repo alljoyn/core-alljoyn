@@ -1873,7 +1873,7 @@ TEST_F(SecurityClaimApplicationTest, fail_if_incorrect_publickey_used_in_identit
 class StateNotification_ApplicationStateListener : public ApplicationStateListener {
   public:
 
-    StateNotification_ApplicationStateListener(const char*busName, PermissionConfigurator::ApplicationState state) :
+    StateNotification_ApplicationStateListener(const String& busName, PermissionConfigurator::ApplicationState state) :
         busNames(),
         publicKeys(),
         states(),
@@ -1884,7 +1884,7 @@ class StateNotification_ApplicationStateListener : public ApplicationStateListen
     }
 
     virtual void State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state) {
-        if ((strcmp(busName, this->busName) == 0) && state == stateToCheck) {
+        if ((strcmp(busName, this->busName.c_str()) == 0) && state == stateToCheck) {
             busNames.push(busName);
             publicKeys.push(publicKeyInfo);
             states.push(state);
@@ -1896,7 +1896,7 @@ class StateNotification_ApplicationStateListener : public ApplicationStateListen
     queue<KeyInfoNISTP256> publicKeys;
     queue<PermissionConfigurator::ApplicationState> states;
     bool stateChanged;
-    const char*busName;
+    String busName;
     PermissionConfigurator::ApplicationState stateToCheck;
 
 };
@@ -1917,7 +1917,7 @@ class StateNotification_ApplicationStateListener : public ApplicationStateListen
  */
 TEST_F(SecurityClaimApplicationTest, get_application_state_signal)
 {
-    StateNotification_ApplicationStateListener appStateListener(securityManagerBus.GetUniqueName().c_str(), PermissionConfigurator::CLAIMABLE);
+    StateNotification_ApplicationStateListener appStateListener(securityManagerBus.GetUniqueName(), PermissionConfigurator::CLAIMABLE);
     securityManagerBus.RegisterApplicationStateListener(appStateListener);
     securityManagerBus.AddApplicationStateRule();
 
@@ -1941,7 +1941,7 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal)
         qcc::Sleep(WAIT_MSECS);
     }
 
-    EXPECT_TRUE(appStateListener.stateChanged);
+    ASSERT_TRUE(appStateListener.stateChanged);
 
     EXPECT_EQ(0, appStateListener.publicKeys.front().GetAlgorithm());
     EXPECT_EQ(0, appStateListener.publicKeys.front().GetCurve());
@@ -1976,7 +1976,7 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal)
  */
 TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_peer)
 {
-    StateNotification_ApplicationStateListener appStateListener(securityManagerBus.GetUniqueName().c_str(), PermissionConfigurator::CLAIMABLE);
+    StateNotification_ApplicationStateListener appStateListener(securityManagerBus.GetUniqueName(), PermissionConfigurator::CLAIMABLE);
     securityManagerBus.RegisterApplicationStateListener(appStateListener);
 
     //EnablePeerSecurity
@@ -1999,7 +1999,7 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
         qcc::Sleep(WAIT_MSECS);
     }
 
-    EXPECT_TRUE(appStateListener.stateChanged);
+    ASSERT_TRUE(appStateListener.stateChanged);
 
     EXPECT_EQ(securityManagerBus.GetUniqueName(), appStateListener.busNames.front());
     appStateListener.busNames.pop();
@@ -2016,7 +2016,7 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
     //verify we read all the signals
     EXPECT_TRUE(appStateListener.busNames.size() == 0 && appStateListener.publicKeys.size() == 0 && appStateListener.states.size() == 0);
 
-    StateNotification_ApplicationStateListener peer1AppStateListener(peer1Bus.GetUniqueName().c_str(), PermissionConfigurator::CLAIMABLE);
+    StateNotification_ApplicationStateListener peer1AppStateListener(peer1Bus.GetUniqueName(), PermissionConfigurator::CLAIMABLE);
     securityManagerBus.RegisterApplicationStateListener(peer1AppStateListener);
     peer1KeyListener = new DefaultECDHEAuthListener();
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
@@ -2224,7 +2224,7 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
 
     InstallMembershipOnManager();
 
-    StateNotification_ApplicationStateListener appStateListener(peer1Bus.GetUniqueName().c_str(), PermissionConfigurator::CLAIMABLE);
+    StateNotification_ApplicationStateListener appStateListener(peer1Bus.GetUniqueName(), PermissionConfigurator::CLAIMABLE);
     peer1Bus.RegisterApplicationStateListener(appStateListener);
 
     // Call Reset

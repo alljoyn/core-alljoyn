@@ -237,7 +237,7 @@ uint32_t AJ_CALL qcc::StringToU32(const qcc::String& inStr, unsigned int base, u
     bool isBad = true;
     qcc::String::const_iterator it = inStr.begin();
     if (base == 0) {
-        if (*it == '0') {
+        if ((it != inStr.end()) && (*it == '0')) {
             ++it;
             if (it == inStr.end()) {
                 return 0;
@@ -251,10 +251,12 @@ uint32_t AJ_CALL qcc::StringToU32(const qcc::String& inStr, unsigned int base, u
             base = 10;
         }
     } else if (base == 16) {
-        if (*it == '0') {
+        if ((it != inStr.end()) && (*it == '0')) {
             ++it;
-            if ((*it == 'x') || (*it == 'X')) {
+            if ((it != inStr.end()) && ((*it == 'x') || (*it == 'X'))) {
                 ++it;
+            } else {
+                it = inStr.begin();
             }
         }
     }
@@ -308,7 +310,7 @@ uint64_t AJ_CALL qcc::StringToU64(const qcc::String& inStr, unsigned int base, u
     bool isBad = true;
     qcc::String::const_iterator it = inStr.begin();
     if (base == 0) {
-        if (*it == '0') {
+        if ((it != inStr.end()) && (*it == '0')) {
             ++it;
             if (it == inStr.end()) {
                 return 0;
@@ -322,10 +324,12 @@ uint64_t AJ_CALL qcc::StringToU64(const qcc::String& inStr, unsigned int base, u
             base = 10;
         }
     } else if (base == 16) {
-        if (*it == '0') {
+        if ((it != inStr.end()) && (*it == '0')) {
             ++it;
-            if ((*it == 'x') || (*it == 'X')) {
+            if ((it != inStr.end()) && ((*it == 'x') || (*it == 'X'))) {
                 ++it;
+            } else {
+                it = inStr.begin();
             }
         }
     }
@@ -374,7 +378,7 @@ double AJ_CALL qcc::StringToDouble(const qcc::String& inStr)
         double val = 0.0;
         bool neg = false;
         qcc::String::const_iterator it = inStr.begin();
-        if (*it == '-') {
+        if ((it != inStr.end()) && (*it == '-')) {
             neg = true;
             ++it;
         }
@@ -387,7 +391,7 @@ double AJ_CALL qcc::StringToDouble(const qcc::String& inStr)
             val += static_cast<double>(v);
             ++it;
         }
-        if (*it == '.') {
+        if ((it != inStr.end()) && (*it == '.')) {
             double divisor = 1.0;
             ++it;
             while ((it != inStr.end()) && ((*it != 'e') && (*it != 'E'))) {
@@ -402,13 +406,13 @@ double AJ_CALL qcc::StringToDouble(const qcc::String& inStr)
             }
             val /= divisor;
         }
-        if ((*it == 'e') || (*it == 'E')) {
+        if ((it != inStr.end() && ((*it == 'e') || (*it == 'E')))) {
             ++it;
             qcc::String exponentString = qcc::String(it, inStr.end());
 
             // verify that the exponent portion is sane
             qcc::String::const_iterator expStrIter = exponentString.begin();
-            if (*expStrIter == '-') {
+            if ((expStrIter != exponentString.end()) && (*expStrIter == '-')) {
                 ++expStrIter;
             }
             while (expStrIter != exponentString.end()) {

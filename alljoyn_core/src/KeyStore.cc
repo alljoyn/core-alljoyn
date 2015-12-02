@@ -341,7 +341,6 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
 {
     QCC_DbgPrintf(("KeyStore::Pull"));
 
-
     /* Don't load if already loaded */
     lock.Lock(MUTEX_CONTEXT);
     if (storeState != UNAVAILABLE) {

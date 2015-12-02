@@ -34,6 +34,5 @@ if router_env['OS'] == 'android':
    libdaemon = libenv.StaticLibrary(['alljoyn-daemon'] + srobj + router_objs)
    dlibs = libenv.Install('$CPP_DISTDIR/lib', libdaemon)
 
-#progs = daemon + servicehelper
 progs = daemon
 Return('progs')

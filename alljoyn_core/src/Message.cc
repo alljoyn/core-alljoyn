@@ -287,7 +287,9 @@ qcc::String _Message::GetErrorDescription() const
 {
     qcc::String msg;
     const char* err = GetErrorName(&msg);
-    if (msg.empty()) {
+    if (!err) {
+        return qcc::String();
+    } else if (msg.empty()) {
         return err;
     } else {
         qcc::String description = err;
