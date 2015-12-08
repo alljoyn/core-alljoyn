@@ -604,7 +604,7 @@ static QStatus ParsePropertiesMessage(Request& request, Message& msg)
     return ER_OK;
 }
 
-bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized)
+bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized, PeerState& peerState)
 {
     authorized = false;
     if (outgoing) {
@@ -623,6 +623,36 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
         if (strncmp(mbrName, "Claim", 5) == 0) {
             /* only allowed when there is no trust anchor */
             authorized = (!permissionMgmtObj->HasTrustAnchors());
+            /* If this isn't a self-claim, make sure the auth mechanism used is acceptable per
+             * the claim capabilities.
+             */
+            if (authorized && !peerState->IsLocalPeer()) {
+                PermissionConfigurator::ClaimCapabilities capabilities;
+                QStatus status = permissionMgmtObj->GetClaimCapabilities(capabilities);
+                if (ER_OK != status) {
+                    QCC_LogError(status, ("Could not query our claim capabilities"));
+                    authorized = false;
+                } else {
+                    switch (peerState->GetAuthSuite()) {
+                    case AUTH_SUITE_ECDHE_NULL:
+                        authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_NULL) == PermissionConfigurator::CAPABLE_ECDHE_NULL);
+                        break;
+
+                    case AUTH_SUITE_ECDHE_PSK:
+                        authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_PSK) == PermissionConfigurator::CAPABLE_ECDHE_PSK);
+                        break;
+
+                    case AUTH_SUITE_ECDHE_ECDSA:
+                        authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_ECDSA) == PermissionConfigurator::CAPABLE_ECDHE_ECDSA);
+                        break;
+
+                    default:
+                        /* No other suites supported for claiming. */
+                        authorized = false;
+                        break;
+                    }
+                }
+            }
             return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
@@ -692,7 +722,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     bool isPermissionMgmt = IsPermissionMgmtInterface(request.iName);
     if (isPermissionMgmt) {
         bool allowed = false;
-        if (AuthorizePermissionMgmt(outgoing, request.iName, request.mbrName, allowed)) {
+        if (AuthorizePermissionMgmt(outgoing, request.iName, request.mbrName, allowed, peerState)) {
             if (allowed) {
                 return ER_OK;
             } else {

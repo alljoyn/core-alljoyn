@@ -49,6 +49,32 @@
 
 namespace ajn {
 
+/* the key exchange is in the 16 MSB.
+   The PIN-based key exchange mechanism was removed in 15.04:
+        AUTH_KEYX_PIN           0x00040000
+   The RSA-based auth mechanism was removed in 15.04:
+        AUTH_KEYX_RSA           0x00200000
+ */
+#define AUTH_KEYX_ANONYMOUS     0x00010000
+#define AUTH_KEYX_EXTERNAL      0x00020000
+#define AUTH_KEYX_SRP           0x00080000
+#define AUTH_KEYX_SRP_LOGON     0x00100000
+#define AUTH_KEYX_ECDHE         0x00400000
+#define AUTH_KEYX_GSSAPI        0x00800000
+
+/*the key authentication suite is in the 16 LSB */
+
+#define AUTH_SUITE_ANONYMOUS    AUTH_KEYX_ANONYMOUS
+#define AUTH_SUITE_EXTERNAL     AUTH_KEYX_EXTERNAL
+#define AUTH_SUITE_SRP_KEYX     AUTH_KEYX_SRP
+#define AUTH_SUITE_SRP_LOGON    AUTH_KEYX_SRP_LOGON
+
+#define AUTH_SUITE_ECDHE_NULL   (AUTH_KEYX_ECDHE | 0x0001)
+#define AUTH_SUITE_ECDHE_PSK    (AUTH_KEYX_ECDHE | 0x0002)
+#define AUTH_SUITE_ECDHE_ECDSA  (AUTH_KEYX_ECDHE | 0x0004)
+
+#define AUTH_SUITE_GSSAPI       AUTH_KEYX_GSSAPI
+
 /* Conversation hash-related constants */
 
 /*
@@ -138,7 +164,8 @@ class _PeerState {
         responderHash(NULL),
         initiatorHashLock(),
         responderHashLock(),
-        keyExchangeMode(KEY_EXCHANGE_NONE)
+        keyExchangeMode(KEY_EXCHANGE_NONE),
+        m_authSuite(0)
     {
         ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
@@ -231,6 +258,7 @@ class _PeerState {
         keys[PEER_SESSION_KEY].Erase();
         keys[PEER_GROUP_KEY].Erase();
         isSecure = false;
+        m_authSuite = 0;
     }
 
     /**
@@ -514,12 +542,36 @@ class _PeerState {
      */
     void ClearKeyExchangeModeMask(uint8_t mask);
 
-    /*
+    /**
      * Is the peer in this key exchange mode?
      * @param[in] mask the key exchange code mask
      * @return true if so; false, otherwise.
      */
     bool IsInKeyExchangeMode(uint8_t mask) const;
+
+    /**
+     * Get the auth suite used to authenticate this peer.
+     * @return One of the AUTH_SUITE_* values, or zero if none was used.
+     */
+    uint32_t GetAuthSuite() const;
+
+    /**
+     * Set the auth suite used to authenticate this peer as a uint32_t.
+     * @param[in] authSuite An AUTH_SUITE_* value reflecting the suite used to authenticate this peer.
+     * @return #ER_OK if the auth suite was successfully set.
+     *         #ER_BAD_ARG_1 if authSuite does not correspond to a valid auth suite.
+     */
+    QStatus SetAuthSuite(uint32_t authSuite);
+
+    /**
+     * Set the auth suite used to authenticate this peer as a string.
+     * @param[in] authSuite A string describing an auth suite compliant with the authMechanisms
+     *                      argument to BusAttachment::EnablePeerSecurity.
+     * @return #ER_OK if the auth suite was successfully set.
+     *         #ER_BAD_ARG_1 if authSuite does not parse as a valid suite.
+     * @see BusAttachment::EnablePeerSecurity
+     */
+    QStatus SetAuthSuite(const qcc::String& authSuite);
 
     /*
      * Destructor
@@ -635,6 +687,11 @@ class _PeerState {
      * The key exchange mode
      */
     uint8_t keyExchangeMode;
+
+    /**
+     * The auth suite used to authenticate this peer.
+     */
+    uint32_t m_authSuite;
 };
 
 

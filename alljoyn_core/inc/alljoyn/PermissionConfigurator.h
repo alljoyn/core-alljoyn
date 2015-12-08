@@ -85,6 +85,9 @@ class PermissionConfigurator {
     } ClaimCapabilityMasks;
     // @}
 
+    /** Default ClaimCapabilities: NULL or PSK. */
+    static const uint16_t CLAIM_CAPABILITIES_DEFAULT;
+
     /**@name ClaimCapabilityAdditionalInfo */
     // {@
     typedef uint16_t ClaimCapabilityAdditionalInfo;
