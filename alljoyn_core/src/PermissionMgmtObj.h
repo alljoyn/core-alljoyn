@@ -587,7 +587,7 @@ class PermissionMgmtObj : public BusObject {
         uint16_t claimCapabilities;
         uint16_t claimCapabilityAdditionalInfo;
 
-        Configuration() : version(1), applicationStateSet(0), applicationState(PermissionConfigurator::NOT_CLAIMABLE), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0)
+        Configuration() : version(1), applicationStateSet(0), applicationState(PermissionConfigurator::NOT_CLAIMABLE), claimCapabilities(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT), claimCapabilityAdditionalInfo(0)
         {
         }
     };

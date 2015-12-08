@@ -83,6 +83,7 @@ class PermissionConfigurator {
         CAPABLE_ECDHE_PSK = 0x02,
         CAPABLE_ECDHE_ECDSA  = 0x04,
     } ClaimCapabilityMasks;
+    static const uint16_t CLAIM_CAPABILITIES_DEFAULT = (CAPABLE_ECDHE_NULL | CAPABLE_ECDHE_PSK);
     // @}
 
     /**@name ClaimCapabilityAdditionalInfo */

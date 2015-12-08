@@ -450,6 +450,7 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, String seed, qcc::String& v
             Timespec<EpochTime> now(GetEpochTimestamp());
             keyStore.SetKeyExpiration(key, now);
         }
+        status = peerState->SetAuthSuite(tag);
     }
     KeyBlob masterSecret;
     if (status == ER_OK) {
@@ -1560,6 +1561,7 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingKeyExchange(const uint32_t* request
     }
 
     if (status == ER_OK) {
+        QCC_ASSERT(currentSuite != 0);
         return status;
     }
     if (!remoteAuthMask) {

@@ -886,9 +886,9 @@ TEST(SecurityOtherTest, call_security_application_over_ECDHE_NULL) {
     SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
 
     // "Version"  Expected value=1
-    uint16_t secuirtyApplicaitonVersion = 0;
-    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
-    EXPECT_EQ(1, secuirtyApplicaitonVersion);
+    uint16_t securityApplicationVersion = 0;
+    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(securityApplicationVersion));
+    EXPECT_EQ(1, securityApplicationVersion);
 
     // "ApplicationState"  Expected value="Not Claimable"
     PermissionConfigurator::ApplicationState applicationState;
@@ -921,7 +921,7 @@ TEST(SecurityOtherTest, call_security_application_over_ECDHE_NULL) {
     // "ClaimCapabilities"  Expected value=Unknown
     PermissionConfigurator::ClaimCapabilities claimCapabilities;
     EXPECT_EQ(ER_OK, proxy.GetClaimCapabilities(claimCapabilities));
-    EXPECT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCapabilities);
+    EXPECT_EQ(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT, claimCapabilities);
 
     MsgArg props;
     EXPECT_EQ(ER_OK, proxy.GetAllProperties(org::alljoyn::Bus::Security::Application::InterfaceName, props));
@@ -1051,9 +1051,9 @@ TEST(SecurityOtherTest, call_security_application_over_SRP) {
     SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
 
     // "Version"  Expected value=1
-    uint16_t secuirtyApplicaitonVersion = 0;
-    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
-    EXPECT_EQ(1, secuirtyApplicaitonVersion);
+    uint16_t securityApplicationVersion = 0;
+    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(securityApplicationVersion));
+    EXPECT_EQ(1, securityApplicationVersion);
 
     // "ApplicationState"  Expected value="Not Claimable"
     PermissionConfigurator::ApplicationState applicationState;
@@ -1086,7 +1086,7 @@ TEST(SecurityOtherTest, call_security_application_over_SRP) {
     // "ClaimCapabilities"  Expected value=Unknown
     PermissionConfigurator::ClaimCapabilities claimCapabilities;
     EXPECT_EQ(ER_OK, proxy.GetClaimCapabilities(claimCapabilities));
-    EXPECT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCapabilities);
+    EXPECT_EQ(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT, claimCapabilities);
 
     MsgArg props;
     EXPECT_EQ(ER_OK, proxy.GetAllProperties(org::alljoyn::Bus::Security::Application::InterfaceName, props));
@@ -1162,9 +1162,9 @@ TEST(SecurityOtherTest, call_security_application_over_ECDHE_ECDSA) {
     SecurityApplicationProxy proxy(peer1Bus, peer2Bus.GetUniqueName().c_str(), sessionId);
 
     // "Version"  Expected value=1
-    uint16_t secuirtyApplicaitonVersion = 0;
-    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(secuirtyApplicaitonVersion));
-    EXPECT_EQ(1, secuirtyApplicaitonVersion);
+    uint16_t securityApplicationVersion = 0;
+    EXPECT_EQ(ER_OK, proxy.GetSecurityApplicationVersion(securityApplicationVersion));
+    EXPECT_EQ(1, securityApplicationVersion);
 
     // "ApplicationState"  Expected value="Not Claimable"
     PermissionConfigurator::ApplicationState applicationState;
@@ -1197,7 +1197,7 @@ TEST(SecurityOtherTest, call_security_application_over_ECDHE_ECDSA) {
     // "ClaimCapabilities"  Expected value=Unknown
     PermissionConfigurator::ClaimCapabilities claimCapabilities;
     EXPECT_EQ(ER_OK, proxy.GetClaimCapabilities(claimCapabilities));
-    EXPECT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCapabilities);
+    EXPECT_EQ(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT, claimCapabilities);
 
     MsgArg props;
     EXPECT_EQ(ER_OK, proxy.GetAllProperties(org::alljoyn::Bus::Security::Application::InterfaceName, props));

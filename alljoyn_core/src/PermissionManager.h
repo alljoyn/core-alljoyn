@@ -110,7 +110,7 @@ class PermissionManager {
     /* Private copy constructor to prevent double freeing of memory */
     PermissionManager(const PermissionManager& src);
 
-    bool AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized);
+    bool AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized, PeerState& peerState);
 
     PermissionPolicy* policy;
     PermissionMgmtObj* permissionMgmtObj;
