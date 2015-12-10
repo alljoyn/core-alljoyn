@@ -1375,8 +1375,10 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                         sendManifest = (ER_OK == aStatus);
                     }
                     if (sendManifest) {
-                        SendManifest(remotePeerObj, ifc, peerState);
-                        SendMembershipData(remotePeerObj, ifc, remotePeerGuid);
+                        status = SendManifest(remotePeerObj, ifc, peerState);
+                        if (status == ER_OK) {
+                            status = SendMembershipData(remotePeerObj, ifc, remotePeerGuid);
+                        }
                     }
                 }
             }
