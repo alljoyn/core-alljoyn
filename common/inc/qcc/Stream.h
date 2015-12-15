@@ -192,8 +192,8 @@ class Sink {
  */
 class Stream : public Source, public Sink {
   public:
-    /** Destructor */
-    virtual ~Stream() { }
+    Stream() { UpdateIdleInformation(true); }
+    virtual ~Stream() { UpdateIdleInformation(false); }
 
     /**
      * Used to perform an 'orderly' release of the stream.  The orderly release
@@ -222,6 +222,28 @@ class Stream : public Source, public Sink {
 
     /** Close the stream */
     virtual void Close() { }
+
+    /**
+     * Indicates whether no stream objects have been created or destroyed for a specified time.
+     * @param minTime          Minimum idle time in milliseconds.
+     * @return true if no stream objects have been created or destroyed for at least that time, otherwise false.
+     */
+    static bool AJ_CALL IsIdle(uint64_t minTime);
+
+  private:
+
+    /**
+     * Updates the static number of stream objects.
+     * @param isStarting       true - if a stream is being created
+     *                         false - if a stream is being destroyed
+     */
+    static void UpdateIdleInformation(bool isStarting);
+
+    /** Current number of stream object instances */
+    static volatile int32_t s_instanceCount;
+
+    /** Timestamp of the latest stream object instance destroyal, in milliseconds */
+    static volatile uint64_t s_lastDestroyTimestamp;
 };
 
 /**
