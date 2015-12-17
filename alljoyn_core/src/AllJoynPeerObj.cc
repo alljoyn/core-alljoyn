@@ -204,6 +204,8 @@ bool AllJoynPeerObj::NeedToYieldToPeer(bool initiatorFlag, PeerState& peerState)
 AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
     BusObject(org::alljoyn::Bus::Peer::ObjectPath, false),
     AlarmListener(),
+    /* This lock is held while calling into app's KeyStoreListener, that might acquire other locks having an unspecified level */
+    lock(LOCK_LEVEL_CHECKING_DISABLED),
     dispatcher("PeerObjDispatcher", true, 3), supportedAuthSuitesCount(0), supportedAuthSuites(NULL), securityApplicationObj(bus)
 {
     /* Add org.alljoyn.Bus.Peer.Authentication interface */

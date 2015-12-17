@@ -74,7 +74,7 @@ Environ* Environ::GetAppEnviron(void)
 qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)
 {
     qcc::String val;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (vars.count(key) == 0) {
         char* val = getenv(key.c_str());
         if (val) {
@@ -85,14 +85,14 @@ qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)
     if (val.empty() && defaultValue) {
         val = defaultValue;
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return val;
 }
 
 void Environ::Preload(const char* keyPrefix)
 {
     size_t prefixLen = strlen(keyPrefix);
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     for (char** var = environ; *var != NULL; ++var) {
         char* p = *var;
         if (strncmp(p, keyPrefix, prefixLen) == 0) {
@@ -104,21 +104,21 @@ void Environ::Preload(const char* keyPrefix)
             Find(key, NULL);
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
 }
 
 void Environ::Add(const qcc::String& key, const qcc::String& value)
 {
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     vars[key] = value;
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
 }
 
 
 QStatus Environ::Parse(Source& source)
 {
     QStatus status = ER_OK;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     while (ER_OK == status) {
         qcc::String line;
         status = source.GetLine(line);
@@ -136,6 +136,6 @@ QStatus Environ::Parse(Source& source)
             }
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return (ER_EOF == status) ? ER_OK : status;
 }

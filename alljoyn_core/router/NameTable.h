@@ -32,6 +32,7 @@
 #include <qcc/Environ.h>
 #include <qcc/String.h>
 #include <qcc/StringMapKey.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/Status.h>
 
@@ -67,7 +68,7 @@ class NameTable {
     /**
      * Constructor
      */
-    NameTable() : uniqueId(0), uniquePrefix(":1.") { }
+    NameTable() : lock(qcc::LOCK_LEVEL_NAMETABLE_LOCK), uniqueId(0), uniquePrefix(":1.") { }
 
     /**
      * Set the GUID of the bus.

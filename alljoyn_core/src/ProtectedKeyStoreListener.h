@@ -29,6 +29,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/String.h>
 #include <qcc/Thread.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/KeyStoreListener.h>
 
@@ -44,7 +45,8 @@ namespace ajn {
 class ProtectedKeyStoreListener : public KeyStoreListener {
   public:
 
-    ProtectedKeyStoreListener(KeyStoreListener* kslistener) : listener(kslistener), refCount(0) { }
+    ProtectedKeyStoreListener(KeyStoreListener* kslistener)
+        : listener(kslistener), lock(qcc::LOCK_LEVEL_PROTECTEDKEYSTORELISTENER_LOCK), refCount(0) { }
     /**
      * Virtual destructor for derivable class.
      */

@@ -26,6 +26,7 @@
 #include <qcc/Thread.h>
 #include <qcc/Timer.h>
 #include <qcc/StringUtil.h>
+#include <qcc/LockLevel.h>
 #include <Status.h>
 #include <algorithm>
 
@@ -278,12 +279,15 @@ class TimerImpl : public ThreadListener {
 }
 
 TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
+    lock(LOCK_LEVEL_TIMERIMPL_LOCK),
     currentAlarm(NULL),
     expireOnExit(expireOnExit),
     timerThreads(concurrency),
     isRunning(false),
     controllerIdx(0),
     preventReentrancy(preventReentrancy),
+    /* reentrancyLock is held while executing app callbacks, and these callbacks might acquire locks having an unspecified level */
+    reentrancyLock(LOCK_LEVEL_CHECKING_DISABLED),
     nameStr(name),
     maxAlarms(maxAlarms),
     numLimitableAlarms(0)
@@ -306,7 +310,7 @@ TimerImpl::~TimerImpl()
 QStatus TimerImpl::Start()
 {
     QStatus status = ER_OK;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (!isRunning) {
         controllerIdx = 0;
         isRunning = true;
@@ -323,22 +327,22 @@ QStatus TimerImpl::Start()
                     status = ER_FAIL;
                     break;
                 } else {
-                    lock.Unlock();
+                    lock.Unlock(MUTEX_CONTEXT);
                     Sleep(2);
-                    lock.Lock();
+                    lock.Lock(MUTEX_CONTEXT);
                 }
             }
         }
         isRunning = (status == ER_OK);
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus TimerImpl::Stop()
 {
     QStatus status = ER_OK;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     isRunning = false;
     for (size_t i = 0; i < timerThreads.size(); ++i) {
         if (timerThreads[i] != NULL) {
@@ -351,41 +355,41 @@ QStatus TimerImpl::Stop()
     while (it != addWaitQueue.end()) {
         (*it++)->Alert(TIMER_IS_DEAD_ALERTCODE);
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus TimerImpl::Join()
 {
     QStatus status = ER_OK;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     for (size_t i = 0; i < timerThreads.size(); ++i) {
         if (timerThreads[i] != NULL) {
-            lock.Unlock();
+            lock.Unlock(MUTEX_CONTEXT);
             QStatus tStatus = timerThreads[i]->Join();
-            lock.Lock();
+            lock.Lock(MUTEX_CONTEXT);
             status = (status == ER_OK) ? tStatus : status;
         }
 
 
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus TimerImpl::AddAlarm(const Alarm& alarm)
 {
     QStatus status = ER_OK;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (isRunning) {
         /* Don't allow an infinite number of alarms to exist on this timer */
         while (maxAlarms && alarm->limitable && (numLimitableAlarms >= maxAlarms) && isRunning) {
             Thread* thread = Thread::GetThread();
             QCC_ASSERT(thread);
             addWaitQueue.push_front(thread);
-            lock.Unlock();
+            lock.Unlock(MUTEX_CONTEXT);
             QStatus status1 = Event::Wait(Event::neverSet, Event::WAIT_FOREVER);
-            lock.Lock();
+            lock.Lock(MUTEX_CONTEXT);
             deque<Thread*>::iterator eit = find(addWaitQueue.begin(), addWaitQueue.end(), thread);
             if (eit != addWaitQueue.end()) {
                 addWaitQueue.erase(eit);
@@ -396,7 +400,7 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
                 thread->ResetAlertCode();
                 thread->GetStopEvent().ResetEvent();
                 if (alertCode == FORCEREMOVEALARM_ALERTCODE) {
-                    lock.Unlock();
+                    lock.Unlock(MUTEX_CONTEXT);
                     return ER_TIMER_EXITING;
                 }
             }
@@ -424,18 +428,18 @@ QStatus TimerImpl::AddAlarm(const Alarm& alarm)
         status = ER_TIMER_EXITING;
     }
 
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 QStatus TimerImpl::AddAlarmNonBlocking(const Alarm& alarm)
 {
     QStatus status = ER_OK;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (isRunning) {
         /* Don't allow an infinite number of alarms to exist on this timer */
         if (maxAlarms && (alarm->limitable && numLimitableAlarms >= maxAlarms)) {
-            lock.Unlock();
+            lock.Unlock(MUTEX_CONTEXT);
             return ER_TIMER_FULL;
         }
 
@@ -455,14 +459,14 @@ QStatus TimerImpl::AddAlarmNonBlocking(const Alarm& alarm)
         status = ER_TIMER_EXITING;
     }
 
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
 {
     bool foundAlarm = false;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (isRunning || expireOnExit) {
         if (alarm->periodMs) {
             set<Alarm>::iterator it = alarms.begin();
@@ -498,9 +502,9 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
                 while (curAlarm && (*curAlarm == alarm)) {
-                    lock.Unlock();
+                    lock.Unlock(MUTEX_CONTEXT);
                     qcc::Sleep(2);
-                    lock.Lock();
+                    lock.Lock(MUTEX_CONTEXT);
                     if (timerThreads[i] == NULL) {
                         break;
                     }
@@ -509,14 +513,14 @@ bool TimerImpl::RemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
             }
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return foundAlarm;
 }
 
 bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
 {
     bool foundAlarm = false;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (isRunning || expireOnExit) {
         if (alarm->periodMs) {
             set<Alarm>::iterator it = alarms.begin();
@@ -553,9 +557,9 @@ bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
                 while (curAlarm && (*curAlarm == alarm)) {
                     timerThreads[i]->Alert(FORCEREMOVEALARM_ALERTCODE);
-                    lock.Unlock();
+                    lock.Unlock(MUTEX_CONTEXT);
                     qcc::Sleep(2);
-                    lock.Lock();
+                    lock.Lock(MUTEX_CONTEXT);
                     if (timerThreads[i] == NULL) {
                         break;
                     }
@@ -564,14 +568,14 @@ bool TimerImpl::ForceRemoveAlarm(const Alarm& alarm, bool blockIfTriggered)
             }
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return foundAlarm;
 }
 
 QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, bool blockIfTriggered)
 {
     QStatus status = ER_NO_SUCH_ALARM;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (isRunning) {
         set<Alarm>::iterator it = alarms.find(origAlarm);
         if (it != alarms.end()) {
@@ -591,9 +595,9 @@ QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, b
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
                 while (curAlarm && (*curAlarm == origAlarm)) {
-                    lock.Unlock();
+                    lock.Unlock(MUTEX_CONTEXT);
                     qcc::Sleep(2);
-                    lock.Lock();
+                    lock.Lock(MUTEX_CONTEXT);
                     if (timerThreads[i] == NULL) {
                         break;
                     }
@@ -602,14 +606,14 @@ QStatus TimerImpl::ReplaceAlarm(const Alarm& origAlarm, const Alarm& newAlarm, b
             }
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 bool TimerImpl::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
 {
     bool removedOne = false;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (isRunning || expireOnExit) {
         for (set<Alarm>::iterator it = alarms.begin(); it != alarms.end(); ++it) {
             if ((*it)->listener == &listener) {
@@ -634,9 +638,9 @@ bool TimerImpl::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
                 }
                 const Alarm* curAlarm = timerThreads[i]->GetCurrentAlarm();
                 while (curAlarm && ((*curAlarm)->listener == &listener)) {
-                    lock.Unlock();
+                    lock.Unlock(MUTEX_CONTEXT);
                     qcc::Sleep(5);
-                    lock.Lock();
+                    lock.Lock(MUTEX_CONTEXT);
                     if (timerThreads[i] == NULL) {
                         break;
                     }
@@ -645,7 +649,7 @@ bool TimerImpl::RemoveAlarm(const AlarmListener& listener, Alarm& alarm)
             }
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return removedOne;
 }
 
@@ -659,11 +663,11 @@ void TimerImpl::RemoveAlarmsWithListener(const AlarmListener& listener)
 bool TimerImpl::HasAlarm(const Alarm& alarm) const
 {
     bool ret = false;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if (isRunning) {
         ret = alarms.count(alarm) != 0;
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return ret;
 }
 
@@ -675,12 +679,12 @@ const qcc::String& TimerImpl::GetName() const
 QStatus TimerThread::Start(void* arg, ThreadListener* listener)
 {
     QStatus status = ER_OK;
-    timer->lock.Lock();
+    timer->lock.Lock(MUTEX_CONTEXT);
     if (timer->isRunning) {
         state = TimerThread::STARTING;
         status = Thread::Start(arg, listener);
     }
-    timer->lock.Unlock();
+    timer->lock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
@@ -702,7 +706,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
     /*
      * Enter the main loop with the timer lock held.
      */
-    timer->lock.Lock();
+    timer->lock.Lock(MUTEX_CONTEXT);
 
     while (!IsStopping()) {
         QCC_DbgPrintf(("TimerThread::Run(): Looping."));
@@ -759,9 +763,9 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                         if (i != static_cast<size_t>(index) && timer->timerThreads[i] != NULL) {
 
                             while ((timer->timerThreads[i]->state != TimerThread::STOPPED) && timer->isRunning && status == ER_TIMEOUT && delay > WORKER_IDLE_TIMEOUT_MS) {
-                                timer->lock.Unlock();
+                                timer->lock.Unlock(MUTEX_CONTEXT);
                                 status = Event::Wait(Event::neverSet, WORKER_IDLE_TIMEOUT_MS);
-                                timer->lock.Lock();
+                                timer->lock.Lock(MUTEX_CONTEXT);
                                 GetTimeNow(&now);
                                 delay = topAlarm->alarmTime - now;
                             }
@@ -779,10 +783,10 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
 
                 }
                 if ((status == ER_TIMEOUT) && (delay > 0)) {
-                    timer->lock.Unlock();
+                    timer->lock.Unlock(MUTEX_CONTEXT);
                     Event evt(static_cast<uint32_t>(delay), 0);
                     Event::Wait(evt);
-                    timer->lock.Lock();
+                    timer->lock.Lock(MUTEX_CONTEXT);
                 }
                 stopEvent.ResetEvent();
             } else if (isController || (delay <= 0)) {
@@ -809,12 +813,12 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
 
                 state = RUNNING;
                 stopEvent.ResetEvent();
-                timer->lock.Unlock();
+                timer->lock.Unlock(MUTEX_CONTEXT);
 
                 /* Get the reentrancy lock if necessary */
                 hasTimerLock = timer->preventReentrancy;
                 if (hasTimerLock) {
-                    timer->reentrancyLock.Lock();
+                    timer->reentrancyLock.Lock(MUTEX_CONTEXT);
                 }
 
                 /*
@@ -823,7 +827,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                  * either case, we are going to handle the alarm at the head of
                  * the list.
                  */
-                timer->lock.Lock();
+                timer->lock.Lock(MUTEX_CONTEXT);
 
 
                 TimerThread* tt = NULL;
@@ -888,9 +892,9 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                              */
                             break;
                         }
-                        timer->lock.Unlock();
+                        timer->lock.Unlock(MUTEX_CONTEXT);
                         Sleep(2);
-                        timer->lock.Lock();
+                        timer->lock.Lock(MUTEX_CONTEXT);
                     }
 
 
@@ -961,15 +965,15 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                             QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
                         }
                     }
-                    timer->lock.Unlock();
+                    timer->lock.Unlock(MUTEX_CONTEXT);
 
                     QCC_DbgPrintf(("TimerThread::Run(): ******** AlarmTriggered()"));
                     (top->listener->AlarmTriggered)(top, ER_OK);
                     if (hasTimerLock) {
                         hasTimerLock = false;
-                        timer->reentrancyLock.Unlock();
+                        timer->reentrancyLock.Unlock(MUTEX_CONTEXT);
                     }
-                    timer->lock.Lock();
+                    timer->lock.Lock(MUTEX_CONTEXT);
                     /* If ForceRemoveAlarm has been called for this alarm, we need to reset the alert code.
                      * Note that this must be atomic with setting the currentAlarm to NULL.
                      */
@@ -990,7 +994,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                 } else {
                     if (hasTimerLock) {
                         hasTimerLock = false;
-                        timer->reentrancyLock.Unlock();
+                        timer->reentrancyLock.Unlock(MUTEX_CONTEXT);
                     }
                 }
             } else {
@@ -1001,9 +1005,9 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                  */
                 state = IDLE;
                 QCC_DbgPrintf(("TimerThread::Run(): Worker with nothing to do"));
-                timer->lock.Unlock();
+                timer->lock.Unlock(MUTEX_CONTEXT);
                 QStatus status = Event::Wait(Event::neverSet, WORKER_IDLE_TIMEOUT_MS);
-                timer->lock.Lock();
+                timer->lock.Lock(MUTEX_CONTEXT);
                 if (status == ER_TIMEOUT && timer->controllerIdx != -1) {
                     QCC_DbgPrintf(("TimerThread::Run(): Worker with nothing to do stopping"));
                     state = STOPPING;
@@ -1032,9 +1036,9 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     if (i != static_cast<size_t>(index) && timer->timerThreads[i] != NULL) {
 
                         while ((timer->timerThreads[i]->state != TimerThread::STOPPED) && timer->isRunning && status == ER_TIMEOUT) {
-                            timer->lock.Unlock();
+                            timer->lock.Unlock(MUTEX_CONTEXT);
                             status = Event::Wait(Event::neverSet, WORKER_IDLE_TIMEOUT_MS);
-                            timer->lock.Lock();
+                            timer->lock.Lock(MUTEX_CONTEXT);
                         }
                         if (status == ER_ALERTED_THREAD || status == ER_STOPPING_THREAD || !timer->isRunning) {
                             break;
@@ -1053,17 +1057,17 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     /* The controller has successfully deleted objects of all other worker threads.
                      * and has not been alerted/stopped.
                      */
-                    timer->lock.Unlock();
+                    timer->lock.Unlock(MUTEX_CONTEXT);
                     Event::Wait(Event::neverSet);
-                    timer->lock.Lock();
+                    timer->lock.Lock(MUTEX_CONTEXT);
                 }
                 stopEvent.ResetEvent();
             } else {
                 QCC_DbgPrintf(("TimerThread::Run(): non-Controller idling"));
                 state = IDLE;
-                timer->lock.Unlock();
+                timer->lock.Unlock(MUTEX_CONTEXT);
                 QStatus status = Event::Wait(Event::neverSet, WORKER_IDLE_TIMEOUT_MS);
-                timer->lock.Lock();
+                timer->lock.Lock(MUTEX_CONTEXT);
                 if (status == ER_TIMEOUT && timer->controllerIdx != -1) {
                     QCC_DbgPrintf(("TimerThread::Run(): non-Controller stopping"));
                     state = STOPPING;
@@ -1078,14 +1082,14 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
      * We entered the main loop with the lock taken, so we need to give it here.
      */
     state = STOPPING;
-    timer->lock.Unlock();
+    timer->lock.Unlock(MUTEX_CONTEXT);
     return (ThreadReturn)0;
 }
 
 void TimerImpl::ThreadExit(Thread* thread)
 {
     TimerThread* tt = static_cast<TimerThread*>(thread);
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     if ((!isRunning) && expireOnExit) {
         /* Call all alarms */
         while (!alarms.empty()) {
@@ -1099,28 +1103,28 @@ void TimerImpl::ThreadExit(Thread* thread)
             }
             alarms.erase(it);
             tt->SetCurrentAlarm(&alarm);
-            lock.Unlock();
+            lock.Unlock(MUTEX_CONTEXT);
             tt->hasTimerLock = preventReentrancy;
             if (tt->hasTimerLock) {
-                reentrancyLock.Lock();
+                reentrancyLock.Lock(MUTEX_CONTEXT);
             }
             alarm->listener->AlarmTriggered(alarm, ER_TIMER_EXITING);
             if (tt->hasTimerLock) {
                 tt->hasTimerLock = false;
-                reentrancyLock.Unlock();
+                reentrancyLock.Unlock(MUTEX_CONTEXT);
             }
-            lock.Lock();
+            lock.Lock(MUTEX_CONTEXT);
             tt->SetCurrentAlarm(NULL);
         }
     }
     tt->state = TimerThread::STOPPED;
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
 }
 
 void TimerImpl::EnableReentrancy()
 {
     Thread* thread = Thread::GetThread();
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     bool allowed = false;
     for (uint32_t i = 0; i < timerThreads.size(); ++i) {
         if ((timerThreads[i] != NULL) && (static_cast<Thread*>(timerThreads[i]) == thread)) {
@@ -1128,12 +1132,12 @@ void TimerImpl::EnableReentrancy()
             break;
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     if (allowed) {
         TimerThread* tt = static_cast<TimerThread*>(thread);
         if (tt->hasTimerLock) {
             tt->hasTimerLock = false;
-            reentrancyLock.Unlock();
+            reentrancyLock.Unlock(MUTEX_CONTEXT);
         }
     } else {
         QCC_LogError(ER_TIMER_NOT_ALLOWED, ("Invalid call to TimerImpl::EnableReentrancy from thread %s", Thread::GetThreadName()));
@@ -1143,21 +1147,21 @@ void TimerImpl::EnableReentrancy()
 bool TimerImpl::IsTimerCallbackThread() const
 {
     bool result = false;
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     for (size_t i = 0; i < timerThreads.size(); ++i) {
         if ((timerThreads[i] != NULL) && (timerThreads[i] == Thread::GetThread())) {
             result = true;
             break;
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     return result;
 }
 
 bool TimerImpl::ThreadHoldsLock() const
 {
     Thread* thread = Thread::GetThread();
-    lock.Lock();
+    lock.Lock(MUTEX_CONTEXT);
     bool allowed = false;
     for (uint32_t i = 0; i < timerThreads.size(); ++i) {
         if ((timerThreads[i] != NULL) && (static_cast<Thread*>(timerThreads[i]) == thread)) {
@@ -1165,7 +1169,7 @@ bool TimerImpl::ThreadHoldsLock() const
             break;
         }
     }
-    lock.Unlock();
+    lock.Unlock(MUTEX_CONTEXT);
     if (allowed) {
         TimerThread* tt = static_cast<TimerThread*>(thread);
         return tt->hasTimerLock;
