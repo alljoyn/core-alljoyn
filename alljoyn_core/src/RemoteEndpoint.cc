@@ -28,6 +28,7 @@
 #include <qcc/SocketStream.h>
 #include <qcc/atomic.h>
 #include <qcc/IODispatch.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/AllJoynStd.h>
@@ -89,7 +90,7 @@ class _RemoteEndpoint::Internal {
         stream(stream),
         txQueue(),
         txWaitQueue(),
-        lock(),
+        lock(LOCK_LEVEL_REMOTEENDPOINT_INTERNAL_LOCK),
         listener(NULL),
         connSpec(connectSpec),
         incoming(incoming),

@@ -30,6 +30,7 @@
 #include <qcc/FileStream.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
+#include <qcc/MutexInternal.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/NamedPipeWrapper.h>
@@ -163,7 +164,7 @@ BusAttachment::Internal::Internal(const char* appName,
                                   uint32_t concurrency) :
     application(appName ? appName : "unknown"),
     bus(bus),
-    listenersLock(),
+    listenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_LISTENERSLOCK),
     listeners(),
     m_ioDispatch("iodisp", 96),
     transportList(bus, factories, &m_ioDispatch, concurrency),
@@ -177,11 +178,22 @@ BusAttachment::Internal::Internal(const char* appName,
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
     stopCount(0),
+    sessionPortListenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_SESSIONPORTLISTENERSLOCK),
+    aboutListenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_ABOUTLISTENERSLOCK),
+    joinLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_JOINLOCK),
     permissionManager(),
     permissionConfigurator(bus),
+    applicationStateListenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_APPLICATIONSTATELISTENERSLOCK),
     observerManager(NULL),
-    permissionConfigurationListener(NULL)
+    permissionConfigurationListener(NULL),
+    permissionConfigurationListenerLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_PERMISSIONCONFIGURATIONLISTENERLOCK)
 {
+#ifndef NDEBUG
+    for (uint32_t index = 0; index < ArraySize(sessionsLock); index++) {
+        MutexInternal::SetLevel(sessionsLock[index], LOCK_LEVEL_BUSATTACHMENT_INTERNAL_SESSIONSLOCK);
+    }
+#endif
+
     /*
      * Bus needs a pointer to this internal object.
      */

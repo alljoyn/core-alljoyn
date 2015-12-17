@@ -70,6 +70,14 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
     }
 
     /**
+     * Copy constructor
+     */
+    InMemoryKeyStoreListener(const InMemoryKeyStoreListener& other)
+    {
+        *this = other;
+    }
+
+    /**
      * Assignment operator
      */
     InMemoryKeyStoreListener& operator=(const InMemoryKeyStoreListener& other)
@@ -79,15 +87,6 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
             CopySink(other.sink);
         }
         return *this;
-    }
-
-    /**
-     * Copy constructor
-     */
-    InMemoryKeyStoreListener(const InMemoryKeyStoreListener& other)
-    {
-        pwd = other.pwd;
-        CopySink(other.sink);
     }
 
   private:
