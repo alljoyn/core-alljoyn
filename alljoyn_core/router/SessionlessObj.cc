@@ -499,13 +499,26 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
     RuleIterator rit = rules.begin();
     while (rit != rules.end()) {
         bool isExplicitMatch = false;
-        String epName = rit->first;
-        BusEndpoint ep = router.FindEndpoint(epName);
-        bool epTypeIsLeaf = (ep->GetEndpointType() == ENDPOINT_TYPE_NULL || ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE);
-        bool epCanReceive = ep->IsValid() && (ep->AllowRemoteMessages() || epTypeIsLeaf);
-        RuleIterator end = rules.upper_bound(epName);
+        String dstEpName = rit->first;
+        BusEndpoint dstEp = router.FindEndpoint(dstEpName);
+        bool dstEpCanReceive = false;
+        if (dstEp->IsValid()) {
+            if (dstEp->AllowRemoteMessages()) {
+                dstEpCanReceive = true;
+            } else {
+                /*
+                 * Destination endpoint doesn't allow remote messages, so check
+                 * if this is a local message (i.e. from a leaf node connected to
+                 * this router).
+                 */
+                BusEndpoint srcEp = router.FindEndpoint(msg->GetRcvEndpointName());
+                bool srcEpTypeIsLeaf = (srcEp->GetEndpointType() == ENDPOINT_TYPE_NULL || srcEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE);
+                dstEpCanReceive = srcEpTypeIsLeaf;
+            }
+        }
+        RuleIterator end = rules.upper_bound(dstEpName);
         for (; rit != end; ++rit) {
-            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && epCanReceive) {
+            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && dstEpCanReceive) {
                 if (rit->second.IsMatch(msg)) {
                     isExplicitMatch = true;
                     if (isAnnounce && !rit->second.implements.empty()) {
@@ -526,8 +539,8 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
                      * rule table.
                      */
                     router.GetRuleTable().Lock();
-                    for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(ep);
-                         !isExplicitMatch && (drit != router.GetRuleTable().End()) && (drit->first == ep);
+                    for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(dstEp);
+                         !isExplicitMatch && (drit != router.GetRuleTable().End()) && (drit->first == dstEp);
                          ++drit) {
                         isExplicitMatch = drit->second.IsMatch(msg);
                     }
@@ -537,19 +550,19 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
         }
 
         bool isImplicitMatch = false;
-        if (isAnnounce && !isExplicitMatch && epCanReceive) {
+        if (isAnnounce && !isExplicitMatch && dstEpCanReceive) {
             /* The message did not match any rules for this endpoint.
              * Check if it matches (only) an implicit rule. */
-            isImplicitMatch = IsOnlyImplicitMatch(epName, msg);
+            isImplicitMatch = IsOnlyImplicitMatch(dstEpName, msg);
         }
 
         if (isExplicitMatch || isImplicitMatch) {
             lock.Unlock();
             router.UnlockNameTable();
-            SendThroughEndpoint(msg, ep, sid);
+            SendThroughEndpoint(msg, dstEp, sid);
             router.LockNameTable();
             lock.Lock();
-            rit = rules.upper_bound(epName);
+            rit = rules.upper_bound(dstEpName);
         }
     }
 }
