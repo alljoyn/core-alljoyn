@@ -115,15 +115,13 @@ class CachedProps {
 
   public:
     CachedProps() :
-        lock(), values(), description(NULL),
-        isFullyCacheable(false),
-        numProperties(0), lastMessageSerial(0),
-        enabled(false) { }
+        lock(LOCK_LEVEL_PROXYBUSOBJECT_CACHEDPROPS_LOCK), values(), description(NULL),
+        isFullyCacheable(false), numProperties(0), lastMessageSerial(0), enabled(false) { }
 
     CachedProps(const InterfaceDescription*intf) :
-        lock(), values(), description(intf),
-        isFullyCacheable(false), lastMessageSerial(0),
-        enabled(false) {
+        lock(LOCK_LEVEL_PROXYBUSOBJECT_CACHEDPROPS_LOCK), values(), description(intf),
+        isFullyCacheable(false), lastMessageSerial(0), enabled(false)
+    {
         numProperties = description->GetProperties();
         if (numProperties > 0) {
             isFullyCacheable = true;
@@ -140,10 +138,9 @@ class CachedProps {
     }
 
     CachedProps(const CachedProps& other) :
-        lock(), values(other.values), description(other.description),
-        isFullyCacheable(other.isFullyCacheable),
-        numProperties(other.numProperties), lastMessageSerial(other.lastMessageSerial),
-        enabled(other.enabled) { }
+        lock(LOCK_LEVEL_PROXYBUSOBJECT_CACHEDPROPS_LOCK), values(other.values), description(other.description),
+        isFullyCacheable(other.isFullyCacheable), numProperties(other.numProperties),
+        lastMessageSerial(other.lastMessageSerial), enabled(other.enabled) { }
 
     CachedProps& operator=(const CachedProps& other) {
         if (&other != this) {
@@ -207,6 +204,7 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
         hasProperties(false),
         isSecure(false),
         cacheProperties(false),
+        lock(LOCK_LEVEL_PROXYBUSOBJECT_INTERNAL_LOCK),
         registeredPropChangedHandler(false),
         handlerThreads()
     {
@@ -225,6 +223,7 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
         hasProperties(false),
         isSecure(isSecure),
         cacheProperties(false),
+        lock(LOCK_LEVEL_PROXYBUSOBJECT_INTERNAL_LOCK),
         registeredPropChangedHandler(false),
         handlerThreads()
     {
@@ -244,6 +243,7 @@ class ProxyBusObject::Internal : public MessageReceiver, public BusAttachment::A
         hasProperties(false),
         isSecure(isSecure),
         cacheProperties(false),
+        lock(LOCK_LEVEL_PROXYBUSOBJECT_INTERNAL_LOCK),
         registeredPropChangedHandler(false),
         handlerThreads()
     {

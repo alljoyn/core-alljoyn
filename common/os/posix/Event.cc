@@ -490,7 +490,7 @@ static void CreateMechanism(int* rdFd, int* wrFd)
     }
 
     /* Check for something on the free pipe list */
-    pipeLock->Lock();
+    pipeLock->Lock(MUTEX_CONTEXT);
     if (!freePipeList->empty()) {
         pair<int, int> fdPair = freePipeList->back();
         usedPipeList->push_back(fdPair);
@@ -510,7 +510,7 @@ static void CreateMechanism(int* rdFd, int* wrFd)
             QCC_LogError(ER_FAIL, ("Failed to create pipe. (%d) %s", errno, strerror(errno)));
         }
     }
-    pipeLock->Unlock();
+    pipeLock->Unlock(MUTEX_CONTEXT);
 #endif
 }
 
@@ -520,7 +520,7 @@ static void DestroyMechanism(int rdFd, int wrFd)
     close(rdFd);
     close(wrFd);
 #else
-    pipeLock->Lock();
+    pipeLock->Lock(MUTEX_CONTEXT);
 
     /*
      * Delete the pipe (permanently) if the number of pipes on the free list is twice as many as
@@ -571,9 +571,9 @@ static void DestroyMechanism(int rdFd, int wrFd)
                 ret = read(rdFd, buf, sizeof(buf));
             }
         }
-        pipeLock->Unlock();
+        pipeLock->Unlock(MUTEX_CONTEXT);
     } else {
-        pipeLock->Unlock();
+        pipeLock->Unlock(MUTEX_CONTEXT);
     }
 #endif
 }
