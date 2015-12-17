@@ -46,14 +46,22 @@ namespace qcc {
 #endif
 
 /**
+ * @internal
+ * Represents the non-public functionality of the Mutex class.
+ */
+class MutexInternal;
+
+/**
  * The implementation of a Mutex abstraction class.
  */
 class Mutex {
   public:
     /**
      * The constructor initializes the underlying mutex implementation.
+     *
+     * @param level Lock level used on Debug builds to detect out-of-order lock acquires.
      */
-    Mutex();
+    Mutex(int level = 0);
 
     /**
      * The destructor will destroy the underlying mutex.
@@ -138,18 +146,12 @@ class Mutex {
 
     /**
      * @internal
-     * Represents the non-public functionality of the Mutex class.
-     */
-    class Internal;
-
-    /**
-     * @internal
      * Contains the non-public functionality of the Mutex class.
      */
-    Internal* m_mutexInternal;
+    MutexInternal* m_mutexInternal;
 
-    /* The condition variable class needs access to the internal data */
-    friend class Condition;
+    /* MutexInternal provides access to the m_mutexInternal member variable for other internal classes */
+    friend class MutexInternal;
 };
 
 } /* namespace */
