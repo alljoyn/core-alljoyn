@@ -22,6 +22,7 @@
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
+#include <qcc/MutexInternal.h>
 
 #include "Crypto.h"
 #include "OpenSsl.h"
@@ -53,8 +54,15 @@ static void LockingCb(int mode, int type, const char* file, int line)
 QStatus Crypto::Init()
 {
     if (!locks) {
-        locks = new Mutex[CRYPTO_num_locks()];
+        int numLocks = CRYPTO_num_locks();
+        locks = new Mutex[numLocks];
         CRYPTO_set_locking_callback(LockingCb);
+
+#ifndef NDEBUG
+        for (int index = 0; index < numLocks; index++) {
+            locks[index].m_mutexInternal->SetLevel(LOCK_LEVEL_OPENSSL_LOCK);
+        }
+#endif
     }
     return ER_OK;
 }
