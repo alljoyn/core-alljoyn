@@ -21,7 +21,11 @@ def CheckCXXFlag(context, flag):
    context.Message('Checking c++ compiler support for %s flag... ' % flag)
    prevCXXFLAGS = context.env.get('CXXFLAGS')
 
-   context.env.Replace(CXXFLAGS = [ flag ])
+   prefix = flag.split('=')[0]
+   checkCXXFLAGS = [x for x in prevCXXFLAGS if not x.startswith(prefix)]
+   checkCXXFLAGS.append(flag)
+
+   context.env.Replace(CXXFLAGS = checkCXXFLAGS)
    r = context.TryCompile(prog, '.cc')
    if not r:
       context.env.Replace(CXXFLAGS = prevCXXFLAGS)
