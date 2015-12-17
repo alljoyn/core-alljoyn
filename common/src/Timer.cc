@@ -26,6 +26,7 @@
 #include <qcc/Thread.h>
 #include <qcc/Timer.h>
 #include <qcc/StringUtil.h>
+#include <qcc/LockLevel.h>
 #include <Status.h>
 #include <algorithm>
 
@@ -278,6 +279,7 @@ class TimerImpl : public ThreadListener {
 }
 
 TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool preventReentrancy, uint32_t maxAlarms) :
+    lock(LOCK_LEVEL_TIMERIMPL_LOCK),
     currentAlarm(NULL),
     expireOnExit(expireOnExit),
     timerThreads(concurrency),
