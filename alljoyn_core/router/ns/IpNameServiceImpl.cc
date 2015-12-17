@@ -44,6 +44,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/GUID.h>
 #include <qcc/Event.h>
+#include <qcc/LockLevel.h>
 
 #include "BusUtil.h"
 #include "IpNameServiceImpl.h"
@@ -378,8 +379,8 @@ const char* const IpNameServiceImpl::ALLJOYN_DEFAULT_ROUTER_NODE_TYPE = "Wireles
 
 IpNameServiceImpl::IpNameServiceImpl()
     : Thread("IpNameServiceImpl"), m_state(IMPL_SHUTDOWN), m_isProcSuspending(false),
-    m_terminal(false), m_protect_callback(false), m_protect_net_callback(false), m_timer(0),
-    m_tDuration(DEFAULT_DURATION), m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
+    m_terminal(false), m_mutex(LOCK_LEVEL_IPNAMESERVICEIMPL_MUTEX), m_protect_callback(false), m_protect_net_callback(false),
+    m_timer(0), m_tDuration(DEFAULT_DURATION), m_tRetransmit(RETRANSMIT_TIME), m_tQuestion(QUESTION_TIME),
     m_modulus(QUESTION_MODULUS), m_retries(ArraySize(RETRY_INTERVALS)),
     m_loopback(false), m_broadcast(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),

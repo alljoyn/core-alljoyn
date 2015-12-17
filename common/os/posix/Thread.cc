@@ -34,6 +34,7 @@
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
+#include <qcc/LockLevel.h>
 
 #include <Status.h>
 
@@ -55,7 +56,7 @@ Mutex* Thread::threadListLock = NULL;
 map<ThreadId, Thread*>* Thread::threadList = NULL;
 
 static pthread_key_t cleanExternalThreadKey;
-static bool initialized = false;
+bool Thread::initialized = false;
 
 void Thread::CleanExternalThread(void* t)
 {
@@ -79,7 +80,8 @@ void Thread::CleanExternalThread(void* t)
 QStatus Thread::Init()
 {
     if (!initialized) {
-        Thread::threadListLock = new Mutex();
+        /* Disable LockChecker for the threadListLock, thus allowing LockChecker to call GetThread() */
+        Thread::threadListLock = new Mutex(LOCK_LEVEL_CHECKING_DISABLED);
         Thread::threadList = new map<ThreadId, Thread*>();
         int ret = pthread_key_create(&cleanExternalThreadKey, Thread::CleanExternalThread);
         if (ret != 0) {
@@ -184,7 +186,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     platformContext(NULL),
     alertCode(0),
     auxListeners(),
-    auxListenersLock(),
+    auxListenersLock(LOCK_LEVEL_THREAD_AUXLISTENERSLOCK),
     waitCount(0),
     waitLock(),
     hasBeenJoined(false)

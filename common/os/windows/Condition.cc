@@ -47,7 +47,7 @@ QStatus Condition::Wait(qcc::Mutex& m)
 QStatus Condition::TimedWait(qcc::Mutex& m, uint32_t ms)
 {
     m.m_mutexInternal->ReleasingLock();
-    bool ret = SleepConditionVariableCS(&c, &m.m_mutexInternal->m_mutex, ms);
+    bool ret = SleepConditionVariableCS(&c, m.m_mutexInternal->GetPlatformSpecificMutex(), ms);
     m.m_mutexInternal->LockAcquired();
 
     if (ret == true) {
