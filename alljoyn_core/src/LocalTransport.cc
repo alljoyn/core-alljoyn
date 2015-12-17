@@ -60,7 +60,8 @@ class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener 
         Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, 10),
         AlarmListener(), endpoint(endpoint), pendingWork(),
         needDeferredCallbacks(false), needObserverWork(false),
-        needCachedPropertyReplyWork(false)
+        needCachedPropertyReplyWork(false),
+        workLock(LOCK_LEVEL_LOCALTRANSPORT_LOCALENDPOINT_DISPATCHER_WORKLOCK)
     {
         uint32_t zero = 0;
         qcc::AlarmListener* listener = static_cast<qcc::AlarmListener*>(this);
@@ -191,13 +192,14 @@ _LocalEndpoint::_LocalEndpoint(BusAttachment& bus, uint32_t concurrency) :
     running(false),
     isRegistered(false),
     bus(&bus),
-    objectsLock(),
-    replyMapLock(),
+    objectsLock(LOCK_LEVEL_LOCALTRANSPORT_LOCALENDPOINT_OBJECTSLOCK),
+    replyMapLock(LOCK_LEVEL_LOCALTRANSPORT_LOCALENDPOINT_REPLYMAPLOCK),
     replyTimer("replyTimer", true),
     dbusObj(NULL),
     alljoynObj(NULL),
     alljoynDebugObj(NULL),
-    peerObj(NULL)
+    peerObj(NULL),
+    handlerThreadsLock(LOCK_LEVEL_LOCALTRANSPORT_LOCALENDPOINT_HANDLERTHREADSLOCK)
 {
 }
 

@@ -27,6 +27,7 @@
 #include <qcc/String.h>
 #include <qcc/Event.h>
 #include <qcc/Mutex.h>
+#include <qcc/LockOrderChecker.h>
 #include <Status.h>
 
 #include <set>
@@ -331,11 +332,21 @@ class Thread {
     ThreadId threadId;          ///< Thread ID used by windows
 #endif
 
+#ifndef NDEBUG
+    LockOrderChecker lockChecker;    ///< Detects locks acquired out of order
+
+    /** Allow the MutexInternal class to use directly the lockChecker member of this class */
+    friend class MutexInternal;
+#endif
+
     /** Lock that protects global list of Threads and their handles */
     static Mutex* threadListLock;
 
     /** Thread list */
     static std::map<ThreadId, Thread*>* threadList;
+
+    /** Set to true during SCL initialization and back to false after shutdown */
+    static bool initialized;
 
     /** Called on thread exit to deallocate external Thread objects */
     static void STDCALL CleanExternalThread(void* thread);
