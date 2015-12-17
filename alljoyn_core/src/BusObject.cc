@@ -70,10 +70,15 @@ static bool operator==(const MethodContext& a, const MethodContext& b)
 }
 
 struct BusObject::Components {
+    /** Constructor */
+    Components() : counterLock(LOCK_LEVEL_BUSOBJECT_COMPONENTS_COUNTERLOCK), inUseCounter(0) { }
+
     /** The interfaces this object implements */
     vector<pair<const InterfaceDescription*, bool> > ifaces;
+
     /** The method handlers for this object */
     vector<MethodContext> methodContexts;
+
     /** Child objects of this object */
     vector<BusObject*> children;
 
@@ -1077,7 +1082,6 @@ BusObject::BusObject(BusAttachment& bus, const char* path, bool isPlaceholder) :
     description(),
     translator(NULL)
 {
-    components->inUseCounter = 0;
 }
 
 BusObject::BusObject(const char* path, bool isPlaceholder) :
@@ -1092,7 +1096,6 @@ BusObject::BusObject(const char* path, bool isPlaceholder) :
     description(),
     translator(NULL)
 {
-    components->inUseCounter = 0;
 }
 
 BusObject::~BusObject()

@@ -35,6 +35,7 @@
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
 #include <qcc/Util.h>
+#include <qcc/LockLevel.h>
 
 using namespace qcc;
 
@@ -162,7 +163,8 @@ void LoggerSetting::SetName(const char* logName)
 
 
 LoggerSetting::LoggerSetting(const char* logName, int logLevel, bool useSystemLog, FILE* logFile) :
-    name(logName), level(logLevel), useSyslog(useSystemLog), file(logFile)
+    name(logName), level(logLevel), useSyslog(useSystemLog), file(logFile),
+    lock(LOCK_LEVEL_CHECKING_DISABLED) // Allow LockOrderChecker to use LoggerSetting
 {
 #if !defined(QCC_OS_GROUP_WINDOWS) && !defined(QCC_OS_ANDROID)
     if (useSystemLog) {

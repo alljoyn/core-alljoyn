@@ -18,6 +18,7 @@
 
 #include <alljoyn/AboutObjectDescription.h>
 #include <qcc/Mutex.h>
+#include <qcc/LockLevel.h>
 
 #include <set>
 #include <map>
@@ -29,6 +30,9 @@ namespace ajn {
 class AboutObjectDescription::Internal {
     friend class AboutObjectDescription;
   public:
+    AboutObjectDescription::Internal::Internal() 
+        : announceObjectsMapLock(qcc::LOCK_LEVEL_ABOUTOBJECTDESCRIPTION_INTERNAL_ANNOUNCEOBJECTSMAPLOCK) { }
+
     AboutObjectDescription::Internal& operator=(const AboutObjectDescription::Internal& other) {
         announceObjectsMap = other.announceObjectsMap;
         return *this;
