@@ -27,7 +27,7 @@
 
 using namespace qcc;
 
-bool Mutex::Internal::PlatformSpecificInit()
+bool MutexInternal::PlatformSpecificInit()
 {
     bool success;
     pthread_mutexattr_t attr;
@@ -46,13 +46,13 @@ bool Mutex::Internal::PlatformSpecificInit()
     return success;
 }
 
-void Mutex::Internal::PlatformSpecificDestroy()
+void MutexInternal::PlatformSpecificDestroy()
 {
     // Can't use QCC_LogError() since it uses mutexes under the hood.
     QCC_VERIFY(pthread_mutex_destroy(&m_mutex) == 0);
 }
 
-QStatus Mutex::Internal::PlatformSpecificLock()
+QStatus MutexInternal::PlatformSpecificLock()
 {
     int ret = pthread_mutex_lock(&m_mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
@@ -64,7 +64,7 @@ QStatus Mutex::Internal::PlatformSpecificLock()
     return ER_OK;
 }
 
-QStatus Mutex::Internal::PlatformSpecificUnlock()
+QStatus MutexInternal::PlatformSpecificUnlock()
 {
     int ret = pthread_mutex_unlock(&m_mutex);
     // Can't use QCC_LogError() since it uses mutexes under the hood.
@@ -75,7 +75,7 @@ QStatus Mutex::Internal::PlatformSpecificUnlock()
     return ER_OK;
 }
 
-bool Mutex::Internal::PlatformSpecificTryLock()
+bool MutexInternal::PlatformSpecificTryLock()
 {
     return (pthread_mutex_trylock(&m_mutex) == 0);
 }

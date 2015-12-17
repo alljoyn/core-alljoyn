@@ -23,23 +23,39 @@
 #define _QCC_MUTEXINTERNAL_H
 
 #include <qcc/Thread.h>
+#include <qcc/LockLevel.h>
 
 namespace qcc {
+
+#if defined(QCC_OS_GROUP_POSIX)
+
+typedef pthread_mutex_t QccPlatformSpecificMutex;
+
+#elif defined(QCC_OS_GROUP_WINDOWS)
+
+typedef CRITICAL_SECTION QccPlatformSpecificMutex;
+
+#else
+#error No OS GROUP defined.
+#endif
 
 /**
  * Represents the non-public functionality of the Mutex class.
  */
-class Mutex::Internal {
+class MutexInternal {
 public:
     /**
      * Constructor.
+     *
+     * @param mutex Pointer back to the mutex object that owns this MutexInternal object.
+     * @param level Lock level used on Debug builds to detect out-of-order lock acquires.
      */
-    Internal();
+    MutexInternal(Mutex *mutex, int level);
 
     /**
      * Destructor.
      */
-    ~Internal();
+    ~MutexInternal();
 
     /**
      * Acquires a lock on the mutex.  If another thread is holding the lock,
@@ -104,12 +120,8 @@ public:
      */
     void AssertOwnedByCurrentThread() const;
 
-private:
-    bool PlatformSpecificInit();
-    void PlatformSpecificDestroy();
-    QStatus PlatformSpecificLock();
-    QStatus PlatformSpecificUnlock();
-    bool PlatformSpecificTryLock();
+    /* Called immediately before current thread tries to acquire this Mutex */
+    void AcquiringLock();
 
     /* Called immediately after current thread acquired this Mutex */
     void LockAcquired();
@@ -117,40 +129,52 @@ private:
     /* Called immediately before current thread releases this Mutex */
     void ReleasingLock();
 
+    QccPlatformSpecificMutex *GetPlatformSpecificMutex() { return &m_mutex; }
+
+#ifndef NDEBUG
+    LockLevel GetLevel() { return m_level; }
+    const char* GetLatestOwnerFileName() { return m_file; }
+    uint32_t GetLatestOwnerLineNumber() { return m_line; }
+#endif 
+
+private:
+    bool PlatformSpecificInit();
+    void PlatformSpecificDestroy();
+    QStatus PlatformSpecificLock();
+    QStatus PlatformSpecificUnlock();
+    bool PlatformSpecificTryLock();
+
     /* Copy constructor is private */
-    Internal(const Internal& other);
+    MutexInternal(const MutexInternal& other);
 
     /* Assignment operator is private */
-    Internal& operator=(const Internal& other);
+    MutexInternal& operator=(const MutexInternal& other);
 
     /* Underlying platform-specific lock */
-#if defined(QCC_OS_GROUP_POSIX)
-    pthread_mutex_t m_mutex;
-#elif defined(QCC_OS_GROUP_WINDOWS)
-    CRITICAL_SECTION m_mutex;
-#else
-#error No OS GROUP defined.
-#endif
+    QccPlatformSpecificMutex m_mutex;
 
     /* true if mutex was successfully initialized */
     bool m_initialized;
 
 #ifndef NDEBUG
-    /* Source code line number where this Mutex has been acquired */
-    uint32_t m_line;
+    /* Pointer back to the mutex object that owns this MutexInternal object */
+    Mutex *m_ownerLock;
 
     /* Source code file name where this Mutex has been acquired */
     const char* m_file;
+
+    /* Source code line number where this Mutex has been acquired */
+    uint32_t m_line;
 
     /* Mutex owner thread ID */
     ThreadId m_ownerThread;
 
     /* How many times this Mutex has been acquired by its current owner thread */
     uint32_t m_recursionCount;
-#endif 
 
-    /* The condition variable class needs access to the underlying private mutex */
-    friend class Condition;
+    /* If the m_level value is not 0 or -1, lock order verification is enabled for this lock */
+    LockLevel m_level;
+#endif
 };
 
 } /* namespace */

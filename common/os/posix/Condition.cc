@@ -56,7 +56,7 @@ Condition::~Condition()
 QStatus Condition::Wait(qcc::Mutex& m)
 {
     m.m_mutexInternal->ReleasingLock();
-    int ret = pthread_cond_wait(&c, &m.m_mutexInternal->m_mutex);
+    int ret = pthread_cond_wait(&c, m.m_mutexInternal->GetPlatformSpecificMutex());
     m.m_mutexInternal->LockAcquired();
 
     if (ret != 0) {
@@ -88,7 +88,7 @@ QStatus Condition::TimedWait(qcc::Mutex& m, uint32_t ms)
     tsTimeout.tv_sec += tsNow.tv_sec;
 
     m.m_mutexInternal->ReleasingLock();
-    int ret = pthread_cond_timedwait(&c, &m.m_mutexInternal->m_mutex, &tsTimeout);
+    int ret = pthread_cond_timedwait(&c, m.m_mutexInternal->GetPlatformSpecificMutex(), &tsTimeout);
     m.m_mutexInternal->LockAcquired();
 
     if (ret == 0) {
