@@ -35,6 +35,7 @@
 #include <qcc/KeyBlob.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
+#include <qcc/LockLevel.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "CredentialAccessor.h"
 #include "ProtectedAuthListener.h"
@@ -180,7 +181,7 @@ class PermissionMgmtObj : public BusObject {
      */
     class TrustAnchorList : public std::vector<std::shared_ptr<TrustAnchor> > {
       public:
-        TrustAnchorList()
+        TrustAnchorList() : lock(qcc::LOCK_LEVEL_PERMISSIONMGMTOBJ_LOCK)
         {
         }
 
