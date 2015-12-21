@@ -688,7 +688,7 @@ class InterfaceDescription {
     /**
      * Default constructor is private
      */
-    InterfaceDescription() { }
+    InterfaceDescription();
 
     /**
      * Construct an interface with no methods or properties
