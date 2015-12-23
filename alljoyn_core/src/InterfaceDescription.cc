@@ -198,7 +198,8 @@ InterfaceDescription::Member& InterfaceDescription::Member::operator=(const Memb
         annotations = new AnnotationsMap(*(other.annotations));
         accessPerms = other.accessPerms;
         description = other.description;
-        *argumentDescriptions = *(other.argumentDescriptions);
+        delete argumentDescriptions;
+        argumentDescriptions = new ArgumentDescriptions(*(other.argumentDescriptions));
         isSessioncastSignal = other.isSessioncastSignal;
         isSessionlessSignal = other.isSessionlessSignal;
         isUnicastSignal = other.isUnicastSignal;
@@ -298,7 +299,6 @@ bool InterfaceDescription::Property::operator==(const Property& o) const {
             && description == o.description);
 }
 
-
 struct InterfaceDescription::Definitions {
     typedef std::map<qcc::StringMapKey, Member> MemberMap;
     typedef std::map<qcc::StringMapKey, Property> PropertyMap;
@@ -312,22 +312,41 @@ struct InterfaceDescription::Definitions {
     Translator* translator;
     bool hasDescription;
 
-
     Definitions() :
         translator(&stringTableTranslator), hasDescription(false)
     { }
 
-    Definitions(const MemberMap& m, const PropertyMap& p, const AnnotationsMap& a,
-                const qcc::String& langTag, const qcc::String& desc, Translator* dt, bool isDefaultTranslator, bool hd) :
-        members(m), properties(p), annotations(a),
-        languageTag(langTag), description(desc), hasDescription(hd)
+    Definitions(const Definitions& other) :
+        members(other.members), properties(other.properties), annotations(other.annotations),
+        languageTag(other.languageTag), description(other.description), hasDescription(other.hasDescription)
     {
-        if (isDefaultTranslator) {
+        bool usingDefaultTranslator = (other.translator == &other.stringTableTranslator);
+        if (usingDefaultTranslator) {
             translator = &stringTableTranslator;
-            *translator = *dt;
+            *translator = *other.translator;
         } else {
-            translator = dt;
+            translator = other.translator;
         }
+    }
+
+    Definitions& operator=(const Definitions& other)
+    {
+        if (this != &other) {
+            members = other.members;
+            properties = other.properties;
+            annotations = other.annotations;
+            languageTag = other.languageTag;
+            description = other.description;
+            bool usingDefaultTranslator = (other.translator == &other.stringTableTranslator);
+            if (usingDefaultTranslator) {
+                translator = &stringTableTranslator;
+                *translator = *other.translator;
+            } else {
+                translator = other.translator;
+            }
+            hasDescription = other.hasDescription;
+        }
+        return *this;
     }
 };
 
@@ -367,9 +386,7 @@ InterfaceDescription::~InterfaceDescription()
 }
 
 InterfaceDescription::InterfaceDescription(const InterfaceDescription& other) :
-    defs(new Definitions(other.defs->members, other.defs->properties, other.defs->annotations,
-                         other.defs->languageTag, other.defs->description, other.defs->translator,
-                         other.defs->translator == &other.defs->stringTableTranslator, other.defs->hasDescription)),
+    defs(new Definitions(*other.defs)),
     name(other.name),
     isActivated(false),
     secPolicy(other.secPolicy)
@@ -384,17 +401,11 @@ InterfaceDescription::InterfaceDescription(const InterfaceDescription& other) :
 InterfaceDescription& InterfaceDescription::operator=(const InterfaceDescription& other)
 {
     if (this != &other) {
+        *defs = *other.defs;
         name = other.name;
-        secPolicy = other.secPolicy;
         isActivated = false;
-        defs->members = other.defs->members;
-        defs->properties = other.defs->properties;
-        defs->annotations = other.defs->annotations;
-        defs->languageTag = other.defs->languageTag;
-        defs->description = other.defs->description;
-        defs->translator = other.defs->translator;
-
-        /* Update the iface pointer in each member */
+        secPolicy = other.secPolicy;
+        /* Update the iface pointer in each definitions member */
         Definitions::MemberMap::iterator mit = defs->members.begin();
         while (mit != defs->members.end()) {
             mit++->second.iface = this;
@@ -862,7 +873,7 @@ const char* InterfaceDescription::Translate(const char* toLanguage, const char* 
         }
     }
 
-    if (text && text[0] != '\0' && !defs->languageTag.empty()) {
+    if (text && text[0] != '\0') {
         return text;
     }
 

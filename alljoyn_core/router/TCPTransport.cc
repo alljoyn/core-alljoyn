@@ -868,7 +868,9 @@ void* _TCPEndpoint::AuthThread::Run(void* arg)
 
 TCPTransport::TCPTransport(BusAttachment& bus)
     : Thread("TCPTransport"), m_bus(bus), m_stopping(false), m_routerNameAdvertised(false),
-    m_listener(0), m_foundCallback(m_listener), m_networkEventCallback(*this),
+    m_listener(0), m_listenFdsLock(LOCK_LEVEL_TCPTRANSPORT_MLISTENFDSLOCK),
+    m_listenRequestsLock(LOCK_LEVEL_TCPTRANSPORT_MLISTENREQUESTSLOCK),
+    m_foundCallback(m_listener), m_networkEventCallback(*this),
     m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false), m_reload(STATE_RELOADING),
     m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
