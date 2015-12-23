@@ -41,6 +41,7 @@
 #include <qcc/time.h>
 #include <qcc/CertificateECC.h>
 #include <qcc/Crypto.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/Status.h>
 #include <alljoyn/PermissionPolicy.h>
@@ -162,8 +163,9 @@ class _PeerState {
         authEvent(NULL),
         initiatorHash(NULL),
         responderHash(NULL),
-        initiatorHashLock(),
-        responderHashLock(),
+        initiatorHashLock(qcc::LOCK_LEVEL_PEERSTATE_INITIATORHASHLOCK),
+        /* This lock is held while calling into app's KeyStoreListener, that might acquire other locks having an unspecified level */
+        responderHashLock(qcc::LOCK_LEVEL_CHECKING_DISABLED),
         keyExchangeMode(KEY_EXCHANGE_NONE),
         m_authSuite(0)
     {
