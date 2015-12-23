@@ -104,7 +104,7 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
     BusObject(objectPath),
-    bus(bus), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL), ready(false)
+    bus(bus), claimCapabilities(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT), claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL), ready(false)
 {
 }
 

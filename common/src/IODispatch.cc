@@ -28,8 +28,6 @@ using namespace qcc;
 using namespace std;
 
 volatile int32_t IODispatch::iodispatchCnt = 0;
-volatile int32_t IODispatch::activeStreamsCnt = 0;
-volatile uint64_t IODispatch::stopStreamTimestamp = 0;
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
     timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false, 96),
@@ -133,8 +131,6 @@ QStatus IODispatch::StartStream(Stream* stream, IOReadListener* readListener, IO
     /* Set reload to false and alert the IODispatch::Run thread */
     reload = false;
     lock.Unlock();
-
-    UpdateIdleInformation(true);
     Thread::Alert();
 
     /* Don't need to wait for the IODispatch::Run thread to reload
@@ -161,7 +157,6 @@ QStatus IODispatch::StopStream(Stream* stream)
     IODispatchEntry dispatchEntry = it->second;
 
     /* Disable further read and writes on this stream */
-    StoppingState previousState = it->second.stopping_state;
     it->second.stopping_state = IO_STOPPING;
 
     /* Set reload to false and alert the IODispatch::Run thread */
@@ -201,10 +196,6 @@ QStatus IODispatch::StopStream(Stream* stream)
         } else {
             lock.Unlock();
         }
-    }
-
-    if (previousState == IO_RUNNING) {
-        UpdateIdleInformation(false);
     }
 
     return ER_OK;
@@ -881,38 +872,4 @@ QStatus IODispatch::DisableWriteCallback(const Sink* sink)
 bool IODispatch::IsTimerCallbackThread() const
 {
     return timer.IsTimerCallbackThread();
-}
-
-void IODispatch::UpdateIdleInformation(bool isStarting)
-{
-    if (isStarting) {
-        QCC_VERIFY(IncrementAndFetch(&activeStreamsCnt) > 0);
-    } else {
-        stopStreamTimestamp = GetTimestamp64();
-        QCC_VERIFY(DecrementAndFetch(&activeStreamsCnt) >= 0);
-    }
-}
-
-bool AJ_CALL IODispatch::IsIdle(uint64_t minTime)
-{
-    /* The dispatcher is considered idle if there are no connected leaf nodes
-     * and no leaf node has disconnected during the minTime period.
-     * Note that the dispatcher idle state can transition while this method is
-     * running, so the caller of this method has to be mindful about that race
-     * condition.
-     */
-    if (activeStreamsCnt == 0) {
-        uint64_t currentTimestamp = GetTimestamp64();
-        uint64_t previousTimestamp = stopStreamTimestamp;
-
-        if (currentTimestamp >= previousTimestamp) {
-            currentTimestamp -= previousTimestamp;
-
-            if (currentTimestamp >= minTime) {
-                return true;
-            }
-        }
-    }
-
-    return false;
 }

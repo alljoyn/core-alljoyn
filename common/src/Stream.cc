@@ -24,6 +24,7 @@
 
 #include <qcc/String.h>
 #include <qcc/Stream.h>
+#include <qcc/time.h>
 
 #include <Status.h>
 
@@ -33,6 +34,9 @@ using namespace std;
 using namespace qcc;
 
 Source Source::nullSource;
+
+volatile int32_t Stream::s_instanceCount = 0;
+volatile uint64_t Stream::s_lastDestroyTimestamp = 0;
 
 QStatus Source::GetLine(qcc::String& outStr, uint32_t timeout)
 {
@@ -56,4 +60,40 @@ QStatus Source::GetLine(qcc::String& outStr, uint32_t timeout)
         }
     }
     return ((status == ER_EOF) && hasBytes) ? ER_OK : status;
+}
+
+void Stream::UpdateIdleInformation(bool isStarting)
+{
+    QCC_DbgPrintf(("UpdateIdleInformation(%u)", (uint32_t)isStarting));
+
+    if (isStarting) {
+        QCC_VERIFY(IncrementAndFetch(&s_instanceCount) > 0);
+    } else {
+        s_lastDestroyTimestamp = GetTimestamp64();
+        QCC_VERIFY(DecrementAndFetch(&s_instanceCount) >= 0);
+    }
+}
+
+bool AJ_CALL Stream::IsIdle(uint64_t minTime)
+{
+    /* Stream activity is considered idle if there are no stream objects
+     * and no stream object has been destroyed during the minTime period.
+     * Note that the idle state can transition while this method is running,
+     * so the caller of this method has to be mindful about that race
+     * condition.
+     */
+    if (s_instanceCount == 0) {
+        uint64_t currentTimestamp = GetTimestamp64();
+        uint64_t previousTimestamp = s_lastDestroyTimestamp;
+
+        if (currentTimestamp >= previousTimestamp) {
+            currentTimestamp -= previousTimestamp;
+
+            if (currentTimestamp >= minTime) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }

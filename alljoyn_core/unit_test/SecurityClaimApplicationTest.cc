@@ -276,7 +276,7 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
                                                                   "Alias",
                                                                   3600,
                                                                   identityCertChain[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to creat identity certificate.";
+                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
 
     appStateListener.stateChanged = false;
     /*
@@ -306,6 +306,121 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
     EXPECT_TRUE(appStateListener.stateChanged);
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+}
+
+
+TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_PSK)
+{
+    Claim_ApplicationStateListener appStateListener;
+    securityManagerBus.RegisterApplicationStateListener(appStateListener);
+    securityManagerBus.AddApplicationStateRule();
+
+    appStateListener.stateChanged = false;
+    //EnablePeerSecurity
+    securityManagerKeyListener = new DefaultECDHEAuthListener();
+    securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", securityManagerKeyListener);
+
+    //The State signal is only emitted if manifest template is installed
+    SetManifestTemplate(securityManagerBus);
+
+    //Wait for a maximum of 10 sec for the Application.State Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        if (appStateListener.stateChanged) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+
+    appStateListener.stateChanged = false;
+
+    peer1KeyListener = new DefaultECDHEAuthListener();
+    /* Keep ECDHE_NULL in so that the peers can establish a key exchange. This test is checking
+     * that the Claim method fails.
+     */
+    peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_PSK", peer1KeyListener);
+
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().SetClaimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_PSK));
+    PermissionConfigurator::ClaimCapabilities capabilities;
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().GetClaimCapabilities(capabilities));
+    ASSERT_EQ(PermissionConfigurator::CAPABLE_ECDHE_PSK, capabilities);
+
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().SetClaimCapabilityAdditionalInfo(PermissionConfigurator::PSK_GENERATED_BY_APPLICATION));
+    PermissionConfigurator::ClaimCapabilityAdditionalInfo addlInfo;
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().GetClaimCapabilityAdditionalInfo(addlInfo));
+    ASSERT_EQ(PermissionConfigurator::PSK_GENERATED_BY_APPLICATION, addlInfo);
+
+    /* The State signal is only emitted if manifest template is installed */
+    SetManifestTemplate(peer1Bus);
+
+    //Wait for a maximum of 10 sec for the Application.State Signal.
+    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        if (appStateListener.stateChanged) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+
+    SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
+    PermissionConfigurator::ApplicationState applicationStatePeer1;
+    EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
+    ASSERT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+
+    //Create admin group key
+    KeyInfoNISTP256 securityManagerKey;
+    PermissionConfigurator& permissionConfigurator = securityManagerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(securityManagerKey));
+
+    //Random GUID used for the SecurityManager
+    GUID128 securityManagerGuid;
+
+    //Create identityCertChain
+    IdentityCertificate identityCertChain[1];
+
+    // peer public key used to generate the identity certificate chain
+    ECCPublicKey peer1PublicKey;
+    EXPECT_EQ(ER_OK, sapWithPeer1.GetEccPublicKey(peer1PublicKey));
+
+    // All Inclusive manifest
+    PermissionPolicy::Rule::Member member[1];
+    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    manifest[0].SetInterfaceName("*");
+    manifest[0].SetMembers(1, member);
+
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(securityManagerBus,
+                                                               manifest, manifestSize,
+                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
+                                                                  "0",
+                                                                  securityManagerGuid.ToString(),
+                                                                  &peer1PublicKey,
+                                                                  "Alias",
+                                                                  3600,
+                                                                  identityCertChain[0],
+                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+    appStateListener.stateChanged = false;
+    /*
+     * Claim Peer1
+     * the certificate authority is self signed so the certificateAuthority
+     * key is the same as the adminGroup key.
+     * For this test the adminGroupId is a randomly generated GUID as long as the
+     * GUID is consistent it's unimportant that the GUID is random.
+     * Use generated identity certificate signed by the securityManager
+     * Since we are only interested in claiming the peer we are using an all
+     * inclusive manifest.
+     */
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1.Claim(securityManagerKey,
+                                                       securityManagerGuid,
+                                                       securityManagerKey,
+                                                       identityCertChain, 1,
+                                                       manifest, manifestSize));
+
+    EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
+    EXPECT_NE(PermissionConfigurator::CLAIMED, applicationStatePeer1);
 }
 
 /*
@@ -686,6 +801,16 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
 
     peer1KeyListener = new DefaultECDHEAuthListener(psk, 16);
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", peer1KeyListener);
+
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().SetClaimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_PSK));
+    PermissionConfigurator::ClaimCapabilities capabilities;
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().GetClaimCapabilities(capabilities));
+    ASSERT_EQ(PermissionConfigurator::CAPABLE_ECDHE_PSK, capabilities);
+
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().SetClaimCapabilityAdditionalInfo(PermissionConfigurator::PSK_GENERATED_BY_APPLICATION));
+    PermissionConfigurator::ClaimCapabilityAdditionalInfo addlInfo;
+    EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().GetClaimCapabilityAdditionalInfo(addlInfo));
+    ASSERT_EQ(PermissionConfigurator::PSK_GENERATED_BY_APPLICATION, addlInfo);
 
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);

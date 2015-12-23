@@ -46,7 +46,7 @@ namespace qcc {
 class TimerThread : public Thread {
   public:
 
-    enum {
+    volatile enum {
         STOPPED,        /**< Thread must be started via Start() */
         STARTING,       /**< Thread has been Started but is not ready to service requests */
         IDLE,           /**< Thrad is sleeping. Waiting to be alerted via Alert() */
@@ -264,7 +264,7 @@ class TimerImpl : public ThreadListener {
     Alarm* currentAlarm;
     bool expireOnExit;
     std::vector<TimerThread*> timerThreads;
-    bool isRunning;
+    volatile bool isRunning;
     int32_t controllerIdx;
     qcc::Timespec<qcc::MonotonicTime> yieldControllerTime;
     bool preventReentrancy;

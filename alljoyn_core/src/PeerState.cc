@@ -445,4 +445,52 @@ qcc::Mutex& _PeerState::GetConversationHashLock(bool initiator)
     return responderHashLock;
 }
 
+uint32_t _PeerState::GetAuthSuite() const
+{
+    return m_authSuite;
+}
+
+QStatus _PeerState::SetAuthSuite(uint32_t authSuite)
+{
+    /* Accept any AUTH_SUITE_* value from the top of PeerState.h. */
+    switch (authSuite) {
+    case AUTH_SUITE_ANONYMOUS:
+    case AUTH_SUITE_EXTERNAL:
+    case AUTH_SUITE_SRP_KEYX:
+    case AUTH_SUITE_SRP_LOGON:
+    case AUTH_SUITE_ECDHE_NULL:
+    case AUTH_SUITE_ECDHE_PSK:
+    case AUTH_SUITE_ECDHE_ECDSA:
+    case AUTH_SUITE_GSSAPI:
+        m_authSuite = authSuite;
+        return ER_OK;
+
+    default:
+        return ER_BAD_ARG_1;
+    }
+}
+
+QStatus _PeerState::SetAuthSuite(const String& authSuite)
+{
+    /* Definitive list of strings taken from BusAttachment.h doc comment for EnablePeerSecurity; some auth
+     * mechanisms listed in the constants at the top of PeerState.h are not represented in EnablePeerSecurity's
+     * list and so are not supported here.
+     */
+    if (authSuite == "ALLJOYN_ECDHE_NULL") {
+        return this->SetAuthSuite(AUTH_SUITE_ECDHE_NULL);
+    } else if (authSuite == "ALLJOYN_ECDHE_PSK") {
+        return this->SetAuthSuite(AUTH_SUITE_ECDHE_PSK);
+    } else if (authSuite == "ALLJOYN_ECDHE_ECDSA") {
+        return this->SetAuthSuite(AUTH_SUITE_ECDHE_ECDSA);
+    } else if (authSuite == "ALLJOYN_SRP_LOGON") {
+        return this->SetAuthSuite(AUTH_SUITE_SRP_LOGON);
+    } else if (authSuite == "ALLJOYN_SRP_KEYX") {
+        return this->SetAuthSuite(AUTH_SUITE_SRP_KEYX);
+    } else if (authSuite == "GSSAPI") {
+        return this->SetAuthSuite(AUTH_SUITE_GSSAPI);
+    } else {
+        return ER_BAD_ARG_1;
+    }
+}
+
 }

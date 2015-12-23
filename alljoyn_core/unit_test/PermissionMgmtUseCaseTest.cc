@@ -2943,7 +2943,7 @@ TEST_F(PermissionMgmtUseCaseTest, RetrievePropertyClaimCapabilities)
     ASSERT_EQ(ER_OK, GenerateFullAccessOutgoingPolicy(adminBus, consumerBus, consumerPolicy)) << "GeneratePolicy failed.";
     InstallPolicyToConsumer(consumerPolicy);
 
-    RetrievePropertyClaimCapabilities(adminBus, serviceBus, PermissionConfigurator::CAPABLE_ECDHE_NULL);
+    RetrievePropertyClaimCapabilities(adminBus, serviceBus, PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT);
 
     SetPropertyClaimCapabilities(serviceBus, PermissionConfigurator::CAPABLE_ECDHE_PSK | PermissionConfigurator::CAPABLE_ECDHE_NULL);
     RetrievePropertyClaimCapabilities(adminBus, serviceBus, PermissionConfigurator::CAPABLE_ECDHE_PSK | PermissionConfigurator::CAPABLE_ECDHE_NULL);

@@ -785,7 +785,10 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
             return ER_INVALID_DATA;
         }
         ECCPublicKey issuerPubKey;
-        issuerPubKey.Import(pBuf, publicKeySize);
+        QStatus status = issuerPubKey.Import(pBuf, publicKeySize);
+        if (ER_OK != status) {
+            return status;
+        }
         issuerPublicKeys.push_back(issuerPubKey);
         bytesRead += publicKeySize;
         pBuf += publicKeySize;
@@ -827,7 +830,11 @@ QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, con
         if (peerIssuerPubKeys.size() > 0) {
             for (size_t cnt = 0; cnt < peerIssuerPubKeys.size(); cnt++) {
                 size_t bufSize = peerIssuerPubKeys[cnt].GetSize();
-                peerIssuerPubKeys[cnt].Export(pBuf, &bufSize);
+                QStatus status = peerIssuerPubKeys[cnt].Export(pBuf, &bufSize);
+                if (ER_OK != status) {
+                    delete[] buffer;
+                    return status;
+                }
                 pBuf += bufSize;
             }
         }

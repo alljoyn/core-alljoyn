@@ -39,32 +39,6 @@ using namespace qcc;
 
 namespace ajn {
 
-/* the key exchange is in the 16 MSB.
-   The PIN-based key exchange mechanism was removed in 15.04:
-        AUTH_KEYX_PIN           0x00040000
-   The RSA-based auth mechanism was removed in 15.04:
-        AUTH_KEYX_RSA           0x00200000
- */
-#define AUTH_KEYX_ANONYMOUS     0x00010000
-#define AUTH_KEYX_EXTERNAL      0x00020000
-#define AUTH_KEYX_SRP           0x00080000
-#define AUTH_KEYX_SRP_LOGON     0x00100000
-#define AUTH_KEYX_ECDHE         0x00400000
-#define AUTH_KEYX_GSSAPI        0x00800000
-
-/*the key authentication suite is in the 16 LSB */
-
-#define AUTH_SUITE_ANONYMOUS    AUTH_KEYX_ANONYMOUS
-#define AUTH_SUITE_EXTERNAL     AUTH_KEYX_EXTERNAL
-#define AUTH_SUITE_SRP_KEYX     AUTH_KEYX_SRP
-#define AUTH_SUITE_SRP_LOGON    AUTH_KEYX_SRP_LOGON
-
-#define AUTH_SUITE_ECDHE_NULL   (AUTH_KEYX_ECDHE | 0x0001)
-#define AUTH_SUITE_ECDHE_PSK    (AUTH_KEYX_ECDHE | 0x0002)
-#define AUTH_SUITE_ECDHE_ECDSA  (AUTH_KEYX_ECDHE | 0x0004)
-
-#define AUTH_SUITE_GSSAPI       AUTH_KEYX_GSSAPI
-
 #define AUTH_VERIFIER_LEN  Crypto_SHA256::DIGEST_SIZE
 
 /* Forward declaration */
