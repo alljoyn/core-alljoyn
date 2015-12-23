@@ -21,6 +21,7 @@
  ******************************************************************************/
 #include <qcc/IODispatch.h>
 #include <qcc/StringUtil.h>
+#include <qcc/LockLevel.h>
 #define QCC_MODULE "IODISPATCH"
 
 using namespace qcc;
@@ -30,6 +31,7 @@ volatile int32_t IODispatch::iodispatchCnt = 0;
 
 IODispatch::IODispatch(const char* name, uint32_t concurrency) :
     timer((String(name) + U32ToString(IncrementAndFetch(&iodispatchCnt)).c_str()), true, concurrency, false, 96),
+    lock(LOCK_LEVEL_IODISPATCH_LOCK),
     reload(false),
     isRunning(false),
     numAlarmsInProgress(0),
