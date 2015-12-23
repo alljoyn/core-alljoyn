@@ -109,6 +109,7 @@ AllJoynObj::AllJoynObj(Bus& bus, BusController* busController, DaemonRouter& rou
     daemonGuid(bus.GetInternal().GetGlobalGUID()),
     detachSessionSignal(NULL),
     timer("NameReaper"),
+    joinSessionThreadsLock(LOCK_LEVEL_ALLJOYNOBJ_JOINSESSIONTHREADSLOCK),
     isStopping(false),
     busController(busController)
 {
