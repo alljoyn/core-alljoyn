@@ -949,7 +949,7 @@ void AllJoynPeerObj::ExchangeSuites(const ajn::InterfaceDescription::Member* mem
     } else {
         effectiveAuthSuitesCount = supportedAuthSuitesCount;
     }
-    uint32_t* effectiveAuthSuites = new uint32_t[supportedAuthSuitesCount];
+    uint32_t* effectiveAuthSuites = new uint32_t[effectiveAuthSuitesCount];
 
     if (supportedAuthSuitesCount == 0) {
         effectiveAuthSuites[0] = 0;
