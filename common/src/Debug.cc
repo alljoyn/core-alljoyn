@@ -164,7 +164,7 @@ void DebugControl::WriteDebugMessage(DbgMsgType type, const char* module, const 
 
 void DebugControl::Register(QCC_DbgMsgCallback callback, void* cbContext)
 {
-    QCC_ASSERT(cb != NULL);
+    QCC_ASSERT(callback != nullptr);
     this->context = cbContext;
     this->cb = callback;
 }
