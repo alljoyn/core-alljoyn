@@ -100,10 +100,10 @@ static volatile sig_atomic_t quit;
 static const char defaultConfig[] =
     "<busconfig>"
     "  <limit name=\"auth_timeout\">20000</limit>"
-    "  <limit name=\"max_incomplete_connections\">16</limit>"
-    "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_remote_clients_tcp\">0</limit>"
-    "  <limit name=\"max_remote_clients_udp\">0</limit>"
+    "  <limit name=\"max_incomplete_connections\">48</limit>"
+    "  <limit name=\"max_completed_connections\">64</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+    "  <limit name=\"max_remote_clients_udp\">48</limit>"
     "  <property name=\"router_power_source\">Battery powered and chargeable</property>"
     "  <property name=\"router_mobility\">Intermediate mobility</property>"
     "  <property name=\"router_availability\">3-6 hr</property>"
@@ -113,10 +113,10 @@ static const char defaultConfig[] =
 static const char defaultConfig[] =
     "<busconfig>"
     "  <limit name=\"auth_timeout\">20000</limit>"
-    "  <limit name=\"max_incomplete_connections\">16</limit>"
-    "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_remote_clients_tcp\">16</limit>"
-    "  <limit name=\"max_remote_clients_udp\">16</limit>"
+    "  <limit name=\"max_incomplete_connections\">48</limit>"
+    "  <limit name=\"max_completed_connections\">64</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+    "  <limit name=\"max_remote_clients_udp\">48</limit>"
     "</busconfig>";
 #endif
 
