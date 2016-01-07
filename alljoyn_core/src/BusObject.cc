@@ -500,20 +500,24 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
                     }
                 }
             }
-            MsgArg* dict = new MsgArg[readable];
-            MsgArg* entry = dict;
-            /* Get readable properties */
-            for (size_t i = 0; i < numProps; i++) {
-                if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
-                    MsgArg* val = new MsgArg();
-                    status = Get(iface->v_string.str, props[i]->name.c_str(), *val);
-                    if (status != ER_OK) {
-                        delete val;
-                        break;
+
+            MsgArg* dict = NULL;
+            if (readable > 0) {
+                dict = new MsgArg[readable];
+                MsgArg* entry = dict;
+                /* Get readable properties */
+                for (size_t i = 0; i < numProps; i++) {
+                    if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
+                        MsgArg* val = new MsgArg();
+                        status = Get(iface->v_string.str, props[i]->name.c_str(), *val);
+                        if (status != ER_OK) {
+                            delete val;
+                            break;
+                        }
+                        entry->Set("{sv}", props[i]->name.c_str(), val);
+                        entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
+                        entry++;
                     }
-                    entry->Set("{sv}", props[i]->name.c_str(), val);
-                    entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
-                    entry++;
                 }
             }
             vals.Set("a{sv}", readable, dict);
