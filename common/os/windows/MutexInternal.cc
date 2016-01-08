@@ -27,30 +27,30 @@
 
 using namespace qcc;
 
-bool Mutex::Internal::PlatformSpecificInit()
+bool MutexInternal::PlatformSpecificInit()
 {
     InitializeCriticalSection(&m_mutex);
     return true;
 }
 
-void Mutex::Internal::PlatformSpecificDestroy()
+void MutexInternal::PlatformSpecificDestroy()
 {
     DeleteCriticalSection(&m_mutex);
 }
 
-QStatus Mutex::Internal::PlatformSpecificLock()
+QStatus MutexInternal::PlatformSpecificLock()
 {
     EnterCriticalSection(&m_mutex);
     return ER_OK;
 }
 
-QStatus Mutex::Internal::PlatformSpecificUnlock()
+QStatus MutexInternal::PlatformSpecificUnlock()
 {
     LeaveCriticalSection(&m_mutex);
     return ER_OK;
 }
 
-bool Mutex::Internal::PlatformSpecificTryLock()
+bool MutexInternal::PlatformSpecificTryLock()
 {
     return (TryEnterCriticalSection(&m_mutex) != FALSE);
 }
