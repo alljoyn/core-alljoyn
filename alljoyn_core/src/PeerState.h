@@ -158,9 +158,10 @@ class _PeerState {
         clockOffset((std::numeric_limits<int32_t>::max)()),
         firstClockAdjust(true),
         lastDriftAdjustTime(0),
-        expectedSerial(0),
         isSecure(false),
         authEvent(NULL),
+        prevSerial(0),
+        flagWindow(0),
         initiatorHash(NULL),
         responderHash(NULL),
         initiatorHashLock(qcc::LOCK_LEVEL_PEERSTATE_INITIATORHASHLOCK),
@@ -169,7 +170,6 @@ class _PeerState {
         keyExchangeMode(KEY_EXCHANGE_NONE),
         m_authSuite(0)
     {
-        ::memset(window, 0, sizeof(window));
         ::memset(authorizations, 0, sizeof(authorizations));
     }
 
@@ -306,7 +306,7 @@ class _PeerState {
      *
      * @return Size of the serial number validation window.
      */
-    size_t SerialWindowSize() { return sizeof(window) / sizeof(window[0]); }
+    size_t SerialWindowSize() { return 64; }
 
     static const uint8_t ALLOW_SECURE_TX = 0x01; /* Transmit authorization */
     static const uint8_t ALLOW_SECURE_RX = 0x02; /* Receive authorization */
@@ -625,11 +625,6 @@ class _PeerState {
     uint32_t lastDriftAdjustTime;
 
     /**
-     * The next serial number expected.
-     */
-    uint32_t expectedSerial;
-
-    /**
      * Set to true if this peer has keys.
      */
     bool isSecure;
@@ -660,10 +655,20 @@ class _PeerState {
     qcc::KeyBlob keys[2];
 
     /**
-     * Serial number window. Used by IsValidSerial() to detect replay attacks. The size of the
-     * window defines that largest tolerable gap between consecutive serial numbers.
+     * The previous serial number seen from this peer.
+     * Used by IsValidSerial() to detect replay attacks.
      */
-    uint32_t window[128];
+    uint32_t prevSerial;
+
+    /**
+     * This contains flags indicating if the serial number was received
+     * for each of the last 64 serial numbers from this peer.
+     * Bit 0 indicates whether the prevSerial number was seen from this peer.
+     * i.e. value of 0 indicates no messages were received from this peer.
+     * Bit 1 indicates whether prevSerial - 1 was received from this peer and so on.
+     * Used by IsValidSerial() to detect replay attacks.
+     */
+    uint64_t flagWindow;
 
     /**
      * The initiator conversation hash.
