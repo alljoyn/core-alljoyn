@@ -1946,7 +1946,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion is supposed to fail.";
         } else {
             EXPECT_EQ(ER_OK, saProxy.GetManagedApplicationVersion(versionNum)) << "AppGetVersionNumber GetClaimableApplicationVersion failed.";
-            EXPECT_EQ(1, versionNum) << "AppGetVersionNumber received unexpected version number.";
+            EXPECT_EQ(2, versionNum) << "AppGetVersionNumber received unexpected version number.";
         }
     }
 

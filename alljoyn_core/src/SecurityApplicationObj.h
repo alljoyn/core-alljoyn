@@ -163,6 +163,24 @@ class SecurityApplicationObj : public PermissionMgmtObj {
     void RemoveMembership(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
 
     /**
+     * This method notifies the application about the fact that the Security Manager
+     * will start to make changes to the application's security settings.
+     *
+     * @param[in] member interface member
+     * @param[in] msg alljoyn message
+     */
+    void StartManagement(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
+
+    /**
+     * This method notifies the application about the fact that the Security Manager
+     * has finished making changes to the application's security settings.
+     *
+     * @param[in] member interface member
+     * @param[in] msg alljoyn message
+     */
+    void EndManagement(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
+
+    /**
      * Handles the GetPropery request
      * @param[in]  ifcName  interface name
      * @param[in]  propName the name of the properly
@@ -170,7 +188,6 @@ class SecurityApplicationObj : public PermissionMgmtObj {
      * @return ER_OK if successful.
      */
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
-
 };
 } //END namepace ajn
 

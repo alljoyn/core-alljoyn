@@ -152,6 +152,46 @@ static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
     publicKey = *keyInfo.GetPublicKey();
 }
 
+class SecurityManagementTestConfigurationListener : public PermissionConfigurationListener {
+  public:
+    SecurityManagementTestConfigurationListener() : factoryResetReceived(false), policyChangedReceived(false),
+        startManagementReceived(false), endManagementReceived(false) {
+    }
+
+    QStatus FactoryReset();
+    bool factoryResetReceived;
+
+    void PolicyChanged();
+    bool policyChangedReceived;
+
+    void StartManagement();
+    bool startManagementReceived;
+
+    void EndManagement();
+    bool endManagementReceived;
+};
+
+QStatus SecurityManagementTestConfigurationListener::FactoryReset()
+{
+    factoryResetReceived = true;
+    return ER_OK;
+}
+
+void SecurityManagementTestConfigurationListener::PolicyChanged()
+{
+    policyChangedReceived = true;
+}
+
+void SecurityManagementTestConfigurationListener::StartManagement()
+{
+    startManagementReceived = true;
+}
+
+void SecurityManagementTestConfigurationListener::EndManagement()
+{
+    endManagementReceived = true;
+}
+
 class SecurityManagementPolicyTest : public testing::Test {
   public:
     SecurityManagementPolicyTest() :
@@ -195,10 +235,10 @@ class SecurityManagementPolicyTest : public testing::Test {
         peer2AuthListener = new DefaultECDHEAuthListener();
         peer3AuthListener = new DefaultECDHEAuthListener();
 
-        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
-        EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
+        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+        EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer3AuthListener, nullptr, false, &peer3ConfigurationListener));
 
         PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
         SetManifestTemplate(managerBus);
@@ -273,7 +313,7 @@ class SecurityManagementPolicyTest : public testing::Test {
             manifest[0].SetMembers(1, member);
         }
 
-        //Get manager key
+        // Get manager key
         KeyInfoNISTP256 managerKey;
         PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
@@ -283,17 +323,16 @@ class SecurityManagementPolicyTest : public testing::Test {
         PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
 
-        //Create peer2 key
+        // Create peer2 key
         KeyInfoNISTP256 peer2Key;
         PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
-
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
         EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
                                                                    manifest, manifestSize,
                                                                    digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
-        //Create identityCert
+        // Create identityCert
         const size_t certChainSize = 1;
         IdentityCertificate identityCertChainMaster[certChainSize];
 
@@ -355,10 +394,8 @@ class SecurityManagementPolicyTest : public testing::Test {
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
 
-        //Create peer2 identityCert
+        // Create peer2 identityCert
         IdentityCertificate identityCertChainPeer2[certChainSize];
-
-
         EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
                                                                       "0",
                                                                       managerGuid.ToString(),
@@ -381,13 +418,12 @@ class SecurityManagementPolicyTest : public testing::Test {
         }
 
 
-        ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
+        ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer2Bus.GetUniqueName()]);
 
-        //Change the managerBus so it only uses ECDHE_ECDSA
-        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
-
+        // Switch to ECDHE_ECDSA-only
+        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
+        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
     }
 
     virtual void TearDown() {
@@ -405,9 +441,8 @@ class SecurityManagementPolicyTest : public testing::Test {
         delete peer2AuthListener;
     }
 
-
     void InstallMembershipOnManager() {
-        //Get manager key
+        // Get manager key
         KeyInfoNISTP256 managerKey;
         PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
@@ -451,7 +486,7 @@ class SecurityManagementPolicyTest : public testing::Test {
 
 
     void InstallMembershipOnPeer2() {
-        //Create peer2 key
+        // Create peer2 key
         KeyInfoNISTP256 peer2Key;
         PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
@@ -533,6 +568,11 @@ class SecurityManagementPolicyTest : public testing::Test {
 
     //Random GUID used for the SecurityManager
     GUID128 managerGuid;
+
+    SecurityManagementTestConfigurationListener managerConfigurationListener;
+    SecurityManagementTestConfigurationListener peer1ConfigurationListener;
+    SecurityManagementTestConfigurationListener peer2ConfigurationListener;
+    SecurityManagementTestConfigurationListener peer3ConfigurationListener;
 };
 
 QStatus SecurityManagementPolicyTest::UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
@@ -1045,9 +1085,9 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_digest_mismatch)
 
     InstallMembershipOnManager();
 
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
 
     // Call UpdateIdentity to install the cert chain
     EXPECT_EQ(ER_DIGEST_MISMATCH, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize)) << "Failed to update Identity cert or manifest ";
@@ -1146,8 +1186,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
     identityCertChain[1] = peer1Cert;
     identityCertChain[2] = caCert;
 
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
 
     // Call UpdateIdentity to install the cert chain
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
@@ -1245,8 +1285,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_fl
     identityCertChain[1] = peer1Cert;
     identityCertChain[2] = caCert;
 
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
 
     // Call UpdateIdentity to install the cert chain
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
@@ -1343,8 +1383,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_
     identityCertChain[1] = peer1Cert;
     identityCertChain[2] = caCert;
 
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
 
     // Call UpdateIdentity to install the cert chain
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
@@ -2699,6 +2739,8 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
  * ASG bus calls InstallMembership on the app. bus
  * ASG bus calls GetMembershipSummaries on the app. bus
  *
+ * ASG bus calls StartManagement on the app. bus
+ * ASG bus calls EndManagement on the app. bus
  * ASG bus calls RemoveMembership on the app. bus
  *
  * ASG bus calls Reset on the app. bus
@@ -2721,6 +2763,8 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
  * RemoveMembership should be sucessful.
  *
  * Reset should be successful.
+ *
+ * StartManagement and EndManagement callbacks should arrive when appropriate.
  *
  * Peer1 = ASG bus
  * Peer2 = app. bus
@@ -2754,7 +2798,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
         manifest[0].SetMembers(1, member);
     }
 
-    //Get manager key
+    // Get manager key
     KeyInfoNISTP256 peer2Key;
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
@@ -2764,7 +2808,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
                                                                manifest, manifestSize,
                                                                digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
-    //Create identityCert
+    // Create identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChain[certChainSize];
     GUID128 guid;
@@ -2851,14 +2895,77 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
         EXPECT_STREQ(serials[1].c_str(), serial0.c_str());
     }
 
-    //Get manager key
+    // Get manager key
     KeyInfoNISTP256 managerKey;
     PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
 
+    // StartManagement
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.StartManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_TRUE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // StartManagement again
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_MANAGEMENT_ALREADY_STARTED, sapWithPeer1toPeer2.StartManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // EndManagement
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.EndManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_TRUE(peer2ConfigurationListener.endManagementReceived);
+
+    // EndManagement again
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_MANAGEMENT_NOT_STARTED, sapWithPeer1toPeer2.EndManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // StartManagement again
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.StartManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_TRUE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // RemoveMembership should succeed
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.RemoveMembership("2", managerKey));
 
+    // Reset should succeed
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.Reset());
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // EndManagement fails because the target app is now in CLAIMABLE state
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.EndManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
 }
 
 /*
@@ -2900,7 +3007,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
 
     // Install 2 more membership certificates on the app bus : Peer2
     // 1 is installed already installed in the call to InstallMembershipOnPeer2()
-    //Create peer2 key
+    // Create peer2 key
     KeyInfoNISTP256 peer2Key;
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
@@ -2961,7 +3068,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
                                                                manifest, manifestSize,
                                                                digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
-    //Create identityCert
+    // Create identityCert
     const size_t certChainSize = 3;
     IdentityCertificate identityCertChain[certChainSize];
     GUID128 guid;
@@ -3019,6 +3126,8 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
  * ResetPolicy
  * InstallMembership
  * RemoveMembership
+ * StartManagement
+ * EndManagement
  *
  * non ASG bus tries to fetch the following properties on the  app. bus:
  * Version
@@ -3059,6 +3168,27 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
 
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.Reset());
 
+    // StartManagement and EndManagement should fail before setting up policies
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.StartManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.EndManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
     // Call UpdateIdentity
     // All Inclusive manifest
     const size_t manifestSize = 1;
@@ -3076,7 +3206,7 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
         manifest[0].SetMembers(1, member);
     }
 
-    //Get manager key
+    // Get manager key
     KeyInfoNISTP256 peer2Key;
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
@@ -3086,7 +3216,7 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
                                                                manifest, manifestSize,
                                                                digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
-    //Create identityCert
+    // Create identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChain[certChainSize];
     GUID128 guid;
@@ -3123,7 +3253,7 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
                                                                     ));
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.InstallMembership(peer2MembershipCertificate, 1));
 
-    //Get manager key
+    // Get manager key
     KeyInfoNISTP256 managerKey;
     PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
@@ -3142,6 +3272,25 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetPolicy(policy));
     MsgArg membershipSummariesArg;
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetMembershipSummaries(membershipSummariesArg));
+
+    // StartManagement and EndManagement should fail, since the policy doesn't allow them
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.StartManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.EndManagement());
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetApplicationState(applicationState));
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
 }
 
 /*
@@ -3180,7 +3329,7 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_non_group_members_can_not_get_mana
  * The non ASG bus calls Reset on the app. bus
  *
  * Verification:
- * Reset should be successful.
+ * StartManagement, EndManagement and Reset should be successful.
  */
 TEST_F(SecurityManagementPolicyTest, non_members_can_call_managedapplication_methods_if_policy_allows)
 {
@@ -3205,8 +3354,8 @@ TEST_F(SecurityManagementPolicyTest, non_members_can_call_managedapplication_met
     EXPECT_EQ(ER_OK, nonASGBus.RegisterKeyStoreListener(keyStoreListener));
 
     DefaultECDHEAuthListener authListener;
-    EXPECT_EQ(ER_OK, nonASGBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", peer2AuthListener));
+    EXPECT_EQ(ER_OK, nonASGBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener, nullptr, false, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
 
     SessionOpts opts;
     uint32_t sessionId;
@@ -3214,14 +3363,193 @@ TEST_F(SecurityManagementPolicyTest, non_members_can_call_managedapplication_met
 
     SecurityApplicationProxy sapWithNonASGBustoPeer2(nonASGBus, peer2Bus.GetUniqueName().c_str());
 
-
     // Policy updated must secure connection to update keys.
     EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.SecureConnection(true));
+
+    // StartManagement and EndManagement should succeed
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.StartManagement());
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_TRUE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.EndManagement());
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_TRUE(peer2ConfigurationListener.endManagementReceived);
+
+    // Reset should succeed too
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
     EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.Reset());
+    EXPECT_EQ(ER_OK, sapWithNonASGBustoPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
 
     EXPECT_EQ(ER_OK, nonASGBus.Stop());
     EXPECT_EQ(ER_OK, nonASGBus.Join());
 }
+
+TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
+{
+    InstallMembershipOnManager();
+
+    // Create management session to peer2
+    SessionOpts opts;
+    uint32_t sessionId;
+    EXPECT_EQ(ER_OK, managerBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+    SecurityApplicationProxy sapToPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    // StartManagement
+    PermissionConfigurator::ApplicationState applicationState;
+    EXPECT_EQ(ER_OK, sapToPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapToPeer2.StartManagement());
+    EXPECT_EQ(ER_OK, sapToPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_TRUE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // Reset
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapToPeer2.Reset());
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // EndManagement fails because the target app is now in CLAIMABLE state
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapToPeer2.EndManagement());
+    EXPECT_EQ(ER_OK, sapToPeer2.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // Claim the target app again
+    managerAuthListener = new DefaultECDHEAuthListener();
+    peer2AuthListener = new DefaultECDHEAuthListener();
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+
+    SetManifestTemplate(peer2Bus);
+
+    // All Inclusive manifest
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifest[manifestSize];
+    {
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*",
+                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        manifest[0].SetObjPath("*");
+        manifest[0].SetInterfaceName("*");
+        manifest[0].SetMembers(1, member);
+    }
+
+    // Get manager key
+    KeyInfoNISTP256 managerKey;
+    PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+
+    // Create peer2 key
+    KeyInfoNISTP256 peer2Key;
+    PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
+                                                               manifest, manifestSize,
+                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+
+    // Create peer2 identityCert
+    const size_t certChainSize = 1;
+    IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+                                                                  "0",
+                                                                  managerGuid.ToString(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  "Peer2Alias",
+                                                                  3600,
+                                                                  identityCertChainPeer2[0],
+                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+
+
+    // Claim peer2
+    SessionOpts opts2;
+    EXPECT_EQ(ER_OK, managerBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, managerToPeer2SessionId, opts2));
+
+    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
+    PermissionConfigurator::ApplicationState applicationStatePeer2;
+    EXPECT_EQ(ER_OK, sapWithPeer2.GetApplicationState(applicationStatePeer2));
+    EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer2);
+
+    EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
+                                        managerGuid,
+                                        managerKey,
+                                        identityCertChainPeer2, certChainSize,
+                                        manifest, manifestSize));
+
+    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
+            break;
+        }
+        qcc::Sleep(WAIT_MSECS);
+    }
+
+    ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer2Bus.GetUniqueName()]);
+
+    // Switch to ECDHE_ECDSA-only
+    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
+    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
+
+    // Create post-Reset & Claim management session
+    EXPECT_EQ(ER_OK, managerBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, sessionId, opts));
+    SecurityApplicationProxy sapForEndManagement(managerBus, peer2Bus.GetUniqueName().c_str());
+
+    // StartManagement returns already-started
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_MANAGEMENT_ALREADY_STARTED, sapForEndManagement.StartManagement());
+    EXPECT_EQ(ER_OK, sapForEndManagement.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+
+    // EndManagement succeeds
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_OK, sapForEndManagement.EndManagement());
+    EXPECT_EQ(ER_OK, sapForEndManagement.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_TRUE(peer2ConfigurationListener.endManagementReceived);
+
+    // EndManagement returns not-started
+    peer2ConfigurationListener.startManagementReceived = false;
+    peer2ConfigurationListener.endManagementReceived = false;
+    EXPECT_EQ(ER_MANAGEMENT_NOT_STARTED, sapForEndManagement.EndManagement());
+    EXPECT_EQ(ER_OK, sapForEndManagement.GetApplicationState(applicationState));
+    EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationState);
+    EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
+    EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+}
+
 /*
  * Purpose:
  * Before claim, any peer trying to call methods on the
@@ -3253,7 +3581,7 @@ TEST_F(SecurityManagementPolicyTest, non_members_can_call_managedapplication_met
  * The method calls and Get property calls should fail peer2. bus is not
  * yet claimed.
  */
-TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_befor_claim)
+TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_before_claim)
 {
     BusAttachment peer1("bus1");
     BusAttachment peer2("bus2");
@@ -3272,9 +3600,11 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
 
     SecurityManagementPolicy2AuthListener bus1AuthListener;
     SecurityManagementPolicy2AuthListener bus2AuthListener;
+    SecurityManagementTestConfigurationListener bus1ConfigurationListener;
+    SecurityManagementTestConfigurationListener bus2ConfigurationListener;
 
-    EXPECT_EQ(ER_OK, peer1.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus1AuthListener));
-    EXPECT_EQ(ER_OK, peer2.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus2AuthListener));
+    EXPECT_EQ(ER_OK, peer1.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus1AuthListener, nullptr, false, &bus1ConfigurationListener));
+    EXPECT_EQ(ER_OK, peer2.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &bus2AuthListener, nullptr, false, &bus2ConfigurationListener));
 
     SessionOpts opts;
     SessionPort sessionPort = 42;
@@ -3295,8 +3625,26 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         EXPECT_EQ(ER_OK, sapBus1toBus2.GetApplicationState(applicationStatePeer1));
         EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
 
-        // Call Reset
+        // Management methods should fail
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.StartManagement());
+        EXPECT_EQ(ER_OK, sapBus1toBus2.GetApplicationState(applicationStatePeer1));
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
+
+        bus2ConfigurationListener.startManagementReceived = false;
+        bus2ConfigurationListener.endManagementReceived = false;
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.EndManagement());
+        EXPECT_EQ(ER_OK, sapBus1toBus2.GetApplicationState(applicationStatePeer1));
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
+        EXPECT_FALSE(bus2ConfigurationListener.startManagementReceived);
+        EXPECT_FALSE(bus2ConfigurationListener.endManagementReceived);
+
+        bus2ConfigurationListener.startManagementReceived = false;
+        bus2ConfigurationListener.endManagementReceived = false;
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.Reset());
+        EXPECT_EQ(ER_OK, sapBus1toBus2.GetApplicationState(applicationStatePeer1));
+        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
+        EXPECT_FALSE(bus2ConfigurationListener.startManagementReceived);
+        EXPECT_FALSE(bus2ConfigurationListener.endManagementReceived);
 
         // Call UpdateIdentity
         // All Inclusive manifest
@@ -3315,7 +3663,7 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
             manifest[0].SetMembers(1, member);
         }
 
-        //Get manager key
+        // Get manager key
         KeyInfoNISTP256 bus1Key;
         PermissionConfigurator& pcBus1 = peer1.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcBus1.GetSigningPublicKey(bus1Key));
@@ -3325,7 +3673,7 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
                                                                    manifest, manifestSize,
                                                                    digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
-        //Create identityCert
+        // Create identityCert
         const size_t certChainSize = 1;
         IdentityCertificate identityCertChain[certChainSize];
         GUID128 guid;

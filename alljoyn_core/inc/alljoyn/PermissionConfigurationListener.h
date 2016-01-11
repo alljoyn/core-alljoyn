@@ -57,6 +57,20 @@ class PermissionConfigurationListener {
     virtual void PolicyChanged()
     {
     }
+
+    /**
+     * Notification provided before Security Manager is starting to change settings for this application.
+     */
+    virtual void StartManagement()
+    {
+    }
+
+    /**
+     * Notification provided after Security Manager finished changing settings for this application.
+     */
+    virtual void EndManagement()
+    {
+    }
 };
 }
 #endif //_ALLJOYN_PERMISSIONCONFIGURATIONLISTENER_H
