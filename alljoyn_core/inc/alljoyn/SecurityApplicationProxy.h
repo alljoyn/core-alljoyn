@@ -299,7 +299,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus ResetPolicy();
 
     /**
-     * This method allows the amdin to install a membership cert chain to the
+     * This method allows the admin to install a membership cert chain to the
      * application.
      *
      * @param[in] certificateChain the membership certificate chain. It can be a
@@ -423,6 +423,28 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetMembershipSummaries(MsgArg& membershipSummaries);
+
+    /**
+     * This method notifies the application about the fact that the Security Manager
+     * will start to make changes to the application's security settings.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - #ER_PERMISSION_DENIED Error raised when the caller does not have permission
+     *  - some other error status indicating failure
+     */
+    QStatus StartManagement();
+
+    /**
+     * This method notifies the application about the fact that the Security Manager
+     * has finished making changes to the application's security settings.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - #ER_PERMISSION_DENIED Error raised when the caller does not have permission
+     *  - some other error status indicating failure
+     */
+    QStatus EndManagement();
 
     /**
      * Populate the array of identity certificates with data from the msg arg

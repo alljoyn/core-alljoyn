@@ -72,6 +72,22 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem)
     return __atomic_dec(mem) - 1;
 }
 
+/**
+ * Performs an atomic compare-and-exchange operation on the specified values.
+ * It compares two specified 32-bit values and exchanges with another 32-bit
+ * value based on the outcome of the comparison.
+ *
+ * @param mem   Pointer to int32_t to be compared and modified.
+ * @param expectedValue Expected value of *mem.
+ * @param newValue New value of *mem after calling this function, if returning true.
+ * @return  true if the initial value of *mem was expectedValue, false otherwise
+ */
+inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int32_t newValue)
+{
+    /* Use strong memory ordering model */
+    return __atomic_compare_exchange_n(mem, &expectedValue, newValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
 #elif defined(QCC_OS_LINUX)
 
 /**
@@ -92,6 +108,20 @@ inline int32_t IncrementAndFetch(volatile int32_t* mem) {
  */
 inline int32_t DecrementAndFetch(volatile int32_t* mem) {
     return __sync_sub_and_fetch(mem, 1);
+}
+
+/**
+ * Performs an atomic compare-and-exchange operation on the specified values.
+ * It compares two specified 32-bit values and exchanges with another 32-bit
+ * value based on the outcome of the comparison.
+ *
+ * @param mem   Pointer to int32_t to be compared and modified.
+ * @param expectedValue Expected value of *mem.
+ * @param newValue New value of *mem after calling this function, if returning true.
+ * @return  true if the initial value of *mem was expectedValue, false otherwise
+ */
+inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int32_t newValue) {
+    return __sync_bool_compare_and_swap(mem, expectedValue, newValue);
 }
 
 #elif defined(QCC_OS_DARWIN)
@@ -116,6 +146,20 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem) {
     return OSAtomicDecrement32(mem);
 }
 
+/**
+ * Performs an atomic compare-and-exchange operation on the specified values.
+ * It compares two specified 32-bit values and exchanges with another 32-bit
+ * value based on the outcome of the comparison.
+ *
+ * @param mem   Pointer to int32_t to be compared and modified.
+ * @param expectedValue Expected value of *mem.
+ * @param newValue New value of *mem after calling this function, if returning true.
+ * @return  true if the initial value of *mem was expectedValue, false otherwise
+ */
+inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int32_t newValue) {
+    return OSAtomicCompareAndSwapIntBarrier(expectedValue, newValue, mem);
+}
+
 #else
 
 /**
@@ -133,6 +177,18 @@ int32_t IncrementAndFetch(volatile int32_t* mem);
  * @return  New value (afer decrement) of *mem
  */
 int32_t DecrementAndFetch(volatile int32_t* mem);
+
+/**
+ * Performs an atomic compare-and-exchange operation on the specified values.
+ * It compares two specified 32-bit values and exchanges with another 32-bit
+ * value based on the outcome of the comparison.
+ *
+ * @param mem   Pointer to int32_t to be compared and modified.
+ * @param expectedValue Expected value of *mem.
+ * @param newValue New value of *mem after calling this function, if returning true.
+ * @return  true if the initial value of *mem was expectedValue, false otherwise
+ */
+bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int32_t newValue);
 
 #endif
 
