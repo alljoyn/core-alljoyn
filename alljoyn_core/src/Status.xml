@@ -296,5 +296,7 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_POLICY_NOT_NEWER" value="0x913c" comment="Installing permission policy not newer than existing policy"/>
   <status name="ER_MANIFEST_REJECTED" value="0x913d" comment="The manifest of the application was rejected."/>
   <status name="ER_INVALID_CERTIFICATE_USAGE" value="0x913e" comment="The certificate extended key usage is not Alljoyn specific."/>
-  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x913f" comment="Attempt to send a signal with the wrong type."/>  
+  <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x913f" comment="Attempt to send a signal with the wrong type."/>
+  <status name="ER_MANAGEMENT_ALREADY_STARTED" value="0x9140" comment="StartManagement has been called already. The app will not receive a second StartManagement callback."/>
+  <status name="ER_MANAGEMENT_NOT_STARTED" value="0x9141" comment="StopManagement has been called without a previous StartManagement. The app will not receive a second StopManagement callback."/>
 </status_block>

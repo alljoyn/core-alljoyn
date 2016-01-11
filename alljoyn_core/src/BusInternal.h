@@ -220,6 +220,16 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     void CallPolicyChangedCallback();
 
     /**
+     * Inform PermissionConfigurationListener before security management starts.
+     */
+    void CallStartManagementCallback();
+
+    /**
+     * Inform PermissionConfigurationListener after security management has finished.
+     */
+    void CallEndManagementCallback();
+
+    /**
      * Set the PermissionConfigurationListener.
      *
      * @param listener   PermissionConfigurationListener to use.

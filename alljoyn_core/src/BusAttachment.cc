@@ -2579,7 +2579,7 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                     QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[0], keyInfo);
                     if (ER_OK == status) {
                         PermissionConfigurator::ApplicationState applicationState = (PermissionConfigurator::ApplicationState) args[1].v_uint16;
-                        if (applicationState <= PermissionConfigurator::ApplicationState::NEED_UPDATE) {
+                        if (applicationState <= PermissionConfigurator::NEED_UPDATE) {
                             ApplicationStateListenerSet::iterator it = applicationStateListeners.begin();
                             while (it != applicationStateListeners.end()) {
                                 ProtectedApplicationStateListener listener = *it;
@@ -3415,6 +3415,30 @@ void BusAttachment::Internal::CallPolicyChangedCallback()
         PermissionConfigurationListener* listener = (**permissionConfigurationListener);
         if (listener) {
             listener->PolicyChanged();
+        }
+    }
+    permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);
+}
+
+void BusAttachment::Internal::CallStartManagementCallback()
+{
+    permissionConfigurationListenerLock.Lock(MUTEX_CONTEXT);
+    if (permissionConfigurationListener) {
+        PermissionConfigurationListener* listener = (**permissionConfigurationListener);
+        if (listener) {
+            listener->StartManagement();
+        }
+    }
+    permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);
+}
+
+void BusAttachment::Internal::CallEndManagementCallback()
+{
+    permissionConfigurationListenerLock.Lock(MUTEX_CONTEXT);
+    if (permissionConfigurationListener) {
+        PermissionConfigurationListener* listener = (**permissionConfigurationListener);
+        if (listener) {
+            listener->EndManagement();
         }
     }
     permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);

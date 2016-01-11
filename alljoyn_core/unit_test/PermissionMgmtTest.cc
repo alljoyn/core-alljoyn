@@ -492,7 +492,7 @@ void BasePermissionMgmtTest::SetApplicationStateSignalReceived(bool flag)
     testASL.signalApplicationStateReceived = flag;
 }
 
-const bool BasePermissionMgmtTest::GetApplicationStateSignalReceived()
+bool BasePermissionMgmtTest::GetApplicationStateSignalReceived() const
 {
     return testASL.signalApplicationStateReceived;
 }
@@ -502,7 +502,7 @@ void BasePermissionMgmtTest::SetFactoryResetReceived(bool flag)
     testPCL.factoryResetReceived = flag;
 }
 
-const bool BasePermissionMgmtTest::GetFactoryResetReceived()
+bool BasePermissionMgmtTest::GetFactoryResetReceived() const
 {
     return testPCL.factoryResetReceived;
 }
@@ -512,7 +512,7 @@ void BasePermissionMgmtTest::SetPolicyChangedReceived(bool flag)
     testPCL.policyChangedReceived = flag;
 }
 
-const bool BasePermissionMgmtTest::GetPolicyChangedReceived()
+bool BasePermissionMgmtTest::GetPolicyChangedReceived() const
 {
     return testPCL.policyChangedReceived;
 }
@@ -522,7 +522,7 @@ void BasePermissionMgmtTest::SetChannelChangedSignalReceived(bool flag)
     channelChangedSignalReceived = flag;
 }
 
-const bool BasePermissionMgmtTest::GetChannelChangedSignalReceived()
+bool BasePermissionMgmtTest::GetChannelChangedSignalReceived() const
 {
     return channelChangedSignalReceived;
 }
@@ -532,7 +532,7 @@ void BasePermissionMgmtTest::SetPropertiesChangedSignalReceived(bool flag)
     propertiesChangedSignalReceived = flag;
 }
 
-const bool BasePermissionMgmtTest::GetPropertiesChangedSignalReceived()
+bool BasePermissionMgmtTest::GetPropertiesChangedSignalReceived() const
 {
     return propertiesChangedSignalReceived;
 }
