@@ -34,8 +34,8 @@ MutexInternal::MutexInternal(Mutex* ownerLock, LockLevel level)
     QCC_UNUSED(ownerLock);
     QCC_UNUSED(level);
 #else
-    m_file = nullptr;
-    m_line = static_cast<uint32_t>(-1);
+    m_file = LockOrderChecker::s_unknownFile;
+    m_line = LockOrderChecker::s_unknownLineNumber;
     m_ownerThread = 0;
     m_recursionCount = 0;
     m_level = level;
@@ -63,11 +63,23 @@ QStatus MutexInternal::Lock(const char* file, uint32_t line)
     QCC_UNUSED(line);
     return Lock();
 #else
-    QStatus status = Lock();
+    if (!m_initialized) {
+        return ER_INIT_FAILED;
+    }
+
+    /*
+     * Duplicate the Lock() functionality in Lock(file, line), rather than
+     * calling Lock() here because the Lock() path gets executed by Release
+     * code too. Adding support for the file & line parameters to that
+     * Release code path could have inflicted a small perf overhead.
+     */
+    AcquiringLock(file, line);
+    QStatus status = PlatformSpecificLock();
     if (status == ER_OK) {
         QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
         m_file = file;
         m_line = line;
+        LockAcquired();
     } else {
         QCC_LogError(status, ("Mutex::Lock %s:%u failed", file, line));
     }
@@ -134,20 +146,31 @@ bool MutexInternal::TryLock()
 }
 
 /**
- * Called immediately before current thread tries to acquire this Mutex.
+ * Called immediately before current thread tries to acquire this Mutex, on Release
+ * builds, or if the caller did not specify the MUTEX_CONTEXT parameter.
  */
 void MutexInternal::AcquiringLock()
 {
 #ifndef NDEBUG
+    return AcquiringLock(LockOrderChecker::s_unknownFile, LockOrderChecker::s_unknownLineNumber);
+#endif
+}
+
+#ifndef NDEBUG
+/**
+ * Called immediately before current thread tries to acquire this Mutex.
+ */
+void MutexInternal::AcquiringLock(const char* file, uint32_t line)
+{
     /*
      * Perform lock order verification. Test LOCK_LEVEL_CHECKING_DISABLED before calling
      * GetThread, because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED mutex internally.
      */
     if (Thread::initialized && m_level != LOCK_LEVEL_CHECKING_DISABLED) {
-        Thread::GetThread()->lockChecker.AcquiringLock(m_ownerLock);
+        Thread::GetThread()->lockChecker.AcquiringLock(m_ownerLock, file, line);
     }
-#endif
 }
+#endif
 
 /**
  * Called immediately after current thread acquired this Mutex.

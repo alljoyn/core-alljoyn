@@ -120,7 +120,10 @@ public:
      */
     void AssertOwnedByCurrentThread() const;
 
-    /* Called immediately before current thread tries to acquire this Mutex */
+    /**
+     * Called immediately before current thread tries to acquire this Mutex, when building
+     * in Release mode, or when the caller did not specify the MUTEX_CONTEXT parameter.
+     */
     void AcquiringLock();
 
     /* Called immediately after current thread acquired this Mutex */
@@ -138,6 +141,12 @@ public:
     static void SetLevel(Mutex& lock, LockLevel level);
     static const char* GetLatestOwnerFileName(const Mutex& lock) { return lock.m_mutexInternal->m_file; }
     static uint32_t GetLatestOwnerLineNumber(const Mutex &lock) { return lock.m_mutexInternal->m_line; }
+
+    /**
+     * Called immediately before current thread tries to acquire this Mutex, when building
+     * in Debug mode and if the caller specified the MUTEX_CONTEXT parameter.
+     */
+    void AcquiringLock(const char* file, uint32_t line);
 #endif 
 
 private:
@@ -163,10 +172,10 @@ private:
     /* Pointer back to the mutex object that owns this MutexInternal object */
     Mutex *m_ownerLock;
 
-    /* Source code file name where this Mutex has been acquired */
+    /* Source code file name where this Mutex has been acquired or released */
     const char* m_file;
 
-    /* Source code line number where this Mutex has been acquired */
+    /* Source code line number where this Mutex has been acquired or released */
     uint32_t m_line;
 
     /* Mutex owner thread ID */
