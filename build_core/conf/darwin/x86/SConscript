@@ -17,10 +17,19 @@ Import('env')
 import os
 
 s = os.environ.get('CONFIGURATION')
+#Command line does not pass CONFIGURATION variable to SConscript,this uses the
+#VARIANT which will be either debug or release.  Left 'CONFIGURATION' in place to
+#avoid breaking anything
+
+if None is s:
+     s = env['VARIANT']
+
 s = s.lower()
 env['OBJDIR'] = 'build/${OS}/${CPU}/' + s + '/obj'
 env['DISTDIR'] = '#build/${OS}/${CPU}/' + s + '/dist'
 env['TESTDIR'] = '#build/${OS}/${CPU}/' + s + '/test'
+
+print "Object Directory = ", env['OBJDIR']
 
 vars = Variables()
 vars.Add(PathVariable('SDKROOT', ' Base directory of Mac/iOS SDK for target', os.environ.get('SDKROOT')))
