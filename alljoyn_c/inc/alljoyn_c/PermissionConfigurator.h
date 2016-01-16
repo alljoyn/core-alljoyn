@@ -1,6 +1,9 @@
+/**
+ * @file
+ * This file defines the alljoyn_permissionconfigurator and related functions
+ */
+
 /******************************************************************************
- *
- *
  * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -15,40 +18,29 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-#ifndef AJTESTCOMMON_H
-#define AJTESTCOMMON_H
 
-#include <qcc/String.h>
-#include <alljoyn_c/BusAttachment.h>
+#ifndef _ALLJOYN_C_PERMISSIONCONFIGURATOR_H
+#define _ALLJOYN_C_PERMISSIONCONFIGURATOR_H
 
-/**
- * Value for death tests that don't return any messages.
- */
-#define DEATH_TEST_EMPTY_MESSAGE ""
-
-/*
- * this header file contains a functions that can be used to replace common
- * actions in the test code.
- */
-namespace ajn {
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 /**
- * Obtain the default connection arg for the OS the test is run on.
- *
- * The environment variable BUS_ADDRESS is specified it will be used in place
- * of the default address
- *
- * @return a qcc::String containing the default connection arg
+ * alljoyn_permissionconfigurator is a handle which exposes Security 2.0 permission
+ * management capabilities to the application.
  */
-qcc::String getConnectArg();
+typedef struct _alljoyn_permissionconfigurator_handle* alljoyn_permissionconfigurator;
 
-/**
- * Generate a globally unique name for use in advertising.
- *
- * Advertised names should be unique to avoid multiple running instances
- * of the test suite from interferring with each other.
- */
-qcc::String genUniqueName(alljoyn_busattachment bus);
+typedef enum {
+    NOT_CLAIMABLE,      /**< The application is not claimed and not accepting claim requests. */
+    CLAIMABLE,          /**< The application is not claimed and is accepting claim requests. */
+    CLAIMED,            /**< The application is claimed and can be configured. */
+    NEED_UPDATE         /**< The application is claimed, but requires a configuration update (after a software upgrade). */
+} alljoyn_applicationstate;
 
-}
-#endif //AJTESTCOMMON_H
+#ifdef __cplusplus
+} /* extern "C" */
+#endif
+
+#endif
