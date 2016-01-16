@@ -895,7 +895,10 @@ QStatus KeyExchangerECDHE_NULL::KeyAuthentication(KeyExchangerCB& callback, cons
         return status;
     }
     uint8_t verifier[AUTH_VERIFIER_LEN];
-    GenerateLocalVerifier(verifier, sizeof(verifier));
+    status = GenerateLocalVerifier(verifier, sizeof(verifier));
+    if (status != ER_OK) {
+        return status;
+    }
     Message sentMsg(bus);
     Message replyMsg(bus);
     MsgArg verifierArg("ay", sizeof(verifier), verifier);
@@ -1098,7 +1101,10 @@ QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const
     peerState->ReleaseConversationHashLock(IsInitiator());
 
     uint8_t verifier[AUTH_VERIFIER_LEN];
-    GenerateLocalVerifier(verifier, sizeof(verifier));
+    status = GenerateLocalVerifier(verifier, sizeof(verifier));
+    if (status != ER_OK) {
+        return status;
+    }
     Message sentMsg(bus);
     Message replyMsg(bus);
     MsgArg verifierArg;
