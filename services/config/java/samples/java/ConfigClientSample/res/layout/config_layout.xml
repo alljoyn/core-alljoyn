@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+   Copyright AllSeen Alliance. All rights reserved.
+ 
+      Permission to use, copy, modify, and/or distribute this software for any
+      purpose with or without fee is hereby granted, provided that the above
+      copyright notice and this permission notice appear in all copies.
+ 
+      THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+      WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+      MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+      ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+      WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+      ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+      OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.^M
+ -->
+
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    >
+
+    <include
+        android:id="@+id/config_current_network"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        layout="@layout/current_network_layout"/>
+    
+    <!-- Config version -->
+    <LinearLayout 
+        android:layout_width="fill_parent"
+    	android:layout_height="wrap_content"
+    	android:orientation="horizontal"
+    >
+    <TextView
+        android:id="@+id/config_version_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/version"        
+        android:textSize="20sp"
+        android:padding="5dp" />
+    
+    <TextView
+        android:id="@+id/config_version_value"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" 
+        android:textSize="20sp"
+        android:padding="5dp" />
+</LinearLayout>
+    
+    <!-- Config data -->
+    <TextView
+        android:id="@+id/config_map_label"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/config_data_label"        
+        android:textSize="20sp"
+        android:padding="5dp" />
+    
+  	<LinearLayout 
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:padding="7dp"
+    android:background="#357EC7"
+    android:orientation="horizontal"
+    >
+
+    <CheckBox 
+        android:id="@+id/configNameCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+	    
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:layout_gravity="center_vertical"
+        android:text="@string/config_device_name"
+        android:textSize="20sp" />
+
+    <EditText
+        android:id="@+id/configNameValue"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+		android:textColor="@color/android:black"
+		android:inputType="text"
+        android:padding="10dp"
+        android:imeOptions="actionDone"
+        >
+    </EditText>
+        
+
+</LinearLayout>
+
+  	<LinearLayout
+    android:layout_width="fill_parent"
+    android:layout_height="wrap_content"
+    android:padding="7dp"
+    android:orientation="horizontal"
+    android:background="#357EC7"
+    >
+
+    <CheckBox 
+        android:id="@+id/configLangCheckBox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        />
+	    
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:layout_gravity="center_vertical"
+        android:text="@string/config_default_lang"
+        android:textSize="20sp" />
+
+    <EditText
+        android:id="@+id/configLangValue"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+		android:textColor="@color/android:black"
+		android:inputType="text"
+        android:padding="10dp"
+        android:imeOptions="actionDone"
+        >
+    </EditText>
+        
+
+</LinearLayout>
+        
+  	<LinearLayout
+  	    android:id="@+id/configButtons"
+  	    android:layout_width="match_parent"
+  	    android:layout_height="wrap_content"
+  	    android:background="#357EC7"
+  	    android:orientation="horizontal" >
+
+  	    <Button
+  	        android:id="@+id/configReset"
+  	        android:layout_width="fill_parent"
+  	        android:layout_height="wrap_content"
+  	        android:layout_weight="1"
+  	        android:text="@string/config_reset" />
+
+  	    <Button
+  	        android:id="@+id/configSave"
+  	        android:layout_width="match_parent"
+  	        android:layout_height="wrap_content"
+  	        android:layout_weight="1"
+  	        android:text="@string/config_save" />
+  	</LinearLayout>
+
+</LinearLayout>
+
+
+
