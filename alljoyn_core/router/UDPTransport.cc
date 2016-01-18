@@ -5172,8 +5172,10 @@ QStatus UDPTransport::Stop(void)
     QCC_DbgPrintf(("UDPTransport::Stop(): Stop endpoints"));
     QCC_DbgPrintf(("UDPTransport::Stop(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
-    for (set<UDPEndpoint>::iterator i = m_preList.begin(); i != m_preList.end(); ++i) {
+    set<UDPEndpoint>::iterator i = m_preList.begin();
+    while (i != m_preList.end()) {
         UDPEndpoint ep = *i;
+        m_preListLock.Unlock(MUTEX_CONTEXT);
         /*
          * Since the UDP Transport is going down, we assume the entire routing
          * node is going down for a reason, and we should not be waiting for
@@ -5182,6 +5184,8 @@ QStatus UDPTransport::Stop(void)
          */
         ep->SetEpWaitEnable(false);
         ep->Stop();
+        m_preListLock.Lock(MUTEX_CONTEXT);
+        i = m_preList.upper_bound(ep);
     }
     QCC_DbgPrintf(("UDPTransport::Stop(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
@@ -5431,9 +5435,13 @@ QStatus UDPTransport::Join(void)
      */
     QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
-    for (set<UDPEndpoint>::iterator i = m_preList.begin(); i != m_preList.end(); ++i) {
+    set<UDPEndpoint>::iterator i = m_preList.begin();
+    while (i != m_preList.end()) {
         UDPEndpoint ep = *i;
+        m_preListLock.Unlock(MUTEX_CONTEXT);
         ep->Join();
+        m_preListLock.Lock(MUTEX_CONTEXT);
+        i = m_preList.upper_bound(ep);
     }
     QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
@@ -5497,7 +5505,6 @@ QStatus UDPTransport::Join(void)
      * since we already Join()ed the maintenance thread we can delete all of the
      * endpoints here.
      */
-    set<UDPEndpoint>::iterator i;
     QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
     while ((i = m_preList.begin()) != m_preList.end()) {
