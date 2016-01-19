@@ -114,6 +114,7 @@ QStatus SocketStream::Connect(qcc::String& host, uint16_t port)
     }
 
     IPAddress ipAddr(host);
+
     QStatus status = qcc::Connect(sock, ipAddr, port);
 
     if (ER_WOULDBLOCK == status) {
@@ -161,7 +162,7 @@ QStatus SocketStream::Shutdown()
          * that is already closed.  Since we should not be doing this, assert
          * here.
          */
-        QCC_ASSERT(ER_OK == status);
+        QCC_ASSERT((ER_OK == status) || (ER_NOT_CONN == status));
         return status;
     }
 }
