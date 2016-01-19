@@ -46,8 +46,10 @@ class LockOrderChecker {
      * Called when a thread is about to acquire a lock.
      *
      * @param lock    Lock being acquired by current thread.
+     * @param file    Source code file name where the lock is being acquired.
+     * @param line    Source code line number where the lock is being acquired.
      */
-    void AcquiringLock(const Mutex* lock);
+    void AcquiringLock(const Mutex* lock, const char* file = s_unknownFile, uint32_t line = s_unknownLineNumber);
 
     /**
      * Called when a thread has just acquired a lock.
@@ -62,6 +64,18 @@ class LockOrderChecker {
      * @param lock    Lock being released by current thread.
      */
     void ReleasingLock(const Mutex* lock);
+
+    /**
+     * Lock/Unlock file name is unknown on Release builds, and on Debug builds
+     * if the caller didn't specify the MUTEX_CONTEXT parameter.
+     */
+    static const char* s_unknownFile;
+
+    /**
+     * Lock/Unlock line number is unknown on Release builds, and on Debug builds
+     * if the caller didn't specify the MUTEX_CONTEXT parameter.
+     */
+    static const uint32_t s_unknownLineNumber;
 
   private:
 
