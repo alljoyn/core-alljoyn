@@ -1203,7 +1203,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * sure at least the UDP transport holds a reference during this
          * process.
          */
-        QCC_DbgPrintf(("_UDPEndpoint::RecvCb(): Taking m_endpointListLock"));
         m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
 
         /*
@@ -5177,12 +5176,10 @@ QStatus UDPTransport::Stop(void)
      * the maintenance thread.
      */
     QCC_DbgPrintf(("UDPTransport::Stop(): Stop endpoints"));
-    QCC_DbgPrintf(("UDPTransport::Stop(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
     set<UDPEndpoint>::iterator i = m_preList.begin();
     while (i != m_preList.end()) {
         UDPEndpoint ep = *i;
-        QCC_DbgPrintf(("UDPTransport::Stop(): Giving pre-auth list lock"));
         m_preListLock.Unlock(MUTEX_CONTEXT);
         /*
          * Since the UDP Transport is going down, we assume the entire routing
@@ -5192,14 +5189,11 @@ QStatus UDPTransport::Stop(void)
          */
         ep->SetEpWaitEnable(false);
         ep->Stop();
-        QCC_DbgPrintf(("UDPTransport::Stop(): Taking pre-auth list lock"));
         m_preListLock.Lock(MUTEX_CONTEXT);
         i = m_preList.upper_bound(ep);
     }
-    QCC_DbgPrintf(("UDPTransport::Stop(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
-    QCC_DbgPrintf(("UDPTransport::Stop(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
         UDPEndpoint ep = *i;
@@ -5226,7 +5220,6 @@ QStatus UDPTransport::Stop(void)
         i->m_event->SetEvent();
     }
 
-    QCC_DbgPrintf(("UDPTransport::Stop(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     m_dynamicScoreUpdater.Stop();
@@ -5269,10 +5262,7 @@ QStatus UDPTransport::Join(void)
      * straightforward thing to do here is to wait for the endpoints to go away
      * before proceeding with the transport takedown.
      */
-    QCC_DbgPrintf(("UDPTransport::Join(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
-
-    QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
 
     bool passive;
@@ -5280,26 +5270,16 @@ QStatus UDPTransport::Join(void)
         passive = m_preList.empty() && m_authList.empty() && m_endpointList.empty();
 
         if (!passive) {
-            QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
             m_preListLock.Unlock(MUTEX_CONTEXT);
-
-            QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
-
             qcc::Sleep(10);
-
-            QCC_DbgPrintf(("UDPTransport::Join(): Taking endpoint list lock"));
             m_endpointListLock.Lock(MUTEX_CONTEXT);
-
-            QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
             m_preListLock.Lock(MUTEX_CONTEXT);
         }
     } while (!passive);
 
-    QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
-    QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
@@ -5442,22 +5422,17 @@ QStatus UDPTransport::Join(void)
      * will be formed, so it is okay to hold the endpoint lock during the
      * Join()s.
      */
-    QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
     set<UDPEndpoint>::iterator i = m_preList.begin();
     while (i != m_preList.end()) {
         UDPEndpoint ep = *i;
-        QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
         m_preListLock.Unlock(MUTEX_CONTEXT);
         ep->Join();
-        QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
         m_preListLock.Lock(MUTEX_CONTEXT);
         i = m_preList.upper_bound(ep);
     }
-    QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
-    QCC_DbgPrintf(("UDPTransport::Join(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
     for (set<UDPEndpoint>::iterator i = m_authList.begin(); i != m_authList.end(); ++i) {
         UDPEndpoint ep = *i;
@@ -5503,10 +5478,8 @@ QStatus UDPTransport::Join(void)
          * and expect the loop to run every 20 ms in the usual case,
          * ensuring that the waiting threads get time to run and leave.
          */
-        QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
         qcc::Sleep(10);
-        QCC_DbgPrintf(("UDPTransport::Join(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
     }
 
@@ -5516,7 +5489,6 @@ QStatus UDPTransport::Join(void)
      * since we already Join()ed the maintenance thread we can delete all of the
      * endpoints here.
      */
-    QCC_DbgPrintf(("UDPTransport::Join(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
     while ((i = m_preList.begin()) != m_preList.end()) {
 #ifndef NDEBUG
@@ -5525,7 +5497,6 @@ QStatus UDPTransport::Join(void)
 #endif
         m_preList.erase(i);
     }
-    QCC_DbgPrintf(("UDPTransport::Join(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     while ((i = m_authList.begin()) != m_authList.end()) {
@@ -5560,7 +5531,6 @@ QStatus UDPTransport::Join(void)
         m_connLock.Unlock(MUTEX_CONTEXT);
     }
 
-    QCC_DbgPrintf(("UDPTransport::Join(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     m_dynamicScoreUpdater.Join();
@@ -5992,16 +5962,12 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
     }
 
     set<UDPEndpoint>::iterator i;
-
-    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
 
     /*
      * If there are any endpoints on the preList, move them to the authList.
      */
-    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
-
     QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): There are %d. endpoints on m_preList", m_preList.size()));
     i = m_preList.begin();
     while (i != m_preList.end()) {
@@ -6016,8 +5982,6 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
         m_preList.erase(i);
         i = m_preList.begin();
     }
-
-    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     /*
@@ -6581,7 +6545,6 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
         ++i;
     }
 
-    QCC_DbgPrintf(("UDPTransport::ManageEndpoints(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
     if (managed) {
         m_dynamicScoreUpdater.Alert();
@@ -7213,7 +7176,6 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
      * managing the lists to deal with the authentication slots and total
      * connection slots.
      */
-    QCC_DbgPrintf(("UDPTransport::AcceptCb(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
 
     QCC_DbgPrintf(("UDPTransport::AcceptCb(): Adding endpoint with conn ID == %d. to m_preList", udpEp->GetConnId()));
@@ -7228,7 +7190,6 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
     if (!m_stopping) {
         m_preList.insert(udpEp);
     } else {
-        QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving pre-auth list lock"));
         m_preListLock.Unlock(MUTEX_CONTEXT);
         udpEp->Stop();
         QCC_LogError(status, ("UDPTransport::AcceptCb(): ARDP_Accept() failed"));
@@ -7243,7 +7204,6 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
         return false;
     }
 
-    QCC_DbgPrintf(("UDPTransport::AcceptCb(): giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
 
     /*
@@ -7355,10 +7315,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
      * really expected to be from now on.  ManageEndpoints touches both lists
      * using the lock order endpointList, preList; so we must do the same.
      */
-    QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
     m_endpointListLock.Lock(MUTEX_CONTEXT);
-
-    QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking pre-auth list lock"));
     m_preListLock.Lock(MUTEX_CONTEXT);
 
     set<UDPEndpoint>::iterator i = m_preList.begin();
@@ -7370,10 +7327,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
         i = m_preList.begin();
     }
 
-    QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Giving pre-auth list lock"));
     m_preListLock.Unlock(MUTEX_CONTEXT);
-
-    QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Giving endpoint list lock"));
     m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
     /*
@@ -7456,7 +7410,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
             return;
         }
 
-        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
         bool haveLock = true;
         for (set<UDPEndpoint>::iterator authListIt = m_authList.begin(); authListIt != m_authList.end(); ++authListIt) {
@@ -7500,7 +7453,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
                 /*
                  * Cannot call out with the endpoint list lock taken.
                  */
-                QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
 
                 /*
                  * If the inbound connection succeeded, we need to tell the daemon
@@ -7562,7 +7514,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
          * lock taken.
          */
         if (haveLock) {
-            QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
             m_endpointListLock.Unlock(MUTEX_CONTEXT);
         }
         DecrementAndFetch(&m_refCount);
@@ -7640,7 +7591,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
          * there is no point in going though the motions, and creating an
          * endpoint we would just have to fail.
          */
-        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
 
         bool eventValid = false;
@@ -7965,7 +7915,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
          * we come back.  If it is going, we need to arrange to undo the
          * following work, but that's the way the threading-cookie crumbles.
          */
-        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
 
         /*
@@ -7979,7 +7928,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
         QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Start()ing endpoint with conn ID == %d.", connId));
         udpEp->SetListener(this);
         udpEp->Start();
-        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): Taking endpoint list lock"));
         m_endpointListLock.Lock(MUTEX_CONTEXT);
 
         /*
@@ -8047,7 +7995,6 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
             udpEp->Stop();
         }
 
-        QCC_DbgPrintf(("UDPTransport::DoConnectCb(): giving endpoint list lock"));
         m_endpointListLock.Unlock(MUTEX_CONTEXT);
         DecrementAndFetch(&m_refCount);
         return;
