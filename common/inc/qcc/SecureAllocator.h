@@ -54,14 +54,14 @@ class SecureAllocator : public std::allocator<T> {
     };
 
     /** Constructor */
-    SecureAllocator() noexcept : std::allocator<T>() { }
+    SecureAllocator() : std::allocator<T>() { }
 
     /** Copy Constructor */
-    SecureAllocator(const SecureAllocator& a) noexcept : std::allocator<T>(a) { }
+    SecureAllocator(const SecureAllocator& a) : std::allocator<T>(a) { }
 
     /** Copy Constructor */
     template <typename U>
-    SecureAllocator(const SecureAllocator<U>& a) noexcept : std::allocator<T>(a) { }
+    SecureAllocator(const SecureAllocator<U>& a) : std::allocator<T>(a) { }
 
     /** Destructor */
     virtual ~SecureAllocator() { }
