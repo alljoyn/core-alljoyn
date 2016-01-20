@@ -28,6 +28,7 @@
 #include <stdarg.h>
 
 #include <qcc/KeyBlob.h>
+#include <qcc/SecureAllocator.h>
 #include <qcc/Stream.h>
 #include <qcc/String.h>
 
@@ -297,7 +298,7 @@ class Crypto_Hash {
      *
      * @return  Indication of success or failure.
      */
-    QStatus Update(const std::vector<uint8_t>& d);
+    QStatus Update(const std::vector<uint8_t, SecureAllocator<uint8_t> >& d);
 
     /**
      * Retrieve the digest into the supplied buffer.  It is assumed that buffer is large enough to
@@ -393,7 +394,7 @@ class Crypto_SHA256 : public Crypto_Hash {
  * @param out     Output data
  * @param outLen  The required length of the output data.
  */
-QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const std::vector<uint8_t>& seed, uint8_t* out, size_t outLen);
+QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const std::vector<uint8_t, SecureAllocator<uint8_t> >& seed, uint8_t* out, size_t outLen);
 
 /**
  *  Secure Remote Password (SRP6) class. This implements the core algorithm for Secure Remote

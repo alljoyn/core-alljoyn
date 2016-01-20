@@ -27,6 +27,7 @@
 #include <qcc/StringSource.h>
 #include <qcc/StringSink.h>
 #include <qcc/Util.h>
+#include <qcc/SecureAllocator.h>
 
 #include <alljoyn/KeyStoreListener.h>
 
@@ -172,11 +173,10 @@ class DefaultKeyStoreListener : public KeyStoreListener {
                 numSent = numBytes;
                 return ER_OK;
             }
-            const std::vector<uint8_t>& GetBuffer() const { return sbuf; }
-            void SecureClear() { ClearMemory(sbuf.data(), sbuf.size()); }
+            const std::vector<uint8_t, SecureAllocator<uint8_t> >& GetBuffer() const { return sbuf; }
 
           private:
-            std::vector<uint8_t> sbuf;    /**< storage for byte stream */
+            std::vector<uint8_t, SecureAllocator<uint8_t> > sbuf;    /**< storage for byte stream */
         };
 
 
@@ -217,7 +217,6 @@ class DefaultKeyStoreListener : public KeyStoreListener {
             QCC_LogError(status, ("Cannot write key store to %s", fileName.c_str()));
         }
 
-        buffer.SecureClear();
         LocalFree(dataOut.pbData);
 
         return status;

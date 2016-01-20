@@ -78,7 +78,7 @@ void AuthMechLogon::ComputeMS()
     /*
      * Use the PRF function to compute the master secret.
      */
-    vector<uint8_t> seed;
+    vector<uint8_t, SecureAllocator<uint8_t> > seed;
     seed.reserve(clientRandom.size() + serverRandom.size());
     AppendStringToVector(clientRandom, seed);
     AppendStringToVector(serverRandom, seed);
@@ -99,7 +99,7 @@ qcc::String AuthMechLogon::ComputeVerifier(const char* labelStr)
      * Snapshot msg hash and compute the verifier string.
      */
     msgHash.GetDigest(digest, true);
-    vector<uint8_t> seed;
+    vector<uint8_t, SecureAllocator<uint8_t> > seed;
     seed.reserve(sizeof(digest));
     seed.insert(seed.end(), digest, digest + sizeof(digest));
     Crypto_PseudorandomFunction(masterSecret, labelStr, seed, verifier, sizeof(verifier));
