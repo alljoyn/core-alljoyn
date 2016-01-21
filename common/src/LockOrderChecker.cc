@@ -39,12 +39,25 @@ namespace qcc {
 const uint32_t LockOrderChecker::defaultMaximumStackDepth = 4;
 
 /*
- * LOCKORDERCHECKER_OPTION_RECURSIVE_ACQUIRE_ASSERT and LOCKORDERCHECKER_OPTION_RECURSIVE_ACQUIRE_LOGERROR
- * are disabled by default because AllJoyn is currently acquiring recursively some of its locks.
- * Those known issues have to be sorted out before enabling the additional verification flags here,
- * to avoid unnecessary noise.
+ * LOCKORDERCHECKER_OPTION_MISSING_LEVEL_ASSERT is disabled by default because
+ * specifying lock level values from apps is not supported, but some of these
+ * apps acquire their own locks during listener callbacks. Listener callbacks
+ * commonly get called while owning one or more SCL locks.
+ *
+ * Another example of problematic MISSING_LEVEL_ASSERT behavior is: timer
+ * callbacks get called with the reentrancy lock held, and they can go off
+ * and execute app code.
+ *
+ * If you need to detect locks that don't have a proper level value:
+ *  - Add the MISSING_LEVEL_ASSERT bit into LockOrderChecker::enabledOptions
+ *  - Run your tests and look for failing assertions:
+ *      - If an assertion points to a lock you care about, add a level
+ *          value to that lock.
+ *      - If an assertion points to a lock you want to ignore, mark that
+ *          lock as LOCK_LEVEL_CHECKING_DISABLED.
+ *  - Then re-run the tests, and repeat the above steps.
  */
-int LockOrderChecker::enabledOptions = (LOCKORDERCHECKER_OPTION_LOCK_ORDERING_ASSERT | LOCKORDERCHECKER_OPTION_MISSING_LEVEL_ASSERT);
+int LockOrderChecker::enabledOptions = LOCKORDERCHECKER_OPTION_LOCK_ORDERING_ASSERT;
 
 /**
  * Lock/Unlock file name is unknown on Release builds, and on Debug builds
