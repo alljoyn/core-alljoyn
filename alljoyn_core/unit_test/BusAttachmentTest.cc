@@ -22,6 +22,7 @@
 #include <qcc/String.h>
 #include <qcc/Thread.h>
 
+#include <alljoyn/ApplicationStateListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/AllJoynStd.h>
@@ -30,6 +31,8 @@
 #include <alljoyn/version.h>
 
 #include <alljoyn/Status.h>
+
+#include "BusInternal.h"
 
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
@@ -40,19 +43,31 @@ using namespace std;
 using namespace qcc;
 using namespace ajn;
 
+class TestApplicationStateListener : public ApplicationStateListener {
+  public:
+    virtual void State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
+    {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(publicKeyInfo);
+        QCC_UNUSED(state);
+    }
+};
+
 class BusAttachmentTest : public testing::Test {
   public:
     BusAttachment bus;
+    TestApplicationStateListener testListener;
+    TestApplicationStateListener* nullListener;
 
-    BusAttachmentTest() : bus("BusAttachmentTest", false) { };
+    BusAttachmentTest() :
+        bus("BusAttachmentTest", false),
+        nullListener(nullptr)
+    { };
 
     virtual void SetUp() {
-        QStatus status = ER_OK;
-        status = bus.Start();
-        ASSERT_EQ(ER_OK, status);
+        ASSERT_EQ(ER_OK, bus.Start());
         ASSERT_FALSE(bus.IsConnected());
-        status = bus.Connect(getConnectArg().c_str());
-        ASSERT_EQ(ER_OK, status);
+        ASSERT_EQ(ER_OK, bus.Connect(getConnectArg().c_str()));
         ASSERT_TRUE(bus.IsConnected());
     }
 
@@ -62,6 +77,75 @@ class BusAttachmentTest : public testing::Test {
     }
 
 };
+
+TEST_F(BusAttachmentTest, shouldReturnErrorWhenRegisteringNullApplicationStateListener)
+{
+    EXPECT_EQ(ER_INVALID_ADDRESS, bus.RegisterApplicationStateListener(*nullListener));
+}
+
+TEST_F(BusAttachmentTest, shouldReturnErrorWhenUnregisteringNullApplicationStateListener)
+{
+    EXPECT_EQ(ER_INVALID_ADDRESS, bus.UnregisterApplicationStateListener(*nullListener));
+}
+
+TEST_F(BusAttachmentTest, shouldNotHaveMatchRuleWithoutRegisteredListener)
+{
+    EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
+}
+
+TEST_F(BusAttachmentTest, shouldNotAddMatchRuleWhenFailedToRegisterListener)
+{
+    ASSERT_EQ(ER_INVALID_ADDRESS, bus.RegisterApplicationStateListener(*nullListener));
+
+    EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
+}
+
+TEST_F(BusAttachmentTest, shouldReturnErrorWhenUnregisteringUnknownApplicationStateListener)
+{
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.UnregisterApplicationStateListener(testListener));
+}
+
+TEST_F(BusAttachmentTest, shouldRegisterApplicationStateListener)
+{
+    EXPECT_EQ(ER_OK, bus.RegisterApplicationStateListener(testListener));
+}
+
+TEST_F(BusAttachmentTest, shouldAddMatchRuleWhenListenerWasRegistered)
+{
+    ASSERT_EQ(ER_OK, bus.RegisterApplicationStateListener(testListener));
+
+    EXPECT_EQ(ER_OK, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
+}
+
+TEST_F(BusAttachmentTest, shouldReturnErrorWhenRegisteringSameApplicationStateListenerTwice)
+{
+    ASSERT_EQ(ER_OK, bus.RegisterApplicationStateListener(testListener));
+
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS, bus.RegisterApplicationStateListener(testListener));
+}
+
+TEST_F(BusAttachmentTest, shouldUnregisterApplicationStateListener)
+{
+    ASSERT_EQ(ER_OK, bus.RegisterApplicationStateListener(testListener));
+
+    EXPECT_EQ(ER_OK, bus.UnregisterApplicationStateListener(testListener));
+}
+
+TEST_F(BusAttachmentTest, shouldRemoveMatchRuleAfterUnregisteringListener)
+{
+    ASSERT_EQ(ER_OK, bus.RegisterApplicationStateListener(testListener));
+    ASSERT_EQ(ER_OK, bus.UnregisterApplicationStateListener(testListener));
+
+    EXPECT_EQ(ER_BUS_MATCH_RULE_NOT_FOUND, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
+}
+
+TEST_F(BusAttachmentTest, shouldNotRemoveMatchRuleWhenFailedToUnregisterListener)
+{
+    ASSERT_EQ(ER_OK, bus.RegisterApplicationStateListener(testListener));
+    ASSERT_EQ(ER_INVALID_ADDRESS, bus.UnregisterApplicationStateListener(*nullListener));
+
+    EXPECT_EQ(ER_OK, bus.RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE));
+}
 
 TEST_F(BusAttachmentTest, IsConnected)
 {
