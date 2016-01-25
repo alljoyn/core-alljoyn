@@ -1113,12 +1113,14 @@ BusObject::~BusObject()
     components->counterLock.Unlock(MUTEX_CONTEXT);
 
     QCC_DbgPrintf(("BusObject destructor for object with path = \"%s\"", GetPath()));
+
     /*
      * If this object has a parent it has not been unregistered so do so now.
      */
-    if (bus && parent) {
+    if (bus && (parent || isRegistered)) {
         bus->GetInternal().GetLocalEndpoint()->UnregisterBusObject(*this);
     }
+
     delete components;
 }
 
