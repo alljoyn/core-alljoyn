@@ -98,27 +98,69 @@ uint32_t _PeerState::EstimateTimestamp(uint32_t remote)
     return remote + static_cast<uint32_t>(clockOffset);
 }
 
-#define IN_RANGE(val, start, sz) ((((start) <= ((start) + (sz))) && ((val) >= (start)) && ((val) < ((start) + (sz)))) || \
-                                  (((start) > ((start) + (sz))) && !(((val) >= ((start) + (sz))) && ((val) < (start)))))
+static uint32_t wrapped_offset(uint32_t a, uint32_t b)
+{
+    uint32_t offset;
+    if (b <= a) {
+        offset = a - b;
+    } else {
+        offset = (0xFFFFFFFFUL - b) + a + 1;
+    }
+
+    return offset;
+}
 
 bool _PeerState::IsValidSerial(uint32_t serial, bool secure, bool unreliable)
 {
     QCC_UNUSED(secure);
     QCC_UNUSED(unreliable);
 
-    bool ret = false;
-    /*
-     * Serial 0 is always invalid.
-     */
-    if (serial != 0) {
-        const size_t winSize = sizeof(window) / sizeof(window[0]);
-        uint32_t* entry = window + (serial % winSize);
-        if ((*entry != serial) && IN_RANGE(serial, *entry, numeric_limits<uint32_t>::max() / 2)) {
-            *entry = serial;
-            ret = true;
+    uint32_t offset;
+    uint64_t mask;
+
+    if (serial == 0) {
+        /* 0 is never a valid serial number */
+        QCC_DbgHLPrintf(("_PeerState::IsValidSerial: 0 is invalid\n"));
+        return false;
+    }
+
+    if (prevSerial == 0) {
+        offset = 0;
+        flagWindow = 0;
+    } else {
+        offset = wrapped_offset(serial, prevSerial);
+        if (0 == offset) {
+            /* Current serial number matches highest recent serial */
+            QCC_DbgHLPrintf(("_PeerState::IsValidSerial: Repeated serial %x %x %llx\n", serial, prevSerial, flagWindow));
+            return false;
+        } else if (0xFFFFFFC0UL < offset) {
+            /* Current serial number is in the recent past. Check mask but don't move the window */
+            offset = (0xFFFFFFFFUL - offset) + 1;
+            mask = ((uint64_t) 1) << offset;
+            if (mask & flagWindow) {
+                QCC_DbgHLPrintf(("_PeerState::IsValidSerial: Repeated serial %x %x %llx\n", serial, prevSerial, flagWindow));
+                return false;
+            }
+            /* Switch this mask on to mark this serial number as "seen" */
+            flagWindow |= mask;
+            return true;
+        } else if (0x80000000UL <= offset) {
+            /* Too far in the past */
+            QCC_DbgHLPrintf(("_PeerState::IsValidSerial: Invalid serial %x %x %llx\n", serial, prevSerial, flagWindow));
+            return false;
+        }
+
+        /* Moving window ahead. */
+        if (offset < 64) {
+            flagWindow <<= offset;
+        } else {
+            flagWindow = 0;
         }
     }
-    return ret;
+
+    prevSerial = serial;
+    flagWindow |= 1;
+    return true;
 
 }
 
