@@ -85,10 +85,10 @@ class ConfigHelper {
     void PlatformDefaults()
     {
         Set("limit", "auth_timeout", "20000");
-        Set("limit", "max_incomplete_connections", "16");
-        Set("limit", "max_completed_connections", "32");
-        Set("limit", "max_remote_clients_tcp", "16");
-        Set("limit", "max_remote_clients_udp", "0");
+        Set("limit", "max_incomplete_connections", "48");
+        Set("limit", "max_completed_connections", "64");
+        Set("limit", "max_remote_clients_tcp", "48");
+        Set("limit", "max_remote_clients_udp", "48");
         Set("property", "router_power_source", "Battery powered and chargeable");
         Set("property", "router_mobility", "Intermediate mobility");
         Set("property", "router_availability", "3-6 hr");
