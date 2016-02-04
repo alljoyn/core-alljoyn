@@ -297,4 +297,6 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_MANIFEST_REJECTED" value="0x913d" comment="The manifest of the application was rejected."/>
   <status name="ER_INVALID_CERTIFICATE_USAGE" value="0x913e" comment="The certificate extended key usage is not Alljoyn specific."/>
   <status name="ER_INVALID_SIGNAL_EMISSION_TYPE" value="0x913f" comment="Attempt to send a signal with the wrong type."/>  
+  <status name="ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS" value="0x9140" comment="Application state listener already exists."/>
+  <status name="ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER" value="0x9141" comment="Application state listener does not exist."/>
 </status_block>
