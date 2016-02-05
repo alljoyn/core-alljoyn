@@ -61,9 +61,10 @@ static const char daemonConfig[] =
     "<busconfig>"
     "  <type>alljoyn</type>"
     "  <limit name=\"auth_timeout\">20000</limit>"
-    "  <limit name=\"max_incomplete_connections\">16</limit>"
-    "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_untrusted_clients\">16</limit>"
+    "  <limit name=\"max_incomplete_connections\">48</limit>"
+    "  <limit name=\"max_completed_connections\">64</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+    "  <limit name=\"max_remote_clients_udp\">48</limit>"
     "</busconfig>";
 
 /** Static top level message bus object */

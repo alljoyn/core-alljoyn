@@ -242,7 +242,6 @@ class SecurityDefaultPolicyTest : public testing::Test {
         EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer2);
 
         managerBus.RegisterApplicationStateListener(appStateListener);
-        managerBus.AddApplicationStateRule();
 
         // All Inclusive manifest
         const size_t manifestSize = 1;

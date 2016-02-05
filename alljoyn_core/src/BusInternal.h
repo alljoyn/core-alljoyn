@@ -58,6 +58,7 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     struct Session;
 
   public:
+
     /**
      * Get a reference to the internal store object.
      *
@@ -417,6 +418,30 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
      * @return true if the bus is connected.
      */
     bool IsConnected() const;
+    
+    /**
+     * Adds an ApplicationStateListener.
+     * Thread safe.
+     *
+     * @param[in] applicationStateListener Listener, which is going to be added to the set.
+     *
+     * @return
+     *         - ER_OK if successful.
+     *         - ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS if the listener already exists in the set.
+     */
+    QStatus AddApplicationStateListener(ApplicationStateListener& applicationStateListener);
+
+    /**
+     * Removes an ApplicationStateListener.
+     * Thread safe.
+     *
+     * @param[in] applicationStateListener Listener, which is going to be removed to the set.
+     *
+     * @return
+     *         - ER_OK if successful.
+     *         - ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER if that listener does not exist in the set.
+     */
+    QStatus RemoveApplicationStateListener(ApplicationStateListener& applicationStateListener);
 
     /**
      * Start all the transports.
@@ -491,6 +516,12 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
 
     /** @copydoc _LocalEndpoint::GetDBusProxyObj() */
     virtual const ProxyBusObject& GetDBusProxyObj() const { return localEndpoint->GetDBusProxyObj(); }
+
+    /** A match string for the "State" signal that's triggering the ApplicationStateListeners. */
+    static AJ_PCSTR STATE_MATCH_RULE;
+
+    /** Wait time before performing the next reference count check during ApplicationStateListener unregistering */
+    static uint32_t APPLICATION_STATE_LISTENER_UNREGISTER_WAIT_INTERVAL;
 
   private:
 

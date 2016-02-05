@@ -286,8 +286,7 @@ TimerImpl::TimerImpl(String name, bool expireOnExit, uint32_t concurrency, bool 
     isRunning(false),
     controllerIdx(0),
     preventReentrancy(preventReentrancy),
-    /* reentrancyLock is held while executing app callbacks, and these callbacks might acquire locks having an unspecified level */
-    reentrancyLock(LOCK_LEVEL_CHECKING_DISABLED),
+    reentrancyLock(LOCK_LEVEL_TIMERIMPL_REENTRANCYLOCK),
     nameStr(name),
     maxAlarms(maxAlarms),
     numLimitableAlarms(0)

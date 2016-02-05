@@ -484,7 +484,12 @@ static void CreateMechanism(int* rdFd, int* wrFd)
 #else
     /* TODO: Potential thread safety issue here */
     if (NULL == pipeLock) {
-        pipeLock = new Mutex();
+        /*
+         * Disable LockOrderChecker for the pipeLock lock, because this lock is
+         * being used indirectly by the LockChecker itself when it looks up the
+         * current thread.
+         */
+        pipeLock = new Mutex(LOCK_LEVEL_CHECKING_DISABLED);
         freePipeList = new vector<pair<int, int> >;
         usedPipeList = new vector<pair<int, int> >;
     }

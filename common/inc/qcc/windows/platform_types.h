@@ -74,4 +74,11 @@ typedef UINT_PTR qcc_UARTFd;   /**< UART file descriptor type. */
 #define PRIiSIZET "Id"
 #endif
 
+/**
+ * Zero-terminated strings.
+ * They also have better support for Microsoft's static code analysis in comparison to char*.
+ */
+typedef PSTR AJ_PSTR;
+typedef PCSTR AJ_PCSTR;
+
 #endif

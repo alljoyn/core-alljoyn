@@ -1905,8 +1905,13 @@ class BusAttachment : public MessageReceiver {
      * State signal.
      *
      * @param[in] applicationStateListener reference to an ApplicationStateListener
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - #ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS when the same listener has already been registered.
+     *    - Different error status otherwise
      */
-    void RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
+    QStatus RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
 
     /**
      * Unregisters the ApplicationStateListener from receiving the
@@ -1915,34 +1920,13 @@ class BusAttachment : public MessageReceiver {
      * @param[in] applicationStateListener reference to an
      *                                     ApplicationStateListener to
      *                                     unregister
-     */
-    void UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
-
-    /**
-     * This is a helper function that will add the match rule responsible for
-     * receiving the org.alljoyn.Bus.Application State signal.
-     *
-     * The ApplicationStateListener should be registered before calling this method.
-     *
-     * This will only call AddMatch for the State signal.
      *
      * @return
      *    - #ER_OK on success
-     *    - An error status otherwise
+     *    - #ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER when this listener has not been registered.
+     *    - Different error status otherwise
      */
-    QStatus AddApplicationStateRule();
-
-    /**
-     * This is a helper function that will remove the match rule responsible for
-     * receiving the org.alljoyn.Bus.Application State signal.
-     *
-     * This will only call RemoveMatch for the State signal.
-     *
-     * @return
-     *    - #ER_OK on success
-     *    - An error status otherwise
-     */
-    QStatus RemoveApplicationStateRule();
+    QStatus UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener);
 
     /// @cond ALLJOYN_DEV
     /**

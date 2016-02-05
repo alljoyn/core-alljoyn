@@ -39,13 +39,37 @@ namespace qcc {
 const uint32_t LockOrderChecker::defaultMaximumStackDepth = 4;
 
 /*
- * LOCKORDERCHECKER_OPTION_RECURSIVE_ACQUIRE_ASSERT and LOCKORDERCHECKER_OPTION_RECURSIVE_ACQUIRE_LOGERROR
- * are disabled by default because AllJoyn is currently acquiring recursively some of its locks.
- * Those known issues have to be sorted out before enabling the additional verification flags here,
- * to avoid unnecessary noise.
+ * LOCKORDERCHECKER_OPTION_MISSING_LEVEL_ASSERT is disabled by default because
+ * specifying lock level values from apps is not supported, but some of these
+ * apps acquire their own locks during listener callbacks. Listener callbacks
+ * commonly get called while owning one or more SCL locks.
+ *
+ * Another example of problematic MISSING_LEVEL_ASSERT behavior is: timer
+ * callbacks get called with the reentrancy lock held, and they can go off
+ * and execute app code.
+ *
+ * If you need to detect locks that don't have a proper level value:
+ *  - Add the MISSING_LEVEL_ASSERT bit into LockOrderChecker::enabledOptions
+ *  - Run your tests and look for failing assertions:
+ *      - If an assertion points to a lock you care about, add a level
+ *          value to that lock.
+ *      - If an assertion points to a lock you want to ignore, mark that
+ *          lock as LOCK_LEVEL_CHECKING_DISABLED.
+ *  - Then re-run the tests, and repeat the above steps.
  */
-int LockOrderChecker::enabledOptions = (LOCKORDERCHECKER_OPTION_LOCK_ORDERING_ASSERT | LOCKORDERCHECKER_OPTION_MISSING_LEVEL_ASSERT);
+int LockOrderChecker::enabledOptions = LOCKORDERCHECKER_OPTION_LOCK_ORDERING_ASSERT;
 
+/**
+ * Lock/Unlock file name is unknown on Release builds, and on Debug builds
+ * if the caller didn't specify the MUTEX_CONTEXT parameter.
+ */
+const char* LockOrderChecker::s_unknownFile = nullptr;
+
+/**
+ * Lock/Unlock line number is unknown on Release builds, and on Debug builds
+ * if the caller didn't specify the MUTEX_CONTEXT parameter.
+ */
+const uint32_t LockOrderChecker::s_unknownLineNumber = static_cast<uint32_t>(-1);
 
 class LockOrderChecker::LockTrace {
   public:
@@ -99,7 +123,7 @@ LockOrderChecker::~LockOrderChecker()
  *
  * @param lock    Lock being acquired by current thread.
  */
-void LockOrderChecker::AcquiringLock(const Mutex* lock)
+void LockOrderChecker::AcquiringLock(const Mutex* lock, const char* file, uint32_t line)
 {
     /* Find the most-recently acquired lock that is being verified */
     bool foundRecentEntry = false;
@@ -125,6 +149,15 @@ void LockOrderChecker::AcquiringLock(const Mutex* lock)
         return;
     }
 
+    if (file == s_unknownFile) {
+        /* Caller's location is unknown, so try to at least point to the previous owner of this lock */
+        file = MutexInternal::GetLatestOwnerFileName(*lock);
+    }
+    if (line == s_unknownLineNumber) {
+        /* Caller's location is unknown, so try to at least point to the previous owner of this lock */
+        line = MutexInternal::GetLatestOwnerLineNumber(*lock);
+    }
+
     LockLevel previousLevel = m_lockStack[recentEntry].m_level;
     LockLevel lockLevel = MutexInternal::GetLevel(*lock);
     QCC_ASSERT(lockLevel != LOCK_LEVEL_CHECKING_DISABLED);
@@ -135,8 +168,8 @@ void LockOrderChecker::AcquiringLock(const Mutex* lock)
             fprintf(stderr,
                     "Acquiring lock %p with unspecified level (%s:%d). Current thread already owns lock %p level %d (%s:%d).\n",
                     lock,
-                    MutexInternal::GetLatestOwnerFileName(*lock) ? MutexInternal::GetLatestOwnerFileName(*lock) : "unknown file",
-                    MutexInternal::GetLatestOwnerLineNumber(*lock),
+                    (file != nullptr) ? file : "unknown file",
+                    line,
                     previousTrace.m_lock,
                     previousTrace.m_level,
                     MutexInternal::GetLatestOwnerFileName(*previousTrace.m_lock) ? MutexInternal::GetLatestOwnerFileName(*previousTrace.m_lock) : "unknown file",
@@ -171,8 +204,8 @@ void LockOrderChecker::AcquiringLock(const Mutex* lock)
                 "Acquiring lock %p level %d (%s:%d). Current thread already owns lock %p level %d (%s:%d).\n",
                 lock,
                 lockLevel,
-                MutexInternal::GetLatestOwnerFileName(*lock) ? MutexInternal::GetLatestOwnerFileName(*lock) : "unknown file",
-                MutexInternal::GetLatestOwnerLineNumber(*lock),
+                (file != nullptr) ? file : "unknown file",
+                line,
                 previousTrace.m_lock,
                 previousTrace.m_level,
                 MutexInternal::GetLatestOwnerFileName(*previousTrace.m_lock) ? MutexInternal::GetLatestOwnerFileName(*previousTrace.m_lock) : "unknown file",

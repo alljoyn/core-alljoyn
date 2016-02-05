@@ -606,7 +606,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * in connection establishment, there should be few connections in this
      * state, so we default to a quite low number.
      */
-    static const uint32_t ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_UDP_DEFAULT = 10;
+    static const uint32_t ALLJOYN_MAX_INCOMPLETE_CONNECTIONS_UDP_DEFAULT = 48;
 
     /**
      * @brief The default value for the maximum number of UDP connections
@@ -625,7 +625,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * connections will be accepted.  This is because we are defending against
      * attacks from "abroad" and trust ourselves implicitly.
      */
-    static const uint32_t ALLJOYN_MAX_COMPLETED_CONNECTIONS_UDP_DEFAULT = 50;
+    static const uint32_t ALLJOYN_MAX_COMPLETED_CONNECTIONS_UDP_DEFAULT = 64;
 
     /**
      * @brief The default value for the maximum number of remote clients over udp.
@@ -636,7 +636,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @warning This maximum is enforced on incoming connections from untrusted clients over udp.
      * This is to limit the amount of resources being used by untrusted clients over udp.
      */
-    static const uint32_t ALLJOYN_MAX_REMOTE_CLIENTS_UDP_DEFAULT = 16;
+    static const uint32_t ALLJOYN_MAX_REMOTE_CLIENTS_UDP_DEFAULT = 48;
 
     /**
      * @brief The default value for the router advertisement prefix that untrusted thin clients

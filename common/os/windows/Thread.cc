@@ -42,11 +42,9 @@ using namespace std;
 
 namespace qcc {
 
-#ifndef NDEBUG
 static volatile int32_t started = 0;
 static volatile int32_t running = 0;
 static volatile int32_t stopped = 0;
-#endif
 
 /** Maximum number of milliseconds to wait between calls to select to check for thread death */
 static const uint32_t MAX_SELECT_WAIT_MS = 10000;

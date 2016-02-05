@@ -95,15 +95,13 @@ KeyStore::KeyStore(const qcc::String& application) :
     storeState(UNAVAILABLE),
     keys(new KeyMap),
     persistentKeys(new KeyMap),
-    /* This lock is held while calling into app's KeyStoreListener, that might acquire other locks having an unspecified level */
-    persistentKeysLock(LOCK_LEVEL_CHECKING_DISABLED),
+    persistentKeysLock(LOCK_LEVEL_KEYSTORE_PERSISTENTKEYSLOCK),
     /* Workaround for ASACORE-2661 */
     consistencyLock(LOCK_LEVEL_CHECKING_DISABLED),
     defaultListener(NULL),
     listener(NULL),
     thisGuid(),
-    /* This lock is held while calling into app's KeyStoreListener, that might acquire other locks having an unspecified level */
-    lock(LOCK_LEVEL_CHECKING_DISABLED),
+    lock(LOCK_LEVEL_KEYSTORE_LOCK),
     keyStoreKey(NULL),
     revision(0),
     persistentRevision(0),
