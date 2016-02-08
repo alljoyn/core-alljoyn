@@ -87,6 +87,15 @@ about_env['OBJDIR_ABOUT'] = env['OBJDIR'] + '/about'
 about_env.VariantDir('$OBJDIR_ABOUT/cpp', '../services/about/cpp', duplicate = 0)
 about_env.SConscript('$OBJDIR_ABOUT/cpp/SConscript', exports = ['about_env'])
 
+# Always build C++ version of ConfigService
+# ajrlib must be set before calling the SConscripts responsible for
+# building the ConfigService.
+
+config_env = env.Clone()
+config_env['OBJDIR_CONFIG'] = env['OBJDIR'] + '/config'
+config_env.VariantDir('$OBJDIR_CONFIG/cpp', '../services/config/cpp', duplicate = 0)
+config_env.SConscript('$OBJDIR_CONFIG/cpp/SConscript', exports = ['config_env'])
+
 # only include command line samples, unit test, test programs if we are not
 # building for iOS. No support on iOS for command line applications.
 if env['OS'] == 'darwin' and env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:

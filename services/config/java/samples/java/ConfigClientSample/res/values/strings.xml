@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<!--
+   Copyright AllSeen Alliance. All rights reserved.
+ 
+      Permission to use, copy, modify, and/or distribute this software for any
+      purpose with or without fee is hereby granted, provided that the above
+      copyright notice and this permission notice appear in all copies.
+ 
+      THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+      WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+      MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+      ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+      WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+      ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+      OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.^M
+ -->
+
+<resources>
+
+    <!-- General -->
+    <string name="app_name">Config Client</string>
+    <string name="current_network">Current network: %s</string>
+    
+   <!-- Scan Wifi Activity -->
+    <!-- 
+	<string name="Scan_WIFI_networks">Scan WIFI networks</string>
+	<string name="scan_wifi_text">Choose network to connect</string>
+	<string name="enter_wifi_password_title">Enter password</string>
+    <string name="enter_wifi_password_message">Enter password if needed. If your WIFI is free, leave this field empty</string>
+    <string name="connecting_to">"Connecting to %s"</string>
+    <string name="failed_to_connect_to_wifi_title">Failed to connect</string>
+    <string name="failed_to_connect_to_wifi_message">"Failed to connect to %s. Please try to refresh your list, or enter another password and try again"</string>
+	<string name="wifi_activity_scanning">Scanning&#8230;</string>
+     -->
+     
+	<!-- Announced Names Activity -->
+	<string name="AllJoynConnect">Connect to AllJoyn</string>
+	<string name="AllJoynDisconnect">Disconnect from AllJoyn</string>
+
+	<!-- About -->
+	<string name="about_language">About language:&#160;</string>
+	<string name="bus_description_label">Bus Object Description:&#160;</string>
+	<string name="about_data_label">About map:&#160;</string>
+	<string name="bus_path_label">Path:&#160;</string>
+	<string name="bus_interfaces_label">Interfaces:&#160;</string>
+	
+	<!-- Config -->		
+	<string name="config_language">Config language:&#160;</string>
+	<string name="config_data_label">Config map:&#160;</string>
+	<string name="config_save">Save</string>
+	<string name="config_reset">Reset</string>
+	<string name="config_property_is_checked">isChecked</string>
+	<string name="config_property_editor">editor</string>
+	<string name="menu_config_set_language">Set config language</string>
+	<string name="menu_config_factory_reset">Factory reset</string>
+	<string name="menu_config_restart">Restart device</string>
+	<string name="menu_config_set_password">Set password</string>
+	<string name="menu_config_show_announcement">Show Announcement</string>
+	
+	<!-- Password -->
+	<string name="enterDevicePassword">Enter device password</string>
+	<string name="showPassword">Show password</string>
+	
+	<!-- Main menu -->
+	<string name="context_menu_announce">Show announce</string>
+	<string name="context_menu_config">Config</string>
+		
+	<string name="version">Version:&#160;</string>
+	<string name="menu_refresh">Refresh</string>
+	
+	<!-- Language popup -->
+	<string name="enter_language">language</string>
+	<string name="supported_languages">supported languages:&#160;</string>
+	<string name="device_list_item_click_toast">Press long for a menu</string>
+	<string name="enter_device_password">Enter Device Password</string>
+	<string name="enter_new_password">Enter new Password</string>
+	<string name="loading_setting_config">Setting config</string>
+	<string name="toast_save_configuration_done">Save configuration done</string>
+	<string name="loading_reset_configuration">Reset configuration</string>
+	<string name="toast_reset_configuration_done">Reset Configuration done</string>
+	<string name="main_screen_row_text">Friendly name = %1$s\nBus name = %2$s</string>
+	<string name="alert_password_incorrect_title">Your password is incorrect. Please enter the correct one</string>
+	<string name="loading_get_config_version">getting config version</string>
+	<string name="loading_get_config">getting config Data</string>
+	<string name="alert_factory_reset">Are you sure you want to factory reset your device?</string>
+	<string name="loading_factory_reset">Factory Reseting</string>
+	<string name="alert_restart">Are you sure you want to restart your device?</string>
+	<string name="loading_restart">Restarting the device</string>
+	<string name="alert_title_enter_new_password">Enter device new password</string>
+	<string name="loading_set_password">Setting Password</string>
+	<string name="error">Error</string>
+	<string name="device_was_not_found">Device was not found</string>
+	<string name="alert_msg_chose_fields">You haven\'t chosen any of the fields</string>
+	<string name="no_peer_selected">No peer selected.</string>
+	<string name="no_device_available">No device available.</string>
+	<string name="alert_title_set_daemon_name">Set daemonname</string>
+	<string name="alert_msg_disconnect_from_alljoyn">Are you sure you want to disconnect from AllJoyn?</string>
+	<string name="config_device_name">Name</string>
+	<string name="config_default_lang">Default lang</string>
+	<string name="get_announce_about_map_null">About map:\nAbout map is null\n</string>
+							 
+</resources>
+

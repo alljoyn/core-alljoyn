@@ -1,0 +1,40 @@
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Import('config_env')
+
+if not config_env.has_key('_ALLJOYNCORE_'):
+    config_env.Append(LIBS = ['alljoyn'])
+    if config_env['BR'] == 'on' :
+        config_env.Prepend(LIBS = ['ajrouter'])
+    if config_env['OS'] == 'openwrt':
+        config_env.AppendUnique(LIBS = [ 'stdc++', 'pthread' ])
+
+# Make config dist a sub-directory of the alljoyn dist.  This avoids any conflicts with alljoyn dist targets.
+config_env['CONFIG_DISTDIR'] = config_env['DISTDIR'] + '/cpp'
+
+config_env.Install('$CONFIG_DISTDIR/inc/alljoyn/config', config_env.Glob('inc/alljoyn/config/*.h'))
+
+# Config libraries
+config_env.Install('$CONFIG_DISTDIR/lib', config_env.SConscript('src/SConscript', exports = ['config_env']))
+
+# Sample programs
+config_env.Install('$CONFIG_DISTDIR/bin/samples', config_env.SConscript('samples/SConscript', exports = ['config_env']))
+
+# only include command line samples, unit test, test programs if we are not 
+# building for iOS. No support on iOS for command line applications.
+## Unit tests have not yet been implemented for Config
+##if not (config_env['OS'] == 'darwin' and config_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]):
+##    # Build unit Tests
+##    config_env.SConscript('unit_test/SConscript', exports = ['config_env'], variant_dir='$OBJDIR_CONFIG/unittest', duplicate = 0)

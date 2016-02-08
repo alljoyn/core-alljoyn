@@ -52,18 +52,12 @@ if 'java' in bindings:
 if 'js' in bindings:
     env.SConscript(['alljoyn_js/SConscript'])
 
-# Always build AboutService.
+# Always build AboutService and ConfigService.
 env.SConscript(['services/about/SConscript'])
+env.SConscript(['services/config/SConscript'])
 
-if services.intersection(['config', 'controlpanel', 'notification', 'onboarding', 'time', 'audio']):
+if services.intersection(['controlpanel', 'notification', 'onboarding', 'time', 'audio']):
     env['APP_COMMON_DIR'] = env.Dir('../../services/base/sample_apps')
-
-    if services.intersection(['config', 'onboarding']):
-        # onboarding also depends on config
-        env.SConscript(['../../services/base/config/SConscript'])
-
-        if 'onboarding' in services:
-            env.SConscript(['../../services/base/onboarding/SConscript'])
 
     if services.intersection(['controlpanel', 'notification']):
         # controlpanel also depends on notification
@@ -71,6 +65,9 @@ if services.intersection(['config', 'controlpanel', 'notification', 'onboarding'
 
         if 'controlpanel' in services:
             env.SConscript(['../../services/base/controlpanel/SConscript'])
+
+    if 'onboarding' in services:
+        env.SConscript(['../../services/base/onboarding/SConscript'])
 
     if 'time' in services:
         env.SConscript(['../../services/base/time/SConscript'])

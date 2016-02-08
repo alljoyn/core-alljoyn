@@ -100,6 +100,12 @@ about_env['OBJDIR_ABOUT'] = env['OBJDIR'] + '/about'
 about_env.VariantDir('$OBJDIR/services/about/java', '../services/about/java', duplicate = 0)
 about_env.SConscript('$OBJDIR/services/about/java/SConscript', exports = ['about_env'])
 
+# Always build Java version of the ConfigService
+config_env = javaenv.Clone()
+config_env['OBJDIR_ABOUT'] = env['OBJDIR'] + '/config'
+config_env.VariantDir('$OBJDIR/services/config/java', '../services/config/java', duplicate = 0)
+config_env.SConscript('$OBJDIR/services/config/java/SConscript', exports = ['config_env'])
+
 # AllJoyn Java binding tests
 javaenv.SConscript('test/SConscript', exports = {'env':javaenv})
 
