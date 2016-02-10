@@ -23,7 +23,31 @@
 
 using namespace qcc;
 
-#define VALID_XML "<root/>"
+#define VALID_ROOT_XML "<root/>"
+#define VALID_CHILD_XML "<child/>"
+
+class XmlElementTest : public testing::Test {
+  public:
+    XmlElementTest() :
+        parent(nullptr),
+        child(nullptr)
+    { };
+
+    virtual void SetUp()
+    {
+        ASSERT_EQ(ER_OK, XmlElement::GetRoot(VALID_ROOT_XML, &parent));
+        ASSERT_EQ(ER_OK, XmlElement::GetRoot(VALID_CHILD_XML, &child));
+    }
+
+    virtual void TearDown()
+    {
+        delete parent;
+    }
+
+  protected:
+    XmlElement* parent;
+    XmlElement* child;
+};
 
 TEST(XmlElement, ShouldFailGetRootForInvalidXml)
 {
@@ -34,9 +58,23 @@ TEST(XmlElement, ShouldFailGetRootForInvalidXml)
 TEST(XmlElement, ShouldPassGetRootForValidInput)
 {
     XmlElement* root = nullptr;
-    EXPECT_EQ(ER_OK, XmlElement::GetRoot(VALID_XML, &root));
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(VALID_ROOT_XML, &root));
     delete root;
 }
+
+TEST_F(XmlElementTest, ShouldReturnSameXmlAsGenerate)
+{
+    EXPECT_EQ(parent->Generate(), parent->ToString());
+}
+
+TEST_F(XmlElementTest, ShouldAddChild)
+{
+    parent->AddChild(child);
+
+    EXPECT_EQ(1U, parent->GetChildren().size());
+    EXPECT_EQ(child->GetName(), parent->GetChildren()[0]->GetName());
+}
+
 
 TEST(XmlElement, SetName)
 {
