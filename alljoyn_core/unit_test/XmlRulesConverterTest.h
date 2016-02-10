@@ -192,6 +192,16 @@ static AJ_PCSTR VALID_MEMBER_WITH_WILDCARD =
     "</interface>"
     "</node>"
     "</manifest>";
+static AJ_PCSTR VALID_MEMBER_WITH_DENY =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<method>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "</method>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
 static AJ_PCSTR VALID_SAME_NAME_INTERFACES_IN_SEPARATE_NODES =
     "<manifest>"
     "<node name = \"/Node0\">"
