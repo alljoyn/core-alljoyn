@@ -35,11 +35,9 @@
 #error Only include XmlRulesValidator.h in C++ code.
 #endif
 
-#include <unordered_set>
 #include <unordered_map>
 #include <alljoyn/Status.h>
 #include <alljoyn/PermissionPolicy.h>
-#include <qcc/platform.h>
 #include <qcc/XmlElement.h>
 #include "XmlValidator.h"
 
@@ -58,6 +56,7 @@ namespace ajn {
 #define METHOD_MEMBER_TYPE "method"
 #define PROPERTY_MEMBER_TYPE "property"
 #define SIGNAL_MEMBER_TYPE "signal"
+#define DENY_MEMBER_MASK "Deny"
 #define OBSERVE_MEMBER_MASK "Observe"
 #define PROVIDE_MEMBER_MASK "Provide"
 #define MODIFY_MEMBER_MASK "Modify"
@@ -433,12 +432,37 @@ class XmlRulesValidator : public XmlValidator {
          * Validates the given annotation is allowed in a member element at all.
          *
          * @param[in]    annotation          Validated annotation.
+         * @param[in]    presentAnnotations  Values of previous annotations in the given memeber.
          *
          * @return
          *            #ER_OK if the input is correct.
          *            #ER_XML_MALFORMED otherwise.
          */
-        QStatus ValidateAnnotationAllowed(qcc::XmlElement* annotation);
+        QStatus ValidateAnnotationAllowed(qcc::XmlElement* annotation, std::unordered_set<std::string>& presentAnnotations);
+
+        /**
+         * Validates the given annotation has the "value" attribute within the
+         * set of allowed values for this particular member.
+         *
+         * @param[in]    annotation          Validated annotation.
+         *
+         * @return
+         *            #ER_OK if the input is correct.
+         *            #ER_XML_MALFORMED otherwise.
+         */
+        QStatus ValidateAnnotationAllowedForMember(qcc::XmlElement* annotation);
+
+        /**
+         * Validates if the "Deny" annotation is not present or is the only
+         * annotation definied for this member.
+         *
+         * @param[in]    presentAnnotations  Values of previous annotations in the given memeber.
+         *
+         * @return
+         *            #ER_OK if the input is correct.
+         *            #ER_XML_MALFORMED otherwise.
+         */
+        QStatus ValidateDenyAnnotation(std::unordered_set<std::string>& presentAnnotations);
 
         /**
          * Validates the XML member's name is correct according to the schema.

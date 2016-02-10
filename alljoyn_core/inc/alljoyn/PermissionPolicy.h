@@ -836,6 +836,7 @@ class _Manifest {
     friend class PermissionMgmtObj;
     friend class SecurityApplicationObj;
     friend class SecurityApplicationProxy;
+    friend class XmlManifestConverter;
 
   public:
     /** MsgArg signature for an array of signed manifests. */
