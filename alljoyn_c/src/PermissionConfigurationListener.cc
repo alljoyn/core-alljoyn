@@ -58,7 +58,23 @@ class PermissionConfigurationListenerCallbackC : public PermissionConfigurationL
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
         if (callbacks.policy_changed != NULL) {
-            return callbacks.policy_changed(context);
+            callbacks.policy_changed(context);
+        }
+    }
+
+    virtual void StartManagement()
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        if (callbacks.start_management != NULL) {
+            callbacks.start_management(context);
+        }
+    }
+
+    virtual void EndManagement()
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        if (callbacks.end_management != NULL) {
+            callbacks.end_management(context);
         }
     }
 

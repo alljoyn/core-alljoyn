@@ -64,12 +64,14 @@ void XmlRulesValidator::MemberTypeMapInit()
 
 void XmlRulesValidator::MethodsValidator::Init()
 {
+    s_actionsMap[DENY_MEMBER_MASK] = 0;
     s_actionsMap[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
     s_actionsMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
 }
 
 void XmlRulesValidator::PropertiesValidator::Init()
 {
+    s_actionsMap[DENY_MEMBER_MASK] = 0;
     s_actionsMap[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
     s_actionsMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
     s_actionsMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
@@ -77,6 +79,7 @@ void XmlRulesValidator::PropertiesValidator::Init()
 
 void XmlRulesValidator::SignalsValidator::Init()
 {
+    s_actionsMap[DENY_MEMBER_MASK] = 0;
     s_actionsMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
     s_actionsMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
 }
@@ -336,10 +339,6 @@ QStatus XmlRulesValidator::MemberValidator::ValidateMemberName(AJ_PCSTR name)
 
 QStatus XmlRulesValidator::MemberValidator::ValidateActionMask(uint8_t actionMask)
 {
-    if (0 == actionMask) {
-        return ER_FAIL;
-    }
-
     uint8_t validActions = GetValidActions();
     return ((validActions | actionMask) == validActions) ? ER_OK : ER_FAIL;
 }
@@ -373,18 +372,37 @@ QStatus XmlRulesValidator::MemberValidator::ValidateAnnotation(qcc::XmlElement* 
     }
 
     if (ER_OK == status) {
-        status = ValidateAnnotationAllowed(annotation);
+        status = ValidateAnnotationAllowed(annotation, presentAnnotations);
     }
 
     return status;
 }
 
-QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowed(qcc::XmlElement* annotation)
+QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowed(qcc::XmlElement* annotation, std::unordered_set<std::string>& presentAnnotations)
+{
+    QStatus status = ValidateAnnotationAllowedForMember(annotation);
+
+    if (ER_OK == status) {
+        status = ValidateDenyAnnotation(presentAnnotations);
+    }
+
+    return status;
+}
+
+QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowedForMember(qcc::XmlElement* annotation)
 {
     String action = annotation->GetAttribute(VALUE_XML_ATTRIBUTE);
     auto foundAction = GetActionsMap().find(action.c_str());
 
     return (foundAction == GetActionsMap().end()) ? ER_XML_MALFORMED : ER_OK;
+}
+
+QStatus XmlRulesValidator::MemberValidator::ValidateDenyAnnotation(std::unordered_set<std::string>& presentAnnotations)
+{
+    bool denyAbsent = (presentAnnotations.find(DENY_MEMBER_MASK) == presentAnnotations.end());
+
+    return (denyAbsent ||
+            presentAnnotations.size() == 1U) ? ER_OK : ER_XML_MALFORMED;
 }
 
 QStatus XmlRulesValidator::MemberValidator::GetValidMemberType(const qcc::XmlElement* member, PermissionPolicy::Rule::Member::MemberType* memberType)

@@ -140,11 +140,6 @@ class ApplicationStateListenerTest : public testing::Test {
     }
 };
 
-TEST_F(ApplicationStateListenerTest, shouldFailCreateListenerWithNullCallbacks)
-{
-    EXPECT_DEATH(alljoyn_applicationstatelistener_create(nullptr, nullptr), DEATH_TEST_EMPTY_MESSAGE);
-}
-
 TEST_F(ApplicationStateListenerTest, shouldCreateListenerWithCallbacksAndNullContext)
 {
     EXPECT_NE(nullptr, alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr));
@@ -165,14 +160,6 @@ TEST_F(ApplicationStateListenerTest, shouldDestroyNonNullListenerWithoutExceptio
     alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr);
 
     alljoyn_applicationstatelistener_destroy(listener);
-}
-
-TEST_F(ApplicationStateListenerTest, shouldFailWhenCallingDestroyedListener)
-{
-    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr);
-    alljoyn_applicationstatelistener_destroy(listener);
-
-    EXPECT_DEATH(((ajn::ApplicationStateListener*)listener)->State(someValidBusName, someValidKey, someValidApplicationState), DEATH_TEST_EMPTY_MESSAGE);
 }
 
 TEST_F(ApplicationStateListenerTest, shouldPassBusNameToCallback)
