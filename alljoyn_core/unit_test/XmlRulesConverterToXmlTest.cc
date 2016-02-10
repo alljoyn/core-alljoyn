@@ -356,13 +356,6 @@ TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForRuleWithZe
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::RulesToXml(validRules, rulesCount, &retrievedManifestTemplateXml));
 }
 
-TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMissingMemberMask)
-{
-    MembersOverwriteUtils::ChangeMemberActionMask(validRules[0], METHOD_MEMBER_INDEX, 0);
-
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::RulesToXml(validRules, rulesCount, &retrievedManifestTemplateXml));
-}
-
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameInterfacesInSeparateSameNameNodes)
 {
     validRules[2].SetObjPath("/Node0");
@@ -577,7 +570,8 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlPass,
                                           VALID_MEMBER_WITH_DIGIT,
                                           VALID_MEMBER_WITH_NAME,
                                           VALID_MEMBER_WITH_UNDERSCORE,
-                                          VALID_MEMBER_WITH_WILDCARD));
+                                          VALID_MEMBER_WITH_WILDCARD,
+                                          VALID_METHOD_WITH_DENY));
 TEST_P(XmlRulesConverterToXmlPassTest, shouldPassForValidInput)
 {
     EXPECT_EQ(ER_OK, XmlRulesConverter::RulesToXml(rules, rulesCount, &retrievedManifestTemplateXml));

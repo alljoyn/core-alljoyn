@@ -1,8 +1,8 @@
-#ifndef _ALLJOYN_MANIFEST_XML_CONVERTER_H
-#define _ALLJOYN_MANIFEST_XML_CONVERTER_H
+#ifndef _ALLJOYN_RULES_XML_CONVERTER_H
+#define _ALLJOYN_RULES_XML_CONVERTER_H
 /**
  * @file
- * This file defines the converter for manifests and manifest templates in XML format
+ * This file defines the converter for a set of PermissionPolicy::Rules in XML format
  */
 
 /******************************************************************************
@@ -34,23 +34,7 @@
 #include <regex>
 #include "XmlRulesValidator.h"
 
-using namespace qcc;
-
 namespace ajn {
-
-#define MANIFEST_XML_ELEMENT "manifest"
-#define NODE_XML_ELEMENT "node"
-#define INTERFACE_XML_ELEMENT "interface"
-#define ANNOTATION_XML_ELEMENT "annotation"
-#define NAME_XML_ATTRIBUTE "name"
-#define VALUE_XML_ATTRIBUTE "value"
-#define METHOD_MEMBER_TYPE "method"
-#define PROPERTY_MEMBER_TYPE "property"
-#define SIGNAL_MEMBER_TYPE "signal"
-#define OBSERVE_MEMBER_MASK "Observe"
-#define PROVIDE_MEMBER_MASK "Provide"
-#define MODIFY_MEMBER_MASK "Modify"
-#define ACTION_ANNOTATION_NAME "org.alljoyn.Bus.Action"
 
 class XmlRulesConverter {
   public:
@@ -64,28 +48,47 @@ class XmlRulesConverter {
      * Extract PermissionPolicy::Rules from rules in XML format. The rules
      * XML schema is available under alljoyn_core/docs/manifest_template.xsd.
      *
-     * @param[in]    manifestXml    Rules in XML format.
-     * @param[out]   rules          Extracted rules.
+     * @param[in]    rulesXml   Rules in XML format.
+     * @param[out]   rules      Extracted rules.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_INVALID_ADDRESS if manifestXml, rules or rulesCount is null.
      *           #ER_XML_MALFORMED if the XML does not follow the policy XML schema.
      */
-    static QStatus XmlToRules(AJ_PCSTR manifestXml, std::vector<PermissionPolicy::Rule>& rules);
+    static QStatus XmlToRules(AJ_PCSTR rulesXml, std::vector<PermissionPolicy::Rule>& rules);
 
     /**
-     * Extract manifest/manifest template XML from an array of rules.
+     * Extract rules XML from an array of PermissionPolicy::Rules.
      *
-     * @param[in]    rules          Array containing the rules.
-     * @param[in]    rulesCount     Number of rules in the array.
-     * @param[out]   manifestXml    Manifest in XML format.
-     *                              Must be freed by calling "delete[]".
+     * @param[in]    rules      Array containing the rules.
+     * @param[in]    rulesCount Number of rules in the array.
+     * @param[out]   rulesXml   Rules in XML format.
+     *                          Must be freed by calling "delete[]".
+     * @param[in]    rootName   Name of the root element.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_INVALID_ADDRESS if rules or manifestXml is null.
      *           #ER_FAIL if the rules do not map to an XML valid according to the rules XML schema.
      */
-    static QStatus RulesToXml(const PermissionPolicy::Rule* rules, const size_t rulesCount, AJ_PSTR* manifestXml);
+    static QStatus RulesToXml(const PermissionPolicy::Rule* rules,
+                              const size_t rulesCount,
+                              AJ_PSTR* rulesXml,
+                              AJ_PCSTR rootElement = MANIFEST_XML_ELEMENT);
+
+    /**
+     * Extract rules XML from an array of PermissionPolicy::Rules.
+     *
+     * @param[in]    rules       Array containing the rules.
+     * @param[in]    rulesCount  Number of rules in the array.
+     * @param[out]   rulesXml    Manifest in XML format.
+     *                           Must be freed by calling "delete".
+     * @param[in]    rootName    Name of the root element.
+     *
+     * @return   #ER_OK if extracted correctly.
+     *           #ER_FAIL if the rules do not map to an XML valid according to the rules XML schema.
+     */
+    static QStatus RulesToXml(const PermissionPolicy::Rule* rules,
+                              const size_t rulesCount,
+                              qcc::XmlElement** rulesXml,
+                              AJ_PCSTR rootElement = MANIFEST_XML_ELEMENT);
 
   private:
 
@@ -209,21 +212,21 @@ class XmlRulesConverter {
     static void BuildActionMask(const qcc::XmlElement* xmlMember, uint8_t* mask);
 
     /**
-     * Builds a XML "manifest" element according to the input PermissionPolicy::Rules.
+     * Builds a XML rules element according to the input PermissionPolicy::Rules.
      *
-     * @param[in]    rules       An array of rules.
-     * @param[in]    rulesCount  Number of rules in the array.
-     * @param[out]   manifestXml Reference to the built "manifest" XmlElement.
+     * @param[in]    rules      An array of rules.
+     * @param[in]    rulesCount Number of rules in the array.
+     * @param[out]   rulesXml   Reference to the built rules XmlElement.
      */
-    static void BuildXmlManifest(const PermissionPolicy::Rule* rules, size_t rulesCount, qcc::XmlElement* manifestXml);
+    static void BuildRulesContents(const PermissionPolicy::Rule* rules, size_t rulesCount, qcc::XmlElement* rulesXml);
 
     /**
-     * Adds a XML "node" element to the "manifest" element according to the input PermissionPolicy::Rules.
+     * Adds a XML "node" element to the rules element according to the input PermissionPolicy::Rules.
      *
      * @param[in]    rules       A vector of rules with the same object path.
-     * @param[out]   manifestXml Reference to the built "manifest" XmlElement.
+     * @param[out]   rulesXml   Reference to the built rules XmlElement.
      */
-    static void BuildXmlNode(const std::vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* manifestXml);
+    static void BuildXmlNode(const std::vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* rulesXml);
 
     /**
      * Adds a XML "interface" element to the "node" element according to the input PermissionPolicy::Rule.
@@ -281,15 +284,6 @@ class XmlRulesConverter {
      * @param[out]   rulesCount  Number of rules in the array.
      */
     static void CopyRules(std::vector<PermissionPolicy::Rule>& rulesVector, PermissionPolicy::Rule** rules, size_t* rulesCount);
-
-    /**
-     * Copies the contents of the XmlElement into a zero-terminated string.
-     *
-     * @param[in]    xmlElement  Input XmlElement.
-     * @param[out]   xml         Result XML.
-     *                           Must be freed by calling "delete[]".
-     */
-    static AJ_PSTR CopyXml(const qcc::XmlElement* xmlElement);
 
     /**
      * Checks if given action masks contain a particular action.

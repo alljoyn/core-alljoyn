@@ -1,8 +1,3 @@
-/**
- * @file
- * XmlValidatorHelper is a base class for XML documents validation
- */
-
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
  *
@@ -19,35 +14,33 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#include "XmlValidator.h"
+#define VALID_RULES_ELEMENT \
+    "<rules>" \
+    "<node>" \
+    "<interface>" \
+    "<method>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
+    "</method>" \
+    "<property>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
+    "</property>" \
+    "<signal>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
+    "</signal>" \
+    "</interface>" \
+    "</node>" \
+    "</rules>"
 
-using namespace qcc;
-
-namespace ajn {
-
-QStatus XmlValidator::ValidateElementName(const qcc::XmlElement* xmlElement, AJ_PCSTR name)
-{
-    return (xmlElement->GetName() == name) ? ER_OK : ER_XML_MALFORMED;
-}
-
-QStatus XmlValidator::ValidateChildrenCountPositive(const qcc::XmlElement* xmlElement)
-{
-    return (xmlElement->GetChildren().size() > 0) ? ER_OK : ER_XML_MALFORMED;
-}
-
-QStatus XmlValidator::ValidateChildrenCountEqual(const qcc::XmlElement* xmlElement, uint8_t expectedChildrenCount)
-{
-    return (xmlElement->GetChildren().size() == expectedChildrenCount) ? ER_OK : ER_XML_MALFORMED;
-}
-
-QStatus XmlValidator::InsertUniqueOrFail(const std::string& value, std::unordered_set<std::string>& valuesSet)
-{
-    if (valuesSet.find(value) == valuesSet.end()) {
-        valuesSet.insert(value);
-    } else {
-        return ER_FAIL;
-    }
-
-    return ER_OK;
-}
-}
+static AJ_PCSTR VALID_MANIFEST =
+    "<manifest>"
+    "<version>1</version>"
+    VALID_RULES_ELEMENT
+    "<thumbprint>"
+    "<oid>2.16.840.1.101.3.4.2.1</oid>"
+    "<value>NjY2ZjZmNjI2MTcy</value>"
+    "</thumbprint>"
+    "<signature>"
+    "<oid>1.2.840.10045.4.3.2</oid>"
+    "<value>NjY2ZjZmNjI2MTcy</value>"
+    "</signature>"
+    "</manifest>";
