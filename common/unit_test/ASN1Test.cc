@@ -14,138 +14,204 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
+#include <utility>
 #include <gtest/gtest.h>
 
 #include <Status.h>
+#include <qcc/StringUtil.h>
 #include <qcc/Util.h>
 
 #include <qcc/Crypto.h>
 
 using namespace qcc;
 
-/*
- * Separate testcase for empty string "", because of the way linebreaks
- * are added by Crypto_ASN1::EncodeBase64.
- * In particular, for the empty string, no line breaks are added
- * by Crypto_ASN1::EncodeBase64.
- */
-TEST(ASN1Test, encode_and_decode_base64_empty_string) {
-    QStatus status = ER_FAIL;
+typedef std::pair<AJ_PCSTR, AJ_PCSTR> Base64TestInput;
 
-    String empty_string = String("");
-    String actual_encoded_base64;
+class ASN1Base64Test : public testing::TestWithParam<Base64TestInput> {
+  public:
+    ASN1Base64Test() :
+        input(GetParam().first),
+        expectedOutput(GetParam().second)
+    { }
 
-    status = Crypto_ASN1::EncodeBase64(empty_string, actual_encoded_base64);
+  protected:
+    String input;
+    String expectedOutput;
+};
 
-    EXPECT_EQ(ER_OK, status) <<
-        "The function EncodeBase64 was unable to encode the empty string \"" <<
-        empty_string.c_str() << "\" to Base64 format. The status returned was: " <<
-        QCC_StatusText(status);
+class ANS1DecodeBase64Test : public ASN1Base64Test { };
+class ANS1EncodeBase64Test : public ASN1Base64Test { };
 
-    if (ER_OK == status) {
-        // The Base64 encoding of empty string is empty string itself.
-        EXPECT_STREQ(empty_string.c_str(), actual_encoded_base64.c_str()) <<
-            "The empty string \"" << empty_string.c_str() << "\" was converted to "
-            "Base64 format. The result \"" << actual_encoded_base64.c_str() <<
-            "\" was NOT an empty string.";
+class ASN1DecodeBase64VectorTest : public testing::TestWithParam<Base64TestInput> {
+  public:
+    ASN1DecodeBase64VectorTest() :
+        input(GetParam().first)
+    { }
+
+    virtual void SetUp()
+    {
+        String outputString = GetParam().second;
+        expectedOutput.resize(outputString.size() / 2);
+
+        HexStringToBytes(outputString, expectedOutput.data(), expectedOutput.size());
     }
 
-    String actual_decoded_string;
+  protected:
+    String input;
+    std::vector<uint8_t> expectedOutput;
+};
 
-    status = Crypto_ASN1::DecodeBase64(empty_string, actual_decoded_string);
-    EXPECT_EQ(ER_OK, status) <<
-        "The function DecodeBase64 was unable to decode the empty string \"" <<
-        empty_string.c_str() << "\". The status returned was: " <<
-        QCC_StatusText(status);
+class ASN1EncodeBase64VectorTest : public testing::TestWithParam<Base64TestInput> {
+  public:
+    ASN1EncodeBase64VectorTest() :
+        expectedOutput(GetParam().second)
+    { }
 
-    if (ER_OK == status) {
-        EXPECT_STREQ(empty_string.c_str(), actual_decoded_string.c_str()) <<
-            "The empty string \"" << empty_string.c_str() << "\" was decoded from "
-            "Base64 format. The result was NOT an empty string.";
+    virtual void SetUp()
+    {
+        String inputString = GetParam().first;
+        input.resize(inputString.size() / 2);
+
+        HexStringToBytes(inputString, input.data(), input.size());
     }
-}
+
+  protected:
+    std::vector<uint8_t> input;
+    String expectedOutput;
+};
 
 // The following test vectors were taken from
 // RFC4648 - https://tools.ietf.org/html/rfc4648#section-10
-static const char* raw_literal[] = {
-    "f",
-    "fo",
-    "foo",
-    "foob",
-    "fooba",
-    "foobar",
-};
+INSTANTIATE_TEST_CASE_P(ASN1EncodeBase64Tests,
+                        ANS1EncodeBase64Test,
+                        ::testing::Values(Base64TestInput("", ""),
+                                          Base64TestInput("f", "Zg==\n"),
+                                          Base64TestInput("fo", "Zm8=\n"),
+                                          Base64TestInput("foo", "Zm9v\n"),
+                                          Base64TestInput("foob", "Zm9vYg==\n"),
+                                          Base64TestInput("fooba", "Zm9vYmE=\n"),
+                                          Base64TestInput("foobar", "Zm9vYmFy\n")));
+TEST_P(ANS1EncodeBase64Test, shouldPassEncodeBase64)
+{
+    String actualEncodedBase64;
+    QStatus status = Crypto_ASN1::EncodeBase64(input, actualEncodedBase64);
 
-static const char* expected_base64_array[] = {
-    "Zg==",
-    "Zm8=",
-    "Zm9v",
-    "Zm9vYg==",
-    "Zm9vYmE=",
-    "Zm9vYmFy",
-};
-
-TEST(ASN1Test, encode_base64) {
-    QStatus status = ER_FAIL;
-
-    for (uint8_t i = 0; i < ArraySize(raw_literal); i++) {
-        String raw_string = String(raw_literal[i]);
-        String actual_encoded_base64;
-
-        status = Crypto_ASN1::EncodeBase64(raw_string, actual_encoded_base64);
-        EXPECT_EQ(ER_OK, status) <<
-            "The function EncodeBase64 was unable to encode the string \"" <<
-            raw_string.c_str() << "\" to Base64 format. "
-            "The status returned was: " << QCC_StatusText(status);
-
-        if (ER_OK == status) {
-            String expected_base64 = String(expected_base64_array[i]);
-            /*
-             * qcc:Crypto_ASN1::EncodeBase64 calls LineBreak (inline),
-             * which is a helper function for putting lines breaks
-             * at the appropriate location.
-             * Accordingly, we add '\n' to the expected value.
-             */
-            expected_base64 = expected_base64.append(1, '\n');
-            EXPECT_STREQ(expected_base64.c_str(),
-                         actual_encoded_base64.c_str()) <<
-                "The string \"" << raw_string.c_str() << "\" was converted to "
-                "Base64 format. The result \"" << actual_encoded_base64.c_str() <<
-                "\" did not match the expected value \"" <<
-                expected_base64.c_str() << "\".";
-        }
-    }
+    EXPECT_EQ(ER_OK, status) <<
+        "The function EncodeBase64 was unable to encode the string \"" <<
+        input.c_str() << "\" to Base64 format. "
+        "The status returned was: " << QCC_StatusText(status);
 }
 
-TEST(ASN1Test, decode_base64) {
-    QStatus status = ER_FAIL;
+TEST_P(ANS1EncodeBase64Test, shouldCorrectlyEncodeBase64)
+{
+    String actualEncodedBase64;
 
-    for (uint8_t i = 0; i < ArraySize(expected_base64_array); i++) {
-        String base64_string = String(expected_base64_array[i]);
-        String actual_decoded_string;
+    ASSERT_EQ(ER_OK, Crypto_ASN1::EncodeBase64(input, actualEncodedBase64));
 
-        status = Crypto_ASN1::DecodeBase64(base64_string,
-                                           actual_decoded_string);
-        EXPECT_EQ(ER_OK, status) <<
-            "The function DecodeBase64 was unable to decode the string \"" <<
-            base64_string.c_str() << "\".";
-
-        if (ER_OK == status) {
-            String expected_decoded_string = String(raw_literal[i]);
-            EXPECT_STREQ(expected_decoded_string.c_str(),
-                         actual_decoded_string.c_str()) <<
-                "The string \"" << base64_string.c_str() << "\" was decoded from "
-                "Base64 format. The result \"" << actual_decoded_string.c_str() <<
-                "\" did not match the expected value \"" <<
-                expected_decoded_string.c_str() << "\".";
-        }
-    }
+    EXPECT_EQ(expectedOutput, actualEncodedBase64) <<
+        "The string \"" << input.c_str() << "\" was converted to "
+        "Base64 format. The result \"" << actualEncodedBase64.c_str() <<
+        "\" did not match the expected value \"" <<
+        expectedOutput.c_str() << "\".";
 }
+
+INSTANTIATE_TEST_CASE_P(ASN1DecodeBase64Tests,
+                        ANS1DecodeBase64Test,
+                        ::testing::Values(Base64TestInput("", ""),
+                                          Base64TestInput("Zg==", "f"),
+                                          Base64TestInput("Zm8=", "fo"),
+                                          Base64TestInput("Zm9v", "foo"),
+                                          Base64TestInput("Zm9vYg==", "foob"),
+                                          Base64TestInput("Zm9vYmE=", "fooba"),
+                                          Base64TestInput("Zm9vYmFy", "foobar")));
+TEST_P(ANS1DecodeBase64Test, shouldPassDecodeBase64)
+{
+    String actualDecodedString;
+    QStatus status = Crypto_ASN1::DecodeBase64(input, actualDecodedString);
+
+    EXPECT_EQ(ER_OK, status) <<
+        "The function DecodeBase64 was unable to decode the string \"" <<
+        expectedOutput.c_str() << "\".";
+}
+
+TEST_P(ANS1DecodeBase64Test, shouldCorrectlyDecodeBase64)
+{
+    String actualDecodedString;
+
+    ASSERT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(input, actualDecodedString));
+
+    EXPECT_EQ(expectedOutput, actualDecodedString) <<
+        "The string \"" << input.c_str() << "\" was decoded from "
+        "Base64 format. The result \"" << actualDecodedString.c_str() <<
+        "\" did not match the expected value \"" <<
+        expectedOutput.c_str() << "\".";
+}
+
+INSTANTIATE_TEST_CASE_P(ASN1EncodeBase64VectorTests,
+                        ASN1EncodeBase64VectorTest,
+                        ::testing::Values(Base64TestInput("", ""),
+                                          Base64TestInput("66", "NjY=\n"),
+                                          Base64TestInput("666f", "NjY2Zg==\n"),
+                                          Base64TestInput("666f6f", "NjY2ZjZm\n"),
+                                          Base64TestInput("666f6f62", "NjY2ZjZmNjI=\n"),
+                                          Base64TestInput("666f6f6261", "NjY2ZjZmNjI2MQ==\n"),
+                                          Base64TestInput("666f6f626172", "NjY2ZjZmNjI2MTcy\n")));
+TEST_P(ASN1EncodeBase64VectorTest, shouldCorrectlyEncodeBase64)
+{
+    String encodedString;
+
+    ASSERT_EQ(ER_OK, Crypto_ASN1::EncodeBase64(input, encodedString));
+
+    EXPECT_EQ(expectedOutput, encodedString);
+}
+
+TEST(ASN1DecodeBase64VectorErrorTest, shouldReturnErrorIfBinaryValueNotMultipleOf2)
+{
+    std::vector<uint8_t> decodedVector;
+    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("NjZm", decodedVector));
+}
+
+TEST(ASN1DecodeBase64VectorErrorTest, shouldReturnErrorIfBase64DoesNotMapToBinary)
+{
+    std::vector<uint8_t> decodedVector;
+    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("ZHVwYXRhaw==", decodedVector));
+}
+
+TEST(ASN1DecodeBase64VectorErrorTest, shouldReturnErrorIfInputNotMultipleOf4)
+{
+    std::vector<uint8_t> decodedVector;
+    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("ZHVwYXRhaw=", decodedVector));
+}
+
+INSTANTIATE_TEST_CASE_P(ASN1DecodeBase64VectorTests,
+                        ASN1DecodeBase64VectorTest,
+                        ::testing::Values(Base64TestInput("", ""),
+                                          Base64TestInput("NjY=", "66"),
+                                          Base64TestInput("NjY2Zg==", "666f"),
+                                          Base64TestInput("NjY2ZjZm", "666f6f"),
+                                          Base64TestInput("NjY2ZjZmNjI=", "666f6f62"),
+                                          Base64TestInput("NjY2ZjZmNjI2MQ==", "666f6f6261"),
+                                          Base64TestInput("NjY2ZjZmNjI2MTcy", "666f6f626172")));
+TEST_P(ASN1DecodeBase64VectorTest, shouldPassEncodeBase64ForVectorInput)
+{
+    std::vector<uint8_t> decodedVector;
+    EXPECT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(input, decodedVector));
+}
+
+TEST_P(ASN1DecodeBase64VectorTest, shouldCorrectlyEncodeBase64ForVectorInput)
+{
+    std::vector<uint8_t> decodedVector;
+
+    ASSERT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(input, decodedVector));
+
+    EXPECT_EQ(expectedOutput, decodedVector);
+}
+
 
 TEST(ASN1Test, decode_base64_negative_test) {
     QStatus status = ER_FAIL;
 
-    const char* quote_of_stephen_colbert =
+    AJ_PCSTR quote_of_stephen_colbert =
         "Twenty-two astronauts were born in Ohio. What is it about your state "
         "that makes people want to flee the Earth?";
 
@@ -222,17 +288,17 @@ TEST(ASN1Test, decode_base64_negative_test) {
 TEST(ASN1Test, encode_and_decode_base64_stress_test) {
     QStatus status = ER_FAIL;
 
-    const char* quote_of_atticus_finch =
+    AJ_PCSTR quote_of_atticus_finch =
         "You never really understand a person until you consider things from "
         "his point of view, until you climb inside of his skin and "
         "walk around in it.";
 
-    const char* quote_of_james_bond = "Bond. James Bond.";
+    AJ_PCSTR quote_of_james_bond = "Bond. James Bond.";
 
     String raw_data = String(quote_of_atticus_finch);
     uint8_t number_of_rounds = 100;
     for (uint8_t i = 0; i < number_of_rounds; i++) {
-        raw_data.append(1, ' ');
+        raw_data.append(' ');
         if (0 == Rand8() % 2) {
             raw_data.append(quote_of_atticus_finch,
                             strlen(quote_of_atticus_finch));

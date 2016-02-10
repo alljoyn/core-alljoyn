@@ -59,13 +59,13 @@ void XmlPoliciesConverter::BuildPolicy(const qcc::XmlElement* root, ajn::Permiss
 void XmlPoliciesConverter::SetPolicyVersion(const qcc::XmlElement* xmlPolicyVersion, PermissionPolicy& policy)
 {
     uint32_t policyVersion = qcc::StringToU32(xmlPolicyVersion->GetContent());
-    policy.SetVersion(policyVersion);
+    policy.SetSpecificationVersion(policyVersion);
 }
 
 void XmlPoliciesConverter::SetPolicySerialNumber(const qcc::XmlElement* xmlSerialNumber, PermissionPolicy& policy)
 {
     uint32_t serialNumber = qcc::StringToU32(xmlSerialNumber->GetContent());
-    policy.SetSpecificationVersion(serialNumber);
+    policy.SetVersion(serialNumber);
 }
 
 void XmlPoliciesConverter::SetPolicyAcls(const qcc::XmlElement* acls, PermissionPolicy& policy)
