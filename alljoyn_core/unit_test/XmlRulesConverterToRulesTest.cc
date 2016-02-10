@@ -294,6 +294,72 @@ static AJ_PCSTR SIGNAL_WITH_MODIFY =
     "</interface>"
     "</node>"
     "</manifest>";
+static AJ_PCSTR METHOD_WITH_DOUBLE_DENY =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<method>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "</method>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+static AJ_PCSTR METHOD_WITH_DENY_AND_OTHER =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<method>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</method>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+static AJ_PCSTR SIGNAL_WITH_DOUBLE_DENY =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<signal>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "</signal>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+static AJ_PCSTR SIGNAL_WITH_DENY_AND_OTHER =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<signal>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</signal>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+static AJ_PCSTR PROPERTY_WITH_DOUBLE_DENY =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<property>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "</property>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+static AJ_PCSTR PROPERTY_WITH_DENY_AND_OTHER =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<property>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</property>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
 
 #ifdef REGEX_SUPPORTED
 static AJ_PCSTR NODE_NAME_WITHOUT_SLASH =
@@ -603,6 +669,17 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSignalForValidNeedAll
               | PermissionPolicy::Rule::Member::ACTION_OBSERVE, signalMember.GetActionMask());
 }
 
+TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidMethodForDenyAction)
+{
+    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(VALID_METHOD_WITH_DENY, rules));
+    ASSERT_EQ((size_t)1, rules.size());
+    ASSERT_EQ((size_t)1, rules[0].GetMembersSize());
+
+    PermissionPolicy::Rule::Member methodMember = rules[0].GetMembers()[0];
+
+    EXPECT_EQ(0, methodMember.GetActionMask());
+}
+
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidNamelessNodeName)
 {
     ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(VALID_NEED_ALL_MANIFEST_TEMPLATE, rules));
@@ -661,7 +738,13 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesInvalidRulesSet,
                                           SAME_NAME_SIGNALS,
                                           SAME_NAMELESS_METHODS,
                                           SAME_NAMELESS_PROPERTIES,
-                                          SAME_NAMELESS_SIGNALS));
+                                          SAME_NAMELESS_SIGNALS,
+                                          METHOD_WITH_DOUBLE_DENY,
+                                          METHOD_WITH_DENY_AND_OTHER,
+                                          SIGNAL_WITH_DOUBLE_DENY,
+                                          SIGNAL_WITH_DENY_AND_OTHER,
+                                          PROPERTY_WITH_DOUBLE_DENY,
+                                          PROPERTY_WITH_DENY_AND_OTHER));
 TEST_P(XmlRulesConverterToRulesInvalidRulesTest, shouldReturnErrorForInvalidRulesSet)
 {
     EXPECT_EQ(ER_XML_MALFORMED, XmlRulesConverter::XmlToRules(rulesXml, rules));
@@ -722,7 +805,8 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesPass,
                                           VALID_MEMBER_WITH_DIGIT,
                                           VALID_MEMBER_WITH_NAME,
                                           VALID_MEMBER_WITH_UNDERSCORE,
-                                          VALID_MEMBER_WITH_WILDCARD));
+                                          VALID_MEMBER_WITH_WILDCARD,
+                                          VALID_METHOD_WITH_DENY));
 TEST_P(XmlRulesConverterToRulesPassTest, shouldPassForValidInput)
 {
     EXPECT_EQ(ER_OK, XmlRulesConverter::XmlToRules(rulesXml, rules));

@@ -14,18 +14,9 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <gtest/gtest.h>
-#include <time.h>
-#include <alljoyn_c/ApplicationStateListener.h>
 #include <alljoyn_c/BusAttachment.h>
-#include <alljoyn_c/DBusStdDefines.h>
-#include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/PermissionConfigurator.h>
-#include <alljoyn_c/ProxyBusObject.h>
-#include <qcc/Thread.h>
 #include <qcc/Util.h>
-#if defined(QCC_OS_GROUP_WINDOWS)
-#include <qcc/windows/NamedPipeWrapper.h>
-#endif
 #include "ajTestCommon.h"
 #include "InMemoryKeyStore.h"
 
@@ -132,6 +123,8 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
     struct CallbacksContext {
         bool* policyChanged;
         bool* factoryResetHappened;
+        bool* startManagementHappened;
+        bool* endManagementHappened;
     } callbacksContext;
 
     static void AJ_CALL policyChangedCallback(const void* context)
@@ -167,6 +160,8 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
         memset(&callbacks, 0, sizeof(callbacks));
         callbacks.factory_reset = factoryResetCallback;
         callbacks.policy_changed = policyChangedCallback;
+        callbacks.start_management = nullptr;
+        callbacks.end_management = nullptr;
 
         memset(&callbacksContext, 0, sizeof(callbacksContext));
     }
