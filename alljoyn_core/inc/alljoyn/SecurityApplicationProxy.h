@@ -44,7 +44,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * @param[in] busName Unique or well-known name of remote AllJoyn bus
      * @param[in] sessionId the session received after joining AllJoyn session
      */
-    SecurityApplicationProxy(BusAttachment& bus, const char* busName, SessionId sessionId = 0);
+    SecurityApplicationProxy(BusAttachment& bus, AJ_PCSTR busName, SessionId sessionId = 0);
 
     /**
      * ClaimableApplicationProxy destructor
@@ -138,6 +138,18 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetManifestTemplate(MsgArg& rules);
 
     /**
+     * Returns the XML version of the manifest template. The returned value
+     * is managed by the caller and has to be freed using delete[].
+     *
+     * @param[out] manifestTemplate The manifest temaplte in XML format.
+     *
+     * @return
+     *  - #ER_OK if successful.
+     *  - An error status indicating failure.
+     */
+    QStatus GetManifestTemplate(AJ_PSTR* manifestTemplateXml);
+
+    /**
      * The authentication mechanisms the application supports for the claim process.
      * It is a bit mask.
      *
@@ -183,7 +195,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * of this or the base CertificateX509 type.
      *
      * Access restriction: None if the app is not yet claimed. An error will be
-     * raised if the app already has an admin and it is not the caller.
+     * raised if the app has already been claimed.
      *
      * @param[in] certificateAuthority   a KeyInfo object representing the
      *                                   public key of the certificate authority
@@ -192,7 +204,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *                                   security group authority
      * @param[in] identityCertChain      the identity certificate chain for the
      *                                   claimed app.  The leaf cert is listed first
-     * @param[in] identityCertChainSize  the size of the identity certificate
+     * @param[in] identityCertChainCount the number of the identity certificates in the
      *                                   chain.
      * @param[in] manifests              the signed manifests to install on the application
      * @param[in] manifestCount          the number of manifests
@@ -209,8 +221,48 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus Claim(const qcc::KeyInfoNISTP256& certificateAuthority,
                   const qcc::GUID128& adminGroupId,
                   const qcc::KeyInfoNISTP256& adminGroup,
-                  const qcc::CertificateX509* identityCertChain, size_t identityCertChainSize,
+                  const qcc::CertificateX509* identityCertChain, size_t identityCertChainCount,
                   const Manifest* manifests, size_t manifestCount);
+
+    /**
+     * Claim the app using a manifests in XML format. This will make
+     * the claimer the admin and certificate authority. The KeyInfo
+     * object description is shown below.
+     *
+     * Access restriction: None if the app is not yet claimed. An error will be
+     * raised if the app has already been claimed.
+     *
+     * @param[in]   certificateAuthority    A KeyInfo object representing the
+     *                                      public key of the certificate authority.
+     * @param[in]   adminGroupId            The admin group Id.
+     * @param[in]   adminGroup              A KeyInfo object representing the admin
+     *                                      security group authority.
+     * @param[in]   identityCertChain       The identity certificate chain for the
+     *                                      claimed app.  The leaf cert is listed first
+     *                                      followed by each intermediate Certificate
+     *                                      Authority's certificate, ending in the trusted
+     *                                      root's certificate.
+     * @param[in]   identityCertChainCount  The count of the identity certificate
+     *                                      chain elements.
+     * @param[in]   manifestsXmls           An array of null-terminated strings containing
+     *                                      the application's manifests in XML format.
+     * @param[in]   manifestsCount          Count of "manifestsXmls" array elements.
+     * @return
+     *  - #ER_OK if successful
+     *  - #ER_PERMISSION_DENIED Error raised when the application is not claimable
+     *  - #ER_INVALID_CERTIFICATE Error raised when the identity certificate
+     *                            chain is not valid
+     *  - #ER_INVALID_CERTIFICATE_USAGE Error raised when the Extended Key Usage
+     *                                  is not AllJoyn specific.
+     *  - #ER_DIGEST_MISMATCH Error raised when none of the provided signed manifests are
+     *                                         valid for the given identity certificate.
+     *  - an error status indicating failure
+     */
+    QStatus Claim(const qcc::KeyInfoNISTP256& certificateAuthority,
+                  const qcc::GUID128& adminGroupId,
+                  const qcc::KeyInfoNISTP256& adminGroup,
+                  const qcc::CertificateX509* identityCertChain, size_t identityCertChainCount,
+                  AJ_PCSTR* manifestsXmls, size_t manifestsCount);
 
     /**
      * The ClaimableApplication version
@@ -242,7 +294,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
 
     /**
      * This method allows an admin to update the application's identity certificate
-     * chain and its manifest.
+     * chain and its manifests using the Manifest objects.
      *
      * After having a new identity certificate installed, the target bus clears
      * out all of its peer's secret and session keys, so the next call will get
@@ -265,7 +317,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * @see SecurityApplicationProxy.GetManifests(std::vector<Manifest>&)
      *
      * @param[in] identityCertificateChain             the identity certificate
-     * @param[in] identityCertificateChainSize         the number of identity certificates
+     * @param[in] identityCertificateChainCount        the number of identity certificates
      * @param[in] manifests                            the signed manifests to install on the application
      * @param[in] manifestCount                        the number of manifests
      *
@@ -277,8 +329,38 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_DIGEST_MISMATCH Error raised when the digest is not accepted
      *  - an error status indicating failure
      */
-    QStatus UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainSize,
+    QStatus UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainCount,
                            const Manifest* manifest, size_t manifestCount);
+
+    /**
+     * This method allows an admin to update the application's identity certificate
+     * chain and its manifests using manifests in XML format.
+     *
+     * After having a new identity certificate installed, the target bus clears
+     * out all of its peer's secret and session keys, so the next call will get
+     * security violation. After calling UpdateIdentity, SecureConnection(true)
+     * should be called to force the peers to create a new set of secret and
+     * session keys.
+     *
+     * @see ProxyBusObject.SecureConnection(bool)
+     *
+     * @param[in] identityCertificateChain       the identity certificate
+     * @param[in] identityCertificateChainCount  the number of identity certificates
+     * @param[in] manifestsXmls                  An array of null-terminated strings containing the application's
+     *                                           manifests in XML format.
+     * @param[in] manifestsCount                 Count of "manifestsXmls" array elements.
+     *
+     * @return
+     *  - #ER_OK                        If successful.
+     *  - #ER_PERMISSION_DENIED         Error raised when the caller does not have permission.
+     *  - #ER_INVALID_CERTIFICATE       Error raised when the identity certificate chain is not valid.
+     *  - #ER_INVALID_CERTIFICATE_USAGE Error raised when the Extended Key Usage is not AllJoyn specific.
+     *  - #ER_DIGEST_MISMATCH           Error raised when none of the provided signed manifests are
+     *                                  valid for the given identity certificate.
+     *  - An error status indicating failure
+     */
+    QStatus UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainCount,
+                           AJ_PCSTR* manifestsXmls, size_t manifestsCount);
 
     /**
      * This method allows an admin to install the permission policy to the
@@ -304,6 +386,32 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus UpdatePolicy(const PermissionPolicy& policy);
 
     /**
+     * This method allows an admin to install the permission policy to the
+     * application using an XML version of the policy.
+     * Any existing policy will be replaced if the new policy version
+     * number is greater than the existing policy's version number.
+     *
+     * After having a new policy installed, the target bus clears out all of
+     * its peer's secret and session keys, so the next call will get security
+     * violation. After calling UpdatePolicy, SecureConnection(true) should be
+     * called to force the peers to create a new set of secret and session keys.
+     *
+     * @see ProxyBusObject.SecureConnection(bool)
+     *
+     * @param[in] policy    The new policy in XML format. For the policy XSD refer to
+     *                      alljoyn_core/docs/policy.xsd.
+     *
+     * @return
+     *  - #ER_OK if successful.
+     *  - #ER_PERMISSION_DENIED Error raised when the caller does not have permission.
+     *  - #ER_POLICY_NOT_NEWER  Error raised when the new policy does not have a
+     *                          greater version number than the existing policy.
+     *  - #ER_XML_MALFORMED     If the policy was not in the valid XML format.
+     *  - an error status indicating failure.
+     */
+    QStatus UpdatePolicy(AJ_PCSTR policyXml);
+
+    /**
      * This method allows an admin to remove the currently installed policy.  The
      * application reverts back to the default policy generated during the claiming
      * process.
@@ -324,10 +432,10 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * Extended Key Usage (EKU) is set. The remaining certificates in the chain can be
      * of this or the base CertificateX509 type.
      *
-     * @param[in] certificateChain the membership certificate chain. It can be a
-     *                             single certificate if it is issued by the security
-     *                             group authority.
-     * @param[in] certificateChainSize the number of certificates in the certificate chain
+     * @param[in] certificateChain      The membership certificate chain. It can be a
+     *                                  single certificate if it is issued by the security
+     *                                  group authority.
+     * @param[in] certificateChainCount The number of certificates in the certificate chain.
      *
      * @return
      *  - #ER_OK if successful
@@ -517,6 +625,22 @@ class SecurityApplicationProxy : public ProxyBusObject {
      */
     static QStatus MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize);
 
+  private:
+
+    /**
+     * Extracts a vector of Manifest objects from an array of signed
+     * manifests in XML format.
+     *
+     * @param[in]    manifestsXmls   An array of signed manifests in XML format.
+     * @param[in]    manifestsCount  Count of the "manifestsXmls" array elements.
+     * @param[out]   manifests       Output vector containing the Manifest objects.
+     *
+     * @return
+     *  - #ER_OK             If successful
+     *  - #ER_XML_MALFORMED  If one of the signed manifests was in an invalid format.
+     *  - Some other error status indicating failure.
+     */
+    QStatus ExtractManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests);
 };
 }
 
