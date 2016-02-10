@@ -115,6 +115,7 @@ static bool IsActionAllowed(uint8_t allowedActions, uint8_t requestedAction)
 
 static bool IsRuleMatched(const PermissionPolicy::Rule& rule, const Request& request, uint8_t requiredAuth, bool scanForDenied, bool& denied, bool strictGetAllProperties)
 {
+    QCC_DbgTrace(("%s: Checking match against rule:\n%s", __FUNCTION__, rule.ToString().c_str()));
     if (rule.GetMembersSize() == 0) {
         return false;
     }
@@ -233,11 +234,15 @@ static bool IsPolicyAclMatched(const PermissionPolicy::Acl& acl, const Request& 
     bool strictGetAllProperties = request.outgoing;
     const PermissionPolicy::Rule* rules = acl.GetRules();
     bool allowed = false;
-    for (size_t cnt = 0; cnt < acl.GetRulesSize(); cnt++) {
+    size_t rulesSize = acl.GetRulesSize();
+    QCC_DbgTrace(("%s: Checking if request matches against %u rules.", __FUNCTION__, rulesSize));
+    for (size_t cnt = 0; cnt < rulesSize; cnt++) {
         if (IsRuleMatched(rules[cnt], request, requiredAuth, scanForDenied, denied, strictGetAllProperties)) {
+            QCC_DbgTrace(("%s: Match found, rule allows access. Continuing search for explicit deny.", __FUNCTION__));
             allowed = true; /* track it */
         } else if (denied) {
             /* skip the remainder of the search */
+            QCC_DbgTrace(("%s: Match found, rule denies access. Stopping search.", __FUNCTION__));
             return allowed;
         }
     }
@@ -335,6 +340,7 @@ static bool IsPeerQualifiedForAcl(const PermissionPolicy::Acl& acl, PeerState& p
 {
     qualifiedPeerWithPublicKey = false;
     const PermissionPolicy::Peer* peers = acl.GetPeers();
+    QCC_DbgTrace(("%s: Checking if peer is qualified for ACL:\n%s", __FUNCTION__, acl.ToString().c_str()));
     for (size_t idx = 0; idx < acl.GetPeersSize(); idx++) {
         if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_ALL) {
             return true;
@@ -355,13 +361,16 @@ static bool IsPeerQualifiedForAcl(const PermissionPolicy::Acl& acl, PeerState& p
             }
         }
         if ((peers[idx].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) && peers[idx].GetKeyInfo()) {
+            QCC_DbgTrace(("%s: Checking peer's issuer chain (size: %u).", __FUNCTION__, issuerChain.size()));
             for (std::vector<ECCPublicKey>::const_iterator it = issuerChain.begin(); it != issuerChain.end(); it++) {
+                QCC_DbgTrace(("%s: Validating against peer's issuer public key: %s", __FUNCTION__, it->ToString().c_str()));
                 if (*peers[idx].GetKeyInfo()->GetPublicKey() == *it) {
                     return true;
                 }
             }
         }
         if (peers[idx].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+            QCC_DbgTrace(("%s: Checking peer's memberships (certificates size: %u).", __FUNCTION__, peerState->guildMap.size()));
             for (_PeerState::GuildMap::iterator it = peerState->guildMap.begin(); it != peerState->guildMap.end(); it++) {
                 _PeerState::GuildMetadata* metadata = it->second;
                 if (metadata->certChain.size() > 0) {
@@ -369,6 +378,7 @@ static bool IsPeerQualifiedForAcl(const PermissionPolicy::Acl& acl, PeerState& p
                         continue;
                     }
                     MembershipCertificate* membershipCert = (MembershipCertificate*) metadata->certChain[0];
+                    QCC_DbgTrace(("%s: Membership certificate found:\n%s", __FUNCTION__, membershipCert->ToString().c_str()));
                     if (peers[idx].GetSecurityGroupId() == membershipCert->GetGuild()) {
                         return true;
                     }
@@ -392,10 +402,14 @@ static bool IsPeerAuthorized(const Request& request, const PermissionPolicy* pol
     denied = false;
     bool qualifiedPeerWithPublicKey = false;
     const PermissionPolicy::Acl* acls = policy->GetAcls();
-    for (size_t cnt = 0; cnt < policy->GetAclsSize(); cnt++) {
+    size_t aclsSize = policy->GetAclsSize();
+    QCC_DbgTrace(("%s: Authorizing peer (public key: %s) against %u ACLs", __FUNCTION__, peerPublicKey->ToString().c_str(), aclsSize));
+    for (size_t cnt = 0; cnt < aclsSize; cnt++) {
         if (!IsPeerQualifiedForAcl(acls[cnt], peerState, trustedPeer, peerPublicKey, issuerChain, qualifiedPeerWithPublicKey)) {
+            QCC_DbgTrace(("%s: Peer did not qualify for ACL numer %u.", __FUNCTION__, cnt));
             continue;
         }
+        QCC_DbgTrace(("%s: Peer qualified for ACL number %u.", __FUNCTION__, cnt));
         if (IsPolicyAclMatched(acls[cnt], request, requiredAuth, qualifiedPeerWithPublicKey, denied)) {
             allowed = true;   /* track it */
         }

@@ -32,8 +32,6 @@
 #include <unordered_map>
 #include "XmlPoliciesValidator.h"
 
-using namespace qcc;
-
 namespace ajn {
 
 #define POLICY_VERSION_INDEX 0
@@ -140,7 +138,7 @@ class XmlPoliciesConverter {
      * @param[in]    peerXml The "peer" element of the policy XML.
      * @param[in]    peers   Vector to add the new peer to.
      */
-    static void AddPeer(const XmlElement* peerXml, std::vector<PermissionPolicy::Peer>& peers);
+    static void AddPeer(const qcc::XmlElement* peerXml, std::vector<PermissionPolicy::Peer>& peers);
 
     /**
      * Sets all of the PermissionPolicy::Peer values according to the input XML.
