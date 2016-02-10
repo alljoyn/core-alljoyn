@@ -53,6 +53,24 @@ typedef QStatus (AJ_CALL * alljoyn_permissionconfigurationlistener_factoryreset_
 typedef void (AJ_CALL * alljoyn_permissionconfigurationlistener_policychanged_ptr)(const void* context);
 
 /**
+ * Type for the StartManagement callback.
+ *
+ * Framework requests application to prepare for Security 2.0 settings changes from the Security Manager.
+ *
+ * @param context    The context pointer passed into the alljoyn_permissionconfigurationlistener_startmanagement_ptr function.
+ */
+typedef void (AJ_CALL * alljoyn_permissionconfigurationlistener_startmanagement_ptr)(const void* context);
+
+/**
+ * Type for the EndManagement callback.
+ *
+ * Framework notifies the application that the Security 2.0 configuration has been finished.
+ *
+ * @param context    The context pointer passed into the alljoyn_permissionconfigurationlistener_endmanagement_ptr function.
+ */
+typedef void (AJ_CALL * alljoyn_permissionconfigurationlistener_endmanagement_ptr)(const void* context);
+
+/**
  * Structure used during alljoyn_permissionconfigurationlistener_create to provide callbacks into C.
  */
 typedef struct {
@@ -65,6 +83,16 @@ typedef struct {
      * Framework notifies application of a security policy change.
      */
     alljoyn_permissionconfigurationlistener_policychanged_ptr policy_changed;
+
+    /**
+     * Notification provided before Security Manager is starting to change settings for this application.
+     */
+    alljoyn_permissionconfigurationlistener_startmanagement_ptr start_management;
+
+    /**
+     * Notification provided after Security Manager finished changing settings for this application.
+     */
+    alljoyn_permissionconfigurationlistener_endmanagement_ptr end_management;
 } alljoyn_permissionconfigurationlistener_callbacks;
 
 /**
