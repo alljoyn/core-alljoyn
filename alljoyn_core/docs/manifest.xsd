@@ -1,112 +1,26 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright AllSeen Alliance. All rights reserved. Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. -->
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
 
-    <xs:element name="policy">
+    <xs:element name="manifest">
         <xs:complexType>
             <xs:sequence>
-                <xs:element ref="policyVersion"/>
-                <xs:element ref="serialNumber"/>
-                <xs:element ref="acls"/>
+                <xs:element ref="version"/>
+                <xs:element ref="rules"/>
+                <xs:element ref="thumbprint"/>
+                <xs:element ref="signature"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
 
-    <xs:element name="policyVersion">
+    <xs:element name="version">
         <xs:simpleType>
             <xs:restriction base="xs:positiveInteger">
-                <!-- According to Security 2.0 HLD the only valid version number for now is "1". -->
                 <xs:enumeration value="1"/>
             </xs:restriction>
         </xs:simpleType>
     </xs:element>
 
-    <xs:element name="serialNumber" type="xs:positiveInteger"/>
-
-    <xs:element name="acls">
-        <xs:complexType>
-            <xs:sequence maxOccurs="unbounded">
-                <xs:element ref="acl"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
-
-    <xs:element name="acl">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element ref="peers"/>
-                <xs:element ref="rules"/>
-            </xs:sequence>
-        </xs:complexType>
-    </xs:element>
-
-    <xs:element name="peers">
-        <xs:complexType>
-            <xs:sequence maxOccurs="unbounded">
-                <xs:element ref="peer"/>
-            </xs:sequence>
-            <!-- xs:assert is from XSD 1.1 -->
-            <!-- There can be either only one 'ALL' peer and no other or at most one 'ANY_TRUSTED' peer plus any number of other peers. -->
-            <xs:assert test="((count(peer[type[text() = 'ALL']]) = 1) and (count(peer) = 1))
-                          or ((count(peer[type[text() = 'ALL']]) = 0) and (count(peer[type[text() = 'ANY_TRUSTED']]) = 1))"/>
-            
-            <!-- Checking for unique 'WITH_PUBLIC_KEY' elements. XPath 'distinct-values' didn't work and 'xs:unique' doesn't support XPath predicates (e.g. peer[type...]). -->
-            <xs:assert test="not(peer[type[text() = 'WITH_PUBLIC_KEY'] and publicKey = preceding-sibling::peer[type[text() = 'WITH_PUBLIC_KEY']]/publicKey])"/>
-            
-            <!-- Similarly for 'FROM_CERTIFICATE_AUTHORITY'. -->
-            <xs:assert test="not(peer[type[text() = 'FROM_CERTIFICATE_AUTHORITY'] and publicKey = preceding-sibling::peer[type[text() = 'FROM_CERTIFICATE_AUTHORITY']]/publicKey])"/>
-        </xs:complexType>
-        <xs:unique name="groupGUIDsUnique">
-            <xs:selector xpath="peer"/>
-            <xs:field xpath="publicKey"/>
-            <xs:field xpath="sgID"/>
-        </xs:unique>
-    </xs:element>
-
-    <xs:element name="peer">
-        <xs:complexType>
-            <xs:sequence>
-                <xs:element ref="type" minOccurs="1"/>
-                <xs:element ref="publicKey" minOccurs="0"/>
-                <xs:element ref="sgID" minOccurs="0"/>
-            </xs:sequence>
-            <!-- 'ALL' and 'ANY_TRUSTED' peers have only 'type' elements. 
-                 'FROM_CERTIFICATE_AUTHORITY' and 'WITH_PUBLIC_KEY' have an additional 'publicKey' element. 
-                 'WITH_MEMBERSHIP' have both 'publicKey' and 'sgID' elements. -->
-            <xs:assert test="(((type = 'ALL') or (type = 'ANY_TRUSTED')) and not(publicKey) and not(sgID))
-                          or (((type = 'FROM_CERTIFICATE_AUTHORITY') or (type = 'WITH_PUBLIC_KEY')) and publicKey and not(sgID))
-                          or ((type = 'WITH_MEMBERSHIP') and publicKey and sgID)"/>
-        </xs:complexType>
-    </xs:element>
-
-    <xs:element name="type">
-        <xs:simpleType>
-            <xs:restriction base="xs:string">
-                <xs:enumeration value="ALL"/>
-                <xs:enumeration value="ANY_TRUSTED"/>
-                <xs:enumeration value="FROM_CERTIFICATE_AUTHORITY"/>
-                <xs:enumeration value="WITH_MEMBERSHIP"/>
-                <xs:enumeration value="WITH_PUBLIC_KEY"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:element>
-
-    <xs:element name="publicKey">
-        <xs:simpleType>
-            <xs:restriction base="xs:string">
-                <xs:pattern value="-----BEGIN PUBLIC KEY-----[a-zA-Z0-9=]+-----END PUBLIC KEY-----"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:element>
-
-    <xs:element name="sgID">
-        <xs:simpleType>
-            <xs:restriction base="xs:string">
-                <xs:pattern value="[a-fA-F0-9]+"/>
-            </xs:restriction>
-        </xs:simpleType>
-    </xs:element>
-    
     <xs:element name="rules">
         <xs:complexType>
             <xs:sequence maxOccurs="unbounded">
@@ -119,7 +33,6 @@
         </xs:unique>
     </xs:element>
 
-    <!-- Everything below is the same as in "manifest_template.xsd". -->
     <xs:element name="node">
         <xs:complexType>
             <xs:sequence maxOccurs="unbounded">
@@ -267,6 +180,36 @@
     <xs:simpleType name="annotationName">
         <xs:restriction base="xs:string">
             <xs:enumeration value="org.alljoyn.Bus.Action"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="thumbprint">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="oid" type="thumbprintOid"/>
+                <xs:element name="value" type="xs:base64Binary"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="thumbprintOid">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="2.16.840.1.101.3.4.2.1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="signature">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="oid" type="signatureOid"/>
+                <xs:element name="value" type="xs:base64Binary"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="signatureOid">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="1.2.840.10045.4.3.2"/>
         </xs:restriction>
     </xs:simpleType>
 </xs:schema>

@@ -22,6 +22,9 @@
 #include <qcc/Util.h>
 #include "PermissionMgmtObj.h"
 #include "KeyInfoHelper.h"
+#include "XmlManifestConverter.h"
+#include "XmlRulesConverter.h"
+#include "XmlPoliciesConverter.h"
 
 #define QCC_MODULE "ALLJOYN_SECURITY"
 
@@ -241,7 +244,7 @@ QStatus SecurityApplicationProxy::GetClaimCapabilityAdditionalInfo(PermissionCon
 QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateAuthority,
                                         const qcc::GUID128& adminGroupId,
                                         const qcc::KeyInfoNISTP256& adminGroup,
-                                        const qcc::CertificateX509* identityCertChain, size_t identityCertChainSize,
+                                        const qcc::CertificateX509* identityCertChain, size_t identityCertChainCount,
                                         const Manifest* manifests, size_t manifestCount)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -269,17 +272,17 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
     KeyInfoHelper::KeyInfoKeyIdToMsgArg(adminGroupKeyInfo, inputs[4]);
 
     std::unique_ptr<MsgArg[]> identityArgs;
-    if (identityCertChainSize == 0) {
+    if (identityCertChainCount == 0) {
         status = inputs[5].Set("a(yay)", 0, NULL);
         if (ER_OK != status) {
             return status;
         }
     } else {
-        identityArgs.reset(new (std::nothrow) MsgArg[identityCertChainSize]);
+        identityArgs.reset(new (std::nothrow) MsgArg[identityCertChainCount]);
         if (nullptr == identityArgs.get()) {
             return ER_OUT_OF_MEMORY;
         }
-        for (size_t cnt = 0; cnt < identityCertChainSize; cnt++) {
+        for (size_t cnt = 0; cnt < identityCertChainCount; cnt++) {
             qcc::String der;
             status = identityCertChain[cnt].EncodeCertificateDER(der);
             if (ER_OK != status) {
@@ -291,7 +294,7 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
             }
             identityArgs[cnt].Stabilize();
         }
-        status = inputs[5].Set("a(yay)", identityCertChainSize, identityArgs.get());
+        status = inputs[5].Set("a(yay)", identityCertChainCount, identityArgs.get());
         if (ER_OK != status) {
             return status;
         }
@@ -313,6 +316,28 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
         if (!GetStatusBasedOnErrorName(reply, status)) {
             QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
+    }
+
+    return status;
+}
+
+QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateAuthority,
+                                        const qcc::GUID128& adminGroupId,
+                                        const qcc::KeyInfoNISTP256& adminGroup,
+                                        const qcc::CertificateX509* identityCertChain, size_t identityCertChainCount,
+                                        AJ_PCSTR* manifestsXmls, size_t manifestsCount)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+
+    std::vector<Manifest> manifests;
+    QStatus status = ExtractManifests(manifestsXmls, manifestsCount, manifests);
+
+    if (ER_OK == status) {
+        status = Claim(certificateAuthority,
+                       adminGroupId,
+                       adminGroup,
+                       identityCertChain, identityCertChainCount,
+                       manifests.data(), manifests.size());
     }
 
     return status;
@@ -347,12 +372,12 @@ QStatus SecurityApplicationProxy::Reset()
     return status;
 }
 
-QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainSize,
+QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainCount,
                                                  const Manifest* manifests, size_t manifestCount)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
 
-    if ((identityCertificateChain == NULL) || (identityCertificateChainSize == 0) || (manifestCount < 1)) {
+    if ((identityCertificateChain == NULL) || (identityCertificateChainCount == 0) || (manifestCount < 1)) {
         return ER_INVALID_DATA;
     }
     if (identityCertificateChain[0].GetType() != qcc::CertificateX509::IDENTITY_CERTIFICATE) {
@@ -361,11 +386,11 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* ide
     QStatus status = ER_OK;
     Message reply(GetBusAttachment());
     MsgArg inputs[2];
-    std::unique_ptr<MsgArg[]> certArgs(new (std::nothrow) MsgArg[identityCertificateChainSize]);
+    std::unique_ptr<MsgArg[]> certArgs(new (std::nothrow) MsgArg[identityCertificateChainCount]);
     if (nullptr == certArgs.get()) {
         return ER_OUT_OF_MEMORY;
     }
-    for (size_t cnt = 0; cnt < identityCertificateChainSize; cnt++) {
+    for (size_t cnt = 0; cnt < identityCertificateChainCount; cnt++) {
         qcc::String der;
         status = identityCertificateChain[cnt].EncodeCertificateDER(der);
         if (ER_OK != status) {
@@ -377,7 +402,7 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* ide
         }
         certArgs[cnt].Stabilize();
     }
-    status = inputs[0].Set("a(yay)", identityCertificateChainSize, certArgs.get());
+    status = inputs[0].Set("a(yay)", identityCertificateChainCount, certArgs.get());
     if (ER_OK != status) {
         return status;
     }
@@ -404,6 +429,22 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* ide
     return status;
 }
 
+QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainCount,
+                                                 AJ_PCSTR* manifestsXmls, size_t manifestsCount)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+
+    std::vector<Manifest> manifests;
+    QStatus status = ExtractManifests(manifestsXmls, manifestsCount, manifests);
+
+    if (ER_OK == status) {
+        status = UpdateIdentity(identityCertificateChain, identityCertificateChainCount,
+                                manifests.data(), manifests.size());
+    }
+
+    return status;
+}
+
 QStatus SecurityApplicationProxy::UpdatePolicy(const PermissionPolicy& policy)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -425,6 +466,21 @@ QStatus SecurityApplicationProxy::UpdatePolicy(const PermissionPolicy& policy)
     return status;
 }
 
+QStatus SecurityApplicationProxy::UpdatePolicy(AJ_PCSTR policyXml)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    QStatus status;
+    PermissionPolicy policy;
+
+    status = XmlPoliciesConverter::FromXml(policyXml, policy);
+
+    if (ER_OK == status) {
+        status = UpdatePolicy(policy);
+    }
+
+    return status;
+}
+
 QStatus SecurityApplicationProxy::ResetPolicy()
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -440,19 +496,19 @@ QStatus SecurityApplicationProxy::ResetPolicy()
     return status;
 }
 
-QStatus SecurityApplicationProxy::InstallMembership(const qcc::CertificateX509* certificateChain, size_t certificateChainSize)
+QStatus SecurityApplicationProxy::InstallMembership(const qcc::CertificateX509* certificateChain, size_t certificateChainCount)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
     Message reply(GetBusAttachment());
 
-    if ((certificateChainSize >= 0) && (certificateChain[0].GetType() != qcc::CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+    if ((certificateChainCount >= 0) && (certificateChain[0].GetType() != qcc::CertificateX509::MEMBERSHIP_CERTIFICATE)) {
         QCC_DbgHLPrintf(("Leaf certificate in membership chain is not of type MEMBERSHIP_CERTIFICATE. This is not recommended."));
     }
 
     MsgArg inputs[1];
-    MsgArg* certArgs = new MsgArg[certificateChainSize];
-    for (size_t cnt = 0; cnt < certificateChainSize; cnt++) {
+    MsgArg* certArgs = new MsgArg[certificateChainCount];
+    for (size_t cnt = 0; cnt < certificateChainCount; cnt++) {
         qcc::String der;
         status = certificateChain[cnt].EncodeCertificateDER(der);
         if (ER_OK != status) {
@@ -464,7 +520,7 @@ QStatus SecurityApplicationProxy::InstallMembership(const qcc::CertificateX509* 
         }
         certArgs[cnt].Stabilize();
     }
-    status = inputs[0].Set("a(yay)", certificateChainSize, certArgs);
+    status = inputs[0].Set("a(yay)", certificateChainCount, certArgs);
     if (ER_OK != status) {
         goto Exit;
     }
@@ -706,6 +762,31 @@ QStatus SecurityApplicationProxy::GetManifests(std::vector<Manifest>& manifests)
     return status;
 }
 
+QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateXml)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+
+    QStatus status;
+    MsgArg argManifestTemplate;
+    PermissionPolicy::Rule* rules = nullptr;
+    size_t rulesCount = 0;
+
+    *manifestTemplateXml = nullptr;
+    status = GetManifestTemplate(argManifestTemplate);
+
+    if (ER_OK == status) {
+        status = PermissionPolicy::ParseRules(argManifestTemplate, &rules, &rulesCount);
+    }
+
+    if (ER_OK == status) {
+        status = XmlRulesConverter::RulesToXml(rules, rulesCount, manifestTemplateXml);
+    }
+
+    delete[] rules;
+
+    return status;
+}
+
 QStatus SecurityApplicationProxy::GetIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -842,6 +923,27 @@ QStatus SecurityApplicationProxy::EndManagement()
             QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
     }
+    return status;
+}
+
+QStatus SecurityApplicationProxy::ExtractManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+
+    QStatus status = ER_OK;
+
+    for (size_t index = 0; index < manifestsCount; index++) {
+        Manifest manifest;
+
+        status = XmlManifestConverter::XmlToManifest(manifestsXmls[index], manifest);
+
+        if (ER_OK != status) {
+            break;
+        }
+
+        manifests.push_back(manifest);
+    }
+
     return status;
 }
 
