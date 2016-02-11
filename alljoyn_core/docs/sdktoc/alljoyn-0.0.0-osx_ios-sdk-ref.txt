@@ -590,6 +590,10 @@ $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnounceHandler.
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -609,6 +613,7 @@ $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/arm/iphoneos/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/arm/iphoneos/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/arm/iphoneos/release/dist/about/inc/alljoyn/about/AJNAboutClient.h
 $SDK/build/darwin/arm/iphoneos/release/dist/about/inc/alljoyn/about/AJNAboutDataConverter.h
 $SDK/build/darwin/arm/iphoneos/release/dist/about/inc/alljoyn/about/AJNAboutIconClient.h
@@ -688,6 +693,10 @@ $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnounceHandle
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -707,6 +716,7 @@ $SDK/build/darwin/arm/iphoneos/release/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/arm/iphoneos/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/arm/iphoneos/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/about/inc/alljoyn/about/AJNAboutClient.h
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/about/inc/alljoyn/about/AJNAboutDataConverter.h
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/about/inc/alljoyn/about/AJNAboutIconClient.h
@@ -786,6 +796,10 @@ $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/AnnounceH
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -805,6 +819,7 @@ $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/inc/qcc/posix/platform_type
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/arm/iphonesimulator/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/arm/iphonesimulator/release/dist/about/inc/alljoyn/about/AJNAboutClient.h
 $SDK/build/darwin/arm/iphonesimulator/release/dist/about/inc/alljoyn/about/AJNAboutDataConverter.h
 $SDK/build/darwin/arm/iphonesimulator/release/dist/about/inc/alljoyn/about/AJNAboutIconClient.h
@@ -884,6 +899,10 @@ $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/about/Announc
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -903,6 +922,7 @@ $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/inc/qcc/posix/platform_ty
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/arm/iphonesimulator/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/AboutData.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/AboutDataListener.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/AboutIcon.h
@@ -955,6 +975,10 @@ $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnounceHandle
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -974,6 +998,7 @@ $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/arm64/iphoneos/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/AboutData.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/AboutDataListener.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/AboutIcon.h
@@ -1026,6 +1051,10 @@ $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnounceHand
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -1045,6 +1074,7 @@ $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/arm64/iphoneos/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/arm64/iphoneos/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/AboutData.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/AboutDataListener.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/AboutIcon.h
@@ -1097,6 +1127,10 @@ $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnounceHandle
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -1116,6 +1150,7 @@ $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/armv7/iphoneos/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/AboutData.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/AboutDataListener.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/AboutIcon.h
@@ -1168,6 +1203,10 @@ $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnounceHand
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -1187,6 +1226,7 @@ $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/armv7/iphoneos/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/armv7/iphoneos/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/AboutData.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/AboutDataListener.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/AboutIcon.h
@@ -1239,6 +1279,10 @@ $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnounceHandl
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -1258,6 +1302,7 @@ $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/armv7s/iphoneos/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/AboutData.h
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/AboutDataListener.h
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/AboutIcon.h
@@ -1310,6 +1355,10 @@ $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnounceHan
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -1329,6 +1378,7 @@ $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/inc/qcc/posix/platform_types.
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/armv7s/iphoneos/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/i386/iphoneos/debug/dist/about/inc/alljoyn/about/AJNAboutClient.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/about/inc/alljoyn/about/AJNAboutDataConverter.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/about/inc/alljoyn/about/AJNAboutIconClient.h
@@ -1408,6 +1458,10 @@ $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnounceHandler
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -1427,6 +1481,7 @@ $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/i386/iphoneos/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/i386/iphoneos/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/i386/iphoneos/release/dist/about/inc/alljoyn/about/AJNAboutClient.h
 $SDK/build/darwin/i386/iphoneos/release/dist/about/inc/alljoyn/about/AJNAboutDataConverter.h
 $SDK/build/darwin/i386/iphoneos/release/dist/about/inc/alljoyn/about/AJNAboutIconClient.h
@@ -1506,6 +1561,10 @@ $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnounceHandl
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -1525,6 +1584,7 @@ $SDK/build/darwin/i386/iphoneos/release/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/i386/iphoneos/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/i386/iphoneos/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/about/inc/alljoyn/about/AJNAboutClient.h
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/about/inc/alljoyn/about/AJNAboutDataConverter.h
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/about/inc/alljoyn/about/AJNAboutIconClient.h
@@ -1604,6 +1664,10 @@ $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/Announce
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -1623,6 +1687,7 @@ $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/inc/qcc/posix/platform_typ
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/i386/iphonesimulator/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/i386/iphonesimulator/release/dist/about/inc/alljoyn/about/AJNAboutClient.h
 $SDK/build/darwin/i386/iphonesimulator/release/dist/about/inc/alljoyn/about/AJNAboutDataConverter.h
 $SDK/build/darwin/i386/iphonesimulator/release/dist/about/inc/alljoyn/about/AJNAboutIconClient.h
@@ -1702,6 +1767,10 @@ $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/about/Announ
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -1721,6 +1790,7 @@ $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/inc/qcc/posix/platform_t
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/i386/iphonesimulator/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/x86/debug/dist/cpp/bin/advtunnel
 $SDK/build/darwin/x86/debug/dist/cpp/bin/ajxmlcop
 $SDK/build/darwin/x86/debug/dist/cpp/bin/bastress2
@@ -1806,6 +1876,10 @@ $SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/about/AnnounceHandler.h
 $SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/x86/debug/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/x86/debug/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/x86/debug/dist/cpp/inc/qcc/CryptoECC.h
@@ -1825,6 +1899,7 @@ $SDK/build/darwin/x86/debug/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/x86/debug/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/x86/debug/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/x86/debug/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/x86/debug/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/x86/debug/dist/cpp/samples/about/AboutClient.cc
 $SDK/build/darwin/x86/debug/dist/cpp/samples/about/AboutService.cc
 $SDK/build/darwin/x86/debug/dist/cpp/samples/aboutlistener/AboutListener.cc
@@ -1937,6 +2012,10 @@ $SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/about/AnnounceHandler.h
 $SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/about/PropertyStore.h
 $SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/config/ConfigClient.h
+$SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/config/ConfigService.h
+$SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/config/LogModule.h
 $SDK/build/darwin/x86/release/dist/cpp/inc/alljoyn/version.h
 $SDK/build/darwin/x86/release/dist/cpp/inc/qcc/CertificateECC.h
 $SDK/build/darwin/x86/release/dist/cpp/inc/qcc/CryptoECC.h
@@ -1956,6 +2035,7 @@ $SDK/build/darwin/x86/release/dist/cpp/inc/qcc/posix/platform_types.h
 $SDK/build/darwin/x86/release/dist/cpp/lib/libajrouter.a
 $SDK/build/darwin/x86/release/dist/cpp/lib/liballjoyn.a
 $SDK/build/darwin/x86/release/dist/cpp/lib/liballjoyn_about.a
+$SDK/build/darwin/x86/release/dist/cpp/lib/liballjoyn_config.a
 $SDK/build/darwin/x86/release/dist/cpp/samples/about/AboutClient.cc
 $SDK/build/darwin/x86/release/dist/cpp/samples/about/AboutService.cc
 $SDK/build/darwin/x86/release/dist/cpp/samples/aboutlistener/AboutListener.cc

@@ -71,9 +71,13 @@ $DIST/cpp/bin/samples/AboutClient_legacy
 $DIST/cpp/bin/samples/AboutListener
 $DIST/cpp/bin/samples/AboutService
 $DIST/cpp/bin/samples/AboutService_legacy
+$DIST/cpp/bin/samples/ConfigClient
+$DIST/cpp/bin/samples/ConfigService
+$DIST/cpp/bin/samples/ConfigService.conf
 $DIST/cpp/bin/samples/DeskTopSharedKSClient1
 $DIST/cpp/bin/samples/DeskTopSharedKSClient2
 $DIST/cpp/bin/samples/DeskTopSharedKSService
+$DIST/cpp/bin/samples/FactoryConfigService.conf
 $DIST/cpp/bin/samples/SampleCertificateUtility
 $DIST/cpp/bin/samples/SampleClientECDHE
 $DIST/cpp/bin/samples/SampleServiceECDHE
@@ -143,6 +147,10 @@ $DIST/cpp/inc/alljoyn/about/AnnounceHandler.h
 $DIST/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $DIST/cpp/inc/alljoyn/about/PropertyStore.h
 $DIST/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$DIST/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$DIST/cpp/inc/alljoyn/config/ConfigClient.h
+$DIST/cpp/inc/alljoyn/config/ConfigService.h
+$DIST/cpp/inc/alljoyn/config/LogModule.h
 $DIST/cpp/inc/alljoyn/version.h
 $DIST/cpp/inc/qcc/CertificateECC.h
 $DIST/cpp/inc/qcc/CryptoECC.h
@@ -164,6 +172,8 @@ $DIST/cpp/lib/liballjoyn.a
 $DIST/cpp/lib/liballjoyn.so
 $DIST/cpp/lib/liballjoyn_about.a
 $DIST/cpp/lib/liballjoyn_about.so
+$DIST/cpp/lib/liballjoyn_config.a
+$DIST/cpp/lib/liballjoyn_config.so
 $DIST/cpp/samples/README.txt
 $DIST/cpp/samples/TrustedTLSampleRN/TrustedTLSampleRN.cc
 $DIST/cpp/samples/about/AboutClient.cc
@@ -213,6 +223,7 @@ $DIST/java/jar/about_server_sample_legacy.jar
 $DIST/java/jar/alljoyn-sources.jar
 $DIST/java/jar/alljoyn.jar
 $DIST/java/jar/alljoyn_about.jar
+$DIST/java/jar/alljoyn_config.jar
 $DIST/java/jar/alljoyn_test.jar
 $DIST/java/lib/liballjoyn_java.so
 $DIST/java/samples/JavaSDKDoc/JavaSDKDocAboutClient/.classpath

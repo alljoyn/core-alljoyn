@@ -116,6 +116,10 @@ $DIST/cpp/inc/alljoyn/about/AnnounceHandler.h
 $DIST/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $DIST/cpp/inc/alljoyn/about/PropertyStore.h
 $DIST/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$DIST/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$DIST/cpp/inc/alljoyn/config/ConfigClient.h
+$DIST/cpp/inc/alljoyn/config/ConfigService.h
+$DIST/cpp/inc/alljoyn/config/LogModule.h
 $DIST/cpp/inc/alljoyn/version.h
 $DIST/cpp/inc/qcc/CertificateECC.h
 $DIST/cpp/inc/qcc/CryptoECC.h
@@ -136,6 +140,7 @@ $DIST/cpp/lib/libajrouter.a
 $DIST/cpp/lib/liballjoyn-daemon.a
 $DIST/cpp/lib/liballjoyn.a
 $DIST/cpp/lib/liballjoyn_about.a
+$DIST/cpp/lib/liballjoyn_config.a
 $DIST/cpp/samples/README.txt
 $DIST/cpp/samples/about/AboutClient.cc
 $DIST/cpp/samples/about/AboutService.cc
@@ -255,6 +260,7 @@ $DIST/cpp/samples/simple/service/src/org/alljoyn/bus/samples/simpleservice/Servi
 $DIST/java/docs/html/index.html
 $DIST/java/jar/alljoyn.jar
 $DIST/java/jar/alljoyn_about.jar
+$DIST/java/jar/alljoyn_config.jar
 $DIST/java/jar/alljoyn_test.jar
 $DIST/java/lib/liballjoyn_java.so
 $DIST/java/samples/README.txt
