@@ -1517,9 +1517,9 @@ TEST_F(CertificateECCTest, CreateIdentityCertificateChain)
     cert3.SetSubjectPublicKey(key3.GetDSAPublicKey());
     cert4.SetSubjectPublicKey(key4.GetDSAPublicKey());
     EXPECT_EQ(ER_OK, cert1.Sign(key1.GetDSAPrivateKey()));
-    EXPECT_EQ(ER_OK, cert2.Sign(key1.GetDSAPrivateKey()));
-    EXPECT_EQ(ER_OK, cert3.Sign(key2.GetDSAPrivateKey()));
-    EXPECT_EQ(ER_OK, cert4.Sign(key3.GetDSAPrivateKey()));
+    EXPECT_EQ(ER_OK, cert2.SignAndGenerateAuthorityKeyId(key1.GetDSAPrivateKey(), key1.GetDSAPublicKey()));
+    EXPECT_EQ(ER_OK, cert3.SignAndGenerateAuthorityKeyId(key2.GetDSAPrivateKey(), key2.GetDSAPublicKey()));
+    EXPECT_EQ(ER_OK, cert4.SignAndGenerateAuthorityKeyId(key3.GetDSAPrivateKey(), key3.GetDSAPublicKey()));
 
     EXPECT_EQ(ER_OK, cert1.Verify(key1.GetDSAPublicKey()));
     EXPECT_EQ(ER_OK, cert2.Verify(key1.GetDSAPublicKey()));

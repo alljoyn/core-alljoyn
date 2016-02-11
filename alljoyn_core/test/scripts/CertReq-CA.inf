@@ -19,3 +19,9 @@
     
 [BasicConstraintsExtension]
     Critical=true
+
+; The OID 2.5.29.14 denotes the Subject Key Identifier. We set it to an arbitrary value, for testing. 
+; The Security HLD recommends we set it to the hash of the public key, but the certreq/certutil tools
+; do not support this. 
+[Extensions]
+    2.5.29.14=Subject_key_id_AllJoynTest
