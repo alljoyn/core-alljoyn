@@ -1,0 +1,20 @@
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN" "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+
+<busconfig>
+  <type>alljoyn</type>
+  <user>dbus</user>
+  <property name="router_advertisement_prefix">org.alljoyn.BusNode.</property>
+  <listen>unix:abstract=alljoyn</listen>
+  <listen>tcp:r4addr=127.0.0.1,r4port=0</listen>
+  <limit name="auth_timeout">5000</limit>
+  <limit name="max_incomplete_connections">16</limit>
+  <limit name="max_completed_connections">100</limit>
+  <policy context="default">
+    <allow send_interface="*" />
+    <allow receive_interface="*" />
+    <allow own="*" />
+    <allow user="*" />
+    <allow send_requested_reply="true" />
+    <allow receive_requested_reply="true" />
+  </policy>
+</busconfig>
