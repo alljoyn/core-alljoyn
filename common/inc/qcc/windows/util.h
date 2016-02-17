@@ -32,6 +32,12 @@
 #define QCC_TARGET_ENDIAN QCC_LITTLE_ENDIAN
 
 /*
+ * Global init and shutdown routines.
+ */
+void WindowsUtilInit();
+void WindowsUtilShutdown();
+
+/*
  * Define some endian conversion macros to be compatible with posix macros.
  * Macros with the _same_ names are available on BSD (and Android Bionic)
  * systems (and with _similar_ names on GLibC based systems).
@@ -74,6 +80,5 @@
 
 
 #define ER_DIR_SEPARATOR  "\\"
-
 
 #endif
