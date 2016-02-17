@@ -90,9 +90,12 @@ struct Rule {
      * Return true if messages matches rule.
      *
      * @param msg   Message to compare with rule.
-     * @return  true if this rule matches the message.
+     * @param cachedWhoImplements   Optional in/out collection of who-implements interfaces
+     *                              cached from 'msg' param. If provided, the interfaces
+     *                              found in the message will be populated.
+     * @return      true if this rule matches the message.
      */
-    bool IsMatch(const Message& msg) const;
+    bool IsMatch(const Message& msg, std::set<qcc::String>* cachedWhoImplements = nullptr) const;
 
     /**
      * String representation of a rule
