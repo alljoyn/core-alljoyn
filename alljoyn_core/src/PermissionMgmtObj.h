@@ -110,6 +110,25 @@ class PermissionMgmtObj : public BusObject {
     static const char* ERROR_CERTIFICATE_NOT_FOUND;
 
     /**
+     * Error name Management Already Started.  Error raised when the app being
+     * managed detects that Security Manager called StartManagement two times,
+     * without calling EndManagement in between these two calls. This error
+     * typically means that the first management session has been interrupted
+     * abruptly - e.g. by losing network connectivity between the Security Manager
+     * and the app being managed during the management session.
+     */
+    static const char* ERROR_MANAGEMENT_ALREADY_STARTED;
+
+    /**
+     * Error name Management Not Started.  Error raised when the app being
+     * managed detects that Security Manager called EndManagement without
+     * a matching StartManagement. This error typically means that the previous
+     * management session has been interrupted abruptly - e.g. by restarting
+     * the app being managed during the management session.
+     */
+    static const char* ERROR_MANAGEMENT_NOT_STARTED;
+
+    /**
      * For the SendMemberships call, the app sends one cert chain at time since
      * thin client peer may not be able to handle large amount of data.  The app
      * reads back the membership cert chain from the peer.  It keeps looping until
@@ -249,7 +268,6 @@ class PermissionMgmtObj : public BusObject {
      *         - ER_OK if successful.
      *         - an error status otherwise.
      */
-
     QStatus GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args, const qcc::GUID128& remotePeerGuid);
 
     /**
@@ -561,6 +579,8 @@ class PermissionMgmtObj : public BusObject {
     void ResetPolicy(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
+    void StartManagement(const InterfaceDescription::Member* member, Message& msg);
+    void EndManagement(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetMembershipSummaries(MsgArg& arg);
     QStatus GetManifestTemplate(MsgArg& arg);
     QStatus GetManifestTemplateDigest(MsgArg& arg);
@@ -642,9 +662,7 @@ class PermissionMgmtObj : public BusObject {
     bool IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
     QStatus LookForManifestTemplate(bool& exist);
 
-    /**
-     * Bind to an exclusive port for PermissionMgmt object.
-     */
+    /* Bind to an exclusive port for PermissionMgmt object */
     QStatus BindPort();
 
     CredentialAccessor* ca;
@@ -653,6 +671,9 @@ class PermissionMgmtObj : public BusObject {
     PortListener* portListener;
     MessageEncryptionNotification* callbackToClearSecrets;
     bool ready;
+
+    /* Has bool semantic but using volatile int32_t for atomic compare-and-exchange */
+    volatile int32_t managementStarted;
 };
 
 }

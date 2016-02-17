@@ -31,7 +31,7 @@ namespace ajn {
 const uint16_t SecurityApplicationObj::APPLICATION_VERSION = 1;
 const uint16_t SecurityApplicationObj::SECURITY_APPLICATION_VERSION = 1;
 const uint16_t SecurityApplicationObj::SECURITY_CLAIMABLE_APPLICATION_VERSION = 1;
-const uint16_t SecurityApplicationObj::SECURITY_MANAGED_APPLICATION_VERSION = 1;
+const uint16_t SecurityApplicationObj::SECURITY_MANAGED_APPLICATION_VERSION = 2;
 
 
 SecurityApplicationObj::SecurityApplicationObj(BusAttachment& bus) :
@@ -127,6 +127,16 @@ QStatus SecurityApplicationObj::Init()
             QCC_LogError(status, ("Failed to add method handler for  %s.RemoveMembership", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
             return status;
         }
+        status = AddMethodHandler(ifc->GetMember("StartManagement"), static_cast<MessageReceiver::MethodHandler>(&SecurityApplicationObj::StartManagement));
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to add method handler for  %s.StartManagement", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
+            return status;
+        }
+        status = AddMethodHandler(ifc->GetMember("EndManagement"), static_cast<MessageReceiver::MethodHandler>(&SecurityApplicationObj::EndManagement));
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to add method handler for  %s.EndManagement", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
+            return status;
+        }
     }
     if (ER_OK == status) {
         status = PermissionMgmtObj::Init();
@@ -201,6 +211,18 @@ void SecurityApplicationObj::RemoveMembership(const ajn::InterfaceDescription::M
 {
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
     PermissionMgmtObj::RemoveMembership(member, msg);
+}
+
+void SecurityApplicationObj::StartManagement(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
+    PermissionMgmtObj::StartManagement(member, msg);
+}
+
+void SecurityApplicationObj::EndManagement(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
+    PermissionMgmtObj::EndManagement(member, msg);
 }
 
 QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, MsgArg& val)

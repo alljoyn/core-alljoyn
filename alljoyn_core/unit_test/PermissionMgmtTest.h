@@ -119,10 +119,11 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
     virtual void PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context);
 
     void EnableSecurity(const char* keyExchange);
-    const bool GetFactoryResetReceived();
+    bool GetFactoryResetReceived() const;
     void SetFactoryResetReceived(bool flag);
-    const bool GetPolicyChangedReceived();
+    bool GetPolicyChangedReceived() const;
     void SetPolicyChangedReceived(bool flag);
+
     void CreateOnOffAppInterface(BusAttachment& bus, bool addService);
     void CreateTVAppInterface(BusAttachment& bus, bool addService);
     void CreateAppInterfaces(BusAttachment& bus, bool addService);
@@ -147,11 +148,11 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
     void ChannelChangedSignalHandler(const InterfaceDescription::Member* member,
                                      const char* sourcePath, Message& msg);
     void SetApplicationStateSignalReceived(bool flag);
-    const bool GetApplicationStateSignalReceived();
+    bool GetApplicationStateSignalReceived() const;
     void SetChannelChangedSignalReceived(bool flag);
-    const bool GetChannelChangedSignalReceived();
+    bool GetChannelChangedSignalReceived() const;
     void SetPropertiesChangedSignalReceived(bool flag);
-    const bool GetPropertiesChangedSignalReceived();
+    bool GetPropertiesChangedSignalReceived() const;
 
     void OnOffOn(const InterfaceDescription::Member* member, Message& msg);
     void OnOffOff(const InterfaceDescription::Member* member, Message& msg);

@@ -58,6 +58,8 @@ const char* PermissionMgmtObj::ERROR_DIGEST_MISMATCH = "org.alljoyn.Bus.Security
 const char* PermissionMgmtObj::ERROR_POLICY_NOT_NEWER = "org.alljoyn.Bus.Security.Error.PolicyNotNewer";
 const char* PermissionMgmtObj::ERROR_DUPLICATE_CERTIFICATE = "org.alljoyn.Bus.Security.Error.DuplicateCertificate";
 const char* PermissionMgmtObj::ERROR_CERTIFICATE_NOT_FOUND = "org.alljoyn.Bus.Security.Error.CertificateNotFound";
+const char* PermissionMgmtObj::ERROR_MANAGEMENT_ALREADY_STARTED = "org.alljoyn.Bus.Security.Error.ManagementAlreadyStarted";
+const char* PermissionMgmtObj::ERROR_MANAGEMENT_NOT_STARTED = "org.alljoyn.Bus.Security.Error.ManagementNotStarted";
 
 /**
  * Interest in the encryption step of a message in order to clear the secrets.
@@ -103,8 +105,8 @@ class ClearSecretsWhenMsgDeliveredNotification : public MessageEncryptionNotific
 static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP256& keyInfo);
 
 PermissionMgmtObj::PermissionMgmtObj(BusAttachment& bus, const char* objectPath) :
-    BusObject(objectPath),
-    bus(bus), claimCapabilities(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT), claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL), ready(false)
+    BusObject(objectPath), bus(bus), claimCapabilities(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT),
+    claimCapabilityAdditionalInfo(0), portListener(NULL), callbackToClearSecrets(NULL), ready(false), managementStarted(false)
 {
 }
 
@@ -259,21 +261,31 @@ QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& k
 
 QStatus PermissionMgmtObj::MethodReply(const Message& msg, QStatus status)
 {
-    if (ER_PERMISSION_DENIED == status) {
-        return BusObject::MethodReply(msg, ERROR_PERMISSION_DENIED);
-    } else if (ER_INVALID_CERTIFICATE == status) {
-        return BusObject::MethodReply(msg, ERROR_INVALID_CERTIFICATE);
-    } else if (ER_INVALID_CERTIFICATE_USAGE == status) {
-        return BusObject::MethodReply(msg, ERROR_INVALID_CERTIFICATE_USAGE);
-    } else if (ER_DUPLICATE_CERTIFICATE == status) {
-        return BusObject::MethodReply(msg, ERROR_DUPLICATE_CERTIFICATE);
-    } else if (ER_DIGEST_MISMATCH == status) {
-        return BusObject::MethodReply(msg, ERROR_DIGEST_MISMATCH);
-    } else if (ER_POLICY_NOT_NEWER == status) {
-        return BusObject::MethodReply(msg, ERROR_POLICY_NOT_NEWER);
-    } else {
+    const char* errorName = nullptr;
+    switch (status) {
+    case ER_PERMISSION_DENIED:          errorName = ERROR_PERMISSION_DENIED; break;
+
+    case ER_INVALID_CERTIFICATE:        errorName = ERROR_INVALID_CERTIFICATE; break;
+
+    case ER_INVALID_CERTIFICATE_USAGE:  errorName = ERROR_INVALID_CERTIFICATE_USAGE; break;
+
+    case ER_DUPLICATE_CERTIFICATE:      errorName = ERROR_DUPLICATE_CERTIFICATE; break;
+
+    case ER_DIGEST_MISMATCH:            errorName = ERROR_DIGEST_MISMATCH; break;
+
+    case ER_POLICY_NOT_NEWER:           errorName = ERROR_POLICY_NOT_NEWER; break;
+
+    case ER_MANAGEMENT_ALREADY_STARTED: errorName = ERROR_MANAGEMENT_ALREADY_STARTED; break;
+
+    case ER_MANAGEMENT_NOT_STARTED:     errorName = ERROR_MANAGEMENT_NOT_STARTED; break;
+
+    default:
+        QCC_DbgPrintf(("Replying with status code = %#x", status));
         return BusObject::MethodReply(msg, status);
     }
+
+    QCC_DbgPrintf(("Replying with error = %s", errorName));
+    return BusObject::MethodReply(msg, errorName);
 }
 
 static bool CanBeCAForIdentity(PermissionMgmtObj::TrustAnchorType taType)
@@ -1287,7 +1299,7 @@ QStatus PermissionMgmtObj::StoreManifest(MsgArg& manifestArg)
     /* retrieve the identity leaf cert */
     status = GetIdentityLeafCert(cert);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to retrieve identify cert status 0x%x\n"));
+        QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to retrieve identify cert status 0x%x\n", status));
         status = ER_CERTIFICATE_NOT_FOUND;
         goto DoneValidation;
     }
@@ -1590,6 +1602,34 @@ Exit:
         /* could not find it.  */
         status = ER_CERTIFICATE_NOT_FOUND;
     }
+    MethodReply(msg, status);
+}
+
+void PermissionMgmtObj::StartManagement(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_UNUSED(member);
+    QStatus status = ER_OK;
+
+    if (!CompareAndExchange(&managementStarted, false, true)) {
+        status = ER_MANAGEMENT_ALREADY_STARTED;
+    } else {
+        bus.GetInternal().CallStartManagementCallback();
+    }
+
+    MethodReply(msg, status);
+}
+
+void PermissionMgmtObj::EndManagement(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_UNUSED(member);
+    QStatus status = ER_OK;
+
+    if (!CompareAndExchange(&managementStarted, true, false)) {
+        status = ER_MANAGEMENT_NOT_STARTED;
+    } else {
+        bus.GetInternal().CallEndManagementCallback();
+    }
+
     MethodReply(msg, status);
 }
 

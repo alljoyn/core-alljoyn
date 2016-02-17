@@ -330,10 +330,12 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddProperty("DefaultPolicy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("DefaultPolicy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddMethod("ResetPolicy", "", "", "");
-        ifc->AddMethod("InstallMembership", "a(yay)", "", "certificateChain,");
+        ifc->AddMethod("InstallMembership", "a(yay)", "", "certificateChain");
         ifc->AddMethod("RemoveMembership", "(ayay(yyayay))", "", "certificateId");
         ifc->AddProperty("MembershipSummaries", "a(ayay(yyayay))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("MembershipSummaries", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddMethod("StartManagement", "", "", "");
+        ifc->AddMethod("EndManagement", "", "", "");
 
         ifc->Activate();
     }
