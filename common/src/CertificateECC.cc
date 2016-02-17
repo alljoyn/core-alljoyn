@@ -1280,6 +1280,11 @@ bool CertificateX509::IsDNEqual(const CertificateX509& other) const
 
 bool CertificateX509::IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const
 {
+    QCC_ASSERT((cnLength > 0) || (nullptr == cn));
+    QCC_ASSERT((ouLength > 0) || (nullptr == ou));
+    QCC_ASSERT((this->GetSubjectCNLength() > 0) || (nullptr == this->GetSubjectCN()));
+    QCC_ASSERT((this->GetSubjectOULength() > 0) || (nullptr == this->GetSubjectOU()));
+
     /* Check lengths are equal. */
     if ((this->GetSubjectCNLength() != cnLength) || (this->GetSubjectOULength() != ouLength)) {
         return false;
@@ -1341,6 +1346,27 @@ bool CertificateX509::ValidateCertificateTypeInCertChain(const CertificateX509* 
         }
     }
     return true;
+}
+
+QStatus CertificateX509::GetSHA256Thumbprint(uint8_t* thumbprint) const
+{
+    String encodedPem;
+    QStatus status = this->EncodeCertificatePEM(encodedPem);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    Crypto_SHA256 hash;
+    status = hash.Init();
+    if (ER_OK != status) {
+        return status;
+    }
+    status = hash.Update((const uint8_t*)encodedPem.data(), encodedPem.size());
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return hash.GetDigest(thumbprint, false);
 }
 
 }

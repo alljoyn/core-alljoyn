@@ -639,6 +639,14 @@ class CertificateX509 {
     bool IsSubjectPublicKeyEqual(const ECCPublicKey* publicKey) const;
 
     /**
+     * Get the SHA-256 thumbprint of this certificate.
+     * @param[out] thumbprint buffer of size Crypto_SHA256::DIGEST_SIZE to receive the thumbprint
+     *
+     * @return #ER_OK if successful, error code otherwise
+     */
+    QStatus GetSHA256Thumbprint(uint8_t* thumbprint) const;
+
+    /**
      * Destructor
      */
     virtual ~CertificateX509()
@@ -724,7 +732,7 @@ class CertificateX509 {
         uint8_t* cn;
         size_t cnLen;
 
-        DistinguishedName() : ou(NULL), ouLen(0), cn(NULL), cnLen(0)
+        DistinguishedName() : ou(nullptr), ouLen(0), cn(nullptr), cnLen(0)
         {
         }
 
@@ -732,15 +740,23 @@ class CertificateX509 {
         {
             ouLen = len;
             delete [] this->ou;
-            this->ou = new uint8_t[len];
-            memcpy(this->ou, newOu, len);
+            if (len > 0) {
+                this->ou = new uint8_t[len];
+                memcpy(this->ou, newOu, len);
+            } else {
+                this->ou = nullptr;
+            }
         }
         void SetCN(const uint8_t* newCn, size_t len)
         {
             cnLen = len;
             delete [] this->cn;
-            this->cn = new uint8_t[len];
-            memcpy(this->cn, newCn, len);
+            if (len > 0) {
+                this->cn = new uint8_t[len];
+                memcpy(this->cn, newCn, len);
+            } else {
+                this->cn = nullptr;
+            }
         }
         ~DistinguishedName()
         {
@@ -748,24 +764,16 @@ class CertificateX509 {
             delete [] cn;
         }
 
-        DistinguishedName(const DistinguishedName& other) :
-            ouLen(other.ouLen), cnLen(other.cnLen) {
-            ou = new uint8_t[ouLen];
-            memcpy(ou, other.ou, ouLen);
-            cn = new uint8_t[cnLen];
-            memcpy(cn, other.cn, cnLen);
+        DistinguishedName(const DistinguishedName& other) : ou(nullptr), ouLen(0), cn(nullptr), cnLen(0)
+        {
+            SetOU(other.ou, other.ouLen);
+            SetCN(other.cn, other.cnLen);
         }
 
         DistinguishedName& operator=(const DistinguishedName& other) {
             if (&other != this) {
-                ouLen = other.ouLen;
-                cnLen = other.cnLen;
-                delete[] ou;
-                ou = new uint8_t[ouLen];
-                memcpy(ou, other.ou, ouLen);
-                delete[] cn;
-                cn = new uint8_t[cnLen];
-                memcpy(cn, other.cn, cnLen);
+                SetOU(other.ou, other.ouLen);
+                SetCN(other.cn, other.cnLen);
             }
             return *this;
         }

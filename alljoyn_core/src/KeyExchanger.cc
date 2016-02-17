@@ -78,7 +78,7 @@ namespace ajn {
  *  uint8_t version;
  *  uint8_t secret[MASTER_SECRET_SIZE];
  *  ECCPublicKey publicKey;
- *  uint8_t manifestDigest[Crypto_SHA256::DIGEST_SIZE];
+ *  uint8_t identityCertificateThumbprint[Crypto_SHA256::DIGEST_SIZE];
  *  uint8_t numIssuerPublicKeys;
  *  uint8_t* issuerPublicKeys;
  */
@@ -90,7 +90,7 @@ static size_t CalcPeerSecretRecordSize(uint8_t numIssuerKeys)
     size_t ret = sizeof(uint8_t) + /* version */
                  MASTER_SECRET_SIZE + /* secret */
                  publicKeySize + /* publicKey */
-                 Crypto_SHA256::DIGEST_SIZE + /* manifestDigest */
+                 Crypto_SHA256::DIGEST_SIZE + /* identityCertificateThumbprint */
                  sizeof(uint8_t); /* numIssuerPublicKeys */
     if (numIssuerKeys == 0) {
         ret += sizeof(uint8_t*);
@@ -696,7 +696,13 @@ QStatus KeyExchangerECDHE::GenerateRemoteVerifier(uint8_t* verifier, size_t veri
     peerState->AcquireConversationHashLock(IsInitiator());
     peerState->GetDigest(IsInitiator(), digest, true);
     peerState->ReleaseConversationHashLock(IsInitiator());
-    return GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
+    QStatus status = GenerateVerifier(label.c_str(), digest, sizeof(digest), masterSecret, verifier, verifierLen);
+    QCC_DEBUG_ONLY(
+        if (ER_OK == status) {
+            QCC_DbgTrace(("%s: verifier: %s", __FUNCTION__, BytesToHexString(verifier, verifierLen).c_str()));
+        }
+        );
+    return status;
 }
 
 QStatus KeyExchanger::ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized)
@@ -754,17 +760,17 @@ QStatus KeyExchangerECDHE::StoreMasterSecret(const qcc::GUID128& guid, const uin
     return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
 }
 
-QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys, bool& publicKeyAvailable)
+QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* identityCertificateThumbprint, std::vector<ECCPublicKey>& issuerPublicKeys, bool& publicKeyAvailable)
 {
     publicKeyAvailable = false;
     if ((rec.GetSize() == MASTER_SECRET_SIZE) || (rec.GetSize() == MASTER_SECRET_PINX_SIZE)) {
         /* support older format by the non ECDHE key exchanges */
         masterSecret = rec;
-        if (publicKey) {
+        if (nullptr != publicKey) {
             publicKey->Clear();
         }
-        if (manifestDigest) {
-            memset(manifestDigest, 0, Crypto_SHA256::DIGEST_SIZE);
+        if (nullptr != identityCertificateThumbprint) {
+            memset(identityCertificateThumbprint, 0, Crypto_SHA256::DIGEST_SIZE);
         }
         return ER_OK;
     }
@@ -811,12 +817,12 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
     bytesRead += publicKeySize;
     pBuf += publicKeySize;
 
-    /* the manifest field */
+    /* the peer's identity certificate thumbprint */
     if ((bytesRead + Crypto_SHA256::DIGEST_SIZE) > rec.GetSize()) {
         return ER_INVALID_DATA;
     }
-    if (manifestDigest) {
-        memcpy(manifestDigest, pBuf, Crypto_SHA256::DIGEST_SIZE);
+    if (nullptr != identityCertificateThumbprint) {
+        memcpy(identityCertificateThumbprint, pBuf, Crypto_SHA256::DIGEST_SIZE);
     }
     bytesRead += Crypto_SHA256::DIGEST_SIZE;
     pBuf += Crypto_SHA256::DIGEST_SIZE;
@@ -854,11 +860,15 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
 
 QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
 {
+    QStatus status = ER_OK;
     if (peerDSAPubKey) {
         /* build a new keyblob with master secret, peer DSA public key, manifest digest, and issuer public keys */
         size_t bufferSize = CalcPeerSecretRecordSize(peerIssuerPubKeys.size());
-        uint8_t* buffer = new uint8_t[bufferSize];
-        uint8_t* pBuf = buffer;
+        std::unique_ptr<uint8_t[]> buffer(new (std::nothrow) uint8_t[bufferSize]);
+        if (nullptr == buffer.get()) {
+            return ER_OUT_OF_MEMORY;
+        }
+        uint8_t* pBuf = buffer.get();
         /* the version field */
         *pBuf = PEER_SECRET_RECORD_VERSION;
         pBuf += sizeof(uint8_t);
@@ -869,25 +879,28 @@ QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, con
         size_t keySize = peerDSAPubKey->GetSize();
         peerDSAPubKey->Export(pBuf, &keySize);
         pBuf += keySize;
-        /* the manifest digest field */
-        memcpy(pBuf, peerManifestDigest, sizeof(peerManifestDigest));
-        pBuf += sizeof(peerManifestDigest);
+        /* the identity certificate thumbprint field */
+        if (peerIdentityCertificateThumbprint.size() > 0) {
+            QCC_ASSERT(peerIdentityCertificateThumbprint.size() == Crypto_SHA256::DIGEST_SIZE);
+            memcpy(pBuf, peerIdentityCertificateThumbprint.data(), peerIdentityCertificateThumbprint.size());
+        } else {
+            memset(pBuf, 0, Crypto_SHA256::DIGEST_SIZE);
+        }
+        pBuf += Crypto_SHA256::DIGEST_SIZE;
         /* the numIssuerPublicKeys field */
         *pBuf = (uint8_t) peerIssuerPubKeys.size();
         pBuf += sizeof(uint8_t);
         if (peerIssuerPubKeys.size() > 0) {
             for (size_t cnt = 0; cnt < peerIssuerPubKeys.size(); cnt++) {
                 size_t bufSize = peerIssuerPubKeys[cnt].GetSize();
-                QStatus status = peerIssuerPubKeys[cnt].Export(pBuf, &bufSize);
+                status = peerIssuerPubKeys[cnt].Export(pBuf, &bufSize);
                 if (ER_OK != status) {
-                    delete[] buffer;
                     return status;
                 }
                 pBuf += bufSize;
             }
         }
-        KeyBlob kb(buffer, bufferSize, KeyBlob::GENERIC);
-        delete [] buffer;
+        KeyBlob kb(buffer.get(), bufferSize, KeyBlob::GENERIC);
 
         return DoStoreMasterSecret(bus, guid, kb, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
     } else {
@@ -1475,13 +1488,15 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         return ER_OK;
     }
 
-    CertificateX509* certs = new CertificateX509[numCerts];
+    std::unique_ptr<CertificateX509[]> certs(new (std::nothrow) CertificateX509[numCerts]);
+    if (nullptr == certs.get()) {
+        return ER_OUT_OF_MEMORY;
+    }
     size_t encodedLen;
     uint8_t* encoded;
     for (size_t cnt = 0; cnt < numCerts; cnt++) {
         status = chainArg[cnt].Get("(ay)", &encodedLen, &encoded);
         if (status != ER_OK) {
-            delete [] certs;
             QCC_LogError(status, ("Error retrieving peer's certificate chain"));
             return status;
         }
@@ -1490,13 +1505,11 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         } else if (certChainEncoding == CertificateX509::ENCODING_X509_DER_PEM) {
             status = certs[cnt].DecodeCertificatePEM(String((const char*) encoded, encodedLen));
         } else {
-            delete [] certs;
             QCC_LogError(status, ("Peer's certificate chain data are not in DER or PEM format"));
             return ER_INVALID_DATA;
         }
         if (status != ER_OK) {
             QCC_LogError(status, ("Error parsing peer's certificate chain"));
-            delete [] certs;
             return status;
         }
         peerState->AcquireConversationHashLock(IsInitiator());
@@ -1511,19 +1524,18 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     sigInfo.SetSCoord(sCoord);
     status = cryptoEcc.DSAVerifyDigest(computedRemoteVerifier, sizeof(computedRemoteVerifier), sigInfo.GetSignature());
     *authorized = (ER_OK == status);
+    QCC_DbgTrace(("authorized is %u, computedRemoteVerifier: %s", *authorized, BytesToHexString(computedRemoteVerifier, sizeof(computedRemoteVerifier)).c_str()));
 
     if (!*authorized) {
-        delete [] certs;
         QCC_LogError(ER_OK, ("Verifier mismatched"));
         return ER_OK;  /* not authorized */
     }
-    if (!IsCertChainStructureValid(certs, numCerts)) {
+    if (!IsCertChainStructureValid(certs.get(), numCerts)) {
         *authorized = false;
-        delete [] certs;
         QCC_LogError(ER_OK, ("Certificate chain structure is invalid"));
         return ER_OK;
     }
-    status = VerifyCredentialsCB(peerName, certs, numCerts);
+    status = VerifyCredentialsCB(peerName, certs.get(), numCerts);
     if (ER_OK != status) {
         if (!IsTrustAnchor(certs[0].GetSubjectPublicKey())) {
             *authorized = false;
@@ -1533,16 +1545,23 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
     if (*authorized) {
         peerDSAPubKey = new ECCPublicKey();
         *peerDSAPubKey = *(certs[0].GetSubjectPublicKey());
-        if (certs[0].GetDigestSize() == Crypto_SHA256::DIGEST_SIZE) {
-            memcpy(peerManifestDigest, certs[0].GetDigest(), Crypto_SHA256::DIGEST_SIZE);
+        /* If this is a peer we previously knew about, clear out any manifests we've seen before, because we
+         * might now have a new identity certificate. Peer needs to re-send any relevant manifests.
+         */
+        status = peerState->ClearManifests();
+        if (ER_OK != status) {
+            return status;
         }
-
-        ExtractIssuerPublicKeys(certs, numCerts, trustAnchorList, peerIssuerPubKeys);
+        peerIdentityCertificateThumbprint.resize(Crypto_SHA256::DIGEST_SIZE);
+        status = certs[0].GetSHA256Thumbprint(peerIdentityCertificateThumbprint.data());
+        if (ER_OK != status) {
+            return status;
+        }
+        ExtractIssuerPublicKeys(certs.get(), numCerts, trustAnchorList, peerIssuerPubKeys);
         CalculateSecretExpiration(certs[0], secretExpiration);
     } else {
         QCC_DbgPrintf(("Not authorized by VerifyCredential callback"));
     }
-    delete [] certs;
     return ER_OK;
 }
 

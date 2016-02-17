@@ -18,6 +18,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/SecurityApplicationProxy.h>
 #include <qcc/CertificateHelper.h>
+#include <qcc/Util.h>
 #include <iostream>
 #include <map>
 #include <memory>
@@ -509,20 +510,8 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
 
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*",
-                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifest[0].SetMembers(1, member);
-    }
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     //Get manager key
     KeyInfoNISTP256 managerKey;
@@ -543,11 +532,6 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
     //Random GUID used for the SecurityManager
     GUID128 managerGuid;
 
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                               manifest, manifestSize,
-                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
     //Create identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChainMaster[certChainSize];
@@ -558,16 +542,16 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                                                                   managerKey.GetPublicKey(),
                                                                   "ManagerAlias",
                                                                   3600,
-                                                                  identityCertChainMaster[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
     /* set claimable */
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithManager.Claim(managerKey,
                                           managerGuid,
                                           managerKey,
                                           identityCertChainMaster, certChainSize,
-                                          manifest, manifestSize));
+                                          manifests, ArraySize(manifests)));
 
 
     ECCPublicKey managerPublicKey;
@@ -584,17 +568,17 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                                                                   peer1Key.GetPublicKey(),
                                                                   "Peer1Alias",
                                                                   3600,
-                                                                  identityCertChainPeer1[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
     //Manager claims Peers
     /* set claimable */
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer1, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
@@ -605,15 +589,15 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                                                                   peer2Key.GetPublicKey(),
                                                                   "Peer2Alias",
                                                                   3600,
-                                                                  identityCertChainPeer2[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
     /* set claimable */
     peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer2, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
     EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
@@ -1249,24 +1233,7 @@ class V1ECDHEKeyXListener : public AuthListener {
         QStatus status = ER_FAIL;
         status = ecc.GenerateDSAKeyPair();
         EXPECT_EQ(ER_OK, status);
-        const size_t manifestSize = 1;
-        PermissionPolicy::Rule manifest[manifestSize];
-        manifest[0].SetObjPath("*");
-        manifest[0].SetInterfaceName("*");
-        {
-            PermissionPolicy::Rule::Member member[1];
-            member[0].Set("*",
-                          PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                          PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-            manifest[0].SetMembers(1, member);
-        }
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        PermissionMgmtObj::GenerateManifestDigest(caBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE);
-        if (ER_OK == status) {
-            EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(caBus, "9010101", "V1Client", ecc.GetDSAPublicKey(), "V1 Client", 3600, identityCert, digest, Crypto_SHA256::DIGEST_SIZE));
-        }
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(caBus, "9010101", "V1Client", ecc.GetDSAPublicKey(), "V1 Client", 3600, identityCert));
     }
 
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds)
@@ -1413,21 +1380,8 @@ class SecurityOther2Test : public testing::Test {
         SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
-
-        // All Inclusive manifest
-        const size_t manifestSize = 1;
-        PermissionPolicy::Rule manifest[manifestSize];
-        manifest[0].SetObjPath("*");
-        manifest[0].SetInterfaceName("*");
-        {
-            PermissionPolicy::Rule::Member member[1];
-            member[0].Set("*",
-                          PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                          PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-            manifest[0].SetMembers(1, member);
-        }
+        Manifest manifests[1];
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
         //Get manager key
         KeyInfoNISTP256 managerKey;
@@ -1447,11 +1401,6 @@ class SecurityOther2Test : public testing::Test {
         GUID128 peer2Guid;
         PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
 
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                                   manifest, manifestSize,
-                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
         //Create identityCert
         const size_t certChainSize = 1;
         IdentityCertificate identityCertChainMaster[certChainSize];
@@ -1462,16 +1411,16 @@ class SecurityOther2Test : public testing::Test {
                                                                       managerKey.GetPublicKey(),
                                                                       "ManagerAlias",
                                                                       3600,
-                                                                      identityCertChainMaster[0],
-                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
         /* set claimable */
         managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
         EXPECT_EQ(ER_OK, sapWithManager.Claim(managerKey,
                                               managerGuid,
                                               managerKey,
                                               identityCertChainMaster, certChainSize,
-                                              manifest, manifestSize));
+                                              manifests, ArraySize(manifests)));
 
 
         ECCPublicKey managerPublicKey;
@@ -1487,15 +1436,15 @@ class SecurityOther2Test : public testing::Test {
                                                                       peer2Key.GetPublicKey(),
                                                                       "Peer2Alias",
                                                                       3600,
-                                                                      identityCertChainPeer2[0],
-                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChainPeer2[0])) << "Failed to create identity certificate.";
         /* set claimable */
         EXPECT_EQ(ER_OK, peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE));
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
         EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
                                             identityCertChainPeer2, certChainSize,
-                                            manifest, manifestSize));
+                                            manifests, ArraySize(manifests)));
 
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
         //    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));

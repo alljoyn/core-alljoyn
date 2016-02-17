@@ -18,6 +18,7 @@
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/SecurityApplicationProxy.h>
+#include <qcc/Util.h>
 
 #include "TestSecurityManager.h"
 
@@ -45,13 +46,14 @@ TestSecurityManager::TestSecurityManager(string appName) :
     authListener(), caKeyPair(), caPublicKeyInfo(), adminGroup(), identityGuid(),
     identityName("testIdentity"), certSerialNumber(0), policyVersion(0)
 {
-    caKeyPair.GenerateDSAKeyPair();
+    QCC_VERIFY(ER_OK == caKeyPair.GenerateDSAKeyPair());
 
     caPublicKeyInfo.SetPublicKey(caKeyPair.GetDSAPublicKey());
     String aki;
-    CertificateX509::GenerateAuthorityKeyId(caKeyPair.GetDSAPublicKey(), aki);
+    QCC_VERIFY(ER_OK == CertificateX509::GenerateAuthorityKeyId(caKeyPair.GetDSAPublicKey(), aki));
     caPublicKeyInfo.SetKeyId((uint8_t*)aki.data(), aki.size());
     bus.RegisterKeyStoreListener(keyStoreListener);
+    IssueCertificate(*caKeyPair.GetDSAPublicKey(), caCertificate, true);
 }
 
 QStatus TestSecurityManager::Init() {
@@ -115,13 +117,14 @@ QStatus TestSecurityManager::ClaimSelf()
 }
 
 void TestSecurityManager::IssueCertificate(const ECCPublicKey& appPubKey,
-                                           CertificateX509& cert) {
+                                           CertificateX509& cert,
+                                           bool isCA) {
     cert.SetSubjectPublicKey(&appPubKey);
     qcc::String aki;
     CertificateX509::GenerateAuthorityKeyId(&appPubKey, aki);
     cert.SetSubjectCN((uint8_t*)aki.data(), aki.size());
 
-    cert.SetCA(false);
+    cert.SetCA(isCA);
 
     CertificateX509::ValidPeriod period;
     uint64_t currentTime = GetEpochTimestamp() / 1000;
@@ -134,21 +137,16 @@ void TestSecurityManager::IssueCertificate(const ECCPublicKey& appPubKey,
     snprintf(buffer, 32, "%x", ++certSerialNumber);
     cert.SetSerial((const uint8_t*)buffer, strlen(buffer));
     cert.SetIssuerCN(caPublicKeyInfo.GetKeyId(), caPublicKeyInfo.GetKeyIdLen());
-    cert.SignAndGenerateAuthorityKeyId(caKeyPair.GetDSAPrivateKey(), caKeyPair.GetDSAPublicKey());;
+    QCC_VERIFY(ER_OK == cert.SignAndGenerateAuthorityKeyId(caKeyPair.GetDSAPrivateKey(), caKeyPair.GetDSAPublicKey()));
 }
 
 void TestSecurityManager::GenerateIdentityCertificate(const ECCPublicKey& appPubKey,
                                                       const PermissionPolicy::Acl& manifest,
                                                       IdentityCertificate& cert)
 {
+    QCC_UNUSED(manifest);
     cert.SetAlias(identityGuid.ToString());
     cert.SetSubjectOU((const uint8_t*)identityName.data(), identityName.size());
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    Message msg(bus);
-    DefaultPolicyMarshaller marshaller(msg);
-    marshaller.Digest(manifest.GetRules(), manifest.GetRulesSize(), digest, Crypto_SHA256::DIGEST_SIZE);
-    cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     IssueCertificate(appPubKey, cert);
 }
@@ -223,14 +221,27 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     }
 
     IdentityCertificate identityCert;
+    CertificateX509 identityCertChain[2];
     GenerateIdentityCertificate(appPublicKey, manifest, identityCert);
+
+    identityCertChain[0] = identityCert;
+    identityCertChain[1] = caCertificate;
 
     const PermissionPolicy::Rule* manifestRules = manifest.GetRules();
     size_t manifestSize = manifest.GetRulesSize();
 
+    Manifest manifests[1];
+    status = manifests[0]->SetRules(manifestRules, manifestSize);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = manifests[0]->Sign(identityCert, caKeyPair.GetDSAPrivateKey());
+    if (ER_OK != status) {
+        return status;
+    }
 
-    status = peerProxy.Claim(caPublicKeyInfo, adminGroup, caPublicKeyInfo, &identityCert,
-                             1, manifestRules, manifestSize);
+    status = peerProxy.Claim(caPublicKeyInfo, adminGroup, caPublicKeyInfo, identityCertChain,
+                             ArraySize(identityCertChain), manifests, ArraySize(manifests));
     if (ER_OK != status) {
         return status;
     }
@@ -272,12 +283,25 @@ QStatus TestSecurityManager::UpdateIdentity(BusAttachment& peerBus,
     }
 
     IdentityCertificate identityCert;
+    CertificateX509 identityCertChain[2];
     GenerateIdentityCertificate(appPublicKey, manifest, identityCert);
+    identityCertChain[0] = identityCert;
+    identityCertChain[1] = caCertificate;
 
     const PermissionPolicy::Rule* manifestRules = manifest.GetRules();
     size_t manifestSize = manifest.GetRulesSize();
 
-    status = peerProxy.UpdateIdentity(&identityCert, 1, manifestRules, manifestSize);
+    Manifest manifests[1];
+    status = manifests[0]->SetRules(manifestRules, manifestSize);
+    if (ER_OK != status) {
+        return status;
+    }
+    status = manifests[0]->Sign(identityCert, caKeyPair.GetDSAPrivateKey());
+    if (ER_OK != status) {
+        return status;
+    }
+
+    status = peerProxy.UpdateIdentity(identityCertChain, ArraySize(identityCertChain), manifests, ArraySize(manifests));
     if (ER_OK != status) {
         return status;
     }
@@ -314,10 +338,13 @@ QStatus TestSecurityManager::InstallMembership(BusAttachment& peerBus, const GUI
         return status;
     }
 
+    CertificateX509 membershipCertChain[2];
     MembershipCertificate membershipCert;
     GenerateMembershipCertificate(appPublicKey, group, membershipCert);
+    membershipCertChain[0] = membershipCert;
+    membershipCertChain[1] = caCertificate;
 
-    status = peerProxy.InstallMembership(&membershipCert, 1);
+    status = peerProxy.InstallMembership(membershipCertChain, ArraySize(membershipCertChain));
     if (ER_OK != status) {
         return status;
     }

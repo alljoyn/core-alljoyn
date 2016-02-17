@@ -293,28 +293,42 @@ static void GenRight(const Request& request, Right& right)
 }
 
 /**
- * Enforce the peer's manifest
+ * Enforce the peer's manifests.
+ *
+ * If one manifest allows the access and no manifest explicitly denies it, access is allowed.
+ * If any manifest denies the access, access is denied, no matter what.
  */
-
 static bool IsAuthorizedByPeerManifest(const Request& request, const Right& right, PeerState& peerState)
 {
-    /* no manifest then default not allowed */
-    if ((peerState->manifest == NULL) || (peerState->manifestSize == 0)) {
-        return false;
-    }
-
-    bool strictGetAllProperties = request.outgoing;
-    for (size_t cnt = 0; cnt < peerState->manifestSize; cnt++) {
-        /* validate the peer manifest to make sure it was granted the same thing */
-        bool denied = false;
-        if (IsRuleMatched(peerState->manifest[cnt], request, right.authByPolicy, false, denied, strictGetAllProperties)) {
-            return true;
-        } else if (denied) {
-            /* skip the remainder of the search */
-            return false;
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_DbgTrace(("request: outgoing %s, propertyRequest %s, isSetProperty %s, objPath %s, iName %s, mbrName %s",
+                  (request.outgoing) ? "true" : "false",
+                  (request.propertyRequest) ? "true" : "false",
+                  (request.isSetProperty) ? "true" : "false",
+                  request.objPath, request.iName, request.mbrName));
+    QCC_DbgTrace(("right.authByPolicy %u, peer GUID %s", right.authByPolicy, peerState->GetGuid().ToString().c_str()));
+    bool allowed = false;
+    for (PeerManifestState it : peerState->GetManifests()) {
+        bool strictGetAllProperties = request.outgoing;
+        for (size_t cnt = 0; cnt < it->m_manifest->GetRules().size(); cnt++) {
+            /* validate the peer manifest to make sure it was granted the same thing */
+            bool denied = false;
+            if (IsRuleMatched(it->m_manifest->GetRules()[cnt], request, right.authByPolicy, false, denied, strictGetAllProperties)) {
+                /* One manifest allows it. Note this for now, but keep looking for any manifests with explicit denials. */
+                QCC_DbgTrace(("Request allowed by manifest"));
+                allowed = true;
+            } else if (denied) {
+                QCC_DbgTrace(("Request specifically denied by manifest"));
+                return false;
+            }
         }
     }
-    return false;
+
+    if (!allowed) {
+        QCC_DbgTrace(("Request was not authorized by any manifest rules"));
+    }
+
+    return allowed;
 }
 
 static bool IsPeerQualifiedForAcl(const PermissionPolicy::Acl& acl, PeerState& peerState, bool trustedPeer, const qcc::ECCPublicKey* peerPublicKey, const std::vector<ECCPublicKey>& issuerChain, bool& qualifiedPeerWithPublicKey)
@@ -411,7 +425,7 @@ static bool IsAuthorized(const Request& request, const PermissionPolicy* policy,
     bool denied = false;
     bool enforceManifest = true;
 
-    QCC_DbgPrintf(("IsAuthorized with required permission %d\n", right.authByPolicy));
+    QCC_DbgPrintf(("IsAuthorized with required permission %d, iName %s, mbrName %s\n", right.authByPolicy, request.iName, request.mbrName));
 
     if (right.authByPolicy) {
         if (policy == NULL) {
