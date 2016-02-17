@@ -17,6 +17,7 @@
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/SecurityApplicationProxy.h>
+#include <qcc/Util.h>
 #include <iostream>
 #include <map>
 
@@ -485,14 +486,8 @@ void SecurityWildCardPolicyRulesTest::SetUp()
 
     managerBus.RegisterApplicationStateListener(appStateListener);
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     //Get manager key
     KeyInfoNISTP256 managerKey;
@@ -509,11 +504,6 @@ void SecurityWildCardPolicyRulesTest::SetUp()
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
 
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                               manifest, manifestSize,
-                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
     //Create identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChainMaster[certChainSize];
@@ -524,17 +514,17 @@ void SecurityWildCardPolicyRulesTest::SetUp()
                                                                   managerKey.GetPublicKey(),
                                                                   "ManagerAlias",
                                                                   3600,
-                                                                  identityCertChainMaster[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
     SecurityApplicationProxy sapWithManagerBus(managerBus, managerBus.GetUniqueName().c_str());
     /* set claimable */
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithManagerBus.Claim(managerKey,
                                              managerGuid,
                                              managerKey,
                                              identityCertChainMaster, certChainSize,
-                                             manifest, manifestSize));
+                                             manifests, ArraySize(manifests)));
 
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.isClaimed(managerBus.GetUniqueName())) {
@@ -559,17 +549,17 @@ void SecurityWildCardPolicyRulesTest::SetUp()
                                                                   peer1Key.GetPublicKey(),
                                                                   "Peer1Alias",
                                                                   3600,
-                                                                  identityCertChainPeer1[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
     //Manager claims Peers
     /* set claimable */
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer1, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.isClaimed(peer1Bus.GetUniqueName())) {
@@ -590,15 +580,15 @@ void SecurityWildCardPolicyRulesTest::SetUp()
                                                                   peer2Key.GetPublicKey(),
                                                                   "Peer2Alias",
                                                                   3600,
-                                                                  identityCertChainPeer2[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
     /* set claimable */
     peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer2, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {

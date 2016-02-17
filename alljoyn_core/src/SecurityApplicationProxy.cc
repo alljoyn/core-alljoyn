@@ -19,6 +19,7 @@
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/Util.h>
 #include "PermissionMgmtObj.h"
 #include "KeyInfoHelper.h"
 
@@ -240,16 +241,19 @@ QStatus SecurityApplicationProxy::GetClaimCapabilityAdditionalInfo(PermissionCon
 QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateAuthority,
                                         const qcc::GUID128& adminGroupId,
                                         const qcc::KeyInfoNISTP256& adminGroup,
-                                        const qcc::IdentityCertificate* identityCertChain, size_t identityCertChainSize,
-                                        const PermissionPolicy::Rule* manifest, size_t manifestSize)
+                                        const qcc::CertificateX509* identityCertChain, size_t identityCertChainSize,
+                                        const Manifest* manifests, size_t manifestCount)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
     Message reply(GetBusAttachment());
 
-    if ((identityCertChain == NULL) || (manifest == NULL)) {
+    if ((identityCertChain == NULL) || (manifestCount < 1)) {
         return ER_INVALID_DATA;
+    }
+    if (identityCertChain[0].GetType() != qcc::CertificateX509::IDENTITY_CERTIFICATE) {
+        QCC_DbgHLPrintf(("Leaf certificate in identity chain is not of type IDENTITY_CERTIFICATE. This is not recommended."));
     }
     MsgArg inputs[7];
     qcc::KeyInfoNISTP256 caKeyInfo(certificateAuthority);
@@ -264,40 +268,43 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
     KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(adminGroupKeyInfo, inputs[3]);
     KeyInfoHelper::KeyInfoKeyIdToMsgArg(adminGroupKeyInfo, inputs[4]);
 
-    MsgArg* identityArgs = NULL;
+    std::unique_ptr<MsgArg[]> identityArgs;
     if (identityCertChainSize == 0) {
         status = inputs[5].Set("a(yay)", 0, NULL);
         if (ER_OK != status) {
-            goto Exit;
+            return status;
         }
     } else {
-        identityArgs = new MsgArg[identityCertChainSize];
+        identityArgs.reset(new (std::nothrow) MsgArg[identityCertChainSize]);
+        if (nullptr == identityArgs.get()) {
+            return ER_OUT_OF_MEMORY;
+        }
         for (size_t cnt = 0; cnt < identityCertChainSize; cnt++) {
             qcc::String der;
             status = identityCertChain[cnt].EncodeCertificateDER(der);
             if (ER_OK != status) {
-                goto Exit;
+                return status;
             }
             status = identityArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, der.size(), der.data());
             if (ER_OK != status) {
-                goto Exit;
+                return status;
             }
             identityArgs[cnt].Stabilize();
         }
-        status = inputs[5].Set("a(yay)", identityCertChainSize, identityArgs);
+        status = inputs[5].Set("a(yay)", identityCertChainSize, identityArgs.get());
         if (ER_OK != status) {
-            goto Exit;
+            return status;
         }
     }
-    if (manifestSize == 0) {
-        status = inputs[6].Set("a(ssa(syy))", 0, NULL);
+    if (manifestCount == 0) {
+        status = inputs[6].Set(_Manifest::s_MsgArgArraySignature, 0, NULL);
         if (ER_OK != status) {
-            goto Exit;
+            return status;
         }
     } else {
-        status = PermissionPolicy::GenerateRules(manifest, manifestSize, inputs[6]);
+        status = _Manifest::GetArrayMsgArg(manifests, manifestCount, inputs[6]);
         if (ER_OK != status) {
-            goto Exit;
+            return status;
         }
     }
 
@@ -308,8 +315,6 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
         }
     }
 
-Exit:
-    delete [] identityArgs;
     return status;
 }
 
@@ -342,37 +347,51 @@ QStatus SecurityApplicationProxy::Reset()
     return status;
 }
 
-QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::IdentityCertificate* identityCertificateChain, size_t identityCertificateChainSize,
-                                                 const PermissionPolicy::Rule* manifest, size_t manifestSize)
+QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainSize,
+                                                 const Manifest* manifests, size_t manifestCount)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
 
-    if ((identityCertificateChain == NULL) || (identityCertificateChainSize == 0) || (manifest == NULL) || (manifestSize == 0)) {
+    if ((identityCertificateChain == NULL) || (identityCertificateChainSize == 0) || (manifestCount < 1)) {
         return ER_INVALID_DATA;
+    }
+    if (identityCertificateChain[0].GetType() != qcc::CertificateX509::IDENTITY_CERTIFICATE) {
+        QCC_DbgHLPrintf(("Leaf certificate in identity chain is not of type IDENTITY_CERTIFICATE. This is not recommended."));
     }
     QStatus status = ER_OK;
     Message reply(GetBusAttachment());
     MsgArg inputs[2];
-    MsgArg* certArgs = new MsgArg[identityCertificateChainSize];
+    std::unique_ptr<MsgArg[]> certArgs(new (std::nothrow) MsgArg[identityCertificateChainSize]);
+    if (nullptr == certArgs.get()) {
+        return ER_OUT_OF_MEMORY;
+    }
     for (size_t cnt = 0; cnt < identityCertificateChainSize; cnt++) {
         qcc::String der;
         status = identityCertificateChain[cnt].EncodeCertificateDER(der);
         if (ER_OK != status) {
-            goto Exit;
+            return status;
         }
         status = certArgs[cnt].Set("(yay)", qcc::CertificateX509::ENCODING_X509_DER, der.size(), der.data());
         if (ER_OK != status) {
-            goto Exit;
+            return status;
         }
         certArgs[cnt].Stabilize();
     }
-    status = inputs[0].Set("a(yay)", identityCertificateChainSize, certArgs);
+    status = inputs[0].Set("a(yay)", identityCertificateChainSize, certArgs.get());
     if (ER_OK != status) {
-        goto Exit;
+        return status;
     }
-    status = PermissionPolicy::GenerateRules(manifest, manifestSize, inputs[1]);
-    if (ER_OK != status) {
-        goto Exit;
+
+    if (manifestCount == 0) {
+        status = inputs[1].Set(_Manifest::s_MsgArgArraySignature, 0, NULL);
+        if (ER_OK != status) {
+            return status;
+        }
+    } else {
+        status = _Manifest::GetArrayMsgArg(manifests, manifestCount, inputs[1]);
+        if (ER_OK != status) {
+            return status;
+        }
     }
     status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "UpdateIdentity", inputs, 2, reply);
 
@@ -382,8 +401,6 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::IdentityCertificate*
         }
     }
 
-Exit:
-    delete [] certArgs;
     return status;
 }
 
@@ -423,11 +440,15 @@ QStatus SecurityApplicationProxy::ResetPolicy()
     return status;
 }
 
-QStatus SecurityApplicationProxy::InstallMembership(const qcc::MembershipCertificate* certificateChain, size_t certificateChainSize)
+QStatus SecurityApplicationProxy::InstallMembership(const qcc::CertificateX509* certificateChain, size_t certificateChainSize)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
     Message reply(GetBusAttachment());
+
+    if ((certificateChainSize >= 0) && (certificateChain[0].GetType() != qcc::CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+        QCC_DbgHLPrintf(("Leaf certificate in membership chain is not of type MEMBERSHIP_CERTIFICATE. This is not recommended."));
+    }
 
     MsgArg inputs[1];
     MsgArg* certArgs = new MsgArg[certificateChainSize];
@@ -490,6 +511,31 @@ QStatus SecurityApplicationProxy::RemoveMembership(const qcc::String& serial, co
 Exit:
     delete [] xData;
     delete [] yData;
+    return status;
+}
+
+QStatus SecurityApplicationProxy::InstallManifests(const Manifest* manifests, size_t manifestCount)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    QStatus status = ER_OK;
+
+    Message reply(GetBusAttachment());
+
+    MsgArg inputs[1];
+
+    status = _Manifest::GetArrayMsgArg(manifests, manifestCount, inputs[0]);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not get MsgArg for manifests"));
+        return status;
+    }
+
+    status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "InstallManifests", inputs, ArraySize(inputs), reply);
+    if (ER_OK != status) {
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
+        }
+    }
+
     return status;
 }
 
@@ -622,13 +668,15 @@ QStatus SecurityApplicationProxy::GetIdentity(MsgArg& identityCertificate)
     return status;
 }
 
-QStatus SecurityApplicationProxy::GetManifest(MsgArg& manifest)
+QStatus SecurityApplicationProxy::GetManifests(std::vector<Manifest>& manifests)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
     QStatus status = ER_OK;
 
+    manifests.clear();
+
     MsgArg arg;
-    status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "Manifest", arg);
+    status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "Manifests", arg);
     if (ER_OK == status) {
         /* GetProperty returns a variant wrapper */
         MsgArg* resultArg;
@@ -636,8 +684,23 @@ QStatus SecurityApplicationProxy::GetManifest(MsgArg& manifest)
         if (ER_OK != status) {
             return status;
         }
-        manifest = *resultArg;
-        manifest.Stabilize();
+        MsgArg* signedManifestArg;
+        size_t signedManifestCount;
+        status = resultArg->Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArg);
+        if (ER_OK != status) {
+            return status;
+        }
+        /* Potentially save a reallocation for each push_back later by reserving now. */
+        manifests.reserve(signedManifestCount);
+        for (size_t i = 0; i < signedManifestCount; i++) {
+            Manifest manifest;
+            status = manifest->SetFromMsgArg(signedManifestArg[i]);
+            if (ER_OK != status) {
+                manifests.clear();
+                return status;
+            }
+            manifests.push_back(std::move(manifest));
+        }
     }
 
     return status;

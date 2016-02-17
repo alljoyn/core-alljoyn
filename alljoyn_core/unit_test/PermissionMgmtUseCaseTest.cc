@@ -932,24 +932,49 @@ static QStatus GeneratePolicyDenyPeerPublicKey(BusAttachment& bus, BusAttachment
     return AddAcls(policy, acls, ArraySize(acls));
 }
 
-static QStatus GenerateAllowAllManifest(PermissionPolicy::Rule** retRules, size_t* count)
+static QStatus GenerateAllowAllManifest(Manifest& manifest)
 {
-    *count = 1;
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
-    rules[0].SetObjPath("*");
-    rules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member prms[1];
-    prms[0].SetMemberName("*");
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    rules[0].SetMembers(1, prms);
-    *retRules = rules;
-    return ER_OK;
+    return PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifest);
 }
 
-static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, size_t* count)
+static QStatus GenerateUselessManifest(Manifest& manifest)
 {
-    *count = 2;
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    const size_t manifestSize = 1;
+    PermissionPolicy::Rule manifestRules[manifestSize];
+    manifestRules[0].SetObjPath("*");
+    manifestRules[0].SetInterfaceName("org::alljoyn::test::interface::that::never::exists");
+    {
+        PermissionPolicy::Rule::Member member[1];
+        member[0].Set("MethodThatNeverExists", PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
+                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        manifestRules[0].SetMembers(1, member);
+    }
+    return manifest->SetRules(manifestRules, manifestSize);
+}
+
+static QStatus GenerateAllowAllManifest(std::vector<Manifest>& manifests, bool generateExtraManifests)
+{
+    QStatus status;
+
+    if (generateExtraManifests) {
+        manifests.resize(2);
+        status = GenerateUselessManifest(manifests[1]);
+        if (ER_OK != status) {
+            return status;
+        }
+    } else {
+        manifests.resize(1);
+    }
+
+    return GenerateAllowAllManifest(manifests[0]);
+}
+
+static QStatus GenerateManifestNoInputSource(Manifest& manifest)
+{
+    size_t count = 2;
+    std::vector<PermissionPolicy::Rule> rules(count);
     {
         rules[0].SetObjPath("*");
         rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
@@ -977,14 +1002,13 @@ static QStatus GenerateManifestNoInputSource(PermissionPolicy::Rule** retRules, 
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
         rules[1].SetMembers(1, prms);
     }
-    *retRules = rules;
-    return ER_OK;
+    return manifest->SetRules(rules.data(), rules.size());
 }
 
-static QStatus GenerateManifestNoGetAllProperties(PermissionPolicy::Rule** retRules, size_t* count)
+static QStatus GenerateManifestNoGetAllProperties(Manifest& manifest)
 {
-    *count = 1;
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    size_t count = 1;
+    std::vector<PermissionPolicy::Rule> rules(count);
     {
         rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("*");
@@ -994,14 +1018,13 @@ static QStatus GenerateManifestNoGetAllProperties(PermissionPolicy::Rule** retRu
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
         rules[0].SetMembers(1, prms);
     }
-    *retRules = rules;
-    return ER_OK;
+    return manifest->SetRules(rules.data(), rules.size());
 }
 
-static QStatus GenerateManifestSetVolumeProperty(PermissionPolicy::Rule** retRules, size_t* count)
+static QStatus GenerateManifestSetVolumeProperty(Manifest& manifest)
 {
-    *count = 1;
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    size_t count = 1;
+    std::vector<PermissionPolicy::Rule> rules(count);
     {
         rules[0].SetObjPath("*");
         rules[0].SetInterfaceName("*");
@@ -1011,14 +1034,13 @@ static QStatus GenerateManifestSetVolumeProperty(PermissionPolicy::Rule** retRul
         prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
         rules[0].SetMembers(1, prms);
     }
-    *retRules = rules;
-    return ER_OK;
+    return manifest->SetRules(rules.data(), rules.size());
 }
 
-static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, PermissionPolicy::Rule** retRules, size_t* count)
+static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Manifest& manifest)
 {
-    *count = 2;
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[*count];
+    size_t count = 2;
+    std::vector<PermissionPolicy::Rule> rules(count);
     rules[0].SetObjPath("*");
     rules[0].SetInterfaceName(BasePermissionMgmtTest::TV_IFC_NAME);
     {
@@ -1058,8 +1080,7 @@ static QStatus GenerateManifestDenied(bool denyTVUp, bool denyCaption, Permissio
         rules[1].SetMembers(1, prms);
     }
 
-    *retRules = rules;
-    return ER_OK;
+    return manifest->SetRules(rules.data(), rules.size());
 }
 static QStatus GenerateManifestTemplate(PermissionPolicy::Rule** retRules, size_t* count)
 {
@@ -1093,12 +1114,19 @@ static QStatus GenerateManifestTemplate(PermissionPolicy::Rule** retRules, size_
 }
 
 class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
+  protected:
+
+    bool generateExtraManifests;
+    bool generateBogusManifests;
 
   public:
-    PermissionMgmtUseCaseTest() : BasePermissionMgmtTest("/app")
+    PermissionMgmtUseCaseTest() : PermissionMgmtUseCaseTest("/app")
     {
     }
-    PermissionMgmtUseCaseTest(const char* path) : BasePermissionMgmtTest(path)
+    PermissionMgmtUseCaseTest(const char* path) :
+        BasePermissionMgmtTest(path),
+        generateExtraManifests(false),
+        generateBogusManifests(false)
     {
     }
 
@@ -1138,9 +1166,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         /* retrieve the manifest to compare */
-        MsgArg manifestArg;
-        EXPECT_EQ(ER_OK, saProxy.GetManifest(manifestArg)) << "GetManifest failed.";
-        size_t newManifestCount = manifestArg.v_array.GetNumElements();
+        std::vector<Manifest> manifests;
+        EXPECT_EQ(ER_OK, saProxy.GetManifests(manifests)) << "GetManifests failed.";
+        if (manifests.size() == 0) {
+            return ER_FAIL;
+        }
+        size_t newManifestCount = manifests[0]->GetRules().size();
         if (newManifestCount == 0) {
             return ER_FAIL;
         }
@@ -1200,26 +1231,42 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionMgmtTestHelper::GetGUID(claimedBus, guid);
         IdentityCertificate identityCertChain[3];
         size_t certChainCount = 3;
-        PermissionPolicy::Rule* manifest = NULL;
-        size_t manifestSize = 0;
-        GenerateAllowAllManifest(&manifest, &manifestSize);
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(claimerBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+        std::vector<Manifest> manifests;
+
+        EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
+
         if (caBus != NULL) {
-            status = PermissionMgmtTestHelper::CreateIdentityCertChain(*caBus, claimerBus, serial, guid.ToString(), &claimedPubKey, alias, 3600, identityCertChain, certChainCount, digest, Crypto_SHA256::DIGEST_SIZE);
+            status = PermissionMgmtTestHelper::CreateIdentityCertChain(*caBus, claimerBus, serial, guid.ToString(), &claimedPubKey, alias, 3600, identityCertChain, certChainCount);
+            EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+            if (ER_OK == status) {
+                status = PermissionMgmtTestHelper::SignManifests(claimerBus, identityCertChain[0], manifests);
+                EXPECT_EQ(ER_OK, status) << "  SignManifest failed.  Actual Status: " << QCC_StatusText(status);
+            }
         } else {
             certChainCount = 1;
-            status = PermissionMgmtTestHelper::CreateIdentityCert(claimerBus, serial, guid.ToString(), &claimedPubKey, alias, 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE);
+            status = PermissionMgmtTestHelper::CreateIdentityCert(claimerBus, serial, guid.ToString(), &claimedPubKey, alias, 3600, identityCertChain[0]);
+            EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+            if (ER_OK == status) {
+                status = PermissionMgmtTestHelper::SignManifests(claimerBus, identityCertChain[0], manifests);
+                EXPECT_EQ(ER_OK, status) << "  SignManifest failed.  Actual Status: " << QCC_StatusText(status);
+            }
+
         }
-        EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.  Actual Status: " << QCC_StatusText(status);
+
+        if (generateBogusManifests) {
+            /* Manifest will be unsigned and so will fail to verify. */
+            Manifest bogusManifest;
+            EXPECT_EQ(ER_OK, GenerateAllowAllManifest(bogusManifest));
+            manifests.push_back(bogusManifest);
+        }
 
         QStatus status;
         if (useAdminSG) {
-            status = saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize);
+            status = saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size());
         } else {
-            status = saProxy.Claim(adminAdminGroupAuthority, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize);
+            status = saProxy.Claim(adminAdminGroupAuthority, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size());
         }
-        delete [] manifest;
+
         if (expectClaimToFail) {
             return status;
         }
@@ -1293,7 +1340,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationState) << "  ApplicationState is not UNCLAIMABLE";
 
         /* try claiming with state unclaimable.  Exptect to fail */
-        EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", true)) << " InvokeClaim is not supposed to succeed.";
+        EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", true, &adminBus)) << " InvokeClaim is not supposed to succeed.";
 
         /* now switch it back to claimable */
         applicationState = PermissionConfigurator::CLAIMABLE;
@@ -1304,7 +1351,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         /* try claiming with state claimable.  Expect to succeed */
         SetPolicyChangedReceived(false);
-        EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", false)) << " InvokeClaim failed.";
+        EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", false, &adminBus)) << " InvokeClaim failed.";
         /* sleep a max of 1 second to see whether the claimed app issues the
            PolicyChanged callback after the InvokeClaim is returned.
          */
@@ -1318,7 +1365,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         /* try to claim one more time */
         SetPolicyChangedReceived(false);
-        EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", true)) << " InvokeClaim is not supposed to succeed.";
+        EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", true, &adminBus)) << " InvokeClaim is not supposed to succeed.";
         EXPECT_FALSE(GetPolicyChangedReceived());
 
         ECCPublicKey claimedPubKey2;
@@ -1444,11 +1491,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
     void AppHasAllowAllManifest(BusAttachment& bus, BusAttachment& targetBus)
     {
-        PermissionPolicy::Rule* manifest = NULL;
-        size_t manifestSize = 0;
-        GenerateAllowAllManifest(&manifest, &manifestSize);
-        EXPECT_EQ(ER_OK, VerifyIdentityManifestSize(bus, targetBus, manifestSize)) << "VerifyIdentityManifestSize failed.";
-        delete [] manifest;
+        std::vector<Manifest> manifests;
+
+        EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
+        EXPECT_EQ(ER_OK, VerifyIdentityManifestSize(bus, targetBus, 1)) << "VerifyIdentityManifestSize failed.";
+
     }
 
     /**
@@ -1526,19 +1573,19 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /*
      *  Replace service app Identity Certificate
      */
-    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const PermissionPolicy::Rule* manifest, size_t manifestSize, bool generateRandomSubjectKey, bool setWrongManifestDigest, bool setEmptyAKI = false)
+    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const Manifest& manifest, bool generateRandomSubjectKey, bool setWrongManifestDigest, bool setEmptyAKI = false)
     {
         SecurityApplicationProxy saProxy(bus, targetBus.GetUniqueName().c_str());
         /* retrieve the current identity cert */
         MsgArg certChainArg;
-        EXPECT_EQ(ER_OK, saProxy.GetIdentity(certChainArg)) << "GetIdentity failed.";
+        ASSERT_EQ(ER_OK, saProxy.GetIdentity(certChainArg)) << "GetIdentity failed.";
         size_t count = certChainArg.v_array.GetNumElements();
         ASSERT_GT(count, (size_t) 0) << "No identity cert found.";
         if (count == 0) {
             return;
         }
-        IdentityCertificate* certs = new IdentityCertificate[count];
-        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs, count)) << "MsgArgToIdentityCertChain failed.";
+        std::unique_ptr<IdentityCertificate[]> certs(new IdentityCertificate[count]);
+        ASSERT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs.get(), count)) << "MsgArgToIdentityCertChain failed.";
 
         /* create a new identity cert */
         qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
@@ -1551,44 +1598,46 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         } else {
             subjectPublicKey = certs[0].GetSubjectPublicKey();
         }
-        IdentityCertificate identityCertChain[1];
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        if (setWrongManifestDigest) {
-            for (size_t cnt = 0; cnt < Crypto_SHA256::DIGEST_SIZE; cnt++) {
-                digest[cnt] = cnt;
-            }
-        } else {
-            EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(bus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+        std::unique_ptr<IdentityCertificate[]> identityCertChain(new IdentityCertificate[count]);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, subjectPublicKey, "Service Provider", 3600, identityCertChain[0], setEmptyAKI);
+        ASSERT_EQ(ER_OK, status) << "  CreateIdentityCert failed.";
+        for (size_t i = 1; i < count; i++) {
+            identityCertChain[i] = certs[i];
         }
-        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, subjectPublicKey, "Service Provider", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE, setEmptyAKI);
-        EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.";
 
-        status = saProxy.UpdateIdentity(identityCertChain, 1, manifest, manifestSize);
+        ASSERT_TRUE(KeyExchangerECDHE_ECDSA::IsCertChainStructureValid(identityCertChain.get(), count));
+
+        std::vector<Manifest> manifests(1);
+        manifests[0] = manifest;
+
+        status = PermissionMgmtTestHelper::SignManifests(bus, identityCertChain[0], manifests);
+        ASSERT_EQ(ER_OK, status) << "  SignManifest failed.";
+
+        status = saProxy.UpdateIdentity(identityCertChain.get(), count, manifests.data(), manifests.size());
         if (generateRandomSubjectKey || setWrongManifestDigest || setEmptyAKI) {
-            EXPECT_NE(ER_OK, status) << "InstallIdentity did not fail.";
+            ASSERT_NE(ER_OK, status) << "InstallIdentity did not fail.";
         } else {
-            EXPECT_EQ(ER_OK, status) << "InstallIdentity failed.";
-            EXPECT_EQ(ER_OK, saProxy.SecureConnection(true)) << "Fail to refresh peer's secret and session keys.";
+            ASSERT_EQ(ER_OK, status) << "InstallIdentity failed.";
+            ASSERT_EQ(ER_OK, saProxy.SecureConnection(true)) << "Fail to refresh peer's secret and session keys.";
 
             /* Try GetPolicy call, it should succeed. */
             PermissionPolicy retPolicy;
-            EXPECT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
+            ASSERT_EQ(ER_OK, saProxy.GetPolicy(retPolicy)) << "GetPolicy failed.";
         }
-        delete [] certs;
     }
 
-    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const PermissionPolicy::Rule* manifest, size_t manifestSize, bool generateRandomSubjectKey)
+    void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, const Manifest& manifest, bool generateRandomSubjectKey)
     {
-        ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, false);
+        ReplaceIdentityCert(bus, targetBus, manifest, generateRandomSubjectKey, false);
     }
 
     void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, bool generateRandomSubjectKey, bool setWrongManifestDigest, bool setEmptyAKI = false)
     {
-        PermissionPolicy::Rule* manifest = NULL;
-        size_t manifestSize = 0;
-        GenerateAllowAllManifest(&manifest, &manifestSize);
-        ReplaceIdentityCert(bus, targetBus, manifest, manifestSize, generateRandomSubjectKey, setWrongManifestDigest, setEmptyAKI);
-        delete [] manifest;
+        Manifest manifest;
+        ASSERT_FALSE(setWrongManifestDigest);
+        EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifest));
+        ReplaceIdentityCert(bus, targetBus, manifest, generateRandomSubjectKey, setWrongManifestDigest, setEmptyAKI);
+
     }
 
     void ReplaceIdentityCert(BusAttachment& bus, BusAttachment& targetBus, bool generateRandomSubjectKey)
@@ -1604,11 +1653,6 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void ReplaceIdentityCertWithBadPublicKey(BusAttachment& bus, BusAttachment& targetBus)
     {
         ReplaceIdentityCert(bus, targetBus, true);
-    }
-
-    void ReplaceIdentityCertWithBadManifestDigest(BusAttachment& bus, BusAttachment& targetBus)
-    {
-        ReplaceIdentityCert(bus, targetBus, false, true);
     }
 
     void ReplaceIdentityCertWithExpiredCert(BusAttachment& bus, BusAttachment& targetBus)
@@ -1628,20 +1672,20 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* create a new identity cert */
         qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
         IdentityCertificate identityCertChain[1];
-        PermissionPolicy::Rule* manifest = NULL;
-        size_t manifestSize = 0;
-        GenerateAllowAllManifest(&manifest, &manifestSize);
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(bus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+        std::vector<Manifest> manifests;
+
+        EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
         /* create a cert that expires in 1 second */
-        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, certs[0].GetSubjectPublicKey(), "Service Provider", 1, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE);
+        status = PermissionMgmtTestHelper::CreateIdentityCert(bus, "4040404", subject, certs[0].GetSubjectPublicKey(), "Service Provider", 1, identityCertChain[0]);
         EXPECT_EQ(ER_OK, status) << "  CreateIdentityCert failed.";
+        status = PermissionMgmtTestHelper::SignManifests(bus, identityCertChain[0], manifests);
+        EXPECT_EQ(ER_OK, status) << "  SignManifest failed.";
 
         /* sleep 2 seconds to get the cert to expire */
         qcc::Sleep(2000);
-        EXPECT_NE(ER_OK, saProxy.UpdateIdentity(identityCertChain, 1, manifest, manifestSize)) << "InstallIdentity did not fail.";
+        EXPECT_NE(ER_OK, saProxy.UpdateIdentity(identityCertChain, 1, manifests.data(), manifests.size())) << "InstallIdentity did not fail.";
         delete [] certs;
-        delete [] manifest;
+
     }
 
     /**
@@ -2476,12 +2520,6 @@ TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithExpiredCert)
     ReplaceIdentityCertWithExpiredCert(adminBus, consumerBus);
 }
 
-TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithBadManifestDigest)
-{
-    Claims(false);
-    ReplaceIdentityCertWithBadManifestDigest(adminBus, serviceBus);
-}
-
 TEST_F(PermissionMgmtUseCaseTest, InstallIdentityCertWithEmptyAKI)
 {
     Claims(false);
@@ -2709,11 +2747,9 @@ TEST_F(PermissionMgmtUseCaseTest, ConsumerHasMoreRestrictiveManifest)
 
     InstallMembershipChainToTarget(adminBus, adminBus, consumerBus, membershipSerial0, membershipSerial1, membershipGUID1);
 
-    PermissionPolicy::Rule* manifest;
-    size_t manifestSize;
-    GenerateManifestNoInputSource(&manifest, &manifestSize);
-    ReplaceIdentityCert(adminBus, consumerBus, manifest, manifestSize, false);
-    delete [] manifest;
+    Manifest manifest;
+    GenerateManifestNoInputSource(manifest);
+    ReplaceIdentityCert(adminBus, consumerBus, manifest, false);
 
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
@@ -2738,11 +2774,9 @@ TEST_F(PathBasePermissionMgmtUseCaseTest, ConsumerHasLessAccessInManifestUsingDe
 
     InstallMembershipToConsumer();
 
-    PermissionPolicy::Rule* manifest;
-    size_t manifestSize;
-    GenerateManifestDenied(true, true, &manifest, &manifestSize);
-    ReplaceIdentityCert(adminBus, consumerBus, manifest, manifestSize, false);
-    delete [] manifest;
+    Manifest manifest;
+    GenerateManifestDenied(true, true, manifest);
+    ReplaceIdentityCert(adminBus, consumerBus, manifest, false);
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
@@ -3033,15 +3067,12 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimFailsWithoutSecurityEnabled)
     validity.validTo = validity.validFrom + 24 * 3600;
     certs[0].SetValidity(&validity);
     EXPECT_EQ(ER_OK, certs[0].SignAndGenerateAuthorityKeyId(ecc.GetDSAPrivateKey(), keyInfo.GetPublicKey())) << " sign cert failed.";
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
 
     SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
-    EXPECT_NE(ER_OK, saProxy.Claim(keyInfo, guid, keyInfo, certs, 1, manifest, manifestSize)) << " saProxy.Claim failed";
-    delete [] manifest;
+    EXPECT_NE(ER_OK, saProxy.Claim(keyInfo, guid, keyInfo, certs, 1, manifests.data(), manifests.size())) << " saProxy.Claim failed";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, GetApplicationStateBeforeEnableSecurity)
@@ -3137,48 +3168,46 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimUnenabledAppShouldFail)
     EnableSecurity("ALLJOYN_ECDHE_NULL");
     GenerateCAKeys();
     IdentityCertificate identityCert;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
     SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
     /* retrieve public key from to-be-claimed app to create identity cert */
     ECCPublicKey claimedPubKey;
     GetAppPublicKey(serviceBus, claimedPubKey);
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert)) << "  CreateIdentityCert failed.";
 
     IdentityCertificate signingCert;
     ECCPublicKey consumerPubKey;
     GetAppPublicKey(consumerBus, consumerPubKey);
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "1011", "signer", &consumerPubKey, "consumer alias", 3600, signingCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "1011", "signer", &consumerPubKey, "consumer alias", 3600, signingCert)) << "  CreateIdentityCert failed.";
 
     IdentityCertificate certChain[2];
     certChain[0] = identityCert;
     certChain[1] = signingCert;
-    EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(consumerBus, identityCert, manifests));
+    EXPECT_EQ(ER_PERMISSION_DENIED, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifests.data(), manifests.size())) << "Claim did not fail.";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimClaimableAppWithoutManifestTemplate)
 {
     EnableSecurity("ALLJOYN_ECDHE_NULL");
     GenerateCAKeys();
-    IdentityCertificate identityCert;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
     SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
     /* retrieve public key from to-be-claimed app to create identity cert */
     ECCPublicKey claimedPubKey;
     GetAppPublicKey(serviceBus, claimedPubKey);
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    IdentityCertificate identityCertChain[2];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(adminBus, adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCertChain, 2)) << "  CreateIdentityCertChain failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     EXPECT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE)) << "  SetApplicationState failed.";
-    EXPECT_EQ(ER_OK, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, &identityCert, 1, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
+    EXPECT_EQ(ER_OK, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, 2, manifests.data(), manifests.size())) << "Claim did not fail.";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithInvalidCertChain)
@@ -3186,32 +3215,31 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithInvalidCertChain)
     EnableSecurity("ALLJOYN_ECDHE_NULL");
     GenerateCAKeys();
     IdentityCertificate identityCert;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
     SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
     /* retrieve public key from to-be-claimed app to create identity cert */
     ECCPublicKey claimedPubKey;
     EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCert)) << "  CreateIdentityCert failed.";
 
     IdentityCertificate signingCert;
     ECCPublicKey consumerPubKey;
     SecurityApplicationProxy consumerProxy(adminBus, consumerBus.GetUniqueName().c_str());
     EXPECT_EQ(ER_OK, consumerProxy.GetEccPublicKey(consumerPubKey)) << " Fail to retrieve to-be-claimed public key.";
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "1011", "signer", &consumerPubKey, "consumer alias", 3600, signingCert, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(consumerBus, "1011", "signer", &consumerPubKey, "consumer alias", 3600, signingCert)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(consumerBus, identityCert, manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(serviceBus);
     IdentityCertificate certChain[2];
     certChain[0] = identityCert;
     certChain[1] = signingCert;
-    EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifests.data(), manifests.size())) << "Claim did not fail.";
     /* do a second claim and expect the same error code returned */
-    EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, certChain, 2, manifests.data(), manifests.size())) << "Claim did not fail.";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
@@ -3242,8 +3270,8 @@ TEST_F(PermissionMgmtUseCaseTest, InvalidCertChainStructure)
 
 TEST_F(PermissionMgmtUseCaseTest, InstallMembershipBeforeClaimMustFail)
 {
-    GenerateCAKeys();
     EnableSecurity("ALLJOYN_ECDHE_NULL");
+    GenerateCAKeys();
     InstallMembershipToAdmin(adminMembershipSerial1, adminAdminGroupGUID, adminBus, false);
 }
 
@@ -3259,12 +3287,11 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
     PermissionMgmtTestHelper::GetGUID(consumerBus, guid);
     IdentityCertificate identityCertChain[3];
     size_t certChainCount = 3;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(remoteControlBus, adminBus, "303030", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain, certChainCount, digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed";
+    std::vector<Manifest> manifests;
+
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(remoteControlBus, adminBus, "303030", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain, certChainCount)) << "  CreateIdentityCert failed";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(consumerBus);
@@ -3273,8 +3300,8 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(ecc.GetDSAPublicKey());
     KeyInfoHelper::GenerateKeyId(keyInfo);
-    EXPECT_EQ(ER_OK, saProxy.Claim(keyInfo, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << " saProxy.Claim failed";
-    delete [] manifest;
+    EXPECT_EQ(ER_OK, saProxy.Claim(keyInfo, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size())) << " saProxy.Claim failed";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
@@ -3288,19 +3315,18 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
     qcc::GUID128 guid;
     IdentityCertificate identityCertChain[1];
     size_t certChainCount = 1;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
     certChainCount = 1;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0])) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
-    EXPECT_EQ(ER_BAD_ARG_1, saProxy.Claim(emptyKeyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
+    EXPECT_EQ(ER_BAD_ARG_1, saProxy.Claim(emptyKeyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
@@ -3314,20 +3340,19 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAAKI)
     qcc::GUID128 guid;
     IdentityCertificate identityCertChain[1];
     size_t certChainCount = 1;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
     certChainCount = 1;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0])) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(adminBus);
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
-    EXPECT_EQ(ER_BAD_ARG_2, saProxy.Claim(keyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
+    EXPECT_EQ(ER_BAD_ARG_2, saProxy.Claim(keyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
@@ -3341,21 +3366,20 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupAKI)
     qcc::GUID128 guid;
     IdentityCertificate identityCertChain[1];
     size_t certChainCount = 1;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
     certChainCount = 1;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0])) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
     KeyInfoNISTP256 keyInfo;
     keyInfo.SetPublicKey(&claimedPubKey);
-    EXPECT_EQ(ER_BAD_ARG_5, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, keyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
+    EXPECT_EQ(ER_BAD_ARG_5, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, keyInfo, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
@@ -3369,19 +3393,18 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
     qcc::GUID128 guid;
     IdentityCertificate identityCertChain[1];
     size_t certChainCount = 1;
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t manifestSize = 0;
-    GenerateAllowAllManifest(&manifest, &manifestSize);
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(adminBus, manifest, manifestSize, digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    std::vector<Manifest> manifests;
+
+    EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
     certChainCount = 1;
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0], digest, Crypto_SHA256::DIGEST_SIZE)) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(adminBus, "1010", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain[0])) << "  CreateIdentityCert failed.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
-    EXPECT_EQ(ER_BAD_ARG_4, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifest, manifestSize)) << "Claim did not fail.";
-    delete [] manifest;
+    EXPECT_EQ(ER_BAD_ARG_4, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
+
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)
@@ -3525,11 +3548,9 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByProviderManifest)
 
     InstallMembershipToConsumer();
 
-    PermissionPolicy::Rule* manifest;
-    size_t manifestSize;
-    GenerateManifestNoGetAllProperties(&manifest, &manifestSize);
-    ReplaceIdentityCert(adminBus, serviceBus, manifest, manifestSize, false);
-    delete [] manifest;
+    Manifest manifest;
+    GenerateManifestNoGetAllProperties(manifest);
+    ReplaceIdentityCert(adminBus, serviceBus, manifest, false);
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
@@ -3552,11 +3573,9 @@ TEST_F(PermissionMgmtUseCaseTest, GetAllPropertiesFailByConsumerManifest)
 
     InstallMembershipToConsumer();
 
-    PermissionPolicy::Rule* manifest;
-    size_t manifestSize;
-    GenerateManifestNoGetAllProperties(&manifest, &manifestSize);
-    ReplaceIdentityCert(adminBus, consumerBus, manifest, manifestSize, false);
-    delete [] manifest;
+    Manifest manifest;
+    GenerateManifestNoGetAllProperties(manifest);
+    ReplaceIdentityCert(adminBus, consumerBus, manifest, false);
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
     CreateAppInterfaces(consumerBus, false);
@@ -3657,11 +3676,9 @@ TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
     /* generate manifest that allows the consumer to modify the Volume
      * property but does not allow it to retrieve the property or receiving
      * the PropertiesChanged signal on that property. */
-    PermissionPolicy::Rule* manifest;
-    size_t manifestSize;
-    GenerateManifestSetVolumeProperty(&manifest, &manifestSize);
-    ReplaceIdentityCert(adminBus, consumerBus, manifest, manifestSize, false);
-    delete [] manifest;
+    Manifest manifest;
+    GenerateManifestSetVolumeProperty(manifest);
+    ReplaceIdentityCert(adminBus, consumerBus, manifest, false);
 
     /* setup the application interfaces for access tests */
     CreateAppInterfaces(serviceBus, true);
@@ -3761,3 +3778,104 @@ TEST_F(PermissionMgmtUseCaseTest, ReceiverIgnoresBroadcastSignal)
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Not expect to receive ChannelChanged signal.";
 }
 
+/* This test generates two manifests for each peer claimed instead of the usual one, and verifies
+ * that the claiming succeeds in accepting multiple manifests.
+ */
+TEST_F(PermissionMgmtUseCaseTest, MultipleManifestsClaim)
+{
+    generateExtraManifests = true;
+
+    Claims(false);
+
+    RetrieveDefaultPolicy(adminBus, serviceBus);
+}
+
+/*
+ * This test generates multiple manifests for each peer claimed, with at least one that will not pass
+ * validation when it is stored. This test ensures that as long as some valid manifests are present,
+ * claiming still succeeds.
+ */
+TEST_F(PermissionMgmtUseCaseTest, MultipleManifestsSomeBogusClaim)
+{
+    generateExtraManifests = true;
+    generateBogusManifests = true;
+
+    Claims(false);
+
+    RetrieveDefaultPolicy(adminBus, serviceBus);
+}
+
+/*
+ * This test exercises the InstallManifests method call.
+ */
+TEST_F(PermissionMgmtUseCaseTest, ExerciseInstallManifestsCall)
+{
+    Claims(false);
+
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+
+    /* Need to get the current manifests to get the identity certificate's thumbprint,
+     * for signing a new manifest.
+     */
+    std::vector<Manifest> manifests;
+    ASSERT_FALSE(generateExtraManifests);
+    ASSERT_FALSE(generateBogusManifests);
+    ASSERT_EQ(ER_OK, saProxy.GetManifests(manifests));
+    ASSERT_EQ(1, manifests.size());
+
+    std::vector<Manifest> newManifests(1);
+    ASSERT_EQ(ER_OK, GenerateManifestNoInputSource(newManifests[0]));
+    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(adminBus, manifests[0]->GetThumbprint(), newManifests[0]));
+    EXPECT_EQ(ER_OK, saProxy.InstallManifests(newManifests.data(), newManifests.size()));
+}
+
+/*
+ * This test installs one new manifest, and verifies the number of manifests is one more afterwards.
+ */
+TEST_F(PermissionMgmtUseCaseTest, InstallOneAdditionalManifestCountCorrect)
+{
+    Claims(false);
+
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+
+    std::vector<Manifest> manifests;
+    ASSERT_FALSE(generateExtraManifests);
+    ASSERT_FALSE(generateBogusManifests);
+    ASSERT_EQ(ER_OK, saProxy.GetManifests(manifests));
+    ASSERT_EQ(1, manifests.size());
+
+    std::vector<Manifest> newManifests(1);
+    ASSERT_EQ(ER_OK, GenerateManifestNoInputSource(newManifests[0]));
+    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(adminBus, manifests[0]->GetThumbprint(), newManifests[0]));
+    ASSERT_EQ(ER_OK, saProxy.InstallManifests(newManifests.data(), newManifests.size()));
+
+    std::vector<Manifest> manifestsAfterUpdate;
+    ASSERT_EQ(ER_OK, saProxy.GetManifests(manifestsAfterUpdate));
+    EXPECT_EQ(manifests.size() + 1, manifestsAfterUpdate.size());
+}
+
+/*
+ * This test installs one new manifest, and verifies the new manifest is present in the list
+ * retrieved manifests.
+ */
+TEST_F(PermissionMgmtUseCaseTest, InstallOneAdditionalManifestNewManifestCorrect)
+{
+    Claims(false);
+
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+
+    std::vector<Manifest> manifests;
+    ASSERT_FALSE(generateExtraManifests);
+    ASSERT_FALSE(generateBogusManifests);
+    ASSERT_EQ(ER_OK, saProxy.GetManifests(manifests));
+    ASSERT_EQ(1, manifests.size());
+
+    std::vector<Manifest> newManifests(1);
+    ASSERT_EQ(ER_OK, GenerateManifestNoInputSource(newManifests[0]));
+    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(adminBus, manifests[0]->GetThumbprint(), newManifests[0]));
+    ASSERT_EQ(ER_OK, saProxy.InstallManifests(newManifests.data(), newManifests.size()));
+
+    std::vector<Manifest> manifestsAfterUpdate;
+    ASSERT_EQ(ER_OK, saProxy.GetManifests(manifestsAfterUpdate));
+    EXPECT_EQ(newManifests[0], manifestsAfterUpdate[manifestsAfterUpdate.size() - 1]);
+}
