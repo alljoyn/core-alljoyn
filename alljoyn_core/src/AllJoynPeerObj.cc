@@ -219,7 +219,7 @@ AllJoynPeerObj::AllJoynPeerObj(BusAttachment& bus) :
             AddMethodHandler(ifc->GetMember("KeyAuthentication"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::KeyAuthentication));
             AddMethodHandler(ifc->GetMember("GenSessionKey"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::GenSessionKey));
             AddMethodHandler(ifc->GetMember("ExchangeGroupKeys"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::ExchangeGroupKeys));
-            AddMethodHandler(ifc->GetMember("SendManifest"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::HandleSendManifest));
+            AddMethodHandler(ifc->GetMember("SendManifests"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::HandleSendManifests));
             AddMethodHandler(ifc->GetMember("SendMemberships"), static_cast<MessageReceiver::MethodHandler>(&AllJoynPeerObj::SendMemberships));
         }
     }
@@ -1377,7 +1377,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                         sendManifest = (ER_OK == aStatus);
                     }
                     if (sendManifest) {
-                        status = SendManifest(remotePeerObj, ifc, peerState);
+                        status = SendManifests(remotePeerObj, ifc, peerState);
                         if (status == ER_OK) {
                             status = SendMembershipData(remotePeerObj, ifc, remotePeerGuid);
                         }
@@ -2020,83 +2020,81 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     peerAuthListener.SetPermissionMgmtObj(&securityApplicationObj);
 }
 
-QStatus AllJoynPeerObj::SendManifest(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, PeerState& peerState)
+QStatus AllJoynPeerObj::SendManifests(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, PeerState& peerState)
 {
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t count = 0;
-    QStatus status = securityApplicationObj.RetrieveManifest(NULL, &count);
+    std::vector<Manifest> manifests;
+    QStatus status = securityApplicationObj.RetrieveManifests(manifests);
     if (ER_OK != status) {
-        if (ER_MANIFEST_NOT_FOUND == status) {
-            return ER_OK;  /* nothing to send */
-        }
-        return status;
-    }
-    if (count > 0) {
-        manifest = new PermissionPolicy::Rule[count];
-    }
-    status = securityApplicationObj.RetrieveManifest(manifest, &count);
-    if (ER_OK != status) {
-        delete [] manifest;
         if (ER_MANIFEST_NOT_FOUND == status) {
             return ER_OK;  /* nothing to send */
         }
         return status;
     }
 
-    MsgArg rulesArg;
-    PermissionPolicy::GenerateRules(manifest, count, rulesArg);
+    MsgArg sendManifestsArg;
+    status = _Manifest::GetArrayMsgArg(manifests, sendManifestsArg);
+    if (ER_OK != status) {
+        return status;
+    }
     Message replyMsg(*bus);
-    const InterfaceDescription::Member* sendManifest = ifc->GetMember("SendManifest");
-    status = remotePeerObj.MethodCall(*sendManifest, &rulesArg, 1, replyMsg, DEFAULT_TIMEOUT);
-
-    delete [] manifest;
+    const InterfaceDescription::Member* sendManifests = ifc->GetMember("SendManifests");
+    status = remotePeerObj.MethodCall(*sendManifests, &sendManifestsArg, 1, replyMsg, DEFAULT_TIMEOUT);
     if (status != ER_OK) {
         return status;
     }
     /* process the reply */
-    return securityApplicationObj.ParseSendManifest(replyMsg, peerState);
+    return securityApplicationObj.ParseSendManifests(replyMsg, peerState);
 }
 
-void AllJoynPeerObj::HandleSendManifest(const InterfaceDescription::Member* member, Message& msg)
+void AllJoynPeerObj::HandleSendManifests(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
     PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
     PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
-    QStatus status = securityApplicationObj.ParseSendManifest(msg, peerState);
+    QStatus status = securityApplicationObj.ParseSendManifests(msg, peerState);
     if (ER_OK != status) {
-        MethodReply(msg, status);
+        QStatus rStatus = MethodReply(msg, status);
+        if (ER_OK != rStatus) {
+            QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+        }
         return;
     }
-    /* send back manifest to calling peer */
-    PermissionPolicy::Rule* manifest = NULL;
-    size_t count = 0;
-    status = securityApplicationObj.RetrieveManifest(NULL, &count);
-    if (ER_OK != status && ER_MANIFEST_NOT_FOUND != status) {
-        MethodReply(msg, status);
-        return;
-    }
-    if (count > 0) {
-        manifest = new PermissionPolicy::Rule[count];
-    }
-    status = securityApplicationObj.RetrieveManifest(manifest, &count);
+    /* send back manifests to calling peer */
+    std::vector<Manifest> manifests;
+    status = securityApplicationObj.RetrieveManifests(manifests);
     if ((ER_OK != status) && (ER_MANIFEST_NOT_FOUND != status)) {
-        delete [] manifest;
-        MethodReply(msg, status);
+        QStatus rStatus = MethodReply(msg, status);
+        if (ER_OK != rStatus) {
+            QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+        }
         return;
     }
     MsgArg replyArg;
     if (ER_MANIFEST_NOT_FOUND == status) {
         /* return empty array */
-        status = replyArg.Set("a(ssa(syy))", 0, NULL);
+        status = replyArg.Set(_Manifest::s_MsgArgArraySignature, 0, nullptr);
     } else {
-        status = PermissionPolicy::GenerateRules(manifest, count, replyArg);
+        status = _Manifest::GetArrayMsgArg(manifests, replyArg);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not GetArrayMsgArg"));
+            QStatus rStatus = MethodReply(msg, status);
+            if (ER_OK != rStatus) {
+                QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+            }
+            return;
+        }
     }
     if (ER_OK == status) {
-        MethodReply(msg, &replyArg, 1);
+        QStatus rStatus = MethodReply(msg, &replyArg, 1);
+        if (ER_OK != rStatus) {
+            QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+        }
     } else {
-        MethodReply(msg, status);
+        QStatus rStatus = MethodReply(msg, status);
+        if (ER_OK != rStatus) {
+            QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+        }
     }
-    delete [] manifest;
 }
 
 static QStatus SetUpSendMembershipInput(std::vector<MsgArg*>& args, uint8_t& pos, uint8_t total, MsgArg* sendMembershipArgs, size_t sendMembershipArgsSize)
