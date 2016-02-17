@@ -309,7 +309,6 @@ _PeerState::~_PeerState()
 {
     ClearGuildMap(guildMap);
     ClearGuildArgs(guildArgs);
-    delete [] manifest;
     delete initiatorHash;
     delete responderHash;
 }
@@ -536,6 +535,30 @@ QStatus _PeerState::SetAuthSuite(const String& authSuite)
     } else {
         return ER_BAD_ARG_1;
     }
+}
+
+QStatus _PeerState::StoreManifest(const Manifest& manifest)
+{
+    m_manifests.push_back(PeerManifestState(manifest));
+
+    return ER_OK;
+}
+
+QStatus _PeerState::ClearManifests()
+{
+    m_manifests.clear();
+
+    return ER_OK;
+}
+
+const std::vector<Manifest> _PeerState::GetManifests() const
+{
+    std::vector<Manifest> output(m_manifests.size());
+    for (PeerManifestState manifestState : m_manifests) {
+        output.push_back(manifestState->m_manifest);
+    }
+
+    return output;
 }
 
 }

@@ -93,6 +93,19 @@ namespace ajn {
 #define CONVERSATION_V1 ((uint32_t)0x0000)
 #define CONVERSATION_V4 ((uint32_t)0x0004)
 
+/**
+ * Container for a peer's manifest.
+ */
+struct _PeerManifestState {
+    Manifest m_manifest;
+
+    _PeerManifestState(Manifest manifest) : m_manifest(manifest)
+    {
+    }
+};
+
+typedef qcc::ManagedObj<_PeerManifestState> PeerManifestState;
+
 /* Forward declaration */
 class _PeerState;
 
@@ -127,9 +140,6 @@ class _PeerState {
     const static uint8_t KEY_EXCHANGE_INITIATOR = 0x01;  /* in a key exchange as an initiator */
     const static uint8_t KEY_EXCHANGE_RESPONDER = 0x02;  /* in a key exchange as as responder */
 
-    PermissionPolicy::Rule* manifest;
-    size_t manifestSize;
-
     struct GuildMetadata {
         std::vector<qcc::CertificateX509*> certChain;
 
@@ -153,8 +163,6 @@ class _PeerState {
      * Default constructor
      */
     _PeerState() :
-        manifest(NULL),
-        manifestSize(0),
         guildArgsSentCount(0),
         isLocalPeer(false),
         clockOffset((std::numeric_limits<int32_t>::max)()),
@@ -170,7 +178,8 @@ class _PeerState {
         /* This lock is held while calling into app's KeyStoreListener, that might acquire other locks having an unspecified level */
         responderHashLock(qcc::LOCK_LEVEL_CHECKING_DISABLED),
         keyExchangeMode(KEY_EXCHANGE_NONE),
-        m_authSuite(0)
+        m_authSuite(0),
+        m_manifests()
     {
         ::memset(authorizations, 0, sizeof(authorizations));
     }
@@ -577,6 +586,31 @@ class _PeerState {
      */
     QStatus SetAuthSuite(const qcc::String& authSuite);
 
+    /**
+     * Store a manifest received from the remote peer.
+     * This manifest should be cryptographically verified before calling this.
+     *
+     * @param[in] manifest The verified manifest to be associated with this peer.
+     * @return #ER_OK if the manifest was successfully added
+     *         error code otherwise
+     */
+    QStatus StoreManifest(const Manifest& manifest);
+
+    /**
+     * Clear out all previously-received manifests from this peer.
+     *
+     * @return #ER_OK if the manifest list was successfully cleared
+     *         error code otherwise
+     */
+    QStatus ClearManifests();
+
+    /**
+     * Get a vector of the peer's verified manifests.
+     *
+     * @return Vector of Manifest objects
+     */
+    const std::vector<Manifest> GetManifests() const;
+
     /*
      * Destructor
      */
@@ -701,6 +735,12 @@ class _PeerState {
      * The auth suite used to authenticate this peer.
      */
     uint32_t m_authSuite;
+
+    /**
+     * Manifests received from the peer.
+     */
+    std::vector<PeerManifestState> m_manifests;
+
 };
 
 

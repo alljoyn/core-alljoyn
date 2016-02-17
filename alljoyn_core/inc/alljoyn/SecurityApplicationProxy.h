@@ -176,6 +176,11 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * Claim the app. This will make the claimer the admin and certificate
      * authority. The KeyInfo object description is shown below.
      *
+     * It is highly recommended that element 0 of identityCertificateChain, the peer's
+     * end entity certificate, be of type qcc::IdentityCertificate, so that the correct
+     * Extended Key Usage (EKU) is set. The remaining certificates in the chain can be
+     * of this or the base CertificateX509 type.
+     *
      * Access restriction: None if the app is not yet claimed. An error will be
      * raised if the app already has an admin and it is not the caller.
      *
@@ -188,8 +193,8 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *                                   claimed app.  The leaf cert is listed first
      * @param[in] identityCertChainSize  the size of the identity certificate
      *                                   chain.
-     * @param[in] manifest               the manifest of the application
-     * @param[in] manifestSize           the number of rules in the manifest
+     * @param[in] manifests              the signed manifests to install on the application
+     * @param[in] manifestCount          the number of manifests
      * @return
      *  - #ER_OK if successful
      *  - #ER_PERMISSION_DENIED Error raised when the application is not claimable
@@ -197,15 +202,14 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *                            chain is not valid
      *  - #ER_INVALID_CERTIFICATE_USAGE Error raised when the Extended Key Usage
      *                                  is not AllJoyn specific
-     *  - #ER_DIGEST_MISMATCH Error raised when the digest of the manifest does
-     *                        not match the digested listed in the identity certificate
+     *  - #ER_DIGEST_MISMATCH Error raised when the manifest is not accepted by the application.
      *  - an error status indicating failure
      */
     QStatus Claim(const qcc::KeyInfoNISTP256& certificateAuthority,
                   const qcc::GUID128& adminGroupId,
                   const qcc::KeyInfoNISTP256& adminGroup,
-                  const qcc::IdentityCertificate* identityCertChain, size_t identityCertChainSize,
-                  const PermissionPolicy::Rule* manifest, size_t manifestSize);
+                  const qcc::CertificateX509* identityCertChain, size_t identityCertChainSize,
+                  const Manifest* manifests, size_t manifestCount);
 
     /**
      * The ClaimableApplication version
@@ -245,23 +249,35 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * should be called to force the peers to create a new set of secret and
      * session keys.
      *
+     * It is highly recommended that eleement 0 of identityCertificateChain, the peer's
+     * end entity certificate, be of type qcc::IdentityCertificate. Other certs can be
+     * of this or the base CertificateX509 type.
+     *
+     * The target peer also clears all manifests it has already stored, and so all
+     * manifests the peer needs must be sent again. Use GetManifests to retrieve
+     * the currently-installed manifests before calling UpdateIdentity to reuse them.
+     *
+     * Manifests must already be signed by the authority that issued the identity
+     * certificate chain.
+     *
      * @see ProxyBusObject.SecureConnection(bool)
+     * @see SecurityApplicationProxy.GetManifests(std::vector<Manifest>&)
      *
      * @param[in] identityCertificateChain             the identity certificate
      * @param[in] identityCertificateChainSize         the number of identity certificates
-     * @param[in] manifest                             the manifest
-     * @param[in] manifestSize                         the number of rules in the manifest
+     * @param[in] manifests                            the signed manifests to install on the application
+     * @param[in] manifestCount                        the number of manifests
      *
      * @return
      *  - #ER_OK if successful
      *  - #ER_PERMISSION_DENIED Error raised when the caller does not have permission
      *  - #ER_INVALID_CERTIFICATE Error raised when the identity certificate chain is not valid
      *  - #ER_INVALID_CERTIFICATE_USAGE Error raised when the Extended Key Usage is not AllJoyn specific
-     *  - #ER_DIGEST_MISMATCH Error raised when the digest of the not have permission
+     *  - #ER_DIGEST_MISMATCH Error raised when the digest is not accepted
      *  - an error status indicating failure
      */
-    QStatus UpdateIdentity(const qcc::IdentityCertificate* identityCertificateChain, size_t identityCertificateChainSize,
-                           const PermissionPolicy::Rule* manifest, size_t manifestSize);
+    QStatus UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainSize,
+                           const Manifest* manifest, size_t manifestCount);
 
     /**
      * This method allows an admin to install the permission policy to the
@@ -302,6 +318,11 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * This method allows the admin to install a membership cert chain to the
      * application.
      *
+     * It is highly recommended that element 0 of certificateChain, the peer's
+     * end entity certificate, be of type qcc::MembershipCertificate, so that the correct
+     * Extended Key Usage (EKU) is set. The remaining certificates in the chain can be
+     * of this or the base CertificateX509 type.
+     *
      * @param[in] certificateChain the membership certificate chain. It can be a
      *                             single certificate if it is issued by the security
      *                             group authority.
@@ -315,7 +336,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_INVALID_CERTIFICATE Error raised when the membership certificate is not valid.
      *  - an error status indicating failure
      */
-    QStatus InstallMembership(const qcc::MembershipCertificate* certificateChain, size_t certificateChainSize);
+    QStatus InstallMembership(const qcc::CertificateX509* certificateChain, size_t certificateChainSize);
 
     /**
      * This method allows an admin to remove a membership certificate chain from the
@@ -331,6 +352,20 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus RemoveMembership(const qcc::String& serial, const qcc::KeyInfoNISTP256& issuerKeyInfo);
+
+    /**
+     * This method allows an admin to install one or more additional signed manifests to the application.
+     *
+     * @param[in] manifests array of signed manifests to append to the application's existing set of manifests
+     * @param[in] manifestCount number of manifests in the array
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - #ER_PERMISSION_DENIED Error raised when the caller does not have permission
+     *  - #ER_DIGEST_MISMATCH Error raised when none of the manifests are validated by the application
+     *  - an error status indicating failure
+     */
+    QStatus InstallManifests(const Manifest* manifests, size_t manifestCount);
 
     /**
      * Get the ManagedApplication version
@@ -355,15 +390,15 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetIdentity(MsgArg& identityCertificate);
 
     /**
-     * Get the manifest
+     * Get the manifests
      *
-     * @param[out] manifest the manifest
+     * @param[out] manifests the manifest
      *
      * @return
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetManifest(MsgArg& manifest);
+    QStatus GetManifests(std::vector<Manifest>& manifest);
 
     /**
      * Get the serial number and issuer of the currently installed identity certificate.
