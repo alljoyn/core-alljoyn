@@ -614,7 +614,7 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
         goto DoneValidation;
     }
     /* install the manifest */
-    status = StoreManifest(args[6]);
+    status = StoreManifests(args[6], false);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store manifest"));
         goto DoneValidation;
@@ -1190,7 +1190,7 @@ void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* memb
     if (ER_OK != status) {
         goto Exit;
     }
-    status = StoreManifest((MsgArg&) *msg->GetArg(1));
+    status = StoreManifests((MsgArg&) *msg->GetArg(1), false);
 Exit:
     if (ER_OK != status) {
         /* restore the identity cert chain */
@@ -1261,6 +1261,7 @@ QStatus PermissionMgmtObj::GetIdentityLeafCert(IdentityCertificate& cert)
     return LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
 }
 
+/* This is now only used for manifest templates. Manifest objects compute digests internally. */
 QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t digestSize)
 {
     if (digestSize != Crypto_SHA256::DIGEST_SIZE) {
@@ -1271,71 +1272,114 @@ QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const Perm
     return marshaller.Digest(rules, count, digest, Crypto_SHA256::DIGEST_SIZE);
 }
 
-static QStatus GetManifestFromMessageArg(BusAttachment& bus, const MsgArg& manifestArg, PermissionPolicy::Rule** rules, size_t* count, uint8_t* digest)
+QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool append)
 {
-    QStatus status = PermissionPolicy::ParseRules(manifestArg, rules, count);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("GetManifestFromMessageArg failed to retrieve rules from msgarg status 0x%x", status));
-        return status;
-    }
-    return PermissionMgmtObj::GenerateManifestDigest(bus, *rules, *count, digest, Crypto_SHA256::DIGEST_SIZE);
-}
+    QCC_DbgTrace(("%s", __FUNCTION__));
 
-QStatus PermissionMgmtObj::StoreManifest(MsgArg& manifestArg)
-{
-    size_t count = 0;
-    PermissionPolicy::Rule* rules = NULL;
     IdentityCertificate cert;
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    QStatus status = GetManifestFromMessageArg(bus, manifestArg, &rules, &count, digest);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to retrieve rules from msgarg status 0x%x", status));
-        goto DoneValidation;
-    }
-    if (count == 0) {
-        status = ER_INVALID_DATA;
-        goto DoneValidation;
-    }
-    /* retrieve the identity leaf cert */
-    status = GetIdentityLeafCert(cert);
-    if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreManifest failed to retrieve identify cert status 0x%x\n", status));
-        status = ER_CERTIFICATE_NOT_FOUND;
-        goto DoneValidation;
-    }
-    /* compare the digests */
-    if (memcmp(digest, cert.GetDigest(), Crypto_SHA256::DIGEST_SIZE)) {
-        status = ER_DIGEST_MISMATCH;
-        goto DoneValidation;
-    }
+    MsgArg* signedManifestArgArray;
+    size_t signedManifestCount;
+    MsgArg manifestArg;
 
-DoneValidation:
-    if (ER_OK != status) {
-        delete [] rules;
-        return status;
-    }
-    /* store the manifest */
-    PermissionPolicy policy;
-    PermissionPolicy::Acl acls[1];
-    acls[0].SetRules(count, rules);
-    policy.SetAcls(1, acls);
-    delete [] rules;
-    rules = NULL;
-
-    uint8_t* buf = NULL;
-    size_t size;
-    Message tmpMsg(bus);
-    DefaultPolicyMarshaller marshaller(tmpMsg);
-    status = policy.Export(marshaller, &buf, &size);
+    QStatus status = signedManifestsArg.Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgArray);
     if (ER_OK != status) {
         return status;
     }
-    /* store the manifest into the key store */
+    if (signedManifestCount == 0) {
+        return ER_OK; /* nothing to do */
+    }
+
+    /* Get our identity cert and our issuer's certificate (if we have it), and verify manifest signatures. */
+    KeyStore::Key identityHead;
+    GetACLKey(ENTRY_IDENTITY, identityHead);
+    std::vector<KeyBlob*> blobs;
+    status = RetrieveIdentityCertChainBlobs(ca, identityHead, blobs);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (blobs.size() == 0) {
+        return ER_CERTIFICATE_NOT_FOUND;
+    }
+
+    /* blobs[0] is the identity cert. If not self-signed, blobs[1] will be the issuer. */
+    CertificateX509 identityCert;
+    std::vector<const ECCPublicKey*> issuerPublicKeys;
+    String der((const char*)blobs[0]->GetData(), blobs[0]->GetSize());
+    status = identityCert.DecodeCertificateDER(der);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not decode identity certificate"));
+        return status;
+    }
+    std::vector<uint8_t> identityThumbprint(Crypto_SHA256::DIGEST_SIZE);
+    status = identityCert.GetSHA256Thumbprint(identityThumbprint.data());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not get identity certificate's thumbprint"));
+        return status;
+    }
+
+    /* Reject any manifests whose thumbprint is not our identity certificate's thumbprint. */
+    std::vector<Manifest> passedManifests;
+
+    for (size_t i = 0; i < signedManifestCount; i++) {
+        /* If one manifest fails to validate or install for whatever reason, try the rest.
+         * Only if all fail do we return failure to caller.
+         */
+        Manifest signedManifest;
+        status = signedManifest->SetFromMsgArg(signedManifestArgArray[i]);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not load manifest from MsgArg"));
+            continue;
+        }
+
+        std::vector<uint8_t> manifestThumbprint(signedManifest->GetThumbprint());
+        if (identityThumbprint != manifestThumbprint) {
+            QCC_DbgTrace(("Manifest %u is for thumbprint %s, not for our identity certificate thumbprint %s",
+                          i, BytesToHexString(manifestThumbprint.data(), manifestThumbprint.size()).c_str(),
+                          BytesToHexString(identityThumbprint.data(), identityThumbprint.size()).c_str()));
+            continue;
+        }
+
+        passedManifests.push_back(signedManifest);
+    }
+
+    if (0 == passedManifests.size()) {
+        QCC_LogError(ER_DIGEST_MISMATCH, ("No digests passed validation"));
+        return ER_DIGEST_MISMATCH;
+    }
+
+    if (append) {
+        /* Retrieve the current set of manifests from the keystore first, and combine them with
+         * the new set.
+         */
+        std::vector<Manifest> previousManifests;
+        status = RetrieveManifests(previousManifests);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not retrieve already-installed manifests"));
+            return status;
+        }
+
+        passedManifests.insert(passedManifests.begin(), previousManifests.begin(), previousManifests.end());
+    }
+
+    /* store the manifests into the key store */
     KeyStore::Key key;
     GetACLKey(ENTRY_MANIFEST, key);
-    KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
-    delete [] buf;
-    return ca->StoreKey(key, kb);
+    std::vector<uint8_t> serializedManifestArray;
+    status = _Manifest::SerializeArray(passedManifests, serializedManifestArray);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to serialize array of passed manifests for storage"));
+        return status;
+    }
+    KeyBlob kb(serializedManifestArray.data(), serializedManifestArray.size(), KeyBlob::GENERIC);
+    status = ca->StoreKey(key, kb);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to store manifests in keystore"));
+        return status;
+    }
+
+    QCC_ASSERT(ER_OK == status);
+    return status;
+
 }
 
 static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)
@@ -1631,6 +1675,21 @@ void PermissionMgmtObj::EndManagement(const InterfaceDescription::Member* member
     }
 
     MethodReply(msg, status);
+}
+
+void PermissionMgmtObj::InstallManifests(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_UNUSED(member);
+
+    QStatus status = StoreManifests((MsgArg&)*msg->GetArg(0), true);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("%s: Could not StoreManifests", __FUNCTION__));
+    }
+
+    QStatus rStatus = MethodReply(msg, status);
+    if (ER_OK != rStatus) {
+        QCC_LogError(rStatus, ("%s: Failed to MethodReply", __FUNCTION__));
+    }
 }
 
 QStatus PermissionMgmtObj::GetAllMembershipCerts(MembershipCertMap& certMap, bool loadCert)
@@ -1976,42 +2035,67 @@ Exit:
     return status;
 }
 
-QStatus PermissionMgmtObj::ParseSendManifest(Message& msg, PeerState& peerState)
+QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState)
 {
-    size_t count = 0;
-    PermissionPolicy::Rule* rules = NULL;
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
     std::vector<ECCPublicKey> issuerKeys;
-    QStatus status = GetManifestFromMessageArg(bus, *(msg->GetArg(0)), &rules, &count, digest);
+    MsgArg* signedManifestArgs;
+    size_t signedManifestCount;
+    QStatus status = msg->GetArg(0)->Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgs);
     if (ER_OK != status) {
-        goto DoneValidation;
+        return status;
     }
-    if (count == 0) {
-        status = ER_OK; /* nothing to do */
-        goto DoneValidation;
-    }
-    /* retrieve the peer's manifest digest from keystore */
-    uint8_t storedDigest[Crypto_SHA256::DIGEST_SIZE];
-    status = GetConnectedPeerPublicKey(peerState->GetGuid(), NULL, storedDigest, issuerKeys);
-    if (ER_OK != status) {
-        status = ER_MISSING_DIGEST_IN_CERTIFICATE;
-        goto DoneValidation;
+    if (signedManifestCount == 0) {
+        return ER_OK; /* nothing to do */
     }
 
-    /* compare the digests */
-    if (memcmp(digest, storedDigest, Crypto_SHA256::DIGEST_SIZE)) {
-        status = ER_DIGEST_MISMATCH;
-        goto DoneValidation;
-    }
-    /* store the manifest in the peer state object */
-    delete [] peerState->manifest;
-    peerState->manifest = rules;
-    peerState->manifestSize = count;
-    return ER_OK;  /* done */
+    ECCPublicKey peerPublicKey;
+    std::vector<ECCPublicKey> issuerPublicKeys;
+    qcc::String authMechanism;
+    bool publicKeyFound = false;
+    uint8_t identityCertificateThumbprint[Crypto_SHA256::DIGEST_SIZE];
 
-DoneValidation:
-    delete [] rules;
-    return status;
+    status = GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, identityCertificateThumbprint, issuerPublicKeys);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not get metadata for peer guid %s", peerState->GetGuid().ToString().c_str()));
+        return status;
+    }
+
+    std::vector<uint8_t> thumbprintVector(Crypto_SHA256::DIGEST_SIZE);
+    thumbprintVector.assign(identityCertificateThumbprint, identityCertificateThumbprint + Crypto_SHA256::DIGEST_SIZE);
+
+    for (size_t i = 0; i < signedManifestCount; i++) {
+        Manifest signedManifest;
+        status = signedManifest->SetFromMsgArg(signedManifestArgs[i]);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not import manifest from MsgArg"));
+            continue;
+        }
+
+        status = ER_CRYPTO_ERROR;
+        for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
+            status = signedManifest->VerifyByThumbprint(thumbprintVector, &(issuerPublicKeys[i]));
+            if (ER_OK == status) {
+                break;
+            }
+        }
+
+        if (ER_OK != status) {
+            continue;
+        }
+
+        /* store the manifest in the peer state object */
+        status = peerState->StoreManifest(signedManifest);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not store manifest in PeerState"));
+            continue;
+        }
+    }
+
+    /* It's possible no manifests get installed if none validate. Don't fail because that will
+     * prevent the secure session from being established, and the peers may only do things that
+     * don't require a manifest. And if they do, things will fail then.
+     */
+    return ER_OK;
 }
 
 QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
@@ -2293,7 +2377,7 @@ void PermissionMgmtObj::Reset(const InterfaceDescription::Member* member, Messag
     MethodReply(msg, Reset());
 }
 
-QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys)
+QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* identityCertificateThumbprint, std::vector<ECCPublicKey>& issuerPublicKeys)
 {
     CredentialAccessor ca(bus);
     KeyBlob kb;
@@ -2304,7 +2388,7 @@ QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc
     }
     KeyBlob msBlob;
     publicKeyFound = false;
-    status = KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey, manifestDigest, issuerPublicKeys, publicKeyFound);
+    status = KeyExchanger::ParsePeerSecretRecord(kb, msBlob, publicKey, identityCertificateThumbprint, issuerPublicKeys, publicKeyFound);
     if (ER_OK != status) {
         return status;
     }
@@ -2312,11 +2396,11 @@ QStatus PermissionMgmtObj::GetConnectedPeerAuthMetadata(const GUID128& guid, qcc
     return status;
 }
 
-QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys)
+QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey, std::vector<ECCPublicKey>& issuerPublicKeys)
 {
     bool publicKeyFound = false;
     qcc::String authMechanism;
-    QStatus status = GetConnectedPeerAuthMetadata(guid, authMechanism, publicKeyFound, publicKey, manifestDigest, issuerPublicKeys);
+    QStatus status = GetConnectedPeerAuthMetadata(guid, authMechanism, publicKeyFound, publicKey, nullptr, issuerPublicKeys);
     if (ER_OK != status) {
         return status;
     }
@@ -2329,7 +2413,7 @@ QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::E
 QStatus PermissionMgmtObj::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
 {
     std::vector<ECCPublicKey> issuerPublicKeys;
-    return GetConnectedPeerPublicKey(guid, publicKey, NULL, issuerPublicKeys);
+    return GetConnectedPeerPublicKey(guid, publicKey, issuerPublicKeys);
 }
 
 QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rules, size_t count)
@@ -2391,7 +2475,7 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
     return status;
 }
 
-QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule* manifest, size_t* count)
+QStatus PermissionMgmtObj::RetrieveManifests(std::vector<Manifest>& manifests)
 {
     KeyBlob kb;
     KeyStore::Key key;
@@ -2403,28 +2487,10 @@ QStatus PermissionMgmtObj::RetrieveManifest(PermissionPolicy::Rule* manifest, si
         }
         return status;
     }
-    Message tmpMsg(bus);
-    DefaultPolicyMarshaller marshaller(tmpMsg);
-    PermissionPolicy policy;
-    status = policy.Import(marshaller, kb.GetData(), kb.GetSize());
+    status = _Manifest::DeserializeArray(kb.GetData(), kb.GetSize(), manifests);
     if (ER_OK != status) {
+        QCC_LogError(status, ("Could not deserialize array of manifests"));
         return status;
-    }
-    if (policy.GetAclsSize() == 0) {
-        return ER_MANIFEST_NOT_FOUND;
-    }
-    const PermissionPolicy::Acl* acls = policy.GetAcls();
-    if (manifest == NULL) {
-        *count = acls[0].GetRulesSize();
-    } else {
-        if (*count < acls[0].GetRulesSize()) {
-            status = ER_BUFFER_TOO_SMALL;
-        } else {
-            *count = acls[0].GetRulesSize();
-        }
-        for (size_t i = 0; i < *count; ++i) {
-            manifest[i] = acls[0].GetRules()[i];
-        }
     }
     return status;
 }

@@ -57,6 +57,7 @@ class TestSecurityManager :
     DefaultECDHEAuthListener authListener;
     Crypto_ECC caKeyPair;
     KeyInfoNISTP256 caPublicKeyInfo;
+    CertificateX509 caCertificate;
     GUID128 adminGroup;
     GUID128 identityGuid;
     string identityName;
@@ -69,7 +70,8 @@ class TestSecurityManager :
                              SessionLostReason reason);
 
     void IssueCertificate(const ECCPublicKey& appPubKey,
-                          CertificateX509& cert);
+                          CertificateX509& cert,
+                          bool isCA = false);
 
     void GenerateIdentityCertificate(const ECCPublicKey& appPubKey,
                                      const PermissionPolicy::Acl& manifest,
