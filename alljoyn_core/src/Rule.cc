@@ -127,7 +127,7 @@ Rule::Rule(const char* ruleSpec, QStatus* outStatus) : type(MESSAGE_INVALID), se
     }
 }
 
-bool Rule::IsMatch(const Message& msg) const
+bool Rule::IsMatch(const Message& msg, std::set<qcc::String>* cachedWhoImplements /* = nullptr */) const
 {
     /* The fields of a rule (if specified) are logically anded together */
     if ((type != MESSAGE_INVALID) && (type != msg->GetType())) {
@@ -173,51 +173,61 @@ bool Rule::IsMatch(const Message& msg) const
         }
     }
     if (!implements.empty()) {
-        if (strcmp(msg->GetInterface(), "org.alljoyn.About") || strcmp(msg->GetMemberName(), "Announce")) {
-            return false;
-        }
+        set<String> nonCacheInterfaces;
+        set<String>* interfaces = (cachedWhoImplements == nullptr) ? &nonCacheInterfaces : cachedWhoImplements;
         /*
-         * Clone the message since this message is unmarshalled by the
-         * LocalEndpoint too and the process of unmarshalling is not
-         * thread-safe.
+         * Parse the message for the list of interfaces if there's a cache provided OR the cache is still empty.
+         * This is to avoid having to repeatedly call UnmarshalArgs as it is a costly operation.
          */
-        Message clone = Message(msg, true);
-        QStatus status = clone->UnmarshalArgs("qqa(oas)a{sv}");
-        if (status != ER_OK) {
-            return false;
-        }
-
-        const MsgArg* arg = clone->GetArg(2);
-        if (!arg) {
-            return false;
-        }
-        size_t numObjectDescriptions;
-        MsgArg* objectDescriptions;
-        status = arg->Get("a(oas)", &numObjectDescriptions, &objectDescriptions);
-        if (status != ER_OK) {
-            return false;
-        }
-        set<String> interfaces;
-        for (size_t ob = 0; ob < numObjectDescriptions; ++ob) {
-            char* objectPath;
-            size_t numIntfs;
-            MsgArg* intfs;
-            status = objectDescriptions[ob].Get("(oas)", &objectPath, &numIntfs, &intfs);
+        if (cachedWhoImplements == nullptr || (cachedWhoImplements->size() == 0)) {
+            if (strcmp(msg->GetInterface(), "org.alljoyn.About") || strcmp(msg->GetMemberName(), "Announce")) {
+                return false;
+            }
+            /*
+             * Clone the message since this message is unmarshalled by the
+             * LocalEndpoint too and the process of unmarshalling is not
+             * thread-safe.
+             */
+            Message clone = Message(msg, true);
+            QStatus status = clone->UnmarshalArgs("qqa(oas)a{sv}");
             if (status != ER_OK) {
                 return false;
             }
-            for (size_t in = 0; in < numIntfs; ++in) {
-                char* intf;
-                status = intfs[in].Get("s", &intf);
+
+            const MsgArg* arg = clone->GetArg(2);
+            if (!arg) {
+                return false;
+            }
+            size_t numObjectDescriptions;
+            MsgArg* objectDescriptions;
+            status = arg->Get("a(oas)", &numObjectDescriptions, &objectDescriptions);
+            if (status != ER_OK) {
+                return false;
+            }
+            for (size_t ob = 0; ob < numObjectDescriptions; ++ob) {
+                char* objectPath;
+                size_t numIntfs;
+                MsgArg* intfs;
+                status = objectDescriptions[ob].Get("(oas)", &objectPath, &numIntfs, &intfs);
                 if (status != ER_OK) {
                     return false;
                 }
-                interfaces.insert(intf);
+                for (size_t in = 0; in < numIntfs; ++in) {
+                    char* intf;
+                    status = intfs[in].Get("s", &intf);
+                    if (status != ER_OK) {
+                        return false;
+                    }
+                    interfaces->insert(intf);
+                }
             }
         }
+        /*
+         * Compare 'implements' interfaces against the message.
+         */
         size_t numMatches = 0;
         for (set<String>::const_iterator im = implements.begin(); im != implements.end(); ++im) {
-            for (set<String>::const_iterator in = interfaces.begin(); in != interfaces.end(); ++in) {
+            for (set<String>::const_iterator in = interfaces->begin(); in != interfaces->end(); ++in) {
                 if (WildcardMatch(*in, *im) == 0) {
                     ++numMatches;
                     break;
