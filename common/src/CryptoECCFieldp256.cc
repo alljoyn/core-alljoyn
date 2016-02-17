@@ -24,7 +24,7 @@
 #include <qcc/CryptoECCfp.h>
 #include <qcc/CryptoECCMath.h>
 
-#if defined(_WIN32) & defined(_umul128)
+#if defined(_WIN32) && defined(_umul128)
 #include <intrin.h>
 #pragma intrinsic(_umul128)
 #endif
