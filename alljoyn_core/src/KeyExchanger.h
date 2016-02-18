@@ -216,7 +216,7 @@ class KeyExchangerECDHE : public KeyExchanger {
     virtual QStatus GenerateLocalVerifier(uint8_t* verifier, size_t verifierLen);
     virtual QStatus GenerateRemoteVerifier(uint8_t* verifier, size_t verifierLen);
     virtual QStatus StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4]);
-    QStatus GenerateECDHEKeyPair();
+    virtual QStatus GenerateECDHEKeyPair();
 
     const ECCPublicKey* GetPeerECDHEPublicKey() { return &peerPubKey; }
     const ECCPublicKey* GetECDHEPublicKey();
@@ -347,6 +347,59 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
 
     qcc::String pskName;
     qcc::String pskValue;
+};
+
+class KeyExchangerECDHE_SPEKE : public KeyExchangerECDHE_NULL {
+
+    /*
+     * The ECDHE_SPEKE authentication mechanism is a password authenticated
+     *  key exchange, with similar functionality to ECDHE_PSK.  Unlike ECDHE_PSK,
+     *  ECDHE_SPEKE does not require a high entropy secret.  The use cases for
+     *  ECDHE_SPEKE are the same as those for ECDHE_PSK, (presently) for security
+     *  claiming during onboarding.
+     */
+
+  public:
+    /**
+     * Returns the static name for this authentication method
+     * @return string "ALLJOYN_ECDHE_SPEKE"
+     */
+    static const char* AuthName() { return "ALLJOYN_ECDHE_SPEKE"; }
+
+    KeyExchangerECDHE_SPEKE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE_NULL(initiator, peerObj, bus, listener, peerState) {
+    }
+
+    virtual ~KeyExchangerECDHE_SPEKE() {
+    }
+
+    /*
+     *  EC-SPEKE version of key generation.  Derivation of the base element used
+     *  to compute the public key includes the password, and GUIDs of both
+     *  endpoints.  This function overrides the ECDHE key generation provided
+     *  by the KeyExchangerECDHE_NULL class.
+     *
+     *  This is the only significant difference between ECDHE_NULL and ECDHE_SPEKE.
+     */
+    QStatus GenerateECDHEKeyPair();
+
+    const uint32_t GetSuite() {
+        return AUTH_SUITE_ECDHE_SPEKE;
+    }
+    const char* GetSuiteName() {
+        return AuthName();
+    }
+
+  private:
+    /**
+     * Assignment not allowed
+     */
+    KeyExchangerECDHE_SPEKE& operator=(const KeyExchangerECDHE_SPEKE& other);
+
+    /**
+     * Copy constructor not allowed
+     */
+    KeyExchangerECDHE_SPEKE(const KeyExchangerECDHE_SPEKE& other);
+
 };
 
 class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {

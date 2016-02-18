@@ -743,7 +743,7 @@ Crypto_ECC::Crypto_ECC()
     }
 
 Exit:
-
+    QCC_ASSERT(status == ER_OK);
     if (ER_OK != status) {
         /*
          *  Don't clean up any of the BCrypt Algorithm provider handles.
@@ -755,7 +755,6 @@ Exit:
          * But to keep things clean, make sure eccState isn't pointing at anything partly initialized.
          */
         eccState = NULL;
-
         abort();
     }
 
@@ -794,6 +793,7 @@ void Crypto_ECC::SetDHPublicKey(const ECCPublicKey* pubKey)
                                      cngCache.ecdhHandles[CurveType],
                                      &eccState->ecdhPublicKey);
 
+    QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
         abort();
     }
@@ -832,6 +832,7 @@ void Crypto_ECC::SetDHPrivateKey(const ECCPrivateKey* privateKey)
                                       cngCache.ecdhHandles[CurveType],
                                       &eccState->ecdhPrivateKey);
 
+    QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
         abort();
     }
@@ -848,6 +849,24 @@ QStatus Crypto_ECC::GenerateDHKeyPair() {
                                       cngCache.ecdhHandles[CurveType],
                                       &eccState->ecdhPublicKey,
                                       &eccState->ecdhPrivateKey);
+}
+
+
+QStatus Crypto_ECC::GenerateSPEKEKeyPair(const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID) {
+
+    /*
+     * CNG does not implement EC-SPEKE, so the builtin key EC-SPEKE key generation is used.
+     * We need to call SetDHPrivateKey and SetDHPublic so that the CNG-specific part of ECCState is properly updated.
+     */
+    QStatus status = Crypto_ECC_GenerateSPEKEKeyPair(&eccState->dhPublicKey, &eccState->dhPrivateKey, pw, pwLen, clientGUID, serviceGUID);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    this->SetDHPublicKey(&eccState->dhPublicKey);
+    this->SetDHPrivateKey(&eccState->dhPrivateKey);
+
+    return status;
 }
 
 QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCSecret* secret)
