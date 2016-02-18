@@ -61,8 +61,7 @@ namespace qcc {
 
 /*
  * This file exports the functions ECDH_generate, ECDH_derive, and
- * optionally, ECDSA_sign and ECDSA_verify.  It depends on a function
- * get_random_bytes, which is expected to be of cryptographic quality.
+ * optionally, ECDSA_sign and ECDSA_verify.
  */
 
 /*
@@ -1545,13 +1544,6 @@ char*ECC_feature_list(void)
 }
 #endif /* ECC_TEST */
 
-int get_random_bytes(void* buf, int len) {
-    QStatus status = qcc::Crypto_GetRandomBytes((uint8_t*) buf, len);
-    if (status == ER_OK) {
-        return 0;
-    }
-    return -1;
-}
 
 /*
  * convert a host uint32_t array to a big-endian byte array
@@ -1606,6 +1598,260 @@ QStatus Crypto_ECC_GenerateSharedSecret(const ECCPublicKey* peerPublicKey, const
     return ER_OK;
 }
 
+/*
+ * Not a general-purpose implementation of REDP-1 from IEEE 1363.
+ * Only used in AllJoyn to derive two basepoints, from the fixed constants
+ * "ALLJOYN-ECSPEKE-1" and "ALLJOYN-ECSPEKE-2"
+ * pi is not treated as a secret value.
+ * This function is not constant-time.
+ */
+QStatus ec_REDP1(const uint8_t* pi, size_t len, ecpoint_t* Q, ec_t* curve)
+{
+    QStatus status = ER_OK;
+    Crypto_SHA256 hash;
+    uint8_t digest_i1[Crypto_SHA256::DIGEST_SIZE];
+    uint8_t bytes_O3[Crypto_SHA256::DIGEST_SIZE];
+    digit256_t x, alpha, beta;
+    digit256_t tmp;
+    digit_t temps[P256_TEMPS];
+    int mu, carry, i;
+    const digit256_tc P256_A = { 0xFFFFFFFFFFFFFFFCULL, 0x00000000FFFFFFFFULL, 0x0000000000000000ULL, 0xFFFFFFFF00000001ULL };
+    const digit256_tc P256_B = { 0x3BCE3C3E27D2604BULL, 0x651D06B0CC53B0F6ULL, 0xB3EBBD55769886BCULL, 0x5AC635D8AA3A93E7ULL };
 
+    /* Steps and notation follow IEEE 1363.2 Section 8.2.17 "[EC]REDP-1" */
+
+    /* Hash pi to an octet string --  Step (a)*/
+    status = hash.Init();
+    if (status != ER_OK) {
+        goto Exit;
+    }
+    status = hash.Update(pi, len);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+    status = hash.GetDigest(digest_i1);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+
+
+    while (1) {
+        /* mu is rightmost bit of digest_i1 */
+        mu = digest_i1[sizeof(digest_i1) - 1] % 2;
+
+        /* Hash the hash -- Steps (b), (c), (d). */
+        status = hash.Init();
+        if (status != ER_OK) {
+            goto Exit;
+        }
+        status = hash.Update(digest_i1, sizeof(digest_i1));
+        if (status != ER_OK) {
+            goto Exit;
+        }
+        status = hash.GetDigest(bytes_O3);
+        if (status != ER_OK) {
+            goto Exit;
+        }
+
+        /* Convert octets O3 to the field element x -- Step (e) */
+        fpimport_p256(bytes_O3, x, temps, TRUE);
+
+        /* Compute alpha = x^3 + a*x + b (mod p)  */
+        fpmul_p256(x, x, alpha, temps);                     /* alpha = x^2 */
+        fpmul_p256(alpha, x, alpha, temps);                 /* alpha = x^3 */
+        fpmul_p256(x, P256_A, tmp, temps);                  /* tmp = a*x */
+        fpadd_p256(alpha, tmp, alpha);                      /* alpha = x^3 + a*x */
+        fpadd_p256(alpha, P256_B, alpha);                   /* alpha = x^3 + a*x + b */
+
+        /* Compute beta = a sqrt of alpha, if possible, if not begin a new iteration. */
+        if (fpissquare_p256(alpha, temps)) {
+            fpsqrt_p256(alpha, beta, temps);
+        } else {
+            /* Increment digest_i1 (as a big endian integer) then start a new iteration */
+            carry = 1;
+            for (i = sizeof(digest_i1) - 1; i >= 0; i--) {
+                digest_i1[i] += carry;
+                carry = (digest_i1[i] == 0);
+            }
+
+            if (carry) {
+                /* It's overflown sizeof(digest_i1), fail. The probability of
+                 * this occuring is negligible.
+                 */
+                status = ER_CRYPTO_ERROR;
+                goto Exit;
+            }
+            continue;
+        }
+
+        if (mu) {
+            fpneg_p256(beta);
+        }
+
+        /* Output (x,beta) */
+        memcpy(Q->x, x, sizeof(digit256_t));
+        memcpy(Q->y, beta, sizeof(digit256_t));
+        break;
+    }
+
+    /* Make sure the point is valid, and is not the identity. */
+    if (!ecpoint_validation(Q, curve)) {
+        status = ER_CRYPTO_ERROR;
+        goto Exit;
+    }
+
+Exit:
+    /* Nothing to zero since inputs are public. */
+    return status;
+}
+
+/* Computes R = Q1*Q2^pi */
+QStatus ec_REDP2(const uint8_t pi[sizeof(digit256_t)], const ecpoint_t* Q1, const ecpoint_t* Q2, ecpoint_t* R, ec_t* curve)
+{
+    digit256_t t;
+    digit_t temps[P256_TEMPS];
+    QStatus status = ER_OK;
+
+    fpimport_p256(pi, t, temps, TRUE);
+    status = ec_scalarmul(Q2, t, R, curve);             /* R = Q2^t*/
+    ec_add(R, Q1, curve);                               /* R = Q1*Q2^t*/
+
+    fpzero_p256(t);
+    ClearMemory(temps, P256_TEMPS * sizeof(digit_t));
+
+    return status;
+}
+
+/*
+ * Get the two precomputed points
+ * Q1 = REDP-1(ALLJOYN-ECSPEKE-1), Q2 = REDP-1(ALLJOYN-ECSPEKE-2).
+ */
+void ec_get_REDP_basepoints(ecpoint_t* Q1, ecpoint_t* Q2, curveid_t curveid)
+{
+    const digit256_tc x1 = { 0x9F011EB0E927BBB7ULL, 0xDCD485337A6C1035ULL, 0x0AF630115AA734C0ULL, 0xE7F425D4C27D2BA1ULL };
+    const digit256_tc y1 = { 0xDD836A9DF0702B55ULL, 0x8A4AE230F7C50D50ULL, 0x4115DB75D35208F6ULL, 0x8B4ADF4EBD690598ULL };
+    const digit256_tc x2 = { 0x4CEC1D03497217AAULL, 0x966C293CD3634462ULL, 0xE4E36BBB81CD843DULL, 0xF9F2EF394FCB375EULL };
+    const digit256_tc y2 = { 0x40D6ACB2274CCFC2ULL, 0x5EAAF49A32B58CFAULL, 0x77999C42D8DDAB41ULL, 0xF5EFE6B53FF34102ULL };
+
+    QCC_ASSERT(curveid == NISTP256r1);
+
+    fpcopy_p256(x1, Q1->x);
+    fpcopy_p256(y1, Q1->y);
+
+    fpcopy_p256(x2, Q2->x);
+    fpcopy_p256(y2, Q2->y);
+}
+
+static QStatus GenerateSPEKEKeyPair_inner(ecpoint_t* publicKey, digit256_t privateKey, const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
+{
+    QStatus status;
+    Crypto_SHA256 hash;
+    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
+    digit_t temps[P256_TEMPS];
+    ecpoint_t Q1, Q2;               /* Base points for REDP-2. */
+    ecpoint_t B;                    /* Base point for ECDH, derived from pw. */
+    ec_t curve;
+
+    if (clientGUID == NULL || serviceGUID == NULL || pw == NULL || pwLen == 0) {
+        return ER_CRYPTO_ILLEGAL_PARAMETERS;
+    }
+
+    status = ec_getcurve(&curve, NISTP256r1);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+
+    status = hash.Init();
+    if (status != ER_OK) {
+        goto Exit;
+    }
+    status = hash.Update(pw, pwLen);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+    status = hash.Update(clientGUID.GetBytes(), GUID128::SIZE);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+    status = hash.Update(serviceGUID.GetBytes(), GUID128::SIZE);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+    status = hash.GetDigest(digest);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+
+    /* Compute basepoint B for keypair. */
+    ec_get_REDP_basepoints(&Q1, &Q2, curve.curveid);
+    status = ec_REDP2(digest, &Q1, &Q2, &B, &curve);
+    if (status != ER_OK) {
+        goto Exit;
+    }
+
+    /* Compute private key. */
+    do {
+        status = Crypto_GetRandomBytes((uint8_t*)privateKey, sizeof(digit256_t));
+        if (status != ER_OK) {
+            goto Exit;
+        }
+    } while (!validate_256(privateKey, curve.order));
+
+    status = ec_scalarmul(&B, privateKey, publicKey, &curve);                /* Public key publicKey = B^r */
+
+Exit:
+    fpzero_p256(B.x);
+    fpzero_p256(B.y);
+    ClearMemory(temps, P256_TEMPS * sizeof(digit_t));
+    ClearMemory(digest, Crypto_SHA256::DIGEST_SIZE);
+    ec_freecurve(&curve);
+
+    return status;
+}
+
+QStatus Crypto_ECC_GenerateSPEKEKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey, const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
+{
+    QStatus status;
+    ecpoint_t pub;
+    digit256_t priv;
+    affine_point_t pubTemp;
+    bigval_t privTemp;
+
+    if (publicKey == NULL || privateKey == NULL) {
+        return ER_CRYPTO_ILLEGAL_PARAMETERS;
+    }
+
+    status = GenerateSPEKEKeyPair_inner(&pub, priv, pw, pwLen, clientGUID, serviceGUID);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    /* Convert pub to ecc_publickey then ECCPublicKey */
+    const size_t coordinateSize = publicKey->GetCoordinateSize();
+    uint8_t* X = new uint8_t[coordinateSize];
+    uint8_t* Y = new uint8_t[coordinateSize];
+    digit256_to_bigval(pub.x, &(pubTemp.x));
+    digit256_to_bigval(pub.y, &(pubTemp.y));
+    bigval_to_binary(&pubTemp.x, X, coordinateSize);
+    bigval_to_binary(&pubTemp.y, Y, coordinateSize);
+
+    /* Convert priv to ecc_privatekey then ECCPrivateKey */
+    uint8_t* D = new uint8_t[privateKey->GetDSize()];
+    digit256_to_bigval(priv, &privTemp);
+    bigval_to_binary(&privTemp, D, privateKey->GetDSize());
+
+    status = publicKey->Import(X, coordinateSize, Y, coordinateSize);
+    if (ER_OK == status) {
+        status = privateKey->Import(D, privateKey->GetDSize());
+    }
+
+    delete[] X;
+    delete[] Y;
+    ClearMemory(&privTemp, BIGLEN);
+    qcc::ClearMemory(D, privateKey->GetDSize());
+    delete[] D;
+
+    return status;
+}
 
 } /*namespace qcc*/

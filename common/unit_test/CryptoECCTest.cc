@@ -28,7 +28,7 @@ class CryptoECCTest : public testing::Test {
 };
 
 /* used for injecting errors */
-static int ToggleRandomBit(void* buf, size_t len)
+static QStatus ToggleRandomBit(void* buf, size_t len)
 {
     struct {
         uint64_t byte;
@@ -36,16 +36,16 @@ static int ToggleRandomBit(void* buf, size_t len)
     } bytebit;
 
 
-    int rv = get_random_bytes(&bytebit, sizeof (bytebit));
-    if (rv) {
-        return rv;
+    QStatus status = Crypto_GetRandomBytes((uint8_t*)(&bytebit), sizeof (bytebit));
+    if (status != ER_OK) {
+        return status;
     }
     bytebit.byte %= len;
     bytebit.bit %= 8;
 
     ((uint8_t*)buf)[bytebit.byte] ^= 1 << bytebit.bit;
 
-    return 0;
+    return ER_OK;
 }
 
 static void AffinePoint2PublicKey(affine_point_t& ap, ECCPublicKey& publicKey) {
@@ -70,7 +70,7 @@ static void ECDHFullPointTest(int iteration, bool injectError)
     AffinePoint2PublicKey(bobPublic, bobECCPublicKey);
     EXPECT_TRUE(ECDH_derive_pt(&aliceFinal, &alicePrivate, &bobPublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Alice's point";
     if (injectError) {
-        EXPECT_EQ(0, ToggleRandomBit(&bobPrivate, sizeof(bobPrivate) - sizeof(int))) << "ECDHFullPointTest [" << iteration << "]: Fail to toggle random bits";
+        EXPECT_EQ(ER_OK, ToggleRandomBit(&bobPrivate, sizeof(bobPrivate) - sizeof(int))) << "ECDHFullPointTest [" << iteration << "]: Fail to toggle random bits";
     }
     EXPECT_TRUE(ECDH_derive_pt(&bobFinal, &bobPrivate, &alicePublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Bob's point";
 
@@ -155,7 +155,7 @@ static void ECDSATest(int iteration, bool injectError,  int dgstlen)
     dgst = new uint8_t[dgstlen];
     ASSERT_FALSE(NULL == dgst) << "ECDSATest [" << iteration << "]: error allocating memory";
 
-    ASSERT_EQ(0, get_random_bytes(dgst, dgstlen)) << "ECDSATest [" << iteration << "]: get_random_bytes failed";
+    ASSERT_EQ(ER_OK, Crypto_GetRandomBytes(dgst, dgstlen)) << "ECDSATest [" << iteration << "]: Crypto_GetRandomBytes failed";
 
     ECCSignature sig;
     EXPECT_EQ(ER_OK, ecc.DSASign(dgst, dgstlen, &sig)) << "ECDSATest [" << iteration << "]: error signing";
@@ -196,7 +196,6 @@ static void BinaryConversionTest(size_t iteration)
     uint8_t c_binary[BYTEVECLEN];
     uint8_t c_binary_via_bigval[BYTEVECLEN];
 
-    int rv;
     unsigned s;
     size_t a_len;
     size_t b_len;
@@ -204,10 +203,8 @@ static void BinaryConversionTest(size_t iteration)
     int full_b; /* ditto */
     int i;
 
-    rv = get_random_bytes(&a_len, sizeof(size_t));
-    rv |= get_random_bytes(&b_len, sizeof(size_t));
-
-    EXPECT_FALSE(rv) << "get_random_bytes a_len and b_len failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes((uint8_t*) &a_len, sizeof(size_t))) << "Crypto_GetRandomBytes failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes((uint8_t*) &b_len, sizeof(size_t))) << "Crypto_GetRandomBytes failed at iteration " << iteration;
 
     /* decide wether to do full or tight testing based on MSB */
     full_a = a_len & 0x80000000;
@@ -219,11 +216,8 @@ static void BinaryConversionTest(size_t iteration)
     memset(a_binary, 0, BYTEVECLEN);
     memset(b_binary, 0, BYTEVECLEN);
 
-    rv = get_random_bytes(a_binary + BYTEVECLEN - a_len, a_len);
-    EXPECT_FALSE(rv) << "get_random_bytes for a failed at iteration " << iteration;
-
-    rv = get_random_bytes(b_binary + BYTEVECLEN - b_len, b_len);
-    EXPECT_FALSE(rv) << "get_random_bytes for b failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes(a_binary + BYTEVECLEN - a_len, a_len)) << "Crypto_GetRandomBytes failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes(b_binary + BYTEVECLEN - b_len, b_len)) << "Crypto_GetRandomBytes failed at iteration " << iteration;
 
     /* cbinary = a_binary + b_binary */
     s = 0;
@@ -341,6 +335,47 @@ TEST_F(CryptoECCTest, ECDHE_ECDSA)
         ECDSATest(i, true, len);
     }
 }
+
+
+
+/**
+ * Test EC-SPEKE key generation.
+ */
+TEST_F(CryptoECCTest, EC_SPEKETest)
+{
+    Crypto_ECC alice;
+    Crypto_ECC bob;
+    uint8_t password[5] = { 1, 2, 3, 4, 5 };
+    uint8_t notPassword[5] = { 5, 4, 3, 2, 1 };
+    GUID128 bobGuid;            // Default constructor will choose random GUIDs
+    GUID128 aliceGuid;
+
+    ECCSecret aliceBobSecret;
+    ECCSecret bobAliceSecret;
+    uint8_t aliceBobDerivedSecret[Crypto_SHA256::DIGEST_SIZE];
+    uint8_t bobAliceDerivedSecret[Crypto_SHA256::DIGEST_SIZE];
+
+    // Generate a shared secret from the same password
+    EXPECT_EQ(ER_OK, alice.GenerateSPEKEKeyPair(password, sizeof(password), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Alice's key";
+    EXPECT_EQ(ER_OK, bob.GenerateSPEKEKeyPair(password, sizeof(password), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Bob's key";
+
+    EXPECT_EQ(ER_OK, alice.GenerateSharedSecret(bob.GetDHPublicKey(), &aliceBobSecret)) << "EC_SPEKETest: Fail to generate shared secret with Alice and Bob";
+    EXPECT_EQ(ER_OK, bob.GenerateSharedSecret(alice.GetDHPublicKey(), &bobAliceSecret)) << "EC_SPEKETest: Fail to generate shared secret with Bob and Alice";
+    EXPECT_EQ(ER_OK, aliceBobSecret.DerivePreMasterSecret(aliceBobDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_EQ(ER_OK, bobAliceSecret.DerivePreMasterSecret(bobAliceDerivedSecret, sizeof(bobAliceDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_EQ(0, memcmp(aliceBobDerivedSecret, bobAliceDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: shared secrets don't match";
+
+    // Repeat key agreement with different passwords. Make sure the shared secrets are different
+    EXPECT_EQ(ER_OK, alice.GenerateSPEKEKeyPair(password, sizeof(password), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Alice's key";
+    EXPECT_EQ(ER_OK, bob.GenerateSPEKEKeyPair(notPassword, sizeof(notPassword), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Bob's key";
+
+    EXPECT_EQ(ER_OK, alice.GenerateSharedSecret(bob.GetDHPublicKey(), &aliceBobSecret)) << "EC_SPEKETest: Fail to generate shared secret with Alice and Bob";
+    EXPECT_EQ(ER_OK, bob.GenerateSharedSecret(alice.GetDHPublicKey(), &bobAliceSecret)) << "EC_SPEKETest: Fail to generate shared secret with Bob and Alice";
+    EXPECT_EQ(ER_OK, aliceBobSecret.DerivePreMasterSecret(aliceBobDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_EQ(ER_OK, bobAliceSecret.DerivePreMasterSecret(bobAliceDerivedSecret, sizeof(bobAliceDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_NE(0, memcmp(aliceBobDerivedSecret, bobAliceDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: shared secrets match with different passwords";
+}
+
 
 /**
  * Test detection of invalid public keys on import.

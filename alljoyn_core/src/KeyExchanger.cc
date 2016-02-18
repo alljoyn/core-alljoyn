@@ -67,6 +67,12 @@ namespace ajn {
 #define PEER_SECRET_RECORD_VERSION 1
 
 /**
+ * If credentials do not have an expiration, expire them after this many
+ * seconds.
+ */
+#define DEFAULT_CRED_EXPIRATION 86400   /* one day */
+
+/**
  * Calculate the size of the Peer secret record.  This record has the
  * following fields:
  *  uint8_t version;
@@ -276,6 +282,48 @@ class SigInfoECC : public SigInfo {
 QStatus KeyExchangerECDHE::GenerateECDHEKeyPair()
 {
     return ecc.GenerateDHKeyPair();
+}
+
+QStatus KeyExchangerECDHE_SPEKE::GenerateECDHEKeyPair()
+{
+    GUID128 localGuid;
+    GUID128 remoteGuid;
+    QStatus status;
+
+    /* Get the GUIDs */
+    status = bus.GetInternal().GetKeyStore().GetGuid(localGuid);
+    if (status != ER_OK) {
+        return status;
+    }
+    remoteGuid = peerState->GetGuid();
+
+    /* Get the password */
+    AuthListener::Credentials creds;
+    uint16_t credsMask = AuthListener::CRED_PASSWORD;
+    qcc::String peerName = bus.GetUniqueName();
+
+    bool ok = listener.RequestCredentials(GetSuiteName(), peerName.c_str(), authCount, "", credsMask, creds);
+    if (!ok) {
+        return ER_AUTH_USER_REJECT;
+    }
+    if (creds.IsSet(AuthListener::CRED_EXPIRATION)) {
+        SetSecretExpiration(creds.GetExpiration());
+    } else {
+        SetSecretExpiration(DEFAULT_CRED_EXPIRATION);
+    }
+    if (!creds.IsSet(AuthListener::CRED_PASSWORD)) {
+        QCC_DbgPrintf(("KeyExchangerECDHE_SPEKE::RequestCredentialsCB password not provided"));
+        return ER_AUTH_FAIL;
+    }
+
+    /* Generate the key pair (with GUIDs in the right order) */
+    if (IsInitiator()) {
+        status = ecc.GenerateSPEKEKeyPair((uint8_t*) creds.GetPassword().data(), creds.GetPassword().length(), localGuid, remoteGuid);
+    } else {
+        status = ecc.GenerateSPEKEKeyPair((uint8_t*) creds.GetPassword().data(), creds.GetPassword().length(), remoteGuid, localGuid);
+    }
+
+    return status;
 }
 
 const ECCPublicKey* KeyExchangerECDHE::GetECDHEPublicKey()
@@ -966,7 +1014,7 @@ QStatus KeyExchangerECDHE_PSK::RequestCredentialsCB(const char* peerName)
     if (creds.IsSet(AuthListener::CRED_EXPIRATION)) {
         SetSecretExpiration(creds.GetExpiration());
     } else {
-        SetSecretExpiration(86400);      /* expires in one day */
+        SetSecretExpiration(DEFAULT_CRED_EXPIRATION);
     }
     if (creds.IsSet(AuthListener::CRED_USER_NAME)) {
         pskName = creds.GetUserName();

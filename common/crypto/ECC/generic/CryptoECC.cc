@@ -380,6 +380,10 @@ QStatus Crypto_ECC::GenerateDHKeyPair() {
     return Crypto_ECC_GenerateKeyPair(&eccState->dhPublicKey, &eccState->dhPrivateKey);
 }
 
+QStatus Crypto_ECC::GenerateSPEKEKeyPair(const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID) {
+    return Crypto_ECC_GenerateSPEKEKeyPair(&eccState->dhPublicKey, &eccState->dhPrivateKey, pw, pwLen, clientGUID, serviceGUID);
+}
+
 QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCSecret* secret)
 {
     bigval_t sec;
