@@ -21,6 +21,12 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECCMath.h>
 
+/* For ECCPublicKeyImportInitializeHandles test, which only applies to Windows CNG. */
+#ifdef CRYPTO_CNG
+#include "../crypto/Crypto.h"
+#include <qcc/CngCache.h>
+#endif
+
 using namespace qcc;
 using namespace std;
 
@@ -375,3 +381,35 @@ TEST_F(CryptoECCTest, ECCPublicKeyImportInvalid)
         EXPECT_EQ(0, memcmp(originalY.data(), y, coordinateSize)) << "Key data was modified despite failed import";
     }
 }
+
+#ifdef CRYPTO_CNG
+/**
+ * Test correct initialization of CNG provider handles without use of a
+ * Crypto_ECC object. (ASACORE-2703) This test only applies to CNG on Windows.
+ */
+TEST_F(CryptoECCTest, ECCPublicKeyImportInitializeHandles)
+{
+    Crypto_ECC* ecc = new (std::nothrow) Crypto_ECC;
+    ASSERT_NE(nullptr, ecc);
+
+    ASSERT_EQ(ER_OK, ecc->GenerateDHKeyPair()) << "Failed to generate DH key pair";
+
+    ECCPublicKey key(*(ecc->GetDHPublicKey()));
+    size_t size = key.GetSize();
+    std::vector<uint8_t> data(size);
+
+    ASSERT_EQ(ER_OK, key.Export(data.data(), &size)) << "Could not export public key";
+    EXPECT_EQ(size, key.GetSize()) << "Exported data was an unexpected size " << size;
+
+    /* Delete the Crypto_ECC object so we can safely shut down the crypto subsystem. */
+    delete ecc;
+
+    /* Shut down and restart the Crypto subsystem to clear out any provider handles opened by
+     * other tests. Init() does not open any provider handles on its own.
+     */
+    qcc::Crypto::Shutdown();
+    ASSERT_EQ(ER_OK, qcc::Crypto::Init());
+
+    EXPECT_EQ(ER_OK, key.Import(data.data(), size)) << "Key import failed";
+}
+#endif
