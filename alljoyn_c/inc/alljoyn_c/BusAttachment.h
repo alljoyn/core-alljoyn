@@ -22,12 +22,14 @@
 #define _ALLJOYN_C_BUSATTACHMENT_H
 
 #include <alljoyn_c/AjAPI.h>
+#include <alljoyn_c/ApplicationStateListener.h>
 #include <alljoyn_c/KeyStoreListener.h>
 #include <alljoyn_c/AuthListener.h>
 #include <alljoyn_c/BusListener.h>
 #include <alljoyn_c/BusObject.h>
 #include <alljoyn_c/ProxyBusObject.h>
 #include <alljoyn_c/PermissionConfigurationListener.h>
+#include <alljoyn_c/PermissionConfigurator.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/Session.h>
 #include <alljoyn_c/SessionListener.h>
@@ -1523,6 +1525,44 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_cancelwhoimplements_interfac
  */
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_cancelwhoimplements_interface(alljoyn_busattachment bus,
                                                                                   const char* implementsInterface);
+
+/**
+ * Retrieves the alljoyn_permissionconfigurator associated with this alljoyn_busattachment.
+ *
+ * @param[in] bus The alljoyn_busattachment containing the alljoyn_permissionconfigurator.
+ *
+ * @return
+ *      - The alljoyn_permissionconfigurator
+ */
+extern AJ_API const alljoyn_permissionconfigurator AJ_CALL alljoyn_busattachment_getpermissionconfigurator(alljoyn_busattachment bus);
+
+/**
+ * Registers a handler to receive the org.alljoyn.Bus.Application State signal.
+ *
+ * @param[in] bus       The alljoyn_busattachment which registers the alljoyn_applicationstatelistener.
+ * @param[in] listener  Listener instance that will receive state event notifications.
+ *
+ * @return
+ *    - #ER_OK on success
+ *    - #ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS when the same listener has already been registered.
+ *    - Different error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registerapplicationstatelistener(alljoyn_busattachment bus,
+                                                                                     alljoyn_applicationstatelistener listener);
+
+/**
+ * Unregisters the listener that was registered with alljoyn_busattachment_registerapplicationstatelistener
+ *
+ * @param[in] bus       The alljoyn_busattachment from which to detach the alljoyn_applicationstatelistener.
+ * @param[in] listener  Object instance to unregister as a listener.
+ *
+ * @return
+ *    - #ER_OK on success
+ *    - #ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER when this listener has not been registered.
+ *    - Different error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregisterapplicationstatelistener(alljoyn_busattachment bus,
+                                                                                       alljoyn_applicationstatelistener listener);
 
 #ifdef __cplusplus
 } /* extern "C" */
