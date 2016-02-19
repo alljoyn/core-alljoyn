@@ -1,0 +1,207 @@
+/******************************************************************************
+ * Copyright AllSeen Alliance. All rights reserved.
+ *
+ *    Permission to use, copy, modify, and/or distribute this software for any
+ *    purpose with or without fee is hereby granted, provided that the above
+ *    copyright notice and this permission notice appear in all copies.
+ *
+ *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ *    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ *    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ *    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ ******************************************************************************/
+#include <gtest/gtest.h>
+#include <alljoyn/ApplicationStateListener.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn/PermissionConfigurator.h>
+#include <alljoyn_c/ApplicationStateListener.h>
+#include <qcc/Util.h>
+#include "ajTestCommon.h"
+#include "InMemoryKeyStore.h"
+
+using namespace ajn;
+
+class ApplicationStateListenerTest : public testing::Test {
+
+  public:
+
+    AJ_PCSTR someValidBusName;
+    AJ_PSTR contextBusName;
+    qcc::KeyInfoNISTP256 someValidKey;
+    PermissionConfigurator::ApplicationState someValidApplicationState;
+    alljoyn_applicationstatelistener_callbacks callbacksWithNullStateCallback;
+    alljoyn_applicationstatelistener_callbacks nonNullCallbacks;
+    alljoyn_applicationstatelistener_callbacks callbacksPassingPublicKeyToContext;
+    alljoyn_applicationstatelistener_callbacks callbacksPassingApplicationStateToContext;
+    alljoyn_applicationstatelistener_callbacks callbacksPassingBusNameToContext;
+
+    ApplicationStateListenerTest() :
+        someValidBusName("someBusName"),
+        contextBusName(nullptr),
+        someValidApplicationState(PermissionConfigurator::CLAIMED)
+    { }
+
+    virtual void SetUp()
+    {
+        InMemoryKeyStoreListener tempKeyStore;
+        BusAttachment tempBus("tempBus");
+
+        ASSERT_EQ(ER_OK, tempBus.RegisterKeyStoreListener(tempKeyStore));
+        ASSERT_EQ(ER_OK, tempBus.Start());
+        ASSERT_EQ(ER_OK, tempBus.Connect(getConnectArg().c_str()));
+        ASSERT_EQ(ER_OK, tempBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", nullptr));
+
+        ASSERT_EQ(ER_OK, tempBus.GetPermissionConfigurator().GetSigningPublicKey(someValidKey));
+
+        ASSERT_EQ(ER_OK, tempBus.Stop());
+
+        InitCallbacks();
+    }
+
+    virtual void TearDown()
+    {
+        delete[] contextBusName;
+    }
+
+  private:
+
+    static void AJ_CALL someCallback(AJ_PCSTR busName,
+                                     AJ_PCSTR publicKey,
+                                     alljoyn_applicationstate applicationState,
+                                     void* context)
+    {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(publicKey);
+        QCC_UNUSED(applicationState);
+        QCC_UNUSED(context);
+    }
+
+    static void AJ_CALL passKeyToContextCallback(AJ_PCSTR busName,
+                                                 AJ_PCSTR publicKey,
+                                                 alljoyn_applicationstate applicationState,
+                                                 void* context)
+    {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(applicationState);
+
+        ASSERT_NE(nullptr, publicKey);
+        ASSERT_NE(nullptr, context);
+
+        qcc::ECCPublicKey eccPublicKey;
+        ASSERT_EQ(ER_OK, qcc::CertificateX509::DecodePublicKeyPEM(qcc::String(publicKey), &eccPublicKey));
+        *((qcc::ECCPublicKey*)context) = eccPublicKey;
+    }
+
+    static void AJ_CALL passApplicationStateToContextCallback(AJ_PCSTR busName,
+                                                              AJ_PCSTR publicKey,
+                                                              alljoyn_applicationstate applicationState,
+                                                              void* context)
+    {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(publicKey);
+
+        ASSERT_NE(nullptr, context);
+
+        *((alljoyn_applicationstate*)context) = applicationState;
+    }
+
+    static void AJ_CALL passBusNameToContextCallback(AJ_PCSTR busName,
+                                                     AJ_PCSTR publicKey,
+                                                     alljoyn_applicationstate applicationState,
+                                                     void* context)
+    {
+        QCC_UNUSED(publicKey);
+        QCC_UNUSED(applicationState);
+
+        ASSERT_NE(nullptr, busName);
+        ASSERT_NE(nullptr, context);
+
+        size_t busNameSize = strlen(busName) + 1;
+        char** contextBusNamePointer = (char**)context;
+
+        *contextBusNamePointer = new(std::nothrow) char[busNameSize];
+        ASSERT_NE(nullptr, *contextBusNamePointer);
+
+        strcpy(*contextBusNamePointer, busName);
+    }
+
+    void InitCallbacks()
+    {
+        callbacksWithNullStateCallback = { nullptr };
+        nonNullCallbacks = { someCallback };
+        callbacksPassingPublicKeyToContext = { passKeyToContextCallback };
+        callbacksPassingApplicationStateToContext = { passApplicationStateToContextCallback };
+        callbacksPassingBusNameToContext = { passBusNameToContextCallback };
+    }
+};
+
+TEST_F(ApplicationStateListenerTest, shouldFailCreateListenerWithNullCallbacks)
+{
+    EXPECT_DEATH(alljoyn_applicationstatelistener_create(nullptr, nullptr), DEATH_TEST_EMPTY_MESSAGE);
+}
+
+TEST_F(ApplicationStateListenerTest, shouldCreateListenerWithCallbacksAndNullContext)
+{
+    EXPECT_NE(nullptr, alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr));
+}
+
+TEST_F(ApplicationStateListenerTest, shouldCreateListenerWithCallbacksAndNonNullContext)
+{
+    EXPECT_NE(nullptr, alljoyn_applicationstatelistener_create(&nonNullCallbacks, this));
+}
+
+TEST_F(ApplicationStateListenerTest, shouldDestroyNullListenerWithoutErrors)
+{
+    EXPECT_NO_THROW(alljoyn_applicationstatelistener_destroy(nullptr));
+}
+
+TEST_F(ApplicationStateListenerTest, shouldDestroyNonNullListenerWithoutErrors)
+{
+    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr);
+
+    EXPECT_NO_THROW(alljoyn_applicationstatelistener_destroy(listener));
+}
+
+TEST_F(ApplicationStateListenerTest, shouldFailWhenCallingDestroyedListener)
+{
+    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr);
+    alljoyn_applicationstatelistener_destroy(listener);
+
+    EXPECT_DEATH(((ajn::ApplicationStateListener*)listener)->State(someValidBusName, someValidKey, someValidApplicationState), DEATH_TEST_EMPTY_MESSAGE);
+}
+
+TEST_F(ApplicationStateListenerTest, shouldPassBusNameToCallback)
+{
+    contextBusName = nullptr;
+    AJ_PCSTR passedBusName = someValidBusName;
+    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&callbacksPassingBusNameToContext, &contextBusName);
+
+    ((ajn::ApplicationStateListener*)listener)->State(passedBusName, someValidKey, someValidApplicationState);
+
+    EXPECT_STRCASEEQ(passedBusName, contextBusName);
+}
+
+TEST_F(ApplicationStateListenerTest, shouldPassPublicKeyToCallback)
+{
+    qcc::ECCPublicKey contextPublicKey;
+    qcc::KeyInfoNISTP256 passedKeyInfo = someValidKey;
+    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&callbacksPassingPublicKeyToContext, &contextPublicKey);
+
+    ((ajn::ApplicationStateListener*)listener)->State(someValidBusName, passedKeyInfo, someValidApplicationState);
+
+    EXPECT_EQ(*(passedKeyInfo.GetPublicKey()), contextPublicKey);
+}
+
+TEST_F(ApplicationStateListenerTest, shouldPassApplicationStateToCallback)
+{
+    alljoyn_applicationstate contextApplicationState;
+    PermissionConfigurator::ApplicationState passedApplicationState = someValidApplicationState;
+    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&callbacksPassingApplicationStateToContext, &contextApplicationState);
+
+    ((ajn::ApplicationStateListener*)listener)->State(someValidBusName, someValidKey, passedApplicationState);
+
+    EXPECT_EQ((alljoyn_applicationstate)passedApplicationState, contextApplicationState);
+}

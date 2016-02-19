@@ -14,6 +14,9 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <gtest/gtest.h>
+#include <time.h>
+#include <alljoyn/BusAttachment.h>
+#include <alljoyn_c/ApplicationStateListener.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/DBusStdDefines.h>
 #include <alljoyn_c/InterfaceDescription.h>
@@ -24,6 +27,278 @@
 #include <qcc/windows/NamedPipeWrapper.h>
 #endif
 #include "ajTestCommon.h"
+#include "InMemoryKeyStore.h"
+
+/*
+ * The unit test uses a busy wait loop. The busy wait loops were chosen
+ * over thread sleeps because of the ease of understanding the busy wait loops.
+ * Also busy wait loops do not require any platform specific threading code.
+ */
+#define WAIT_MSECS 5
+#define STATE_CHANGE_TIMEOUT_MS 2000
+
+class BusAttachmentSecurity20Test : public testing::Test {
+  public:
+
+    BusAttachmentSecurity20Test() :
+        privateSecurityAgentBus("SecurityAgentBus"),
+        managedApp("SampleManagedApp"),
+        securityAgent((alljoyn_busattachment) & privateSecurityAgentBus),
+        callbacks({ stateCallback })
+    { };
+
+    virtual void SetUp()
+    {
+        basicBusSetup(privateSecurityAgentBus, securityAgentKeyStoreListener);
+        basicBusSetup(managedApp, managedAppKeyStoreListener);
+        setupAgent();
+    }
+
+    virtual void TearDown()
+    {
+        appTearDown(privateSecurityAgentBus);
+        appTearDown(managedApp);
+    }
+
+  protected:
+
+    alljoyn_busattachment securityAgent;
+
+    void createApplicationStateListener(alljoyn_applicationstatelistener* listener, bool* listenerCalled = nullptr)
+    {
+        *listener = alljoyn_applicationstatelistener_create(&callbacks, listenerCalled);
+        ASSERT_NE(nullptr, listener);
+    }
+
+    void changeApplicationState()
+    {
+        managedApp.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", nullptr);
+        SetManifestTemplate(managedApp);
+    }
+
+    bool waitForTrueOrTimeout(bool* isTrue, int timeoutMs)
+    {
+        time_t startTime = time(nullptr);
+        int timeDiffMs = difftime(time(nullptr), startTime) * 1000;
+        while (!(*isTrue)
+               && (timeDiffMs < timeoutMs)) {
+            qcc::Sleep(WAIT_MSECS);
+            timeDiffMs = difftime(time(nullptr), startTime) * 1000;
+        }
+
+        return *isTrue;
+    }
+
+  private:
+
+    ajn::BusAttachment privateSecurityAgentBus;
+    ajn::BusAttachment managedApp;
+    alljoyn_applicationstatelistener_callbacks callbacks;
+    ajn::InMemoryKeyStoreListener securityAgentKeyStoreListener;
+    ajn::InMemoryKeyStoreListener managedAppKeyStoreListener;
+
+    static void AJ_CALL stateCallback(AJ_PCSTR busName,
+                                      AJ_PCSTR publicKey,
+                                      alljoyn_applicationstate applicationState,
+                                      void* listenerCalled)
+    {
+        QCC_UNUSED(busName);
+        QCC_UNUSED(publicKey);
+        QCC_UNUSED(applicationState);
+
+        if (listenerCalled) {
+            *((bool*)listenerCalled) = true;
+        }
+    }
+
+    void setupAgent()
+    {
+        ASSERT_EQ(ER_OK, privateSecurityAgentBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", nullptr));
+    }
+
+    void basicBusSetup(ajn::BusAttachment& bus, ajn::InMemoryKeyStoreListener& keyStoreListener)
+    {
+        ASSERT_EQ(ER_OK, bus.RegisterKeyStoreListener(keyStoreListener));
+        ASSERT_EQ(ER_OK, bus.Start());
+        ASSERT_EQ(ER_OK, bus.Connect(ajn::getConnectArg().c_str()));
+    }
+
+    void appTearDown(ajn::BusAttachment& bus)
+    {
+        bus.UnregisterKeyStoreListener();
+        bus.Stop();
+        bus.Join();
+    }
+
+    void SetManifestTemplate(ajn::BusAttachment& bus)
+    {
+        ajn::PermissionPolicy::Rule manifestTemplate[1];
+        ajn::PermissionPolicy::Rule::Member member[1];
+        member[0].Set("*",
+                      ajn::PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+                      ajn::PermissionPolicy::Rule::Member::ACTION_PROVIDE
+                      | ajn::PermissionPolicy::Rule::Member::ACTION_MODIFY
+                      | ajn::PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        manifestTemplate[0].SetObjPath("*");
+        manifestTemplate[0].SetInterfaceName("*");
+        manifestTemplate[0].SetMembers(1, member);
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifest(manifestTemplate, 1));
+    }
+};
+
+TEST_F(BusAttachmentSecurity20Test, shouldDieWhenUsingNullBusToGetPermissionConfigurator)
+{
+    EXPECT_DEATH(alljoyn_busattachment_getpermissionconfigurator(nullptr), DEATH_TEST_EMPTY_MESSAGE);
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldReturnNonNullPermissionConfigurator)
+{
+    EXPECT_NE(alljoyn_busattachment_getpermissionconfigurator(securityAgent), nullptr);
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldDieWhenRegisteringWithNullBus)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    EXPECT_DEATH(alljoyn_busattachment_registerapplicationstatelistener(nullptr, listener), DEATH_TEST_EMPTY_MESSAGE);
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldDieWhenUnregisteringWithNullBus)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    EXPECT_DEATH(alljoyn_busattachment_unregisterapplicationstatelistener(nullptr, listener), DEATH_TEST_EMPTY_MESSAGE);
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenRegisteringWithNullListener)
+{
+    EXPECT_EQ(ER_INVALID_ADDRESS, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, nullptr));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringWithNullListener)
+{
+    EXPECT_EQ(ER_INVALID_ADDRESS, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, nullptr));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringUnknownListener)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldRegisterSuccessfullyForNewListener)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldUnregisterSuccessfullyForSameListener)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenRegisteringSameListenerTwice)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringSameListenerTwice)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldRegisterSameListenerSuccessfullyAfterUnregister)
+{
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldCallStateListenerAfterRegister)
+{
+    bool listenerCalled = false;
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener, &listenerCalled);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    changeApplicationState();
+
+    EXPECT_TRUE(waitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldNotCallStateListenerAfterUnregister)
+{
+    bool listenerCalled = false;
+    alljoyn_applicationstatelistener listener = nullptr;
+    createApplicationStateListener(&listener, &listenerCalled);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+    changeApplicationState();
+
+    EXPECT_FALSE(waitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldCallAllStateListeners)
+{
+    bool firstListenerCalled = false;
+    bool secondListenerCalled = false;
+    alljoyn_applicationstatelistener firstListener = nullptr;
+    alljoyn_applicationstatelistener secondListener = nullptr;
+    createApplicationStateListener(&firstListener, &firstListenerCalled);
+    createApplicationStateListener(&secondListener, &secondListenerCalled);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, firstListener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, secondListener));
+    changeApplicationState();
+
+    EXPECT_TRUE(waitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_TRUE(waitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+}
+
+TEST_F(BusAttachmentSecurity20Test, shouldCallOnlyOneStateListenerWhenOtherUnregistered)
+{
+    bool firstListenerCalled = false;
+    bool secondListenerCalled = false;
+    alljoyn_applicationstatelistener firstListener = nullptr;
+    alljoyn_applicationstatelistener secondListener = nullptr;
+    createApplicationStateListener(&firstListener, &firstListenerCalled);
+    createApplicationStateListener(&secondListener, &secondListenerCalled);
+
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, firstListener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, secondListener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, firstListener));
+    changeApplicationState();
+
+    EXPECT_FALSE(waitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_TRUE(waitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+}
 
 TEST(BusAttachmentTest, createinterface) {
     QStatus status = ER_OK;
@@ -206,12 +481,12 @@ TEST(BusAttachmentTest, connect_null)
 
     EXPECT_TRUE(alljoyn_busattachment_isconnected(bus));
 
-    const char* connectspec = alljoyn_busattachment_getconnectspec(bus);
+    AJ_PCSTR connectspec = alljoyn_busattachment_getconnectspec(bus);
 
     /**
      * Note: the default connect spec here must match the one in alljoyn_core BusAttachment.
      */
-    const char* preferredConnectSpec;
+    AJ_PCSTR preferredConnectSpec;
 
 #if defined(QCC_OS_GROUP_WINDOWS)
     if (qcc::NamedPipeWrapper::AreApisAvailable()) {
@@ -251,7 +526,7 @@ TEST(BusAttachmentTest, getconnectspec)
     status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    const char* connectspec = alljoyn_busattachment_getconnectspec(bus);
+    AJ_PCSTR connectspec = alljoyn_busattachment_getconnectspec(bus);
 
     /*
      * The BusAttachment has joined either a separate daemon or it is using
@@ -355,8 +630,8 @@ TEST(BusAttachmentTest, ping_other_on_same_bus) {
     alljoyn_busattachment_destroy(bus);
 }
 
-static QCC_BOOL test_alljoyn_authlistener_requestcredentials(const void* context, const char* authMechanism, const char* peerName, uint16_t authCount,
-                                                             const char* userName, uint16_t credMask, alljoyn_credentials credentials)
+static QCC_BOOL test_alljoyn_authlistener_requestcredentials(const void* context, AJ_PCSTR authMechanism, AJ_PCSTR peerName, uint16_t authCount,
+                                                             AJ_PCSTR userName, uint16_t credMask, alljoyn_credentials credentials)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(authMechanism);
@@ -368,7 +643,7 @@ static QCC_BOOL test_alljoyn_authlistener_requestcredentials(const void* context
     return true;
 }
 
-static void test_alljoyn_authlistener_authenticationcomplete(const void* context, const char* authMechanism, const char* peerName, QCC_BOOL success)
+static void test_alljoyn_authlistener_authenticationcomplete(const void* context, AJ_PCSTR authMechanism, AJ_PCSTR peerName, QCC_BOOL success)
 {
 
     QCC_UNUSED(authMechanism);
@@ -487,4 +762,3 @@ TEST(BusAttachmentTest, BasicSecureConnectionAsync)
     alljoyn_busattachment_destroy(bus);
     alljoyn_authlistener_destroy(al);
 }
-
