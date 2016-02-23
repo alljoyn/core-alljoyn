@@ -62,6 +62,7 @@ namespace ajn {
 #define AUTH_KEYX_SRP_LOGON     0x00100000
 #define AUTH_KEYX_ECDHE         0x00400000
 #define AUTH_KEYX_GSSAPI        0x00800000
+#define AUTH_KEYX_SPEKE         0x01000000
 
 /*the key authentication suite is in the 16 LSB */
 
@@ -73,6 +74,7 @@ namespace ajn {
 #define AUTH_SUITE_ECDHE_NULL   (AUTH_KEYX_ECDHE | 0x0001)
 #define AUTH_SUITE_ECDHE_PSK    (AUTH_KEYX_ECDHE | 0x0002)
 #define AUTH_SUITE_ECDHE_ECDSA  (AUTH_KEYX_ECDHE | 0x0004)
+#define AUTH_SUITE_ECDHE_SPEKE  (AUTH_KEYX_ECDHE | 0x0008)
 
 #define AUTH_SUITE_GSSAPI       AUTH_KEYX_GSSAPI
 
@@ -351,7 +353,7 @@ class _PeerState {
      * @param[in] issuerAki the membership certificate issuer authority key id
      * @param[in] guild the guild metadata
      */
-    void SetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki,        GuildMetadata* guild);
+    void SetGuildMetadata(const qcc::String& serial, const qcc::String& issuerAki, GuildMetadata* guild);
 
     /**
      * Retrieve the guild metadata indexed by the serial number and the issuer.

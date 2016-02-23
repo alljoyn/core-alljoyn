@@ -702,7 +702,8 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
  * @param authMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
  *                         If this parameter is NULL peer-to-peer authentication is disabled.
  *                         This is a space separated list of any of the following values: ALLJOYN_SRP_LOGON,
- *                         ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+ *                         ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI,
+ *                         ALLJOYN_ECDHE_SPEKE.
  *
  * @param listener         Passes password and other authentication related requests to the application.
  *
@@ -740,7 +741,8 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_enablepeersecurity(alljoyn_b
  * @param authMechanisms        The authentication mechanism(s) to use for peer-to-peer authentication.
  *                              If this parameter is NULL peer-to-peer authentication is disabled.
  *                              This is a space separated list of any of the following values: ALLJOYN_SRP_LOGON,
- *                              ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI.
+ *                              ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA, GSSAPI,
+ *                              ALLJOYN_ECDHE_SPEKE.
  *
  * @param authListener          Passes password and other authentication related requests to the application.
  *
