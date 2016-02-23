@@ -140,6 +140,8 @@ void U32ArrayToU8BeArray(const uint32_t* src, size_t len, uint8_t* dest);
 
 void U8BeArrayToU32Array(const uint8_t* src, size_t len, uint32_t* dest);
 
+QStatus Crypto_ECC_GenerateSPEKEKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey, const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID);
+
 
 } /*namespace qcc*/
 #endif /*CRYPTOECCMATH_H*/

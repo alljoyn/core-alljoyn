@@ -22,6 +22,7 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <qcc/Debug.h>
+#include <qcc/Util.h>
 
 #include <alljoyn/AuthListener.h>
 
@@ -32,32 +33,70 @@ using namespace qcc;
 
 namespace ajn {
 
-DefaultECDHEAuthListener::DefaultECDHEAuthListener() : AuthListener(), psk(NULL), pskSize(0)
+DefaultECDHEAuthListener::DefaultECDHEAuthListener() : AuthListener(), m_psk(nullptr), m_pskSize(0), m_password(nullptr), m_passwordSize(0)
 {
 }
 
-DefaultECDHEAuthListener::DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize) : AuthListener()
+DefaultECDHEAuthListener::~DefaultECDHEAuthListener()
 {
-    QCC_ASSERT(pskSize >= 16);  /* psk size should be 128 bits or longer */
-    this->psk = new uint8_t[pskSize];
-    QCC_ASSERT(this->psk);
-    memcpy(this->psk, psk, pskSize);
-    this->pskSize = pskSize;
+    if (m_pskSize > 0) {
+        ClearMemory(m_psk, m_pskSize);
+        delete[] m_psk;
+    }
+
+    if (m_passwordSize > 0) {
+        ClearMemory(m_password, m_passwordSize);
+        delete[] m_password;
+    }
 }
 
-QStatus DefaultECDHEAuthListener::SetPSK(const uint8_t* _psk, size_t _pskSize)
+/* Note that this constructor is deprecated because it only supports PSK. */
+DefaultECDHEAuthListener::DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize) : AuthListener(), m_password(nullptr), m_passwordSize(0)
 {
-    if (_psk && _pskSize < 16) {
+    /* A secret must be supplied, and have the minimum length. */
+    QCC_ASSERT(pskSize >= 16);
+
+    m_psk = new uint8_t[pskSize];
+    memcpy(m_psk, psk, pskSize);
+    m_pskSize = pskSize;
+}
+
+
+
+QStatus DefaultECDHEAuthListener::SetPSK(const uint8_t* psk, size_t pskSize)
+{
+    if ((psk != nullptr) && (pskSize < 16)) {
         return ER_BAD_ARG_2;
     }
-    delete[] psk;
-    psk = NULL;
-    pskSize = 0;
 
-    if (_psk) {
-        psk = new uint8_t[_pskSize];
-        memcpy(psk, _psk, _pskSize);
-        pskSize = _pskSize;
+    ClearMemory(m_psk, m_pskSize);
+    delete[] m_psk;
+    m_psk = NULL;
+    m_pskSize = 0;
+
+    if (psk != nullptr) {
+        m_psk = new uint8_t[pskSize];
+        memcpy(m_psk, psk, pskSize);
+        m_pskSize = pskSize;
+    }
+    return ER_OK;
+}
+
+QStatus DefaultECDHEAuthListener::SetPassword(const uint8_t* password, size_t passwordSize)
+{
+    if ((password != nullptr) && (passwordSize < 4)) {
+        return ER_BAD_ARG_2;
+    }
+
+    ClearMemory(m_password, m_passwordSize);
+    delete[] m_password;
+    m_password = NULL;
+    m_passwordSize = 0;
+
+    if (password != nullptr) {
+        m_password = new uint8_t[passwordSize];
+        memcpy(m_password, password, passwordSize);
+        m_passwordSize = passwordSize;
     }
     return ER_OK;
 }
@@ -65,19 +104,35 @@ QStatus DefaultECDHEAuthListener::SetPSK(const uint8_t* _psk, size_t _pskSize)
 bool DefaultECDHEAuthListener::RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials) {
     QCC_DbgTrace(("DefaultECDHEAuthListener::%s", __FUNCTION__));
     QCC_UNUSED(peerName);
-    QCC_UNUSED(authCount);
     QCC_UNUSED(userName);
     QCC_UNUSED(credMask);
-    QCC_UNUSED(credentials);
+
     if (strcmp(authMechanism, "ALLJOYN_ECDHE_NULL") == 0) {
         return true;
-    } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_PSK") == 0) {
-        if (pskSize == 0) {
+    } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_PSK") == 0) {     /* Marked deprecated in 16.04 */
+        if (m_pskSize == 0) {
+            QCC_DbgHLPrintf(("DefaultECDHEAuthListener::RequestCredentials called for ECDHE_PSK, but no PSK value is set, authentication will fail."));
             return false;
         }
-        qcc::String outPsk;
-        outPsk.assign(reinterpret_cast<const char*>(psk), pskSize);
-        credentials.SetPassword(outPsk);
+        qcc::String outpsk;
+        outpsk.assign(reinterpret_cast<const char*>(m_psk), m_pskSize);
+        credentials.SetPassword(outpsk);    /* The credentials class has only one way to store pre-shared credentials. */
+        outpsk.clear();
+        return true;
+    } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_SPEKE") == 0) {
+        if (m_passwordSize == 0) {
+            QCC_DbgHLPrintf(("DefaultECDHEAuthListener::RequestCredentials called for ECDHE_SPEKE, but no password value is set, authentication will fail."));
+            return false;
+        }
+        if (authCount > 10) {
+            /* If the peer making a large number of attempts, they may be an attacking trying to guess the password. */
+            QCC_DbgHLPrintf(("DefaultECDHEAuthListener::RequestCredentials called for ECDHE_SPEKE more than 10 times, authentication will fail."));
+            return false;
+        }
+        qcc::String outpassword;
+        outpassword.assign(reinterpret_cast<const char*>(m_password), m_passwordSize);
+        credentials.SetPassword(outpassword);
+        outpassword.clear();
         return true;
     } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_ECDSA") == 0) {
         return true;
