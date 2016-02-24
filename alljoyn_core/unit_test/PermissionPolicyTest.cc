@@ -47,6 +47,14 @@ TEST(PermissionPolicyTest, Peer_constructor)
     PermissionPolicy::Peer peer;
     EXPECT_EQ(PermissionPolicy::Peer::PEER_ANY_TRUSTED, peer.GetType());
     EXPECT_EQ(qcc::GUID128(0), peer.GetSecurityGroupId());
+    EXPECT_EQ(nullptr, peer.GetKeyInfo());
+}
+
+TEST(PermissionPolicyTest, shouldCopyPeerWithNullPublicKey)
+{
+    PermissionPolicy::Peer peer;
+    peer.SetKeyInfo(nullptr);
+    EXPECT_NO_THROW(PermissionPolicy::Peer copiedPeer(peer));
 }
 
 TEST(PermissionPolicyTest, peer_set_get_type)
