@@ -447,12 +447,12 @@ class BusObject : public MessageReceiver {
 
     /**
      * Returns a description of the object in the AllJoyn introspection XML format.
-     * This is the same as the D-Bus format but includes <description> elements.
+     * This is the same as the D-Bus format but includes description elements.
      * This method can be overridden by derived classes in order to customize the
      * introspection XML presented to remote nodes. Note that to DTD description and
      * the root element are not generated.
      *
-     * @param requestedLanguageTag      Language reguested for <description>'s. NULL for no descriptions.
+     * @param requestedLanguageTag      Language requested for descriptions. NULL for all descriptions in unified format.
      * @param deep                      Include XML for all descendants rather than stopping at direct children.
      * @param indent                    Number of characters to indent the XML
      * @return                          Description of the object in AllJoyn introspection XML format
@@ -519,7 +519,9 @@ class BusObject : public MessageReceiver {
     virtual void Introspect(const InterfaceDescription::Member* member, Message& msg);
 
     /**
-     * Default handler for a bus attempt to read the object's introspection data with descriptions.
+     * @deprecated IntrospectWithDescription() is deprecated.  Please use Introspect() instead.
+     *
+     * Default handler for a bus attempt to read the object's extended introspection data with descriptions.
      * @remark
      * A derived class can override this function to provide a custom handler for the IntrospectWithDescription method
      * call. If overridden the custom handler must compose an appropriate reply message.
@@ -650,6 +652,16 @@ class BusObject : public MessageReceiver {
      * @return The description or NULL if not found
      */
     const char* GetDescription(const char* toLanguage, qcc::String& buffer) const;
+
+    /**
+    * Internal method that returns a description of the object in the D-Bus introspection XML format.
+    *
+    * @param requestedLanguageTag      Language requested for descriptions. NULL for all descriptions in unified format.
+    * @param deep                      Include XML for all descendants rather than stopping at direct children.
+    * @param indent                    Number of characters to indent the XML.
+    * @return                          Description of the object in AllJoyn introspection XML format.
+    */
+    qcc::String GenerateIntrospectionInternal(const char* requestedLanguageTag, bool deep, size_t indent) const;
 
     /**
      * the internal method to send signal.

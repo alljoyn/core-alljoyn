@@ -103,6 +103,9 @@ class InterfaceDescription {
     /** map containing description tables per argument name */
     class ArgumentDescriptions;
 
+    /** map containing annotations per argument name */
+    class ArgumentAnnotations;
+
   public:
 
     class AnnotationsMap; /**< A map to store string annotations */
@@ -125,6 +128,7 @@ class InterfaceDescription {
         bool isSessionlessSignal;                   /**< True if this is described as a sessionless signal */
         bool isUnicastSignal;                       /**< True if this is described as a unicast signal */
         bool isGlobalBroadcastSignal;               /**< True if this is described as a global broadcast signal */
+        ArgumentAnnotations* argumentAnnotations;   /**< Map of argument annotations */
 
         /**
          * %Member constructor.
@@ -533,7 +537,7 @@ class InterfaceDescription {
      * Returns a description of the interface in introspection XML format
      * @return The interface description in introspection XML format.
      *
-     * @param indent   Number of space chars to use in XML indentation.
+     * @param indent   Number of characters to indent the XML
      * @param languageTag Specifies the description language or NULL to omit descriptions
      * @param translator Translator instance to use for introspection descriptions
      * @return The XML introspection data.
@@ -683,6 +687,34 @@ class InterfaceDescription {
      */
     bool HasDescription() const;
 
+    /**
+    * Add an annotation to an existing argument.
+    *
+    * @param member     Name of member.
+    * @param arg        Name of the argument.
+    * @param name       Name of annotation.
+    * @param value      Value for the annotation.
+    *
+    * @return
+    *      - #ER_OK if successful
+    *      - #ER_BUS_ANNOTATION_ALREADY_EXISTS if annotation already exists
+    */
+    QStatus AddArgAnnotation(const char* member, const char* arg, const qcc::String& name, const qcc::String& value);
+
+    /**
+    * Get annotation from an existing argument.
+    *
+    * @param member     Name of member.
+    * @param arg        Name of the argument.
+    * @param name       Name of annotation.
+    * @param value      Output value for the annotation.
+    *
+    * @return
+    *      - true if found
+    *      - false if annotation not found
+    */
+    bool GetArgAnnotation(const char* member, const char* arg, const qcc::String& name, qcc::String& value) const;
+
   private:
 
     /**
@@ -708,15 +740,24 @@ class InterfaceDescription {
      */
     InterfaceDescription& operator=(const InterfaceDescription& other);
 
-    void AppendDescriptionXml(qcc::String& xml, const char* language,
-                              const char* localDescription, Translator* translator, qcc::String const& indent) const;
+    void AppendDescriptionToAnnotations(AnnotationsMap& annotations, const char* description, Translator* translator) const;
 
-    qcc::String NextArg(const char*& signature, qcc::String& argNames, bool inOut,
-                        size_t indent, Member const& member, bool withDescriptions,
-                        const char* langTag, Translator* translator) const;
+    void AppendDescriptionXml(qcc::String& xml,
+                              const char* language,
+                              const char* localDescription,
+                              Translator* translator,
+                              qcc::String const& indent) const;
+
+    qcc::String NextArg(const char*& signature,
+                        qcc::String& argNames,
+                        bool inOut,
+                        size_t indent,
+                        Member const& member,
+                        bool withDescriptions,
+                        const char* langTag,
+                        Translator* translator) const;
 
     const char* Translate(const char* toLanguage, const char* text, qcc::String& buffer, Translator* translator) const;
-
 
     struct Definitions;
     Definitions* defs;   /**< The definitions for this interface */
