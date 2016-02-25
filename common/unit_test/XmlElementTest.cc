@@ -23,6 +23,21 @@
 
 using namespace qcc;
 
+#define VALID_XML "<root/>"
+
+TEST(XmlElement, ShouldFailGetRootForInvalidXml)
+{
+    XmlElement* root = nullptr;
+    EXPECT_EQ(ER_EOF, XmlElement::GetRoot("InvalidXml", &root));
+}
+
+TEST(XmlElement, ShouldPassGetRootForValidInput)
+{
+    XmlElement* root = nullptr;
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(VALID_XML, &root));
+    delete root;
+}
+
 TEST(XmlElement, SetName)
 {
     XmlElement root;
@@ -88,12 +103,12 @@ TEST(XmlElement, constructor_add_child_to_parent_node)
 TEST(XmlElement, CreateChild_GetChild)
 {
     XmlElement root = XmlElement("root");
-    XmlElement foo = root.CreateChild("foo");
-    XmlElement first = foo.CreateChild("value");
-    XmlElement second = foo.CreateChild("value");
+    XmlElement* foo = root.CreateChild("foo");
+    foo->CreateChild("value");
+    foo->CreateChild("value");
 
     EXPECT_STREQ("foo", root.GetChild("foo")->GetName().c_str());
-    EXPECT_STREQ("value", foo.GetChild("value")->GetName().c_str());
+    EXPECT_STREQ("value", foo->GetChild("value")->GetName().c_str());
 
     EXPECT_TRUE(NULL == root.GetChild("bar"));
 }
@@ -101,16 +116,16 @@ TEST(XmlElement, CreateChild_GetChild)
 TEST(XmlElement, GetChildren_of_root_node)
 {
     XmlElement root = XmlElement("root");
-    XmlElement foo = root.CreateChild("foo");
-    XmlElement first = foo.CreateChild("value");
-    XmlElement second = foo.CreateChild("value");
+    XmlElement* foo = root.CreateChild("foo");
+    foo->CreateChild("value");
+    foo->CreateChild("value");
 
     const std::vector<XmlElement*>& children = root.GetChildren();
 
     EXPECT_EQ(1U, children.size());
     EXPECT_STREQ("foo", children[0]->GetName().c_str());
 
-    const std::vector<XmlElement*>& children2 = foo.GetChildren();
+    const std::vector<XmlElement*>& children2 = foo->GetChildren();
 
     EXPECT_EQ(2U, children2.size());
     EXPECT_STREQ("value", children2[0]->GetName().c_str());
@@ -120,16 +135,16 @@ TEST(XmlElement, GetChildren_of_root_node)
 TEST(XmlElement, GetChildren_by_name)
 {
     XmlElement root = XmlElement("root");
-    XmlElement foo = root.CreateChild("foo");
-    XmlElement first = foo.CreateChild("value");
-    XmlElement second = foo.CreateChild("value");
+    XmlElement* foo = root.CreateChild("foo");
+    foo->CreateChild("value");
+    foo->CreateChild("value");
 
     std::vector<const XmlElement*> children = root.GetChildren("foo");
 
     EXPECT_EQ(1U, children.size());
     EXPECT_STREQ("foo", children[0]->GetName().c_str());
 
-    std::vector<const XmlElement*> children2 = foo.GetChildren("value");
+    std::vector<const XmlElement*> children2 = foo->GetChildren("value");
 
     EXPECT_EQ(2U, children2.size());
     EXPECT_STREQ("value", children2[0]->GetName().c_str());
