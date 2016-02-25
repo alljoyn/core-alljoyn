@@ -360,6 +360,16 @@ const char* _QCC_DbgGetMsg(void* ctx);
  */
 void _QCC_DbgDeleteCtx(void* ctx);
 
+/**
+ * @internal
+ * Checks if any modules have been explicitly enabled for debug logging -
+ * by setting one or more ER_DEBUG_ModuleName environment variables, or by
+ * calling QCC_SetDebugLevel.
+ *
+ * @return  true if there are any filters based on module name, false otherwise.
+ */
+bool AJ_CALL _QCC_DbgModulesSpecified();
+
 /** @endcond */
 #ifdef __cplusplus
 }
