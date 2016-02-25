@@ -37,6 +37,7 @@
 #include <alljoyn/DBusStd.h>
 #include <qcc/Debug.h>
 #include <qcc/Thread.h>
+#include <qcc/Util.h>
 
 using namespace std;
 using namespace qcc;
@@ -45,15 +46,16 @@ using namespace ajn;
 static const char* INTERFACE_NAME = "org.alljoyn.Bus.DescriptionInterface";
 static const char* SERVICE_PATH = "/";
 
-static const char* tags[] = { "en", "de" };
+/* The elements in tags array must be placed in alphabetical order */
+static const char* tags[] = { "de", "en" };
 static const char* objId = "obj";
-static const char* objDescription[] = { "This is the object", "DE: This is the object" };
+static const char* objDescription[] = { "DE: This is the object", "This is the object" };
 static const char* ifcId = "ifc";
-static const char* ifcDescription[] = { "This is the interface", "<bold>DE:</bold> This is the interface" };
+static const char* ifcDescription[] = { "<bold>DE:</bold> This is the interface", "This is the interface" };
 static const char* propId = "prop";
-static const char* namePropDescription[] = { "This is the actual name", "DE: This is the actual name" };
+static const char* namePropDescription[] = { "DE: This is the actual name", "This is the actual name" };
 static const char* methId = "method";
-static const char* pingMethodDescription[] = { "This is the ping description", "DE: This is the ping description" };
+static const char* pingMethodDescription[] = { "DE: This is the ping description", "This is the ping description" };
 
 static const char* IntrospectWithDescriptionString1[] = {
     "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
@@ -65,7 +67,11 @@ static const char* IntrospectWithDescriptionString1[] = {
     "    <description>This is the interface</description>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
     "      <description>This is the actual name</description>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the actual name\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the actual name\"/>\n"
     "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
     "    <method name=\"Introspect\">\n"
@@ -94,7 +100,134 @@ static const char* IntrospectWithDescriptionString1[] = {
     "    <description>&lt;bold&gt;DE:&lt;/bold&gt; This is the interface</description>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
     "      <description>DE: This is the actual name</description>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the actual name\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the actual name\"/>\n"
     "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n"
+    ,
+
+    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the object\"/>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the object\"/>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the actual name\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the actual name\"/>\n"
+    "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n"
+};
+
+static const char* IntrospectString1[] = {
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the object\"/>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the actual name\"/>\n"
+    "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n"
+    ,
+
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en_US\" value=\"This is the interface\"/>\n"
+    "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en_US\" value=\"This is the actual name\"/>\n"
+    "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n"
+    ,
+
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the object\"/>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the actual name\"/>\n"
+    "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
     "    <method name=\"Introspect\">\n"
@@ -125,10 +258,16 @@ static const char* IntrospectWithDescriptionString2[] = {
     "      <description>This is the ping description</description>\n"
     "      <arg name=\"inStr\" type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"outStr\" type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the ping description\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the ping description\"/>\n"
     "    </method>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
     "      <description>This is the actual name</description>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the actual name\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the actual name\"/>\n"
     "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
     "    <method name=\"Introspect\">\n"
@@ -158,10 +297,52 @@ static const char* IntrospectWithDescriptionString2[] = {
     "      <description>DE: This is the ping description</description>\n"
     "      <arg name=\"inStr\" type=\"s\" direction=\"in\"/>\n"
     "      <arg name=\"outStr\" type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the ping description\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the ping description\"/>\n"
     "    </method>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
     "      <description>DE: This is the actual name</description>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the actual name\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the actual name\"/>\n"
     "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n"
+    ,
+
+    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <method name=\"Ping\">\n"
+    "      <arg name=\"inStr\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"outStr\" type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the ping description\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the ping description\"/>\n"
+    "    </method>\n"
+    "    <property name=\"name\" type=\"s\" access=\"readwrite\">\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the actual name\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the actual name\"/>\n"
+    "    </property>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"&lt;bold&gt;DE:&lt;/bold&gt; This is the interface\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the interface\"/>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
     "    <method name=\"Introspect\">\n"
@@ -190,6 +371,7 @@ static const char* IntrospectWithDescriptionString3[] = {
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
     "    <description>ifc</description>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString\" value=\"ifc\"/>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
     "    <method name=\"Introspect\">\n"
@@ -217,6 +399,35 @@ static const char* IntrospectWithDescriptionString3[] = {
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
     "    <description>ifc</description>\n"
     "    <property name=\"name\" type=\"s\" access=\"readwrite\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString\" value=\"ifc\"/>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n"
+    ,
+
+    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the object\"/>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the object\"/>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <property name=\"name\" type=\"s\" access=\"readwrite\"/>\n"
+    "    <annotation name=\"org.alljoyn.Bus.DocString\" value=\"ifc\"/>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
     "    <method name=\"Introspect\">\n"
@@ -236,7 +447,7 @@ static const char* IntrospectWithDescriptionString3[] = {
     "</node>\n"
 };
 
-static const char* IntrospectWithDescriptionString4 =
+static const char* IntrospectWithDescriptionString4[] = {
     "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
     "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
     "<node>\n"
@@ -245,26 +456,35 @@ static const char* IntrospectWithDescriptionString4 =
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
     "    <signal name=\"globalBroadcastSignal\" sessionless=\"false\" globalbroadcast=\"true\">\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.GlobalBroadcast\" value=\"true\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacyNonSessionlessSignal\" sessionless=\"false\">\n"
     "      <description>legacy non-sessionless signal</description>\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"legacy non-sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"legacy non-sessionless signal\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacySessionlessSignal\" sessionless=\"true\">\n"
     "      <description>legacy sessionless signal</description>\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"legacy sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"legacy sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Sessionless\" value=\"true\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacySignal\" sessionless=\"false\">\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
     "    </signal>\n"
     "    <signal name=\"sessioncastSignal\" sessioncast=\"true\" sessionless=\"false\">\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Sessioncast\" value=\"true\"/>\n"
     "    </signal>\n"
     "    <signal name=\"sessionlessSignal\" sessionless=\"true\">\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Sessionless\" value=\"true\"/>\n"
     "    </signal>\n"
     "    <signal name=\"unicastSignal\" sessionless=\"false\" unicast=\"true\">\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Unicast\" value=\"true\"/>\n"
     "    </signal>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
@@ -282,7 +502,64 @@ static const char* IntrospectWithDescriptionString4 =
     "    </method>\n"
     "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
     "  </interface>\n"
-    "</node>\n";
+    "</node>\n"
+    ,
+
+    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
+    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<node>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the object\"/>\n"
+    "  <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the object\"/>\n"
+    "  <node name=\"org\"/>\n"
+    "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
+    "    <signal name=\"globalBroadcastSignal\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.GlobalBroadcast\" value=\"true\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"legacyNonSessionlessSignal\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"legacy non-sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"legacy non-sessionless signal\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"legacySessionlessSignal\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"legacy sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"legacy sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Sessionless\" value=\"true\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"legacySignal\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"sessioncastSignal\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Sessioncast\" value=\"true\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"sessionlessSignal\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Sessionless\" value=\"true\"/>\n"
+    "    </signal>\n"
+    "    <signal name=\"unicastSignal\">\n"
+    "      <arg type=\"s\" direction=\"out\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.Signal.Unicast\" value=\"true\"/>\n"
+    "    </signal>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
+    "    <method name=\"Introspect\">\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "  </interface>\n"
+    "  <interface name=\"org.allseen.Introspectable\">\n"
+    "    <method name=\"GetDescriptionLanguages\">\n"
+    "      <arg name=\"languageTags\" type=\"as\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <method name=\"IntrospectWithDescription\">\n"
+    "      <arg name=\"languageTag\" type=\"s\" direction=\"in\"/>\n"
+    "      <arg name=\"data\" type=\"s\" direction=\"out\"/>\n"
+    "    </method>\n"
+    "    <annotation name=\"org.alljoyn.Bus.Secure\" value=\"off\"/>\n"
+    "  </interface>\n"
+    "</node>\n"
+};
 
 class MyTranslator : public Translator {
   public:
@@ -301,12 +578,12 @@ class MyTranslator : public Translator {
         QCC_UNUSED(sourceLanguage);
         const char* tag = (*targetLanguage == '\0') ? "en" : targetLanguage;
         size_t i = 0;
-
-        if (0 == strcasecmp(tag, "en")) {
-            i = 0;
-        } else if (0 == strcasecmp(tag, "de")) {
-            i = 1;
-        } else {
+        for (; i < ArraySize(tags); i++) {
+            if (0 == strcasecmp(tag, tags[i])) {
+                break;
+            }
+        }
+        if (i == ArraySize(tags)) {
             return NULL;
         }
 
@@ -429,7 +706,7 @@ class DescriptionTest : public::testing::Test {
         for (size_t i = 0; i < las; ++i) {
             char* pas;
             EXPECT_EQ(ER_OK, asArray[i].Get("s", &pas));
-            ASSERT_STREQ(tags[1 - i], pas);
+            ASSERT_STREQ(tags[i], pas);
         }
     }
 
@@ -448,6 +725,23 @@ class DescriptionTest : public::testing::Test {
         ASSERT_TRUE(replyArg != NULL);
         EXPECT_EQ(ER_OK, replyArg->Get("s", &str));
         ASSERT_STREQ(IntrospectWithDescriptionStr, str);
+    }
+
+    void Introspect(ProxyBusObject* remoteObj, const char* IntrospectStr)
+    {
+        const InterfaceDescription* testIntf = remoteObj->GetInterface("org.freedesktop.DBus.Introspectable");
+        ASSERT_TRUE(testIntf != 0);
+        const InterfaceDescription::Member* member = testIntf->GetMember("Introspect");
+        ASSERT_TRUE(member != 0);
+
+        MsgArg msgArg;
+        Message replyMsg(*s_msgBusClient);
+        EXPECT_EQ(ER_OK, remoteObj->MethodCall("org.freedesktop.DBus.Introspectable", "Introspect", &msgArg, 0, replyMsg));
+        char* str = NULL;
+        const MsgArg* replyArg = replyMsg->GetArg(0);
+        ASSERT_TRUE(replyArg != NULL);
+        EXPECT_EQ(ER_OK, replyArg->Get("s", &str));
+        ASSERT_STREQ(IntrospectStr, str);
     }
 };
 
@@ -477,6 +771,7 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObject) {
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString1[0]);
     IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString1[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
+    Introspect(m_remoteObj, IntrospectWithDescriptionString1[2]);
 }
 
 TEST_F(DescriptionTest, IntrospectableDescriptionObjectGlobalTranslator)
@@ -504,6 +799,7 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectGlobalTranslator)
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString1[0]);
     IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString1[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
+    Introspect(m_remoteObj, IntrospectWithDescriptionString1[2]);
 }
 
 TEST_F(DescriptionTest, IntrospectableDescriptionObjectDefaultTranslator)
@@ -538,6 +834,7 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectDefaultTranslator)
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString1[0]);
     IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString1[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
+    Introspect(m_remoteObj, IntrospectWithDescriptionString1[2]);
 }
 
 TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoTranslate) {
@@ -571,6 +868,7 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoTranslate) {
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString2[0]);
     IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString2[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString2[1]);
+    Introspect(m_remoteObj, IntrospectWithDescriptionString2[2]);
 }
 
 TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoIntfTranslate) {
@@ -596,6 +894,41 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoIntfTranslate) {
     IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString3[0]);
     IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString3[0]);
     IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString3[1]);
+    Introspect(m_remoteObj, IntrospectWithDescriptionString3[2]);
+}
+
+TEST_F(DescriptionTest, IntrospectableDescriptionObjectWithAnnotations) {
+    // Service part
+    InterfaceDescription* intf = NULL;
+    MyTranslator translator;
+    EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
+    ASSERT_TRUE(intf != NULL);
+
+    intf->AddProperty("name", "s", PROP_ACCESS_RW);
+    intf->SetDescriptionLanguage("");
+    intf->SetDescription(ifcId);
+    intf->SetPropertyDescription("name", propId);
+    intf->SetDescriptionTranslator(&translator);
+    for (size_t i = 0; i < ArraySize(tags); i++) {
+        qcc::String annotName = qcc::String("org.alljoyn.Bus.DocString.") + tags[i];
+        qcc::String annotValue(namePropDescription[i]);
+        intf->AddPropertyAnnotation("name", annotName, annotValue);
+    }
+    intf->Activate();
+
+    ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
+    m_testObj->SetDescriptionTranslator(&translator);
+    ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
+    ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
+
+    ASSERT_TRUE((m_remoteObj = new ProxyBusObject(*s_msgBusClient, s_msgBusServer->GetUniqueName().c_str(), SERVICE_PATH, 0)) != NULL);
+    EXPECT_EQ(ER_OK, m_remoteObj->IntrospectRemoteObject());
+
+    DescriptionLanguages(m_remoteObj);
+    IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString1[0]);
+    IntrospectWithDescription(m_remoteObj, "en-US", IntrospectWithDescriptionString1[0]);
+    IntrospectWithDescription(m_remoteObj, "de", IntrospectWithDescriptionString1[1]);
+    Introspect(m_remoteObj, IntrospectWithDescriptionString1[2]);
 }
 
 TEST_F(DescriptionTest, SignalTypes)
@@ -644,5 +977,6 @@ TEST_F(DescriptionTest, SignalTypes)
     ASSERT_TRUE((m_remoteObj = new ProxyBusObject(*s_msgBusClient, s_msgBusServer->GetUniqueName().c_str(), SERVICE_PATH, 0)) != NULL);
     EXPECT_EQ(ER_OK, m_remoteObj->IntrospectRemoteObject());
 
-    IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString4);
+    IntrospectWithDescription(m_remoteObj, "en", IntrospectWithDescriptionString4[0]);
+    Introspect(m_remoteObj, IntrospectWithDescriptionString4[1]);
 }
