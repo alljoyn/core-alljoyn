@@ -35,11 +35,9 @@
 #include "PermissionMgmtObj.h"
 #include "PeerState.h"
 
-using namespace qcc;
-
 namespace ajn {
 
-#define AUTH_VERIFIER_LEN  Crypto_SHA256::DIGEST_SIZE
+#define AUTH_VERIFIER_LEN  qcc::Crypto_SHA256::DIGEST_SIZE
 
 /* Forward declaration */
 class AllJoynPeerObj;
@@ -67,7 +65,18 @@ class KeyExchangerCB {
 class KeyExchanger {
   public:
 
-    KeyExchanger(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : peerObj(peerObj), bus(bus), authCount(1), listener(listener), secretExpiration(3600), peerState(peerState), initiator(initiator) {
+    KeyExchanger(bool initiator,
+                 AllJoynPeerObj* peerObj,
+                 BusAttachment& bus,
+                 ProtectedAuthListener& listener,
+                 PeerState peerState) :
+        peerObj(peerObj),
+        bus(bus),
+        authCount(1),
+        listener(listener),
+        secretExpiration(3600),
+        peerState(peerState),
+        initiator(initiator) {
     }
 
     virtual ~KeyExchanger() {
@@ -154,7 +163,12 @@ class KeyExchanger {
      *              is available
      * @return ER_OK if successful; otherwise, an error code.
      */
-    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret, ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<ECCPublicKey>& issuerPublicKeys, bool& publicKeyAvailable);
+    static QStatus ParsePeerSecretRecord(const qcc::KeyBlob& rec,
+                                         qcc::KeyBlob& masterSecret,
+                                         qcc::ECCPublicKey* publicKey,
+                                         uint8_t* manifestDigest,
+                                         std::vector<qcc::ECCPublicKey>& issuerPublicKeys,
+                                         bool& publicKeyAvailable);
 
     /**
      * Helper function to parse the peer secret record to retrieve the master secret.
@@ -162,7 +176,7 @@ class KeyExchanger {
      * @param[out] masterSecret the master secret
      * @return ER_OK if successful; otherwise, an error code.
      */
-    static QStatus ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterSecret);
+    static QStatus ParsePeerSecretRecord(const qcc::KeyBlob& rec, qcc::KeyBlob& masterSecret);
     /**
      * Can peer support the KeyInfo structure.
      * @return true if the peer supports KeyInfo; false, otherwise.
@@ -204,7 +218,16 @@ class KeyExchangerECDHE : public KeyExchanger {
      * Constructor
      *
      */
-    KeyExchangerECDHE(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchanger(initiator, peerObj, bus, listener, peerState) {
+    KeyExchangerECDHE(bool initiator,
+                      AllJoynPeerObj* peerObj,
+                      BusAttachment& bus,
+                      ProtectedAuthListener& listener,
+                      PeerState peerState) :
+        KeyExchanger(initiator,
+                     peerObj,
+                     bus,
+                     listener,
+                     peerState) {
     }
     /**
      * Desstructor
@@ -218,13 +241,13 @@ class KeyExchangerECDHE : public KeyExchanger {
     virtual QStatus StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4]);
     virtual QStatus GenerateECDHEKeyPair();
 
-    const ECCPublicKey* GetPeerECDHEPublicKey() { return &peerPubKey; }
-    const ECCPublicKey* GetECDHEPublicKey();
-    void SetECDHEPublicKey(const ECCPublicKey* publicKey);
-    const ECCPrivateKey* GetECDHEPrivateKey();
-    void SetECDHEPrivateKey(const ECCPrivateKey* privateKey);
+    const qcc::ECCPublicKey* GetPeerECDHEPublicKey() { return &peerPubKey; }
+    const qcc::ECCPublicKey* GetECDHEPublicKey();
+    void SetECDHEPublicKey(const qcc::ECCPublicKey* publicKey);
+    const qcc::ECCPrivateKey* GetECDHEPrivateKey();
+    void SetECDHEPrivateKey(const qcc::ECCPrivateKey* privateKey);
 
-    QStatus GenerateMasterSecret(const ECCPublicKey* remotePubKey);
+    QStatus GenerateMasterSecret(const qcc::ECCPublicKey* remotePubKey);
 
     QStatus RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask);
 
@@ -247,8 +270,8 @@ class KeyExchangerECDHE : public KeyExchanger {
     void KeyExchangeGenKeyInfo(MsgArg& variant);
     QStatus KeyExchangeReadKeyInfo(MsgArg& variant);
 
-    ECCPublicKey peerPubKey;
-    Crypto_ECC ecc;
+    qcc::ECCPublicKey peerPubKey;
+    qcc::Crypto_ECC ecc;
     qcc::KeyBlob masterSecret;
 
   private:
@@ -273,7 +296,16 @@ class KeyExchangerECDHE_NULL : public KeyExchangerECDHE {
      */
     static const char* AuthName() { return "ALLJOYN_ECDHE_NULL"; }
 
-    KeyExchangerECDHE_NULL(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState) {
+    KeyExchangerECDHE_NULL(bool initiator,
+                           AllJoynPeerObj* peerObj,
+                           BusAttachment& bus,
+                           ProtectedAuthListener& listener,
+                           PeerState peerState) :
+        KeyExchangerECDHE(initiator,
+                          peerObj,
+                          bus,
+                          listener,
+                          peerState) {
     }
 
     virtual ~KeyExchangerECDHE_NULL() {
@@ -310,7 +342,16 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
      */
     static const char* AuthName() { return "ALLJOYN_ECDHE_PSK"; }
 
-    KeyExchangerECDHE_PSK(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState) {
+    KeyExchangerECDHE_PSK(bool initiator,
+                          AllJoynPeerObj* peerObj,
+                          BusAttachment& bus,
+                          ProtectedAuthListener& listener,
+                          PeerState peerState) :
+        KeyExchangerECDHE(initiator,
+                          peerObj,
+                          bus,
+                          listener,
+                          peerState) {
         pskName = "<anonymous>";
         pskValue = " ";
     }
@@ -410,7 +451,21 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
      */
     static const char* AuthName() { return "ALLJOYN_ECDHE_ECDSA"; }
 
-    KeyExchangerECDHE_ECDSA(bool initiator, AllJoynPeerObj* peerObj, BusAttachment& bus, ProtectedAuthListener& listener, PeerState peerState, PermissionMgmtObj::TrustAnchorList* trustAnchorList) : KeyExchangerECDHE(initiator, peerObj, bus, listener, peerState), certChainLen(0), certChain(NULL), trustAnchorList(trustAnchorList), peerDSAPubKey(NULL)
+    KeyExchangerECDHE_ECDSA(bool initiator,
+                            AllJoynPeerObj* peerObj,
+                            BusAttachment& bus,
+                            ProtectedAuthListener& listener,
+                            PeerState peerState,
+                            PermissionMgmtObj::TrustAnchorList* trustAnchorList) :
+        KeyExchangerECDHE(initiator,
+                          peerObj,
+                          bus,
+                          listener,
+                          peerState),
+        certChainLen(0),
+        certChain(NULL),
+        trustAnchorList(trustAnchorList),
+        peerDSAPubKey(NULL)
     {
         memset(peerManifestDigest, 0, sizeof(peerManifestDigest));
     }
@@ -451,20 +506,20 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
      */
     KeyExchangerECDHE_ECDSA(const KeyExchangerECDHE_ECDSA& other);
 
-    QStatus VerifyCredentialsCB(const char* peerName, CertificateX509* certs, size_t numCerts);
-    QStatus ParseCertChainPEM(String& encodedCertChain);
+    QStatus VerifyCredentialsCB(const char* peerName, qcc::CertificateX509* certs, size_t numCerts);
+    QStatus ParseCertChainPEM(qcc::String& encodedCertChain);
     QStatus GenVerifierCertArg(MsgArg& msgArg, bool updateHash);
     QStatus GenVerifierSigInfoArg(MsgArg& msgArg, bool updateHash);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
 
-    ECCPrivateKey issuerPrivateKey;
-    ECCPublicKey issuerPublicKey;
+    qcc::ECCPrivateKey issuerPrivateKey;
+    qcc::ECCPublicKey issuerPublicKey;
     size_t certChainLen;
-    CertificateX509* certChain;
+    qcc::CertificateX509* certChain;
     PermissionMgmtObj::TrustAnchorList* trustAnchorList;
-    ECCPublicKey* peerDSAPubKey;
-    uint8_t peerManifestDigest[Crypto_SHA256::DIGEST_SIZE];
-    std::vector<ECCPublicKey> peerIssuerPubKeys;
+    qcc::ECCPublicKey* peerDSAPubKey;
+    uint8_t peerManifestDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
+    std::vector<qcc::ECCPublicKey> peerIssuerPubKeys;
 };
 
 } /* namespace ajn */
