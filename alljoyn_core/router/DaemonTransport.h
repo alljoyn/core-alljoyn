@@ -116,6 +116,8 @@ class DaemonTransport : public Transport, public _RemoteEndpoint::EndpointListen
      */
     virtual QStatus NormalizeTransportSpec(const char* inSpec, qcc::String& outSpec, std::map<qcc::String, qcc::String>& argMap) const;
 
+    virtual bool SupportsOptions(const SessionOpts& opts) const;
+
     /**
      * Start listening for incoming connections on a specified bus address.
      *
