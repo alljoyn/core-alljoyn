@@ -60,6 +60,25 @@ DaemonTransport::~DaemonTransport()
     Join();
 }
 
+bool DaemonTransport::SupportsOptions(const SessionOpts& opts) const
+{
+    QCC_DbgTrace(("DaemonTransport::SupportsOptions()"));
+    bool rc = true;
+
+    if (opts.traffic != SessionOpts::TRAFFIC_MESSAGES ) {
+        QCC_DbgPrintf(("DaemonTransport::SupportsOptions(): traffic type mismatch"));
+        rc = false;
+    }
+
+    if (!(opts.transports & TRANSPORT_LOCAL)) {
+        QCC_DbgPrintf(("DaemonTransport::SupportsOptions(): transport mismatch"));
+        rc = false;
+    }
+
+    QCC_DbgPrintf(("DaemonTransport::SupportsOptions(): returns \"%s\"", rc == true ? "true" : "false"));
+    return rc;
+}
+
 QStatus DaemonTransport::Start()
 {
     stopping = false;
