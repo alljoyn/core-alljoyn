@@ -93,6 +93,16 @@ class KeyInfoHelper {
      * @return ER_OK if successfull; otherwise, error code.
      */
     static QStatus ExportCoordinates(const qcc::ECCPublicKey& publicKey, uint8_t* xData, const size_t xSize, uint8_t* yData, const size_t ySize);
+
+    /**
+     * Helper function to create KeyInfoNISTP256 from a PEM encoded public key.
+     *
+     * @param[in]    pemKey  The ECC public key in PEM format.
+     * @param[out]   key     Instance of the created KeyInfoNISTP256.
+     *
+     * @return ER_OK if successfull; otherwise, error code.
+     */
+    static QStatus PEMToKeyInfoNISTP256(AJ_PCSTR pemKey, qcc::KeyInfoNISTP256& key);
 };
 
 }
