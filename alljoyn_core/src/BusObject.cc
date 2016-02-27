@@ -199,6 +199,7 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
     qcc::String in(indent, ' ');
     qcc::String xml;
     qcc::String buffer;
+    bool unifiedFormat = (requestedLanguageTag == NULL);
 
     /* Iterate over child nodes */
     vector<BusObject*>::const_iterator iter = components->children.begin();
@@ -206,15 +207,19 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
         BusObject* child = *iter++;
         xml += in + "<node name=\"" + child->GetName() + "\"";
 
-        const char* nodeDesc = NULL;
-        if (requestedLanguageTag) {
-            nodeDesc = child->GetDescription(requestedLanguageTag, buffer);
-        }
-
+        const char* nodeDesc = child->GetDescription(requestedLanguageTag, buffer);
         if (deep || nodeDesc) {
             xml += ">\n";
             if (nodeDesc) {
-                xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
+                if (unifiedFormat) {
+                    xml += in + "  <annotation name=\"org.alljoyn.Bus.DocString";
+                    if (!languageTag.empty()) {
+                        xml += "." + languageTag;
+                    }
+                    xml += "\" value=\"" + XmlElement::EscapeXml(nodeDesc) + "\" />";
+                } else {
+                    xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
+                }
             }
             if (deep) {
                 xml += child->GenerateIntrospection(requestedLanguageTag, deep, indent + 2);
@@ -547,10 +552,37 @@ void BusObject::Introspect(const InterfaceDescription::Member* member, Message& 
 
     qcc::String xml = org::freedesktop::DBus::Introspectable::IntrospectDocType;
     xml += "<node>\n";
+
+    /* Append descriptions in all target languages */
+    if (!description.empty()) {
+        Translator* myTranslator = translator;
+        if (!myTranslator && bus) {
+            myTranslator = bus->GetDescriptionTranslator();
+        }
+        if (myTranslator != NULL) {
+            qcc::String language;
+            size_t size = myTranslator->NumTargetLanguages();
+            for (size_t index = 0; index < size; index++) {
+                myTranslator->GetTargetLanguage(index, language);
+                if (!language.empty()) {
+                    qcc::String buffer;
+                    qcc::String bestLanguage;
+                    myTranslator->GetBestLanguage(language.c_str(), languageTag, bestLanguage);
+                    const char* d = myTranslator->Translate(languageTag.c_str(), bestLanguage.c_str(), description.c_str(), buffer);
+                    if ((d == NULL) || (d[0] == '\0')) {
+                        continue;
+                    }
+                    xml += qcc::String("  <annotation name=\"org.alljoyn.Bus.DocString.") + language + "\" value=\"" + XmlElement::EscapeXml(d) + "\"/>\n";
+                }
+            }
+        } else if (!languageTag.empty()) {
+            xml += qcc::String("  <annotation name=\"org.alljoyn.Bus.DocString.") + languageTag + "\" value=\"" + description + "\"/>\n";
+        }
+    }
     if (isSecure) {
         xml += "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"true\"/>\n";
     }
-    xml += GenerateIntrospection(false, 2);
+    xml += GenerateIntrospection(NULL, false, 2);
     xml += "</node>\n";
     MsgArg arg("s", xml.c_str());
     QStatus status = MethodReply(msg, &arg, 1);
