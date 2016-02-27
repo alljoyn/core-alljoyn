@@ -40,12 +40,16 @@ env.Append(CPPDEFINES=['UNICODE',
 # from giving errors we cannot do anything about.
 env.Append(CPPDEFINES=['_CRT_SECURE_NO_WARNINGS'])
 
-# Set MS OS version number
+# Set the OS version number. The compiler would complain if the SDK public header
+# values were different from the values defined below.
+env.Append(CPPDEFINES=[('_WIN32_WINNT_WIN7',    '0x0601')])
+env.Append(CPPDEFINES=[('_WIN32_WINNT_WIN8',    '0x0602')])
+env.Append(CPPDEFINES=[('_WIN32_WINNT_WINBLUE', '0x0603')])
+env.Append(CPPDEFINES=[('_WIN32_WINNT_WIN10',   '0x0A00')])
+
 if env['OS'] == 'win10':
-    # Windows 10
     env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN10')])
 elif env['OS'] == 'win7':
-    # Windows 7
     env.Append(CPPDEFINES=[('_WIN32_WINNT', '_WIN32_WINNT_WIN7')])
 else:
     print 'Error: Unknown Windows OS type: ' + env['OS']
