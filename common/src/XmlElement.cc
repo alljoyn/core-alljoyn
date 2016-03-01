@@ -27,6 +27,7 @@
 
 #include <qcc/Debug.h>
 #include <qcc/String.h>
+#include <qcc/StringSource.h>
 #include <qcc/StringUtil.h>
 #include <qcc/XmlElement.h>
 
@@ -194,6 +195,25 @@ void XmlElement::FinalizeElement(XmlParseContext& ctx)
     ctx.curElem = ctx.curElem->GetParent();
 }
 
+QStatus AJ_CALL XmlElement::GetRoot(AJ_PCSTR xml, XmlElement** root)
+{
+    QCC_ASSERT(nullptr != xml);
+    QCC_ASSERT(nullptr != root);
+
+    QStatus status;
+    StringSource source(xml);
+    XmlParseContext context(source);
+    *root = nullptr;
+
+    status = XmlElement::Parse(context);
+
+    if (ER_OK == status) {
+        *root = context.DetachRoot();
+    }
+
+    return status;
+}
+
 QStatus AJ_CALL XmlElement::Parse(XmlParseContext& ctx)
 {
     bool done = false;
@@ -242,7 +262,7 @@ QStatus AJ_CALL XmlElement::Parse(XmlParseContext& ctx)
                             ctx.curElem = ctx.root;
                             ctx.curElem->SetName(ctx.elemName);
                         } else {
-                            ctx.curElem = &(ctx.curElem->CreateChild(ctx.elemName));
+                            ctx.curElem = ctx.curElem->CreateChild(ctx.elemName);
                         }
                     } else {
                         FinalizeElement(ctx);
@@ -257,7 +277,7 @@ QStatus AJ_CALL XmlElement::Parse(XmlParseContext& ctx)
                         ctx.curElem = ctx.root;
                         ctx.curElem->SetName(ctx.elemName);
                     } else {
-                        ctx.curElem = &(ctx.curElem->CreateChild(ctx.elemName));
+                        ctx.curElem = ctx.curElem->CreateChild(ctx.elemName);
                     }
                     ctx.isEndTag = true;
                 } else {
@@ -407,11 +427,11 @@ qcc::String XmlElement::Generate(qcc::String* outStr) const
     return *outStr;
 }
 
-XmlElement& XmlElement::CreateChild(const qcc::String& elementName)
+XmlElement* XmlElement::CreateChild(const qcc::String& elementName)
 {
     QCC_DbgTrace(("XmlElement::CreateChild(\"%s\")", elementName.c_str()));
     new XmlElement(elementName, this, true);
-    return *children.back();
+    return children.back();
 }
 
 std::vector<const XmlElement*> XmlElement::GetChildren(const qcc::String& elementName) const

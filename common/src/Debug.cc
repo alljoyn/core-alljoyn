@@ -177,6 +177,11 @@ bool DebugControl::PrintThread() const
     return printThread;
 }
 
+bool DebugControl::DbgModulesSpecified() const
+{
+    return !modLevels.empty();
+}
+
 bool DebugControl::Check(DbgMsgType type, const char* module)
 {
     map<const qcc::String, uint32_t>::const_iterator iter;
@@ -573,4 +578,9 @@ void _QCC_DbgDeleteCtx(void* ctx)
 {
     DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
     delete context;
+}
+
+extern "C" bool AJ_CALL _QCC_DbgModulesSpecified()
+{
+    return dbgControl->DbgModulesSpecified();
 }

@@ -65,6 +65,9 @@ class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::S
 class InterfaceDescription::ArgumentDescriptions : public std::map<qcc::String, qcc::String> {
 };
 
+class InterfaceDescription::ArgumentAnnotations : public std::map<std::pair<qcc::String, qcc::String>, qcc::String> {
+};
+
 qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& argNames, bool inOut,
                                           size_t indent, Member const& member, bool withDescriptions,
                                           const char* langTag, Translator* translator) const
@@ -98,9 +101,23 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
             myDesc = search->second.c_str();
         }
     }
-    if (myDesc) {
+    if (myDesc || member.argumentAnnotations->size() > 0) {
         arg += ">\n";
-        AppendDescriptionXml(arg, langTag, myDesc, translator, in);
+        if (myDesc) {
+            if (langTag != NULL) {
+                AppendDescriptionXml(arg, langTag, myDesc, translator, in);
+            } else {
+                AppendDescriptionToAnnotations(*member.annotations, myDesc, translator);
+            }
+        }
+
+        /* Add annotations that belongs to this argument */
+        ArgumentAnnotations::const_iterator ait = member.argumentAnnotations->begin();
+        for (; ait != member.argumentAnnotations->end(); ++ait) {
+            if (ait->first.first == argName) {
+                arg += in + "  <annotation name=\"" + ait->first.second.c_str() + "\" value=\"" + ait->second + "\"/>\n";
+            }
+        }
         arg += in + "</arg>\n";
     } else {
         arg += "/>\n";
@@ -140,7 +157,8 @@ InterfaceDescription::Member::Member(const InterfaceDescription* iface,
     isSessioncastSignal(false),
     isSessionlessSignal(false),
     isUnicastSignal(false),
-    isGlobalBroadcastSignal(false)
+    isGlobalBroadcastSignal(false),
+    argumentAnnotations(new ArgumentAnnotations())
 {
     if (annotation & MEMBER_ANNOTATE_DEPRECATED) {
         (*annotations)[org::freedesktop::DBus::AnnotateDeprecated] = "true";
@@ -181,7 +199,8 @@ InterfaceDescription::Member::Member(const Member& other)
     isSessioncastSignal(other.isSessioncastSignal),
     isSessionlessSignal(other.isSessionlessSignal),
     isUnicastSignal(other.isUnicastSignal),
-    isGlobalBroadcastSignal(other.isGlobalBroadcastSignal)
+    isGlobalBroadcastSignal(other.isGlobalBroadcastSignal),
+    argumentAnnotations(new ArgumentAnnotations(*(other.argumentAnnotations)))
 {
 }
 
@@ -200,6 +219,8 @@ InterfaceDescription::Member& InterfaceDescription::Member::operator=(const Memb
         description = other.description;
         delete argumentDescriptions;
         argumentDescriptions = new ArgumentDescriptions(*(other.argumentDescriptions));
+        delete argumentAnnotations;
+        argumentAnnotations = new ArgumentAnnotations(*(other.argumentAnnotations));
         isSessioncastSignal = other.isSessioncastSignal;
         isSessionlessSignal = other.isSessionlessSignal;
         isUnicastSignal = other.isUnicastSignal;
@@ -212,6 +233,7 @@ InterfaceDescription::Member::~Member()
 {
     delete annotations;
     delete argumentDescriptions;
+    delete argumentAnnotations;
 }
 
 size_t InterfaceDescription::Member::GetAnnotations(qcc::String* names, qcc::String* values, size_t size) const
@@ -223,6 +245,7 @@ bool InterfaceDescription::Member::operator==(const Member& o) const {
     return ((memberType == o.memberType) && (name == o.name) && (signature == o.signature)
             && (returnSignature == o.returnSignature) && (*annotations == *(o.annotations))
             && (description == o.description) && (*argumentDescriptions == *(o.argumentDescriptions))
+            && (*argumentAnnotations == *(o.argumentAnnotations))
             && (isSessioncastSignal == o.isSessioncastSignal)
             && (isSessionlessSignal == o.isSessionlessSignal)
             && (isUnicastSignal == o.isUnicastSignal)
@@ -427,12 +450,16 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
     }
 
     bool withDescriptions = languageTag && defs->hasDescription;
+    bool unifiedFormat = (languageTag == NULL);
 
     qcc::String xml = in + "<interface name=\"";
     xml += name + close;
 
     if (withDescriptions) {
         AppendDescriptionXml(xml, languageTag, defs->description.c_str(), myTranslator, in);
+    }
+    if (unifiedFormat && defs->hasDescription) {
+        AppendDescriptionToAnnotations(defs->annotations, defs->description.c_str(), myTranslator);
     }
 
     /*
@@ -464,8 +491,26 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
         }
         xml     += close;
 
+        if (unifiedFormat && !isMethod) {
+            if (member.isSessioncastSignal) {
+                (*member.annotations)["org.alljoyn.Bus.Signal.Sessioncast"] = "true";
+            }
+            if (member.isSessionlessSignal) {
+                (*member.annotations)["org.alljoyn.Bus.Signal.Sessionless"] = "true";
+            }
+            if (member.isUnicastSignal) {
+                (*member.annotations)["org.alljoyn.Bus.Signal.Unicast"] = "true";
+            }
+            if (member.isGlobalBroadcastSignal) {
+                (*member.annotations)["org.alljoyn.Bus.Signal.GlobalBroadcast"] = "true";
+            }
+        }
+
         if (withDescriptions) {
             AppendDescriptionXml(xml, languageTag, member.description.c_str(), myTranslator, in + "  ");
+        }
+        if (unifiedFormat) {
+            AppendDescriptionToAnnotations(*member.annotations, member.description.c_str(), myTranslator);
         }
 
         /* Iterate over IN arguments */
@@ -505,12 +550,11 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
             xml += " access=\"readwrite\"";
         }
 
-        // Does this property have a description? Only if (a) we're doing descriptions,
-        // (b) the property has some description text, (c) that text is not a
+        // Does this property have a description? Only if
+        // (a) the property has some description text, (b) that text is not a
         // lookup key (empty language tag) with no Translator to produce a description string,
-        // and (d) the translator has a description in the requested language.
-        bool propWithDescription = withDescriptions &&
-                                   !property.description.empty() &&
+        // and (c) the translator has a description in the requested language.
+        bool propWithDescription = !property.description.empty() &&
                                    !(defs->languageTag.empty() && !myTranslator);
         if (propWithDescription) {
             qcc::String buffer;
@@ -524,16 +568,19 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
         if (property.annotations->size() || propWithDescription) {
             xml += ">\n";
 
+            if (withDescriptions) {
+                AppendDescriptionXml(xml, languageTag, property.description.c_str(), myTranslator, in + "  ");
+            }
+            if (unifiedFormat) {
+                AppendDescriptionToAnnotations(*property.annotations, property.description.c_str(), myTranslator);
+            }
+
             if (property.annotations->size()) {
                 // add annotations
                 AnnotationsMap::const_iterator ait = property.annotations->begin();
                 for (; ait != property.annotations->end(); ++ait) {
                     xml += in + "    <annotation name=\"" + ait->first.c_str() + "\" value=\"" + ait->second + "\"/>\n";
                 }
-            }
-
-            if (propWithDescription) {
-                AppendDescriptionXml(xml, languageTag, property.description.c_str(), myTranslator, in + "  ");
             }
             xml += in + "  </property>\n";
         } else {
@@ -858,6 +905,36 @@ bool InterfaceDescription::HasDescription() const
     return defs->hasDescription;
 }
 
+QStatus InterfaceDescription::AddArgAnnotation(const char* member, const char* arg, const qcc::String& name, const qcc::String& value)
+{
+    if (isActivated) {
+        return ER_BUS_INTERFACE_ACTIVATED;
+    }
+
+    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    if (it == defs->members.end()) {
+        return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
+    }
+
+    Member& m = it->second;
+    pair<qcc::String, qcc::String> item(qcc::String(arg), name);
+    std::pair<ArgumentAnnotations::iterator, bool> ret = m.argumentAnnotations->insert(ArgumentAnnotations::value_type(item, value));
+    return (ret.second || ((ret.first->first.first.compare(arg) == 0) && (ret.first->first.second == name))) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
+}
+
+bool InterfaceDescription::GetArgAnnotation(const char* member, const char* arg, const qcc::String& name, qcc::String& value) const
+{
+    Definitions::MemberMap::iterator it = defs->members.find(StringMapKey(member));
+    if (it == defs->members.end()) {
+        return false;
+    }
+
+    Member& m = it->second;
+    pair<qcc::String, qcc::String> item(qcc::String(arg), name);
+    ArgumentAnnotations::const_iterator ait = m.argumentAnnotations->find(item);
+    return (ait != m.argumentAnnotations->end() ? value = ait->second, true : false);
+}
+
 const char* InterfaceDescription::Translate(const char* toLanguage, const char* text, qcc::String& buffer, Translator* translator) const
 {
     if (NULL == text) {
@@ -887,6 +964,49 @@ void InterfaceDescription::SetDescriptionTranslator(Translator* translator) {
 Translator* InterfaceDescription::GetDescriptionTranslator() const
 {
     return defs->translator;
+}
+
+void InterfaceDescription::AppendDescriptionToAnnotations(AnnotationsMap& annotations, const char* description, Translator* translator) const
+{
+    if ((description == NULL) || (description[0] == '\0')) {
+        return;
+    }
+
+    qcc::String docString("org.alljoyn.Bus.DocString");
+    qcc::String localDescription(description);
+
+    /* Append description of all languages */
+    qcc::String language;
+    if (translator != NULL) {
+        size_t size = translator->NumTargetLanguages();
+        for (size_t index = 0; index < size; index++) {
+            translator->GetTargetLanguage(index, language);
+
+            if (!language.empty()) {
+                qcc::String buffer;
+                const char* d = Translate(language.c_str(), description, buffer, translator);
+                if ((d == NULL) || (d[0] == '\0')) {
+                    continue;
+                }
+                localDescription = XmlElement::EscapeXml(d);
+                qcc::String name = docString + "." + language;
+                annotations[name] = localDescription;
+            }
+        }
+    } else {
+        /* Append with no language tag only if it hasn't been annotated */
+        bool found = false;
+        AnnotationsMap::const_iterator mit = annotations.begin();
+        for (; mit != annotations.end(); ++mit) {
+            if (localDescription == mit->second) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            annotations[docString] = localDescription;
+        }
+    }
 }
 
 }

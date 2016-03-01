@@ -50,7 +50,8 @@ static const char* SERVICE_PATH = "/SecureService";
 static const char* KEYX_ECDHE_NULL = "ALLJOYN_ECDHE_NULL";
 static const char* KEYX_ECDHE_PSK = "ALLJOYN_ECDHE_PSK";
 static const char* KEYX_ECDHE_ECDSA = "ALLJOYN_ECDHE_ECDSA";
-static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL";
+static const char* KEYX_ECDHE_SPEKE = "ALLJOYN_ECDHE_SPEKE";
+static const char* ECDHE_KEYX = "ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_SPEKE ALLJOYN_ECDHE_PSK ALLJOYN_ECDHE_NULL";
 static const SessionPort SERVICE_PORT = 42;
 
 static volatile sig_atomic_t s_interrupt = false;
@@ -234,6 +235,16 @@ class ECDHEKeyXListener : public AuthListener {
             }
 
             creds.SetExpiration(100);  /* set the master secret expiry time to 100 seconds */
+            return true;
+        } else if (strcmp(authMechanism, KEYX_ECDHE_SPEKE) == 0) {
+            /*
+             * Based on the pre shared secret id, the application can retrieve
+             * the password from storage or from the end user.
+             * In this example, the password is a hard coded string.
+             */
+            String password("1234");
+            creds.SetPassword(password);
+            creds.SetExpiration(100);              /* set the master secret expiry time to 100 seconds */
             return true;
         }
         return false;

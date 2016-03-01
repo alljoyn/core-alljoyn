@@ -27,6 +27,9 @@
 #include "AutoPingerInternal.h"
 #include "BusInternal.h"
 #include "NamedPipeClientTransport.h"
+#include "XmlPoliciesValidator.h"
+#include "XmlRulesConverter.h"
+#include "XmlRulesValidator.h"
 
 namespace ajn {
 
@@ -38,6 +41,9 @@ class StaticGlobals {
         AutoPingerInternal::Init();
         PasswordManager::Init();
         BusAttachment::Internal::Init();
+        XmlPoliciesValidator::Init();
+        XmlRulesConverter::Init();
+        XmlRulesValidator::Init();
     }
 
     static void Shutdown()

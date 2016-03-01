@@ -65,8 +65,11 @@ bool GetDescription(const XmlElement* elem, qcc::String& description)
 {
     vector<XmlElement*>::const_iterator it = elem->GetChildren().begin();
     for (; it != elem->GetChildren().end(); it++) {
-        if ((*it)->GetName().compare("description")) {
+        if ((*it)->GetName().compare("description") == 0) {
             description = (*it)->GetContent();
+            return true;
+        } else if (((*it)->GetName() == "annotation") && ((*it)->GetAttribute("name").compare(0, 25, "org.alljoyn.Bus.DocString") == 0)) {
+            description = (*it)->GetAttribute("value");
             return true;
         }
     }
@@ -140,12 +143,24 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 bool isSessionlessSignal = false;
                 bool isUnicastSignal = false;
                 bool isGlobalBroadcastSignal = false;
-
-                /* Iterate over member children */
                 const vector<XmlElement*>& argChildren = ifChildElem->GetChildren();
                 vector<XmlElement*>::const_iterator argIt = argChildren.begin();
                 map<qcc::String, qcc::String> argDescriptions;
+                map<pair<qcc::String, qcc::String>, qcc::String> argAnnotations;
                 qcc::String memberDescription;
+
+                if (isSignal) {
+                    const qcc::String& sessioncastStr = ifChildElem->GetAttribute("sessioncast");
+                    isSessioncastSignal = (sessioncastStr == "true");
+                    const qcc::String& sessionlessStr = ifChildElem->GetAttribute("sessionless");
+                    isSessionlessSignal = (sessionlessStr == "true");
+                    const qcc::String& unicastStr = ifChildElem->GetAttribute("unicast");
+                    isUnicastSignal = (unicastStr == "true");
+                    const qcc::String& globalBroadcastStr = ifChildElem->GetAttribute("globalbroadcast");
+                    isGlobalBroadcastSignal = (globalBroadcastStr == "true");
+                }
+
+                /* Iterate over member children */
                 while ((ER_OK == status) && (argIt != argChildren.end())) {
                     const XmlElement* argElem = *argIt++;
                     if (argElem->GetName() == "arg") {
@@ -170,6 +185,17 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                             if (GetDescription(argElem, description)) {
                                 argDescriptions.insert(pair<qcc::String, qcc::String>(nameAtt, description));
                             }
+
+                            /* Add argument annotations */
+                            vector<XmlElement*>::const_iterator it = argElem->GetChildren().begin();
+                            for (; it != argElem->GetChildren().end(); it++) {
+                                if ((*it)->GetName() == "annotation") {
+                                    const qcc::String& argNameAtt = (*it)->GetAttribute("name");
+                                    const qcc::String& argValueAtt = (*it)->GetAttribute("value");
+                                    pair<qcc::String, qcc::String> item(nameAtt, argNameAtt);
+                                    argAnnotations[item] = argValueAtt;
+                                }
+                            }
                         }
 
                         if (isSignal || (argElem->GetAttribute("direction") == "in")) {
@@ -180,21 +206,28 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                     } else if (argElem->GetName() == "annotation") {
                         const qcc::String& nameAtt = argElem->GetAttribute("name");
                         const qcc::String& valueAtt = argElem->GetAttribute("value");
+
+                        /* Treat annotation DocString as description */
+                        if (nameAtt.compare(0, 25, "org.alljoyn.Bus.DocString") == 0) {
+                            memberDescription = valueAtt;
+                        }
                         annotations[nameAtt] = valueAtt;
+
+                        /* Unified XML signal emission behaviors */
+                        if (isSignal) {
+                            if (nameAtt == "org.alljoyn.Bus.Signal.Sessionless") {
+                                isSessionlessSignal = (valueAtt == "true");
+                            } else if (nameAtt == "org.alljoyn.Bus.Signal.Sessioncast") {
+                                isSessioncastSignal = (valueAtt == "true");
+                            } else if (nameAtt == "org.alljoyn.Bus.Signal.Unicast") {
+                                isUnicastSignal = (valueAtt == "true");
+                            } else if (nameAtt == "org.alljoyn.Bus.Signal.GlobalBroadcast") {
+                                isGlobalBroadcastSignal = (valueAtt == "true");
+                            }
+                        }
                     } else if (argElem->GetName() == "description") {
                         memberDescription = argElem->GetContent();
                     }
-
-                }
-                if (isSignal) {
-                    const qcc::String& sessioncastStr = ifChildElem->GetAttribute("sessioncast");
-                    isSessioncastSignal = (sessioncastStr == "true");
-                    const qcc::String& sessionlessStr = ifChildElem->GetAttribute("sessionless");
-                    isSessionlessSignal = (sessionlessStr == "true");
-                    const qcc::String& unicastStr = ifChildElem->GetAttribute("unicast");
-                    isUnicastSignal = (unicastStr == "true");
-                    const qcc::String& globalBroadcastStr = ifChildElem->GetAttribute("globalbroadcast");
-                    isGlobalBroadcastSignal = (globalBroadcastStr == "true");
                 }
 
                 /* Add the member */
@@ -229,6 +262,10 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
 
                     for (std::map<String, String>::const_iterator it = argDescriptions.begin(); it != argDescriptions.end(); it++) {
                         intf.SetArgDescription(memberName.c_str(), it->first.c_str(), it->second.c_str());
+                    }
+
+                    for (std::map<std::pair<qcc::String, qcc::String>, qcc::String>::const_iterator it = argAnnotations.begin(); it != argAnnotations.end(); it++) {
+                        intf.AddArgAnnotation(memberName.c_str(), it->first.first.c_str(), it->first.second, it->second);
                     }
                 }
             } else {
@@ -271,7 +308,18 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 }
             }
         } else if (ifChildName == "annotation") {
-            status = intf.AddAnnotation(ifChildElem->GetAttribute("name"), ifChildElem->GetAttribute("value"));
+            const qcc::String& nameAtt = ifChildElem->GetAttribute("name");
+            const qcc::String& valueAtt = ifChildElem->GetAttribute("value");
+
+            /* Treat annotation DocString as description (for example, "org.alljoyn.Bus.DocString.En") */
+            if (nameAtt.compare(0, 25, "org.alljoyn.Bus.DocString") == 0) {
+                if ((nameAtt.length() > 26) && (nameAtt[25] == '.')) {
+                    qcc::String const& language = nameAtt.substr(26);
+                    intf.SetDescriptionLanguage(language.c_str());
+                }
+                intf.SetDescription(valueAtt.c_str());
+            }
+            status = intf.AddAnnotation(nameAtt, valueAtt);
         } else if (ifChildName == "description") {
             qcc::String const& description = ifChildElem->GetContent();
             qcc::String const& language = ifChildElem->GetAttribute("language");

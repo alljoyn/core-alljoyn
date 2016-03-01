@@ -802,7 +802,7 @@ class BusAttachment : public MessageReceiver {
      *                             If this parameter is NULL peer-to-peer authentication is disabled.  This is a
      *                             space separated list of any of the following values:
      *                             ALLJOYN_SRP_LOGON, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
-     *                             ALLJOYN_ECDHE_ECDSA, GSSAPI.
+     *                             ALLJOYN_ECDHE_ECDSA, GSSAPI, ALLJOYN_ECDHE_SPEKE.
      *
      * @param authListener         Passes password and other authentication related requests to the application.
      *

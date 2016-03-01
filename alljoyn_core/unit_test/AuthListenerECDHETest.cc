@@ -61,6 +61,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
              * cryptographically secure random number generator.
              */
             psk("faaa0af3dd3f1e0379da046a3ab6ca44"),
+            password("1234"),                   /* password for ECDHE_SPEKE mechanism */
             server(server)
         {
         }
@@ -98,6 +99,18 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
                     creds.SetUserName(pskName);
                 }
                 creds.SetPassword(psk);
+                if (sendExpiry) {
+                    creds.SetExpiration(expirationSeconds);
+                }
+                return true;
+            } else if (strcmp(authMechanism, "ALLJOYN_ECDHE_SPEKE") == 0) {
+                /*
+                 * Solicit the password
+                 */
+                if (!sendKeys) {
+                    return false;
+                }
+                creds.SetPassword(password);
                 if (sendExpiry) {
                     creds.SetExpiration(expirationSeconds);
                 }
@@ -407,6 +420,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         bool authComplete;
         qcc::String pskName;
         qcc::String psk;
+        qcc::String password;
         qcc::String chosenMechanism;
       private:
         bool server;
@@ -686,6 +700,69 @@ TEST_F(AuthListenerECDHETest, ECDHE_PSK_Fail_DifferentPSKName)
     EXPECT_FALSE(clientAuthListener.authComplete);
     EXPECT_FALSE(serverAuthListener.authComplete);
 }
+
+TEST_F(AuthListenerECDHETest, ECDHE_SPEKE_Success_SendKeys)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_SPEKE"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_SPEKE"));
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_SPEKE_Success_DoNotSendExpiry)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_SPEKE"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_SPEKE"));
+    clientAuthListener.sendExpiry = false;
+    EXPECT_EQ(ER_OK, ExerciseOn());
+    EXPECT_TRUE(clientAuthListener.authComplete);
+    EXPECT_TRUE(serverAuthListener.authComplete);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_SPEKE_Fail_DoNotSendKeys)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_SPEKE"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_SPEKE"));
+    clientAuthListener.sendKeys = false;
+    serverAuthListener.sendKeys = false;
+    EXPECT_NE(ER_OK, ExerciseOn());
+    EXPECT_FALSE(clientAuthListener.authComplete);
+    EXPECT_FALSE(serverAuthListener.authComplete);
+}
+
+
+TEST_F(AuthListenerECDHETest, ECDHE_SPEKE_Fail_ServerDoNotSendKeys)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_SPEKE"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_SPEKE"));
+    serverAuthListener.sendKeys = false;
+    EXPECT_NE(ER_OK, ExerciseOn());
+    EXPECT_FALSE(clientAuthListener.authComplete);
+    EXPECT_FALSE(serverAuthListener.authComplete);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_SPEKE_Fail_ClientDoNotSendKeys)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_SPEKE"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_SPEKE"));
+    clientAuthListener.sendKeys = false;
+    EXPECT_NE(ER_OK, ExerciseOn());
+    EXPECT_FALSE(clientAuthListener.authComplete);
+    EXPECT_FALSE(serverAuthListener.authComplete);
+}
+
+TEST_F(AuthListenerECDHETest, ECDHE_SPEKE_Fail_DifferentPassword)
+{
+    EXPECT_EQ(ER_OK, EnableSecurity(true, "ALLJOYN_ECDHE_SPEKE"));
+    EXPECT_EQ(ER_OK, EnableSecurity(false, "ALLJOYN_ECDHE_SPEKE"));
+    clientAuthListener.password = "1234";
+    serverAuthListener.password = "4321";
+    EXPECT_NE(ER_OK, ExerciseOn());
+    EXPECT_FALSE(clientAuthListener.authComplete);
+    EXPECT_FALSE(serverAuthListener.authComplete);
+}
+
 
 TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_Success)
 {

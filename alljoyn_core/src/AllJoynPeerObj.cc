@@ -1878,6 +1878,9 @@ std::shared_ptr<KeyExchanger> AllJoynPeerObj::GetKeyExchangerInstance(PeerState 
         if ((suite & AUTH_SUITE_ECDHE_PSK) == AUTH_SUITE_ECDHE_PSK) {
             return make_shared<KeyExchangerECDHE_PSK>(initiator, this, *bus, peerAuthListener, peerState);
         }
+        if ((suite & AUTH_SUITE_ECDHE_SPEKE) == AUTH_SUITE_ECDHE_SPEKE) {
+            return make_shared<KeyExchangerECDHE_SPEKE>(initiator, this, *bus, peerAuthListener, peerState);
+        }
         if ((suite & AUTH_SUITE_ECDHE_NULL) == AUTH_SUITE_ECDHE_NULL) {
             return make_shared<KeyExchangerECDHE_NULL>(initiator, this, *bus, peerAuthListener, peerState);
         }
@@ -1990,10 +1993,12 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
             suiteList.push_back(SortableAuthSuite(5, AUTH_SUITE_SRP_LOGON));
         } else if (mech == "ALLJOYN_ECDHE_PSK") {
             suiteList.push_back(SortableAuthSuite(6, AUTH_SUITE_ECDHE_PSK));
+        } else if (mech == "ALLJOYN_ECDHE_SPEKE") {
+            suiteList.push_back(SortableAuthSuite(7, AUTH_SUITE_ECDHE_SPEKE));
         } else if (mech == "GSSAPI") {
-            suiteList.push_back(SortableAuthSuite(7, AUTH_SUITE_GSSAPI));
+            suiteList.push_back(SortableAuthSuite(8, AUTH_SUITE_GSSAPI));
         } else if (mech == "ALLJOYN_ECDHE_ECDSA") {
-            suiteList.push_back(SortableAuthSuite(8, AUTH_SUITE_ECDHE_ECDSA));
+            suiteList.push_back(SortableAuthSuite(9, AUTH_SUITE_ECDHE_ECDSA));
         }
     }
     if (suiteList.size() == 0) {

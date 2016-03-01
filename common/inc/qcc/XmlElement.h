@@ -47,6 +47,18 @@ class XmlElement {
   public:
 
     /**
+     * Retrieves the root of the XML in form of a XmlElement.
+     *
+     * @param[in]     xml     Input XML.
+     * @param[out]    root    XML root, null if call failed.
+     *                        Must be freed by calling "delete".
+     * @return    ER_OK if parse was successful.
+     *            ER_WOULDBLOCK if parse is partially completed pending more I/O.
+     *            Otherwise error.
+     */
+    static QStatus AJ_CALL GetRoot(AJ_PCSTR xml, XmlElement** root);
+
+    /**
      * Create an XmlElement from an XML document fragment.
      * It is the responsibility of the caller to free the pointer returned in root.
      *
@@ -156,7 +168,7 @@ class XmlElement {
      *
      * @param name   Child node name.
      */
-    XmlElement& CreateChild(const qcc::String& name);
+    XmlElement* CreateChild(const qcc::String& name);
 
     /**
      * Get the content.

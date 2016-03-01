@@ -26,6 +26,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
+#include <qcc/GUID.h>
 
 namespace qcc {
 
@@ -496,6 +497,20 @@ class Crypto_ECC {
      *      Other error status.
      */
     QStatus GenerateDHKeyPair();
+
+    /**
+     * Generates the ephemeral key pair for EC-SPEKE. The key pair
+     * can then be used with the other DH APIs to compute the shared secret.
+     * @param pw          Password and additional data to use during key generation.
+     * @param pwLen       The byte length of pw.
+     * @param clientGUID  The client's GUID
+     * @param serviceGUID The service's GUID
+     * @return
+     *      ER_OK if the key pair is successfully generated.
+     *      ER_FAIL otherwise
+     *      Other error status.
+     */
+    QStatus GenerateSPEKEKeyPair(const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID);
 
     /**
      * Generates the Diffie-Hellman shared secret.
