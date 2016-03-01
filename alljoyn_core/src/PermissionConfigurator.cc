@@ -27,6 +27,7 @@
 #include "BusInternal.h"
 #include "CredentialAccessor.h"
 #include "KeyInfoHelper.h"
+#include "XmlRulesConverter.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -86,7 +87,21 @@ QStatus PermissionConfigurator::SetPermissionManifest(PermissionPolicy::Rule* ru
     return permissionMgmtObj->SetManifestTemplate(rules, count);
 }
 
-QStatus PermissionConfigurator::GetApplicationState(ApplicationState& applicationState)
+QStatus PermissionConfigurator::SetManifestTemplateFromXml(AJ_PCSTR manifestXml)
+{
+    QStatus status;
+    std::vector<PermissionPolicy::Rule> rules;
+
+    status = XmlRulesConverter::XmlToRules(manifestXml, rules);
+
+    if (ER_OK == status) {
+        status = SetPermissionManifest(rules.data(), rules.size());
+    }
+
+    return status;
+}
+
+QStatus PermissionConfigurator::GetApplicationState(ApplicationState& applicationState) const
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
@@ -174,7 +189,7 @@ QStatus PermissionConfigurator::SetClaimCapabilityAdditionalInfo(PermissionConfi
     return permissionMgmtObj->SetClaimCapabilityAdditionalInfo(additionalInfo);
 }
 
-QStatus PermissionConfigurator::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
+QStatus PermissionConfigurator::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities) const
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
@@ -183,7 +198,7 @@ QStatus PermissionConfigurator::GetClaimCapabilities(PermissionConfigurator::Cla
     return permissionMgmtObj->GetClaimCapabilities(claimCapabilities);
 }
 
-QStatus PermissionConfigurator::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
+QStatus PermissionConfigurator::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {

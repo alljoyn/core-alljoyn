@@ -41,7 +41,7 @@ typedef struct _alljoyn_permissionconfigurationlistener_handle* alljoyn_permissi
  *
  * @param context  The context pointer passed into the alljoyn_permissionconfigurationlistener_create function.
  */
-typedef QStatus (AJ_CALL * alljoyn_permissionconfigurationlistener_factoryreset_ptr)(const void* context);
+typedef QStatus (AJ_CALL * alljoyn_permissionconfigurationlistener_factoryreset_ptr)(void* context);
 
 /**
  * Type for the PolicyChanged callback.
@@ -50,7 +50,7 @@ typedef QStatus (AJ_CALL * alljoyn_permissionconfigurationlistener_factoryreset_
  *
  * @param context  The context pointer passed into the alljoyn_permissionconfigurationlistener_create function.
  */
-typedef void (AJ_CALL * alljoyn_permissionconfigurationlistener_policychanged_ptr)(const void* context);
+typedef void (AJ_CALL * alljoyn_permissionconfigurationlistener_policychanged_ptr)(void* context);
 
 /**
  * Structure used during alljoyn_permissionconfigurationlistener_create to provide callbacks into C.
@@ -76,7 +76,7 @@ typedef struct {
  *
  * @return Handle to newly allocated alljoyn_permissionconfigurationlistener.
  */
-extern AJ_API alljoyn_permissionconfigurationlistener AJ_CALL alljoyn_permissionconfigurationlistener_create(const alljoyn_permissionconfigurationlistener_callbacks* callbacks, const void* context);
+extern AJ_API alljoyn_permissionconfigurationlistener AJ_CALL alljoyn_permissionconfigurationlistener_create(const alljoyn_permissionconfigurationlistener_callbacks* callbacks, void* context);
 
 /**
  * Destroy an alljoyn_permissionconfigurationlistener.
