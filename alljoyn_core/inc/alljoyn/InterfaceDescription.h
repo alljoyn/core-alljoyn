@@ -46,8 +46,9 @@ static const uint8_t PROP_ACCESS_RW    = 3; /**< Read-Write Access type */
 // @}
 /** @name Property Annotation flags */
 // @{
-static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL             = 1; /**< EmitChangedSignal annotate flag. */
-static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES = 2; /**< EmitChangedSignal annotate flag (for notifying invalidation of property instead of value. */
+static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL             = 1; /**< EmitsChangedSignal annotate flag. */
+static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES = 2; /**< EmitsChangedSignal annotate flag for notifying invalidation of property instead of value. */
+static const uint8_t PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_CONST       = 4; /**< EmitsChangedSignal annotate flag for const property. */
 // @}
 /** @name Method/Signal Annotation flags */
 // @{
