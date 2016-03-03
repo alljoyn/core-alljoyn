@@ -172,7 +172,7 @@ class AuthListenerTest : public testing::Test {
         EXPECT_TRUE(name_owner_changed_flag);
     }
 
-    void SetupAuthClient() {
+    void SetUpAuthClient() {
         alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(clientbus, OBJECT_NAME, OBJECT_PATH, 0);
         EXPECT_TRUE(proxyObj);
         status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
@@ -192,7 +192,7 @@ class AuthListenerTest : public testing::Test {
 
     }
 
-    void SetupAuthClientAuthFail() {
+    void SetUpAuthClientAuthFail() {
         alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(clientbus, OBJECT_NAME, OBJECT_PATH, 0);
         EXPECT_TRUE(proxyObj);
         status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
@@ -219,6 +219,16 @@ class AuthListenerTest : public testing::Test {
         verifycredentials_client_flag = QCC_FALSE;
         securityviolation_client_flag = QCC_FALSE;
     }
+
+    /* Helper methods to run a test with different authentication mechanisms. */
+    void RunAuthSucceedsTest(const char* mechanism, const char* context_string);
+    void RunAuthFailsTest(const char* mechanism);
+    void RunSecureConnectionTest(const char* mechanism, const char* context_string);
+
+    void RunAsyncAuthSucceedsTest(const char* mechanism, const char* context_string);
+    void RunAsyncAuthFailsTest(const char* mechanism);
+    void RunAsyncSecureConnectionTest(const char* mechanism, const char* context_string);
+
     QStatus status;
     alljoyn_busattachment servicebus;
     alljoyn_busattachment clientbus;
@@ -228,232 +238,122 @@ class AuthListenerTest : public testing::Test {
 };
 
 /* AuthListener callback functions*/
-static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx(const void* context, const char* authMechanism,
-                                                                         const char* peerName, uint16_t authCount,
-                                                                         const char* userName, uint16_t credMask,
-                                                                         alljoyn_credentials credentials) {
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_service(const void* context, const char* authMechanism,
+                                                                const char* peerName, uint16_t authCount,
+                                                                const char* userName, uint16_t credMask,
+                                                                alljoyn_credentials credentials) {
     QCC_UNUSED(peerName);
     QCC_UNUSED(authCount);
-    QCC_UNUSED(userName);
 
-    EXPECT_STREQ("context test string", (const char*)context);
-    EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
-    if (credMask & ALLJOYN_CRED_PASSWORD) {
-        alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
+        }
+        requestcredentials_service_flag = QCC_TRUE;
+        return QCC_TRUE;
     }
-    requestcredentials_service_flag = QCC_TRUE;
-    return QCC_TRUE;
-}
 
-static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx(const void* context, const char* authMechanism,
-                                                                                 const char* peerName, QCC_BOOL success) {
-    QCC_UNUSED(authMechanism);
-    QCC_UNUSED(peerName);
-
-    EXPECT_STREQ("context test string", (const char*)context);
-    EXPECT_TRUE(success);
-    authenticationcomplete_service_flag = QCC_TRUE;
-}
-
-
-static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx(const void* context, const char* authMechanism,
-                                                                        const char* peerName, uint16_t authCount,
-                                                                        const char* userName, uint16_t credMask,
-                                                                        alljoyn_credentials credentials) {
-    QCC_UNUSED(peerName);
-    QCC_UNUSED(authCount);
-    QCC_UNUSED(userName);
-
-    EXPECT_STREQ("context test string", (const char*)context);
-    EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
-    if (credMask & ALLJOYN_CRED_PASSWORD) {
-        alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
+    if (strcmp("ALLJOYN_ECDHE_SPEKE", authMechanism) == 0) {
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
+        }
+        requestcredentials_service_flag = QCC_TRUE;
+        return QCC_TRUE;
     }
-    requestcredentials_client_flag = QCC_TRUE;
-    return QCC_TRUE;
-}
 
-static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(const void* context, const char* authMechanism,
-                                                                                const char* peerName, QCC_BOOL success) {
-    QCC_UNUSED(authMechanism);
-    QCC_UNUSED(peerName);
-
-    EXPECT_STREQ("context test string", (const char*)context);
-    EXPECT_TRUE(success);
-    authenticationcomplete_client_flag = QCC_TRUE;
-}
-
-TEST_F(AuthListenerTest, srp_keyx) {
-    ResetAuthFlags();
-
-    alljoyn_busattachment_clearkeystore(clientbus);
-
-    /* set up the service */
-    alljoyn_authlistener_callbacks authlistener_cb_service = {
-        authlistener_requestcredentials_service_srp_keyx, //requestcredentials
-        NULL, //verifycredentials
-        NULL, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_service_srp_keyx //authenticationcomplete
-    };
-
-    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)"context test string");
-
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
-    alljoyn_busattachment_clearkeystore(servicebus);
-
-    SetUpAuthService();
-
-    /* set up the client */
-    alljoyn_authlistener_callbacks authlistener_cb_client = {
-        authlistener_requestcredentials_client_srp_keyx, //requestcredentials
-        NULL, //verifycredentials
-        NULL, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_client_srp_keyx //authenticationcomplete
-    };
-
-    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)"context test string");
-
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
-    alljoyn_busattachment_clearkeystore(clientbus);
-
-    SetupAuthClient();
-
-    EXPECT_TRUE(requestcredentials_service_flag);
-    EXPECT_TRUE(authenticationcomplete_service_flag);
-
-    EXPECT_TRUE(requestcredentials_client_flag);
-    EXPECT_TRUE(authenticationcomplete_client_flag);
-
-    alljoyn_authlistener_destroy(serviceauthlistener);
-    alljoyn_authlistener_destroy(clientauthlistener);
-}
-
-/* AuthListener callback functions*/
-static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_logon(const void* context, const char* authMechanism,
-                                                                          const char* peerName, uint16_t authCount,
-                                                                          const char* userName, uint16_t credMask,
-                                                                          alljoyn_credentials credentials) {
-    QCC_UNUSED(context);
-    QCC_UNUSED(peerName);
-    QCC_UNUSED(authCount);
-
-    EXPECT_STREQ("ALLJOYN_SRP_LOGON", authMechanism);
-    if (!userName) {
-        return QCC_FALSE;
-    } else if (credMask & ALLJOYN_CRED_PASSWORD) {
-        EXPECT_STREQ("Mr. Cuddles", userName);
-        if (strcmp(userName, "Mr. Cuddles") == 0) {
-            alljoyn_credentials_setpassword(credentials, "123456");
+    if (strcmp("ALLJOYN_SRP_LOGON", authMechanism) == 0) {
+        if (userName == nullptr) {
+            return QCC_FALSE;
+        } else if (credMask & ALLJOYN_CRED_PASSWORD) {
+            EXPECT_STREQ("Mr. Cuddles", userName);
+            if (strcmp(userName, "Mr. Cuddles") == 0) {
+                alljoyn_credentials_setpassword(credentials, "123456");
+            } else {
+                printf("authlistener_requestcredentials_service: unknown username");
+                return QCC_FALSE;
+            }
         } else {
+            printf("authlistener_requestcredentials_service: invalid credential type");
             return QCC_FALSE;
         }
-    } else {
-        return QCC_FALSE;
+        requestcredentials_service_flag = QCC_TRUE;
+        return QCC_TRUE;
     }
-    requestcredentials_service_flag = QCC_TRUE;
-    return QCC_TRUE;
+
+    printf("authlistener_requestcredentials_service: invalid auth mechanism");
+    return QCC_FALSE;
+
 }
 
-static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_logon(const void* context, const char* authMechanism,
-                                                                                  const char* peerName, QCC_BOOL success) {
-    QCC_UNUSED(context);
-    QCC_UNUSED(authMechanism);
-    QCC_UNUSED(peerName);
-
-    EXPECT_TRUE(success);
-    authenticationcomplete_service_flag = QCC_TRUE;
-}
-
-
-static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_logon(const void* context, const char* authMechanism,
-                                                                         const char* peerName, uint16_t authCount,
-                                                                         const char* userName, uint16_t credMask,
-                                                                         alljoyn_credentials credentials) {
-    QCC_UNUSED(context);
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_client(const void* context, const char* authMechanism,
+                                                               const char* peerName, uint16_t authCount,
+                                                               const char* userName, uint16_t credMask,
+                                                               alljoyn_credentials credentials) {
     QCC_UNUSED(peerName);
     QCC_UNUSED(authCount);
     QCC_UNUSED(userName);
 
-    EXPECT_STREQ("ALLJOYN_SRP_LOGON", authMechanism);
-    if (credMask & ALLJOYN_CRED_USER_NAME) {
-        alljoyn_credentials_setusername(credentials, "Mr. Cuddles");
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
+        }
+        requestcredentials_client_flag = QCC_TRUE;
+        return QCC_TRUE;
     }
 
-    if (credMask & ALLJOYN_CRED_PASSWORD) {
-        alljoyn_credentials_setpassword(credentials, "123456");
+    if (strcmp("ALLJOYN_ECDHE_SPEKE", authMechanism) == 0) {
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(credentials, "ABCDEFGH");
+        }
+        requestcredentials_client_flag = QCC_TRUE;
+        return QCC_TRUE;
     }
-    requestcredentials_client_flag = QCC_TRUE;
-    return QCC_TRUE;
+
+    if (strcmp("ALLJOYN_SRP_LOGON", authMechanism) == 0) {
+        if (credMask & ALLJOYN_CRED_USER_NAME) {
+            alljoyn_credentials_setusername(credentials, "Mr. Cuddles");
+        }
+
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(credentials, "123456");
+        }
+        requestcredentials_client_flag = QCC_TRUE;
+        return QCC_TRUE;
+    }
+
+    printf("authlistener_requestcredentials_client: invalid auth mechanism");
+    return QCC_FALSE;
 }
 
-static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_logon(const void* context, const char* authMechanism,
-                                                                                 const char* peerName, QCC_BOOL success) {
-    QCC_UNUSED(context);
-    QCC_UNUSED(authMechanism);
+static void AJ_CALL authlistener_authenticationcomplete_service(const void* context, const char* authMechanism,
+                                                                const char* peerName, QCC_BOOL success) {
     QCC_UNUSED(peerName);
 
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+    }
     EXPECT_TRUE(success);
+    authenticationcomplete_service_flag = QCC_TRUE;
+}
+
+static void AJ_CALL authlistener_authenticationcomplete_client(const void* context, const char* authMechanism,
+                                                               const char* peerName, QCC_BOOL success) {
+    QCC_UNUSED(peerName);
+
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+    }
+    EXPECT_TRUE(success) << "Client authentication complete callback called with QCC_FALSE, indicating authentication failed";
     authenticationcomplete_client_flag = QCC_TRUE;
 }
 
-TEST_F(AuthListenerTest, srp_logon) {
-    ResetAuthFlags();
-
-    alljoyn_busattachment_clearkeystore(clientbus);
-
-    /* set up the service */
-    alljoyn_authlistener_callbacks authlistener_cb_service = {
-        authlistener_requestcredentials_service_srp_logon, //requestcredentials
-        NULL, //verifycredentials
-        NULL, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_service_srp_logon //authenticationcomplete
-    };
-
-    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, NULL);
-
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_LOGON", serviceauthlistener, NULL, QCC_FALSE);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
-    alljoyn_busattachment_clearkeystore(servicebus);
-
-    SetUpAuthService();
-
-    /* set up the client */
-    alljoyn_authlistener_callbacks authlistener_cb_client = {
-        authlistener_requestcredentials_client_srp_logon, //requestcredentials
-        NULL, //verifycredentials
-        NULL, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_client_srp_logon //authenticationcomplete
-    };
-
-    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, NULL);
-
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_LOGON", clientauthlistener, NULL, QCC_FALSE);
-    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    /* Clear the Keystore between runs */
-    alljoyn_busattachment_clearkeystore(clientbus);
-
-    SetupAuthClient();
-
-    EXPECT_TRUE(requestcredentials_service_flag);
-    EXPECT_TRUE(authenticationcomplete_service_flag);
-
-    EXPECT_TRUE(requestcredentials_client_flag);
-    EXPECT_TRUE(authenticationcomplete_client_flag);
-
-    alljoyn_authlistener_destroy(serviceauthlistener);
-    alljoyn_authlistener_destroy(clientauthlistener);
-}
-
-/* AuthListener callback functions*/
-static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx2(const void* context, const char* authMechanism,
-                                                                          const char* peerName, uint16_t authCount,
-                                                                          const char* userName, uint16_t credMask,
-                                                                          alljoyn_credentials credentials) {
+/* Failing RequestCredentials implementation, to test the case when no password is provided. */
+static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_fails(const void* context, const char* authMechanism,
+                                                                      const char* peerName, uint16_t authCount,
+                                                                      const char* userName, uint16_t credMask,
+                                                                      alljoyn_credentials credentials) {
     QCC_UNUSED(context);
     QCC_UNUSED(peerName);
     QCC_UNUSED(authCount);
@@ -461,75 +361,185 @@ static QCC_BOOL AJ_CALL authlistener_requestcredentials_service_srp_keyx2(const 
     QCC_UNUSED(credMask);
     QCC_UNUSED(credentials);
 
-    EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
-    requestcredentials_service_flag = QCC_TRUE;
+    if ((strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) ||
+        (strcmp("ALLJOYN_ECDHE_SPEKE", authMechanism) == 0) ||
+        (strcmp("ALLJOYN_SRP_LOGON", authMechanism) == 0)) {
+        requestcredentials_service_flag = QCC_TRUE;
+    }
+
     return QCC_FALSE;
 }
 
-static void AJ_CALL alljoyn_authlistener_authenticationcomplete_service_srp_keyx2(const void* context, const char* authMechanism,
-                                                                                  const char* peerName, QCC_BOOL success) {
-    QCC_UNUSED(context);
-    QCC_UNUSED(authMechanism);
+/* Corresponding authenticationcomplete implementation; it EXPECTs authentication to fail. */
+static void AJ_CALL authlistener_authenticationcomplete_service_fails(const void* context, const char* authMechanism,
+                                                                      const char* peerName, QCC_BOOL success) {
     QCC_UNUSED(peerName);
 
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+    }
     EXPECT_FALSE(success);
     authenticationcomplete_service_flag = QCC_TRUE;
 }
 
-
-static QCC_BOOL AJ_CALL authlistener_requestcredentials_client_srp_keyx2(const void* context, const char* authMechanism,
-                                                                         const char* peerName, uint16_t authCount,
-                                                                         const char* userName, uint16_t credMask,
-                                                                         alljoyn_credentials credentials) {
-    QCC_UNUSED(context);
+static void AJ_CALL authlistener_authenticationcomplete_client_fails(const void* context, const char* authMechanism,
+                                                                     const char* peerName, QCC_BOOL success) {
     QCC_UNUSED(peerName);
-    QCC_UNUSED(authCount);
-    QCC_UNUSED(userName);
-    QCC_UNUSED(credMask);
-    QCC_UNUSED(credentials);
 
-    EXPECT_STREQ("ALLJOYN_SRP_KEYX", authMechanism);
-    requestcredentials_client_flag = QCC_TRUE;
-    return QCC_FALSE;
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+    }
+    EXPECT_FALSE(success);
+    authenticationcomplete_client_flag = QCC_TRUE;
 }
 
-static void AJ_CALL authlistener_securityviolation_client_srp_keyx2(const void* context, QStatus status, const alljoyn_message msg) {
+static void AJ_CALL authlistener_securityviolation_client(const void* context, QStatus status, const alljoyn_message msg) {
     QCC_UNUSED(context);
     QCC_UNUSED(status);
     QCC_UNUSED(msg);
     securityviolation_client_flag = QCC_TRUE;
 }
 
-/*
- * Run the SRP Key Exchange test again except this time fail the authentication
- * we expect to see an authlistener secutity violation.
- */
-static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx2(const void* context, const char* authMechanism,
-                                                                                 const char* peerName, QCC_BOOL success) {
+static void AJ_CALL authlistener_securityviolation_service(const void* context, QStatus status, const alljoyn_message msg) {
     QCC_UNUSED(context);
-    QCC_UNUSED(authMechanism);
-    QCC_UNUSED(peerName);
+    QCC_UNUSED(status);
+    QCC_UNUSED(msg);
 
-    EXPECT_FALSE(success);
-    authenticationcomplete_client_flag = QCC_TRUE;
+    securityviolation_service_flag = QCC_TRUE;
 }
 
-TEST_F(AuthListenerTest, srp_keyx2) {
+/* Asynchronous versions of RequestCredentials*/
+static QStatus AJ_CALL authlistener_requestcredentialsasync_service(const void* context, alljoyn_authlistener listener,
+                                                                    const char* authMechanism, const char* peerName,
+                                                                    uint16_t authCount, const char* userName,
+                                                                    uint16_t credMask, void* authContext) {
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+
+    QStatus status = ER_FAIL;
+    alljoyn_credentials creds = alljoyn_credentials_create();
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(creds, "ABCDEFGH");
+        }
+        status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
+        requestcredentials_service_flag = QCC_TRUE;
+    } else if (strcmp("ALLJOYN_SRP_LOGON", authMechanism) == 0) {
+        if (userName == nullptr) {
+            status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_FALSE, creds);
+        } else if (credMask & ALLJOYN_CRED_PASSWORD) {
+            EXPECT_STREQ("Mr. Cuddles", userName);
+            if (strcmp(userName, "Mr. Cuddles") == 0) {
+                alljoyn_credentials_setpassword(creds, "123456");
+                status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
+            } else {
+                status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_FALSE, creds);
+            }
+        } else {
+            status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_FALSE, creds);
+        }
+        requestcredentials_service_flag = QCC_TRUE;
+    } else if (strcmp("ALLJOYN_ECDHE_SPEKE", authMechanism) == 0) {
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(creds, "ABCDEFGH");
+        }
+        status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
+        requestcredentials_service_flag = QCC_TRUE;
+    }
+
+    alljoyn_credentials_destroy(creds);
+
+    return status;
+}
+
+static QStatus AJ_CALL authlistener_requestcredentialsasync_client(const void* context, alljoyn_authlistener listener,
+                                                                   const char* authMechanism, const char* peerName,
+                                                                   uint16_t authCount, const char* userName,
+                                                                   uint16_t credMask, void* authContext) {
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(authCount);
+    QCC_UNUSED(userName);
+
+    QStatus status = ER_FAIL;
+    alljoyn_credentials creds = alljoyn_credentials_create();
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0) {
+        EXPECT_STREQ("context test string", (const char*)context);
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(creds, "ABCDEFGH");
+        }
+        status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
+        requestcredentials_client_flag = QCC_TRUE;
+    } else if (strcmp("ALLJOYN_SRP_LOGON", authMechanism) == 0) {
+        if (credMask & ALLJOYN_CRED_USER_NAME) {
+            alljoyn_credentials_setusername(creds, "Mr. Cuddles");
+        }
+
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(creds, "123456");
+        }
+        status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
+        requestcredentials_client_flag = QCC_TRUE;
+    } else if (strcmp("ALLJOYN_ECDHE_SPEKE", authMechanism) == 0) {
+        if (credMask & ALLJOYN_CRED_PASSWORD) {
+            alljoyn_credentials_setpassword(creds, "ABCDEFGH");
+        }
+        status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_TRUE, creds);
+        requestcredentials_client_flag = QCC_TRUE;
+    }
+
+    alljoyn_credentials_destroy(creds);
+
+    return status;
+}
+
+/* Failing RequestCredentials implementation, to test the case when no password is provided. */
+static QStatus AJ_CALL authlistener_requestcredentialsasync_service_fails(const void* context, alljoyn_authlistener listener,
+                                                                          const char* authMechanism, const char* peerName,
+                                                                          uint16_t authCount, const char* userName,
+                                                                          uint16_t credMask, void* authContext) {
+    QCC_UNUSED(context);
+    QCC_UNUSED(peerName);
+    QCC_UNUSED(userName);
+    QCC_UNUSED(credMask);
+    QCC_UNUSED(authCount);
+
+    QStatus status = ER_FAIL;
+    if (strcmp("ALLJOYN_SRP_KEYX", authMechanism) == 0    ||
+        strcmp("ALLJOYN_ECDHE_SPEKE", authMechanism) == 0 ||
+        strcmp("ALLJOYN_SRP_LOGON", authMechanism) == 0) {
+
+        alljoyn_credentials creds = alljoyn_credentials_create();
+        QStatus status = alljoyn_authlistener_requestcredentialsresponse(listener, authContext, QCC_FALSE, creds);
+        requestcredentials_service_flag = QCC_TRUE;
+        alljoyn_credentials_destroy(creds);
+        return status;
+    }
+
+    return status;
+}
+
+/*
+ * Tests for successful authentication
+ */
+
+void AuthListenerTest::RunAuthSucceedsTest(const char* mechanism, const char* context_string)
+{
     ResetAuthFlags();
 
     alljoyn_busattachment_clearkeystore(clientbus);
 
     /* set up the service */
     alljoyn_authlistener_callbacks authlistener_cb_service = {
-        authlistener_requestcredentials_service_srp_keyx2, //requestcredentials
+        authlistener_requestcredentials_service,
         NULL, //verifycredentials
         NULL, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_service_srp_keyx2 //authenticationcomplete
+        authlistener_authenticationcomplete_service
     };
+    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)context_string);
 
-    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, NULL);
-
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -538,22 +548,149 @@ TEST_F(AuthListenerTest, srp_keyx2) {
 
     /* set up the client */
     alljoyn_authlistener_callbacks authlistener_cb_client = {
-        authlistener_requestcredentials_client_srp_keyx2, //requestcredentials
+        authlistener_requestcredentials_client,
         NULL, //verifycredentials
-        authlistener_securityviolation_client_srp_keyx2, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_client_srp_keyx2 //authenticationcomplete
+        NULL, //securityviolation
+        authlistener_authenticationcomplete_client
     };
+    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)context_string);
 
-    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, NULL);
-
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
 
-    SetupAuthClientAuthFail();
+    SetUpAuthClient();
 
-    //Wait upto 2 seconds for the signal to complete.
+    EXPECT_TRUE(requestcredentials_service_flag);
+    EXPECT_TRUE(authenticationcomplete_service_flag);
+
+    EXPECT_TRUE(requestcredentials_client_flag);
+    EXPECT_TRUE(authenticationcomplete_client_flag);
+
+    alljoyn_authlistener_destroy(serviceauthlistener);
+    alljoyn_authlistener_destroy(clientauthlistener);
+}
+
+TEST_F(AuthListenerTest, AuthSucceeds_SRP_LOGON) {
+    RunAuthSucceedsTest("ALLJOYN_SRP_LOGON", NULL);
+}
+
+TEST_F(AuthListenerTest, AuthSucceeds_SRP_KEYX) {
+    RunAuthSucceedsTest("ALLJOYN_SRP_KEYX", "context test string");
+}
+
+TEST_F(AuthListenerTest, AuthSucceeds_SPEKE) {
+    RunAuthSucceedsTest("ALLJOYN_ECDHE_SPEKE", NULL);
+}
+
+/*
+ * Tests for successful authentication, with asynchronous callback.
+ */
+
+void AuthListenerTest::RunAsyncAuthSucceedsTest(const char* mechanism, const char* context_string)
+{
+    ResetAuthFlags();
+
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    /* set up the service */
+    alljoyn_authlistenerasync_callbacks authlistenerasync_cb_service = {
+        authlistener_requestcredentialsasync_service,
+        NULL, //verifycredentials
+        NULL, //securityviolation
+        authlistener_authenticationcomplete_service
+    };
+    alljoyn_authlistener serviceauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_service, (void*)context_string);
+
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(servicebus);
+
+    SetUpAuthService();
+
+    /* set up the client */
+    alljoyn_authlistenerasync_callbacks authlistenerasync_cb_client = {
+        authlistener_requestcredentialsasync_client,
+        NULL, //verifycredentials
+        NULL, //securityviolation
+        authlistener_authenticationcomplete_client
+    };
+    alljoyn_authlistener clientauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_client, (void*)context_string);
+
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    SetUpAuthClient();
+
+    EXPECT_TRUE(requestcredentials_service_flag);
+    EXPECT_TRUE(authenticationcomplete_service_flag);
+
+    EXPECT_TRUE(requestcredentials_client_flag);
+    EXPECT_TRUE(authenticationcomplete_client_flag);
+
+    alljoyn_authlistenerasync_destroy(serviceauthlistener);
+    alljoyn_authlistenerasync_destroy(clientauthlistener);
+}
+
+TEST_F(AuthListenerTest, AsyncAuthSucceeds_SRP_LOGON) {
+    RunAsyncAuthSucceedsTest("ALLJOYN_SRP_LOGON", NULL);
+}
+
+TEST_F(AuthListenerTest, AsyncAuthSucceeds_SRP_KEYX) {
+    RunAsyncAuthSucceedsTest("ALLJOYN_SRP_KEYX", "context test string");
+}
+
+TEST_F(AuthListenerTest, AsyncAuthSucceeds_SPEKE) {
+    RunAsyncAuthSucceedsTest("ALLJOYN_ECDHE_SPEKE", NULL);
+}
+
+/*
+ * Tests for failing authentication. Expect to see an authlistener security violation.
+ */
+
+void AuthListenerTest::RunAuthFailsTest(const char* mechanism)
+{
+    ResetAuthFlags();
+
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    /* set up the service */
+    alljoyn_authlistener_callbacks authlistener_cb_service = {
+        authlistener_requestcredentials_service_fails,
+        NULL, //verifycredentials
+        authlistener_securityviolation_service,
+        authlistener_authenticationcomplete_service_fails
+    };
+    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)"context test string");
+
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(servicebus);
+
+    SetUpAuthService();
+
+    /* set up the client */
+    alljoyn_authlistener_callbacks authlistener_cb_client = {
+        authlistener_requestcredentials_client, /* The client does provide a password, but expects authentication to fail */
+        NULL, //verifycredentials
+        authlistener_securityviolation_client,
+        authlistener_authenticationcomplete_client_fails
+    };
+    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)"context test string");
+
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    SetUpAuthClientAuthFail();
+
+    /* Wait up to 2 seconds for the signal to complete. */
     for (int i = 0; i < 200; ++i) {
 
         if (securityviolation_client_flag) {
@@ -563,36 +700,112 @@ TEST_F(AuthListenerTest, srp_keyx2) {
     }
 
     EXPECT_TRUE(requestcredentials_service_flag);
-    EXPECT_TRUE(authenticationcomplete_service_flag);
 
     EXPECT_TRUE(authenticationcomplete_client_flag);
     EXPECT_TRUE(securityviolation_client_flag);
 
     alljoyn_authlistener_destroy(serviceauthlistener);
     alljoyn_authlistener_destroy(clientauthlistener);
+
+}
+
+TEST_F(AuthListenerTest, AuthFails_SRP_KEYX) {
+    RunAuthFailsTest("ALLJOYN_SRP_KEYX");
+}
+
+TEST_F(AuthListenerTest, AuthFails_SPEKE) {
+    RunAuthFailsTest("ALLJOYN_ECDHE_SPEKE");
 }
 
 /*
- * This test re-uses the authlisteners used for the srp_keyx unit test.
- * It is unimportant to know what authlistener is used just that authentication
- * is being done when alljoyn_proxybusobject_secureconnection is called.
+ * Tests for failing authentication, with asynchronous callback. Expect to see an authlistener security violation.
  */
-TEST_F(AuthListenerTest, secureconnection) {
+
+void AuthListenerTest::RunAsyncAuthFailsTest(const char* mechanism)
+{
+    ResetAuthFlags();
+
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    /* set up the service */
+    alljoyn_authlistenerasync_callbacks authlistenerasync_cb_service = {
+        authlistener_requestcredentialsasync_service_fails,
+        NULL, //verifycredentials
+        authlistener_securityviolation_service,
+        authlistener_authenticationcomplete_service_fails
+    };
+    alljoyn_authlistener serviceauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_service, (void*)"context test string");
+
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(servicebus);
+
+    SetUpAuthService();
+
+    /* set up the client */
+    alljoyn_authlistenerasync_callbacks authlistenerasync_cb_client = {
+        authlistener_requestcredentialsasync_client, /* The client does provide a password, but expects authentication to fail */
+        NULL, //verifycredentials
+        authlistener_securityviolation_client,
+        authlistener_authenticationcomplete_client_fails
+    };
+    alljoyn_authlistener clientauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_client, (void*)"context test string");
+
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    SetUpAuthClientAuthFail();
+
+    /* Wait up to 2 seconds for the signal to complete. */
+    for (int i = 0; i < 200; ++i) {
+
+        if (securityviolation_client_flag) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+
+    EXPECT_TRUE(requestcredentials_service_flag);
+
+    EXPECT_TRUE(authenticationcomplete_client_flag);
+    EXPECT_TRUE(securityviolation_client_flag);
+
+    alljoyn_authlistenerasync_destroy(serviceauthlistener);
+    alljoyn_authlistenerasync_destroy(clientauthlistener);
+
+}
+
+TEST_F(AuthListenerTest, AsyncAuthFails_SRP_KEYX) {
+    RunAsyncAuthFailsTest("ALLJOYN_SRP_KEYX");
+}
+
+TEST_F(AuthListenerTest, AsyncAuthFails_SPEKE) {
+    RunAsyncAuthFailsTest("ALLJOYN_ECDHE_SPEKE");
+}
+
+/*
+ * Tests that authentication is being done when alljoyn_proxybusobject_secureconnection is called.
+ */
+
+void AuthListenerTest::RunSecureConnectionTest(const char* mechanism, const char* context_string)
+{
     ResetAuthFlags();
 
     alljoyn_busattachment_clearkeystore(clientbus);
 
     /* set up the service */
     alljoyn_authlistener_callbacks authlistener_cb_service = {
-        authlistener_requestcredentials_service_srp_keyx, //requestcredentials
+        authlistener_requestcredentials_service,
         NULL, //verifycredentials
-        NULL, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_service_srp_keyx //authenticationcomplete
+        authlistener_securityviolation_service,
+        authlistener_authenticationcomplete_service
     };
+    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)context_string);
 
-    alljoyn_authlistener serviceauthlistener = alljoyn_authlistener_create(&authlistener_cb_service, (void*)"context test string");
-
-    status = alljoyn_busattachment_enablepeersecurity(servicebus, "ALLJOYN_SRP_KEYX", serviceauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(servicebus);
@@ -601,15 +814,14 @@ TEST_F(AuthListenerTest, secureconnection) {
 
     /* set up the client */
     alljoyn_authlistener_callbacks authlistener_cb_client = {
-        authlistener_requestcredentials_client_srp_keyx, //requestcredentials
+        authlistener_requestcredentials_client,
         NULL, //verifycredentials
-        NULL, //securityviolation
-        alljoyn_authlistener_authenticationcomplete_client_srp_keyx //authenticationcomplete
+        authlistener_securityviolation_client,
+        authlistener_authenticationcomplete_client
     };
+    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)context_string);
 
-    alljoyn_authlistener clientauthlistener = alljoyn_authlistener_create(&authlistener_cb_client, (void*)"context test string");
-
-    status = alljoyn_busattachment_enablepeersecurity(clientbus, "ALLJOYN_SRP_KEYX", clientauthlistener, NULL, QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     /* Clear the Keystore between runs */
     alljoyn_busattachment_clearkeystore(clientbus);
@@ -628,9 +840,9 @@ TEST_F(AuthListenerTest, secureconnection) {
 
     ResetAuthFlags();
     /*
-     * the peer-to-peer connection should have been authenticated with the last
-     * call to alljoyn_proxybusobject_secureconnection this call should return
-     * ER_OK with out calling any of the authlistener functions.
+     * The peer-to-peer connection should have been authenticated with the last
+     * call to alljoyn_proxybusobject_secureconnection. This call should return
+     * ER_OK without calling any of the authlistener functions.
      */
     status = alljoyn_proxybusobject_secureconnection(proxyObj, QCC_FALSE);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -661,4 +873,110 @@ TEST_F(AuthListenerTest, secureconnection) {
 
     alljoyn_authlistener_destroy(serviceauthlistener);
     alljoyn_authlistener_destroy(clientauthlistener);
+}
+
+TEST_F(AuthListenerTest, secureconnection_SRP_KEYX) {
+    RunSecureConnectionTest("ALLJOYN_SRP_KEYX", "context test string");
+}
+
+TEST_F(AuthListenerTest, secureconnection_SPEKE) {
+    RunSecureConnectionTest("ALLJOYN_ECDHE_SPEKE", NULL);
+}
+
+/*
+ * Tests that authentication is being done when alljoyn_proxybusobject_secureconnection is called,
+ * and the asynchronous authentication callback is used.
+ */
+
+void AuthListenerTest::RunAsyncSecureConnectionTest(const char* mechanism, const char* context_string)
+{
+    ResetAuthFlags();
+
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    /* set up the service */
+    alljoyn_authlistenerasync_callbacks authlistenerasync_cb_service = {
+        authlistener_requestcredentialsasync_service,
+        NULL, //verifycredentials
+        authlistener_securityviolation_service,
+        authlistener_authenticationcomplete_service
+    };
+    alljoyn_authlistener serviceauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_service, (void*)context_string);
+
+    status = alljoyn_busattachment_enablepeersecurity(servicebus, mechanism, serviceauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(servicebus);
+
+    SetUpAuthService();
+
+    /* set up the client */
+    alljoyn_authlistenerasync_callbacks authlistenerasync_cb_client = {
+        authlistener_requestcredentialsasync_client,
+        NULL, //verifycredentials
+        authlistener_securityviolation_client,
+        authlistener_authenticationcomplete_client
+    };
+    alljoyn_authlistener clientauthlistener = alljoyn_authlistenerasync_create(&authlistenerasync_cb_client, (void*)context_string);
+
+    status = alljoyn_busattachment_enablepeersecurity(clientbus, mechanism, clientauthlistener, NULL, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    /* Clear the Keystore between runs */
+    alljoyn_busattachment_clearkeystore(clientbus);
+
+    alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(clientbus, OBJECT_NAME, OBJECT_PATH, 0);
+    ASSERT_TRUE(proxyObj);
+
+    status = alljoyn_proxybusobject_secureconnection(proxyObj, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(requestcredentials_service_flag);
+    EXPECT_TRUE(authenticationcomplete_service_flag);
+
+    EXPECT_TRUE(requestcredentials_client_flag);
+    EXPECT_TRUE(authenticationcomplete_client_flag);
+
+    ResetAuthFlags();
+    /*
+     * the peer-to-peer connection should have been authenticated with the last
+     * call to alljoyn_proxybusobject_secureconnection. This call should return
+     * ER_OK without calling any of the authlistener functions.
+     */
+    status = alljoyn_proxybusobject_secureconnection(proxyObj, QCC_FALSE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_FALSE(requestcredentials_service_flag);
+    EXPECT_FALSE(authenticationcomplete_service_flag);
+
+    EXPECT_FALSE(requestcredentials_client_flag);
+    EXPECT_FALSE(authenticationcomplete_client_flag);
+
+    ResetAuthFlags();
+
+    /*
+     * Although the peer-to-peer connection has already been authenticated we
+     * are forcing re-authentication so we expect the authlistener functions to
+     * be called again.
+     */
+    status = alljoyn_proxybusobject_secureconnection(proxyObj, QCC_TRUE);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(requestcredentials_service_flag);
+    EXPECT_TRUE(authenticationcomplete_service_flag);
+
+    EXPECT_TRUE(requestcredentials_client_flag);
+    EXPECT_TRUE(authenticationcomplete_client_flag);
+
+    alljoyn_proxybusobject_destroy(proxyObj);
+
+    alljoyn_authlistenerasync_destroy(serviceauthlistener);
+    alljoyn_authlistenerasync_destroy(clientauthlistener);
+}
+
+TEST_F(AuthListenerTest, async_secureconnection_SRP_KEYX) {
+    RunAsyncSecureConnectionTest("ALLJOYN_SRP_KEYX", "context test string");
+}
+
+TEST_F(AuthListenerTest, async_secureconnection_SPEKE) {
+    RunAsyncSecureConnectionTest("ALLJOYN_ECDHE_SPEKE", NULL);
 }
