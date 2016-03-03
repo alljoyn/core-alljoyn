@@ -62,7 +62,6 @@ namespace ajn {
 #define AUTH_KEYX_SRP_LOGON     0x00100000
 #define AUTH_KEYX_ECDHE         0x00400000
 #define AUTH_KEYX_GSSAPI        0x00800000
-#define AUTH_KEYX_SPEKE         0x01000000
 
 /*the key authentication suite is in the 16 LSB */
 
