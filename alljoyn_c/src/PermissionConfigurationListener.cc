@@ -38,7 +38,7 @@ namespace ajn {
  */
 class PermissionConfigurationListenerCallbackC : public PermissionConfigurationListener {
   public:
-    PermissionConfigurationListenerCallbackC(const alljoyn_permissionconfigurationlistener_callbacks* callbacks_in, const void* context_in)
+    PermissionConfigurationListenerCallbackC(const alljoyn_permissionconfigurationlistener_callbacks* callbacks_in, void* context_in)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
         memcpy(&callbacks, callbacks_in, sizeof(alljoyn_permissionconfigurationlistener_callbacks));
@@ -64,7 +64,7 @@ class PermissionConfigurationListenerCallbackC : public PermissionConfigurationL
 
   private:
     alljoyn_permissionconfigurationlistener_callbacks callbacks;
-    const void* context;
+    void* context;
 };
 
 }
@@ -73,7 +73,7 @@ struct _alljoyn_permissionconfigurationlistener_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
 };
 
-alljoyn_permissionconfigurationlistener AJ_CALL alljoyn_permissionconfigurationlistener_create(const alljoyn_permissionconfigurationlistener_callbacks* callbacks, const void* context)
+alljoyn_permissionconfigurationlistener AJ_CALL alljoyn_permissionconfigurationlistener_create(const alljoyn_permissionconfigurationlistener_callbacks* callbacks, void* context)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_permissionconfigurationlistener) new ajn::PermissionConfigurationListenerCallbackC(callbacks, context);

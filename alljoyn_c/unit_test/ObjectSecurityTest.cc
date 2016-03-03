@@ -29,7 +29,7 @@
 static const char* INTERFACE_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_NAME = "org.alljoyn.test.c.authlistener";
 static const char* OBJECT_PATH = "/org/alljoyn/test";
-static const void* PERMISSION_LISTENER_CONTEXT = ((const void*) 0x12345678);
+static void* PERMISSION_LISTENER_CONTEXT = ((void*) 0x12345678);
 
 static QCC_BOOL name_owner_changed_flag = QCC_FALSE;
 
@@ -278,13 +278,13 @@ static void AJ_CALL alljoyn_authlistener_authenticationcomplete_client_srp_keyx(
     authenticationcomplete_client_flag = QCC_TRUE;
 }
 
-static QStatus AJ_CALL permissionconfigurationlistener_factoryreset(const void* context) {
+static QStatus AJ_CALL permissionconfigurationlistener_factoryreset(void* context) {
     EXPECT_EQ(context, PERMISSION_LISTENER_CONTEXT);
     factoryreset_service_flag = QCC_TRUE;
     return ER_OK;
 }
 
-static void AJ_CALL permissionconfigurationlistener_policychanged(const void* context) {
+static void AJ_CALL permissionconfigurationlistener_policychanged(void* context) {
     EXPECT_EQ(context, PERMISSION_LISTENER_CONTEXT);
     policychanged_service_flag = QCC_TRUE;
 }

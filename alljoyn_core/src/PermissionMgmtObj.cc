@@ -2159,7 +2159,7 @@ QStatus PermissionMgmtObj::GetConfiguration(Configuration& config)
     return ER_OK;
 }
 
-PermissionConfigurator::ApplicationState PermissionMgmtObj::GetApplicationState()
+PermissionConfigurator::ApplicationState PermissionMgmtObj::GetApplicationState() const
 {
     return applicationState;
 }
@@ -2701,13 +2701,13 @@ QStatus PermissionMgmtObj::SetClaimCapabilityAdditionalInfo(PermissionConfigurat
     return ER_OK;
 }
 
-QStatus PermissionMgmtObj::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& caps)
+QStatus PermissionMgmtObj::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& caps) const
 {
     caps = claimCapabilities;
     return ER_OK;
 }
 
-QStatus PermissionMgmtObj::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
+QStatus PermissionMgmtObj::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const
 {
     additionalInfo = claimCapabilityAdditionalInfo;
     return ER_OK;
