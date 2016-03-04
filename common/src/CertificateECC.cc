@@ -1351,7 +1351,7 @@ bool CertificateX509::ValidateCertificateTypeInCertChain(const CertificateX509* 
 QStatus CertificateX509::GetSHA256Thumbprint(uint8_t* thumbprint) const
 {
     String encodedPem;
-    QStatus status = this->EncodeCertificatePEM(encodedPem);
+    QStatus status = this->EncodeCertificateDER(encodedPem);
     if (ER_OK != status) {
         return status;
     }

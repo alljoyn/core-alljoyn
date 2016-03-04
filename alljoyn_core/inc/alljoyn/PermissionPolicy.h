@@ -842,6 +842,8 @@ class _Manifest {
     static AJ_PCSTR s_MsgArgArraySignature;
     /** MsgArg signature for a single signed manifest. */
     static AJ_PCSTR s_MsgArgSignature;
+    /** MsgArg signature for a single signed manifest without the cryptographic signature field. */
+    static AJ_PCSTR s_MsgArgDigestSignature;
     /** MsgArg signature for a 15.09-format MsgArg. */
     static AJ_PCSTR s_TemplateMsgArgSignature;
 
@@ -885,30 +887,6 @@ class _Manifest {
      * @return true if the contents are different, false if they are equal
      */
     bool operator!=(const _Manifest& other) const;
-
-    /**
-     * Set the contents of this Manifest from a signed manifest MsgArg.
-     *
-     * @param[in] manifestArg A MsgArg with the MsgArgSignature signature containing a signed manifest
-     *
-     * @return
-     * - #ER_OK if successful
-     * - #ER_INVALID_DATA if the version number is unsupported
-     * - other error indicating failure
-     */
-    QStatus SetFromMsgArg(const MsgArg& manifestArg);
-
-
-    /**
-     * Get a MsgArg containing the contents of this manifest.
-     *
-     * @param[out] outputArg MsgArg to receive the output
-     *
-     * @return
-     * - #ER_OK if successful
-     * - other error indicating failure
-     */
-    QStatus GetMsgArg(MsgArg& outputArg) const;
 
     /**
      * Set the rules to be set on this manifest. After calling SetRules, the cryptographic
@@ -1018,26 +996,62 @@ class _Manifest {
 
   private:
 
+    typedef enum {
+        MANIFEST_FULL = 0,
+        MANIFEST_FOR_DIGEST = 1,
+        MANIFEST_PURPOSE_MAX
+    } ManifestPurpose;
+
+    /**
+     * @internal
+     *
+     * Set the contents of this Manifest from a signed manifest MsgArg.
+     *
+     * @param[in] manifestArg A MsgArg with the MsgArgSignature signature containing a signed manifest
+     *
+     * @return
+     * - #ER_OK if successful
+     * - #ER_INVALID_DATA if the version number is unsupported
+     * - other error indicating failure
+     */
+    QStatus SetFromMsgArg(const MsgArg& manifestArg);
+
+    /**
+     * @internal
+     *
+     * Get a MsgArg containing the contents of this manifest.
+     *
+     * @param[in] manifestPurpose Specifies the purpose for the output form of this manifest
+     * @param[out] outputArg MsgArg to receive the output
+     *
+     * @return
+     * - #ER_OK if successful
+     * - other error indicating failure
+     */
+    QStatus GetMsgArg(ManifestPurpose manifestPurpose, MsgArg& outputArg) const;
+
     /**
      * @internal
      *
      * Serialize a manifest to a vector of bytes
      *
-     * @param[in] includeSignature Include the signature in serialized form
+     * @param[in] manifestPurpose Specifies the purpose for the serialized form of this manifest
      * @param[out] serializedForm Vector of bytes to receive serialized form
      *
      * @return
      * - #ER_OK if the manifest was successfully serialized
      * - other error indicating failure
      */
-    QStatus Serialize(bool includeSignature, std::vector<uint8_t>& serializedForm) const;
+    QStatus Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_t>& serializedForm) const;
 
     /**
      * @internal
      *
-     * Deserialize a manifest from a vector of bytes.
+     * Deserialize a manifest from a vector of bytes. This method only accepts manifests
+     * that were serialized with all fields, such as by providing MANIFEST_FULL as the manifestPurpose
+     * parameter when calling Serialize.
      *
-     * @param[in] serializedForm Vector of bytes containing serialized manifest
+     * @param[in] serializedForm Vector of bytes containing the serialized manifest
      *
      * @return
      * - #ER_OK if the manifest was successfully deserialized

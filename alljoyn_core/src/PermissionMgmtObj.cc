@@ -1289,41 +1289,10 @@ QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool appen
         return ER_OK; /* nothing to do */
     }
 
-    /* Get our identity cert and our issuer's certificate (if we have it), and verify manifest signatures. */
-    KeyStore::Key identityHead;
-    GetACLKey(ENTRY_IDENTITY, identityHead);
-    std::vector<KeyBlob*> blobs;
-    status = RetrieveIdentityCertChainBlobs(ca, identityHead, blobs);
-    if (ER_OK != status) {
-        return status;
-    }
-    if (blobs.size() == 0) {
-        return ER_CERTIFICATE_NOT_FOUND;
-    }
-
-    /* blobs[0] is the identity cert. If not self-signed, blobs[1] will be the issuer. */
-    CertificateX509 identityCert;
-    std::vector<const ECCPublicKey*> issuerPublicKeys;
-    String der((const char*)blobs[0]->GetData(), blobs[0]->GetSize());
-    status = identityCert.DecodeCertificateDER(der);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not decode identity certificate"));
-        return status;
-    }
-    std::vector<uint8_t> identityThumbprint(Crypto_SHA256::DIGEST_SIZE);
-    status = identityCert.GetSHA256Thumbprint(identityThumbprint.data());
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not get identity certificate's thumbprint"));
-        return status;
-    }
-
-    /* Reject any manifests whose thumbprint is not our identity certificate's thumbprint. */
-    std::vector<Manifest> passedManifests;
+    std::vector<Manifest> newManifests;
 
     for (size_t i = 0; i < signedManifestCount; i++) {
-        /* If one manifest fails to validate or install for whatever reason, try the rest.
-         * Only if all fail do we return failure to caller.
-         */
+        /* As long as we successfully parse one manifest and can install it, we succeed. */
         Manifest signedManifest;
         status = signedManifest->SetFromMsgArg(signedManifestArgArray[i]);
         if (ER_OK != status) {
@@ -1331,18 +1300,10 @@ QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool appen
             continue;
         }
 
-        std::vector<uint8_t> manifestThumbprint(signedManifest->GetThumbprint());
-        if (identityThumbprint != manifestThumbprint) {
-            QCC_DbgTrace(("Manifest %u is for thumbprint %s, not for our identity certificate thumbprint %s",
-                          i, BytesToHexString(manifestThumbprint.data(), manifestThumbprint.size()).c_str(),
-                          BytesToHexString(identityThumbprint.data(), identityThumbprint.size()).c_str()));
-            continue;
-        }
-
-        passedManifests.push_back(signedManifest);
+        newManifests.push_back(signedManifest);
     }
 
-    if (0 == passedManifests.size()) {
+    if (0 == newManifests.size()) {
         QCC_LogError(ER_DIGEST_MISMATCH, ("No digests passed validation"));
         return ER_DIGEST_MISMATCH;
     }
@@ -1358,14 +1319,14 @@ QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool appen
             return status;
         }
 
-        passedManifests.insert(passedManifests.begin(), previousManifests.begin(), previousManifests.end());
+        newManifests.insert(newManifests.begin(), previousManifests.begin(), previousManifests.end());
     }
 
     /* store the manifests into the key store */
     KeyStore::Key key;
     GetACLKey(ENTRY_MANIFEST, key);
     std::vector<uint8_t> serializedManifestArray;
-    status = _Manifest::SerializeArray(passedManifests, serializedManifestArray);
+    status = _Manifest::SerializeArray(newManifests, serializedManifestArray);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to serialize array of passed manifests for storage"));
         return status;
@@ -1379,7 +1340,6 @@ QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool appen
 
     QCC_ASSERT(ER_OK == status);
     return status;
-
 }
 
 static QStatus GetMembershipKey(CredentialAccessor* ca, KeyStore::Key& membershipHead, const String& serialNum, const String& issuerAki, KeyStore::Key& membershipKey)

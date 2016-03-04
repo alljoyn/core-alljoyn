@@ -1137,6 +1137,7 @@ void PermissionPolicy::SetAcls(size_t count, const PermissionPolicy::Acl* acls) 
 
 AJ_PCSTR _Manifest::s_MsgArgArraySignature = "a(ua(ssa(syy))saysay)";
 AJ_PCSTR _Manifest::s_MsgArgSignature = "(ua(ssa(syy))saysay)";
+AJ_PCSTR _Manifest::s_MsgArgDigestSignature = "(ua(ssa(syy))says)";
 AJ_PCSTR _Manifest::s_TemplateMsgArgSignature = "a(ssa(syy))";
 const uint32_t _Manifest::DefaultVersion = 1;
 static AJ_PCSTR TEMPORARY_BUS_ATTACHMENT_NAME = "TemporaryBusAttachment";
@@ -1239,7 +1240,7 @@ QStatus _Manifest::GetArrayMsgArg(const Manifest* manifests, size_t manifestCoun
     std::vector<MsgArg> msgArgs(manifestCount);
 
     for (size_t i = 0; i < manifestCount; i++) {
-        status = manifests[i]->GetMsgArg(msgArgs[i]);
+        status = manifests[i]->GetMsgArg(MANIFEST_FULL, msgArgs[i]);
         if (ER_OK != status) {
             QCC_LogError(status, ("Could not get MsgArg for manifest"));
             return status;
@@ -1257,7 +1258,7 @@ QStatus _Manifest::GetArrayMsgArg(const Manifest* manifests, size_t manifestCoun
     return status;
 }
 
-QStatus _Manifest::GetMsgArg(MsgArg& outputArg) const
+QStatus _Manifest::GetMsgArg(ManifestPurpose manifestPurpose, MsgArg& outputArg) const
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -1270,11 +1271,28 @@ QStatus _Manifest::GetMsgArg(MsgArg& outputArg) const
     std::unique_ptr<MsgArg[]> rulesArgs(rulesArgsRaw);
     rulesArgsRaw = nullptr;
 
-    status = outputArg.Set(_Manifest::s_MsgArgSignature,
-                           m_version,
-                           m_rules.size(), rulesArgs.get(),
-                           m_thumbprintAlgorithmOid.c_str(), m_thumbprint.size(), m_thumbprint.data(),
-                           m_signatureAlgorithmOid.c_str(), m_signature.size(), m_signature.data());
+    switch (manifestPurpose) {
+    case MANIFEST_FULL:
+        status = outputArg.Set(_Manifest::s_MsgArgSignature,
+                               m_version,
+                               m_rules.size(), rulesArgs.get(),
+                               m_thumbprintAlgorithmOid.c_str(), m_thumbprint.size(), m_thumbprint.data(),
+                               m_signatureAlgorithmOid.c_str(), m_signature.size(), m_signature.data());
+        break;
+
+    case MANIFEST_FOR_DIGEST:
+        status = outputArg.Set(_Manifest::s_MsgArgDigestSignature,
+                               m_version,
+                               m_rules.size(), rulesArgs.get(),
+                               m_thumbprintAlgorithmOid.c_str(), m_thumbprint.size(), m_thumbprint.data(),
+                               m_signatureAlgorithmOid.c_str());
+        break;
+
+    default:
+        QCC_ASSERT(false && "Unknown value of manifestPurpose");
+        return ER_BAD_ARG_1;
+    }
+
     if (ER_OK != status) {
         return status;
     }
@@ -1282,7 +1300,6 @@ QStatus _Manifest::GetMsgArg(MsgArg& outputArg) const
     outputArg.Stabilize();
 
     return ER_OK;
-
 }
 
 QStatus _Manifest::Sign(const CertificateX509& subjectCertificate, const ECCPrivateKey* issuerPrivateKey)
@@ -1432,7 +1449,7 @@ QStatus _Manifest::GetDigest(std::vector<uint8_t>& digest) const
 
     /* Serialize manifest without signature field to byte array and hash. */
     std::vector<uint8_t> serializedForm;
-    status = Serialize(false, serializedForm);
+    status = Serialize(MANIFEST_FOR_DIGEST, serializedForm);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not serialize manifest to hash"));
         return status;
@@ -1500,40 +1517,79 @@ QStatus _Manifest::SetRules(const PermissionPolicy::Rule* rules, size_t rulesCou
     return ER_OK;
 }
 
-/* Serialized format of a single signed manifest:
- *
- * uint32_t version
- * uint32_t rulesSize
- * uint8_t rules[rulesSize]  marshalled rules using 15.09 method of serialization
- * uint32_t thumbprintAlgorithmOidLength
- * char thumbprintAlgorithmOid[thumbprintAlgorithmOidLength]
- * uint32_t thumbprintLength
- * uint8_t thumbprint[thumbprintLength]
- * uint32_t signatureAlgorithmOidLength
- * char signatureAlgorithmOid[signatureAlgorithmOidLength]
- * uint32_t signatureLength
- * uint8_t signature[signatureLength]
- *
- * All uint32_t's are in little-Endian byte order. uint32_t is used instead of size_t so that
- * there is portability between 32-bit and 64-bit code running on the same keystore.
- *
- * signatureLength and signature are computed based on the serialized form of all of the fields
- * above them.
- */
-
-#define SERIALIZE_APPEND_ADVANCE(data, size) { \
-        memcpy(pBuf, (data), (size)); \
-        pBuf += (size); \
-}
-
-QStatus _Manifest::Serialize(bool includeSignature, std::vector<uint8_t>& serializedForm) const
+QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_t>& serializedForm) const
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
-    PermissionPolicy policy;
-    PermissionPolicy::Acl acls[1];
-    acls[0].SetRules(m_rules.size(), m_rules.data());
-    policy.SetAcls(1, acls);
+    MsgArg msgArg[1];
+    AJ_PCSTR messageSignature;
+    QStatus status;
+
+    switch (manifestPurpose) {
+    case MANIFEST_FULL:
+        messageSignature = _Manifest::s_MsgArgSignature;
+        break;
+
+    case MANIFEST_FOR_DIGEST:
+        messageSignature = _Manifest::s_MsgArgDigestSignature;
+        break;
+
+    default:
+        QCC_ASSERT(false && "Unknown value of manifestPurpose");
+        return ER_BAD_ARG_1;
+    }
+
+    status = GetMsgArg(manifestPurpose, msgArg[0]);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
+    status = bus.Start();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not start temporary BusAttachment"));
+        return status;
+    }
+
+    char savedEndian = _Message::outEndian;
+    _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
+    Message tmpMsg(bus);
+    tmpMsg->ErrorMsg("/", 0);
+    status = tmpMsg->MarshalMessage(messageSignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not marshal message"));
+        _Message::SetEndianess(savedEndian);
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    switch (manifestPurpose) {
+    case MANIFEST_FULL:
+        /* Form for storing in the keystore: store the message headers as well. */
+        serializedForm.assign(tmpMsg->GetBuffer(), tmpMsg->GetBuffer() + tmpMsg->GetBufferSize());
+        break;
+
+    case MANIFEST_FOR_DIGEST:
+        /* Omit the message headers and the signature field. */
+        serializedForm.assign(tmpMsg->GetBodyBuffer(), tmpMsg->GetBodyBuffer() + tmpMsg->GetBodyBufferSize());
+        break;
+
+    default:
+        QCC_ASSERT(false && "Unknown value of manifestPurpose");
+        status = ER_BAD_ARG_1;
+        break;
+    }
+
+    StopBusAttachment(bus);
+    _Message::SetEndianess(savedEndian);
+
+    return status;
+}
+
+QStatus _Manifest::Deserialize(const std::vector<uint8_t>& serializedForm)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    qcc::String endpointName("local");
 
     BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
     QStatus status = bus.Start();
@@ -1542,243 +1598,70 @@ QStatus _Manifest::Serialize(bool includeSignature, std::vector<uint8_t>& serial
         return status;
     }
     Message tmpMsg(bus);
-    DefaultPolicyMarshaller marshaller(tmpMsg);
-    uint8_t* rulesBufRaw = nullptr;
-    size_t rulesSize;
-    status = policy.Export(marshaller, &rulesBufRaw, &rulesSize);
-    StopBusAttachment(bus);
+    std::vector<uint8_t> serializedFormCopy(serializedForm); /* LoadBytes doesn't take const. */
+    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
     if (ER_OK != status) {
-        QCC_LogError(status, ("Could not export policy"));
+        QCC_LogError(status, ("Could not populate Message object with serialized form"));
+        StopBusAttachment(bus);
         return status;
     }
 
-    /* Take ownership of memory allocated by policy.Export. */
-    std::unique_ptr<uint8_t[]> rulesBuf(rulesBufRaw);
-    rulesBufRaw = nullptr;
-
-    size_t serializedSize =
-        sizeof(uint32_t) + /* version */
-        sizeof(uint32_t) + /* rulesSize */
-        rulesSize +
-        sizeof(uint32_t) + /* thumbprintAlgorithmOidLength */
-        m_thumbprintAlgorithmOid.size() +
-        sizeof(uint32_t) + /* thumbprintLength */
-        m_thumbprint.size() +
-        sizeof(uint32_t) + /* signatureAlgorithmOidLength */
-        m_signatureAlgorithmOid.size();
-
-    if (includeSignature) {
-        serializedSize +=
-            sizeof(uint32_t) + /* signatureLength */
-            m_signature.size();
+    status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not Unmarshal"));
+        StopBusAttachment(bus);
+        return status;
     }
 
-    serializedForm.resize(serializedSize);
-    uint8_t* pBuf = serializedForm.data();
-    uint32_t tmp;
-
-    tmp = htole32(m_version);
-    SERIALIZE_APPEND_ADVANCE(&tmp, sizeof(uint32_t));
-
-    tmp = htole32(rulesSize);
-    SERIALIZE_APPEND_ADVANCE(&tmp, sizeof(uint32_t));
-
-    SERIALIZE_APPEND_ADVANCE(rulesBuf.get(), rulesSize);
-
-    tmp = htole32(m_thumbprintAlgorithmOid.size());
-    SERIALIZE_APPEND_ADVANCE(&tmp, sizeof(uint32_t));
-
-    SERIALIZE_APPEND_ADVANCE(m_thumbprintAlgorithmOid.data(), m_thumbprintAlgorithmOid.size());
-
-    tmp = htole32(m_thumbprint.size());
-    SERIALIZE_APPEND_ADVANCE(&tmp, sizeof(uint32_t));
-
-    SERIALIZE_APPEND_ADVANCE(m_thumbprint.data(), m_thumbprint.size());
-
-    tmp = htole32(m_signatureAlgorithmOid.size());
-    SERIALIZE_APPEND_ADVANCE(&tmp, sizeof(uint32_t));
-
-    SERIALIZE_APPEND_ADVANCE(m_signatureAlgorithmOid.data(), m_signatureAlgorithmOid.size());
-
-    if (includeSignature) {
-        tmp = htole32(m_signature.size());
-        SERIALIZE_APPEND_ADVANCE(&tmp, sizeof(uint32_t));
-
-        SERIALIZE_APPEND_ADVANCE(m_signature.data(), m_signature.size());
+    status = tmpMsg->UnmarshalArgs("*");
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not UnmarshalArgs"));
+        StopBusAttachment(bus);
+        return status;
     }
 
-    QCC_ASSERT(pBuf == (serializedForm.data() + serializedForm.size()));
+    status = SetFromMsgArg(*tmpMsg->GetArg(0));
+    StopBusAttachment(bus);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not SetFromMsgArg"));
+        return status;
+    }
 
     return ER_OK;
 }
 
-#undef SERIALIZE_APPEND_ADVANCE
-
-#define DESERIALIZE_BOUNDS_CHECK(nextSize) { \
-        if ((pBuf + (nextSize)) > (serializedForm.data() + serializedForm.size())) { \
-            return ER_INVALID_DATA; \
-        } \
-}
-
-QStatus _Manifest::Deserialize(const std::vector<uint8_t>& serializedForm)
-{
-    QCC_DbgTrace(("%s", __FUNCTION__));
-    const uint8_t* pBuf = serializedForm.data();
-    uint32_t u32LE;
-    uint32_t u32HostByteOrder;
-
-    /* version */
-    DESERIALIZE_BOUNDS_CHECK(sizeof(uint32_t));
-    memcpy(&u32LE, pBuf, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-    m_version = letoh32(u32LE);
-
-    /* rulesSize */
-    DESERIALIZE_BOUNDS_CHECK(sizeof(uint32_t));
-    memcpy(&u32LE, pBuf, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-    u32HostByteOrder = letoh32(u32LE);
-
-    /* rules */
-    DESERIALIZE_BOUNDS_CHECK(u32HostByteOrder);
-    /* 15.09-style deserialization of the rules portion. */
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    QStatus status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary bus attachment for deserializing rules"));
-        return status;
-    }
-    Message tmpMsg(bus);
-    DefaultPolicyMarshaller marshaller(tmpMsg);
-    PermissionPolicy policy;
-    status = policy.Import(marshaller, pBuf, u32HostByteOrder);
-    StopBusAttachment(bus);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not deserialize rules"));
-        return status;
-    }
-    pBuf += u32HostByteOrder;
-
-    if (policy.GetAclsSize() == 0) {
-        return ER_MANIFEST_NOT_FOUND;
-    }
-
-    const PermissionPolicy::Acl* acls = policy.GetAcls();
-
-    status = this->SetRules(acls[0].GetRules(), acls[0].GetRulesSize());
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not set rules"));
-        return status;
-    }
-    /* End of rules deserialization. */
-
-    /* thumbprintAlgorithmOidLength */
-    DESERIALIZE_BOUNDS_CHECK(sizeof(uint32_t));
-    memcpy(&u32LE, pBuf, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-    u32HostByteOrder = letoh32(u32LE);
-
-    /* thumbprintAlgorithmOid */
-    DESERIALIZE_BOUNDS_CHECK(u32HostByteOrder);
-    m_thumbprintAlgorithmOid.assign(pBuf, pBuf + u32HostByteOrder);
-    pBuf += u32HostByteOrder;
-
-    /* thumbprintLength */
-    DESERIALIZE_BOUNDS_CHECK(sizeof(uint32_t));
-    memcpy(&u32LE, pBuf, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-    u32HostByteOrder = letoh32(u32LE);
-
-    /* thumbprint */
-    DESERIALIZE_BOUNDS_CHECK(u32HostByteOrder);
-    m_thumbprint.assign(pBuf, pBuf + u32HostByteOrder);
-    pBuf += u32HostByteOrder;
-
-    /* signatureAlgorithmOidLength */
-    DESERIALIZE_BOUNDS_CHECK(sizeof(uint32_t));
-    memcpy(&u32LE, pBuf, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-    u32HostByteOrder = letoh32(u32LE);
-
-    /* signatureAlgorithmOid */
-    DESERIALIZE_BOUNDS_CHECK(u32HostByteOrder);
-    m_signatureAlgorithmOid.assign(pBuf, pBuf + u32HostByteOrder);
-    pBuf += u32HostByteOrder;
-
-    /* signatureLength */
-    DESERIALIZE_BOUNDS_CHECK(sizeof(uint32_t));
-    memcpy(&u32LE, pBuf, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-    u32HostByteOrder = letoh32(u32LE);
-
-    /* signature */
-    DESERIALIZE_BOUNDS_CHECK(u32HostByteOrder);
-    m_signature.assign(pBuf, pBuf + u32HostByteOrder);
-    pBuf += u32HostByteOrder;
-
-    QCC_ASSERT(pBuf == (serializedForm.data() + serializedForm.size()));
-
-    return ER_OK;
-}
-
-#undef DESERIALIZE_BOUNDS_CHECK
-
-/*
- * Serialized format of an array of signed manifests:
- *
- * uint32_t manifestCount
- * uint32_t manifest[0].size
- * uint8_t manifest[0].data[manifest[0].size]
- * uint32_t manifest[1].size
- * uint8_t manifest[1].data[manifest[1].size)
- * :
- * uint32_t manifest[manifestCount-1].size
- * uint8_t manifest[manifestCount-1].data[manifest[manifestCount-1].size]
- *
- * uint32_t's are all in host byte order, just like above.
- */
 QStatus _Manifest::SerializeArray(const std::vector<Manifest>& manifests, std::vector<uint8_t>& serializedForm)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if (manifests.size() < 1) {
-        return ER_INVALID_DATA;
+
+    MsgArg msgArg[1];
+    QStatus status = GetArrayMsgArg(manifests, msgArg[0]);
+    if (ER_OK != status) {
+        return status;
     }
 
-    QStatus status = ER_OK;
-    std::vector<std::vector<uint8_t> > serializedManifests;
-    serializedManifests.resize(manifests.size());
-
-    uint32_t serializedSize =
-        sizeof(uint32_t) + /* manifestCount */
-        sizeof(uint32_t) * manifests.size(); /* all manifest[i].size */
-
-    for (size_t i = 0; i < manifests.size(); i++) {
-        status = manifests[i]->Serialize(true, serializedManifests[i]);
-        if (ER_OK != status) {
-            return status;
-        }
-        serializedSize += serializedManifests[i].size(); /* all manifest[i].data */
+    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
+    status = bus.Start();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not start temporary BusAttachment"));
+        return status;
     }
 
-    serializedForm.resize(serializedSize);
-    uint8_t* pBuf = serializedForm.data();
-
-    uint32_t manifestCountLE = htole32(manifests.size());
-    memcpy(pBuf, &manifestCountLE, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-
-    for (size_t i = 0; i < serializedManifests.size(); i++) {
-        uint32_t manifestSizeLE = htole32(serializedManifests[i].size());
-        memcpy(pBuf, &manifestSizeLE, sizeof(uint32_t));
-        pBuf += sizeof(uint32_t);
-
-        memcpy(pBuf, serializedManifests[i].data(), serializedManifests[i].size());
-        pBuf += serializedManifests[i].size();
+    char savedEndian = _Message::outEndian;
+    _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
+    Message tmpMsg(bus);
+    tmpMsg->ErrorMsg("/", 0);
+    status = tmpMsg->MarshalMessage(_Manifest::s_MsgArgArraySignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not marshal message"));
+    } else {
+        serializedForm.assign(tmpMsg->GetBuffer(), tmpMsg->GetBuffer() + tmpMsg->GetBufferSize());
     }
 
-    QCC_ASSERT(pBuf == (serializedForm.data() + serializedForm.size()));
+    StopBusAttachment(bus);
+    _Message::SetEndianess(savedEndian);
 
-    return ER_OK;
+    return status;
 }
 
 QStatus _Manifest::DeserializeArray(const std::vector<uint8_t>& serializedForm, std::vector<Manifest>& manifests)
@@ -1787,64 +1670,66 @@ QStatus _Manifest::DeserializeArray(const std::vector<uint8_t>& serializedForm, 
     return DeserializeArray(serializedForm.data(), serializedForm.size(), manifests);
 }
 
-#define DESERIALIZEARRAY_BOUNDS_CHECK(nextSize) { \
-        if ((pBuf + (nextSize)) > (serializedForm + serializedSize)) { \
-            return ER_INVALID_DATA; \
-        } \
-}
-
 QStatus _Manifest::DeserializeArray(const uint8_t* serializedForm, size_t serializedSize, std::vector<Manifest>& manifests)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    const uint8_t* pBuf = serializedForm;
-    uint32_t u32LE;
-    uint32_t manifestCount;
+    qcc::String endpointName("local");
 
-    /* manifestCount */
-    DESERIALIZEARRAY_BOUNDS_CHECK(sizeof(uint32_t));
-    memcpy(&u32LE, pBuf, sizeof(uint32_t));
-    pBuf += sizeof(uint32_t);
-    manifestCount = letoh32(u32LE);
+    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
+    QStatus status = bus.Start();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not start temporary BusAttachment"));
+        return status;
+    }
+    Message tmpMsg(bus);
+    std::vector<uint8_t> serializedFormCopy(serializedSize); /* LoadBytes doesn't take const. */
+    serializedFormCopy.assign(serializedForm, serializedForm + serializedSize);
 
-    if (0 == manifestCount) {
-        return ER_MANIFEST_NOT_FOUND;
+    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not populate Message object with serialized form"));
+        StopBusAttachment(bus);
+        return status;
     }
 
-    manifests.resize(manifestCount);
+    status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not Unmarshal"));
+        StopBusAttachment(bus);
+        return status;
+    }
 
-    /* Reuse serializedManfiest instead of declaring it in the for loop to hopefully avoid some
-     * memory reallocations.
-     */
-    std::vector<uint8_t> serializedManifest;
+    status = tmpMsg->UnmarshalArgs("*");
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not UnmarshalArgs"));
+        StopBusAttachment(bus);
+        return status;
+    }
 
-    for (uint32_t i = 0; i < manifestCount; i++) {
-        uint32_t manifestSize;
+    MsgArg* signedManifestArgs;
+    size_t signedManifestCount;
 
-        /* manifest[i].size */
-        DESERIALIZEARRAY_BOUNDS_CHECK(sizeof(uint32_t));
-        memcpy(&u32LE, pBuf, sizeof(uint32_t));
-        pBuf += sizeof(uint32_t);
-        manifestSize = letoh32(u32LE);
+    status = tmpMsg->GetArg(0)->Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgs);
+    StopBusAttachment(bus);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (signedManifestCount == 0) {
+        return ER_OK; /* nothing to do */
+    }
 
-        if (0 == manifestSize) {
-            return ER_INVALID_DATA;
-        }
-
-        /* manifest[i].data */
-        DESERIALIZEARRAY_BOUNDS_CHECK(manifestSize);
-        serializedManifest.assign(pBuf, pBuf + manifestSize);
-        pBuf += manifestSize;
-
-        QStatus status = manifests[i]->Deserialize(serializedManifest);
+    for (size_t i = 0; i < signedManifestCount; i++) {
+        Manifest manifest;
+        status = manifest->SetFromMsgArg(signedManifestArgs[i]);
         if (ER_OK != status) {
+            QCC_LogError(status, ("Could not SetFromMsgArg"));
             return status;
         }
+        manifests.push_back(manifest);
     }
 
     return ER_OK;
 }
-
-#undef DESERIALIZEARRAY_BOUNDS_CHECK
 
 bool _Manifest::IsVersionSupported(uint32_t version)
 {

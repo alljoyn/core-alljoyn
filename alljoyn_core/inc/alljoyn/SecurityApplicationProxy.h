@@ -249,7 +249,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * should be called to force the peers to create a new set of secret and
      * session keys.
      *
-     * It is highly recommended that eleement 0 of identityCertificateChain, the peer's
+     * It is highly recommended that element 0 of identityCertificateChain, the peer's
      * end entity certificate, be of type qcc::IdentityCertificate. Other certs can be
      * of this or the base CertificateX509 type.
      *
@@ -362,7 +362,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * @return
      *  - #ER_OK if successful
      *  - #ER_PERMISSION_DENIED Error raised when the caller does not have permission
-     *  - #ER_DIGEST_MISMATCH Error raised when none of the manifests are validated by the application
+     *  - #ER_DIGEST_MISMATCH Error raised when none of the manifests are accepted by the application
      *  - an error status indicating failure
      */
     QStatus InstallManifests(const Manifest* manifests, size_t manifestCount);
