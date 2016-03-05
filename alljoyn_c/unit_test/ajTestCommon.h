@@ -21,6 +21,11 @@
 #include <qcc/String.h>
 #include <alljoyn_c/BusAttachment.h>
 
+/**
+ * Value for death tests that don't return any messages.
+ */
+#define DEATH_TEST_EMPTY_MESSAGE ""
+
 /*
  * this header file contains a functions that can be used to replace common
  * actions in the test code.

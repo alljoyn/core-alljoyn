@@ -22,45 +22,49 @@ if test_env['BR'] == 'on':
     # Build apps with bundled daemon support
     test_env.Prepend(LIBS = [test_env['ajrlib']])
 
-# Test Programs
+# Test Programs installed in the sdk bin directory
 progs = [
-    test_env.Program('aclient',       ['aclient.cc']),
     test_env.Program('ajxmlcop',      ['ajxmlcop.cc']),
-    test_env.Program('aservice',      ['aservice.cc']),
-    test_env.Program('bastress',      ['bastress.cc']),
     test_env.Program('bastress2',     ['bastress2.cc']),
-    test_env.Program('bignum',        ['bignum.cc']),
-    test_env.Program('propstresstest',['propstresstest.cc']),
-    test_env.Program('proptester',    ['proptester.cc']),
-    test_env.Program('socktest',      ['socktest.cc']),
-    test_env.Program('remarshal',     ['remarshal.cc']),
-    test_env.Program('unpack',        ['unpack.cc']),
-    test_env.Program('srp',           ['srp.cc']),
-    test_env.Program('aes_ccm',       ['aes_ccm.cc']),
-    test_env.Program('bbservice',     ['bbservice.cc']),
-    test_env.Program('bbsig',         ['bbsig.cc']),
     test_env.Program('bbclient',      ['bbclient.cc']),
     test_env.Program('bbjoin',        ['bbjoin.cc']),
-    test_env.Program('bbjitter',      ['bbjitter.cc']),
-    test_env.Program('marshal',       ['marshal.cc']),
-    test_env.Program('names',         ['names.cc']),
+    test_env.Program('bbservice',     ['bbservice.cc']),
+    test_env.Program('bbsig',         ['bbsig.cc']),
+    test_env.Program('bbsigtest',     ['bbsigtest.cc']),
+    test_env.Program('eventsactionservice', ['eventsactionservice.cc']),
+    test_env.Program('init',          ['init.cc']),
     test_env.Program('rawclient',     ['rawclient.cc']),
     test_env.Program('rawservice',    ['rawservice.cc']),
-    test_env.Program('sessions',      ['sessions.cc']),
-    test_env.Program('bbsigtest',     ['bbsigtest.cc']),
-    test_env.Program('init',          ['init.cc']),
-    test_env.Program('eventsactionservice', ['eventsactionservice.cc'])
+    test_env.Program('sessions',      ['sessions.cc'])
     ]
 
 if test_env['OS'] == 'linux':
    progs.extend(test_env.Program('observer-multipeer',     ['observer-multipeer.cc']))
 
-if test_env['OS'] == 'linux' or test_env['OS'] == 'android':
+if test_env['OS'] in ['linux', 'android']:
     progs.extend(test_env.Program('mc-rcv',     ['mc-rcv.cc']))
     progs.extend(test_env.Program('mc-snd',     ['mc-snd.cc']))
 
 if test_env['OS'] in ['win7', 'win10']:
-    progs.extend(test_env.Program('mouseclient', ['mouseclient.cc']))
     progs.extend(test_env.Program('litegen',     ['litegen.cc']))
+    progs.extend(test_env.Program('mouseclient', ['mouseclient.cc']))
 
-Return('progs')
+# Test Programs installed in the test bin directory
+progs_test = [
+    test_env.Program('aclient',       ['aclient.cc']),
+    test_env.Program('aes_ccm',       ['aes_ccm.cc']),
+    test_env.Program('aservice',      ['aservice.cc']),
+    test_env.Program('bastress',      ['bastress.cc']),
+    test_env.Program('bbjitter',      ['bbjitter.cc']),
+    test_env.Program('bignum',        ['bignum.cc']),
+    test_env.Program('marshal',       ['marshal.cc']),
+    test_env.Program('names',         ['names.cc']),
+    test_env.Program('propstresstest',['propstresstest.cc']),
+    test_env.Program('proptester',    ['proptester.cc']),
+    test_env.Program('remarshal',     ['remarshal.cc']),
+    test_env.Program('socktest',      ['socktest.cc']),
+    test_env.Program('srp',           ['srp.cc']),
+    test_env.Program('unpack',        ['unpack.cc'])
+    ]
+
+Return('progs', 'progs_test')

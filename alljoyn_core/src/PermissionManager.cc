@@ -402,7 +402,7 @@ static bool IsPeerAuthorized(const Request& request, const PermissionPolicy* pol
  * 5. all peers
  */
 
-static bool IsAuthorized(const Request& request, const PermissionPolicy* policy, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj)
+static bool IsAuthorized(const Request& request, const PermissionPolicy* policy, PeerState& peerState, PermissionMgmtObj* permissionMgmtObj, bool authenticated = true)
 {
     Right right;
     GenRight(request, right);
@@ -425,26 +425,33 @@ static bool IsAuthorized(const Request& request, const PermissionPolicy* policy,
         std::vector<ECCPublicKey> issuerPublicKeys;
         const ECCPublicKey* trustedPeerPublicKey = NULL;
         bool trustedPeer = false;
-        if (peerState->IsLocalPeer()) {
-            if (ER_OK == permissionMgmtObj->GetPublicKey(publicKeyInfo)) {
-                trustedPeerPublicKey = publicKeyInfo.GetPublicKey();
-                trustedPeer = true;
-                enforceManifest = false;
-            }
-        } else {
-            bool publicKeyFound = false;
-            qcc::String authMechanism;
-            if (ER_OK == permissionMgmtObj->GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, NULL, issuerPublicKeys)) {
-                /* trusted peer */
-                if (publicKeyFound) {
-                    trustedPeerPublicKey = &peerPublicKey;
-                    trustedPeer = true;
-                } else if ((authMechanism == KeyExchangerECDHE_PSK::AuthName()) ||
-                           (authMechanism == AuthMechSRP::AuthName()) ||
-                           (authMechanism == AuthMechLogon::AuthName())) {
+        if (authenticated) {
+            if (peerState->IsLocalPeer()) {
+                if (ER_OK == permissionMgmtObj->GetPublicKey(publicKeyInfo)) {
+                    trustedPeerPublicKey = publicKeyInfo.GetPublicKey();
                     trustedPeer = true;
                     enforceManifest = false;
-                } else {
+                }
+            } else {
+                bool publicKeyFound = false;
+                qcc::String authMechanism;
+                QStatus status = permissionMgmtObj->GetConnectedPeerAuthMetadata(peerState->GetGuid(), authMechanism, publicKeyFound, &peerPublicKey, NULL, issuerPublicKeys);
+                if (ER_OK == status) {
+                    /* trusted peer */
+                    if (publicKeyFound) {
+                        trustedPeerPublicKey = &peerPublicKey;
+                        trustedPeer = true;
+                    } else if ((authMechanism == KeyExchangerECDHE_PSK::AuthName()) ||
+                               (authMechanism == AuthMechSRP::AuthName()) ||
+                               (authMechanism == AuthMechLogon::AuthName())) {
+                        trustedPeer = true;
+                        enforceManifest = false;
+                    } else {
+                        enforceManifest = false;
+                    }
+                } else if (ER_BUS_KEY_UNAVAILABLE == status) {
+                    /* assuming the peer secret just expires so it is not a trusted
+                     * peer */
                     enforceManifest = false;
                 }
             }
@@ -461,7 +468,7 @@ static bool IsAuthorized(const Request& request, const PermissionPolicy* policy,
             }
         }
 #endif
-        QCC_DbgPrintf(("Peer's public key: %s Authorized: %d Denied: %d", trustedPeerPublicKey ? trustedPeerPublicKey->ToString().c_str() : "N/A", authorized, denied));
+        QCC_DbgPrintf(("Peer's trusted peer: %d public key: %s Authorized: %d Denied: %d Manifest required: %d", trustedPeer, trustedPeerPublicKey ? trustedPeerPublicKey->ToString().c_str() : "N/A", authorized, denied, enforceManifest));
         if (denied || !authorized) {
             return false;
         }
@@ -597,7 +604,7 @@ static QStatus ParsePropertiesMessage(Request& request, Message& msg)
     return ER_OK;
 }
 
-bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized)
+bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized, PeerState& peerState)
 {
     authorized = false;
     if (outgoing) {
@@ -616,6 +623,36 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
         if (strncmp(mbrName, "Claim", 5) == 0) {
             /* only allowed when there is no trust anchor */
             authorized = (!permissionMgmtObj->HasTrustAnchors());
+            /* If this isn't a self-claim, make sure the auth mechanism used is acceptable per
+             * the claim capabilities.
+             */
+            if (authorized && !peerState->IsLocalPeer()) {
+                PermissionConfigurator::ClaimCapabilities capabilities;
+                QStatus status = permissionMgmtObj->GetClaimCapabilities(capabilities);
+                if (ER_OK != status) {
+                    QCC_LogError(status, ("Could not query our claim capabilities"));
+                    authorized = false;
+                } else {
+                    switch (peerState->GetAuthSuite()) {
+                    case AUTH_SUITE_ECDHE_NULL:
+                        authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_NULL) == PermissionConfigurator::CAPABLE_ECDHE_NULL);
+                        break;
+
+                    case AUTH_SUITE_ECDHE_PSK:
+                        authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_PSK) == PermissionConfigurator::CAPABLE_ECDHE_PSK);
+                        break;
+
+                    case AUTH_SUITE_ECDHE_ECDSA:
+                        authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_ECDSA) == PermissionConfigurator::CAPABLE_ECDHE_ECDSA);
+                        break;
+
+                    default:
+                        /* No other suites supported for claiming. */
+                        authorized = false;
+                        break;
+                    }
+                }
+            }
             return true;  /* handled */
         }
     } else if (strcmp(iName, org::alljoyn::Bus::Security::ManagedApplication::InterfaceName) == 0) {
@@ -654,7 +691,7 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
     return false;  /* not handled */
 }
 
-QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerState& peerState)
+QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerState& peerState, bool authenticated)
 {
     QStatus status = ER_PERMISSION_DENIED;
     bool authorized = false;
@@ -685,7 +722,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     bool isPermissionMgmt = IsPermissionMgmtInterface(request.iName);
     if (isPermissionMgmt) {
         bool allowed = false;
-        if (AuthorizePermissionMgmt(outgoing, request.iName, request.mbrName, allowed)) {
+        if (AuthorizePermissionMgmt(outgoing, request.iName, request.mbrName, allowed, peerState)) {
             if (allowed) {
                 return ER_OK;
             } else {
@@ -705,7 +742,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage with outgoing: %d msg %s", outgoing, msg->ToString().c_str()));
     QCC_DbgPrintf(("PermissionManager::AuthorizeMessage: local policy %s", GetPolicy() ? GetPolicy()->ToString().c_str() : "NULL"));
 
-    authorized = IsAuthorized(request, GetPolicy(), peerState, permissionMgmtObj);
+    authorized = IsAuthorized(request, GetPolicy(), peerState, permissionMgmtObj, authenticated);
     if (!authorized) {
         QCC_DbgPrintf(("PermissionManager::AuthorizeMessage IsAuthorized returns ER_PERMISSION_DENIED\n"));
         return ER_PERMISSION_DENIED;

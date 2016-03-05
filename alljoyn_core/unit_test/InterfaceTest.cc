@@ -535,3 +535,37 @@ TEST_F(InterfaceTest, ArgNamesTest) {
     ASSERT_TRUE(member != NULL);
     EXPECT_STREQ(",arg1", member->argNames.c_str());
 }
+
+TEST_F(InterfaceTest, ArgAnnotationsTest) {
+    QStatus status = ER_OK;
+
+    ASSERT_EQ(ER_OK, ServiceBusSetup());
+
+    InterfaceDescription* testIntf = NULL;
+    ServiceObject myService(*g_msgBus, "/org/alljoyn/xmlTest");
+
+    ASSERT_EQ(ER_OK, ServiceBusSetup());
+
+    /* Add org.alljoyn.alljoyn_test interface */
+    status = g_msgBus->CreateInterface("org.alljoyn.xmlTest", testIntf);
+    EXPECT_EQ(status, ER_OK);
+    ASSERT_TRUE(testIntf != NULL);
+
+    const char* methodName = "Method1";
+    const char* argName = "arg1";
+    const char* annotationName1 = "org.alljoyn.Bus.DocString.en";
+    const char* annotationName2 = "org.alljoyn.Bus.DocString.de";
+    const char* annotationValue1 = "The first argument";
+    const char* annotationValue2 = "DE: The first argument";
+    testIntf->AddMethod(methodName, NULL, "h", "arg1");
+    testIntf->AddArgAnnotation(methodName, argName, annotationName1, annotationValue1);
+    testIntf->AddArgAnnotation(methodName, argName, annotationName2, annotationValue2);
+    testIntf->AddMemberAnnotation("NoReply", org::freedesktop::DBus::AnnotateNoReply, "true");
+
+    qcc::String value;
+    ASSERT_TRUE(testIntf->GetArgAnnotation(methodName, argName, annotationName1, value));
+    EXPECT_STREQ(annotationValue1, value.c_str());
+    ASSERT_TRUE(testIntf->GetArgAnnotation(methodName, argName, annotationName2, value));
+    EXPECT_STREQ(annotationValue2, value.c_str());
+}
+

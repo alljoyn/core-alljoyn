@@ -18,6 +18,7 @@
 #include <alljoyn/BusAttachment.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
+#include <qcc/LockLevel.h>
 #include <algorithm>
 #include <memory>
 #include <set>
@@ -157,7 +158,7 @@ static AutoPingAsyncCB* pingCallback = NULL;
 void AutoPingerInternal::Init()
 {
     ctxs = new std::set<PingAsyncContext*>();
-    globalPingerLock = new qcc::Mutex();
+    globalPingerLock = new qcc::Mutex(qcc::LOCK_LEVEL_AUTOPINGERINTERNAL_GLOBALPINGERLOCK);
     pingCallback = new AutoPingAsyncCB();
 }
 

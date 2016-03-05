@@ -52,9 +52,6 @@ if '' == jsenv.subst('$GECKO_BASE') and '' == jsenv.subst('$CORDOVA_BASE'):
 sys.path.append(str(jsenv.Dir('../build_core/tools/scons').srcnode()))
 from jsstatus import JavaScriptStatus
 
-if jsenv.has_key('BULLSEYE_BIN'):
-    jsenv.PrependENVPath('PATH', jsenv.get('BULLSEYE_BIN'))
-
 if jsenv.has_key('JSDOC_DIR'):
     jsenv.PrependENVPath('PATH', jsenv.get('JSDOC_DIR'))
 

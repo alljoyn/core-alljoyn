@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project name="ConfigService" basedir="." default="jar">
+
+     <property name="src.dir"     value="src" />
+     <property name="libs.dir"    value="libs"/>
+     <property name="build.dir"   value="build"/>
+     <property name="classes.dir" value="${build.dir}/classes" />
+     <property name="deploy.dir"  value="${build.dir}/deploy" />
+     
+     <property name="docs.lib"    value="docs"/>
+     
+     <property name="config"      value="alljoyn_config" />
+     
+     <target name="clean">
+         <echo message="Cleaning ${ant.project.name} ${build.dir} directory..."/>
+         <delete dir="${build.dir}" includeemptydirs="true" quiet="true"/>
+     </target>
+     
+     <target name="init" depends="clean">
+         <echo message="${ant.project.name} Starting init..."/>
+         <echo message="${ant.project.name} Create build directory"/>
+         <mkdir dir="${build.dir}"/>
+ 
+         <echo message="${ant.project.name} Create ${classes.dir} directory"/>
+         <mkdir dir="${classes.dir}"/>
+ 
+         <echo message="${ant.project.name} Create ${deploy.dir} directory"/>
+         <mkdir dir="${deploy.dir}"/>
+     </target>
+     
+     
+     <target name="compile" depends="init" description="Compiles the code">
+         <echo message="${ant.project.name} starting compilation..."/>
+ 
+         <path id="classpath">
+             <fileset dir="${libs.dir}" includes="**/*.jar"/>
+         </path>
+ 
+         <javac source="1.6" target="1.6" srcdir="${src.dir}" destdir="${classes.dir}" classpathref="classpath" debug="true" includeantruntime="false"/>
+     </target>
+     
+     <target name="jar" depends="compile">
+         <echo message="${ant.project.name} Creates ${config} JAR file"/>
+         <jar destfile="${deploy.dir}/${config}.jar" basedir="${classes.dir}" includes="*/**"/>
+     </target>
+     
+     
+     <target name="jdoc" description="${ant.project.name} Creates JAVADOC">
+          <delete dir="${docs.lib}" includeemptydirs="true" quiet="true"/>
+ 
+         <javadoc
+                 destdir="${docs.lib}"
+                 author="false"
+                 version="false"
+                 use="true"
+                 windowtitle="AllJoyn Config Service">
+ 
+             <classpath id="classpath">
+                 <fileset dir="${libs.dir}" >
+                    <include name="**/*.jar"/>
+                 </fileset>
+             </classpath>
+ 
+             <fileset dir="src" defaultexcludes="yes" includes="*/**" excludes="SConscript"/>
+ 
+             <doctitle><![CDATA[<h1>AllJoyn&trade; Config Service Version 15.04.00</h1>]]></doctitle>
+             <bottom><![CDATA[<small>AllJoyn&trade; Config Service Java API Reference Manual Version 15.04.00<br/>Copyright AllSeen Alliance, Inc. All Rights Reserved.<br/><br/>AllSeen, AllSeen Alliance, and AllJoyn are trademarks of the AllSeen Alliance, Inc in the United States and other jurisdictions.<br/><br/><b>THIS DOCUMENT AND ALL INFORMATION CONTAIN HEREIN ARE PROVIDED ON AN "AS-IS" BASIS WITHOUT WARRANTY OF ANY KIND</b>.<br/><b>MAY CONTAIN U.S. AND INTERNATIONAL EXPORT CONTROLLED INFORMATION</b><br/></small>]]></bottom>
+        </javadoc>
+     </target>
+
+</project>

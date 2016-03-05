@@ -86,6 +86,10 @@ static bool GetStatusBasedOnErrorName(Message& reply, QStatus& status)
         status = ER_CERTIFICATE_NOT_FOUND;
     } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_DUPLICATE_CERTIFICATE) == 0) {
         status = ER_DUPLICATE_CERTIFICATE;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_MANAGEMENT_ALREADY_STARTED) == 0) {
+        status = ER_MANAGEMENT_ALREADY_STARTED;
+    } else if (strcmp(reply->GetErrorName(), PermissionMgmtObj::ERROR_MANAGEMENT_NOT_STARTED) == 0) {
+        status = ER_MANAGEMENT_NOT_STARTED;
     } else if (strcmp(reply->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0 && reply->GetArg(1)) {
         status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
     } else {
@@ -749,6 +753,32 @@ QStatus SecurityApplicationProxy::GetMembershipSummaries(MsgArg& membershipSumma
         membershipSummaries.Stabilize();
     }
 
+    return status;
+}
+
+QStatus SecurityApplicationProxy::StartManagement()
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    Message reply(GetBusAttachment());
+    QStatus status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "StartManagement", nullptr, 0, reply);
+    if (ER_OK != status) {
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
+        }
+    }
+    return status;
+}
+
+QStatus SecurityApplicationProxy::EndManagement()
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    Message reply(GetBusAttachment());
+    QStatus status = MethodCall(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "EndManagement", nullptr, 0, reply);
+    if (ER_OK != status) {
+        if (!GetStatusBasedOnErrorName(reply, status)) {
+            QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
+        }
+    }
     return status;
 }
 

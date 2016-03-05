@@ -75,11 +75,12 @@ class PermissionManager {
      * @param outgoing indicating whether is a outgoing or incoming
      * @param msg the target message
      * @param peerState the peer's PeerState object
+     * @param authenticated flag indicating the message is authenticated
      * @return
      *  - ER_OK: authorized
      *  - ER_PERMISSION_DENIED: permission denied
      */
-    QStatus AuthorizeMessage(bool outgoing, Message& msg, PeerState& peerState);
+    QStatus AuthorizeMessage(bool outgoing, Message& msg, PeerState& peerState, bool authenticated = true);
 
     /**
      * Authorize a Get Property message.  Make sure there is a proper permission is setup for this type of message.
@@ -109,7 +110,7 @@ class PermissionManager {
     /* Private copy constructor to prevent double freeing of memory */
     PermissionManager(const PermissionManager& src);
 
-    bool AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized);
+    bool AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized, PeerState& peerState);
 
     PermissionPolicy* policy;
     PermissionMgmtObj* permissionMgmtObj;

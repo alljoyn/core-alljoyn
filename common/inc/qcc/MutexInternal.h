@@ -23,48 +23,170 @@
 #define _QCC_MUTEXINTERNAL_H
 
 #include <qcc/Thread.h>
+#include <qcc/LockLevel.h>
 
 namespace qcc {
+
+#if defined(QCC_OS_GROUP_POSIX)
+
+typedef pthread_mutex_t QccPlatformSpecificMutex;
+
+#elif defined(QCC_OS_GROUP_WINDOWS)
+
+typedef CRITICAL_SECTION QccPlatformSpecificMutex;
+
+#else
+#error No OS GROUP defined.
+#endif
 
 /**
  * Represents the non-public functionality of the Mutex class.
  */
-class Mutex::Internal {
+class MutexInternal {
 public:
     /**
      * Constructor.
+     *
+     * @param mutex Pointer back to the mutex object that owns this MutexInternal object.
+     * @param level Lock level used on Debug builds to detect out-of-order lock acquires.
      */
-    Internal();
-    
-    /**
-     * Called immediately after current thread acquired this Mutex.
-     */
-    void LockAcquired();
+    MutexInternal(Mutex *mutex, LockLevel level);
 
     /**
-     * Called immediately before current thread releases this Mutex.
+     * Destructor.
      */
-    void ReleasingLock();
+    ~MutexInternal();
+
+    /**
+     * Acquires a lock on the mutex.  If another thread is holding the lock,
+     * then this function will block until the other thread has released its
+     * lock.
+     *
+     * @param file the name of the file this Mutex lock was called from
+     * @param line the line number of the file this Mutex lock was called from
+     *
+     * @return
+     *  - #ER_OK if the lock was acquired.
+     *  - #ER_OS_ERROR if the underlying OS reports an error.
+     */
+    QStatus Lock(const char* file, uint32_t line);
+
+    /**
+     * Acquires a lock on the mutex.  If another thread is holding the lock,
+     * then this function will block until the other thread has released its
+     * lock.
+     *
+     * @return
+     * - #ER_OK if the lock was acquired.
+     * - #ER_OS_ERROR if the underlying OS reports an error.
+     */
+    QStatus Lock();
+
+    /**
+     * Releases a lock on the mutex.  This will only release a lock for the
+     * current thread if that thread was the one that aquired the lock in the
+     * first place.
+     *
+     * @param file the name of the file this Mutex unlock was called from
+     * @param line the line number of the file this Mutex unlock was called from
+     *
+     * @return
+     *  - #ER_OK if the lock was acquired.
+     *  - #ER_OS_ERROR if the underlying OS reports an error.
+     */
+    QStatus Unlock(const char* file, uint32_t line);
+
+    /**
+     * Releases a lock on the mutex.  This will only release a lock for the
+     * current thread if that thread was the one that aquired the lock in the
+     * first place.
+     *
+     * @return
+     * - #ER_OK if the lock was acquired.
+     * - #ER_OS_ERROR if the underlying OS reports an error.
+     */
+    QStatus Unlock();
+
+    /**
+     * Attempt to acquire a lock on a mutex. If another thread is holding the lock
+     * this function return false otherwise the lock is acquired and the function returns true.
+     *
+     * @return  True if the lock was acquired.
+     */
+    bool TryLock();
 
     /**
      * Assert that current thread owns this Mutex.
      */
     void AssertOwnedByCurrentThread() const;
 
-private:
-    /* Copy constructor is private */
-    Internal(const Internal& other);
+    /**
+     * Called immediately before current thread tries to acquire this Mutex, when building
+     * in Release mode, or when the caller did not specify the MUTEX_CONTEXT parameter.
+     */
+    void AcquiringLock();
 
-    /* Assignment operator is private */
-    Internal& operator=(const Internal& other);
+    /* Called immediately after current thread acquired this Mutex */
+    void LockAcquired();
+    static void LockAcquired(Mutex& lock);
+
+    /* Called immediately before current thread releases this Mutex */
+    void ReleasingLock();
+    static void ReleasingLock(Mutex& lock);
+
+    static QccPlatformSpecificMutex* GetPlatformSpecificMutex(Mutex& lock) { return &lock.m_mutexInternal->m_mutex; }
 
 #ifndef NDEBUG
+    static LockLevel GetLevel(const Mutex& lock) { return lock.m_mutexInternal->m_level; }
+    static void SetLevel(Mutex& lock, LockLevel level);
+    static const char* GetLatestOwnerFileName(const Mutex& lock) { return lock.m_mutexInternal->m_file; }
+    static uint32_t GetLatestOwnerLineNumber(const Mutex &lock) { return lock.m_mutexInternal->m_line; }
+
+    /**
+     * Called immediately before current thread tries to acquire this Mutex, when building
+     * in Debug mode and if the caller specified the MUTEX_CONTEXT parameter.
+     */
+    void AcquiringLock(const char* file, uint32_t line);
+#endif 
+
+private:
+    bool PlatformSpecificInit();
+    void PlatformSpecificDestroy();
+    QStatus PlatformSpecificLock();
+    QStatus PlatformSpecificUnlock();
+    bool PlatformSpecificTryLock();
+
+    /* Copy constructor is private */
+    MutexInternal(const MutexInternal& other);
+
+    /* Assignment operator is private */
+    MutexInternal& operator=(const MutexInternal& other);
+
+    /* Underlying platform-specific lock */
+    QccPlatformSpecificMutex m_mutex;
+
+    /* true if mutex was successfully initialized */
+    bool m_initialized;
+
+#ifndef NDEBUG
+    /* Pointer back to the mutex object that owns this MutexInternal object */
+    Mutex *m_ownerLock;
+
+    /* Source code file name where this Mutex has been acquired or released */
+    const char* m_file;
+
+    /* Source code line number where this Mutex has been acquired or released */
+    uint32_t m_line;
+
     /* Mutex owner thread ID */
     ThreadId m_ownerThread;
 
     /* How many times this Mutex has been acquired by its current owner thread */
     uint32_t m_recursionCount;
-#endif 
+
+    /* If the m_level value is not 0 or -1, lock order verification is enabled for this lock */
+    LockLevel m_level;
+#endif
 };
 
 } /* namespace */

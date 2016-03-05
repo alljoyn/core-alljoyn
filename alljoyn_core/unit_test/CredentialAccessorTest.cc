@@ -222,7 +222,7 @@ QStatus HeaderKeyExpired_Pre(CredentialAccessor& ca, KeyStore::Key& peerKey, Key
     if (status != ER_OK) {
         return status;
     }
-    Timespec expiry;
+    Timespec<EpochTime> expiry;
     kb.GetExpiration(expiry);
     const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::GENERIC);
@@ -247,7 +247,7 @@ QStatus MemberKeyExpired_Pre(CredentialAccessor& ca, KeyStore::Key& peerKey, Key
     if (status != ER_OK) {
         return status;
     }
-    Timespec expiry;
+    Timespec<EpochTime> expiry;
     kb.GetExpiration(expiry);
     const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::GENERIC);
@@ -273,7 +273,7 @@ QStatus ComboMemberKeyExpired_Pre(CredentialAccessor& ca, KeyStore::Key& peerKey
     if (status != ER_OK) {
         return status;
     }
-    Timespec expiry;
+    Timespec<EpochTime> expiry;
     kb.GetExpiration(expiry);
     const char* blobName = "This is the custom key 1";
     KeyBlob customKb1((const uint8_t*) blobName, strlen(blobName), KeyBlob::GENERIC);
@@ -333,7 +333,7 @@ TEST_F(CredentialAccessorTest, KeysExpired)
     status = ComboMemberKeyExpired_Pre(ca, t3PeerKey, t3CustomKey1, t3CustomKey2, t3CustomKey3);
     ASSERT_EQ(ER_OK, status) << " ComboMemberKeyExpired_Pre failed";
 
-    Timespec now;
+    Timespec<MonotonicTime> now;
     GetTimeNow(&now);
     printf("*** Sleep 35 secs since the minimum key expiration time is 30 seconds\n");
     qcc::Sleep(35000);

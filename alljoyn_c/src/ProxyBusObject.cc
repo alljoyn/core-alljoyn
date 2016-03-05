@@ -105,6 +105,12 @@ class ProxyBusObjectC : public ajn::ProxyBusObject {
         return propListener;
     }
 
+    ProxyBusObjectC& operator=(const ProxyBusObjectC& other)
+    {
+        listeners = other.listeners;
+        return *this;
+    }
+
   private:
 
     ListenerMap listeners;

@@ -73,6 +73,8 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
         testIntf->AddSignal(TEST_SIGNAL_NAME, "b", "state", 0);
         testIntf->AddProperty(TEST_PROP_NAME, "b", PROP_ACCESS_RW);
         testIntf->AddPropertyAnnotation(TEST_PROP_NAME, org::freedesktop::DBus::AnnotateEmitsChanged, "true");
+        testIntf->AddProperty(TEST_PROP_NAME2, "b", PROP_ACCESS_RW);
+        testIntf->AddPropertyAnnotation(TEST_PROP_NAME2, org::freedesktop::DBus::AnnotateEmitsChanged, "true");
         testIntf->Activate();
     } else {
         cerr << "SecureApplication::Init failed " << __LINE__ << endl;
@@ -207,6 +209,11 @@ QStatus TestSecureApplication::SetAnyTrustedUserPolicy(TestSecurityManager& tsm,
     return tsm.UpdatePolicy(bus, policy);
 }
 
+QStatus TestSecureApplication::SetPolicy(TestSecurityManager& tsm, PermissionPolicy& newPolicy)
+{
+    return tsm.UpdatePolicy(bus, newPolicy);
+}
+
 QStatus TestSecureApplication::UpdateManifest(TestSecurityManager& tsm, uint8_t actionMask, const char* interfaceName)
 {
     PermissionPolicy::Acl acl;
@@ -224,6 +231,11 @@ QStatus TestSecureApplication::UpdateManifest(TestSecurityManager& tsm, uint8_t 
     peer.SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acl.SetPeers(1, &peer);
     return tsm.UpdateIdentity(bus, acl);
+}
+
+QStatus TestSecureApplication::UpdateManifest(TestSecurityManager& tsm, const PermissionPolicy::Acl& manifest)
+{
+    return tsm.UpdateIdentity(bus, manifest);
 }
 
 QStatus TestSecureApplication::UpdateTestProperty(bool newState)

@@ -26,6 +26,8 @@
 #error Only include PermissionMgmtObj.h in C++ code.
 #endif
 
+#include <memory>
+
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
@@ -33,6 +35,7 @@
 #include <qcc/KeyBlob.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
+#include <qcc/LockLevel.h>
 #include <alljoyn/PermissionPolicy.h>
 #include "CredentialAccessor.h"
 #include "ProtectedAuthListener.h"
@@ -107,6 +110,25 @@ class PermissionMgmtObj : public BusObject {
     static const char* ERROR_CERTIFICATE_NOT_FOUND;
 
     /**
+     * Error name Management Already Started.  Error raised when the app being
+     * managed detects that Security Manager called StartManagement two times,
+     * without calling EndManagement in between these two calls. This error
+     * typically means that the first management session has been interrupted
+     * abruptly - e.g. by losing network connectivity between the Security Manager
+     * and the app being managed during the management session.
+     */
+    static const char* ERROR_MANAGEMENT_ALREADY_STARTED;
+
+    /**
+     * Error name Management Not Started.  Error raised when the app being
+     * managed detects that Security Manager called EndManagement without
+     * a matching StartManagement. This error typically means that the previous
+     * management session has been interrupted abruptly - e.g. by restarting
+     * the app being managed during the management session.
+     */
+    static const char* ERROR_MANAGEMENT_NOT_STARTED;
+
+    /**
      * For the SendMemberships call, the app sends one cert chain at time since
      * thin client peer may not be able to handle large amount of data.  The app
      * reads back the membership cert chain from the peer.  It keeps looping until
@@ -176,7 +198,46 @@ class PermissionMgmtObj : public BusObject {
     /**
      * The list of trust anchors
      */
-    typedef std::vector<TrustAnchor*> TrustAnchorList;
+    class TrustAnchorList : public std::vector<std::shared_ptr<TrustAnchor> > {
+      public:
+        TrustAnchorList() : lock(qcc::LOCK_LEVEL_PERMISSIONMGMTOBJ_LOCK)
+        {
+        }
+
+        TrustAnchorList(const TrustAnchorList& other) : std::vector<std::shared_ptr<TrustAnchor> >(other)
+        {
+        }
+
+        TrustAnchorList& operator=(const TrustAnchorList& other)
+        {
+            std::vector<std::shared_ptr<TrustAnchor> >::operator=(other);
+            return *this;
+        }
+
+        QStatus Lock()
+        {
+            return lock.Lock();
+        }
+
+        QStatus Lock(const char* file, uint32_t line)
+        {
+            return lock.Lock(file, line);
+        }
+
+        QStatus Unlock()
+        {
+            return lock.Unlock();
+        }
+
+        QStatus Unlock(const char* file, uint32_t line)
+        {
+            return lock.Unlock(file, line);
+        }
+
+      private:
+        /* Use a member variable instead of inheriting from qcc::Mutex because copying qcc::Mutex objects is not supported */
+        qcc::Mutex lock;
+    };
 
     /**
      * Constructor
@@ -207,7 +268,6 @@ class PermissionMgmtObj : public BusObject {
      *         - ER_OK if successful.
      *         - an error status otherwise.
      */
-
     QStatus GenerateSendMemberships(std::vector<std::vector<MsgArg*> >& args, const qcc::GUID128& remotePeerGuid);
 
     /**
@@ -238,26 +298,16 @@ class PermissionMgmtObj : public BusObject {
      * Is there any trust anchor installed?
      * @return true if there is at least one trust anchors installed; false, otherwise.
      */
-    bool HasTrustAnchors()
-    {
-        return !trustAnchors.empty();
-    }
+    bool HasTrustAnchors();
 
     /**
      * Retrieve the list of trust anchors.
      * @return the list of trust anchors
      */
-
     const TrustAnchorList& GetTrustAnchors()
     {
         return trustAnchors;
     }
-
-    /**
-     * Helper function to release the allocated memory for the trust anchor list.
-     * @param list the list to be clear of allocated memory.
-     */
-    static void ClearTrustAnchorList(TrustAnchorList& list);
 
     /**
      * Help function to store DSA keys in the key store.
@@ -266,7 +316,6 @@ class PermissionMgmtObj : public BusObject {
      * @param publicKey the DSA public key
      * @return ER_OK if successful; otherwise, error code.
      */
-
     static QStatus StoreDSAKeys(CredentialAccessor* ca, const qcc::ECCPrivateKey* privateKey, const qcc::ECCPublicKey* publicKey);
 
     /**
@@ -280,7 +329,7 @@ class PermissionMgmtObj : public BusObject {
      * Retrieve the claimable state of the application.
      * @return the claimable state
      */
-    PermissionConfigurator::ApplicationState GetApplicationState();
+    PermissionConfigurator::ApplicationState GetApplicationState() const;
 
     /**
      * Set the application state.  The state can't be changed from CLAIMED to
@@ -474,7 +523,7 @@ class PermissionMgmtObj : public BusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities);
+    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities) const;
 
 
     /**
@@ -485,7 +534,7 @@ class PermissionMgmtObj : public BusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo);
+    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const;
 
     /**
      * Store a membership certificate chain.
@@ -530,6 +579,8 @@ class PermissionMgmtObj : public BusObject {
     void ResetPolicy(const InterfaceDescription::Member* member, Message& msg);
     void InstallMembership(const InterfaceDescription::Member* member, Message& msg);
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
+    void StartManagement(const InterfaceDescription::Member* member, Message& msg);
+    void EndManagement(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetMembershipSummaries(MsgArg& arg);
     QStatus GetManifestTemplate(MsgArg& arg);
     QStatus GetManifestTemplateDigest(MsgArg& arg);
@@ -557,7 +608,7 @@ class PermissionMgmtObj : public BusObject {
         uint16_t claimCapabilities;
         uint16_t claimCapabilityAdditionalInfo;
 
-        Configuration() : version(1), applicationStateSet(0), applicationState(PermissionConfigurator::NOT_CLAIMABLE), claimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL), claimCapabilityAdditionalInfo(0)
+        Configuration() : version(1), applicationStateSet(0), applicationState(PermissionConfigurator::NOT_CLAIMABLE), claimCapabilities(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT), claimCapabilityAdditionalInfo(0)
         {
         }
     };
@@ -611,9 +662,7 @@ class PermissionMgmtObj : public BusObject {
     bool IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
     QStatus LookForManifestTemplate(bool& exist);
 
-    /**
-     * Bind to an exclusive port for PermissionMgmt object.
-     */
+    /* Bind to an exclusive port for PermissionMgmt object */
     QStatus BindPort();
 
     CredentialAccessor* ca;
@@ -622,6 +671,9 @@ class PermissionMgmtObj : public BusObject {
     PortListener* portListener;
     MessageEncryptionNotification* callbackToClearSecrets;
     bool ready;
+
+    /* Has bool semantic but using volatile int32_t for atomic compare-and-exchange */
+    volatile int32_t managementStarted;
 };
 
 }

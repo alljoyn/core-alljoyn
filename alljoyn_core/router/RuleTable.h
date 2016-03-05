@@ -26,6 +26,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
+#include <qcc/LockLevel.h>
 
 #include "BusEndpoint.h"
 #include "Rule.h"
@@ -43,6 +44,11 @@ typedef std::multimap<BusEndpoint, Rule>::const_iterator RuleConstIterator;
  */
 class RuleTable {
   public:
+
+    /**
+     * Constructor.
+     */
+    RuleTable() : lock(qcc::LOCK_LEVEL_RULETABLE_LOCK) { }
 
     /**
      * Add a rule for an endpoint.

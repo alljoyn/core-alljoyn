@@ -60,7 +60,7 @@ void Environ::Shutdown()
     }
 }
 
-Environ* AJ_CALL Environ::GetAppEnviron(void)
+Environ* AJ_CALL Environ::GetAppEnviron()
 {
     return &environSingleton;
 }
@@ -71,13 +71,17 @@ qcc::String Environ::Find(const qcc::String& key, const char* defaultValue)
 
     lock.Lock();
     if (vars.count(key) == 0) {
-        char c;
-        char* val = &c;
-        DWORD len = GetEnvironmentVariableA(key.c_str(), val, 0);
-        if (len) {
-            val = new char[len];
-            GetEnvironmentVariableA(key.c_str(), val, len);
-            vars[key] = val;
+        DWORD len = GetEnvironmentVariableA(key.c_str(), nullptr, 0);
+        if (len != 0) {
+            char* val = new char[len];
+
+            DWORD readLen = GetEnvironmentVariableA(key.c_str(), val, len);
+            if ((readLen == 0) || (readLen >= len)) {
+                Log(LOG_ERR, "Environ::Find detected environment change for key %s", key.c_str());
+            } else {
+                vars[key] = val;
+            }
+
             delete [] val;
         }
     }

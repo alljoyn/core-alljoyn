@@ -100,10 +100,10 @@ static volatile sig_atomic_t quit;
 static const char defaultConfig[] =
     "<busconfig>"
     "  <limit name=\"auth_timeout\">20000</limit>"
-    "  <limit name=\"max_incomplete_connections\">16</limit>"
-    "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_remote_clients_tcp\">0</limit>"
-    "  <limit name=\"max_remote_clients_udp\">0</limit>"
+    "  <limit name=\"max_incomplete_connections\">48</limit>"
+    "  <limit name=\"max_completed_connections\">64</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+    "  <limit name=\"max_remote_clients_udp\">48</limit>"
     "  <property name=\"router_power_source\">Battery powered and chargeable</property>"
     "  <property name=\"router_mobility\">Intermediate mobility</property>"
     "  <property name=\"router_availability\">3-6 hr</property>"
@@ -113,10 +113,10 @@ static const char defaultConfig[] =
 static const char defaultConfig[] =
     "<busconfig>"
     "  <limit name=\"auth_timeout\">20000</limit>"
-    "  <limit name=\"max_incomplete_connections\">16</limit>"
-    "  <limit name=\"max_completed_connections\">32</limit>"
-    "  <limit name=\"max_remote_clients_tcp\">16</limit>"
-    "  <limit name=\"max_remote_clients_udp\">16</limit>"
+    "  <limit name=\"max_incomplete_connections\">48</limit>"
+    "  <limit name=\"max_completed_connections\">64</limit>"
+    "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+    "  <limit name=\"max_remote_clients_udp\">48</limit>"
     "</busconfig>";
 #endif
 
@@ -433,14 +433,11 @@ OptParse::ParseResultCode OptParse::ParseResult()
             }
             configService = true;
 #endif
-        } else if (arg.compare(0, sizeof("--print-address") - 1,
-                               "--print-address") == 0) {
-            if (arg[sizeof("--print-address") - 1] == '=') {
-                printAddressFd = StringToI32(arg.substr(
-                                                 sizeof("--print-address")), 10, -2);
+        } else if (arg.compare(0, sizeof("--print-address") - 1, "--print-address") == 0) {
+            if ((arg.size() > sizeof("--print-address") - 1) && (arg[sizeof("--print-address") - 1] == '=')) {
+                printAddressFd = StringToI32(arg.substr(sizeof("--print-address")), 10, -2);
             } else {
-                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i
-                                                                           + 1][1] == '-'))) {
+                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i + 1][1] == '-'))) {
                     printAddressFd = STDERR_FILENO;
                 } else {
                     ++i;
@@ -451,14 +448,12 @@ OptParse::ParseResultCode OptParse::ParseResult()
                 result = PR_INVALID_OPTION;
                 goto exit;
             }
-        } else if (arg.substr(0, sizeof("--print-pid") - 1).compare(
-                       "--print-pid") == 0) {
-            if (arg[sizeof("--print-pid") - 1] == '=') {
-                printPidFd = StringToI32(arg.substr(sizeof("--print-pid")), 10,
-                                         -2);
+        } else if (arg.compare(0, sizeof("--print-pid") - 1, "--print-pid") == 0) {
+            if ((arg.size() > sizeof("--print-pid") - 1) &&
+                (arg[sizeof("--print-pid") - 1] == '=')) {
+                printPidFd = StringToI32(arg.substr(sizeof("--print-pid")), 10, -2);
             } else {
-                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i
-                                                                           + 1][1] == '-'))) {
+                if (((i + 1) == argc) || ((argv[i + 1][0] == '-') && (argv[i + 1][1] == '-'))) {
                     printPidFd = STDERR_FILENO;
                 } else {
                     ++i;

@@ -372,8 +372,7 @@ bool KeyBlob::HasExpired()
     if (expiration.seconds == 0) {
         return false;
     }
-    Timespec now;
-    GetTimeNow(&now);
+    Timespec<EpochTime> now(GetEpochTimestamp());
     return expiration <= now;
 }
 

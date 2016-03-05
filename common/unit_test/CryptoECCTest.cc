@@ -21,6 +21,12 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECCMath.h>
 
+/* For ECCPublicKeyImportInitializeHandles test, which only applies to Windows CNG. */
+#ifdef CRYPTO_CNG
+#include "../crypto/Crypto.h"
+#include <qcc/CngCache.h>
+#endif
+
 using namespace qcc;
 using namespace std;
 
@@ -28,7 +34,7 @@ class CryptoECCTest : public testing::Test {
 };
 
 /* used for injecting errors */
-static int ToggleRandomBit(void* buf, size_t len)
+static QStatus ToggleRandomBit(void* buf, size_t len)
 {
     struct {
         uint64_t byte;
@@ -36,16 +42,16 @@ static int ToggleRandomBit(void* buf, size_t len)
     } bytebit;
 
 
-    int rv = get_random_bytes(&bytebit, sizeof (bytebit));
-    if (rv) {
-        return rv;
+    QStatus status = Crypto_GetRandomBytes((uint8_t*)(&bytebit), sizeof (bytebit));
+    if (status != ER_OK) {
+        return status;
     }
     bytebit.byte %= len;
     bytebit.bit %= 8;
 
     ((uint8_t*)buf)[bytebit.byte] ^= 1 << bytebit.bit;
 
-    return 0;
+    return ER_OK;
 }
 
 static void AffinePoint2PublicKey(affine_point_t& ap, ECCPublicKey& publicKey) {
@@ -70,7 +76,7 @@ static void ECDHFullPointTest(int iteration, bool injectError)
     AffinePoint2PublicKey(bobPublic, bobECCPublicKey);
     EXPECT_TRUE(ECDH_derive_pt(&aliceFinal, &alicePrivate, &bobPublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Alice's point";
     if (injectError) {
-        EXPECT_EQ(0, ToggleRandomBit(&bobPrivate, sizeof(bobPrivate) - sizeof(int))) << "ECDHFullPointTest [" << iteration << "]: Fail to toggle random bits";
+        EXPECT_EQ(ER_OK, ToggleRandomBit(&bobPrivate, sizeof(bobPrivate) - sizeof(int))) << "ECDHFullPointTest [" << iteration << "]: Fail to toggle random bits";
     }
     EXPECT_TRUE(ECDH_derive_pt(&bobFinal, &bobPrivate, &alicePublic)) << "ECDHFullPointTest [" << iteration << "]: Fail to derive Bob's point";
 
@@ -155,7 +161,7 @@ static void ECDSATest(int iteration, bool injectError,  int dgstlen)
     dgst = new uint8_t[dgstlen];
     ASSERT_FALSE(NULL == dgst) << "ECDSATest [" << iteration << "]: error allocating memory";
 
-    ASSERT_EQ(0, get_random_bytes(dgst, dgstlen)) << "ECDSATest [" << iteration << "]: get_random_bytes failed";
+    ASSERT_EQ(ER_OK, Crypto_GetRandomBytes(dgst, dgstlen)) << "ECDSATest [" << iteration << "]: Crypto_GetRandomBytes failed";
 
     ECCSignature sig;
     EXPECT_EQ(ER_OK, ecc.DSASign(dgst, dgstlen, &sig)) << "ECDSATest [" << iteration << "]: error signing";
@@ -196,7 +202,6 @@ static void BinaryConversionTest(size_t iteration)
     uint8_t c_binary[BYTEVECLEN];
     uint8_t c_binary_via_bigval[BYTEVECLEN];
 
-    int rv;
     unsigned s;
     size_t a_len;
     size_t b_len;
@@ -204,10 +209,8 @@ static void BinaryConversionTest(size_t iteration)
     int full_b; /* ditto */
     int i;
 
-    rv = get_random_bytes(&a_len, sizeof(size_t));
-    rv |= get_random_bytes(&b_len, sizeof(size_t));
-
-    EXPECT_FALSE(rv) << "get_random_bytes a_len and b_len failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes((uint8_t*) &a_len, sizeof(size_t))) << "Crypto_GetRandomBytes failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes((uint8_t*) &b_len, sizeof(size_t))) << "Crypto_GetRandomBytes failed at iteration " << iteration;
 
     /* decide wether to do full or tight testing based on MSB */
     full_a = a_len & 0x80000000;
@@ -219,11 +222,8 @@ static void BinaryConversionTest(size_t iteration)
     memset(a_binary, 0, BYTEVECLEN);
     memset(b_binary, 0, BYTEVECLEN);
 
-    rv = get_random_bytes(a_binary + BYTEVECLEN - a_len, a_len);
-    EXPECT_FALSE(rv) << "get_random_bytes for a failed at iteration " << iteration;
-
-    rv = get_random_bytes(b_binary + BYTEVECLEN - b_len, b_len);
-    EXPECT_FALSE(rv) << "get_random_bytes for b failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes(a_binary + BYTEVECLEN - a_len, a_len)) << "Crypto_GetRandomBytes failed at iteration " << iteration;
+    EXPECT_EQ(ER_OK, Crypto_GetRandomBytes(b_binary + BYTEVECLEN - b_len, b_len)) << "Crypto_GetRandomBytes failed at iteration " << iteration;
 
     /* cbinary = a_binary + b_binary */
     s = 0;
@@ -342,3 +342,109 @@ TEST_F(CryptoECCTest, ECDHE_ECDSA)
     }
 }
 
+
+
+/**
+ * Test EC-SPEKE key generation.
+ */
+TEST_F(CryptoECCTest, EC_SPEKETest)
+{
+    Crypto_ECC alice;
+    Crypto_ECC bob;
+    uint8_t password[5] = { 1, 2, 3, 4, 5 };
+    uint8_t notPassword[5] = { 5, 4, 3, 2, 1 };
+    GUID128 bobGuid;            // Default constructor will choose random GUIDs
+    GUID128 aliceGuid;
+
+    ECCSecret aliceBobSecret;
+    ECCSecret bobAliceSecret;
+    uint8_t aliceBobDerivedSecret[Crypto_SHA256::DIGEST_SIZE];
+    uint8_t bobAliceDerivedSecret[Crypto_SHA256::DIGEST_SIZE];
+
+    // Generate a shared secret from the same password
+    EXPECT_EQ(ER_OK, alice.GenerateSPEKEKeyPair(password, sizeof(password), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Alice's key";
+    EXPECT_EQ(ER_OK, bob.GenerateSPEKEKeyPair(password, sizeof(password), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Bob's key";
+
+    EXPECT_EQ(ER_OK, alice.GenerateSharedSecret(bob.GetDHPublicKey(), &aliceBobSecret)) << "EC_SPEKETest: Fail to generate shared secret with Alice and Bob";
+    EXPECT_EQ(ER_OK, bob.GenerateSharedSecret(alice.GetDHPublicKey(), &bobAliceSecret)) << "EC_SPEKETest: Fail to generate shared secret with Bob and Alice";
+    EXPECT_EQ(ER_OK, aliceBobSecret.DerivePreMasterSecret(aliceBobDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_EQ(ER_OK, bobAliceSecret.DerivePreMasterSecret(bobAliceDerivedSecret, sizeof(bobAliceDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_EQ(0, memcmp(aliceBobDerivedSecret, bobAliceDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: shared secrets don't match";
+
+    // Repeat key agreement with different passwords. Make sure the shared secrets are different
+    EXPECT_EQ(ER_OK, alice.GenerateSPEKEKeyPair(password, sizeof(password), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Alice's key";
+    EXPECT_EQ(ER_OK, bob.GenerateSPEKEKeyPair(notPassword, sizeof(notPassword), aliceGuid, bobGuid)) << "EC_SPEKETest, Failed to generate Bob's key";
+
+    EXPECT_EQ(ER_OK, alice.GenerateSharedSecret(bob.GetDHPublicKey(), &aliceBobSecret)) << "EC_SPEKETest: Fail to generate shared secret with Alice and Bob";
+    EXPECT_EQ(ER_OK, bob.GenerateSharedSecret(alice.GetDHPublicKey(), &bobAliceSecret)) << "EC_SPEKETest: Fail to generate shared secret with Bob and Alice";
+    EXPECT_EQ(ER_OK, aliceBobSecret.DerivePreMasterSecret(aliceBobDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_EQ(ER_OK, bobAliceSecret.DerivePreMasterSecret(bobAliceDerivedSecret, sizeof(bobAliceDerivedSecret))) << "EC_SPEKETest: fail to derive secret";
+    EXPECT_NE(0, memcmp(aliceBobDerivedSecret, bobAliceDerivedSecret, sizeof(aliceBobDerivedSecret))) << "EC_SPEKETest: shared secrets match with different passwords";
+}
+
+
+/**
+ * Test detection of invalid public keys on import.
+ */
+TEST_F(CryptoECCTest, ECCPublicKeyImportInvalid)
+{
+    Crypto_ECC ecc;
+
+    EXPECT_EQ(ER_OK, ecc.GenerateDHKeyPair()) << "Failed to generate DH key pair";
+
+    ECCPublicKey key(*ecc.GetDHPublicKey());
+    size_t size = key.GetSize();
+    size_t coordinateSize = key.GetCoordinateSize();
+    std::vector<uint8_t> data(size);
+    uint8_t* y = data.data() + coordinateSize;
+
+    EXPECT_EQ(ER_OK, key.Export(data.data(), &size)) << "Could not export public key";
+    EXPECT_EQ(size, key.GetSize()) << "Exported data was an unexpected size " << size;
+
+    std::vector<uint8_t> originalY(data.begin() + coordinateSize, data.end());
+
+    /* Generate random values for the y-coordinate, and so long as we don't manage to randomly
+     * re-generate the same y coordinate (which might indicate a problem with the RNG), make sure
+     * it doesn't import with the same x coordinate.
+     */
+    for (int trials = 0; trials < 20; trials++) {
+        EXPECT_EQ(ER_OK, Crypto_GetRandomBytes(y, coordinateSize));
+        EXPECT_NE(0, memcmp(originalY.data(), y, coordinateSize)) << "Failed to generate a new Y; RNG may be broken";
+        EXPECT_NE(ER_OK, key.Import(data.data(), size)) << "Imported key succeeded when it shouldn't have";
+        /* Verify that the key remains unchanged by verifying the original Y value is still present. */
+        EXPECT_EQ(ER_OK, key.Export(data.data(), &size)) << "Could not re-export key";
+        EXPECT_EQ(0, memcmp(originalY.data(), y, coordinateSize)) << "Key data was modified despite failed import";
+    }
+}
+
+#ifdef CRYPTO_CNG
+/**
+ * Test correct initialization of CNG provider handles without use of a
+ * Crypto_ECC object. (ASACORE-2703) This test only applies to CNG on Windows.
+ */
+TEST_F(CryptoECCTest, ECCPublicKeyImportInitializeHandles)
+{
+    Crypto_ECC* ecc = new (std::nothrow) Crypto_ECC;
+    ASSERT_NE(nullptr, ecc);
+
+    ASSERT_EQ(ER_OK, ecc->GenerateDHKeyPair()) << "Failed to generate DH key pair";
+
+    ECCPublicKey key(*(ecc->GetDHPublicKey()));
+    size_t size = key.GetSize();
+    std::vector<uint8_t> data(size);
+
+    ASSERT_EQ(ER_OK, key.Export(data.data(), &size)) << "Could not export public key";
+    EXPECT_EQ(size, key.GetSize()) << "Exported data was an unexpected size " << size;
+
+    /* Delete the Crypto_ECC object so we can safely shut down the crypto subsystem. */
+    delete ecc;
+
+    /* Shut down and restart the Crypto subsystem to clear out any provider handles opened by
+     * other tests. Init() does not open any provider handles on its own.
+     */
+    qcc::Crypto::Shutdown();
+    ASSERT_EQ(ER_OK, qcc::Crypto::Init());
+
+    EXPECT_EQ(ER_OK, key.Import(data.data(), size)) << "Key import failed";
+}
+#endif

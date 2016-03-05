@@ -1,0 +1,43 @@
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+Import('config_env')
+import os
+
+if config_env['OS_GROUP'] == 'posix':
+    config_env.Append(CXXFLAGS = ['-Wno-deprecated-declarations'])
+if config_env['OS_GROUP'] == 'windows':
+    config_env.Append(CXXFLAGS = ['/wd4996'])
+
+# Sources
+srcs = config_env.Glob('*.cc')
+
+# Platform specific sources
+if config_env['OS'] == 'android':
+    srcs += config_env.Glob('$OS/*.cc')
+else:
+    srcs += config_env.Glob('$OS_GROUP/*.cc')
+
+libs = []
+
+# Static library
+objs = config_env.Object(srcs)
+libs.append(config_env.StaticLibrary('alljoyn_config', objs))
+
+# Shared library
+if config_env.get('LIBTYPE', 'static') != 'static':
+    shobjs = config_env.SharedObject(srcs)
+    libs.append(config_env.SharedLibrary('alljoyn_config', shobjs))
+
+Return ('libs')

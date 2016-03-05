@@ -293,7 +293,9 @@ public class DescriptionTest extends TestCase {
             "<node>\n"+
             "  <description>My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleNoDescriptionInterface\">\n"+
+            "    <description>This is a simple interface</description>\n"+
             "    <method name=\"Ping\">\n"+
+            "      <description>The ping method sends a small piece of data</description>\n"+
             "      <arg type=\"s\" direction=\"in\"/>\n"+
             "      <arg type=\"s\" direction=\"out\"/>\n"+
             "    </method>\n"+
@@ -321,7 +323,9 @@ public class DescriptionTest extends TestCase {
             "<node>\n"+
             "  <description>DE: My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleNoDescriptionInterface\">\n"+
+            "    <description>This is a simple interface</description>\n"+
             "    <method name=\"Ping\">\n"+
+            "      <description>The ping method sends a small piece of data</description>\n"+
             "      <arg type=\"s\" direction=\"in\"/>\n"+
             "      <arg type=\"s\" direction=\"out\"/>\n"+
             "    </method>\n"+

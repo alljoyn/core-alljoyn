@@ -46,14 +46,22 @@ namespace qcc {
 #endif
 
 /**
+ * @internal
+ * Represents the non-public functionality of the Mutex class.
+ */
+class MutexInternal;
+
+/**
  * The implementation of a Mutex abstraction class.
  */
 class Mutex {
   public:
     /**
      * The constructor initializes the underlying mutex implementation.
+     *
+     * @param level Lock level used on Debug builds to detect out-of-order lock acquires.
      */
-    Mutex();
+    Mutex(int level = 0);
 
     /**
      * The destructor will destroy the underlying mutex.
@@ -82,8 +90,6 @@ class Mutex {
      * Acquires a lock on the mutex.  If another thread is holding the lock,
      * then this function will block until the other thread has released its
      * lock.
-     *
-     * It is not safe to use static global data from within this function.
      *
      * @return
      * - #ER_OK if the lock was acquired.
@@ -114,8 +120,6 @@ class Mutex {
      * current thread if that thread was the one that aquired the lock in the
      * first place.
      *
-     * It is not safe to use static global data from within this function.
-     *
      * @return
      * - #ER_OK if the lock was acquired.
      * - #ER_OS_ERROR if the underlying OS reports an error.
@@ -131,70 +135,23 @@ class Mutex {
     bool TryLock();
 
     /**
-     * Mutex copy constructor creates a new mutex.
-     */
-    Mutex(const Mutex& other);
-
-    /**
-     * Mutex assignment operator.
-     */
-    Mutex& operator=(const Mutex& other);
-
-    /**
      * Assert that current thread owns this Mutex.
      */
     void AssertOwnedByCurrentThread() const;
 
   private:
 
-#if defined(QCC_OS_GROUP_POSIX)
-    pthread_mutex_t mutex;  ///< The Linux mutex implementation uses pthread mutex's.
-#elif defined(QCC_OS_GROUP_WINDOWS)
-    CRITICAL_SECTION mutex; ///< The Windows mutex uses a critical section.
-#else
-#error No OS GROUP defined.
-#endif
-
-    bool isInitialized;     ///< true if mutex was successfully initialized.
-    void Init();            ///< Initialize the underlying OS mutex.
-    void Destroy();         ///< Destroy the underlying OS mutex.
-
-    /**
-     * Source code line number where this Mutex has been acquired.
-     *
-     * That information is available only on Debug builds and only for those Mutex objects
-     * locked using MUTEX_CONTEXT. However, the size of Mutex objects must be the same
-     * across Debug and Release builds, thus allowing the interop of Release applications
-     * with Debug AllJoyn Core libraries. Therefore this class member is present on Release
-     * builds too.
-     */
-    uint32_t line;
-
-    /**
-     * Source code file name where this Mutex has been acquired.
-     *
-     * That information is available only on Debug builds and only for those Mutex objects
-     * locked using MUTEX_CONTEXT. However, the size of Mutex objects must be the same
-     * across Debug and Release builds, thus allowing the interop of Release applications
-     * with Debug AllJoyn Core libraries. Therefore this class member is present on Release
-     * builds too.
-     */
-    const char* file;
-
-    /**
-     * @internal
-     * Represents the non-public functionality of the Mutex class.
-     */
-    class Internal;
+    Mutex(const Mutex& other);
+    Mutex& operator=(const Mutex& other);
 
     /**
      * @internal
      * Contains the non-public functionality of the Mutex class.
      */
-    Internal* mutexInternal;
+    MutexInternal* m_mutexInternal;
 
-    /* The condition variable class needs access to the underlying private mutex */
-    friend class Condition;
+    /* MutexInternal provides access to the m_mutexInternal member variable for other internal classes */
+    friend class MutexInternal;
 };
 
 } /* namespace */

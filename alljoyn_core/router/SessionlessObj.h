@@ -252,7 +252,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @return ER_FAIL if the total retry time is exhausted, ER_OK otherwise
      */
     static QStatus GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
-                                   uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime);
+                                   uint32_t retries,
+                                   qcc::Timespec<qcc::MonotonicTime>& firstJoinTime,
+                                   qcc::Timespec<qcc::MonotonicTime>& nextJoinTime);
 
     class RemoteCache {
       public:
@@ -377,7 +379,16 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     qcc::Timer timer;                     /**< Timer object for reaping expired names */
 
-    typedef std::pair<uint32_t, Message> SessionlessMessage;
+    /** A structure for keeping track of stored sessionless signals */
+    struct _SessionlessMessage {
+        _SessionlessMessage(Message message);
+        ~_SessionlessMessage();
+        uint32_t changeId;
+        Message msg;
+        std::set<qcc::String>* cachedWhoImplements; /**< For About signals, this field caches 'implements' interfaces (to avoid future cost of re-parsing) */
+    };
+
+    typedef qcc::ManagedObj<_SessionlessMessage> SessionlessMessage;
 
     typedef std::map<qcc::String, SessionlessMessage> LocalCache;
     /** Storage for sessionless messages waiting to be delivered */
@@ -405,8 +416,8 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
             IN_PROGRESS
         } state;
         uint32_t retries;
-        qcc::Timespec firstJoinTime;
-        qcc::Timespec nextJoinTime;
+        qcc::Timespec<qcc::MonotonicTime> firstJoinTime;
+        qcc::Timespec<qcc::MonotonicTime> nextJoinTime;
         SessionId sid;
         std::list<RoutedMessage> routedMessages;
     };
@@ -492,11 +503,11 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * Internal helper for sending sessionless signals filtered by our rule table.
      *
      * @param[in] sid Session ID
-     * @param[in] msg The sessionless signal
+     * @param[in] slm The sessionless signal
      * @param[in] fromRulesId Beginning of rules ID range (inclusive)
      * @param[in] toRulesId End of rules ID range (exclusive)
      */
-    void SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId);
+    void SendMatchingThroughEndpoint(SessionId sid, SessionlessMessage slm, uint32_t fromRulesId, uint32_t toRulesId);
 
     /** Rule iterator */
     typedef std::multimap<qcc::String, TimestampedRule>::iterator RuleIterator;
@@ -560,12 +571,12 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * with the endpoint are removed).
      *
      * @param[in] epName the name of the endpoint
-     * @param[in] msg the Message to compare with the implicit rules
+     * @param[in] slm the SessionlessMessage to compare with the implicit rules
      *
      * @return true if the Message matches only the implicit rule associated with
      *              the endpoint and the Message's sender.
      */
-    bool IsOnlyImplicitMatch(const qcc::String& epName, Message& msg);
+    bool IsOnlyImplicitMatch(const qcc::String& epName, SessionlessMessage slm);
 
     /*
      * Advertise or cancel the SL advertisements.

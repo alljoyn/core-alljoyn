@@ -24,7 +24,7 @@
 #include <qcc/CryptoECCfp.h>
 #include <qcc/CryptoECCMath.h>
 
-#if defined(_WIN32) & defined(_umul128)
+#if defined(_WIN32) && defined(_umul128)
 #include <intrin.h>
 #pragma intrinsic(_umul128)
 #endif
@@ -752,6 +752,31 @@ void fpimport_p256(const uint8_t* bytes, digit256_t x, digit_t* temps, bool is_b
     /* Convert words to machine's endianness. */
     fpdigitswap_p256(x);
 #endif
+}
+
+/* Returns TRUE if a is a square mod P256. */
+boolean_t fpissquare_p256(digit256_tc a, digit_t* temps)
+{
+    digit256_t one, legendre;
+    digit256_tc P256m1div2 = { 0xFFFFFFFFFFFFFFFFULL, 0x000000007FFFFFFFULL, 0x8000000000000000ULL, 0x7FFFFFFF80000000ULL };     /* (P256-1)/2 */
+    fpset_p256(1, one);
+
+    fpexp_naive_p256(a, P256m1div2, legendre, temps);   /* legendre = a^((P256-1)/2) mod P256 */
+
+    if (fpequal_p256(legendre, one)) {                  /* if the Legendre symbol of a is one, a is a square mod P256 */
+        return B_TRUE;
+    }
+
+    return B_FALSE;
+}
+
+/* Returns sqrt = sqrt(a) mod P256. Correct only if a is a square (see fpissquare_p256). */
+void fpsqrt_p256(digit256_tc a, digit256_t sqrt, digit_t* temps)
+{
+    digit256_tc P256p1div4 = { 0x0000000000000000ULL, 0x0000000040000000ULL, 0x4000000000000000ULL, 0x3FFFFFFFC0000000ULL };     /* (P256 + 1)/4*/
+
+    /* Since p = 3 mod 4, a^((p+1)/4) is a square root of a. */
+    fpexp_naive_p256(a, P256p1div4, sqrt, temps);
 }
 
 }

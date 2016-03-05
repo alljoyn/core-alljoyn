@@ -17,6 +17,7 @@ $DIST/c/inc/alljoyn_c/AboutObj.h
 $DIST/c/inc/alljoyn_c/AboutObjectDescription.h
 $DIST/c/inc/alljoyn_c/AboutProxy.h
 $DIST/c/inc/alljoyn_c/AjAPI.h
+$DIST/c/inc/alljoyn_c/ApplicationStateListener.h
 $DIST/c/inc/alljoyn_c/AuthListener.h
 $DIST/c/inc/alljoyn_c/AutoPinger.h
 $DIST/c/inc/alljoyn_c/BusAttachment.h
@@ -31,6 +32,7 @@ $DIST/c/inc/alljoyn_c/MessageReceiver.h
 $DIST/c/inc/alljoyn_c/MsgArg.h
 $DIST/c/inc/alljoyn_c/Observer.h
 $DIST/c/inc/alljoyn_c/PasswordManager.h
+$DIST/c/inc/alljoyn_c/PermissionConfigurator.h
 $DIST/c/inc/alljoyn_c/PermissionConfigurationListener.h
 $DIST/c/inc/alljoyn_c/ProxyBusObject.h
 $DIST/c/inc/alljoyn_c/Session.h
@@ -44,14 +46,11 @@ $DIST/c/lib/liballjoyn_c.a
 $DIST/c/lib/liballjoyn_c.so
 $DIST/c/samples/about/about_client.cc
 $DIST/c/samples/about/about_service.cc
-$DIST/cpp/bin/aclient
 $DIST/cpp/bin/advtunnel
 $DIST/cpp/bin/ajxmlcop
 $DIST/cpp/bin/alljoyn-daemon
 $DIST/cpp/bin/ardp
 $DIST/cpp/bin/ardptest
-$DIST/cpp/bin/aservice
-$DIST/cpp/bin/bastress
 $DIST/cpp/bin/bastress2
 $DIST/cpp/bin/bbclient
 $DIST/cpp/bin/bbjoin
@@ -60,9 +59,6 @@ $DIST/cpp/bin/bbsig
 $DIST/cpp/bin/bbsigtest
 $DIST/cpp/bin/eventsactionservice
 $DIST/cpp/bin/init
-$DIST/cpp/bin/marshal
-$DIST/cpp/bin/propstresstest
-$DIST/cpp/bin/proptester
 $DIST/cpp/bin/rawclient
 $DIST/cpp/bin/rawservice
 $DIST/cpp/bin/samples/AboutClient
@@ -122,6 +118,10 @@ $DIST/cpp/inc/alljoyn/about/AnnounceHandler.h
 $DIST/cpp/inc/alljoyn/about/AnnouncementRegistrar.h
 $DIST/cpp/inc/alljoyn/about/PropertyStore.h
 $DIST/cpp/inc/alljoyn/about/PropertyStoreProperty.h
+$DIST/cpp/inc/alljoyn/config/AboutDataStoreInterface.h
+$DIST/cpp/inc/alljoyn/config/ConfigClient.h
+$DIST/cpp/inc/alljoyn/config/ConfigService.h
+$DIST/cpp/inc/alljoyn/config/LogModule.h
 $DIST/cpp/inc/alljoyn/version.h
 $DIST/cpp/inc/qcc/CertificateECC.h
 $DIST/cpp/inc/qcc/CryptoECC.h
@@ -142,6 +142,7 @@ $DIST/cpp/lib/libajrouter.a
 $DIST/cpp/lib/liballjoyn-daemon.a
 $DIST/cpp/lib/liballjoyn.a
 $DIST/cpp/lib/liballjoyn_about.a
+$DIST/cpp/lib/liballjoyn_config.a
 $DIST/cpp/samples/README.txt
 $DIST/cpp/samples/about/AboutClient.cc
 $DIST/cpp/samples/about/AboutService.cc
@@ -262,6 +263,7 @@ $DIST/java/docs/html/index.html
 $DIST/java/jar/alljoyn-sources.jar
 $DIST/java/jar/alljoyn.jar
 $DIST/java/jar/alljoyn_about.jar
+$DIST/java/jar/alljoyn_config.jar
 $DIST/java/jar/alljoyn_test.jar
 $DIST/java/lib/liballjoyn_java.so
 $DIST/java/samples/README.txt

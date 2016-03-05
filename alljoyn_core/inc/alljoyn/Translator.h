@@ -183,8 +183,8 @@ class Translator {
     /**
      * Get the best matching language according to RFC 4647 section 3.4.
      *
-     * @param[in] The requested IETF language range.
-     * @param[in] The default language to use.
+     * @param[in] requested The requested IETF language range.
+     * @param[in] defaultLanguage The default language to use.
      * @param[out] ret The returned value
      */
     virtual void GetBestLanguage(const char* requested, const qcc::String& defaultLanguage, qcc::String& ret);
@@ -286,6 +286,7 @@ class LookupTableTranslator : public Translator {
 class StringTableTranslator : public LookupTableTranslator {
   public:
     /**
+     * @copydoc LookupTableTranslator::NumFields
      * @see LookupTableTranslator::NumFields
      */
     virtual size_t NumFields()
@@ -294,16 +295,19 @@ class StringTableTranslator : public LookupTableTranslator {
     }
 
     /**
+     * @copydoc LookupTableTranslator::GetFieldId
      * @see LookupTableTranslator::GetFieldId
      */
     virtual const char* GetFieldId(size_t index);
 
     /**
+     * @copydoc Translator::Translate
      * @see Translator::Translate
      */
     virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* sourceText);
 
     /**
+     * @copydoc Translator::AddStringTranslation
      * @see Translator::AddStringTranslation
      */
     virtual QStatus AddStringTranslation(const char* id, const char* value, const char* language);

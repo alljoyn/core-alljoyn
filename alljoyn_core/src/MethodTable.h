@@ -29,6 +29,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
 #include <qcc/atomic.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/BusObject.h>
 #include <alljoyn/InterfaceDescription.h>
@@ -101,6 +102,11 @@ class MethodTable {
 
         const Entry* entry;
     };
+
+    /**
+     * Constructor
+     */
+    MethodTable() : lock(qcc::LOCK_LEVEL_METHODTABLE_LOCK) { }
 
     /**
      * Destructor

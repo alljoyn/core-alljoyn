@@ -70,10 +70,15 @@ static bool operator==(const MethodContext& a, const MethodContext& b)
 }
 
 struct BusObject::Components {
+    /** Constructor */
+    Components() : counterLock(LOCK_LEVEL_BUSOBJECT_COMPONENTS_COUNTERLOCK), inUseCounter(0) { }
+
     /** The interfaces this object implements */
     vector<pair<const InterfaceDescription*, bool> > ifaces;
+
     /** The method handlers for this object */
     vector<MethodContext> methodContexts;
+
     /** Child objects of this object */
     vector<BusObject*> children;
 
@@ -194,6 +199,7 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
     qcc::String in(indent, ' ');
     qcc::String xml;
     qcc::String buffer;
+    bool unifiedFormat = (requestedLanguageTag == NULL);
 
     /* Iterate over child nodes */
     vector<BusObject*>::const_iterator iter = components->children.begin();
@@ -201,15 +207,19 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
         BusObject* child = *iter++;
         xml += in + "<node name=\"" + child->GetName() + "\"";
 
-        const char* nodeDesc = NULL;
-        if (requestedLanguageTag) {
-            nodeDesc = child->GetDescription(requestedLanguageTag, buffer);
-        }
-
+        const char* nodeDesc = child->GetDescription(requestedLanguageTag, buffer);
         if (deep || nodeDesc) {
             xml += ">\n";
             if (nodeDesc) {
-                xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
+                if (unifiedFormat) {
+                    xml += in + "  <annotation name=\"org.alljoyn.Bus.DocString";
+                    if (!languageTag.empty()) {
+                        xml += "." + languageTag;
+                    }
+                    xml += "\" value=\"" + XmlElement::EscapeXml(nodeDesc) + "\" />";
+                } else {
+                    xml += in + "  <description>" + XmlElement::EscapeXml(nodeDesc) + "</description>";
+                }
             }
             if (deep) {
                 xml += child->GenerateIntrospection(requestedLanguageTag, deep, indent + 2);
@@ -500,20 +510,24 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
                     }
                 }
             }
-            MsgArg* dict = new MsgArg[readable];
-            MsgArg* entry = dict;
-            /* Get readable properties */
-            for (size_t i = 0; i < numProps; i++) {
-                if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
-                    MsgArg* val = new MsgArg();
-                    status = Get(iface->v_string.str, props[i]->name.c_str(), *val);
-                    if (status != ER_OK) {
-                        delete val;
-                        break;
+
+            MsgArg* dict = NULL;
+            if (readable > 0) {
+                dict = new MsgArg[readable];
+                MsgArg* entry = dict;
+                /* Get readable properties */
+                for (size_t i = 0; i < numProps; i++) {
+                    if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
+                        MsgArg* val = new MsgArg();
+                        status = Get(iface->v_string.str, props[i]->name.c_str(), *val);
+                        if (status != ER_OK) {
+                            delete val;
+                            break;
+                        }
+                        entry->Set("{sv}", props[i]->name.c_str(), val);
+                        entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
+                        entry++;
                     }
-                    entry->Set("{sv}", props[i]->name.c_str(), val);
-                    entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
-                    entry++;
                 }
             }
             vals.Set("a{sv}", readable, dict);
@@ -538,10 +552,37 @@ void BusObject::Introspect(const InterfaceDescription::Member* member, Message& 
 
     qcc::String xml = org::freedesktop::DBus::Introspectable::IntrospectDocType;
     xml += "<node>\n";
+
+    /* Append descriptions in all target languages */
+    if (!description.empty()) {
+        Translator* myTranslator = translator;
+        if (!myTranslator && bus) {
+            myTranslator = bus->GetDescriptionTranslator();
+        }
+        if (myTranslator != NULL) {
+            qcc::String language;
+            size_t size = myTranslator->NumTargetLanguages();
+            for (size_t index = 0; index < size; index++) {
+                myTranslator->GetTargetLanguage(index, language);
+                if (!language.empty()) {
+                    qcc::String buffer;
+                    qcc::String bestLanguage;
+                    myTranslator->GetBestLanguage(language.c_str(), languageTag, bestLanguage);
+                    const char* d = myTranslator->Translate(languageTag.c_str(), bestLanguage.c_str(), description.c_str(), buffer);
+                    if ((d == NULL) || (d[0] == '\0')) {
+                        continue;
+                    }
+                    xml += qcc::String("  <annotation name=\"org.alljoyn.Bus.DocString.") + language + "\" value=\"" + XmlElement::EscapeXml(d) + "\"/>\n";
+                }
+            }
+        } else if (!languageTag.empty()) {
+            xml += qcc::String("  <annotation name=\"org.alljoyn.Bus.DocString.") + languageTag + "\" value=\"" + description + "\"/>\n";
+        }
+    }
     if (isSecure) {
         xml += "  <annotation name=\"org.alljoyn.Bus.Secure\" value=\"true\"/>\n";
     }
-    xml += GenerateIntrospection(false, 2);
+    xml += GenerateIntrospection(NULL, false, 2);
     xml += "</node>\n";
     MsgArg arg("s", xml.c_str());
     QStatus status = MethodReply(msg, &arg, 1);
@@ -822,6 +863,9 @@ QStatus BusObject::SignalInternal(const char* destination,
                      * not need to authorize the message again.
                      */
                     msg->authorizationChecked = true;
+                } else if (((destination == NULL) || (strlen(destination) == 0)) && (sessionId == 0)) {
+                    /* broadcast signal */
+                    msg->authorizationChecked = true; /* skip authorization check */
                 } else if (!bus->GetInternal().GetRouter().IsDaemon()) {
                     /* do an earlier permission authorization to make sure this
                      * signal is allowed to send to the router for delivery.
@@ -1074,7 +1118,6 @@ BusObject::BusObject(BusAttachment& bus, const char* path, bool isPlaceholder) :
     description(),
     translator(NULL)
 {
-    components->inUseCounter = 0;
 }
 
 BusObject::BusObject(const char* path, bool isPlaceholder) :
@@ -1089,7 +1132,6 @@ BusObject::BusObject(const char* path, bool isPlaceholder) :
     description(),
     translator(NULL)
 {
-    components->inUseCounter = 0;
 }
 
 BusObject::~BusObject()
@@ -1103,12 +1145,14 @@ BusObject::~BusObject()
     components->counterLock.Unlock(MUTEX_CONTEXT);
 
     QCC_DbgPrintf(("BusObject destructor for object with path = \"%s\"", GetPath()));
+
     /*
      * If this object has a parent it has not been unregistered so do so now.
      */
-    if (bus && parent) {
+    if (bus && (parent || isRegistered)) {
         bus->GetInternal().GetLocalEndpoint()->UnregisterBusObject(*this);
     }
+
     delete components;
 }
 

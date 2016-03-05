@@ -29,7 +29,7 @@ using namespace qcc;
 static std::deque<std::pair<QStatus, Alarm> > triggeredAlarms;
 static Mutex triggeredAlarmsLock;
 
-static bool testNextAlarm(const Timespec& expectedTime, void* context)
+static bool testNextAlarm(const Timespec<MonotonicTime>& expectedTime, void* context)
 {
     static const int jitter = 100;
 
@@ -48,10 +48,10 @@ static bool testNextAlarm(const Timespec& expectedTime, void* context)
     if (!triggeredAlarms.empty()) {
         pair<QStatus, Alarm> p = triggeredAlarms.front();
         triggeredAlarms.pop_front();
-        Timespec ts;
+        Timespec<MonotonicTime> ts;
         GetTimeNow(&ts);
-        uint64_t alarmTime = ts.GetAbsoluteMillis();
-        uint64_t expectedTimeMs = expectedTime.GetAbsoluteMillis();
+        uint64_t alarmTime = ts.GetMillis();
+        uint64_t expectedTimeMs = expectedTime.GetMillis();
         ret = (p.first == ER_OK) && (context == p.second->GetContext()) && (alarmTime + QCC_TIMESTAMP_GRANULARITY >= expectedTimeMs) && (alarmTime < (expectedTimeMs + jitter));
         if (!ret) {
             printf("Failed Triggered Alarm: status=%s, \na.alarmTime=\t%" PRIu64 "\nexpectedTimeMs=\t%" PRIu64 "\ndiff=\t\t%" PRIu64 "\n",
@@ -109,7 +109,7 @@ class MyAlarmListener2 : public AlarmListener {
 
 TEST(TimerTest, SingleThreaded) {
     Timer t1("testTimer");
-    Timespec ts;
+    Timespec<MonotonicTime> ts;
     QStatus status = t1.Start();
     ASSERT_EQ(ER_OK, status) << "Status: " << QCC_StatusText(status);
 
@@ -158,7 +158,7 @@ TEST(TimerTest, SingleThreaded) {
 
 
 TEST(TimerTest, TestMultiThreaded) {
-    Timespec ts;
+    Timespec<MonotonicTime> ts;
     GetTimeNow(&ts);
     QStatus status;
     MyAlarmListener alarmListener(5000);
@@ -204,7 +204,7 @@ TEST(TimerTest, TestMultiThreaded) {
 }
 
 TEST(TimerTest, TestReplaceTimer) {
-    Timespec ts;
+    Timespec<MonotonicTime> ts;
     GetTimeNow(&ts);
     MyAlarmListener alarmListener(1);
     AlarmListener* al = &alarmListener;
@@ -430,7 +430,7 @@ TEST(TimerTest, TestMaxAlarms) {
     MyAlarmListener listener(t0);
     AlarmListener* al = &listener;
 
-    Timespec baseTimespec;
+    Timespec<MonotonicTime> baseTimespec;
     GetTimeNow(&baseTimespec);
 
     QStatus status;
@@ -448,10 +448,10 @@ TEST(TimerTest, TestMaxAlarms) {
     ASSERT_EQ(ER_OK, timer.AddAlarm(a2));
 
     /* Make sure t2 has elapsed */
-    Timespec ts2;
+    Timespec<MonotonicTime> ts2;
     uint32_t delta2;
     GetTimeNow(&ts2);
-    delta2 = ts2.GetAbsoluteMillis() - baseTimespec.GetAbsoluteMillis();
+    delta2 = ts2.GetMillis() - baseTimespec.GetMillis();
     ASSERT_GE(delta2 + QCC_TIMESTAMP_GRANULARITY, t2);
     ASSERT_LE(delta2, (t2 + jitter));
 
@@ -468,10 +468,10 @@ TEST(TimerTest, TestMaxAlarms) {
     ASSERT_EQ(ER_OK, timer.AddAlarm(a3));
 
     /* Make sure current time in main thread is between (t2) and (t3) */
-    Timespec ts3;
+    Timespec<MonotonicTime> ts3;
     uint32_t delta3;
     GetTimeNow(&ts3);
-    delta3 = ts3.GetAbsoluteMillis() - baseTimespec.GetAbsoluteMillis();
+    delta3 = ts3.GetMillis() - baseTimespec.GetMillis();
     ASSERT_GE(delta3, t2);
     ASSERT_LE(delta3, t3);
 

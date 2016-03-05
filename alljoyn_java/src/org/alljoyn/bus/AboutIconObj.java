@@ -36,7 +36,7 @@ public class AboutIconObj implements Icon, BusObject{
      * @param bus BusAttachment instance associated with this BusObject
      * @param icon instance of an AboutIcon which holds the icon image
      */
-    AboutIconObj(BusAttachment bus, AboutIcon icon) {
+    public AboutIconObj(BusAttachment bus, AboutIcon icon) {
         if(bus == null) {
             throw new NullPointerException("bus must not be null");
         }

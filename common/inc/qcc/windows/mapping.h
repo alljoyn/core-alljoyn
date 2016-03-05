@@ -94,14 +94,14 @@
 #endif
 
 /**
- * Map QCC_ASSERT to _ASSERT if not already defined.
+ * Map QCC_ASSERT to _ASSERTE if not already defined.
  *
- * _ASSERT allows the developer to break into a debugger instead of aborting.
+ * _ASSERTE allows the developer to break into a debugger instead of aborting.
  */
 #ifndef QCC_ASSERT
 
 /* <crtdbg.h> keys off of the presence of _DEBUG, not the absence of NDEBUG.
- * Make sure _DEBUG is defined if NDEBUG is not so _ASSERT is correctly defined
+ * Make sure _DEBUG is defined if NDEBUG is not so _ASSERTE is correctly defined
  * for both build variants. This must be done before <crtdbg.h> is included.
  */
 #ifndef NDEBUG
@@ -112,7 +112,7 @@
 
 #include <crtdbg.h>
 
-#define QCC_ASSERT(expr) _ASSERT(expr)
+#define QCC_ASSERT(expr) _ASSERTE(expr)
 
 #endif /* QCC_ASSERT */
 /// @endcond
@@ -135,19 +135,6 @@
  * GroupID name for white listed Windows applications.
  */
 #define WHITELISTED_APPLICATION       "WhitelistedApplication"
-///@}
-
-/**
- * @name _WIN32_WINNT version constants
- * _WIN32_WINNT version constants, defined here just in case the Windows SDK version used to
- * compile AllJoyn doesn't include them already in Include\shared\sdkddkver.h. Compiler would complain
- * if the SDK public header values were different from the values below.
- */
-///@{
-#define _WIN32_WINNT_WIN7     0x0601
-#define _WIN32_WINNT_WIN8     0x0602
-#define _WIN32_WINNT_WINBLUE  0x0603
-#define _WIN32_WINNT_WIN10    0x0A00
 ///@}
 
 #endif

@@ -26,6 +26,7 @@
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
+#include <qcc/GUID.h>
 
 namespace qcc {
 
@@ -67,6 +68,8 @@ class ECCPrivateKey {
      * the assign operator for the ECCPrivateKey
      *
      * @param[in] other the ECCPrivate key to assign
+     * @return Reference to *this which has just had its values assigned from
+     *         the other ECCPrivateKey
      */
     ECCPrivateKey& operator=(const ECCPrivateKey& other)
     {
@@ -146,6 +149,11 @@ class ECCPrivateKey {
         return this->d;
     }
 
+    /**
+     * Get the size of the private key value
+     *
+     * @return Size of the private key in bytes
+     */
     const size_t GetDSize() const
     {
         return this->GetSize();
@@ -156,18 +164,18 @@ class ECCPrivateKey {
 /**
  * The ECC public key
  *
- * At the moment, because the code only supports one curve, private keys
+ * At the moment, because the code only supports one curve, public keys
  * are not innately tied to a particular curve. In the future, if the code
- * supports more than one curve, a private key should store its curve also.
+ * supports more than one curve, a public key should store its curve also.
  */
 class ECCPublicKey {
 
     /**
-     * The x coordinate of the elliptic curve
+     * The x coordinate of the elliptic curve point
      */
     uint8_t x[ECC_COORDINATE_SZ];
     /**
-     * The y coordinate of the elliptic curve
+     * The y coordinate of the elliptic curve point
      */
     uint8_t y[ECC_COORDINATE_SZ];
 
@@ -257,7 +265,9 @@ class ECCPublicKey {
     /**
      * Assign operator for ECCPublicKey
      *
-     * @param[in] other the ECCPublic key to assign
+     * @param[in] other the ECCPublicKey to assign
+     * @return Reference to *this which has just had its values assigned from
+     *         the other ECCPublicKey
      */
     ECCPublicKey& operator=(const ECCPublicKey& other)
     {
@@ -338,7 +348,7 @@ class ECCPublicKey {
         return this->y;
     }
 
-    /*
+    /**
      * Get the size of a single coordinate
      *
      * @return The size of a single coordinate
@@ -448,6 +458,8 @@ struct ECCSignature {
     /**
      * The ECCSignature assign operator
      * @param[in] other the ECC signature to assign
+     * @return Reference to *this which has just had its values assigned from
+     *         the other ECCSignature
      */
     ECCSignature& operator=(const ECCSignature& other)
     {
@@ -485,6 +497,20 @@ class Crypto_ECC {
      *      Other error status.
      */
     QStatus GenerateDHKeyPair();
+
+    /**
+     * Generates the ephemeral key pair for EC-SPEKE. The key pair
+     * can then be used with the other DH APIs to compute the shared secret.
+     * @param pw          Password and additional data to use during key generation.
+     * @param pwLen       The byte length of pw.
+     * @param clientGUID  The client's GUID
+     * @param serviceGUID The service's GUID
+     * @return
+     *      ER_OK if the key pair is successfully generated.
+     *      ER_FAIL otherwise
+     *      Other error status.
+     */
+    QStatus GenerateSPEKEKeyPair(const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID);
 
     /**
      * Generates the Diffie-Hellman shared secret.

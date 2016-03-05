@@ -26,6 +26,7 @@
 #endif
 
 #include <qcc/platform.h>
+#include <qcc/LockLevel.h>
 
 #include <vector>
 
@@ -127,6 +128,11 @@ class SignalTable {
      * Const table iterator
      */
     typedef std::unordered_multimap<Key, Entry, Hash, Equal>::const_iterator const_iterator;
+
+    /**
+     * Constructor.
+     */
+    SignalTable() : lock(qcc::LOCK_LEVEL_SIGNALTABLE_LOCK) { }
 
     /**
      * Add an entry to the signal hash table.

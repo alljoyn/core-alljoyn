@@ -138,10 +138,19 @@ class LoggerSetting {
      *
      * @return  Pointer to most recently instantiated LoggerSetting object.
      */
-    static LoggerSetting * AJ_CALL GetLoggerSetting(const char* name = LOGGERSETTING_DEFAULT_NAME,
+    static LoggerSetting * AJ_CALL GetLoggerSetting(const char* name,
                                                     int level = LOG_DEBUG,
                                                     bool useSyslog = LOGGERSETTING_DEFAULT_SYSLOG,
                                                     FILE* file = LOGGERSETTING_DEFAULT_FILE);
+
+    /**
+     * Convenience function for getting access to the instantiated
+     * LoggerSetting object and setting its attributes.  This is normally used
+     * when reading the logging settings.
+     *
+     * @return  Pointer to most recently instantiated LoggerSetting object.
+     */
+    static LoggerSetting * AJ_CALL GetLoggerSetting();
 
   private:
     static void Init();

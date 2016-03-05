@@ -16,6 +16,7 @@
 
 #include <qcc/Mutex.h>
 #include <qcc/Condition.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/Observer.h>
 #include <alljoyn/AutoPinger.h>
@@ -236,6 +237,7 @@ error:
 ObserverManager::ObserverManager(BusAttachment& bus) :
     bus(bus),
     pinger(NULL),
+    wqLock(qcc::LOCK_LEVEL_OBSERVERMANAGER_WQLOCK),
     processingWork(false),
     stopping(false),
     started(false)

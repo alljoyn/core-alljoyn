@@ -21,11 +21,15 @@
 
 #include <qcc/platform.h>
 #include <qcc/StaticGlobals.h>
+#include <qcc/LockLevel.h>
 #include <alljoyn/Init.h>
 #include <alljoyn/PasswordManager.h>
 #include "AutoPingerInternal.h"
 #include "BusInternal.h"
 #include "NamedPipeClientTransport.h"
+#include "XmlPoliciesValidator.h"
+#include "XmlRulesConverter.h"
+#include "XmlRulesValidator.h"
 
 namespace ajn {
 
@@ -37,6 +41,9 @@ class StaticGlobals {
         AutoPingerInternal::Init();
         PasswordManager::Init();
         BusAttachment::Internal::Init();
+        XmlPoliciesValidator::Init();
+        XmlRulesConverter::Init();
+        XmlRulesValidator::Init();
     }
 
     static void Shutdown()
@@ -53,7 +60,12 @@ class StaticGlobals {
 extern "C" {
 
 static uint32_t allJoynInitCount = 0;
-static qcc::Mutex allJoynInitLock;
+
+/*
+ * Disable LockOrderChecker for the Init lock, because this lock is being used
+ * before LockOrderChecker & Thread modules have been initialized.
+ */
+static qcc::Mutex allJoynInitLock(qcc::LOCK_LEVEL_CHECKING_DISABLED);
 
 QStatus AJ_CALL AllJoynInit(void)
 {

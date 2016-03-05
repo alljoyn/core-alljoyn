@@ -109,6 +109,7 @@ AllJoynObj::AllJoynObj(Bus& bus, BusController* busController, DaemonRouter& rou
     daemonGuid(bus.GetInternal().GetGlobalGUID()),
     detachSessionSignal(NULL),
     timer("NameReaper"),
+    joinSessionThreadsLock(LOCK_LEVEL_ALLJOYNOBJ_JOINSESSIONTHREADSLOCK),
     isStopping(false),
     busController(busController)
 {
@@ -2649,6 +2650,57 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
             }
         } else {
             ++it;
+        }
+    }
+    size_t guidLen = vepName.find_first_of('.');
+    if (vepName.substr(guidLen + 1) != "1") {
+        /* Let directly connected daemons that are in the same session know that this session endpoint is gone.
+         * Note: This must be done only for non-router endpoints
+         */
+        map<std::string, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
+        const qcc::GUID128& otherSideGuid = b2bEp->GetRemoteGUID();
+        /* Send a DetachSession message over bus-to-bus endpoints in an MP session
+         * if the session Id of the endpoint which is leaving matches this session id.
+         */
+        while ((it2 != b2bEndpoints.end())) {
+            if ((b2bEp->GetSessionId() == it2->second->GetSessionId()) && (it2->second->GetRemoteGUID() != otherSideGuid)) {
+                MsgArg detachSessionArgs[2];
+                detachSessionArgs[0].Set("u", b2bEp->GetSessionId());
+                detachSessionArgs[1].Set("s", vepName.c_str());
+                Message sigMsg(bus);
+                QStatus status = sigMsg->SignalMsg("us",
+                                                   org::alljoyn::Daemon::WellKnownName,
+                                                   0,
+                                                   org::alljoyn::Daemon::ObjectPath,
+                                                   org::alljoyn::Daemon::InterfaceName,
+                                                   "DetachSession",
+                                                   detachSessionArgs,
+                                                   ArraySize(detachSessionArgs),
+                                                   0,
+                                                   0);
+                if (ER_OK == status) {
+                    std::string key2 = it2->first;
+                    RemoteEndpoint ep = it2->second;
+                    ReleaseLocks();
+                    status = ep->PushMessage(sigMsg);
+                    if (ER_OK != status) {
+                        QCC_LogError(status, ("Failed to send DetachSession to %s", ep->GetUniqueName().c_str()));
+                    }
+                    AcquireLocks();
+                    it2 = b2bEndpoints.lower_bound(key2);
+                    if ((it2 != b2bEndpoints.end()) && (it2->first == key2)) {
+                        ++it2;
+                    }
+                } else {
+                    ++it2;
+                }
+
+            } else {
+                ++it2;
+
+            }
+
+
         }
     }
     ReleaseLocks();

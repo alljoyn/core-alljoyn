@@ -114,6 +114,7 @@ class AuthManager {
             qcc::String name = list.substr(0, pos);
             if (name == "ALLJOYN_ECDHE_NULL") {
             } else if (name == "ALLJOYN_ECDHE_PSK") {
+            } else if (name == "ALLJOYN_ECDHE_SPEKE") {
             } else if (name == "ALLJOYN_ECDHE_ECDSA") {
             } else if (name == "GSSAPI") {
             } else if (!authMechanisms.count(name)) {

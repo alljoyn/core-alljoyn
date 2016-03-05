@@ -358,8 +358,11 @@ PermissionPolicy::Peer& PermissionPolicy::Peer::operator=(const PermissionPolicy
 
 PermissionPolicy::Peer::Peer(const PermissionPolicy::Peer& other) :
     type(other.type),
-    securityGroupId(other.securityGroupId) {
-    keyInfo = new qcc::KeyInfoNISTP256(*other.keyInfo);
+    securityGroupId(other.securityGroupId),
+    keyInfo(nullptr) {
+    if (nullptr != other.keyInfo) {
+        keyInfo = new qcc::KeyInfoNISTP256(*other.keyInfo);
+    }
 }
 
 void PermissionPolicy::Acl::SetPeers(size_t count, const PermissionPolicy::Peer* peers)

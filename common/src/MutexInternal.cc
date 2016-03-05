@@ -19,40 +19,165 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
-
+#include <qcc/platform.h>
+#include <qcc/Mutex.h>
 #include <qcc/MutexInternal.h>
+#include <qcc/Debug.h>
 
-namespace qcc {
+#define QCC_MODULE "MUTEX"
+
+using namespace qcc;
+
+MutexInternal::MutexInternal(Mutex* ownerLock, LockLevel level)
+{
+#ifdef NDEBUG
+    QCC_UNUSED(ownerLock);
+    QCC_UNUSED(level);
+#else
+    m_file = LockOrderChecker::s_unknownFile;
+    m_line = LockOrderChecker::s_unknownLineNumber;
+    m_ownerThread = 0;
+    m_recursionCount = 0;
+    m_level = level;
+    m_ownerLock = ownerLock;
+#endif
+
+    m_initialized = PlatformSpecificInit();
+    QCC_ASSERT(m_initialized);
+}
+
+MutexInternal::~MutexInternal()
+{
+    if (m_initialized) {
+        PlatformSpecificDestroy();
+        m_initialized = false;
+    }
+}
+
+QStatus MutexInternal::Lock(const char* file, uint32_t line)
+{
+    QCC_ASSERT(m_initialized);
 
 #ifdef NDEBUG
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
+    return Lock();
+#else
+    if (!m_initialized) {
+        return ER_INIT_FAILED;
+    }
 
-Mutex::Internal::Internal()
-{
+    /*
+     * Duplicate the Lock() functionality in Lock(file, line), rather than
+     * calling Lock() here because the Lock() path gets executed by Release
+     * code too. Adding support for the file & line parameters to that
+     * Release code path could have inflicted a small perf overhead.
+     */
+    AcquiringLock(file, line);
+    QStatus status = PlatformSpecificLock();
+    if (status == ER_OK) {
+        QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
+        m_file = file;
+        m_line = line;
+        LockAcquired();
+    } else {
+        QCC_LogError(status, ("Mutex::Lock %s:%u failed", file, line));
+    }
+    return status;
+#endif
 }
 
-void Mutex::Internal::LockAcquired()
+QStatus MutexInternal::Lock()
 {
+    QCC_ASSERT(m_initialized);
+    if (!m_initialized) {
+        return ER_INIT_FAILED;
+    }
+
+    AcquiringLock();
+    QStatus status = PlatformSpecificLock();
+    if (status == ER_OK) {
+        LockAcquired();
+    }
+
+    return status;
 }
 
-void Mutex::Internal::ReleasingLock()
+QStatus MutexInternal::Unlock(const char* file, uint32_t line)
 {
+    QCC_ASSERT(m_initialized);
+
+#ifdef NDEBUG
+    QCC_UNUSED(file);
+    QCC_UNUSED(line);
+#else
+    QCC_DbgPrintf(("Lock Released: %s:%u (acquired at %s:%u)", file, line, m_file, m_line));
+    m_file = file;
+    m_line = line;
+#endif
+
+    return Unlock();
 }
 
-void Mutex::Internal::AssertOwnedByCurrentThread() const
+QStatus MutexInternal::Unlock()
 {
+    QCC_ASSERT(m_initialized);
+    if (!m_initialized) {
+        return ER_INIT_FAILED;
+    }
+
+    ReleasingLock();
+    return PlatformSpecificUnlock();
 }
 
-#else /* NDEBUG */
-
-Mutex::Internal::Internal() : m_ownerThread(0), m_recursionCount(0)
+bool MutexInternal::TryLock()
 {
+    QCC_ASSERT(m_initialized);
+    if (!m_initialized) {
+        return false;
+    }
+
+    AcquiringLock();
+    bool locked = PlatformSpecificTryLock();
+    if (locked) {
+        LockAcquired();
+    }
+    return locked;
 }
+
+/**
+ * Called immediately before current thread tries to acquire this Mutex, on Release
+ * builds, or if the caller did not specify the MUTEX_CONTEXT parameter.
+ */
+void MutexInternal::AcquiringLock()
+{
+#ifndef NDEBUG
+    return AcquiringLock(LockOrderChecker::s_unknownFile, LockOrderChecker::s_unknownLineNumber);
+#endif
+}
+
+#ifndef NDEBUG
+/**
+ * Called immediately before current thread tries to acquire this Mutex.
+ */
+void MutexInternal::AcquiringLock(const char* file, uint32_t line)
+{
+    /*
+     * Perform lock order verification. Test LOCK_LEVEL_CHECKING_DISABLED before calling
+     * GetThread, because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED mutex internally.
+     */
+    if (Thread::initialized && m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.AcquiringLock(m_ownerLock, file, line);
+    }
+}
+#endif
 
 /**
  * Called immediately after current thread acquired this Mutex.
  */
-void Mutex::Internal::LockAcquired()
+void MutexInternal::LockAcquired()
 {
+#ifndef NDEBUG
     /* Use GetCurrentThreadId rather than GetThread, because GetThread acquires a Mutex */
     ThreadId currentThread = Thread::GetCurrentThreadId();
     QCC_ASSERT(currentThread != 0);
@@ -66,13 +191,28 @@ void Mutex::Internal::LockAcquired()
     }
 
     m_recursionCount++;
+
+    /*
+     * Perform lock order verification. Test LOCK_LEVEL_CHECKING_DISABLED before calling
+     * GetThread, because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED mutex internally.
+     */
+    if (Thread::initialized && m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.LockAcquired(m_ownerLock);
+    }
+#endif
+}
+
+void MutexInternal::LockAcquired(Mutex& lock)
+{
+    lock.m_mutexInternal->LockAcquired();
 }
 
 /**
  * Called immediately before current thread releases this Mutex.
  */
-void Mutex::Internal::ReleasingLock()
+void MutexInternal::ReleasingLock()
 {
+#ifndef NDEBUG
     /* Use GetCurrentThreadId rather than GetThread, because GetThread acquires a Mutex */
     ThreadId currentThread = Thread::GetCurrentThreadId();
     QCC_ASSERT(currentThread != 0);
@@ -84,20 +224,45 @@ void Mutex::Internal::ReleasingLock()
     if (m_recursionCount == 0) {
         m_ownerThread = 0;
     }
+
+    /*
+     * Perform lock order verification. Test LOCK_LEVEL_CHECKING_DISABLED before calling
+     * GetThread, because GetThread uses a LOCK_LEVEL_CHECKING_DISABLED mutex internally.
+     */
+    if (Thread::initialized && m_level != LOCK_LEVEL_CHECKING_DISABLED) {
+        Thread::GetThread()->lockChecker.ReleasingLock(m_ownerLock);
+    }
+#endif
+}
+
+void MutexInternal::ReleasingLock(Mutex& lock)
+{
+    lock.m_mutexInternal->ReleasingLock();
 }
 
 /**
  * Assert that current thread owns this Mutex.
  */
-void Mutex::Internal::AssertOwnedByCurrentThread() const
+void MutexInternal::AssertOwnedByCurrentThread() const
 {
+#ifndef NDEBUG
     /* Use GetCurrentThreadId rather than GetThread, because GetThread acquires a Mutex */
     ThreadId currentThread = Thread::GetCurrentThreadId();
     QCC_ASSERT(currentThread != 0);
     QCC_ASSERT(m_ownerThread == currentThread);
     QCC_ASSERT(m_recursionCount != 0);
+#endif
 }
 
-#endif /* NDEBUG */
-
-} /* namespace */
+/**
+ * Set the level value for locks that cannot get a proper level from their constructor -
+ * because an entire array of locks has been allocated (e.g. locks = new Mutex[numLocks];).
+ */
+#ifndef NDEBUG
+void MutexInternal::SetLevel(Mutex& lock, LockLevel level)
+{
+    QCC_ASSERT(lock.m_mutexInternal->m_level == LOCK_LEVEL_NOT_SPECIFIED);
+    QCC_ASSERT(level != LOCK_LEVEL_NOT_SPECIFIED);
+    lock.m_mutexInternal->m_level = level;
+}
+#endif

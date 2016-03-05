@@ -18,6 +18,7 @@
 
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/Observer.h>
 #include <alljoyn/InterfaceDescription.h>
@@ -147,7 +148,9 @@ Observer::Internal::Internal(BusAttachment& bus,
                              InterfaceSet mandatory) :
     CoreObserver(mandatory),
     bus(bus),
-    observer(observer)
+    observer(observer),
+    proxiesLock(qcc::LOCK_LEVEL_OBSERVER_PROXIESLOCK),
+    listenersLock(qcc::LOCK_LEVEL_OBSERVER_LISTENERSLOCK)
 {
     ObserverManager& obsmgr = bus.GetInternal().GetObserverManager();
     obsmgr.RegisterObserver(this);

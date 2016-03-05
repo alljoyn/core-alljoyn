@@ -633,8 +633,8 @@ TEST_F(PerfTest, FindAdvertisedName_MatchAll_Success)
 TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
 {
     QStatus status = ER_OK;
-    Timespec startTime;
-    Timespec endTime;
+    Timespec<MonotonicTime> startTime;
+    Timespec<MonotonicTime> endTime;
 
 
     ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());
@@ -724,8 +724,8 @@ TEST_F(PerfTest, JoinSession_RecordTime_Success)
 {
     QStatus status = ER_OK;
     BusAttachment* client_msgBus = NULL;
-    Timespec startTime;
-    Timespec endTime;
+    Timespec<MonotonicTime> startTime;
+    Timespec<MonotonicTime> endTime;
 
 
     ClientSetup testclient(ajn::getConnectArg().c_str(), myService->getAlljoynWellKnownName());

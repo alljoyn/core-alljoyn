@@ -228,6 +228,8 @@ typedef struct {
  * additional memory is allocated for an #ALLJOYN_STRING that references an existing const char*.
  * If a MsgArg is assigned the destination receives a copy of the contents of the source. The
  * Stabilize() methods can also be called to explicitly force contents of the MsgArg to be copied.
+ *
+ * See [Message argument or MsgArg](@ref msg_argument_or_msgarg)
  */
 class MsgArg {
     friend class _Message;

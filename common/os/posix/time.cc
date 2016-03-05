@@ -36,8 +36,6 @@
 
 #endif
 
-const qcc::Timespec qcc::Timespec::Zero;
-
 using namespace qcc;
 
 static void platform_gettime(struct timespec* ts, bool useMonotonic)
@@ -50,7 +48,6 @@ static void platform_gettime(struct timespec* ts, bool useMonotonic)
     mach_port_deallocate(mach_task_self(), cclock);
     ts->tv_sec = mts.tv_sec;
     ts->tv_nsec = mts.tv_nsec;
-
 #else
     clock_gettime(useMonotonic ? CLOCK_MONOTONIC : CLOCK_REALTIME, ts);
 #endif
@@ -105,7 +102,7 @@ uint64_t qcc::GetEpochTimestamp(void)
     return ret_val;
 }
 
-void qcc::GetTimeNow(Timespec* ts)
+void qcc::GetTimeNow(Timespec<MonotonicTime>* ts)
 {
     struct timespec _ts;
     platform_gettime(&_ts, true);

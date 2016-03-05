@@ -24,71 +24,40 @@
 #include <qcc/MutexInternal.h>
 #include <qcc/Debug.h>
 
-/** @internal */
 #define QCC_MODULE "MUTEX"
 
 using namespace qcc;
 
-Mutex::Mutex() : isInitialized(false)
+Mutex::Mutex(int level) : m_mutexInternal(new MutexInternal(this, static_cast<LockLevel>(level)))
 {
-    Init();
-}
-
-Mutex::Mutex(const Mutex& other) : isInitialized(false)
-{
-    QCC_UNUSED(other);
-    Init();
 }
 
 Mutex::~Mutex()
 {
-    Destroy();
-}
-
-Mutex& Mutex::operator=(const Mutex& other)
-{
-    QCC_UNUSED(other);
-    Destroy();
-    Init();
-    return *this;
+    delete m_mutexInternal;
 }
 
 QStatus Mutex::Lock(const char* file, uint32_t line)
 {
-#ifdef NDEBUG
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Lock();
-#else
-    QCC_ASSERT(isInitialized);
-    QStatus status = Lock();
-    if (status == ER_OK) {
-        QCC_DbgPrintf(("Lock Acquired %s:%d", file, line));
-        this->file = file;
-        this->line = line;
-    } else {
-        QCC_LogError(status, ("Mutex::Lock %s:%u failed", file, line));
-    }
-    return status;
-#endif
+    return m_mutexInternal->Lock(file, line);
+}
+
+QStatus Mutex::Lock()
+{
+    return m_mutexInternal->Lock();
 }
 
 QStatus Mutex::Unlock(const char* file, uint32_t line)
 {
-#ifdef NDEBUG
-    QCC_UNUSED(file);
-    QCC_UNUSED(line);
-    return Unlock();
-#else
-    QCC_ASSERT(isInitialized);
-    QCC_DbgPrintf(("Lock Released: %s:%d (acquired at %s:%u)", file, line, this->file, this->line));
-    this->file = NULL;
-    this->line = static_cast<uint32_t>(-1);
-    return Unlock();
-#endif
+    return m_mutexInternal->Unlock(file, line);
+}
+
+QStatus Mutex::Unlock()
+{
+    return m_mutexInternal->Unlock();
 }
 
 void Mutex::AssertOwnedByCurrentThread() const
 {
-    mutexInternal->AssertOwnedByCurrentThread();
+    m_mutexInternal->AssertOwnedByCurrentThread();
 }

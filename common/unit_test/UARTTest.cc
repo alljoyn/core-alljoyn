@@ -592,11 +592,9 @@ TEST(UARTTest, DISABLED_serial_testsendrecv) {
 
     UARTController uc(s1, iodisp, &h1);
     uc.Start();
-    int iter = 0;
     size_t txlen;
-    for (;;) {
+    for (int iter = 0; iter < 1000; iter++) {
         printf("iteration %d\n", iter);
-        iter++;
         txlen = rand() % RANDOM_BYTES_MAX;
         for (size_t i = 0; i < txlen; i++) {
             txBuffer[i] = rand() % 256;

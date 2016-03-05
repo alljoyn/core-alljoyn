@@ -31,6 +31,7 @@
 #include <qcc/Debug.h>
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
+#include <qcc/LockLevel.h>
 
 #include <Status.h>
 
@@ -41,11 +42,9 @@ using namespace std;
 
 namespace qcc {
 
-#ifndef NDEBUG
 static volatile int32_t started = 0;
 static volatile int32_t running = 0;
 static volatile int32_t stopped = 0;
-#endif
 
 /** Maximum number of milliseconds to wait between calls to select to check for thread death */
 static const uint32_t MAX_SELECT_WAIT_MS = 10000;
@@ -55,7 +54,7 @@ Mutex* Thread::threadListLock = NULL;
 map<ThreadId, Thread*>* Thread::threadList = NULL;
 
 static DWORD cleanExternalThreadKey;
-static bool initialized = false;
+bool Thread::initialized = false;
 
 void Thread::CleanExternalThread(void* t)
 {
@@ -78,7 +77,8 @@ void Thread::CleanExternalThread(void* t)
 QStatus Thread::Init()
 {
     if (!initialized) {
-        Thread::threadListLock = new Mutex();
+        /* Disable LockChecker for the threadListLock, thus allowing LockChecker to call GetThread() */
+        Thread::threadListLock = new Mutex(LOCK_LEVEL_CHECKING_DISABLED);
         Thread::threadList = new map<ThreadId, Thread*>();
         cleanExternalThreadKey = FlsAlloc(Thread::CleanExternalThread);
         if (cleanExternalThreadKey == FLS_OUT_OF_INDEXES) {
@@ -183,7 +183,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     platformContext(NULL),
     alertCode(0),
     auxListeners(),
-    auxListenersLock(),
+    auxListenersLock(LOCK_LEVEL_THREAD_AUXLISTENERSLOCK),
     threadId(isExternal ? GetCurrentThreadId() : 0)
 {
     /* qcc::String is not thread safe.  Don't use it here. */

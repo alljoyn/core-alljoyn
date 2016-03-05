@@ -30,6 +30,7 @@
 #include <qcc/FileStream.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
+#include <qcc/MutexInternal.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/NamedPipeWrapper.h>
@@ -154,6 +155,9 @@ struct RemoveMatchCBContext {
 namespace ajn {
 
 
+AJ_PCSTR BusAttachment::Internal::STATE_MATCH_RULE = "type='signal',interface='org.alljoyn.Bus.Application',member='State',sessionless='t'";
+uint32_t BusAttachment::Internal::APPLICATION_STATE_LISTENER_UNREGISTER_WAIT_INTERVAL = 5U;
+
 BusAttachment::Internal::Internal(const char* appName,
                                   BusAttachment& bus,
                                   TransportFactoryContainer& factories,
@@ -163,7 +167,7 @@ BusAttachment::Internal::Internal(const char* appName,
                                   uint32_t concurrency) :
     application(appName ? appName : "unknown"),
     bus(bus),
-    listenersLock(),
+    listenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_LISTENERSLOCK),
     listeners(),
     m_ioDispatch("iodisp", 96),
     transportList(bus, factories, &m_ioDispatch, concurrency),
@@ -177,11 +181,22 @@ BusAttachment::Internal::Internal(const char* appName,
     listenAddresses(listenAddresses ? listenAddresses : ""),
     stopLock(),
     stopCount(0),
+    sessionPortListenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_SESSIONPORTLISTENERSLOCK),
+    aboutListenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_ABOUTLISTENERSLOCK),
+    joinLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_JOINLOCK),
     permissionManager(),
     permissionConfigurator(bus),
+    applicationStateListenersLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_APPLICATIONSTATELISTENERSLOCK),
     observerManager(NULL),
-    permissionConfigurationListener(NULL)
+    permissionConfigurationListener(NULL),
+    permissionConfigurationListenerLock(LOCK_LEVEL_BUSATTACHMENT_INTERNAL_PERMISSIONCONFIGURATIONLISTENERLOCK)
 {
+#ifndef NDEBUG
+    for (uint32_t index = 0; index < ArraySize(sessionsLock); index++) {
+        MutexInternal::SetLevel(sessionsLock[index], LOCK_LEVEL_BUSATTACHMENT_INTERNAL_SESSIONSLOCK);
+    }
+#endif
+
     /*
      * Bus needs a pointer to this internal object.
      */
@@ -1018,6 +1033,61 @@ QStatus BusAttachment::UnregisterAllHandlers(MessageReceiver* receiver)
 bool BusAttachment::Internal::IsConnected() const {
     QCC_ASSERT(router);
     return router->IsBusRunning();
+}
+
+QStatus BusAttachment::Internal::AddApplicationStateListener(ApplicationStateListener& applicationStateListener)
+{
+    QStatus status = ER_OK;
+    ApplicationStateListener* pListener = &applicationStateListener;
+    ProtectedApplicationStateListener protectedListener(pListener);
+
+    applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+
+    if (applicationStateListeners.end() != applicationStateListeners.find(protectedListener)) {
+        status = ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS;
+    } else {
+        applicationStateListeners.insert(pListener);
+    }
+
+    applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+
+    return status;
+}
+
+QStatus BusAttachment::Internal::RemoveApplicationStateListener(ApplicationStateListener& applicationStateListener)
+{
+    QStatus status = ER_OK;
+    ApplicationStateListener* pListener = &applicationStateListener;
+    ProtectedApplicationStateListener protectedListener(pListener);
+
+    applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+
+    ApplicationStateListenerSet::iterator it = applicationStateListeners.find(protectedListener);
+
+    if (it == applicationStateListeners.end()) {
+        status = ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER;
+    } else {
+
+        /* Wait for all refs to ProtectedApplicationStateListener to exit */
+        while ((it != applicationStateListeners.end()) && (it->GetRefCount() > 1)) {
+            ProtectedApplicationStateListener l = *it;
+            applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+            qcc::Sleep(APPLICATION_STATE_LISTENER_UNREGISTER_WAIT_INTERVAL);
+            applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+            it = applicationStateListeners.find(l);
+        }
+
+        /* Delete the listeners entry */
+        if (it != applicationStateListeners.end()) {
+            applicationStateListeners.erase(it);
+        } else {
+            status = ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER;
+        }
+    }
+
+    applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+
+    return status;
 }
 
 bool BusAttachment::IsConnected() const {
@@ -2571,7 +2641,7 @@ void BusAttachment::Internal::AllJoynSignalHandler(const InterfaceDescription::M
                     QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[0], keyInfo);
                     if (ER_OK == status) {
                         PermissionConfigurator::ApplicationState applicationState = (PermissionConfigurator::ApplicationState) args[1].v_uint16;
-                        if (applicationState <= PermissionConfigurator::ApplicationState::NEED_UPDATE) {
+                        if (applicationState <= PermissionConfigurator::NEED_UPDATE) {
                             ApplicationStateListenerSet::iterator it = applicationStateListeners.begin();
                             while (it != applicationStateListeners.end()) {
                                 ProtectedApplicationStateListener listener = *it;
@@ -2752,53 +2822,44 @@ QStatus BusAttachment::CancelWhoImplements(const char* iface)
     return CancelWhoImplements(tmp, 1);
 }
 
-void BusAttachment::RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
+QStatus BusAttachment::RegisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
 {
-    busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
-    ApplicationStateListener* pListener = &applicationStateListener;
-    Internal::ProtectedApplicationStateListener protectedListener(pListener);
-    busInternal->applicationStateListeners.insert(pListener);
-    busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
+    QStatus status = ER_OK;
+
+    if (nullptr == &applicationStateListener) {
+        status = ER_INVALID_ADDRESS;
+    }
+
+    if (ER_OK == status) {
+        status = busInternal->AddApplicationStateListener(applicationStateListener);
+    }
+
+    if (ER_OK == status) {
+        status = AddMatch(BusAttachment::Internal::STATE_MATCH_RULE);
+        QCC_ASSERT(ER_OK == status);
+    }
+
+    return status;
 }
 
-void BusAttachment::UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
+QStatus BusAttachment::UnregisterApplicationStateListener(ApplicationStateListener& applicationStateListener)
 {
-    busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
+    QStatus status = ER_OK;
 
-    /* Look for listener on ListenerSet */
-    Internal::ApplicationStateListenerSet::iterator it = busInternal->applicationStateListeners.begin();
-    while (it != busInternal->applicationStateListeners.end()) {
-        if (**it == &applicationStateListener) {
-            break;
-        }
-        ++it;
+    if (nullptr == &applicationStateListener) {
+        status = ER_INVALID_ADDRESS;
     }
 
-    /* Wait for all refs to ProtectedApplicationStateListener to exit */
-    while ((it != busInternal->applicationStateListeners.end()) && (it->GetRefCount() > 1)) {
-        Internal::ProtectedApplicationStateListener l = *it;
-        busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
-        qcc::Sleep(5);
-        busInternal->applicationStateListenersLock.Lock(MUTEX_CONTEXT);
-        it = busInternal->applicationStateListeners.find(l);
+    if (ER_OK == status) {
+        status = busInternal->RemoveApplicationStateListener(applicationStateListener);
     }
 
-    /* Delete the listeners entry */
-    if (it != busInternal->applicationStateListeners.end()) {
-        Internal::ProtectedApplicationStateListener l = *it;
-        busInternal->applicationStateListeners.erase(it);
+    if (ER_OK == status) {
+        status = RemoveMatch(BusAttachment::Internal::STATE_MATCH_RULE);
+        QCC_ASSERT(ER_OK == status);
     }
-    busInternal->applicationStateListenersLock.Unlock(MUTEX_CONTEXT);
-}
 
-QStatus BusAttachment::AddApplicationStateRule() {
-    const char* stateMatchRule = "type='signal',interface='org.alljoyn.Bus.Application',member='State',sessionless='t'";
-    return AddMatch(stateMatchRule);
-}
-
-QStatus BusAttachment::RemoveApplicationStateRule() {
-    const char* stateMatchRule = "type='signal',interface='org.alljoyn.Bus.Application',member='State',sessionless='t'";
-    return RemoveMatch(stateMatchRule);
+    return status;
 }
 
 QStatus BusAttachment::CancelWhoImplementsNonBlocking(const char* iface)
@@ -2989,8 +3050,7 @@ QStatus BusAttachment::SetKeyExpiration(const qcc::String& guid, uint32_t timeou
     } else {
         qcc::GUID128 g(guid);
         KeyStore::Key key(KeyStore::Key::REMOTE, g);
-        uint64_t millis = 1000ull * timeout;
-        Timespec expiration(millis, TIME_RELATIVE);
+        Timespec<EpochTime> expiration(GetEpochTimestamp() + (1000ull * timeout));
         return busInternal->keyStore.SetKeyExpiration(key, expiration);
     }
 }
@@ -3002,10 +3062,11 @@ QStatus BusAttachment::GetKeyExpiration(const qcc::String& guid, uint32_t& timeo
     } else {
         qcc::GUID128 g(guid);
         KeyStore::Key key(KeyStore::Key::REMOTE, g);
-        Timespec expiration;
+        Timespec<EpochTime> expiration;
         QStatus status = busInternal->keyStore.GetKeyExpiration(key, expiration);
         if (status == ER_OK) {
-            int64_t deltaMillis = expiration - Timespec(0, TIME_RELATIVE);
+            Timespec<EpochTime> now(GetEpochTimestamp());
+            int64_t deltaMillis = expiration - now;
             if (deltaMillis < 0) {
                 timeout = 0;
             } else if (deltaMillis > (0xFFFFFFFFll * 1000)) {
@@ -3407,6 +3468,30 @@ void BusAttachment::Internal::CallPolicyChangedCallback()
         PermissionConfigurationListener* listener = (**permissionConfigurationListener);
         if (listener) {
             listener->PolicyChanged();
+        }
+    }
+    permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);
+}
+
+void BusAttachment::Internal::CallStartManagementCallback()
+{
+    permissionConfigurationListenerLock.Lock(MUTEX_CONTEXT);
+    if (permissionConfigurationListener) {
+        PermissionConfigurationListener* listener = (**permissionConfigurationListener);
+        if (listener) {
+            listener->StartManagement();
+        }
+    }
+    permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);
+}
+
+void BusAttachment::Internal::CallEndManagementCallback()
+{
+    permissionConfigurationListenerLock.Lock(MUTEX_CONTEXT);
+    if (permissionConfigurationListener) {
+        PermissionConfigurationListener* listener = (**permissionConfigurationListener);
+        if (listener) {
+            listener->EndManagement();
         }
     }
     permissionConfigurationListenerLock.Unlock(MUTEX_CONTEXT);

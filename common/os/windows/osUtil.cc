@@ -43,6 +43,9 @@
 
 #define QCC_MODULE  "UTIL"
 
+static uint32_t s_uid = 0;
+static uint32_t s_gid = 0;
+
 void qcc::ClearMemory(void* s, size_t n)
 {
     SecureZeroMemory(s, n);
@@ -66,35 +69,14 @@ static uint32_t ComputeId(const char* buf, size_t len)
 
 uint32_t qcc::GetUid()
 {
-    /*
-     * Windows has no equivalent of getuid so fake one by creating a hash of the user name.
-     */
-    char buf[UNLEN];
-    ULONG len = UNLEN;
-    if (GetUserNameExA(NameUniqueId, buf, &len)) {
-        return ComputeId((char*)buf, len);
-    } else {
-        return ComputeId("nobody", sizeof("nobody") - 1);
-    }
+    QCC_ASSERT(s_uid != 0);
+    return s_uid;
 }
 
 uint32_t qcc::GetGid()
 {
-    /*
-     * Windows has no equivalent of getgid so fake one by creating a hash of the user's domain name.
-     */
-    char buf[UNLEN];
-    ULONG len = UNLEN;
-    if (GetUserNameExA(NameDnsDomain, buf, &len)) {
-        qcc::String gp((char*)buf, len);
-        size_t pos = gp.find_first_of('\\');
-        if (pos != qcc::String::npos) {
-            gp.erase(pos);
-        }
-        return ComputeId((const char*)gp.c_str(), gp.size());
-    } else {
-        return ComputeId("nogroup", sizeof("nogroup") - 1);
-    }
+    QCC_ASSERT(s_gid != 0);
+    return s_gid;
 }
 
 uint32_t qcc::GetUsersUid(const char* name)
@@ -253,4 +235,40 @@ QStatus qcc::ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSi
         return ER_BAD_HOSTNAME;
     }
     return (new ResolverThread(hostname, addr, &addrLen))->Get(timeoutMs);
+}
+
+void WindowsUtilInit()
+{
+    char buf[UNLEN + 1];
+
+    /*
+     * UID: Windows has no equivalent of getuid so fake one by creating a hash of the user name.
+     */
+    ULONG len = UNLEN;
+    if (GetUserNameExA(NameUniqueId, buf, &len)) {
+        s_uid = ComputeId(buf, len);
+    } else {
+        s_uid = ComputeId("nobody", sizeof("nobody") - 1);
+    }
+    QCC_ASSERT(s_uid != 0);
+
+    /*
+     * GID: Windows has no equivalent of getgid so fake one by creating a hash of the user's domain name.
+     */
+    len = UNLEN;
+    if (GetUserNameExA(NameDnsDomain, buf, &len)) {
+        qcc::String gp((char*)buf, len);
+        size_t pos = gp.find_first_of('\\');
+        if (pos != qcc::String::npos) {
+            gp.erase(pos);
+        }
+        s_gid = ComputeId(gp.c_str(), gp.size());
+    } else {
+        s_gid = ComputeId("nogroup", sizeof("nogroup") - 1);
+    }
+    QCC_ASSERT(s_gid != 0);
+}
+
+void WindowsUtilShutdown()
+{
 }

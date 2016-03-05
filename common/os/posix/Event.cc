@@ -484,13 +484,18 @@ static void CreateMechanism(int* rdFd, int* wrFd)
 #else
     /* TODO: Potential thread safety issue here */
     if (NULL == pipeLock) {
-        pipeLock = new Mutex();
+        /*
+         * Disable LockOrderChecker for the pipeLock lock, because this lock is
+         * being used indirectly by the LockChecker itself when it looks up the
+         * current thread.
+         */
+        pipeLock = new Mutex(LOCK_LEVEL_CHECKING_DISABLED);
         freePipeList = new vector<pair<int, int> >;
         usedPipeList = new vector<pair<int, int> >;
     }
 
     /* Check for something on the free pipe list */
-    pipeLock->Lock();
+    pipeLock->Lock(MUTEX_CONTEXT);
     if (!freePipeList->empty()) {
         pair<int, int> fdPair = freePipeList->back();
         usedPipeList->push_back(fdPair);
@@ -510,7 +515,7 @@ static void CreateMechanism(int* rdFd, int* wrFd)
             QCC_LogError(ER_FAIL, ("Failed to create pipe. (%d) %s", errno, strerror(errno)));
         }
     }
-    pipeLock->Unlock();
+    pipeLock->Unlock(MUTEX_CONTEXT);
 #endif
 }
 
@@ -520,7 +525,7 @@ static void DestroyMechanism(int rdFd, int wrFd)
     close(rdFd);
     close(wrFd);
 #else
-    pipeLock->Lock();
+    pipeLock->Lock(MUTEX_CONTEXT);
 
     /*
      * Delete the pipe (permanently) if the number of pipes on the free list is twice as many as
@@ -571,9 +576,9 @@ static void DestroyMechanism(int rdFd, int wrFd)
                 ret = read(rdFd, buf, sizeof(buf));
             }
         }
-        pipeLock->Unlock();
+        pipeLock->Unlock(MUTEX_CONTEXT);
     } else {
-        pipeLock->Unlock();
+        pipeLock->Unlock(MUTEX_CONTEXT);
     }
 #endif
 }

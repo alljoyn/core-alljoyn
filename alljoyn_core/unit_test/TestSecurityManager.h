@@ -46,6 +46,11 @@ class TestSecurityManager :
 
     QStatus Reset(const BusAttachment& peerBus);
 
+    const KeyInfoNISTP256& GetCaPublicKeyInfo()
+    {
+        return caPublicKeyInfo;
+    }
+
   private:
     BusAttachment bus;
     SessionOpts opts;

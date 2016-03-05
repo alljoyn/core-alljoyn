@@ -24,7 +24,7 @@ using namespace qcc;
 void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, uint32_t timeoutMs, bool useTimedEvent = true)
 {
     const uint32_t jitter = 500;
-    Timespec ts1;
+    Timespec<MonotonicTime> ts1;
     GetTimeNow(&ts1);
 
     std::vector<Event*> checkEvents;
@@ -48,9 +48,9 @@ void RunEventTest(uint32_t instances, uint32_t signalIndex, uint32_t delayMs, ui
     std::vector<Event*> signalEvents;
     QStatus status = Event::Wait(checkEvents, signalEvents, timeoutMs);
 
-    Timespec ts2;
+    Timespec<MonotonicTime> ts2;
     GetTimeNow(&ts2);
-    uint32_t waitReturnTimeMs = ts2.GetAbsoluteMillis() - ts1.GetAbsoluteMillis();
+    uint32_t waitReturnTimeMs = ts2.GetMillis() - ts1.GetMillis();
 
     if (timeoutMs < delayMs) {
         /* Expecting timeout */

@@ -236,7 +236,7 @@ class KeyBlob {
      *
      * @param expires The expiration date/time.
      */
-    void SetExpiration(const Timespec& expires) { expiration = expires; }
+    void SetExpiration(const Timespec<EpochTime>& expires) { expiration = expires; }
 
     /**
      * Default minimun expiration time for a key. If keys are expired too quickly they can end up
@@ -255,7 +255,7 @@ class KeyBlob {
         if (expiresInSeconds == 0xFFFFFFFF) {
             expiration.seconds = 0;
         } else {
-            expiration = Timespec((uint64_t) std::max(minExpiration, expiresInSeconds) * 1000, TIME_RELATIVE);
+            expiration = Timespec<EpochTime>(GetEpochTimestamp() + (uint64_t) std::max(minExpiration, expiresInSeconds) * 1000);
         }
     }
 
@@ -266,7 +266,7 @@ class KeyBlob {
      *
      * @return  true if an expiration time is set for this key blob.
      */
-    bool GetExpiration(Timespec& expires) const {
+    bool GetExpiration(Timespec<EpochTime>& expires) const {
         expires = expiration;
         return expiration.seconds != 0;
     }
@@ -343,7 +343,7 @@ class KeyBlob {
 
     uint8_t version;
     Type blobType;
-    Timespec expiration;
+    Timespec<EpochTime> expiration;
     uint8_t* data;
     uint16_t size;
     qcc::String tag;

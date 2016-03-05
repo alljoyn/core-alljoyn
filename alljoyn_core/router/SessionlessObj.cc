@@ -139,6 +139,7 @@ SessionlessObj::SessionlessObj(Bus& bus, BusController* busController, DaemonRou
     requestRangeSignal(NULL),
     requestRangeMatchSignal(NULL),
     timer("sessionless", true),
+    lock(LOCK_LEVEL_SESSIONLESSOBJ_LOCK),
     curChangeId(0),
     sessionOpts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY, SessionOpts::SLS_NAMES),
     sessionPort(SESSIONLESS_SESSION_PORT),
@@ -420,6 +421,20 @@ bool SessionlessObj::IsSessionlessEmitter(String name)
     return ret;
 }
 
+SessionlessObj::_SessionlessMessage::_SessionlessMessage(Message message)
+    : changeId(0), msg(message), cachedWhoImplements(nullptr)
+{
+    /* Only create the cache if this is an Announce message */
+    if ((0 == strcmp(msg->GetInterface(), "org.alljoyn.About")) && (0 == strcmp(msg->GetMemberName(), "Announce"))) {
+        cachedWhoImplements = new std::set<qcc::String>();
+    }
+}
+
+SessionlessObj::_SessionlessMessage::~_SessionlessMessage()
+{
+    delete cachedWhoImplements;
+}
+
 void SessionlessObj::PushMessageWork::Run()
 {
     slObj.router.LockNameTable();
@@ -428,17 +443,18 @@ void SessionlessObj::PushMessageWork::Run()
     /* Match the message against any existing implicit rules */
     uint32_t fromRulesId = slObj.nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
     uint32_t toRulesId = slObj.nextRulesId;
-    slObj.SendMatchingThroughEndpoint(0, msg, fromRulesId, toRulesId);
+    SessionlessMessage slm(msg);
+    slObj.SendMatchingThroughEndpoint(0, slm, fromRulesId, toRulesId);
 
     /* Put the message in the local cache */
     String key = MakeSessionlessMessageKey(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
     slObj.advanceChangeId = true;
-    SessionlessMessage val(slObj.curChangeId, msg);
+    slm->changeId = slObj.curChangeId;
     LocalCache::iterator it = slObj.localCache.find(key);
     if (it == slObj.localCache.end()) {
-        slObj.localCache.insert(pair<String, SessionlessMessage>(key, val));
+        slObj.localCache.insert(pair<String, SessionlessMessage>(key, slm));
     } else {
-        it->second = val;
+        it->second = slm;
     }
 
     slObj.lock.Unlock();
@@ -485,28 +501,43 @@ void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
         cache.routedMessages.push_back(RoutedMessage(msg));
     }
 
-    SendMatchingThroughEndpoint(sid, msg, cache.fromRulesId, cache.toRulesId);
+    SessionlessMessage slm(msg);
+    SendMatchingThroughEndpoint(sid, slm, cache.fromRulesId, cache.toRulesId);
 
     lock.Unlock();
     router.UnlockNameTable();
     return;
 }
 
-void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uint32_t fromRulesId, uint32_t toRulesId)
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, SessionlessMessage slm, uint32_t fromRulesId, uint32_t toRulesId)
 {
+    Message& msg = slm->msg;
     bool isAnnounce = (0 == strcmp(msg->GetInterface(), "org.alljoyn.About")) && (0 == strcmp(msg->GetMemberName(), "Announce"));
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
     RuleIterator rit = rules.begin();
     while (rit != rules.end()) {
         bool isExplicitMatch = false;
-        String epName = rit->first;
-        BusEndpoint ep = router.FindEndpoint(epName);
-        bool epTypeIsLeaf = (ep->GetEndpointType() == ENDPOINT_TYPE_NULL || ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE);
-        bool epCanReceive = ep->IsValid() && (ep->AllowRemoteMessages() || epTypeIsLeaf);
-        RuleIterator end = rules.upper_bound(epName);
+        String dstEpName = rit->first;
+        BusEndpoint dstEp = router.FindEndpoint(dstEpName);
+        bool dstEpCanReceive = false;
+        if (dstEp->IsValid()) {
+            if (dstEp->AllowRemoteMessages()) {
+                dstEpCanReceive = true;
+            } else {
+                /*
+                 * Destination endpoint doesn't allow remote messages, so check
+                 * if this is a local message (i.e. from a leaf node connected to
+                 * this router).
+                 */
+                BusEndpoint srcEp = router.FindEndpoint(msg->GetRcvEndpointName());
+                bool srcEpTypeIsLeaf = (srcEp->GetEndpointType() == ENDPOINT_TYPE_NULL || srcEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE);
+                dstEpCanReceive = srcEpTypeIsLeaf;
+            }
+        }
+        RuleIterator end = rules.upper_bound(dstEpName);
         for (; rit != end; ++rit) {
-            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && epCanReceive) {
-                if (rit->second.IsMatch(msg)) {
+            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && dstEpCanReceive) {
+                if (rit->second.IsMatch(msg, slm->cachedWhoImplements)) {
                     isExplicitMatch = true;
                     if (isAnnounce && !rit->second.implements.empty()) {
                         /*
@@ -526,10 +557,10 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
                      * rule table.
                      */
                     router.GetRuleTable().Lock();
-                    for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(ep);
-                         !isExplicitMatch && (drit != router.GetRuleTable().End()) && (drit->first == ep);
+                    for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(dstEp);
+                         !isExplicitMatch && (drit != router.GetRuleTable().End()) && (drit->first == dstEp);
                          ++drit) {
-                        isExplicitMatch = drit->second.IsMatch(msg);
+                        isExplicitMatch = drit->second.IsMatch(msg, slm->cachedWhoImplements);
                     }
                     router.GetRuleTable().Unlock();
                 }
@@ -537,19 +568,19 @@ void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, Message msg, uin
         }
 
         bool isImplicitMatch = false;
-        if (isAnnounce && !isExplicitMatch && epCanReceive) {
+        if (isAnnounce && !isExplicitMatch && dstEpCanReceive) {
             /* The message did not match any rules for this endpoint.
              * Check if it matches (only) an implicit rule. */
-            isImplicitMatch = IsOnlyImplicitMatch(epName, msg);
+            isImplicitMatch = IsOnlyImplicitMatch(dstEpName, slm);
         }
 
         if (isExplicitMatch || isImplicitMatch) {
             lock.Unlock();
             router.UnlockNameTable();
-            SendThroughEndpoint(msg, ep, sid);
+            SendThroughEndpoint(msg, dstEp, sid);
             router.LockNameTable();
             lock.Lock();
-            rit = rules.upper_bound(epName);
+            rit = rules.upper_bound(dstEpName);
         }
     }
 }
@@ -569,9 +600,9 @@ void SessionlessObj::CancelMessageWork::Run()
     slObj.lock.Lock();
     String key = MakeSessionlessMessageKey(sender.c_str(), "", "", "");
     LocalCache::iterator it = slObj.localCache.lower_bound(key);
-    while ((it != slObj.localCache.end()) && (sender == it->second.second->GetSender())) {
-        if (it->second.second->GetCallSerial() == serialNum) {
-            if (!it->second.second->IsExpired()) {
+    while ((it != slObj.localCache.end()) && (sender == it->second->msg->GetSender())) {
+        if (it->second->msg->GetCallSerial() == serialNum) {
+            if (!it->second->msg->IsExpired()) {
                 status = ER_OK;
             }
             slObj.localCache.erase(it);
@@ -628,7 +659,7 @@ void SessionlessObj::NameOwnerChangedWork::Run()
     /* Remove stored sessionless messages sent by the old owner */
     String key = MakeSessionlessMessageKey(oldOwner.c_str(), "", "", "");
     LocalCache::iterator mit = slObj.localCache.lower_bound(key);
-    while ((mit != slObj.localCache.end()) && (::strcmp(oldOwner.c_str(), mit->second.second->GetSender()) == 0)) {
+    while ((mit != slObj.localCache.end()) && (::strcmp(oldOwner.c_str(), mit->second->msg->GetSender()) == 0)) {
         slObj.localCache.erase(mit++);
     }
 
@@ -857,10 +888,10 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
     LocalCache::iterator it = localCache.begin();
     uint32_t rangeLen = toChangeId - fromChangeId;
     while (it != localCache.end()) {
-        if (IN_WINDOW(uint32_t, fromChangeId, rangeLen, it->second.first)) {
+        SessionlessMessage slm = it->second;
+        if (IN_WINDOW(uint32_t, fromChangeId, rangeLen, slm->changeId)) {
             String key = it->first;
-            Message msg = it->second.second;
-            if (msg->IsExpired()) {
+            if (slm->msg->IsExpired()) {
                 /* Remove expired message without sending */
                 localCache.erase(it++);
                 messageErased = true;
@@ -869,15 +900,15 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
                 bool isMatch = remoteRules.empty();
                 for (vector<String>::iterator rit = remoteRules.begin(); !isMatch && (rit != remoteRules.end()); ++rit) {
                     Rule rule(rit->c_str());
-                    isMatch = rule.IsMatch(msg) || (rule == legacyRule);
+                    isMatch = rule.IsMatch(slm->msg) || (rule == legacyRule);
                 }
                 if (isMatch) {
                     BusEndpoint ep = router.FindEndpoint(sender);
                     if (ep->IsValid()) {
                         lock.Unlock();
                         router.UnlockNameTable();
-                        QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", it->second.first, msg->GetCallSerial(), sid));
-                        SendThroughEndpoint(msg, ep, sid);
+                        QCC_DbgPrintf(("Send cid=%u,serialNum=%u to sid=%u", slm->changeId, slm->msg->GetCallSerial(), sid));
+                        SendThroughEndpoint(slm->msg, ep, sid);
                         router.LockNameTable();
                         lock.Lock();
                     }
@@ -885,7 +916,7 @@ void SessionlessObj::HandleRangeRequest(const char* sender, SessionId sid,
                 it = localCache.upper_bound(key);
             } else {
                 /* Send message to local destination */
-                SendMatchingThroughEndpoint(sid, msg, fromLocalRulesId, toLocalRulesId);
+                SendMatchingThroughEndpoint(sid, slm, fromLocalRulesId, toLocalRulesId);
                 it = localCache.upper_bound(key);
             }
         } else {
@@ -920,7 +951,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
     QStatus status = ER_OK;
 
     if (reason == ER_OK) {
-        Timespec tilExpire;
+        Timespec<MonotonicTime> tilExpire;
         uint32_t expire;
 
         /* Send name service responses if needed */
@@ -934,7 +965,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         lock.Lock();
         LocalCache::iterator it = localCache.begin();
         while (it != localCache.end()) {
-            if (it->second.second->IsExpired(&expire)) {
+            if (it->second->msg->IsExpired(&expire)) {
                 localCache.erase(it++);
             } else {
                 ++it;
@@ -948,7 +979,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         /* Look for new/failed joinsessions to try/retry (after backoff) */
         router.LockNameTable();
         lock.Lock();
-        Timespec now;
+        Timespec<MonotonicTime> now;
         GetTimeNow(&now);
         RemoteCaches::iterator cit = remoteCaches.begin();
         while (cit != remoteCaches.end()) {
@@ -995,7 +1026,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
                         cache.state = RemoteCacheWork::IDLE;
                         /* Retry with a random backoff */
                         ScheduleWork(cache, false);
-                        if ((tilExpire == Timespec::Zero) || (cache.nextJoinTime < tilExpire)) {
+                        if ((tilExpire == Timespec<MonotonicTime>()) || (cache.nextJoinTime < tilExpire)) {
                             tilExpire = cache.nextJoinTime;
                         }
                     }
@@ -1011,7 +1042,7 @@ void SessionlessObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         router.UnlockNameTable();
 
         /* Rearm alarm */
-        if (tilExpire != Timespec::Zero) {
+        if (tilExpire != Timespec<MonotonicTime>()) {
             SessionlessObj* slObj = this;
             timer.AddAlarm(Alarm(tilExpire, slObj));
         }
@@ -1233,9 +1264,9 @@ void SessionlessObj::UpdateAdvertisements()
     map<String, uint32_t> advertisements;
     lock.Lock();
     for (LocalCache::iterator it = localCache.begin(); it != localCache.end(); ++it) {
-        Message msg = it->second.second;
-        advertisements[msg->GetInterface()] = max(advertisements[msg->GetInterface()], it->second.first);
-        advertisements[WildcardInterfaceName] = max(advertisements[WildcardInterfaceName], it->second.first); /* The v0 advertisement */
+        Message msg = it->second->msg;
+        advertisements[msg->GetInterface()] = max(advertisements[msg->GetInterface()], it->second->changeId);
+        advertisements[WildcardInterfaceName] = max(advertisements[WildcardInterfaceName], it->second->changeId); /* The v0 advertisement */
     }
 
     /* First pass: cancel any names that don't need to be advertised anymore. */
@@ -1457,13 +1488,14 @@ QStatus SessionlessObj::ScheduleWork(RemoteCacheWork& cache, bool addAlarm, bool
  * The actual join time is randomly distributed over the retry interval above.
  */
 QStatus SessionlessObj::GetNextJoinTime(const BackoffLimits& backoff, bool doInitialBackoff,
-                                        uint32_t retries, qcc::Timespec& firstJoinTime, qcc::Timespec& nextJoinTime)
+                                        uint32_t retries, qcc::Timespec<qcc::MonotonicTime>& firstJoinTime,
+                                        qcc::Timespec<qcc::MonotonicTime>& nextJoinTime)
 {
     if (retries == 0) {
         GetTimeNow(&firstJoinTime);
     }
 
-    qcc::Timespec startTime;
+    qcc::Timespec<qcc::MonotonicTime> startTime;
     uint32_t delayMs = 1;
     for (uint32_t m = 0, i = 0; i <= retries; ++i) {
         if (i == 0) {
@@ -1565,8 +1597,8 @@ bool SessionlessObj::SendResponseIfMatch(TransportMask transport, const qcc::IPE
     String name;
     lock.Lock();
     for (LocalCache::iterator mit = localCache.begin(); mit != localCache.end(); ++mit) {
-        Message& msg = mit->second.second;
-        if (rule.IsMatch(msg)) {
+        Message& msg = mit->second->msg;
+        if (rule.IsMatch(msg, mit->second->cachedWhoImplements)) {
             name = AdvertisedName(msg->GetInterface(), lastAdvertisements[msg->GetInterface()]);
             sendResponse = true;
             break;
@@ -1815,8 +1847,9 @@ void SessionlessObj::RemoveImplicitRules(const RemoteCacheWork& cache)
     }
 }
 
-bool SessionlessObj::IsOnlyImplicitMatch(const qcc::String& epName, Message& msg)
+bool SessionlessObj::IsOnlyImplicitMatch(const qcc::String& epName, SessionlessMessage slm)
 {
+    const Message& msg = slm->msg;
     QCC_DbgTrace(("IsOnlyImplicitMatch(epName=%s, msg.sender=%s)", epName.c_str(), msg->GetSender()));
 
     /* Find the implicit rule that matches the message sender, check all associated
@@ -1824,12 +1857,12 @@ bool SessionlessObj::IsOnlyImplicitMatch(const qcc::String& epName, Message& msg
      * purely implicit, and the implicit match rule should be removed for this epName.
      */
     for (ImplicitRuleIterator irit = implicitRules.begin(); irit != implicitRules.end(); ++irit) {
-        if (irit->IsMatch(msg)) {
+        if (irit->IsMatch(msg, slm->cachedWhoImplements)) {
             bool hasExplicitMatch = false;
             std::pair<RuleIterator, RuleIterator> range = rules.equal_range(epName);
             bool hasExplicitRules = (range.first != range.second);
             for (; range.first != range.second; range.first++) {
-                if (range.first->second.IsMatch(msg)) {
+                if (range.first->second.IsMatch(msg, slm->cachedWhoImplements)) {
                     hasExplicitMatch = true;
                     break;
                 }

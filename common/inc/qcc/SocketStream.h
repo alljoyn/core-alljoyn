@@ -253,7 +253,7 @@ class SocketStream : public Stream {
      * Detach this SocketStream from the underlying socket.
      *
      * Calling this method will cause the underlying socket descriptor
-     * to not be shutdown by this SocketStream.
+     * to not be shutdown or aborted by this SocketStream.
      */
     void DetachSocketFd() { isDetached = true; }
 

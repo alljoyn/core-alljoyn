@@ -26,7 +26,7 @@ using namespace qcc;
 using namespace ajn;
 
 namespace qcc {
-void PrintTo(const Timespec& ts, ::std::ostream* os) {
+void PrintTo(const Timespec<MonotonicTime>& ts, ::std::ostream* os) {
     *os << ts.seconds << '.' << setfill('0') << setw(3) << ts.mseconds;
 }
 };
@@ -54,9 +54,9 @@ TEST_P(SessionlessBackoffAlgorithmTest, Backoff)
     uint32_t c = backoff.exponential;
     uint32_t R = backoff.maxSecs;
 
-    Timespec first, next;
+    Timespec<MonotonicTime> first, next;
     uint32_t i = 0, j;
-    Timespec lo, hi;
+    Timespec<MonotonicTime> lo, hi;
 
     /* Initial backoff (T) */
     SessionlessObj::GetNextJoinTime(backoff, doInitialBackoff, i++, first, next);

@@ -26,7 +26,7 @@ using namespace sample::secure::door;
 using namespace ajn;
 using namespace std;
 
-void UpdateDoorProviderManifest(DoorCommon& common)
+QStatus UpdateDoorProviderManifest(DoorCommon& common)
 {
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
     rules[0].SetInterfaceName(DOOR_INTERFACE);
@@ -47,7 +47,7 @@ void UpdateDoorProviderManifest(DoorCommon& common)
     PermissionPolicy::Acl manifest;
     manifest.SetRules(1, rules);
 
-    common.UpdateManifest(manifest);
+    return common.UpdateManifest(manifest);
 }
 
 int CDECL_CALL main(int argc, char** argv)
@@ -75,32 +75,44 @@ int CDECL_CALL main(int argc, char** argv)
     DoorCommonPCL pcl(*ba);
 
     QStatus status = common.Init(true, &pcl);
-    if (status != ER_OK) {
-        fprintf(stderr, "Failed to initialize common layer\n");
-        exit(1);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to initialize DoorCommon - status (%s)\n",
+                QCC_StatusText(status));
+        goto Exit;
     }
 
     do {
-        if (status != ER_OK) {
-            break;
-        }
         // Create bus object
         Door door(ba);
 
+        status = door.Init();
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to initialize Door - status (%s)\n",
+                    QCC_StatusText(status));
+            goto Exit;
+        }
+
         status = ba->RegisterBusObject(door, true);
         if (ER_OK != status) {
-            printf("Failed to RegisterBusObject\n");
-            break;
+            fprintf(stderr, "Failed to RegisterBusObject - status (%s)\n",
+                    QCC_StatusText(status));
+            goto Exit;
         }
 
         status = common.AnnounceAbout();
         if (ER_OK != status) {
-            printf("Failed to announce about\n");
-            break;
+            fprintf(stderr, "Failed to AnnounceAbout - status (%s)\n",
+                    QCC_StatusText(status));
+            goto Exit;
         }
 
         //Wait until we are claimed
-        pcl.WaitForClaimedState();
+        status = pcl.WaitForClaimedState();
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to WaitForClaimedState - status (%s)\n",
+                    QCC_StatusText(status));
+            goto Exit;
+        }
 
         printf("Door provider initialized; Waiting for consumers ...\n");
         printf("Type 'q' to quit\n");
@@ -112,13 +124,23 @@ int CDECL_CALL main(int argc, char** argv)
 
             switch (cmd) {
             case 'u':
-                printf("Enabling automatic signaling of door events ...\n");
-                UpdateDoorProviderManifest(common);
+                printf("Enabling automatic signaling of door events ... ");
+                status = UpdateDoorProviderManifest(common);
+                if (ER_OK != status) {
+                    fprintf(stderr, "Failed to UpdateDoorProviderManifest - status (%s)\n",
+                            QCC_StatusText(status));
+                    break;
+                }
                 door.autoSignal = true;
+                printf("done\n");
                 break;
 
             case 's':
-                door.SendDoorEvent();
+                status = door.SendDoorEvent();
+                if (ER_OK != status) {
+                    fprintf(stderr, "Failed to SendDoorEvent - status (%s)\n",
+                            QCC_StatusText(status));
+                }
                 break;
 
             case '\n':
@@ -133,6 +155,7 @@ int CDECL_CALL main(int argc, char** argv)
         }
     } while (0);
 
+Exit:
     common.Fini();
 
 #ifdef ROUTER

@@ -28,6 +28,7 @@
 #include <qcc/String.h>
 #include <qcc/Util.h>
 #include <qcc/atomic.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Status.h>
@@ -51,7 +52,9 @@ namespace ajn {
 
 #define SESSION_SELF_JOIN 0x02
 
-DaemonRouter::DaemonRouter() : ruleTable(), nameTable(), busController(NULL), alljoynObj(NULL), sessionlessObj(NULL)
+DaemonRouter::DaemonRouter()
+    : ruleTable(), nameTable(), busController(NULL), alljoynObj(NULL), sessionlessObj(NULL),
+    m_Lock(LOCK_LEVEL_DAEMONROUTER_MLOCK)
 {
 #ifdef ENABLE_POLICYDB
     AddBusNameListener(ConfigDB::GetConfigDB());

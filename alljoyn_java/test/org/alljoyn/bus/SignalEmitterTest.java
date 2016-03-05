@@ -227,9 +227,9 @@ public class SignalEmitterTest extends TestCase {
         emitter = null;
 
         /* Remove rule to receive non-session based signals */
-        Status status = bus.addMatch("type='signal',interface='org.alljoyn.bus.EmitterInterface',member='Emit'");
+        Status status = bus.removeMatch("type='signal',interface='org.alljoyn.bus.EmitterInterface',member='Emit'");
         if (Status.OK != status) {
-            throw new GameException("Cannot add rule to receive signals");
+            throw new GameException("Cannot remove rule to receive signals");
         }
 
         bus.disconnect();

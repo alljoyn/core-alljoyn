@@ -37,6 +37,7 @@
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 #include <qcc/OSLogger.h>
+#include <qcc/LockLevel.h>
 #include "DebugControl.h"
 
 using namespace std;
@@ -102,7 +103,7 @@ static void WriteMsg(DbgMsgType type, const char* module, const char* msg, void*
 void DebugControl::Init()
 {
     if (!initialized) {
-        stdoutLock = new qcc::Mutex();
+        stdoutLock = new qcc::Mutex(LOCK_LEVEL_CHECKING_DISABLED);  // Allow LockOrderChecker to use DebugControl
         dbgControl = new DebugControl();
         initialized = true;
     }
@@ -117,7 +118,9 @@ void DebugControl::Shutdown()
     }
 }
 
-DebugControl::DebugControl(void) : cb(Output), context(stderr), allLevel(0), printThread(true)
+DebugControl::DebugControl(void)
+    : mutex(LOCK_LEVEL_CHECKING_DISABLED), // Allow LockOrderChecker to use DebugControl
+    cb(Output), context(stderr), allLevel(0), printThread(true)
 {
     Environ* env = Environ::GetAppEnviron();
     Environ::const_iterator iter;
@@ -164,7 +167,7 @@ void DebugControl::WriteDebugMessage(DbgMsgType type, const char* module, const 
 
 void DebugControl::Register(QCC_DbgMsgCallback callback, void* cbContext)
 {
-    QCC_ASSERT(cb != NULL);
+    QCC_ASSERT(callback != nullptr);
     this->context = cbContext;
     this->cb = callback;
 }
@@ -172,6 +175,11 @@ void DebugControl::Register(QCC_DbgMsgCallback callback, void* cbContext)
 bool DebugControl::PrintThread() const
 {
     return printThread;
+}
+
+bool DebugControl::DbgModulesSpecified() const
+{
+    return !modLevels.empty();
 }
 
 bool DebugControl::Check(DbgMsgType type, const char* module)
@@ -570,4 +578,9 @@ void _QCC_DbgDeleteCtx(void* ctx)
 {
     DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
     delete context;
+}
+
+extern "C" bool AJ_CALL _QCC_DbgModulesSpecified()
+{
+    return dbgControl->DbgModulesSpecified();
 }

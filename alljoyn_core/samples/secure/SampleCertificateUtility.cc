@@ -231,6 +231,7 @@ static uint64_t GetEpochTimestamp()
  * @param[in] issuerCN Common Name component of the issuer's Distinguished Name. For correct certificate chain
  *                     validation, this must exactly match the issuer certificate's subject CN.
  * @param[in] issuerCNSize Size of the issuerCN array.
+ * @param[in] issuerPublicKey Pointer to ECCPublicKey containing the issuer's public key.
  * @param[in] issuerPrivateKey Pointer to ECCPrivateKey containing the issuer's private key for signing.
  * @param[in] validity ValidPeriod structure containing the notValidBefore and notValidAfter dates for the certificate.
  * @param[in] isCA Whether or not the certificate should be labeled as a certificate authority (true) or an end entity (false).
@@ -246,6 +247,7 @@ QStatus CreateAndSignCertificate(
     const ECCPublicKey* subjectPublicKey,
     const uint8_t* issuerCN,
     const size_t issuerCNSize,
+    const ECCPublicKey* issuerPublicKey,
     const ECCPrivateKey* issuerPrivateKey,
     const CertificateX509::ValidPeriod& validity,
     bool isCA,
@@ -307,7 +309,7 @@ QStatus CreateAndSignCertificate(
     certificate.SetCA(isCA);
     certificate.SetValidity(&validity);
 
-    status = certificate.Sign(issuerPrivateKey);
+    status = certificate.SignAndGenerateAuthorityKeyId(issuerPrivateKey, issuerPublicKey);
 
     return status;
 }
@@ -624,6 +626,7 @@ int CreateCA(int argc, char** argv)
         keypair.GetDSAPublicKey(),
         reinterpret_cast<const uint8_t*>(subjectCN.c_str()),
         subjectCN.size(),
+        keypair.GetDSAPublicKey(),
         keypair.GetDSAPrivateKey(),
         validity,
         true,
@@ -715,6 +718,7 @@ int CreateEE(int argc, char** argv)
         eeKeyPair.GetDSAPublicKey(),
         caCertificate.GetSubjectCN(),
         caCertificate.GetSubjectCNLength(),
+        caCertificate.GetSubjectPublicKey(),
         &caPrivateKey,
         validity,
         false,

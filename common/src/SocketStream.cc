@@ -114,6 +114,7 @@ QStatus SocketStream::Connect(qcc::String& host, uint16_t port)
     }
 
     IPAddress ipAddr(host);
+
     QStatus status = qcc::Connect(sock, ipAddr, port);
 
     if (ER_WOULDBLOCK == status) {
@@ -149,8 +150,11 @@ QStatus SocketStream::Shutdown()
 {
     if (sock == qcc::INVALID_SOCKET_FD) {
         return ER_OS_ERROR;
-    } else if (!isConnected || isDetached) {
+    } else if (!isConnected) {
         return ER_FAIL;
+    } else if (isDetached) {
+        /* Do nothing here since socket is detached (app will Shutdown, etc.) */
+        return ER_OK;
     } else {
         QStatus status = qcc::Shutdown(sock, QCC_SHUTDOWN_WR);
         /*
@@ -158,7 +162,7 @@ QStatus SocketStream::Shutdown()
          * that is already closed.  Since we should not be doing this, assert
          * here.
          */
-        QCC_ASSERT(ER_OK == status);
+        QCC_ASSERT((ER_OK == status) || (ER_NOT_CONN == status));
         return status;
     }
 }
@@ -168,7 +172,8 @@ QStatus SocketStream::Abort()
     if (sock == qcc::INVALID_SOCKET_FD) {
         return ER_OS_ERROR;
     } else if (isDetached) {
-        return ER_FAIL;
+        /* Do nothing here since socket is detached (app will SetLinger, etc.) */
+        return ER_OK;
     } else {
         QStatus status = qcc::SetLinger(sock, true, 0);
         /*
@@ -225,7 +230,6 @@ QStatus SocketStream::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes,
     }
     if ((ER_OK == status) && (0 == actualBytes)) {
         /* Other end has closed */
-        isConnected = false;
         status = ER_SOCK_OTHER_END_CLOSED;
     }
     return status;
@@ -265,7 +269,6 @@ QStatus SocketStream::PullBytesAndFds(void* buf, size_t reqBytes, size_t& actual
     }
     if ((ER_OK == status) && (0 == actualBytes)) {
         /* Other end has closed */
-        isConnected = false;
         status = ER_SOCK_OTHER_END_CLOSED;
     }
     numFds = recvdFds;

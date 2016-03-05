@@ -459,7 +459,11 @@ QStatus Shutdown(SocketFd sockfd, ShutdownHow how)
 
     ret = shutdown(static_cast<int>(sockfd), static_cast<int>(how));
     if (ret != 0) {
-        status = ER_OS_ERROR;
+        if (errno == ENOTCONN) {
+            status = ER_NOT_CONN;
+        } else {
+            status = ER_OS_ERROR;
+        }
         QCC_LogError(status, ("Shutdown socket (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
     }
     return status;

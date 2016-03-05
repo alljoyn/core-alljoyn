@@ -70,7 +70,7 @@ using namespace std;
 static const char defaultConfig[] =
     "<busconfig>"
     "  <limit name=\"auth_timeout\">20000</limit>"
-    "  <limit name=\"max_incomplete_connections\">16</limit>"
+    "  <limit name=\"max_incomplete_connections\">48</limit>"
     "  <limit name=\"max_completed_connections\">64</limit>"
     "  <limit name=\"max_remote_clients_tcp\">48</limit>"
     "  <limit name=\"max_remote_clients_udp\">0</limit>"

@@ -48,6 +48,20 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem) {
     return InterlockedDecrement(reinterpret_cast<volatile long*>(mem));
 }
 
+/**
+ * Performs an atomic compare-and-exchange operation on the specified values.
+ * It compares two specified 32-bit values and exchanges with another 32-bit
+ * value based on the outcome of the comparison.
+ *
+ * @param mem   Pointer to int32_t to be compared and modified.
+ * @param expectedValue Expected value of *mem.
+ * @param newValue New value of *mem after calling this function, if returning true.
+ * @return  true if the initial value of *mem was expectedValue, false otherwise
+ */
+inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int32_t newValue) {
+    return (InterlockedCompareExchange(reinterpret_cast<volatile long*>(mem), newValue, expectedValue) == expectedValue);
+}
+
 }
 
 #endif

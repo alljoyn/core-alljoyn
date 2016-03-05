@@ -27,6 +27,7 @@
 #include "BusInternal.h"
 #include "CredentialAccessor.h"
 #include "KeyInfoHelper.h"
+#include "XmlRulesConverter.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -34,6 +35,9 @@ using namespace std;
 using namespace qcc;
 
 namespace ajn {
+
+/* Keep this definition in sync with the doc comment for this constant in PermissionConfigurator.h. */
+const uint16_t PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT = (CAPABLE_ECDHE_NULL | CAPABLE_ECDHE_PSK);
 
 /**
  * Class for internal state of a PermissionConfigurator object.
@@ -83,7 +87,21 @@ QStatus PermissionConfigurator::SetPermissionManifest(PermissionPolicy::Rule* ru
     return permissionMgmtObj->SetManifestTemplate(rules, count);
 }
 
-QStatus PermissionConfigurator::GetApplicationState(ApplicationState& applicationState)
+QStatus PermissionConfigurator::SetManifestTemplateFromXml(AJ_PCSTR manifestXml)
+{
+    QStatus status;
+    std::vector<PermissionPolicy::Rule> rules;
+
+    status = XmlRulesConverter::XmlToRules(manifestXml, rules);
+
+    if (ER_OK == status) {
+        status = SetPermissionManifest(rules.data(), rules.size());
+    }
+
+    return status;
+}
+
+QStatus PermissionConfigurator::GetApplicationState(ApplicationState& applicationState) const
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
@@ -171,7 +189,7 @@ QStatus PermissionConfigurator::SetClaimCapabilityAdditionalInfo(PermissionConfi
     return permissionMgmtObj->SetClaimCapabilityAdditionalInfo(additionalInfo);
 }
 
-QStatus PermissionConfigurator::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities)
+QStatus PermissionConfigurator::GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities) const
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
@@ -180,7 +198,7 @@ QStatus PermissionConfigurator::GetClaimCapabilities(PermissionConfigurator::Cla
     return permissionMgmtObj->GetClaimCapabilities(claimCapabilities);
 }
 
-QStatus PermissionConfigurator::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo)
+QStatus PermissionConfigurator::GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {

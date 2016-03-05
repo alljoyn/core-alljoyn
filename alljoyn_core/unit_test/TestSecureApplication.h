@@ -33,6 +33,7 @@ using namespace qcc;
 #define DEFAULT_TEST_PORT 12345
 #define TEST_INTERFACE "test.interface"
 #define TEST_PROP_NAME "test_property"
+#define TEST_PROP_NAME2 "other_test_property"
 #define TEST_METHOD_NAME "test_method"
 #define TEST_SIGNAL_NAME "test_signal"
 #define DEFAULT_TEST_OBJ_PATH "/default/test/object/path"
@@ -56,7 +57,10 @@ class TestSecureApplication :
     QStatus JoinSession(TestSecureApplication& sessionHost, SessionId& sessionId, SessionPort port = DEFAULT_TEST_PORT, bool multipoint = false);
 
     QStatus SetAnyTrustedUserPolicy(TestSecurityManager& tsm, uint8_t actionMask, const char* interfaceName = TEST_INTERFACE);
+    QStatus SetPolicy(TestSecurityManager& tsm, PermissionPolicy& newPolicy);
+
     QStatus UpdateManifest(TestSecurityManager& tsm, uint8_t actionMask, const char* interfaceName = TEST_INTERFACE);
+    QStatus UpdateManifest(TestSecurityManager& tsm, const PermissionPolicy::Acl& manifest);
 
     ProxyBusObject* GetProxyObject(TestSecureApplication& host, SessionId sessionId, const char* objPath = DEFAULT_TEST_OBJ_PATH);
 
@@ -95,6 +99,11 @@ class TestSecureApplication :
         {
             cout << "TestObject::Get(" <<  propName << ", " << ifcName << ")" << endl;
             if (strcmp(ifcName, TEST_INTERFACE) == 0 && strcmp(propName, TEST_PROP_NAME) == 0) {
+                val.Set("b", state);
+                getCount++;
+                return ER_OK;
+            }
+            if (strcmp(ifcName, TEST_INTERFACE) == 0 && strcmp(propName, TEST_PROP_NAME2) == 0) {
                 val.Set("b", state);
                 getCount++;
                 return ER_OK;

@@ -29,6 +29,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/String.h>
 #include <qcc/Stream.h>
+#include <qcc/LockLevel.h>
 #include <Status.h>
 
 namespace qcc {
@@ -43,16 +44,17 @@ class Environ {
     typedef std::map<qcc::String, qcc::String>::const_iterator const_iterator;
 
     /**
-     * Create a new envionment (useful when launching other programs).
+     * Create a new envionment (useful when launching other programs). Lock checking
+     * is disabled to allow lock order checking to use Environ.
      */
-    Environ(void) { }
+    Environ() : lock(LOCK_LEVEL_CHECKING_DISABLED) { }
 
     /**
      * Return a pointer to the Environ instance that applies to the running application.
      *
      * @return  Pointer to the environment variable singleton.
      */
-    static Environ * AJ_CALL GetAppEnviron(void);
+    static Environ * AJ_CALL GetAppEnviron();
 
     /**
      * Return a specific environment variable
@@ -85,21 +87,21 @@ class Environ {
      *
      * @return  A const_iterator pointing to the beginning of the environment variables.
      */
-    const_iterator Begin(void) const { return vars.begin(); }
+    const_iterator Begin() const { return vars.begin(); }
 
     /**
      * Return an iterator to one past the last environment variable.
      *
      * @return  A const_iterator pointing to the end of the environment variables.
      */
-    const_iterator End(void) const { return vars.end(); }
+    const_iterator End() const { return vars.end(); }
 
     /**
      * Return the number of entries in the environment.
      *
      * @return  Number of entries in the environment.
      */
-    size_t Size(void) const { return vars.size(); }
+    size_t Size() const { return vars.size(); }
 
   private:
     static void Init();

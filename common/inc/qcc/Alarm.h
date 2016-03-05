@@ -83,18 +83,18 @@ class _Alarm {
     /**
      * Create an alarm that can be added to a Timer.
      *
-     * @param absoluteTime    Alarm time.
+     * @param relativeTime    Alarm time.
      * @param listener        Object to call when alarm is triggered.
      * @param context         Opaque context passed to listener callback.
      * @param periodMs        Periodicity of alarm in ms or 0 for no repeat.
      * @param limited         Whether this alarm should be counted towards the Timer's max alarm limit
      */
-    _Alarm(Timespec absoluteTime, AlarmListener* listener, void* context = NULL, uint32_t periodMs = 0, bool limited = true);
+    _Alarm(Timespec<MonotonicTime> relativeTime, AlarmListener* listener, void* context = NULL, uint32_t periodMs = 0, bool limited = true);
 
     /**
      * Create an alarm that can be added to a Timer.
      *
-     * @param relativeTimed   Number of ms from now that alarm will trigger.
+     * @param relativeTime    Number of ms from now that alarm will trigger.
      * @param listener        Object to call when alarm is triggered.
      * @param context         Opaque context passed to listener callback.
      * @param periodMs        Periodicity of alarm in ms or 0 for no repeat.
@@ -141,7 +141,7 @@ class _Alarm {
   private:
 
     static volatile int32_t nextId;
-    Timespec alarmTime;
+    Timespec<MonotonicTime> alarmTime;
     AlarmListener* listener;
     uint32_t periodMs;
     mutable void* context;

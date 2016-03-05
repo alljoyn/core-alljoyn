@@ -356,7 +356,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param seed       A seed string negotiated by the peers.
      * @param verifier   A verifier string that used to verify the session key.
      */
-    QStatus KeyGen(PeerState& peerState, const std::vector<uint8_t, SecureAllocator<uint8_t> >& seed, qcc::String& verifier, qcc::KeyBlob::Role role);
+    QStatus KeyGen(PeerState& peerState, const std::vector<uint8_t, qcc::SecureAllocator<uint8_t> >& seed, qcc::String& verifier, qcc::KeyBlob::Role role);
 
     /**
      * Get a property from this object
@@ -469,10 +469,20 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *  conversation hash state. The authentication protocol version is also
      *  hashed (before the GUIDs).
      *
+     *  @param initiatorFlag   The desired conversation hash to use
      *  @param peerState   The state of the peer.
      *  @param localFirst  If true compute Hash(local||remote), if false compute Hash(remote||local).
      */
-    void HashGUIDs(PeerState& peerState, bool localFirst);
+    void HashGUIDs(bool initiatorFlag, PeerState& peerState, bool localFirst);
+
+    /**
+     * determine whether the local peer needs to yield to the remote peer in a
+     * concurrent key exchange.  This call needs to protected for thread safe
+     * access.
+     *  @param initiatorFlag   is the key exchange started as an initiator or responder
+     *  @param peerState   The state of the peer.
+     */
+    bool NeedToYieldToPeer(bool initiatorFlag, PeerState& peerState);
 
     /**
      * The peer-to-peer authentication mechanisms available to this object

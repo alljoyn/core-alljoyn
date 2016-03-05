@@ -34,6 +34,7 @@
 #include <qcc/String.h>
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
+#include <qcc/LockLevel.h>
 
 #include <Status.h>
 
@@ -55,7 +56,7 @@ Mutex* Thread::threadListLock = NULL;
 map<ThreadId, Thread*>* Thread::threadList = NULL;
 
 static pthread_key_t cleanExternalThreadKey;
-static bool initialized = false;
+bool Thread::initialized = false;
 
 void Thread::CleanExternalThread(void* t)
 {
@@ -65,7 +66,7 @@ void Thread::CleanExternalThread(void* t)
     }
 
     Thread* thread = reinterpret_cast<Thread*>(t);
-    threadListLock->Lock();
+    threadListLock->Lock(MUTEX_CONTEXT);
     map<ThreadId, Thread*>::iterator it = threadList->find(thread->handle);
     if (it != threadList->end()) {
         if (it->second->isExternal) {
@@ -73,13 +74,14 @@ void Thread::CleanExternalThread(void* t)
             threadList->erase(it);
         }
     }
-    threadListLock->Unlock();
+    threadListLock->Unlock(MUTEX_CONTEXT);
 }
 
 QStatus Thread::Init()
 {
     if (!initialized) {
-        Thread::threadListLock = new Mutex();
+        /* Disable LockChecker for the threadListLock, thus allowing LockChecker to call GetThread() */
+        Thread::threadListLock = new Mutex(LOCK_LEVEL_CHECKING_DISABLED);
         Thread::threadList = new map<ThreadId, Thread*>();
         int ret = pthread_key_create(&cleanExternalThreadKey, Thread::CleanExternalThread);
         if (ret != 0) {
@@ -121,12 +123,12 @@ Thread* Thread::GetThread()
     Thread* ret = NULL;
 
     /* Find thread on Thread::threadList */
-    threadListLock->Lock();
+    threadListLock->Lock(MUTEX_CONTEXT);
     map<ThreadHandle, Thread*>::const_iterator iter = threadList->find(pthread_self());
     if (iter != threadList->end()) {
         ret = iter->second;
     }
-    threadListLock->Unlock();
+    threadListLock->Unlock(MUTEX_CONTEXT);
 
     /* If the current thread isn't on the list, then create an external (wrapper) thread */
     if (NULL == ret) {
@@ -141,12 +143,12 @@ const char* Thread::GetThreadName()
     Thread* thread = NULL;
 
     /* Find thread on Thread::threadList */
-    threadListLock->Lock();
+    threadListLock->Lock(MUTEX_CONTEXT);
     map<ThreadId, Thread*>::const_iterator iter = threadList->find(pthread_self());
     if (iter != threadList->end()) {
         thread = iter->second;
     }
-    threadListLock->Unlock();
+    threadListLock->Unlock(MUTEX_CONTEXT);
 
     /* If the current thread isn't on the list, then don't create an external (wrapper) thread */
     if (thread == NULL) {
@@ -158,7 +160,7 @@ const char* Thread::GetThreadName()
 
 void Thread::CleanExternalThreads()
 {
-    threadListLock->Lock();
+    threadListLock->Lock(MUTEX_CONTEXT);
     map<ThreadId, Thread*>::iterator it = threadList->begin();
     while (it != threadList->end()) {
         if (it->second->isExternal) {
@@ -168,7 +170,7 @@ void Thread::CleanExternalThreads()
             ++it;
         }
     }
-    threadListLock->Unlock();
+    threadListLock->Unlock(MUTEX_CONTEXT);
 }
 
 Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
@@ -184,10 +186,11 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     platformContext(NULL),
     alertCode(0),
     auxListeners(),
-    auxListenersLock(),
+    auxListenersLock(LOCK_LEVEL_THREAD_AUXLISTENERSLOCK),
     waitCount(0),
-    waitLock(),
-    hasBeenJoined(false)
+    waitLock(LOCK_LEVEL_THREAD_WAITLOCK),
+    hasBeenJoined(false),
+    hbjMutex(LOCK_LEVEL_THREAD_HBJMUTEX)
 {
     /* qcc::String is not thread safe.  Don't use it here. */
     funcName[0] = '\0';
@@ -197,7 +200,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     /* If this is an external thread, add it to the thread list here since Run will not be called */
     if (isExternal) {
         QCC_ASSERT(func == NULL);
-        threadListLock->Lock();
+        threadListLock->Lock(MUTEX_CONTEXT);
         (*threadList)[handle] = this;
         if (pthread_getspecific(cleanExternalThreadKey) == NULL) {
             int ret = pthread_setspecific(cleanExternalThreadKey, this);
@@ -206,7 +209,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
             }
             QCC_ASSERT(ret == 0);
         }
-        threadListLock->Unlock();
+        threadListLock->Unlock(MUTEX_CONTEXT);
     }
     QCC_DbgHLPrintf(("Thread::Thread() created %s - %x -- started:%d running:%d joined:%d", funcName, handle, started, running, joined));
 }
@@ -252,11 +255,11 @@ ThreadInternalReturn Thread::RunInternal(void* arg)
     QCC_DbgPrintf(("Thread::RunInternal: %s (pid=%x)", thread->funcName, (unsigned long) thread->handle));
 
     /* Add this Thread to list of running threads */
-    threadListLock->Lock();
+    threadListLock->Lock(MUTEX_CONTEXT);
     (*threadList)[thread->handle] = thread;
     thread->state = RUNNING;
     pthread_sigmask(SIG_UNBLOCK, &newmask, NULL);
-    threadListLock->Unlock();
+    threadListLock->Unlock(MUTEX_CONTEXT);
 
     /* Start the thread if it hasn't been stopped */
     if (!thread->isStopping) {
@@ -279,14 +282,14 @@ ThreadInternalReturn Thread::RunInternal(void* arg)
 
 
     /* Call aux listeners before main listener since main listner may delete the thread */
-    thread->auxListenersLock.Lock();
+    thread->auxListenersLock.Lock(MUTEX_CONTEXT);
     ThreadListeners::iterator it = thread->auxListeners.begin();
     while (it != thread->auxListeners.end()) {
         ThreadListener* listener = *it;
         listener->ThreadExit(thread);
         it = thread->auxListeners.upper_bound(listener);
     }
-    thread->auxListenersLock.Unlock();
+    thread->auxListenersLock.Unlock(MUTEX_CONTEXT);
 
     if (thread->threadListener) {
         thread->threadListener->ThreadExit(thread);
@@ -295,9 +298,9 @@ ThreadInternalReturn Thread::RunInternal(void* arg)
     /* This also means no QCC_DbgPrintf as they try to get context on the current thread */
 
     /* Remove this Thread from list of running threads */
-    threadListLock->Lock();
+    threadListLock->Lock(MUTEX_CONTEXT);
     threadList->erase(handle);
-    threadListLock->Unlock();
+    threadListLock->Unlock(MUTEX_CONTEXT);
 
     return reinterpret_cast<ThreadInternalReturn>(retVal);
 }
@@ -394,19 +397,19 @@ QStatus Thread::Alert(uint32_t alertCode)
 
 void Thread::AddAuxListener(ThreadListener* listener)
 {
-    auxListenersLock.Lock();
+    auxListenersLock.Lock(MUTEX_CONTEXT);
     auxListeners.insert(listener);
-    auxListenersLock.Unlock();
+    auxListenersLock.Unlock(MUTEX_CONTEXT);
 }
 
 void Thread::RemoveAuxListener(ThreadListener* listener)
 {
-    auxListenersLock.Lock();
+    auxListenersLock.Lock(MUTEX_CONTEXT);
     ThreadListeners::iterator it = auxListeners.find(listener);
     if (it != auxListeners.end()) {
         auxListeners.erase(it);
     }
-    auxListenersLock.Unlock();
+    auxListenersLock.Unlock(MUTEX_CONTEXT);
 }
 
 QStatus Thread::Join(void)
@@ -438,10 +441,10 @@ QStatus Thread::Join(void)
     /* Threads that join themselves must detach without blocking */
     if (handle == pthread_self()) {
         int32_t waiters = IncrementAndFetch(&waitCount);
-        hbjMutex.Lock();
+        hbjMutex.Lock(MUTEX_CONTEXT);
         if ((waiters == 1) && !hasBeenJoined) {
             hasBeenJoined = true;
-            hbjMutex.Unlock();
+            hbjMutex.Unlock(MUTEX_CONTEXT);
             int ret = 0;
             if (state != INITIAL) {
                 QCC_ASSERT(handle);
@@ -455,7 +458,7 @@ QStatus Thread::Join(void)
             }
             handle = 0;
         } else {
-            hbjMutex.Unlock();
+            hbjMutex.Unlock(MUTEX_CONTEXT);
 
         }
         DecrementAndFetch(&waitCount);
@@ -470,11 +473,11 @@ QStatus Thread::Join(void)
          */
         int ret = 0;
         int32_t waiters = IncrementAndFetch(&waitCount);
-        waitLock.Lock();
-        hbjMutex.Lock();
+        waitLock.Lock(MUTEX_CONTEXT);
+        hbjMutex.Lock(MUTEX_CONTEXT);
         if ((waiters == 1) && !hasBeenJoined) {
             hasBeenJoined = true;
-            hbjMutex.Unlock();
+            hbjMutex.Unlock(MUTEX_CONTEXT);
             if (state != INITIAL) {
                 QCC_ASSERT(handle);
                 ret = pthread_join(handle, NULL);
@@ -482,10 +485,10 @@ QStatus Thread::Join(void)
             handle = 0;
             QCC_DEBUG_ONLY(IncrementAndFetch(&joined));
         } else {
-            hbjMutex.Unlock();
+            hbjMutex.Unlock(MUTEX_CONTEXT);
 
         }
-        waitLock.Unlock();
+        waitLock.Unlock(MUTEX_CONTEXT);
         DecrementAndFetch(&waitCount);
 
         if (ret != 0) {

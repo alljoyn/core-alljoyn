@@ -30,6 +30,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/String.h>
 #include <qcc/Thread.h>
+#include <qcc/LockLevel.h>
 
 #include <alljoyn/AuthListener.h>
 
@@ -46,7 +47,7 @@ class ProtectedAuthListener : public AuthListener {
 
   public:
 
-    ProtectedAuthListener() : listener(NULL), refCount(0) { }
+    ProtectedAuthListener() : listener(NULL), lock(qcc::LOCK_LEVEL_PROTECTEDAUTHLISTENER_LOCK), refCount(0) { }
 
     /**
      * Virtual destructor for derivable class.

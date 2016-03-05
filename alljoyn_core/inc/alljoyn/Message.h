@@ -179,11 +179,11 @@ typedef qcc::ManagedObj<_Message> Message;
 
 
 /**
- * This class implements the functionality underlying the #Message class. Instances
+ * This class implements the functionality underlying the Message class. Instances
  * of #_Message should not be declared directly by applications. Rather applications
- * create instances of the class #Message which handles reference counting for the
+ * create instances of the class Message which handles reference counting for the
  * underlying #_Message instance. The members of #_Message are always accessed
- * indirectly via #Message.
+ * indirectly via Message.
  */
 class _Message {
 

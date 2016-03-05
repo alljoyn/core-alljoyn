@@ -52,4 +52,10 @@ typedef int qcc_UARTFd; /**< UART file descriptor type. */
 #define PRIiSIZET "zd"
 #endif
 
+/**
+ * Zero-terminated strings.
+ */
+typedef char*       AJ_PSTR;
+typedef const char* AJ_PCSTR;
+
 #endif

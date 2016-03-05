@@ -43,6 +43,7 @@ namespace ajn {
 _VirtualEndpoint::_VirtualEndpoint(const String& uniqueName, RemoteEndpoint& b2bEp) :
     _BusEndpoint(ENDPOINT_TYPE_VIRTUAL),
     m_uniqueName(uniqueName),
+    m_b2bEndpointsLock(LOCK_LEVEL_VIRTUALENDPOINT_MB2BENDPOINTSLOCK),
     m_hasRefs(false),
     m_epState(EP_STARTED)
 {
