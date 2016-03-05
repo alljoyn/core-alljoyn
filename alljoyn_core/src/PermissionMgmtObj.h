@@ -329,7 +329,7 @@ class PermissionMgmtObj : public BusObject {
      * Retrieve the claimable state of the application.
      * @return the claimable state
      */
-    PermissionConfigurator::ApplicationState GetApplicationState();
+    PermissionConfigurator::ApplicationState GetApplicationState() const;
 
     /**
      * Set the application state.  The state can't be changed from CLAIMED to
@@ -523,7 +523,7 @@ class PermissionMgmtObj : public BusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities);
+    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities) const;
 
 
     /**
@@ -534,7 +534,7 @@ class PermissionMgmtObj : public BusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo);
+    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const;
 
     /**
      * Store a membership certificate chain.

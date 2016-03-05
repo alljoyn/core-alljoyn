@@ -63,6 +63,7 @@ class ApplicationStateListenerTest : public testing::Test {
         ASSERT_EQ(ER_OK, tempBus.GetPermissionConfigurator().GetSigningPublicKey(someValidKey));
 
         ASSERT_EQ(ER_OK, tempBus.Stop());
+        ASSERT_EQ(ER_OK, tempBus.Join());
     }
 
     virtual void TearDown()
