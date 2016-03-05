@@ -20,6 +20,7 @@ $DIST/c/inc/alljoyn_c/AboutObj.h
 $DIST/c/inc/alljoyn_c/AboutObjectDescription.h
 $DIST/c/inc/alljoyn_c/AboutProxy.h
 $DIST/c/inc/alljoyn_c/AjAPI.h
+$DIST/c/inc/alljoyn_c/ApplicationStateListener.h
 $DIST/c/inc/alljoyn_c/AuthListener.h
 $DIST/c/inc/alljoyn_c/AutoPinger.h
 $DIST/c/inc/alljoyn_c/BusAttachment.h
@@ -34,6 +35,7 @@ $DIST/c/inc/alljoyn_c/MessageReceiver.h
 $DIST/c/inc/alljoyn_c/MsgArg.h
 $DIST/c/inc/alljoyn_c/Observer.h
 $DIST/c/inc/alljoyn_c/PasswordManager.h
+$DIST/c/inc/alljoyn_c/PermissionConfigurator.h
 $DIST/c/inc/alljoyn_c/PermissionConfigurationListener.h
 $DIST/c/inc/alljoyn_c/ProxyBusObject.h
 $DIST/c/inc/alljoyn_c/Session.h

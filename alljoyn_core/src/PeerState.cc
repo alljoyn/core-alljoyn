@@ -502,6 +502,7 @@ QStatus _PeerState::SetAuthSuite(uint32_t authSuite)
     case AUTH_SUITE_SRP_LOGON:
     case AUTH_SUITE_ECDHE_NULL:
     case AUTH_SUITE_ECDHE_PSK:
+    case AUTH_SUITE_ECDHE_SPEKE:
     case AUTH_SUITE_ECDHE_ECDSA:
     case AUTH_SUITE_GSSAPI:
         m_authSuite = authSuite;
@@ -522,6 +523,8 @@ QStatus _PeerState::SetAuthSuite(const String& authSuite)
         return this->SetAuthSuite(AUTH_SUITE_ECDHE_NULL);
     } else if (authSuite == "ALLJOYN_ECDHE_PSK") {
         return this->SetAuthSuite(AUTH_SUITE_ECDHE_PSK);
+    } else if (authSuite == "ALLJOYN_ECDHE_SPEKE") {
+        return this->SetAuthSuite(AUTH_SUITE_ECDHE_SPEKE);
     } else if (authSuite == "ALLJOYN_ECDHE_ECDSA") {
         return this->SetAuthSuite(AUTH_SUITE_ECDHE_ECDSA);
     } else if (authSuite == "ALLJOYN_SRP_LOGON") {

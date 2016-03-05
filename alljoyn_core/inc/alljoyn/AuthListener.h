@@ -381,6 +381,8 @@ class DefaultECDHEAuthListener : public AuthListener {
      *     returns true.
      * For ECDHE_PSK authentication mechanism, the RequestCredentials callback
      *     returns false.
+     * For ECDHE_SPEKE authentication mechanism, the RequestCredentials callback
+     *     returns false.
      * For ECDHE_ECDSA authentication mechanism, the RequestCredentials callback
      *     returns true without providing any credential.
      * This AuthListener is suitable to be used in Claimed application since
@@ -394,35 +396,55 @@ class DefaultECDHEAuthListener : public AuthListener {
      * For ECDHE_NULL authentication mechanism, the RequestCredentials callback
      *     returns true.
      * For ECDHE_PSK authentication mechanism, the RequestCredentials callback
-     *     returns true using the provided psk.
+     *     returns true using the provided PSK.
+     * For ECDHE_SPEKE authentication mechanism, the RequestCredentials callback
+     *     returns true using the provided password.
      * For ECDHE_ECDSA authentication mechanism, the RequestCredentials callback
      *     returns true without providing any credential.
      * This AuthListener is suitable to be used in Claimed application since
      * the framework will provide the Identity certificate chain to the peer.
-     * @param[in] psk the pre-shared secret
-     * @param[in] pskSize the size of the pre-shared secret.  It must be at
-     *                    least 128 bits.
+     * @param[in] psk the pre-shared secret (or password) for ECDHE_PSK
+     * @param[in] pskSize the size of the pre-shared key.  Must be zero or at
+     *                    least 16 bytes.  See the remark below on secret length.
+     *
+     * @remarks
      */
     DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize);
 
-    virtual ~DefaultECDHEAuthListener()
-    {
-        delete [] psk;
-    }
+    ~DefaultECDHEAuthListener();
 
     /**
-     * @brief updates the preshared used by this DefaultECDHEAuthListener.
+     * @brief updates the PSK used by this DefaultECDHEAuthListener
+     * for the ECDHE_PSK authentication method.
      *
-     * This method allows to update the current set pre-shared secret (or set
-     * when it is not yet defined) or clear it by providing a NULL array.
+     * This method updates the current set secret value (or sets
+     * when it is not yet defined) or clears it by providing a NULL array.
      *
-     * @param[in] psk the pre-shared secret or NULL.
-     * @param[in] pskSize the size of the pre-shared secret.  It must be at
-     *                    least 128 bits (pksSize >= 16) or 0 to clear the
-     *                    current set secret.
+     * @param[in] password the pre-shared key or nullptr.
+     * @param[in] password the size of the secret.  It must be at least 16 bytes
+     *                     when setting a value or 0 bytes when clearing current
+     *                     value.
+     * @return ER_OK on success
+     *
+     * @remarks This method is deprecated because ECHDE_PSK is deprecated.
+     *          See SetPassword(), to set a shared credential for the ECDHE_SPEKE
+     *          mechanism.
+     */
+    virtual QStatus SetPSK(const uint8_t* secret, size_t secretSize);
+
+    /**
+     * @brief updates the password used by this DefaultECDHEAuthListener.
+     *
+     * This method allows to update the current set password (or set
+     * when it is not yet defined) or clears it by providing a NULL array.
+     *
+     * @param[in] password the pre-shared secret or nullptr.
+     * @param[in] password the size of the password secret.  It must be at
+     *                    least 4 characters or 0 to clear the
+     *                    current value.
      * @return ER_OK on success
      */
-    virtual QStatus SetPSK(const uint8_t* psk, size_t pskSize);
+    virtual QStatus SetPassword(const uint8_t* password, size_t passwordSize);
 
     /**
      * @copydoc AuthListener::RequestCredentials
@@ -447,8 +469,10 @@ class DefaultECDHEAuthListener : public AuthListener {
      */
     DefaultECDHEAuthListener(const DefaultECDHEAuthListener& other);
 
-    uint8_t* psk;
-    size_t pskSize;
+    uint8_t* m_psk;
+    size_t m_pskSize;
+    uint8_t* m_password;
+    size_t m_passwordSize;
 };
 
 }

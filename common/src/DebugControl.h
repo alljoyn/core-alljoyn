@@ -47,6 +47,8 @@ class DebugControl {
 
     bool PrintThread() const;
 
+    bool DbgModulesSpecified() const;
+
   private:
     Mutex mutex;
     QCC_DbgMsgCallback cb;
