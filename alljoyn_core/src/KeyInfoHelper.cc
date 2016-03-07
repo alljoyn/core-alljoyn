@@ -172,4 +172,19 @@ QStatus KeyInfoHelper::GenerateKeyId(KeyInfoNISTP256& keyInfo)
     return ER_OK;
 }
 
+QStatus KeyInfoHelper::PEMToKeyInfoNISTP256(AJ_PCSTR pemKey, qcc::KeyInfoNISTP256& key)
+{
+    QStatus status;
+    qcc::ECCPublicKey eccPublicKey;
+
+    status = qcc::CertificateX509::DecodePublicKeyPEM(pemKey, &eccPublicKey);
+
+    if (ER_OK == status) {
+        key.SetPublicKey(&eccPublicKey);
+        status = GenerateKeyId(key);
+    }
+
+    return status;
+}
+
 }

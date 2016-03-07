@@ -694,57 +694,58 @@ Exit:
     return status;
 }
 
-Crypto_ECC::Crypto_ECC()
+static QStatus InitializeBCryptProviderHandles(uint8_t curveType)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     QStatus status = ER_OK;
     NTSTATUS ntStatus;
+    LPCWSTR ecdsaAlgId = nullptr;
+    LPCWSTR ecdhAlgId = nullptr;
 
-    uint8_t CurveType;
-
-    LPCWSTR ecdsaAlgId = NULL;
-    LPCWSTR ecdhAlgId = NULL;
-
-    QCC_DbgTrace(("Crypto_ECC::Crypto_ECC"));
-
-    eccState = new ECCState();
-
-    memset(eccState, 0, sizeof(*eccState));
-
-    CurveType = GetCurveType();
-
-    switch (CurveType) {
-    case ECC_NIST_P256:
+    switch (curveType) {
+    case Crypto_ECC::ECC_NIST_P256:
         ecdsaAlgId = BCRYPT_ECDSA_P256_ALGORITHM;
         ecdhAlgId = BCRYPT_ECDH_P256_ALGORITHM;
         break;
 
     default:
         status = ER_CRYPTO_ILLEGAL_PARAMETERS;
-        QCC_LogError(status, ("Unrecognized curve type %d", CurveType));
-        goto Exit;
+        QCC_LogError(status, ("Unrecognized curve type %d", curveType));
+        return status;
     }
 
-    if (NULL == cngCache.ecdsaHandles[CurveType]) {
-        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdsaHandles[CurveType], ecdsaAlgId, NULL, 0);
+    if (NULL == cngCache.ecdsaHandles[curveType]) {
+        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdsaHandles[curveType], ecdsaAlgId, NULL, 0);
         if (!BCRYPT_SUCCESS(ntStatus)) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Failed to open ECDSA algorithm provider, ntStatus=%X", ntStatus));
-            goto Exit;
+            return status;
         }
     }
 
-    if (NULL == cngCache.ecdhHandles[CurveType]) {
-        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdhHandles[CurveType], ecdhAlgId, NULL, 0);
+    if (NULL == cngCache.ecdhHandles[curveType]) {
+        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdhHandles[curveType], ecdhAlgId, NULL, 0);
         if (!BCRYPT_SUCCESS(ntStatus)) {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Failed to open ECDH algorithm provider, ntStatus=%X", ntStatus));
-            goto Exit;
+            return status;
         }
     }
 
-Exit:
+    return ER_OK;
+}
 
-    if (ER_OK != status) {
+Crypto_ECC::Crypto_ECC()
+{
+    QCC_DbgTrace(("Crypto_ECC::Crypto_ECC"));
+
+    QStatus status = InitializeBCryptProviderHandles(GetCurveType());
+    if (ER_OK == status) {
+        eccState = new ECCState();
+
+        memset(eccState, 0, sizeof(*eccState));
+    } else {
         /*
          *  Don't clean up any of the BCrypt Algorithm provider handles.
          *  If they have been created on the CNG Cache they'll be freed when that is cleaned up.
@@ -755,10 +756,8 @@ Exit:
          * But to keep things clean, make sure eccState isn't pointing at anything partly initialized.
          */
         eccState = NULL;
-
         abort();
     }
-
 }
 
 const ECCPublicKey* Crypto_ECC::GetDHPublicKey() const
@@ -794,6 +793,7 @@ void Crypto_ECC::SetDHPublicKey(const ECCPublicKey* pubKey)
                                      cngCache.ecdhHandles[CurveType],
                                      &eccState->ecdhPublicKey);
 
+    QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
         abort();
     }
@@ -832,6 +832,7 @@ void Crypto_ECC::SetDHPrivateKey(const ECCPrivateKey* privateKey)
                                       cngCache.ecdhHandles[CurveType],
                                       &eccState->ecdhPrivateKey);
 
+    QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
         abort();
     }
@@ -848,6 +849,24 @@ QStatus Crypto_ECC::GenerateDHKeyPair() {
                                       cngCache.ecdhHandles[CurveType],
                                       &eccState->ecdhPublicKey,
                                       &eccState->ecdhPrivateKey);
+}
+
+
+QStatus Crypto_ECC::GenerateSPEKEKeyPair(const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID) {
+
+    /*
+     * CNG does not implement EC-SPEKE, so the builtin key EC-SPEKE key generation is used.
+     * We need to call SetDHPrivateKey and SetDHPublic so that the CNG-specific part of ECCState is properly updated.
+     */
+    QStatus status = Crypto_ECC_GenerateSPEKEKeyPair(&eccState->dhPublicKey, &eccState->dhPrivateKey, pw, pwLen, clientGUID, serviceGUID);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    this->SetDHPublicKey(&eccState->dhPublicKey);
+    this->SetDHPrivateKey(&eccState->dhPrivateKey);
+
+    return status;
 }
 
 QStatus Crypto_ECC::GenerateSharedSecret(const ECCPublicKey* peerPublicKey, ECCSecret* secret)
@@ -1351,6 +1370,15 @@ static QStatus ECCPublicKey_Validate(ECCPublicKey* pubKey)
     QStatus status;
     uint8_t CurveType = Crypto_ECC::ECC_NIST_P256;
     BCRYPT_KEY_HANDLE keyHandle = nullptr;
+
+    /* Most of the ECC code assumes it's called with a Crypto_ECC object having been created.
+     * That's not necessarily true with this function, so be sure the BCrypt provider handles
+     * are opened.
+     */
+    status = InitializeBCryptProviderHandles(CurveType);
+    if (ER_OK != status) {
+        return status;
+    }
 
     status = Crypto_ECC_SetPublicKey(CurveType,
                                      CNG_ECC_ALG_DSA,

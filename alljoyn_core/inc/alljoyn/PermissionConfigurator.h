@@ -116,6 +116,15 @@ class PermissionConfigurator {
     QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count);
 
     /**
+     * Set the manifest template for the application from an XML.
+     *
+     * @params manifestXml XML containing the manifest template.
+     *
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus SetManifestTemplateFromXml(AJ_PCSTR manifestXml);
+
+    /**
      * Retrieve the state of the application.
      * @param[out] applicationState the application state
      * @return
@@ -123,7 +132,7 @@ class PermissionConfigurator {
      *      - #ER_NOT_IMPLEMENTED if the method is not implemented
      *      - #ER_FEATURE_NOT_AVAILABLE if the value is not known
      */
-    QStatus GetApplicationState(ApplicationState& applicationState);
+    QStatus GetApplicationState(ApplicationState& applicationState) const;
 
     /**
      * Set the application state.  The state can't be changed from CLAIMED to
@@ -137,7 +146,7 @@ class PermissionConfigurator {
     QStatus SetApplicationState(ApplicationState newState);
 
     /**
-     * Retrieve the public key info fo the signing key.
+     * Retrieve the public key info for the signing key.
      * @param[out] keyInfo the public key info
      * @return ER_OK if successful; otherwise, an error code.
      */
@@ -151,9 +160,9 @@ class PermissionConfigurator {
     QStatus SignCertificate(qcc::CertificateX509& cert);
 
     /**
-     * Reset the Permission module by removing all the trust anchors, DSA keys,
-     * installed policy and certificates.  This call must be invoked after the
-     * bus attachment has enable peer security.
+     * Reset the permission settings by removing the manifest all the
+     * trust anchors, installed policy and certificates. This call
+     * must be invoked after the bus attachment has enable peer security.
      * @return ER_OK if successful; otherwise, an error code.
      * @see BusAttachment::EnablePeerSecurity
      */
@@ -196,7 +205,7 @@ class PermissionConfigurator {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities);
+    QStatus GetClaimCapabilities(PermissionConfigurator::ClaimCapabilities& claimCapabilities) const;
 
     /**
      * Set the additional information on the claim capabilities.
@@ -223,7 +232,7 @@ class PermissionConfigurator {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo);
+    QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const;
 
   private:
     /**
