@@ -392,6 +392,9 @@ TEST(SecurityOtherTest, methodCallOverECDHE_ECDSASession) {
     EXPECT_TRUE(peer2AuthListener.verifyCredentialsCalled);
     EXPECT_TRUE(peer2AuthListener.authenticationSuccessfull);
     EXPECT_FALSE(peer2AuthListener.securityViolationCalled);
+
+    // Remove the session port listener allocated on the stack, before it gets destroyed
+    EXPECT_EQ(ER_OK, peer2Bus.UnbindSessionPort(sessionPort));
 }
 
 /*
@@ -778,6 +781,11 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
 
         EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
     }
+
+    // Remove the session port listeners allocated on the stack, before they get destroyed
+    EXPECT_EQ(ER_OK, managerBus.UnbindSessionPort(managerSessionPort));
+    EXPECT_EQ(ER_OK, peer1Bus.UnbindSessionPort(peer1SessionPort));
+    EXPECT_EQ(ER_OK, peer2Bus.UnbindSessionPort(peer2SessionPort));
 }
 
 class SecurityOtherECDHE_NULLAuthListener : public AuthListener {
