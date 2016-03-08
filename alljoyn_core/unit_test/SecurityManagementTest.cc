@@ -3757,6 +3757,9 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         MsgArg membershipSummaries;
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetMembershipSummaries(membershipSummaries));
     }
+
+    // Remove the session port listener allocated on the stack, before it gets destroyed
+    EXPECT_EQ(ER_OK, peer2.UnbindSessionPort(sessionPort));
 }
 
 /*

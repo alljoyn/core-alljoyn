@@ -412,6 +412,9 @@ TEST_F(PresenceTest, PingSessionNames) {
     // stop second bus
     otherBus.Stop();
     otherBus.Join();
+
+    // Remove the session port listener allocated on the stack, before it is destroyed
+    EXPECT_EQ(ER_OK, bus.UnbindSessionPort(portA));
 }
 
 // ping with invalid "null" name as an argument, NOTE: ER_BUS_BAD_BUS_NAME is returned instead of ER_BAD_ARG_1

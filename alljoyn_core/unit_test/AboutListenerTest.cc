@@ -99,7 +99,6 @@ class AboutListenerTest : public testing::Test {
         EXPECT_TRUE(aboutData.IsValid()) << "failed to setup about data.\n";
 
         SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-        AnnounceListenerTestSessionPortListener listener;
         status = serviceBus->BindSessionPort(port, opts, listener);
         EXPECT_EQ(ER_OK, status);
     }
@@ -114,6 +113,7 @@ class AboutListenerTest : public testing::Test {
         }
     }
 
+    AnnounceListenerTestSessionPortListener listener;
     BusAttachment* serviceBus;
     AboutData aboutData;
     SessionPort port;

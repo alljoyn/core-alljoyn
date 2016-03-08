@@ -205,6 +205,10 @@ TEST_F(SessionTest, TwoMultipointSessions)
      */
     ASSERT_NE(outIdA, outIdB);
     qcc::Sleep(100); /* Let all callbacks come before stopping */
+
+    /* Remove the session port listeners allocated on the stack, before they get destroyed */
+    ASSERT_EQ(ER_OK, busA.UnbindSessionPort(portA));
+    ASSERT_EQ(ER_OK, busB.UnbindSessionPort(portB));
 }
 
 bool sessionMemberAddedFlagA = false;
@@ -442,6 +446,9 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
         qcc::Sleep(10);
     }
     qcc::Sleep(10);
+
+    //Remove the session port listener allocated on the stack, before it gets destroyed
+    EXPECT_EQ(ER_OK, busA.UnbindSessionPort(port));
 }
 
 static int sessionJoinedCounter;
@@ -693,6 +700,8 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
 
     qcc::Sleep(200);         /* let all callbacks finish */
 
+    /* Remove the session port listener allocated on the stack, before it gets destroyed */
+    EXPECT_EQ(ER_OK, busHost.UnbindSessionPort(port));
     return true;
 }
 
@@ -879,6 +888,8 @@ TEST_F(SessionTest, RemoveSessionMember) {
     EXPECT_TRUE(sessionMemberRemovedFlagA);
     EXPECT_TRUE(sessionMemberRemovedFlagB);
 
+    /* Remove the session port listener allocated on the stack, before it gets destroyed */
+    EXPECT_EQ(ER_OK, busA.UnbindSessionPort(port));
 }
 
 typedef enum {
@@ -1354,6 +1365,9 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     busJoiner2.LeaveSession(sessionId);
 
     qcc::Sleep(100);         /* let all callbacks finish */
+
+    /* Remove the session port listener allocated on the stack, before it gets destroyed */
+    EXPECT_EQ(ER_OK, busHost.UnbindSessionPort(port));
 }
 
 TEST_F(SessionTest, MultipointSelfJoinRemoveMember) {
@@ -1414,6 +1428,8 @@ TEST_F(SessionTest, MultipointSelfJoinRemoveMember) {
     EXPECT_EQ(2, sessionMemberRemovedCounter);
     EXPECT_EQ(2, sessionLostCounter);
 
+    /* Remove the session port listener allocated on the stack, before it gets destroyed */
+    EXPECT_EQ(ER_OK, busA.UnbindSessionPort(port));
 }
 
 TEST_F(SessionTest, MultipointExtended_AB_C_2ndJoiner_B_leaves_C_leaves) {
