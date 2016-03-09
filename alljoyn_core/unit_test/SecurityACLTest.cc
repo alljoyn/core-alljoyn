@@ -849,6 +849,12 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
         EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "king", NULL, static_cast<size_t>(0), replyMsg));
         EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "sing", NULL, static_cast<size_t>(0), replyMsg));
     }
+
+    // Remove the session port listeners allocated on the stack, before they get destroyed
+    EXPECT_EQ(ER_OK, managerBus.UnbindSessionPort(managerSessionPort));
+    EXPECT_EQ(ER_OK, peer1Bus.UnbindSessionPort(peer1SessionPort));
+    EXPECT_EQ(ER_OK, peer2Bus.UnbindSessionPort(peer2SessionPort));
+    EXPECT_EQ(ER_OK, peer3Bus.UnbindSessionPort(peer3SessionPort));
 }
 
 /**
@@ -1634,4 +1640,9 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
     EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "ping", NULL, static_cast<size_t>(0), replyMsg));
     EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "king", NULL, static_cast<size_t>(0), replyMsg));
     EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "sing", NULL, static_cast<size_t>(0), replyMsg));
+
+    // Remove the session port listeners allocated on the stack, before they get destroyed
+    EXPECT_EQ(ER_OK, managerBus.UnbindSessionPort(managerSessionPort));
+    EXPECT_EQ(ER_OK, peer1Bus.UnbindSessionPort(peer1SessionPort));
+    EXPECT_EQ(ER_OK, peer2Bus.UnbindSessionPort(peer2SessionPort));
 }

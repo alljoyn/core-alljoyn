@@ -137,17 +137,4 @@
 #define WHITELISTED_APPLICATION       "WhitelistedApplication"
 ///@}
 
-/**
- * @name _WIN32_WINNT version constants
- * _WIN32_WINNT version constants, defined here just in case the Windows SDK version used to
- * compile AllJoyn doesn't include them already in Include\shared\sdkddkver.h. Compiler would complain
- * if the SDK public header values were different from the values below.
- */
-///@{
-#define _WIN32_WINNT_WIN7     0x0601
-#define _WIN32_WINNT_WIN8     0x0602
-#define _WIN32_WINNT_WINBLUE  0x0603
-#define _WIN32_WINNT_WIN10    0x0A00
-///@}
-
 #endif

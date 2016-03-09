@@ -67,6 +67,12 @@ namespace ajn {
 #define PEER_SECRET_RECORD_VERSION 1
 
 /**
+ * If credentials do not have an expiration, expire them after this many
+ * seconds.
+ */
+#define DEFAULT_CRED_EXPIRATION 86400   /* one day */
+
+/**
  * Calculate the size of the Peer secret record.  This record has the
  * following fields:
  *  uint8_t version;
@@ -278,6 +284,51 @@ QStatus KeyExchangerECDHE::GenerateECDHEKeyPair()
     return ecc.GenerateDHKeyPair();
 }
 
+QStatus KeyExchangerECDHE_SPEKE::GenerateECDHEKeyPair()
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    GUID128 localGuid;
+    GUID128 remoteGuid;
+    QStatus status;
+
+    /* Get the GUIDs */
+    status = bus.GetInternal().GetKeyStore().GetGuid(localGuid);
+    if (status != ER_OK) {
+        return status;
+    }
+    remoteGuid = peerState->GetGuid();
+
+    /* Get the password */
+    AuthListener::Credentials creds;
+    uint16_t credsMask = AuthListener::CRED_PASSWORD;
+    qcc::String peerName = bus.GetUniqueName();
+
+    bool ok = listener.RequestCredentials(GetSuiteName(), peerName.c_str(), authCount, "", credsMask, creds);
+    if (!ok) {
+        QCC_DbgPrintf(("KeyExchangerECDHE_SPEKE::RequestCredentials call failed"));
+        return ER_AUTH_USER_REJECT;
+    }
+    if (creds.IsSet(AuthListener::CRED_EXPIRATION)) {
+        SetSecretExpiration(creds.GetExpiration());
+    } else {
+        SetSecretExpiration(DEFAULT_CRED_EXPIRATION);
+    }
+    if (!creds.IsSet(AuthListener::CRED_PASSWORD)) {
+        QCC_DbgPrintf(("KeyExchangerECDHE_SPEKE::RequestCredentialsCB password not provided"));
+        return ER_AUTH_FAIL;
+    }
+
+    /* Generate the key pair (with GUIDs in the right order) */
+    if (IsInitiator()) {
+        status = ecc.GenerateSPEKEKeyPair((uint8_t*) creds.GetPassword().data(), creds.GetPassword().length(), localGuid, remoteGuid);
+    } else {
+        status = ecc.GenerateSPEKEKeyPair((uint8_t*) creds.GetPassword().data(), creds.GetPassword().length(), remoteGuid, localGuid);
+    }
+
+    return status;
+}
+
 const ECCPublicKey* KeyExchangerECDHE::GetECDHEPublicKey()
 {
     return ecc.GetDHPublicKey();
@@ -336,9 +387,10 @@ void KeyExchanger::ShowCurrentDigest(const char* ref)
 
 QStatus KeyExchangerECDHE::RespondToKeyExchange(Message& msg, MsgArg* variant, uint32_t remoteAuthMask, uint32_t authMask)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     Message replyMsg(bus);
 
-    QCC_DbgHLPrintf(("KeyExchangerECDHE::RespondToKeyExchange"));
     /* hash the handshake data */
     peerState->AcquireConversationHashLock(IsInitiator());
     peerState->UpdateHash(IsInitiator(), CONVERSATION_V1, HexStringToByteString(U32ToString(remoteAuthMask, 16, 2 * sizeof(remoteAuthMask), '0')));
@@ -488,7 +540,6 @@ void KeyExchangerECDHE::KeyExchangeGenKey(MsgArg& variant)
     }
 }
 
-
 bool KeyExchangerECDHE_ECDSA::IsTrustAnchor(const ECCPublicKey* publicKey)
 {
     bool isTrustAnchor = false;
@@ -556,6 +607,8 @@ QStatus KeyExchangerECDHE::KeyExchangeReadKey(MsgArg& variant)
 
 QStatus KeyExchangerECDHE::ExecKeyExchange(uint32_t authMask, KeyExchangerCB& callback, uint32_t* remoteAuthMask)
 {
+    QCC_DbgTrace(("%s (authMask=%u, remoteAuthMask=%u)", __FUNCTION__, authMask, *remoteAuthMask));
+
     QStatus status = GenerateECDHEKeyPair();
     if (status != ER_OK) {
         return status;
@@ -653,6 +706,8 @@ QStatus KeyExchangerECDHE::GenerateRemoteVerifier(uint8_t* verifier, size_t veri
 
 QStatus KeyExchanger::ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     QStatus status;
     if (!IsInitiator()) {
         status = RequestCredentialsCB(peerName);
@@ -703,6 +758,8 @@ static QStatus DoStoreMasterSecret(BusAttachment& bus, const qcc::GUID128& guid,
 
 QStatus KeyExchangerECDHE::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     return DoStoreMasterSecret(bus, guid, masterSecret, (const uint8_t*) GetSuiteName(), strlen(GetSuiteName()), secretExpiration, IsInitiator(), accessRights);
 }
 
@@ -806,6 +863,8 @@ QStatus KeyExchanger::ParsePeerSecretRecord(const KeyBlob& rec, KeyBlob& masterS
 
 QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, const uint8_t accessRights[4])
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     if (peerDSAPubKey) {
         /* build a new keyblob with master secret, peer DSA public key, manifest digest, and issuer public keys */
         size_t bufferSize = CalcPeerSecretRecordSize(peerIssuerPubKeys.size());
@@ -849,6 +908,8 @@ QStatus KeyExchangerECDHE_ECDSA::StoreMasterSecret(const qcc::GUID128& guid, con
 
 QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
     QStatus status = GenerateLocalVerifier(verifier, sizeof(verifier));
@@ -868,6 +929,8 @@ QStatus KeyExchanger::ReplyWithVerifier(Message& msg)
 
 QStatus KeyExchangerECDHE_NULL::RequestCredentialsCB(const char* peerName)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     AuthListener::Credentials creds;
     bool ok = listener.RequestCredentials(GetSuiteName(),
                                           peerName, authCount, "", AuthListener::CRED_EXPIRATION, creds);
@@ -884,6 +947,8 @@ QStatus KeyExchangerECDHE_NULL::RequestCredentialsCB(const char* peerName)
 
 QStatus KeyExchangerECDHE_NULL::KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     *authorized = false;
     QStatus status = GenerateMasterSecret(&peerPubKey);
     if (status != ER_OK) {
@@ -932,6 +997,8 @@ QStatus KeyExchangerECDHE_NULL::KeyAuthentication(KeyExchangerCB& callback, cons
 
 QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     /* compute the local verifier to send back */
     uint8_t verifier[AUTH_VERIFIER_LEN];
     QStatus status = GenerateLocalVerifier(verifier, sizeof(verifier));
@@ -952,6 +1019,8 @@ QStatus KeyExchangerECDHE_PSK::ReplyWithVerifier(Message& msg)
 
 QStatus KeyExchangerECDHE_PSK::RequestCredentialsCB(const char* peerName)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     AuthListener::Credentials creds;
     uint16_t credsMask = AuthListener::CRED_PASSWORD;
     if (pskName != "<anonymous>") {
@@ -966,7 +1035,7 @@ QStatus KeyExchangerECDHE_PSK::RequestCredentialsCB(const char* peerName)
     if (creds.IsSet(AuthListener::CRED_EXPIRATION)) {
         SetSecretExpiration(creds.GetExpiration());
     } else {
-        SetSecretExpiration(86400);      /* expires in one day */
+        SetSecretExpiration(DEFAULT_CRED_EXPIRATION);
     }
     if (creds.IsSet(AuthListener::CRED_USER_NAME)) {
         pskName = creds.GetUserName();
@@ -1036,6 +1105,8 @@ QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* peerPskName, size
 
 QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     QStatus status;
     *authorized = false;
     uint8_t* peerPskName;
@@ -1078,6 +1149,8 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
 
 QStatus KeyExchangerECDHE_PSK::KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     *authorized = false;
     QStatus status = GenerateMasterSecret(&peerPubKey);
     if (status != ER_OK) {
@@ -1174,6 +1247,8 @@ KeyExchangerECDHE_ECDSA::~KeyExchangerECDHE_ECDSA()
 
 QStatus KeyExchangerECDHE_ECDSA::RequestCredentialsCB(const char* peerName)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     /* check the Auth listener */
     AuthListener::Credentials creds;
     uint16_t credsMask = AuthListener::CRED_PRIVATE_KEY | AuthListener::CRED_CERT_CHAIN | AuthListener::CRED_EXPIRATION;
@@ -1345,6 +1420,8 @@ static void CalculateSecretExpiration(const CertificateX509& cert, uint32_t& exp
 
 QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     QStatus status = ER_OK;
     if (!IsInitiator()) {
         status = RequestCredentialsCB(peerName);
@@ -1501,6 +1578,8 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
 
 QStatus KeyExchangerECDHE_ECDSA::ReplyWithVerifier(Message& msg)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     QStatus status;
     MsgArg variant;
     status = GenVerifierSigInfoArg(variant, false);
@@ -1603,6 +1682,8 @@ QStatus KeyExchangerECDHE_ECDSA::GenVerifierSigInfoArg(MsgArg& msgArg, bool upda
 
 QStatus KeyExchangerECDHE_ECDSA::KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
     *authorized = false;
     QStatus status = GenerateMasterSecret(&peerPubKey);
     if (status != ER_OK) {

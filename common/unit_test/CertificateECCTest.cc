@@ -400,7 +400,7 @@ TEST_F(CertificateECCTest, GenSelfSignECCX509CertForBBservice)
     ECCPublicKey subjectPublicKey;
     IdentityCertificate x509;
 
-    /* cert expires in one year */
+    /* cert expires in ten years */
     QStatus status = GenKeyAndCreateCert(issuer, "1010101", "organization", &dsaPrivateKey, &dsaPublicKey, &subjectPrivateKey, &subjectPublicKey, true, 10 * 365 * 24 * 3600, x509);
     ASSERT_EQ(ER_OK, status) << " GenKeyAndCreateCert failed with actual status: " << QCC_StatusText(status);
 

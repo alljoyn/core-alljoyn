@@ -103,7 +103,7 @@ QStatus Crypto::Init()
 
 void Crypto::Shutdown()
 {
-    if (!initialized) {
+    if (initialized) {
         cngCache.~CngCache();
         initialized = false;
     }
