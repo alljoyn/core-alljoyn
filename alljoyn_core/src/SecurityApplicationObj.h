@@ -119,7 +119,9 @@ class SecurityApplicationObj : public PermissionMgmtObj {
 
     /**
      * This method allows an admin to update the application's identity
-     * certificate chain and its manifest.
+     * certificate chain and its manifests. Any existing manifests in the app's key store
+     * are removed; use the InstallManifests method to append manifests without removing
+     * existing ones.
      *
      * @param[in] member interface member
      * @param[in] msg alljoyn message
@@ -181,7 +183,16 @@ class SecurityApplicationObj : public PermissionMgmtObj {
     void EndManagement(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
 
     /**
-     * Handles the GetPropery request
+     * This method accepts a number of new manifests and adds them to the current manifests
+     * in the peer's key store. Existing manifests in the store are retained.
+     *
+     * @param[in] member interface member
+     * @param[in] msg alljoyn message
+     */
+    void InstallManifests(const ajn::InterfaceDescription::Member* member, ajn::Message& msg);
+
+    /**
+     * Handles the GetProperty request
      * @param[in]  ifcName  interface name
      * @param[in]  propName the name of the properly
      * @param[in]  val reference of MsgArg out parameter.

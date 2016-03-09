@@ -156,7 +156,7 @@ class KeyExchanger {
      * @param rec the peer secret record
      * @param[out] masterSecret the master secret
      * @param[out] publicKey the buffer holding the public key.
-     * @param[out] manifestDigest the buffer holding the manifest digest.
+     * @param[out] identityCertificateThumbprint the buffer to receive the SHA-256 thumbprint of the identity certificate
      * @param[out] issuerPublicKeys the vector holding the list of issuer
      *              public keys
      * @param[out] publicKeyAvailable flag indicating whether the public key
@@ -166,7 +166,7 @@ class KeyExchanger {
     static QStatus ParsePeerSecretRecord(const qcc::KeyBlob& rec,
                                          qcc::KeyBlob& masterSecret,
                                          qcc::ECCPublicKey* publicKey,
-                                         uint8_t* manifestDigest,
+                                         uint8_t* identityCertificateThumbprint,
                                          std::vector<qcc::ECCPublicKey>& issuerPublicKeys,
                                          bool& publicKeyAvailable);
 
@@ -465,9 +465,9 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
         certChainLen(0),
         certChain(NULL),
         trustAnchorList(trustAnchorList),
-        peerDSAPubKey(NULL)
+        peerDSAPubKey(NULL),
+        peerIdentityCertificateThumbprint()
     {
-        memset(peerManifestDigest, 0, sizeof(peerManifestDigest));
     }
 
     virtual ~KeyExchangerECDHE_ECDSA();
@@ -518,8 +518,8 @@ class KeyExchangerECDHE_ECDSA : public KeyExchangerECDHE {
     qcc::CertificateX509* certChain;
     PermissionMgmtObj::TrustAnchorList* trustAnchorList;
     qcc::ECCPublicKey* peerDSAPubKey;
-    uint8_t peerManifestDigest[qcc::Crypto_SHA256::DIGEST_SIZE];
     std::vector<qcc::ECCPublicKey> peerIssuerPubKeys;
+    std::vector<uint8_t> peerIdentityCertificateThumbprint;
 };
 
 } /* namespace ajn */
