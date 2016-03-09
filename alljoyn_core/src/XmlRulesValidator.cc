@@ -106,7 +106,7 @@ QStatus XmlRulesValidator::ValidateRules(const PermissionPolicy::Rule* rules, co
     QStatus status = (rulesCount > 0) ? ER_OK : ER_FAIL;
 
     if (ER_OK == status) {
-        std::unordered_map<std::string, std::vector<PermissionPolicy::Rule> > objectToRulesMap;
+        std::map<std::string, std::vector<PermissionPolicy::Rule> > objectToRulesMap;
         AssignRulesToObjects(rules, rulesCount, objectToRulesMap);
 
         status = ValidateObject(objectToRulesMap);
@@ -115,14 +115,14 @@ QStatus XmlRulesValidator::ValidateRules(const PermissionPolicy::Rule* rules, co
     return (ER_OK == status) ? ER_OK : ER_FAIL;
 }
 
-void XmlRulesValidator::AssignRulesToObjects(const PermissionPolicy::Rule* rules, const size_t rulesCount, std::unordered_map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap)
+void XmlRulesValidator::AssignRulesToObjects(const PermissionPolicy::Rule* rules, const size_t rulesCount, std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap)
 {
     for (size_t index = 0; index < rulesCount; index++) {
         objectToRulesMap[rules[index].GetObjPath().c_str()].push_back(rules[index]);
     }
 }
 
-QStatus XmlRulesValidator::ValidateObject(const std::unordered_map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap)
+QStatus XmlRulesValidator::ValidateObject(const std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap)
 {
     QStatus status = ER_OK;
     for (auto rulesUnderObject : objectToRulesMap) {
