@@ -38,12 +38,10 @@ ApplicationMonitor::ApplicationMonitor(BusAttachment* ba) :
     }
 
     busAttachment->RegisterApplicationStateListener(*this);
-    busAttachment->AddApplicationStateRule();
 }
 
 ApplicationMonitor::~ApplicationMonitor()
 {
-    busAttachment->RemoveApplicationStateRule();
     busAttachment->UnregisterApplicationStateListener(*this);
 }
 
