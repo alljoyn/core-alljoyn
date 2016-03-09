@@ -191,7 +191,7 @@ void XmlRulesConverter::BuildActionMask(const qcc::XmlElement* xmlMember, uint8_
 
 void XmlRulesConverter::BuildXmlManifest(const PermissionPolicy::Rule* rules, const size_t rulesCount, qcc::XmlElement* manifestXml)
 {
-    std::unordered_map<std::string, std::vector<PermissionPolicy::Rule> > objectToRulesMap;
+    std::map<std::string, std::vector<PermissionPolicy::Rule> > objectToRulesMap;
     XmlRulesValidator::AssignRulesToObjects(rules, rulesCount, objectToRulesMap);
 
     for (auto objectAndRulesPair : objectToRulesMap) {
