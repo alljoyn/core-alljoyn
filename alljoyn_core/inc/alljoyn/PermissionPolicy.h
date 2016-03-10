@@ -30,9 +30,13 @@
 #include <qcc/String.h>
 #include <qcc/KeyInfoECC.h>
 #include <qcc/GUID.h>
+#include <qcc/CertificateECC.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/MsgArg.h>
 #include <alljoyn/Message.h>
+
+#include <vector>
+#include <string>
 
 namespace ajn {
 
@@ -817,6 +821,360 @@ class DefaultPolicyMarshaller : public PermissionPolicy::Marshaller {
     QStatus MarshalPrep(const PermissionPolicy::Rule* rules, size_t count);
     Message& msg;
 };
+
+/**
+ * Class used to encapsulate and manipulate a manifest.
+ */
+
+class _Manifest;
+
+typedef qcc::ManagedObj<_Manifest> Manifest;
+
+class _Manifest {
+
+    friend class AllJoynPeerObj;
+    friend class PermissionMgmtObj;
+    friend class SecurityApplicationObj;
+    friend class SecurityApplicationProxy;
+
+  public:
+    /** MsgArg signature for an array of signed manifests. */
+    static AJ_PCSTR s_MsgArgArraySignature;
+    /** MsgArg signature for a single signed manifest. */
+    static AJ_PCSTR s_MsgArgSignature;
+    /** MsgArg signature for a single signed manifest without the cryptographic signature field. */
+    static AJ_PCSTR s_MsgArgDigestSignature;
+    /** MsgArg signature for a 15.09-format MsgArg. */
+    static AJ_PCSTR s_TemplateMsgArgSignature;
+
+    /** Default version number for new manifests. */
+    static const uint32_t DefaultVersion;
+
+    /**
+     * Constructor.
+     */
+    _Manifest();
+
+    /**
+     * Copy constructor.
+     * @param[in] other Manifest being copied
+     */
+    _Manifest(const _Manifest& other);
+
+    /**
+     * Destructor.
+     */
+    ~_Manifest();
+
+    /**
+     * Assignment operator.
+     * @param[in] other Manifest being assigned from
+     */
+    _Manifest& operator=(const _Manifest& other);
+
+    /**
+     * Equality operator.
+     * @param[in] other Manifest to compare against
+     *
+     * @return true if contents are equal, false otherwise
+     */
+    bool operator==(const _Manifest& other) const;
+
+    /**
+     * Inequality operator.
+     * @param[in] other Manifest to compare against
+     *
+     * @return true if the contents are different, false if they are equal
+     */
+    bool operator!=(const _Manifest& other) const;
+
+    /**
+     * Set the rules to be set on this manifest. After calling SetRules, the cryptographic
+     * signature on this Manifest will no lnoger be valid; it will need to be signed again with the
+     * Sign method before applying to an application.
+     *
+     * @param[in] rules Array of PermissionPolicy::Rule objects
+     * @param[in] ruleCount Number of elements in rules array
+     *
+     * @return
+     * - #ER_OK if successful
+     * - other error indicating failure
+     */
+    QStatus SetRules(const PermissionPolicy::Rule* rules, size_t rulesCount);
+
+    /**
+     * Cryptographically sign this manifest for the use of a particular subject certificate using
+     * the provided signing key. issuerPrivateKey must be the private key that signed subjectCertificate for
+     * apps to consider it valid. Caller must ensure the correct issuer public key is provided; this method
+     * does not verify the correct key is provided.
+     *
+     * Caller is responsible for verifying subjectCertificate is the signed certificate which will be used
+     * by the peer using this manifest; no validation of this is done.
+     *
+     * @param[in] subjectCertificate Signed certificate of the app which will use this manifest
+     * @param[in] issuerPrivateKey Private key of subjectCertificate's issuer to sign the manifest
+     *
+     * @return
+     * - #ER_OK if successful
+     * - other error indicating failure
+     */
+    QStatus Sign(const qcc::CertificateX509& subjectCertificate, const qcc::ECCPrivateKey* issuerPrivateKey);
+
+    /**
+     * Cryptographically sign this manifest for the use of a particular subject certificate using
+     * the provided signing key. issuerPrivateKey must be the private key that signed the certificate
+     * corresponding to the given thumbprint for apps to consider it valid. Caller must ensure the correct
+     * issuer public key is provided; this method does not verify the correct key is provided.
+     *
+     * @param[in] subjectThumbprint SHA-256 thumbprint of the signed certificate of the app which will use this manifest
+     * @param[in] issuerPrivateKey Private key of subjectCertificate's issuer to sign the manifest
+     *
+     * @return
+     * - #ER_OK if successful
+     * - other error indicating failure
+     */
+    QStatus Sign(const std::vector<uint8_t>& subjectThumbprint, const qcc::ECCPrivateKey* issuerPrivateKey);
+
+    /**
+     * Cryptographically verify this manifest for the use of a particular subject certificate using
+     * the provided issuer public key. issuerPublicKey must be the public key corresponding to the private key
+     * which signed subjectCertificate.
+     *
+     * @param[in] subjectCertificate Signed certificate of the app using this manifest
+     * @param[in] issuerPublicKey Public key of the issuer to verify the signature of this manifest
+     *
+     * @return
+     * - #ER_OK if the manifest is cryptographically verified for use by subjectCertificate
+     * - #ER_UNKNOWN_CERTIFICATE if the manifest is not for the use of subjectCertificate
+     * - #ER_DIGEST_MISMATCH if the cryptographic signature is invalid
+     * - #ER_NOT_IMPLEMENTED if the manifest uses an unsupported thumbprint or signature algorithm
+     * - other error indicating failure
+     */
+    QStatus VerifyByCertificate(const qcc::CertificateX509& subjectCertificate, const qcc::ECCPublicKey* issuerPublicKey) const;
+
+    /**
+     * Get version number of this manifest.
+     *
+     * @return version number
+     */
+    uint32_t GetVersion() const;
+
+    /**
+     * Get rules of this manifest.
+     *
+     * @return Vector of PermissionPolicy::Rule objects
+     */
+    const std::vector<PermissionPolicy::Rule>& GetRules() const;
+
+    /**
+     * Get the OID of the algorithm used to compute the certificate thumbprint.
+     *
+     * @return std::string containing the OID
+     */
+    std::string GetThumbprintAlgorithmOid() const;
+
+    /**
+     * Get the certificate thumbprint.
+     *
+     * @return Vector of bytes containing the thumbprint
+     */
+    std::vector<uint8_t> GetThumbprint() const;
+
+    /**
+     * Get the OID used to compute the signature.
+     *
+     * @return std::string containing the OID
+     */
+    std::string GetSignatureAlgorithmOid() const;
+
+    /**
+     * Get the signature.
+     *
+     * @return Vector of bytes containing the signature
+     */
+    std::vector<uint8_t> GetSignature() const;
+
+  private:
+
+    typedef enum {
+        MANIFEST_FULL = 0,
+        MANIFEST_FOR_DIGEST = 1,
+        MANIFEST_PURPOSE_MAX
+    } ManifestPurpose;
+
+    /**
+     * @internal
+     *
+     * Set the contents of this Manifest from a signed manifest MsgArg.
+     *
+     * @param[in] manifestArg A MsgArg with the MsgArgSignature signature containing a signed manifest
+     *
+     * @return
+     * - #ER_OK if successful
+     * - #ER_INVALID_DATA if the version number is unsupported
+     * - other error indicating failure
+     */
+    QStatus SetFromMsgArg(const MsgArg& manifestArg);
+
+    /**
+     * @internal
+     *
+     * Get a MsgArg containing the contents of this manifest.
+     *
+     * @param[in] manifestPurpose Specifies the purpose for the output form of this manifest
+     * @param[out] outputArg MsgArg to receive the output
+     *
+     * @return
+     * - #ER_OK if successful
+     * - other error indicating failure
+     */
+    QStatus GetMsgArg(ManifestPurpose manifestPurpose, MsgArg& outputArg) const;
+
+    /**
+     * @internal
+     *
+     * Serialize a manifest to a vector of bytes
+     *
+     * @param[in] manifestPurpose Specifies the purpose for the serialized form of this manifest
+     * @param[out] serializedForm Vector of bytes to receive serialized form
+     *
+     * @return
+     * - #ER_OK if the manifest was successfully serialized
+     * - other error indicating failure
+     */
+    QStatus Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_t>& serializedForm) const;
+
+    /**
+     * @internal
+     *
+     * Deserialize a manifest from a vector of bytes. This method only accepts manifests
+     * that were serialized with all fields, such as by providing MANIFEST_FULL as the manifestPurpose
+     * parameter when calling Serialize.
+     *
+     * @param[in] serializedForm Vector of bytes containing the serialized manifest
+     *
+     * @return
+     * - #ER_OK if the manifest was successfully deserialized
+     * - other error indicating failure
+     */
+    QStatus Deserialize(const std::vector<uint8_t>& serializedForm);
+
+    /**
+     * @internal
+     *
+     * Serialize a vector of manifests into a vector of bytes.
+     *
+     * @param[in] manifests Vector of manifests to serialize.
+     * @param[out] serializedForm Vector to receive bytes of serialized array.
+     *
+     * @return
+     * - #ER_OK if manifests are successfully serialized
+     * - other error indicating failure
+     */
+    static QStatus SerializeArray(const std::vector<Manifest>& manifests, std::vector<uint8_t>& serializedForm);
+
+    /**
+     * @internal
+     * Deserialize a vector of manifests from a vector of bytes.
+     *
+     * @param[in] serializedForm Vector of bytes containing serialized array of manifests
+     * @param[out] manifests Vector to receive deserialized manifests
+     *
+     * @return
+     * - #ER_OK if manifests are successfully deserialized
+     * - other error indicating failure
+     */
+    static QStatus DeserializeArray(const std::vector<uint8_t>& serializedForm, std::vector<Manifest>& manifests);
+
+    /**
+     * @internal
+     *
+     * Deserialize a vector of manifests from a byte array.
+     *
+     * @param[in] serializedForm Array of bytes containing serialized array of manifests
+     * @param[in] serializedSize Number of bytes in serializedForm
+     * @param[out] manifests Vector to receive deserialized manifests
+     *
+     * @return
+     * - #ER_OK if manifests are successfully deserialized
+     * - other error indicating failure
+     */
+    static QStatus DeserializeArray(const uint8_t* serializedForm, size_t serializedSize, std::vector<Manifest>& manifests);
+
+    /**
+     * @internal
+     *
+     * Cryptographically verify this manifest for the use of a particular subject certificate thumbprint using
+     * the provided issuer public key. issuerPublicKey must be the public key corresponding to the private key
+     * which signed subjectCertificate.
+     *
+     * @param[in] subjectThumbprint SHA-256 thumbprint of the signed certificate of the app using this manifest
+     * @param[in] issuerPublicKey Public key of the issuer to verify the signature of this manifest
+     *
+     * @return
+     * - #ER_OK if the manifest is cryptographically verified for use by subjectThumbprint
+     * - #ER_UNKNOWN_CERTIFICATE if the manifest is not for the use of subjectThumbprint
+     * - #ER_DIGEST_MISMATCH if the cryptographic signature is invalid
+     * - #ER_NOT_IMPLEMENTED if the manifest uses an unsupported thumbprint or signature algorithm
+     * - other error indicating failure
+     */
+    QStatus VerifyByThumbprint(const std::vector<uint8_t>& subjectThumbprint, const qcc::ECCPublicKey* issuerPublicKey) const;
+
+    /**
+     * @internal
+     *
+     * Get a MsgArg that contains an array of signed manifests suitable for method calls that transport
+     * arrays of signed manifests.
+     *
+     * @param[in] manifests Vector of manifests to put into the array MsgArg.
+     * @param[out] outputArg MsgArg to receive the output.
+     *
+     * @return
+     * - #ER_OK if outputArg is successfully populated with the array of signed manifests.
+     * - other error indicating failure
+     */
+    static QStatus GetArrayMsgArg(const std::vector<Manifest>& manifests, MsgArg& outputArg);
+
+    /**
+     * @internal
+     *
+     * Get a MsgArg that contains an array of signed manifests suitable for method calls that transport
+     * arrays of signed manifests.
+     *
+     * @param[in] manifests Array of manifests to put into the array MsgArg.
+     * @param[in] manifestCount Number of elements in manifests array
+     * @param[out] outputArg MsgArg to receive the output.
+     *
+     * @return
+     * - #ER_OK if outputArg is successfully populated with the array of signed manifests.
+     * - other error indicating failure
+     */
+    static QStatus GetArrayMsgArg(const Manifest* manifests, size_t manifestCount, MsgArg& outputArg);
+
+    /**
+     * @internal
+     *
+     * Determine whether or not a given manifest version number is supported by this version of AllJoyn.
+     *
+     * @param[in] version Version number to check.
+     *
+     * @return true if manifest version is supported, false otherwise
+     */
+    static bool IsVersionSupported(uint32_t version);
+
+    QStatus GetDigest(std::vector<uint8_t>& digest) const;
+    QStatus GetECCSignature(qcc::ECCSignature& signature) const;
+    QStatus SetECCSignature(const qcc::ECCSignature& signature);
+
+    uint32_t m_version;
+    std::vector<PermissionPolicy::Rule> m_rules;
+    std::string m_thumbprintAlgorithmOid;
+    std::vector<uint8_t> m_thumbprint;
+    std::string m_signatureAlgorithmOid;
+    std::vector<uint8_t> m_signature;
+};
+
+
 
 }
 #endif

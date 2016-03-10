@@ -552,7 +552,7 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
     // User defined sessionPort Number
     SessionPort sessionPort = 42;
 
-    // bindSessionPort new SessionPortListener
+    // BindSessionPort new SessionPortListener
     JoinSession_SessionPortListener sessionPortListener(&bus);
     status = bus.BindSessionPort(sessionPort, sessionOpts, sessionPortListener);
     EXPECT_EQ(ER_OK, status);
@@ -577,7 +577,7 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
     JoinSession_BusListener busListener(&otherBus);
     otherBus.RegisterBusListener(busListener);
 
-    // find the AdvertisedName
+    // Find the AdvertisedName
     status = otherBus.FindAdvertisedName("org.alljoyn.bus.BusAttachmentTest.advertise");
     EXPECT_EQ(ER_OK, status);
 
@@ -616,6 +616,9 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
 
     otherBus.Stop();
     otherBus.Join();
+
+    // Remove the session port listener allocated on the stack, before it gets destroyed
+    EXPECT_EQ(ER_OK, bus.UnbindSessionPort(sessionPort));
 }
 
 TEST_F(BusAttachmentTest, GetDBusProxyObj) {

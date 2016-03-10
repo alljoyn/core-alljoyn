@@ -130,7 +130,7 @@ class XmlRulesValidator : public XmlValidator {
      */
     static void AssignRulesToObjects(const PermissionPolicy::Rule* rules,
                                      const size_t rulesCount,
-                                     std::unordered_map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
+                                     std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
 
   private:
 
@@ -233,7 +233,7 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_FAIL otherwise.
      */
-    static QStatus ValidateObject(const std::unordered_map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
+    static QStatus ValidateObject(const std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
 
     /**
      * Validates the collection of PermissionPolicy::Rule represent a valid

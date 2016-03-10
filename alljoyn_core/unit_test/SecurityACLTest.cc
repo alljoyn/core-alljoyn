@@ -17,6 +17,7 @@
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/SecurityApplicationProxy.h>
+#include <qcc/Util.h>
 #include <iostream>
 #include <map>
 
@@ -363,34 +364,8 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
     PermissionConfigurator& pcLivingRoom = busUsedAsLivingRoom.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcLivingRoom.GetSigningPublicKey(livingRoomKey));
 
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifest[0].SetMembers(1, member);
-    }
-
-    uint8_t managerDigest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                               manifest, manifestSize,
-                                                               managerDigest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
-    uint8_t caDigest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA,
-                                                               manifest, manifestSize,
-                                                               caDigest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
-    uint8_t livingRoomDigest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsLivingRoom,
-                                                               manifest, manifestSize,
-                                                               livingRoomDigest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     GUID128 managerGuid;
     PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
@@ -406,11 +381,27 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
     PermissionMgmtTestHelper::GetGUID(busUsedAsLivingRoom, livingRoomGuid);
 
     //Create identityCerts
-    const size_t certChainSize = 1;
+    const size_t certChainSize = 2;
     IdentityCertificate identityCertChainMaster[certChainSize];
     IdentityCertificate identityCertChainPeer1[certChainSize];
     IdentityCertificate identityCertChainPeer2[certChainSize];
     IdentityCertificate identityCertChainPeer3[certChainSize];
+
+    /* Create CA cert for all the chains. */
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
+                                                                  "0",
+                                                                  caGuid.ToString(),
+                                                                  caKey.GetPublicKey(),
+                                                                  "CertificateAuthority",
+                                                                  3600,
+                                                                  identityCertChainMaster[1])) << "Failed to create CA cert";
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA, identityCertChainMaster[1])) << "Failed to set CA flag on CA's cert";
+
+    /* Copy to other chains. */
+    identityCertChainPeer1[1] = identityCertChainMaster[1];
+    identityCertChainPeer2[1] = identityCertChainMaster[1];
+    identityCertChainPeer3[1] = identityCertChainMaster[1];
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                   "0",
@@ -418,8 +409,7 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
                                                                   managerKey.GetPublicKey(),
                                                                   "ManagerAlias",
                                                                   3600,
-                                                                  identityCertChainMaster[0],
-                                                                  caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                   "0",
@@ -427,8 +417,7 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
                                                                   peer1Key.GetPublicKey(),
                                                                   "Peer1Alias",
                                                                   3600,
-                                                                  identityCertChainPeer1[0],
-                                                                  caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                   "0",
@@ -436,8 +425,7 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
                                                                   peer2Key.GetPublicKey(),
                                                                   "Peer2Alias",
                                                                   3600,
-                                                                  identityCertChainPeer2[0],
-                                                                  caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                   "0",
@@ -445,36 +433,39 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
                                                                   peer3Key.GetPublicKey(),
                                                                   "Peer3Alias",
                                                                   3600,
-                                                                  identityCertChainPeer3[0],
-                                                                  caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer3[0])) << "Failed to create identity certificate.";
 
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainMaster[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithManager.Claim(caKey,
                                           managerGuid,
                                           managerKey,
                                           identityCertChainMaster, certChainSize,
-                                          manifest, manifestSize));
+                                          manifests, ArraySize(manifests)));
 
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.Claim(caKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer1, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.Claim(caKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer2, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     peer3Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer3[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer3.Claim(caKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer3, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
     EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
@@ -750,19 +741,19 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
      * Peer1 makes a method call sing. It should be successful. Auth mechanism should be ECDHE_ECDSA.
      */
     {
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                       "4",
                                                                       peer1Guid.ToString(),
                                                                       peer1Key.GetPublicKey(),
                                                                       "Peer1Alias",
                                                                       3600,
-                                                                      identityCertChainPeer1[0],
-                                                                      managerDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChainPeer1[0])) << "Failed to create identity certificate.";
         /* peer1 was set to use ECDHE_NULL in the previous test, so now it
            needs to be enabled with ECDSA */
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
         EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
-        EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, 1, manifest, manifestSize));
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer1[0], manifests[0]));
+        EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, ArraySize(identityCertChainPeer1), manifests, ArraySize(manifests)));
 
         EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer3AuthListener));
 
@@ -787,18 +778,18 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
      * Peer1 makes a method call sing. It should be successful. Auth mechanism should be ECDHE_ECDSA.
      */
     {
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsLivingRoom,
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                       "5",
                                                                       peer1Guid.ToString(),
                                                                       peer1Key.GetPublicKey(),
                                                                       "Peer1Alias",
                                                                       3600,
-                                                                      identityCertChainPeer1[0],
-                                                                      livingRoomDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
         /* reestablish connection */
         EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
-        EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, 1, manifest, manifestSize));
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer1[0], manifests[0]));
+        EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, ArraySize(identityCertChainPeer1), manifests, ArraySize(manifests)));
 
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
         EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer3AuthListener));
@@ -824,15 +815,15 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
      * Peer2 makes a method call sing. Ensure that it cannot be received by peer2.
      */
     {
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsLivingRoom,
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                       "6",
                                                                       peer2Guid.ToString(),
                                                                       peer2Key.GetPublicKey(),
                                                                       "Peer2Alias",
                                                                       3600,
-                                                                      identityCertChainPeer2[0],
-                                                                      livingRoomDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
-        EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, 1, manifest, manifestSize));
+                                                                      identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer2[0], manifests[0]));
+        EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, ArraySize(identityCertChainPeer2), manifests, ArraySize(manifests)));
 
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
         EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer3AuthListener));
@@ -849,6 +840,12 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
         EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "king", NULL, static_cast<size_t>(0), replyMsg));
         EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(interfaceName, "sing", NULL, static_cast<size_t>(0), replyMsg));
     }
+
+    // Remove the session port listeners allocated on the stack, before they get destroyed
+    EXPECT_EQ(ER_OK, managerBus.UnbindSessionPort(managerSessionPort));
+    EXPECT_EQ(ER_OK, peer1Bus.UnbindSessionPort(peer1SessionPort));
+    EXPECT_EQ(ER_OK, peer2Bus.UnbindSessionPort(peer2SessionPort));
+    EXPECT_EQ(ER_OK, peer3Bus.UnbindSessionPort(peer3SessionPort));
 }
 
 /**
@@ -1119,30 +1116,8 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
     PermissionConfigurator& pcInt2 = busUsedAsInt2.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcInt2.GetSigningPublicKey(int2Key));
 
-
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifest[0].SetMembers(1, member);
-    }
-
-    uint8_t managerDigest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                               manifest, manifestSize,
-                                                               managerDigest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
-    uint8_t caDigest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA,
-                                                               manifest, manifestSize,
-                                                               caDigest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     GUID128 managerGuid;
     PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
@@ -1172,10 +1147,26 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
     PermissionMgmtTestHelper::GetGUID(busUsedAsInt2, int2Guid);
 
     //Create identityCerts
-    const size_t certChainSize = 1;
+    const size_t certChainSize = 2;
     IdentityCertificate identityCertChainMaster[certChainSize];
     IdentityCertificate identityCertChainPeer1[certChainSize];
     IdentityCertificate identityCertChainPeer2[certChainSize];
+
+    /* Create CA cert for all the chains. */
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
+                                                                  "0",
+                                                                  caGuid.ToString(),
+                                                                  caKey.GetPublicKey(),
+                                                                  "CertificateAuthority",
+                                                                  3600,
+                                                                  identityCertChainMaster[1])) << "Failed to create CA cert";
+
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA, identityCertChainMaster[1])) << "Failed to set CA flag on CA's cert";
+
+    /* Copy to other chains. */
+    identityCertChainPeer1[1] = identityCertChainMaster[1];
+    identityCertChainPeer2[1] = identityCertChainMaster[1];
+
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                   "0",
@@ -1183,8 +1174,7 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
                                                                   managerKey.GetPublicKey(),
                                                                   "ManagerAlias",
                                                                   3600,
-                                                                  identityCertChainMaster[0],
-                                                                  caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                   "0",
@@ -1192,8 +1182,7 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
                                                                   peer1Key.GetPublicKey(),
                                                                   "Peer1Alias",
                                                                   3600,
-                                                                  identityCertChainPeer1[0],
-                                                                  caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
                                                                   "0",
@@ -1201,29 +1190,31 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
                                                                   peer2Key.GetPublicKey(),
                                                                   "Peer2Alias",
                                                                   3600,
-                                                                  identityCertChainPeer2[0],
-                                                                  caDigest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainMaster[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithManager.Claim(caKey,
                                           managerGuid,
                                           managerKey,
                                           identityCertChainMaster, certChainSize,
-                                          manifest, manifestSize));
+                                          manifests, ArraySize(manifests)));
 
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.Claim(caKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer1, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.Claim(caKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer2, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
     EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
@@ -1634,4 +1625,9 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
     EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "ping", NULL, static_cast<size_t>(0), replyMsg));
     EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "king", NULL, static_cast<size_t>(0), replyMsg));
     EXPECT_EQ(ER_OK, proxy.MethodCall(interfaceName, "sing", NULL, static_cast<size_t>(0), replyMsg));
+
+    // Remove the session port listeners allocated on the stack, before they get destroyed
+    EXPECT_EQ(ER_OK, managerBus.UnbindSessionPort(managerSessionPort));
+    EXPECT_EQ(ER_OK, peer1Bus.UnbindSessionPort(peer1SessionPort));
+    EXPECT_EQ(ER_OK, peer2Bus.UnbindSessionPort(peer2SessionPort));
 }

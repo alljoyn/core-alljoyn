@@ -126,7 +126,7 @@ class UARTStream : public NonBlockingStream {
      */
     UARTStream operator=(const UARTStream&);
 
-    int fd;             /**< File descriptor associated with the device */
+    UARTFd fd;          /**< File descriptor associated with the device */
     Event* sourceEvent; /**< Event signaled when data is available */
     Event* sinkEvent;   /**< Event signaled when sink can accept data */
 };

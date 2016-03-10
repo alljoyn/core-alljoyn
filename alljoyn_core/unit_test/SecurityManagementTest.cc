@@ -17,6 +17,7 @@
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/SecurityApplicationProxy.h>
+#include <qcc/Util.h>
 #include <map>
 
 #include "InMemoryKeyStore.h"
@@ -298,20 +299,8 @@ class SecurityManagementPolicyTest : public testing::Test {
 
         managerBus.RegisterApplicationStateListener(appStateListener);
 
-        // All Inclusive manifest
-        const size_t manifestSize = 1;
-        PermissionPolicy::Rule manifest[manifestSize];
-        {
-            PermissionPolicy::Rule::Member member[1];
-            member[0].Set("*",
-                          PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                          PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-            manifest[0].SetObjPath("*");
-            manifest[0].SetInterfaceName("*");
-            manifest[0].SetMembers(1, member);
-        }
+        Manifest manifests[1];
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
         // Get manager key
         KeyInfoNISTP256 managerKey;
@@ -327,10 +316,6 @@ class SecurityManagementPolicyTest : public testing::Test {
         KeyInfoNISTP256 peer2Key;
         PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                                   manifest, manifestSize,
-                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
         // Create identityCert
         const size_t certChainSize = 1;
@@ -342,15 +327,15 @@ class SecurityManagementPolicyTest : public testing::Test {
                                                                       managerKey.GetPublicKey(),
                                                                       "ManagerAlias",
                                                                       3600,
-                                                                      identityCertChainMaster[0],
-                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
         SecurityApplicationProxy sapWithManagerBus(managerBus, managerBus.GetUniqueName().c_str());
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
         EXPECT_EQ(ER_OK, sapWithManagerBus.Claim(managerKey,
                                                  managerGuid,
                                                  managerKey,
                                                  identityCertChainMaster, certChainSize,
-                                                 manifest, manifestSize));
+                                                 manifests, ArraySize(manifests)));
 
         for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
             if (appStateListener.isClaimed(managerBus.GetUniqueName())) {
@@ -375,15 +360,15 @@ class SecurityManagementPolicyTest : public testing::Test {
                                                                       peer1Key.GetPublicKey(),
                                                                       "Peer1Alias",
                                                                       3600,
-                                                                      identityCertChainPeer1[0],
-                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
         //Manager claims Peers
         EXPECT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
                                             identityCertChainPeer1, certChainSize,
-                                            manifest, manifestSize));
+                                            manifests, ArraySize(manifests)));
 
         for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
             if (appStateListener.isClaimed(peer1Bus.GetUniqueName())) {
@@ -402,13 +387,13 @@ class SecurityManagementPolicyTest : public testing::Test {
                                                                       peer2Key.GetPublicKey(),
                                                                       "Peer2Alias",
                                                                       3600,
-                                                                      identityCertChainPeer2[0],
-                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
         EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
                                             identityCertChainPeer2, certChainSize,
-                                            manifest, manifestSize));
+                                            manifests, ArraySize(manifests)));
 
         for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
             if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
@@ -989,113 +974,6 @@ class SecurityManagementPolicy2AuthListener : public AuthListener {
 
 };
 
-
-TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_digest_mismatch)
-{
-    SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
-    SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
-    SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
-
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
-
-    // Intentionally set the digest so that it does not match the one with the manifest above
-    for (uint8_t i = 0; i < Crypto_SHA256::DIGEST_SIZE; i++) {
-        digest[i] = 0;
-    }
-    uint8_t managerCN[] = { 1, 2, 3, 4 };
-    uint8_t intermediateCN[] = { 5, 6, 7, 8 };
-    uint8_t leafCN[] = { 9, 0, 1, 2 };
-
-    //Create the CA cert
-    qcc::IdentityCertificate caCert;
-    caCert.SetSerial((uint8_t*)"1234", 5);
-    caCert.SetIssuerCN(managerCN, 4);
-    caCert.SetSubjectCN(managerCN, 4);
-    CertificateX509::ValidPeriod validityCA;
-    validityCA.validFrom = 1427404154;
-    validityCA.validTo = 1427404154 + 630720000;
-    caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
-
-    KeyInfoNISTP256 managerPublicKey;
-    PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
-    EXPECT_EQ(ER_OK, permissionConfigurator.GetSigningPublicKey(managerPublicKey));
-
-    caCert.SetSubjectPublicKey(managerPublicKey.GetPublicKey());
-    caCert.SetAlias("ca-cert-alias");
-    caCert.SetCA(true);
-
-    //sign the ca cert
-    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(caCert));
-
-    // Create the intermediate certificate using peer2
-    qcc::IdentityCertificate peer2Cert;
-    peer2Cert.SetSerial((uint8_t*)"5678", 5);
-    peer2Cert.SetIssuerCN(managerCN, 4);
-    peer2Cert.SetSubjectCN(intermediateCN, 4);
-    CertificateX509::ValidPeriod validity;
-    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
-    validity.validTo = validity.validFrom + TEN_MINS;
-    peer2Cert.SetValidity(&validity);
-    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
-
-    ECCPublicKey peer2PublicKey;
-    GetAppPublicKey(peer2Bus, peer2PublicKey);
-
-    peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
-    peer2Cert.SetAlias("intermediate-cert-alias");
-    peer2Cert.SetCA(true);
-
-    //sign the leaf cert
-    EXPECT_EQ(ER_OK, permissionConfigurator.SignCertificate(peer2Cert));
-
-    // Create the leaf certificate using peer2
-    qcc::IdentityCertificate peer1Cert;
-    peer1Cert.SetSerial((uint8_t*)"9123", 5);
-    peer1Cert.SetIssuerCN(intermediateCN, 4);
-    peer1Cert.SetSubjectCN(leafCN, 4);
-    peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
-
-    ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
-
-    peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
-    peer1Cert.SetAlias("peer2-cert-alias");
-    peer1Cert.SetCA(false);
-
-    //sign the leaf cert
-    PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
-    EXPECT_EQ(ER_OK, peer2PermissionConfigurator.SignCertificate(peer1Cert));
-
-    //We need identityCert chain CA1->Peer1
-    const size_t certChainSize = 3;
-    IdentityCertificate identityCertChain[certChainSize];
-    identityCertChain[0] = peer1Cert;
-    identityCertChain[1] = peer2Cert;
-    identityCertChain[2] = caCert;
-
-    InstallMembershipOnManager();
-
-    EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
-    EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
-    EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
-
-    // Call UpdateIdentity to install the cert chain
-    EXPECT_EQ(ER_DIGEST_MISMATCH, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize)) << "Failed to update Identity cert or manifest ";
-
-}
-
 TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
 {
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
@@ -1103,16 +981,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
 
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 5, 6, 7, 8 };
@@ -1127,7 +997,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
     validityCA.validFrom = 1427404154;
     validityCA.validTo = 1427404154 + 630720000;
     caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 managerPublicKey;
     PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
@@ -1149,7 +1018,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
     sapWithPeer1.GetEccPublicKey(peer1PublicKey);
@@ -1168,7 +1036,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
     peer2Cert.SetIssuerCN(intermediateCN, 4);
     peer2Cert.SetSubjectCN(leafCN, 4);
     peer2Cert.SetValidity(&validity);
-    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
     sapWithPeer2.GetEccPublicKey(peer2PublicKey);
@@ -1191,8 +1058,9 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_invalid_icc_chain)
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
     EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
 
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity to install the cert chain
-    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
 }
 
@@ -1203,16 +1071,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_fl
 
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 5, 6, 7, 8 };
@@ -1227,7 +1087,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_fl
     validityCA.validFrom = 1427404154;
     validityCA.validTo = 1427404154 + 630720000;
     caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 managerPublicKey;
     PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
@@ -1249,7 +1108,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_fl
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
     sapWithPeer1.GetEccPublicKey(peer1PublicKey);
@@ -1267,7 +1125,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_fl
     peer2Cert.SetIssuerCN(intermediateCN, 4);
     peer2Cert.SetSubjectCN(leafCN, 4);
     peer2Cert.SetValidity(&validity);
-    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
     sapWithPeer2.GetEccPublicKey(peer2PublicKey);
@@ -1290,8 +1147,9 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_intermediate_ca_fl
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
     EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1AuthListener, nullptr, false, &peer1ConfigurationListener));
 
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity to install the cert chain
-    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
 }
 
@@ -1303,16 +1161,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_
 
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 5, 6, 7, 8 };
@@ -1327,7 +1177,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_
     validityCA.validFrom = 1427404154;
     validityCA.validTo = 1427404154 + 630720000;
     caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 managerPublicKey;
     PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
@@ -1349,7 +1198,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
     sapWithPeer1.GetEccPublicKey(peer1PublicKey);
@@ -1367,7 +1215,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_
     peer2Cert.SetIssuerCN(intermediateCN, 4);
     peer2Cert.SetSubjectCN(leafCN, 4);
     peer2Cert.SetValidity(&validity);
-    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     // We are intentionally making the leaf certificate public key different
     peer2Cert.SetSubjectPublicKey(&peer1PublicKey);
@@ -1388,8 +1235,9 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_fails_on_different_subject_
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
     EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false, &peer2ConfigurationListener));
 
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity to install the cert chain
-    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+    EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
 }
 
@@ -1400,17 +1248,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_succeeds_on_long_icc)
 
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 5, 6, 7, 8 };
@@ -1426,7 +1265,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_succeeds_on_long_icc)
     validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
     validityCA.validTo = validityCA.validFrom + TEN_MINS;
     caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 managerPublicKey;
     PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
@@ -1448,7 +1286,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_succeeds_on_long_icc)
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
     sapWithPeer1.GetEccPublicKey(peer1PublicKey);
@@ -1472,7 +1309,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_succeeds_on_long_icc)
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     intermediateCACert.SetValidity(&validity);
-    intermediateCACert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     intermediateCACert.SetSubjectPublicKey(peer3PublicKey.GetPublicKey());
     intermediateCACert.SetAlias("intermediate-ca-cert-alias");
@@ -1488,7 +1324,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_succeeds_on_long_icc)
     peer2Cert.SetIssuerCN(intermediate2CN, 4);
     peer2Cert.SetSubjectCN(leafCN, 4);
     peer2Cert.SetValidity(&validity);
-    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
     sapWithPeer2.GetEccPublicKey(peer2PublicKey);
@@ -1510,8 +1345,9 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_succeeds_on_long_icc)
     EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
     EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
 
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer3Bus, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity to install the cert chain
-    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
 }
 
@@ -1522,17 +1358,8 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_single_icc_any_sign)
 
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t leafCN[] = { 9, 0, 1, 2 };
 
@@ -1549,7 +1376,6 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_single_icc_any_sign)
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer2Cert.SetValidity(&validity);
-    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
     sapWithPeer2.GetEccPublicKey(peer2PublicKey);
@@ -1568,8 +1394,9 @@ TEST_F(SecurityManagementPolicyTest, Update_identity_single_icc_any_sign)
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
     EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
 
-    // Call UpdateIdentity to install the cert chain
-    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
+    // Call UpdateIdentity to install the cert chain.
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
 }
 
@@ -1580,16 +1407,8 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_install_membership_fails_with_inva
 
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     KeyInfoNISTP256 managerPublicKey;
     PermissionConfigurator& permissionConfigurator = managerBus.GetPermissionConfigurator();
@@ -1635,16 +1454,8 @@ TEST_F(SecurityManagementPolicyTest, install_membership_fails_with_same_cert_ser
 
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
     EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
@@ -1688,16 +1499,8 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t issuerCN[] = { 1, 2, 3, 4 };
     uint8_t leafCN[] = { 5, 6, 7, 8 };
@@ -1711,7 +1514,6 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     memCert.SetValidity(&validity);
-    memCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer2PublicKey;
     sapWithPeer2.GetEccPublicKey(peer2PublicKey);
@@ -1735,7 +1537,6 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     memCert2.SetValidity(&validity);
-    memCert2.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
     memCert2.SetSubjectPublicKey(&peer2PublicKey);
     memCert2.SetCA(true);
     memCert.SetGuild(asgaGUID);
@@ -1794,17 +1595,8 @@ TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_serial_does_not_
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
     InstallMembershipOnManager();
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
     EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
@@ -1876,16 +1668,8 @@ TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_issuer_does_not_
 {
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
     InstallMembershipOnManager();
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(managerBus, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
     EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
@@ -1978,17 +1762,8 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 9, 9, 9, 9 };
@@ -2004,7 +1779,6 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
     validityCA.validTo = validityCA.validFrom + TEN_MINS;
     caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 caKey;
     PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
@@ -2026,7 +1800,6 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
     GetAppPublicKey(peer1Bus, peer1PublicKey);
@@ -2120,8 +1893,9 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     //EXPECT_EQ(ER_OK, sapWithPeer1.Reset());
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(membershipCertChain, 3));
 
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity on Peer 1 to install the cert chain
-    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+    EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
 
     // Create the intermediate certificate using peer2
@@ -2132,7 +1906,6 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer2Cert.SetValidity(&validity);
-    peer2Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 peer2Key;
     PermissionConfigurator& peer2PC = peer2Bus.GetPermissionConfigurator();
@@ -2149,8 +1922,9 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     identityCertChain[0] = peer2Cert;
     identityCertChain[1] = caCert;
 
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChain[0], manifests[0]));
     // Call UpdateIdentity on Peer 1 to install the cert chain
-    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize))
+    EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
 
     uint32_t peer1ToPeer2SessionId;
@@ -2188,17 +1962,8 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_memb
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 9, 9, 9, 9 };
@@ -2214,7 +1979,6 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_memb
     validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
     validityCA.validTo = validityCA.validFrom + TEN_MINS;
     caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 caKey;
     PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
@@ -2236,7 +2000,6 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_memb
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
     sapWithPeer1.GetEccPublicKey(peer1PublicKey);
@@ -2356,17 +2119,8 @@ TEST_F(SecurityManagementPolicyTest, chained_membership_signed_upto_ca_fails)
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 9, 9, 9, 9 };
@@ -2595,17 +2349,8 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
 
-    // All Inclusive manifest
-    PermissionPolicy::Rule::Member member[1];
-    member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED, PermissionPolicy::Rule::Member::ACTION_PROVIDE | PermissionPolicy::Rule::Member::ACTION_MODIFY | PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-    manifest[0].SetMembers(1, member);
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    PermissionMgmtObj::GenerateManifestDigest(busUsedAsCA, manifest, 1, digest, Crypto_SHA256::DIGEST_SIZE);
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     //uint8_t intermediateCN[] = { 9, 9, 9, 9 };
@@ -2621,7 +2366,6 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
     validityCA.validFrom = qcc::GetEpochTimestamp() / 1000;
     validityCA.validTo = validityCA.validFrom + TEN_MINS;
     caCert.SetValidity(&validityCA);
-    caCert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     KeyInfoNISTP256 caKey;
     PermissionConfigurator& caPC = busUsedAsCA.GetPermissionConfigurator();
@@ -2643,7 +2387,6 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
     validity.validFrom = qcc::GetEpochTimestamp() / 1000;
     validity.validTo = validity.validFrom + TEN_MINS;
     peer1Cert.SetValidity(&validity);
-    peer1Cert.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
 
     ECCPublicKey peer1PublicKey;
     sapWithPeer1.GetEccPublicKey(peer1PublicKey);
@@ -2784,31 +2527,14 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
     SecurityApplicationProxy sapWithPeer1toPeer2(peer1Bus, peer2Bus.GetUniqueName().c_str());
 
     // Call UpdateIdentity
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*",
-                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifest[0].SetMembers(1, member);
-    }
 
     // Get manager key
     KeyInfoNISTP256 peer2Key;
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(peer1Bus,
-                                                               manifest, manifestSize,
-                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
     // Create identityCert
     const size_t certChainSize = 1;
@@ -2822,10 +2548,9 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
                                                                   peer2Key.GetPublicKey(),
                                                                   "Alias",
                                                                   3600,
-                                                                  identityCertChain[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
-
-    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.SecureConnection(true));
 
     MsgArg identityArg;
@@ -3049,26 +2774,8 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
     SecurityApplicationProxy sapWithPeer1toPeer2(peer1Bus, peer2Bus.GetUniqueName().c_str());
 
     // Call UpdateIdentity
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-
-    {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*",
-                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifest[0].SetMembers(1, member);
-    }
-
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(peer1Bus,
-                                                               manifest, manifestSize,
-                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // Create identityCert
     const size_t certChainSize = 3;
@@ -3086,12 +2793,10 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
                                                                        "Alias",
                                                                        3600,
                                                                        identityCertChain,
-                                                                       certChainSize,
-                                                                       digest,
-                                                                       Crypto_SHA256::DIGEST_SIZE));
+                                                                       certChainSize));
 
-
-    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.SecureConnection(true));
 
     // Call GetAllProperties
@@ -3102,7 +2807,7 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_call_getallpro
     MsgArg* propArg;
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Version", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Identity", &propArg));
-    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Manifest", &propArg));
+    EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Manifests", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "IdentityCertificateId", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "PolicyVersion", &propArg));
     EXPECT_EQ(ER_OK, props.GetElement("{sv}", "Policy", &propArg));
@@ -3192,37 +2897,18 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
     EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
 
     // Call UpdateIdentity
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    manifest[0].SetObjPath("*");
-    manifest[0].SetInterfaceName("*");
-
-    {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*",
-                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifest[0].SetMembers(1, member);
-    }
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // Get manager key
     KeyInfoNISTP256 peer2Key;
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
 
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(peer1Bus,
-                                                               manifest, manifestSize,
-                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
-
     // Create identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChain[certChainSize];
     GUID128 guid;
-
 
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
                                                                   "1",
@@ -3230,10 +2916,10 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
                                                                   peer2Key.GetPublicKey(),
                                                                   "Alias",
                                                                   3600,
-                                                                  identityCertChain[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
 
-    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)));
 
 
     PermissionPolicy policy;
@@ -3264,8 +2950,8 @@ TEST_F(SecurityManagementPolicyTest, non_group_members_can_not_call_managedappli
 
     MsgArg identityCertArg;
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetIdentity(identityCertArg));
-    MsgArg manifestArg;
-    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetManifest(manifestArg));
+    std::vector<Manifest> retrievedManifests;
+    EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetManifests(retrievedManifests));
     String serial;
     qcc::KeyInfoNISTP256 issuerKey;
     EXPECT_EQ(ER_PERMISSION_DENIED, sapWithPeer1toPeer2.GetIdentityCertificateId(serial, issuerKey));
@@ -3448,20 +3134,8 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
 
     SetManifestTemplate(peer2Bus);
 
-    // All Inclusive manifest
-    const size_t manifestSize = 1;
-    PermissionPolicy::Rule manifest[manifestSize];
-    {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*",
-                      PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                      PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifest[0].SetObjPath("*");
-        manifest[0].SetInterfaceName("*");
-        manifest[0].SetMembers(1, member);
-    }
+    Manifest manifests[1];
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // Get manager key
     KeyInfoNISTP256 managerKey;
@@ -3472,10 +3146,6 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
     KeyInfoNISTP256 peer2Key;
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
     EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(managerBus,
-                                                               manifest, manifestSize,
-                                                               digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
     // Create peer2 identityCert
     const size_t certChainSize = 1;
@@ -3487,9 +3157,7 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
                                                                   peer2Key.GetPublicKey(),
                                                                   "Peer2Alias",
                                                                   3600,
-                                                                  identityCertChainPeer2[0],
-                                                                  digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
-
+                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
     // Claim peer2
     SessionOpts opts2;
@@ -3500,11 +3168,12 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
     EXPECT_EQ(ER_OK, sapWithPeer2.GetApplicationState(applicationStatePeer2));
     EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer2);
 
+    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                         managerGuid,
                                         managerKey,
                                         identityCertChainPeer2, certChainSize,
-                                        manifest, manifestSize));
+                                        manifests, ArraySize(manifests)));
 
     for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
         if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
@@ -3649,31 +3318,14 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         EXPECT_FALSE(bus2ConfigurationListener.endManagementReceived);
 
         // Call UpdateIdentity
-        // All Inclusive manifest
-        const size_t manifestSize = 1;
-        PermissionPolicy::Rule manifest[manifestSize];
-        manifest[0].SetObjPath("*");
-        manifest[0].SetInterfaceName("*");
+        Manifest manifests[1];
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-        {
-            PermissionPolicy::Rule::Member member[1];
-            member[0].Set("*",
-                          PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                          PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                          PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                          PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-            manifest[0].SetMembers(1, member);
-        }
 
         // Get manager key
         KeyInfoNISTP256 bus1Key;
         PermissionConfigurator& pcBus1 = peer1.GetPermissionConfigurator();
         EXPECT_EQ(ER_OK, pcBus1.GetSigningPublicKey(bus1Key));
-
-        uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        EXPECT_EQ(ER_OK, PermissionMgmtObj::GenerateManifestDigest(peer1,
-                                                                   manifest, manifestSize,
-                                                                   digest, Crypto_SHA256::DIGEST_SIZE)) << " GenerateManifestDigest failed.";
 
         // Create identityCert
         const size_t certChainSize = 1;
@@ -3687,10 +3339,10 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
                                                                       bus1Key.GetPublicKey(),
                                                                       "Alias",
                                                                       3600,
-                                                                      identityCertChain[0],
-                                                                      digest, Crypto_SHA256::DIGEST_SIZE)) << "Failed to create identity certificate.";
+                                                                      identityCertChain[0])) << "Failed to create identity certificate.";
 
-        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.UpdateIdentity(identityCertChain, certChainSize, manifest, manifestSize));
+        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1, identityCertChain[0], manifests[0]));
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)));
         EXPECT_EQ(ER_OK, sapBus1toBus2.SecureConnection(true));
 
         // Call UpdatePolicy
@@ -3734,8 +3386,8 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetIdentity(identityCertificate));
 
         // Fetch Manifest property
-        MsgArg manifest;
-        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetManifest(manifest));
+        std::vector<Manifest> manifests;
+        EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetManifests(manifests));
 
         // Fetch IdentityCertificateId property
         String serial;
@@ -3757,6 +3409,9 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
         MsgArg membershipSummaries;
         EXPECT_EQ(ER_PERMISSION_DENIED, sapBus1toBus2.GetMembershipSummaries(membershipSummaries));
     }
+
+    // Remove the session port listener allocated on the stack, before it gets destroyed
+    EXPECT_EQ(ER_OK, peer2.UnbindSessionPort(sessionPort));
 }
 
 /*
@@ -3778,7 +3433,7 @@ TEST(SecurityManagementPolicy2Test, verify_values_are_readonly) {
     const InterfaceDescription* managedAppIface = bus.GetInterface(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Version")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Identity")->access);
-    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Manifest")->access);
+    EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Manifests")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("IdentityCertificateId")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("PolicyVersion")->access);
     EXPECT_EQ(PROP_ACCESS_READ, managedAppIface->GetProperty("Policy")->access);
