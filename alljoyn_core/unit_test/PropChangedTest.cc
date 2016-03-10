@@ -2510,8 +2510,10 @@ class SecPropChangedTest :
 /**
  * Basic test for the property cache with security enabled.
  * Test events being sent when policy is configured properly.
+ *
+ * Temporarily disabled, until ASACORE-2725 will get fixed.
  */
-TEST_F(SecPropChangedTest, PropertyCache_SecurityEnabled)
+TEST_F(SecPropChangedTest, DISABLED_PropertyCache_SecurityEnabled)
 {
     proxy->EnablePropertyCaching();
     // No policy set. So GetProperty should be denied by remote policy.
