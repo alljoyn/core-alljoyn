@@ -363,6 +363,14 @@ class KeyStore {
     QStatus Clear(const qcc::String& tagPrefixPattern);
 
     /**
+     * Enables deleting and re-creating the key store, rather than loading
+     * the existing key store contents, when using the default KeyStoreListener.
+     *
+     * @return  ER_OK if the key store will be cleared and re-created rather than loaded
+     */
+    QStatus DeleteDefaultKeyStore();
+
+    /**
      * Reset the state of
      *
      * @return  ER_OK if the state was cleared
@@ -672,6 +680,11 @@ class KeyStore {
      */
     uint8_t guidSetRefCount;
 
+    /**
+     * Delete the existing key store file, if it exists, before initializing this Key Store,
+     * when using the default KeyStoreListener.
+     */
+    bool deleteAndRecreate;
 };
 
 class KeyStoreKeyEventListener {
@@ -692,7 +705,7 @@ class KeyStoreKeyEventListener {
 class KeyStoreListenerFactory {
 
   public:
-    static KeyStoreListener* CreateInstance(const qcc::String& application, const char* fname);
+    static KeyStoreListener* CreateInstance(const qcc::String& application, const char* fname, bool deleteAndRecreate);
 
 };
 

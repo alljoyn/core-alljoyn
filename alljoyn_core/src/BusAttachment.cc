@@ -930,9 +930,14 @@ QStatus BusAttachment::UnregisterKeyStoreListener()
     return busInternal->keyStore.SetDefaultListener();
 }
 
-void BusAttachment::ClearKeyStore()
+QStatus BusAttachment::ClearKeyStore()
 {
-    busInternal->keyStore.Clear();
+    return busInternal->keyStore.Clear();
+}
+
+QStatus BusAttachment::DeleteDefaultKeyStore()
+{
+    return busInternal->keyStore.DeleteDefaultKeyStore();
 }
 
 const qcc::String BusAttachment::GetUniqueName() const

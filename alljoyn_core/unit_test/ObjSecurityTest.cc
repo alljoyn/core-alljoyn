@@ -157,7 +157,10 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
         clientbus("ObjectSecurityTestClient", false),
         servicebus("ObjectSecurityTestService", false),
         authComplete(false)
-    { };
+    {
+        EXPECT_EQ(ER_OK, clientbus.DeleteDefaultKeyStore());
+        EXPECT_EQ(ER_OK, servicebus.DeleteDefaultKeyStore());
+    };
 
     virtual void SetUp() {
         QStatus status = clientbus.Start();

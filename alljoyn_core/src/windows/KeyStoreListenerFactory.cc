@@ -46,11 +46,18 @@ class DefaultKeyStoreListener : public KeyStoreListener {
 
   public:
 
-    DefaultKeyStoreListener(const qcc::String& application, const char* fname) {
+    DefaultKeyStoreListener(const qcc::String& application, const char* fname, bool deleteAndRecreate) {
         if (fname) {
             fileName = GetHomeDir() + "/.alljoyn_secure_keystore/" + fname;
         } else {
             fileName = GetHomeDir() + "/.alljoyn_secure_keystore/" + application;
+        }
+
+        if (deleteAndRecreate) {
+            QStatus status = qcc::DeleteFile(fileName);
+            if (status != ER_OK) {
+                QCC_LogError(ER_WARNING, ("DeleteFile(%s) failed, error %s", fileName.c_str(), QCC_StatusText(status)));
+            }
         }
     }
 
@@ -203,9 +210,9 @@ class DefaultKeyStoreListener : public KeyStoreListener {
 
 };
 
-KeyStoreListener* KeyStoreListenerFactory::CreateInstance(const qcc::String& application, const char* fname)
+KeyStoreListener* KeyStoreListenerFactory::CreateInstance(const qcc::String& application, const char* fname, bool deleteAndRecreate)
 {
-    return new DefaultKeyStoreListener(application, fname);
+    return new DefaultKeyStoreListener(application, fname, deleteAndRecreate);
 }
 
 }

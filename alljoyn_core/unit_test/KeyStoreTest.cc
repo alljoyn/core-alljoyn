@@ -62,6 +62,7 @@ TEST(KeyStoreTest, basic_store_load) {
      */
     /* Store step */
     {
+        qcc::DeleteFile("keystore_test");
         FileSink sink("keystore_test");
 
         key.Set((const uint8_t*)testData, sizeof(testData), KeyBlob::GENERIC);
@@ -120,7 +121,8 @@ TEST(KeyStoreTest, basic_store_load) {
 
         ASSERT_STREQ(testData, (const char*)inKey.GetData()) << "Key data was incorrect";
     }
-    DeleteFile("keystore_test");
+
+    ASSERT_EQ(ER_OK, qcc::DeleteFile("keystore_test"));
 }
 
 TEST(KeyStoreTest, keystore_store_load_merge) {
@@ -140,7 +142,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
      */
     {
         KeyStore keyStore("keystore_test");
-
+        ASSERT_EQ(ER_OK, keyStore.DeleteDefaultKeyStore());
         keyStore.Init(NULL, true);
         keyStore.Clear();
 
@@ -215,7 +217,6 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         status = keyStore.Store();
         ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
     }
-    DeleteFile("keystore_test");
 }
 
 class KeyStoreThread : public Thread {
@@ -287,6 +288,7 @@ static void TestConcurrentKeyStoreAccess(bool useSharedKeyStore)
 {
     InMemoryKeyStoreListener keyStoreListener;
     KeyStore keyStore("shared_keystore");
+    ASSERT_EQ(ER_OK, keyStore.DeleteDefaultKeyStore());
     keyStore.SetListener(keyStoreListener);
     keyStore.Init(NULL, useSharedKeyStore);
 

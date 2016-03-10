@@ -739,7 +739,10 @@ TEST_F(BusAttachmentTest, BasicSecureConnection)
     otherBus.Connect();
     EXPECT_EQ(ER_BUS_SECURITY_NOT_ENABLED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
 
+    EXPECT_EQ(ER_OK, otherBus.DeleteDefaultKeyStore());
     EXPECT_EQ(ER_OK, otherBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myOtherTestKeyStore", true));
+
+    EXPECT_EQ(ER_OK, bus.DeleteDefaultKeyStore());
     EXPECT_EQ(ER_OK, bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &al, "myTestKeyStore", true));
 
     EXPECT_EQ(ER_OK, otherBus.SecureConnection(bus.GetUniqueName().c_str()));

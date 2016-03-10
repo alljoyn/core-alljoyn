@@ -112,7 +112,10 @@ class ProxyBusObjectTest : public testing::Test {
         servicebus("ProxyBusObjectTestservice", false),
         proxyBusObjectTestAuthListenerOne(NULL),
         proxyBusObjectTestAuthListenerTwo(NULL)
-    { }
+    {
+        EXPECT_EQ(ER_OK, bus.DeleteDefaultKeyStore());
+        EXPECT_EQ(ER_OK, servicebus.DeleteDefaultKeyStore());
+    }
 
     virtual void SetUp() {
         QStatus status = bus.Start();

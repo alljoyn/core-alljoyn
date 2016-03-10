@@ -115,7 +115,8 @@ KeyStore::KeyStore(const qcc::String& application) :
     guidSetEvent(NULL),
     guidSet(false),
     guidSetEventLock(LOCK_LEVEL_KEYSTORE_GUIDSETEVENTLOCK),
-    guidSetRefCount(0)
+    guidSetRefCount(0),
+    deleteAndRecreate(false)
 {
 }
 
@@ -240,7 +241,7 @@ QStatus KeyStore::Init(const char* fileName, bool isShared)
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
         if (listener == NULL) {
-            defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
+            defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName, deleteAndRecreate);
             listener = new ProtectedKeyStoreListener(defaultListener);
         }
         shared = isShared;
@@ -250,6 +251,19 @@ QStatus KeyStore::Init(const char* fileName, bool isShared)
         lock.Unlock(MUTEX_CONTEXT);
         return ER_KEY_STORE_ALREADY_INITIALIZED;
     }
+}
+
+QStatus KeyStore::DeleteDefaultKeyStore()
+{
+    QStatus status = ER_OK;
+
+    if (storeState == UNAVAILABLE) {
+        deleteAndRecreate = true;
+    } else {
+        status = ER_KEY_STORE_ALREADY_INITIALIZED;
+    }
+
+    return status;
 }
 
 QStatus KeyStore::Store()
@@ -985,3 +999,4 @@ void KeyStore::KeyStoreEncryptionKey::Build()
 }
 
 }
+
