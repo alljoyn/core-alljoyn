@@ -17,6 +17,7 @@
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/Message.h>
+#include <qcc/Util.h>
 
 /* Add canary values before and after output string buffers, to detect typical overruns/underruns */
 #define CANARY_SIZE (sizeof(void*))
@@ -41,6 +42,35 @@
             localBuffer += 1;                                           \
         }                                                               \
     }
+
+static uint16_t translationCount = 0;
+
+const char* translation_callback(const char* sourceLanguage, const char* targetLanguage, const char* sourceText)
+{
+    static qcc::String translated;
+
+    translationCount++;
+    if (sourceLanguage == targetLanguage) {
+        return sourceText;
+    } else if ((targetLanguage == nullptr) || (targetLanguage[0] == '\0')) {
+        /* if target language is not specified, you may choose to use sourceText as a lookup id */
+        translated = qcc::String("id:") + sourceText;
+    } else {
+        translated = qcc::String(targetLanguage) + ":" + sourceText;
+    }
+    return translated.c_str();
+}
+
+void introspect_and_compare(const alljoyn_interfacedescription& testIntf, const char* expectedIntrospect)
+{
+    char* introspect;
+    size_t bufSize = alljoyn_interfacedescription_introspect(testIntf, NULL, 0, 0);
+    introspect = (char*)malloc((sizeof(char) * bufSize));
+    size_t bufSize2 = alljoyn_interfacedescription_introspect(testIntf, introspect, bufSize, 0);
+    EXPECT_EQ(bufSize, bufSize2);
+    EXPECT_STREQ(expectedIntrospect, introspect);
+    free(introspect);
+}
 
 TEST(InterfaceDescriptionTest, addmember) {
     QStatus status = ER_OK;
@@ -1243,6 +1273,226 @@ TEST(InterfaceDescriptionTest, property_annotations)
     alljoyn_busattachment_destroy(bus);
 }
 
+TEST(InterfaceDescriptionTest, member_argument_annotations)
+{
+    QStatus status = ER_OK;
+    char argName1[] = "in_name1";
+    char argValue1[] = "in_value1";
+    char argName2[] = "in_name2";
+    char argValue2[] = "in_value 2";
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_TRUE(bus != NULL);
+    alljoyn_interfacedescription testIntf = NULL;
+    status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addargannotation(testIntf, "ping", "in", argName1, argValue1);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addargannotation(testIntf, "ping", "in", argName2, argValue2);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_interfacedescription_activate(testIntf);
+
+    alljoyn_interfacedescription_member method_member;
+    EXPECT_TRUE(alljoyn_interfacedescription_getmember(testIntf, "ping", &method_member));
+
+    size_t annotation_count = alljoyn_interfacedescription_member_getargannotationscount(method_member, "in");
+    EXPECT_EQ((size_t)2, annotation_count);
+    size_t name_size;
+    size_t value_size;
+
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 1, NULL, &name_size, NULL, &value_size);
+    EXPECT_EQ(sizeof(argName2), name_size); //the size of name + nul
+    EXPECT_EQ(sizeof(argValue2), value_size); //the size of value + nul
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, NULL, &name_size, NULL, &value_size);
+    EXPECT_EQ(sizeof(argName1), name_size); //the size of name + nul
+    EXPECT_EQ(sizeof(argValue1), value_size); //the size of value + nul
+
+    char* name = (char*)malloc((sizeof(char) * name_size) + (2 * CANARY_SIZE));
+    char* value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
+
+    memset(name, 'A', name_size + (2 * CANARY_SIZE));
+    memset(value, 'B', value_size + (2 * CANARY_SIZE));
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ(sizeof(argName1), name_size); //the size of name + nul
+    EXPECT_EQ(sizeof(argValue1), value_size); //the size of value + nul
+    EXPECT_STREQ(argName1, name + CANARY_SIZE);
+    EXPECT_STREQ(argValue1, value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'A');
+    VERIFY_CANARY_VALUES(value, value_size, 'B');
+
+    memset(name, 'C', name_size + (2 * CANARY_SIZE));
+    memset(value, 'D', value_size + (2 * CANARY_SIZE));
+    size_t badNameSize = 0;
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ(sizeof(argName1), badNameSize); //the size of name + nul
+    EXPECT_EQ(sizeof(argValue1), value_size); //the size of value + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'C');
+    VERIFY_CANARY_VALUES(value, value_size, 'D');
+
+    memset(name, 'E', name_size + (2 * CANARY_SIZE));
+    memset(value, 'F', value_size + (2 * CANARY_SIZE));
+    size_t badValueSize = 0;
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ(sizeof(argName1), name_size); //the size of name + nul
+    EXPECT_EQ(sizeof(argValue1), badValueSize); //the size of value + nul
+    VERIFY_CANARY_VALUES(name, name_size, 'E');
+    VERIFY_CANARY_VALUES(value, value_size, 'F');
+
+    memset(name, 'G', name_size + (2 * CANARY_SIZE));
+    memset(value, 'H', value_size + (2 * CANARY_SIZE));
+    badNameSize = 0;
+    badValueSize = 0;
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &badNameSize, value + CANARY_SIZE, &badValueSize);
+    EXPECT_EQ(sizeof(argName1), badNameSize);
+    EXPECT_EQ(sizeof(argValue1), badValueSize);
+    VERIFY_CANARY_VALUES(name, name_size, 'G');
+    VERIFY_CANARY_VALUES(value, value_size, 'H');
+
+    memset(name, 'I', name_size + (2 * CANARY_SIZE));
+    memset(value, 'J', value_size + (2 * CANARY_SIZE));
+    size_t tooSmallSize = 1;
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &tooSmallSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ(sizeof(argName1), tooSmallSize);
+    EXPECT_EQ(sizeof(argValue1), value_size);
+    EXPECT_STREQ("", name + CANARY_SIZE); //empty string instead of 'one'
+    EXPECT_STREQ(argValue1, value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'I');
+    VERIFY_CANARY_VALUES(value, value_size, 'J');
+
+    memset(name, 'L', name_size + (2 * CANARY_SIZE));
+    memset(value, 'M', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_EQ(sizeof(argName1), name_size);
+    EXPECT_EQ(sizeof(argValue1), tooSmallSize);
+    EXPECT_STREQ(argName1, name + CANARY_SIZE);
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of arg value
+    VERIFY_CANARY_VALUES(name, name_size, 'L');
+    VERIFY_CANARY_VALUES(value, value_size, 'M');
+
+    memset(name, 'N', name_size + (2 * CANARY_SIZE));
+    memset(value, 'O', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &tooSmallSize, value + CANARY_SIZE, &value_size);
+    EXPECT_EQ(sizeof(argName1), tooSmallSize);
+    EXPECT_EQ(sizeof(argValue1), value_size);
+    char s1[] = { argName1[0], '\0' }; //first character of arg name
+    EXPECT_STREQ(s1, name + CANARY_SIZE);
+    EXPECT_STREQ(argValue1, value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(name, name_size, 'N');
+    VERIFY_CANARY_VALUES(value, value_size, 'O');
+
+    memset(name, 'P', name_size + (2 * CANARY_SIZE));
+    memset(value, 'R', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 3;
+    alljoyn_interfacedescription_member_getargannotationatindex(method_member, "in", 0, name + CANARY_SIZE, &name_size, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_EQ(sizeof(argName1), name_size);
+    EXPECT_EQ(sizeof(argValue1), tooSmallSize);
+    EXPECT_STREQ(argName1, name + CANARY_SIZE);
+    char s2[] = { argValue1[0], argValue1[1], '\0' };
+    EXPECT_STREQ(s2, value + CANARY_SIZE); //first two characters of arg value
+    VERIFY_CANARY_VALUES(name, name_size, 'P');
+    VERIFY_CANARY_VALUES(value, value_size, 'R');
+
+    free(name);
+    free(value);
+
+    QCC_BOOL success = alljoyn_interfacedescription_member_getargannotation(method_member, "in", argName1, NULL, &value_size);
+    EXPECT_FALSE(success);
+    EXPECT_EQ(sizeof(argValue1), value_size);
+    value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
+
+    memset(value, 'K', value_size + (2 * CANARY_SIZE));
+    success = alljoyn_interfacedescription_member_getargannotation(method_member, "in", argName1, value + CANARY_SIZE, &value_size);
+    EXPECT_TRUE(success);
+    EXPECT_EQ(sizeof(argValue1), value_size);
+    EXPECT_STREQ(argValue1, value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'K');
+
+    memset(value, 'L', value_size + (2 * CANARY_SIZE));
+    badValueSize = 0;
+    success = alljoyn_interfacedescription_member_getargannotation(method_member, "in", argName1, value + CANARY_SIZE, &badValueSize);
+    EXPECT_FALSE(success);
+    EXPECT_EQ(sizeof(argValue1), badValueSize);
+    VERIFY_CANARY_VALUES(value, value_size, 'L');
+
+    memset(value, 'M', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    success = alljoyn_interfacedescription_member_getargannotation(method_member, "in", argName1, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ(sizeof(argValue1), tooSmallSize);
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of arg value
+    VERIFY_CANARY_VALUES(value, value_size, 'M');
+
+    memset(value, 'N', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    success = alljoyn_interfacedescription_member_getargannotation(method_member, "in", argName1, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ(sizeof(argValue1), tooSmallSize);
+    char s3[] = { argValue1[0], '\0' }; //first character of arg value
+    EXPECT_STREQ(s3, value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'N');
+
+    free(value);
+
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "ping", "in", argName1, NULL, &value_size);
+    EXPECT_FALSE(success);
+    EXPECT_EQ(sizeof(argValue1), value_size);
+
+    value = (char*)malloc((sizeof(char) * value_size) + (2 * CANARY_SIZE));
+
+    memset(value, 'O', value_size + (2 * CANARY_SIZE));
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "ping", "in", argName1, value + CANARY_SIZE, &value_size);
+    EXPECT_TRUE(success);
+    EXPECT_EQ(sizeof(argValue1), value_size);
+    EXPECT_STREQ(argValue1, value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'O');
+
+    memset(value, 'P', value_size + (2 * CANARY_SIZE));
+    badValueSize = 0;
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "ping", "in", argName1, value + CANARY_SIZE, &badValueSize);
+    EXPECT_FALSE(success);
+    EXPECT_EQ(sizeof(argValue1), badValueSize);
+    VERIFY_CANARY_VALUES(value, value_size, 'P');
+
+    memset(value, 'Q', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 1;
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "ping", "in", argName1, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ(sizeof(argValue1), tooSmallSize);
+    EXPECT_STREQ("", value + CANARY_SIZE); //empty string instead of arg value
+    VERIFY_CANARY_VALUES(value, value_size, 'Q');
+
+    memset(value, 'R', value_size + (2 * CANARY_SIZE));
+    tooSmallSize = 2;
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "ping", "in", argName1, value + CANARY_SIZE, &tooSmallSize);
+    EXPECT_TRUE(success);
+    EXPECT_EQ(sizeof(argValue1), tooSmallSize);
+    char s4[] = { argValue1[0], '\0' }; //first character of arg value
+    EXPECT_STREQ(s4, value + CANARY_SIZE);
+    VERIFY_CANARY_VALUES(value, value_size, 'R');
+
+    free(value);
+
+    size_t allocSize = 16;
+    value = (char*)malloc(allocSize);
+    value_size = allocSize;
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "notexist", "notexist", "notexist", value, &value_size);
+    EXPECT_EQ(QCC_FALSE, success);
+    value_size = allocSize;
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "ping", "notexist", "notexist", value, &value_size);
+    EXPECT_EQ(QCC_FALSE, success);
+    value_size = allocSize;
+    success = alljoyn_interfacedescription_getmemberargannotation(testIntf, "chirp", "chirp", "notexist", value, &value_size);
+    EXPECT_EQ(QCC_FALSE, success);
+    free(value);
+
+    alljoyn_busattachment_destroy(bus);
+}
+
 /*
  * check to see that we are still backward compatible with the annotation flags
  */
@@ -1373,5 +1623,236 @@ TEST(InterfaceDescriptionTest, multiple_annotations)
         free(name);
         free(value);
     }
+    alljoyn_busattachment_destroy(bus);
+}
+
+TEST(InterfaceDescriptionTest, description_language)
+{
+    QStatus status = ER_OK;
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_TRUE(bus != NULL);
+    alljoyn_interfacedescription testIntf = NULL;
+    status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
+    char language[] = "En";
+    alljoyn_interfacedescription_setdescriptionlanguage(testIntf, language);
+    alljoyn_interfacedescription_setdescription(testIntf, "Hello");
+    alljoyn_interfacedescription_activate(testIntf);
+
+    size_t count = alljoyn_interfacedescription_getdescriptionlanguages(testIntf, nullptr, 0);
+    EXPECT_EQ((size_t)1, count);
+    const char* languages[1];
+    count = alljoyn_interfacedescription_getdescriptionlanguages(testIntf, languages, ArraySize(languages));
+    EXPECT_EQ((size_t)1, count);
+    EXPECT_STREQ(language, languages[0]);
+
+    alljoyn_busattachment_destroy(bus);
+}
+
+TEST(InterfaceDescriptionTest, member_property_arg_description)
+{
+    QStatus status = ER_OK;
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_TRUE(bus != NULL);
+    alljoyn_interfacedescription testIntf = NULL;
+    status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
+
+    QCC_BOOL hasdescription = alljoyn_interfacedescription_hasdescription(testIntf);
+    EXPECT_EQ(QCC_FALSE, hasdescription);
+
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "my member description");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = alljoyn_interfacedescription_setargdescription(testIntf, "ping", "in", "my member in argument description");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setargdescription(testIntf, "ping", "out", "my member out argument description");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    status = alljoyn_interfacedescription_addproperty(testIntf, "prop1", "s", ALLJOYN_PROP_ACCESS_READ);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setpropertydescription(testIntf, "prop1", "my property description");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    alljoyn_interfacedescription_activate(testIntf);
+
+    hasdescription = alljoyn_interfacedescription_hasdescription(testIntf);
+    EXPECT_EQ(QCC_TRUE, hasdescription);
+
+    alljoyn_busattachment_destroy(bus);
+}
+
+TEST(InterfaceDescriptionTest, description_translator_en_en) {
+    QStatus status = ER_OK;
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    alljoyn_interfacedescription testIntf = NULL;
+    status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "chirp", "", "s", "chirp", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addproperty(testIntf, "prop1", "s", ALLJOYN_PROP_ACCESS_READ);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    // Set description language to "En", introspect returns "En" descriptions
+    alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "En");
+    alljoyn_interfacedescription_setdescription(testIntf, "in_desc");
+    status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "me_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setargdescription(testIntf, "ping", "in", "ar_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setmemberdescription(testIntf, "chirp", "si_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setpropertydescription(testIntf, "prop1", "pr_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    const char* expectedIntrospect =
+        "<interface name=\"org.alljoyn.test.InterfaceDescription\">\n"
+        "  <signal name=\"chirp\">\n"
+        "    <arg name=\"chirp\" type=\"s\" direction=\"out\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"si_desc\"/>\n"
+        "  </signal>\n"
+        "  <method name=\"ping\">\n"
+        "    <arg name=\"in\" type=\"s\" direction=\"in\">\n"
+        "      <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"ar_desc\"/>\n"
+        "    </arg>\n"
+        "    <arg name=\"out\" type=\"s\" direction=\"out\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"me_desc\"/>\n"
+        "  </method>\n"
+        "  <property name=\"prop1\" type=\"s\" access=\"read\">\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"pr_desc\"/>\n"
+        "  </property>\n"
+        "  <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"in_desc\"/>\n"
+        "</interface>\n";
+    translationCount = 0;
+    introspect_and_compare(testIntf, expectedIntrospect);
+    EXPECT_TRUE(translationCount == 0);
+
+    alljoyn_busattachment_destroy(bus);
+}
+
+TEST(InterfaceDescriptionTest, description_translator_en_null) {
+    QStatus status = ER_OK;
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    alljoyn_interfacedescription testIntf = NULL;
+    status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "chirp", "", "s", "chirp", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addproperty(testIntf, "prop1", "s", ALLJOYN_PROP_ACCESS_READ);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "En");
+    alljoyn_interfacedescription_setdescription(testIntf, "in_desc");
+    status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "me_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setargdescription(testIntf, "ping", "in", "ar_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setmemberdescription(testIntf, "chirp", "si_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setpropertydescription(testIntf, "prop1", "pr_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_interfacedescription_translation_callback_ptr p = alljoyn_interfacedescription_getdescriptiontranslationcallback(testIntf);
+    EXPECT_EQ(nullptr, p);
+    alljoyn_interfacedescription_setdescriptiontranslationcallback(testIntf, translation_callback);
+    p = alljoyn_interfacedescription_getdescriptiontranslationcallback(testIntf);
+    EXPECT_TRUE(p == translation_callback);
+
+    // Set translation callback and set description language to "", translation callback is invoked and introspect returns translated "En" descriptions
+    alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "");
+    const char* expectedIntrospect =
+        "<interface name=\"org.alljoyn.test.InterfaceDescription\">\n"
+        "  <signal name=\"chirp\">\n"
+        "    <arg name=\"chirp\" type=\"s\" direction=\"out\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:si_desc\"/>\n"
+        "  </signal>\n"
+        "  <method name=\"ping\">\n"
+        "    <arg name=\"in\" type=\"s\" direction=\"in\">\n"
+        "      <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:ar_desc\"/>\n"
+        "    </arg>\n"
+        "    <arg name=\"out\" type=\"s\" direction=\"out\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:me_desc\"/>\n"
+        "  </method>\n"
+        "  <property name=\"prop1\" type=\"s\" access=\"read\">\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:pr_desc\"/>\n"
+        "  </property>\n"
+        "  <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:in_desc\"/>\n"
+        "</interface>\n";
+    translationCount = 0;
+    introspect_and_compare(testIntf, expectedIntrospect);
+    EXPECT_TRUE(translationCount > 0);
+
+    alljoyn_busattachment_destroy(bus);
+}
+
+TEST(InterfaceDescriptionTest, description_translator_en_de) {
+    QStatus status = ER_OK;
+    alljoyn_busattachment bus = NULL;
+    bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    alljoyn_interfacedescription testIntf = NULL;
+    status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    ASSERT_TRUE(testIntf != NULL);
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_SIGNAL, "chirp", "", "s", "chirp", 0);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_addproperty(testIntf, "prop1", "s", ALLJOYN_PROP_ACCESS_READ);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "En");
+    alljoyn_interfacedescription_setdescription(testIntf, "in_desc");
+    status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "me_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setargdescription(testIntf, "ping", "in", "ar_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setmemberdescription(testIntf, "chirp", "si_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = alljoyn_interfacedescription_setpropertydescription(testIntf, "prop1", "pr_desc");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_interfacedescription_setdescriptiontranslationcallback(testIntf, translation_callback);
+
+    // Set description language to "De", translation callback is invoked and introspect returns "En" and translated "De" descriptions
+    alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "De");
+    const char* expectedIntrospect =
+        "<interface name=\"org.alljoyn.test.InterfaceDescription\">\n"
+        "  <signal name=\"chirp\">\n"
+        "    <arg name=\"chirp\" type=\"s\" direction=\"out\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.De\" value=\"De:si_desc\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:si_desc\"/>\n"
+        "  </signal>\n"
+        "  <method name=\"ping\">\n"
+        "    <arg name=\"in\" type=\"s\" direction=\"in\">\n"
+        "      <annotation name=\"org.alljoyn.Bus.DocString.De\" value=\"De:ar_desc\"/>\n"
+        "      <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:ar_desc\"/>\n"
+        "    </arg>\n"
+        "    <arg name=\"out\" type=\"s\" direction=\"out\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.De\" value=\"De:me_desc\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:me_desc\"/>\n"
+        "  </method>\n"
+        "  <property name=\"prop1\" type=\"s\" access=\"read\">\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.De\" value=\"De:pr_desc\"/>\n"
+        "    <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:pr_desc\"/>\n"
+        "  </property>\n"
+        "  <annotation name=\"org.alljoyn.Bus.DocString.De\" value=\"De:in_desc\"/>\n"
+        "  <annotation name=\"org.alljoyn.Bus.DocString.En\" value=\"En:in_desc\"/>\n"
+        "</interface>\n";
+    translationCount = 0;
+    introspect_and_compare(testIntf, expectedIntrospect);
+    EXPECT_TRUE(translationCount > 0);
+
     alljoyn_busattachment_destroy(bus);
 }

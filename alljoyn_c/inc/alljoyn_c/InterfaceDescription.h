@@ -61,7 +61,7 @@ static const uint8_t ALLJOYN_PROP_ACCESS_READ  = 1; /**< Read Access type */
 static const uint8_t ALLJOYN_PROP_ACCESS_WRITE = 2; /**< Write Access type */
 static const uint8_t ALLJOYN_PROP_ACCESS_RW    = 3; /**< Read-Write Access type */
 // @}
-/** @name Anotation flags */
+/** @name Annotation flags */
 // @{
 static const uint8_t ALLJOYN_MEMBER_ANNOTATE_NO_REPLY         = 1; /**< No reply annotate flag */
 static const uint8_t ALLJOYN_MEMBER_ANNOTATE_DEPRECATED       = 2; /**< Deprecated annotate flag */
@@ -101,11 +101,23 @@ typedef struct {
 } alljoyn_interfacedescription_member;
 
 /**
- * find out the amount of annotations the alljoyn_interfacedescription_member has
+ * Type for the interface description translation callback.
  *
- * The number of the annotation is only valid as long as no annotations have
- * been removed or added to the interface.  For this reason this function should
- * only be used after calling alljoyn_interfacedescription_activate.
+ * Called by the interface description when the description of a language is requested.
+ *
+ * @param[in] sourceLanguage The language tag of the text in sourceText. If
+ *  sourceLanguage is NULL or empty, then sourceText is simply an id used
+ *  for lookup.
+ * @param[in] targetLanguage The language tag to translate into
+ * @param[in] sourceText The source text to translate or id to look up
+ */
+typedef const char* (AJ_CALL * alljoyn_interfacedescription_translation_callback_ptr)(const char* sourceLanguage, const char* targetLanguage, const char* sourceText);
+
+/**
+ * Get the number of annotations that a member has.
+ *
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number of annotations will no longer change.
  *
  * @param[in] member The alljoyn interfacedescription member that we want the
  *                   annotations count from
@@ -114,10 +126,10 @@ typedef struct {
 extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_member_getannotationscount(alljoyn_interfacedescription_member member);
 
 /**
- * Obtain the name and value for the annotation index.
- * The order of the annotation is only valid as long as no new annotations are
- * removed or added to the interface.  For this reason this function should
- * only be used after calling alljoyn_interfacedescription_activate.
+ * Obtain the name and value for the annotation at the specified index.
+ *
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number and order of annotations will no longer change.
  *
  * @param[in] member the alljoyn interfacedescription member that we want to read annotations from
  * @param[in] index  the index of the annotation of interest
@@ -139,9 +151,57 @@ extern AJ_API void AJ_CALL alljoyn_interfacedescription_member_getannotationatin
  * @param[in] name   Name of the annotation to look for
  * @param[out] value  Value to compare with
  * @param[in,out] value_size size of the value string if value == NULL it will return the size of the value string plus nul character
- * @return    true iff annotations[name] == value
+ * @return    true if annotations[name] == value
  */
 extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedescription_member member, const char* name, char* value, size_t* value_size);
+
+/**
+ * Get the number of annotations that a member argument has.
+ *
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number of annotations will no longer change.
+ *
+ * @param[in] member The alljoyn interfacedescription member that we want the annotations count from.
+ * @param[in] argName Name of the argument.
+ *
+ * @return the number of annotations.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_member_getargannotationscount(alljoyn_interfacedescription_member member, const char* argName);
+
+/**
+ * Obtain the name and value for the argument annotation at the specified index.
+ *
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number and order of annotations will no longer change.
+ *
+ * @param[in] member The alljoyn interfacedescription member that we want to read annotations from.
+ * @param[in] argName Name of the argument.
+ * @param[in] index The index of the annotation of interest.
+ * @param[out] name The name of the annotation.
+ * @param[in,out] name_size The size of the name string. If name==NULL, this will return the size of the name string plus nul character.
+ * @param[out] value The value of the annotation.
+ * @param[in,out] value_size The size of the value string. If value == NULL, this will return the size of the value string plus nul character.
+ */
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_member_getargannotationatindex(alljoyn_interfacedescription_member member,
+                                                                                       const char* argName,
+                                                                                       size_t index,
+                                                                                       char* name,
+                                                                                       size_t* name_size,
+                                                                                       char* value,
+                                                                                       size_t* value_size);
+
+/**
+ * Get this member's argument annotation value and return the size of the value string if
+ * name is NULL.
+ *
+ * @param[in] member The AllJoyn alljoyn_interfacedescription member that we want the annotation from.
+ * @param[in] argName Name of the argument.
+ * @param[in] name Name of the annotation to look for.
+ * @param[out] value Value of the annotation.
+ * @param[in,out] value_size The size of the value string. If value == NULL, it will return the size of the value string plus nul character.
+ * @return    true if annotations[name] == value.
+ */
+extern QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getargannotation(alljoyn_interfacedescription_member member, const char* argName, const char* name, char* value, size_t* value_size);
 
 /**
  * Structure representing properties of the Interface
@@ -155,11 +215,10 @@ typedef struct {
 } alljoyn_interfacedescription_property;
 
 /**
- * find out the amount of annotations the alljoyn_interfacedescription_member has
+ * Get the number of annotations that a property has.
  *
- * The number of the annotation is only valid as long as no annotations have
- * been removed or added to the interface.  For this reason this function should
- * only be used after calling alljoyn_interfacedescription_activate.
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number of annotations will no longer change.
  *
  * @param[in] property The alljoyn interfacedescription property that we want the
  *                   annotations count from
@@ -168,10 +227,10 @@ typedef struct {
 extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_property_getannotationscount(alljoyn_interfacedescription_property property);
 
 /**
- * Obtain the name and value for the annotation index.
- * The order of the annotation is only valid as long as no new annotations are
- * removed or added to the interface.  For this reason this function should
- * only be used after calling alljoyn_interfacedescription_activate.
+ * Obtain the name and value for the annotation at the specified index.
+ *
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number and order of annotations will no longer change.
  *
  * @param[in] property the alljoyn interfacedescription property that we want to read annotations from
  * @param[in] index  the index of the annotation of interest
@@ -193,7 +252,7 @@ extern AJ_API void AJ_CALL alljoyn_interfacedescription_property_getannotationat
  * @param[in] name   Name of the annotation to look for
  * @param[out] value  Value to compare with
  * @param[in,out] value_size size of the value string if value == NULL it will return the size of the value string plus nul character
- * @return    true iff annotations[name] == value
+ * @return    true if annotations[name] == value
  */
 extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_getannotation(alljoyn_interfacedescription_property property, const char* name, char* value, size_t* value_size);
 
@@ -233,11 +292,10 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getannotation(alljoy
 
 
 /**
- * find out the amount of annotations the alljoyn_interfacedescription has
+ * Find the number of annotations the alljoyn_interfacedescription has
  *
- * The number of the annotation is only valid as long as no annotations have
- * been removed or added to the interface.  For this reason this function should
- * only be used after calling alljoyn_interfacedescription_activate.
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number of annotations will no longer change.
  *
  * @param[in] iface The alljoyn_interfacedescription that we want the annotations count from
  *
@@ -246,10 +304,10 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getannotation(alljoy
 extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getannotationscount(alljoyn_interfacedescription iface);
 
 /**
- * Obtain the name and value for the annotation index.
- * The order of the annotation is only valid as long as no new annotations are
- * removed or added to the interface.  For this reason this function should
- * only be used after calling alljoyn_interfacedescription_activate.
+ * Obtain the name and value for the annotation at the specified index.
+ *
+ * This function must only be used after calling alljoyn_interfacedescription_activate
+ * because it guarantees that the number and order of annotations will no longer change.
  *
  * @param[in] iface the alljoyn interfacedescription that we want to read annotations from
  * @param[in] index  the index of the annotation of interest
@@ -465,7 +523,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addproperty(alljoyn_i
 
 /**
  * Add an annotation to an existing property
- * @param iface      Interface on which to add the property.
+ * @param iface      Interface on which to add the property annotation.
  * @param property   Name of property.
  * @param name       Name of annotation
  * @param value      value of annotation
@@ -563,6 +621,136 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_issecure(const alljo
  * @return Returns the security policy for this interface.
  */
 extern AJ_API alljoyn_interfacedescription_securitypolicy AJ_CALL alljoyn_interfacedescription_getsecuritypolicy(const alljoyn_interfacedescription iface);
+
+/**
+ * Set the description language to this interface.
+ *
+ * @param[in] iface Interface on which to set the description language.
+ * @param[in] language The language tag.
+ */
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(alljoyn_interfacedescription iface, const char* language);
+
+/**
+ * Get the description language of this interface.
+ *
+ * @param[in] iface Interface to query.
+ * @param[out] languages A pointer to a language array to receive the
+ *                       languages. Can be NULL in which case no
+ *                       languages are returned and the return value gives
+ *                       the number of languages available.
+ * @param[in] num The size of the language array.
+ *
+ * @return The number of languages returned or the total number of
+ *         language tags if languages is NULL.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoyn_interfacedescription iface, const char** languages, size_t num);
+
+/**
+ * Set the description to this interface.
+ *
+ * @param[in] iface Interface on which to set the description.
+ * @param[in] description The interface description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
+ */
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description);
+
+/**
+ * Set the description for member of this interface.
+ *
+ * @param[in] iface Interface on which to set member description.
+ * @param[in] member The name of the member.
+ * @param[in] description The member description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
+ *
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description);
+
+/**
+ * Set the description for the argument of the member of this interface.
+ *
+ * @param[in] iface Interface on which to set argument description.
+ * @param[in] member The name of the member.
+ * @param[in] argName The name of the argument.
+ * @param[in] description The argument description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
+ *
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description);
+
+/**
+ * Set the description for the property of this interface.
+ *
+ * @param[in] iface Interface on which to set property description.
+ * @param[in] name The name of the property.
+ * @param[in] description The introspection description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
+ *
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description);
+
+/**
+ * Set the translation callback that provides this interface's description in multiple languages.
+ *
+ * @param[in] iface Interface on which to set description translation callback.
+ * @param[in] translationCallback The translation callback instance.
+ */
+extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptiontranslationcallback(alljoyn_interfacedescription iface, alljoyn_interfacedescription_translation_callback_ptr translationCallback);
+
+/**
+ * Get the translation callback that provides this interface's description in multiple languages.
+ *
+ * @param[in] iface Interface to query.
+ *
+ * @return The translation callback instance.
+ */
+extern AJ_API alljoyn_interfacedescription_translation_callback_ptr AJ_CALL alljoyn_interfacedescription_getdescriptiontranslationcallback(const alljoyn_interfacedescription iface);
+
+/**
+ * Determine whether this interface has at least one description on an element.
+ *
+ * @param[in] iface Interface to query.
+ *
+ * @return True if this interface has at least one description.
+ */
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasdescription(const alljoyn_interfacedescription iface);
+
+/**
+ * Add an annotation to an existing argument.
+ *
+ * @param[in] iface Interface on which to add argument annotation.
+ * @param[in] member Name of member.
+ * @param[in] argName Name of the argument.
+ * @param[in] name Name of annotation.
+ * @param[in] value Value for the annotation.
+ *
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_ANNOTATION_ALREADY_EXISTS if annotation already exists.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_addargannotation(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* name, const char* value);
+
+/**
+ * Get annotation from an existing member argument.
+ *
+ * @param[in] iface Interface to query.
+ * @param[in] member Name of member.
+ * @param[in] argName Name of the argument.
+ * @param[in] name Name of annotation.
+ * @param[out] value The value of the annotation.
+ * @param[in,out] value_size The size of the value string. If value == NULL, this will return the size of the value string plus nul character.
+ * @return
+ *      - QCC_TRUE if found.
+ *      - QCC_FALSE if annotation not found.
+ */
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmemberargannotation(const alljoyn_interfacedescription iface, const char* member, const char* argName, const char* name, char* value, size_t* value_size);
 
 /**
  * Equality operation.
