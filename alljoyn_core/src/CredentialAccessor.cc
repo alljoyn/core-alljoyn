@@ -156,11 +156,22 @@ QStatus CredentialAccessor::DeleteKey(const KeyStore::Key& key)
     if (numItems == 0) {
         return ER_OK;
     }
+
+    /*
+     * Delete the associated keys. Do not call KeyStore::DelKey directly since it
+     * is neccessary to handle the associated deletes for each member. If a delete
+     * fails, we save the status and continue trying to delete other associated keys.
+     */
+    QStatus savedStatus = ER_OK;
     for (size_t cnt = 0; cnt < numItems; cnt++) {
-        status = DeleteKey(list[cnt]);      /* do not call KeyStore::DelKey directly since it is neccesary to handle the associated deletes for each member */
+        status = DeleteKey(list[cnt]);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("%s failed while deleting a keystore entry, keystore may now be corrupted.", __FUNCTION__));
+            savedStatus = status;
+        }
     }
     delete [] list;
-    return ER_OK;
+    return savedStatus;
 }
 
 QStatus CredentialAccessor::StoreKey(KeyStore::Key& key, qcc::KeyBlob& keyBlob)
