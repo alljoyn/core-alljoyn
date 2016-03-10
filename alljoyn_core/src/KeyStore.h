@@ -671,7 +671,6 @@ class KeyStore {
      * guidSet ref count
      */
     uint8_t guidSetRefCount;
-
 };
 
 class KeyStoreKeyEventListener {
@@ -689,11 +688,20 @@ class KeyStoreKeyEventListener {
     virtual bool NotifyAutoDelete(KeyStore* holder, const KeyStore::Key& key);
 };
 
-class KeyStoreListenerFactory {
-
+class DefaultKeyStoreListener : public KeyStoreListener {
   public:
-    static KeyStoreListener* CreateInstance(const qcc::String& application, const char* fname);
+    DefaultKeyStoreListener(const qcc::String& application, const char* fname);
 
+    /* Virtual overrides */
+    QStatus LoadRequest(KeyStore& keyStore);
+    QStatus StoreRequest(KeyStore& keyStore);
+
+    /* Test helper method */
+    static QStatus DeleteKeyStoreFile(const qcc::String& application, const char* fname = nullptr);
+
+  private:
+    static qcc::String CalculateStoreFilePath(const qcc::String& application, const char* fname);
+    qcc::String m_fileName;
 };
 
 }

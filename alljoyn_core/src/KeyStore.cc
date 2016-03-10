@@ -240,7 +240,7 @@ QStatus KeyStore::Init(const char* fileName, bool isShared)
     lock.Lock(MUTEX_CONTEXT);
     if (storeState == UNAVAILABLE) {
         if (listener == NULL) {
-            defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
+            defaultListener = new DefaultKeyStoreListener(application, fileName);
             listener = new ProtectedKeyStoreListener(defaultListener);
         }
         shared = isShared;

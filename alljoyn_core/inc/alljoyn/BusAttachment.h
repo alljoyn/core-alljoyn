@@ -885,8 +885,12 @@ class BusAttachment : public MessageReceiver {
      * Clears all stored keys from the key store. All store keys and authentication information is
      * deleted and cannot be recovered. Any passwords or other credentials will need to be reentered
      * when establishing secure peer connections.
+     *
+     * @return - ER_OK if the key store was successfully cleared
+     *         - ER_BUS_KEYSTORE_NOT_LOADED if peer security has not been enabled on this bus attachment
+     *         - Other error status codes indicating failure to clear the key store.
      */
-    void ClearKeyStore();
+    QStatus ClearKeyStore();
 
     /**
      * Clear the keys associated with a specific remote peer as identified by its peer GUID. The
@@ -2119,7 +2123,6 @@ class BusAttachment : public MessageReceiver {
     Translator* translator;       /**< Global translator for localizable text */
 
     JoinObj joinObj;          /**< MUST BE LAST MEMBER. Ensure all threads are joined before BusAttachment destruction */
-
 };
 
 }

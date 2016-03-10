@@ -215,6 +215,12 @@ int CDECL_CALL main(int argc, char** argv)
     {
 
         BusAttachment bus("srp");
+        status = DefaultKeyStoreListener::DeleteKeyStoreFile("srp");
+        if (status != ER_OK) {
+            printf("DeleteKeyStoreFile returned %s\n", QCC_StatusText(status));
+            goto TestFail;
+        }
+
         MyAuthListener myListener;
         bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", &myListener);
 
