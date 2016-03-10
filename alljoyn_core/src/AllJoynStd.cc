@@ -175,7 +175,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
             return status;
         }
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
-        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "const");
         ifc->AddSignal("State", "(yyayay)q", "publicKey,state", 0);
 
         ifc->Activate();
@@ -269,7 +269,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         }
         ifc->AddAnnotation(org::alljoyn::Bus::Secure, "true");
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
-        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "const");
         ifc->AddProperty("ApplicationState", "q", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("ApplicationState", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("ManifestTemplateDigest", "(yay)", PROP_ACCESS_READ);
@@ -297,7 +297,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         }
         ifc->AddAnnotation(org::alljoyn::Bus::Secure, "true");
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
-        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "const");
         ifc->AddMethod("Claim", "(yyayay)ayay(yyayay)aya(yay)a(ua(ssa(syy))saysay)", "",
                        "certificateAuthority,authorityKeyIdentifier,adminSecurityGroupId,adminSecurityGroupAuthority,adminGroupAuthorityKeyIdentifier,identityCertificateChain,manifests");
 
@@ -313,7 +313,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         }
         ifc->AddAnnotation(org::alljoyn::Bus::Secure, "true");
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
-        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "const");
         ifc->AddMethod("Reset", "", "", "");
         ifc->AddMethod("UpdateIdentity", "a(yay)a(ua(ssa(syy))saysay)", "", "certificateChain,manifests");
         ifc->AddProperty("Identity", "a(yay)", PROP_ACCESS_READ);

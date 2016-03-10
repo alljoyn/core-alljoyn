@@ -276,6 +276,10 @@ InterfaceDescription::Property::Property(const char* name, const char* signature
         (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "true";
         cacheable = true;
     }
+    if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_CONST) {
+        (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "const";
+        cacheable = true;
+    }
     if (annotation & PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES) {
         (*annotations)[org::freedesktop::DBus::AnnotateEmitsChanged] = "invalidates";
         cacheable = true;
@@ -675,8 +679,17 @@ QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, c
     Property& property = pit->second;
     std::pair<AnnotationsMap::iterator, bool> ret = property.annotations->insert(AnnotationsMap::value_type(annotationName, value));
     QStatus status = (ret.second || (ret.first->first == annotationName && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
-    if (status == ER_OK && annotationName == org::freedesktop::DBus::AnnotateEmitsChanged && value != "false") {
-        property.cacheable = true;
+    if (status == ER_OK) {
+        if ((annotationName == org::freedesktop::DBus::AnnotateEmitsChanged) && (value != "false")) {
+            property.cacheable = true;
+        } else if ((annotationName == "org.alljoyn.Bus.Type.Min") ||
+                   (annotationName == "org.alljoyn.Bus.Type.Max") ||
+                   (annotationName == "org.alljoyn.Bus.Type.Units") ||
+                   (annotationName == "org.alljoyn.Bus.Type.Default") ||
+                   (annotationName == "org.alljoyn.Bus.Type.Reference") ||
+                   (annotationName == "org.alljoyn.Bus.Type.DisplayHint")) {
+            property.cacheable = true;
+        }
     }
     return status;
 }
