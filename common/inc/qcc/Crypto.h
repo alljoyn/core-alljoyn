@@ -246,7 +246,14 @@ class Crypto_AES {
  * Generic hash calculation interface abstraction class.
  */
 class Crypto_Hash {
+
   public:
+
+    /// Typedef for abstracting the hash algorithm specifier.
+    typedef enum {
+        SHA1,          ///< SHA1 algorithm specifier
+        SHA256         ///< SHA256 algorithm specifier
+    } Algorithm;
 
     /**
      * Default constructor
@@ -314,12 +321,6 @@ class Crypto_Hash {
     QStatus GetDigest(uint8_t* digest, bool keepAlive = false);
 
   protected:
-
-    /// Typedef for abstracting the hash algorithm specifier.
-    typedef enum {
-        SHA1,          ///< SHA1 algorithm specifier
-        SHA256         ///< SHA256 algorithm specifier
-    } Algorithm;
 
     static const size_t SHA1_SIZE = 20;   ///< SHA1 digest size - 20 bytes == 160 bits
     static const size_t SHA256_SIZE = 32; ///< SHA256 digest size - 32 bytes == 256 bits

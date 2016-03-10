@@ -208,6 +208,9 @@ typedef enum {
     /* BusAttachment.cc */
     LOCK_LEVEL_BUSATTACHMENT_INTERNAL_BUSATTACHMENTSETLOCK = 40000,
 
+    /* CngCache.cc */
+    LOCK_LEVEL_CNGCACHELOCK = 39000,
+
 } LockLevel;
 
 } /* namespace */
