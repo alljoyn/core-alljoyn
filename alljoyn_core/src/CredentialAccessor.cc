@@ -166,12 +166,7 @@ QStatus CredentialAccessor::DeleteKey(const KeyStore::Key& key)
 QStatus CredentialAccessor::StoreKey(KeyStore::Key& key, qcc::KeyBlob& keyBlob)
 {
     KeyStore& ks = bus.GetInternal().GetKeyStore();
-    QStatus status = ks.AddKey(key, keyBlob);
-    if (status != ER_OK) {
-        return status;
-    }
-    /* persist the changes */
-    return ks.Store();
+    return ks.AddKey(key, keyBlob);
 }
 
 QStatus CredentialAccessor::GetKeys(const KeyStore::Key& headerKey, KeyStore::Key** list, size_t* numItems)
