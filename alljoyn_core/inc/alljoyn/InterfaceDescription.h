@@ -180,9 +180,30 @@ class InterfaceDescription {
          *
          * @param        annotationName   name of the annotation to look for
          * @param[out]   value            The value of the annotation, if found
-         * @return                        true iff annotations[name] == value
+         * @return                        true if annotations[name] == value
          */
         bool GetAnnotation(const qcc::String& annotationName, qcc::String& value) const;
+
+        /**
+         * Get the names and values of argument annotations.
+         *
+         * @param[in] argName   Argument name of the member from which to get annotations.
+         * @param[out] names    Annotation names. Either NULL or the caller must allocate enough memory for the number of annotations.
+         * @param[out] values   Annotation values. Either NULL or the caller must allocate enough memory for the number of annotations.
+         * @param[in]  size     Number of annotations to get.
+         * @return              The number of annotations returned or the total number of annotations if names or values is NULL.
+         */
+        size_t GetArgAnnotations(const char* argName, qcc::String* names = NULL, qcc::String* values = NULL, size_t size = 0) const;
+
+        /**
+         * Get this member's argument annotation value
+         *
+         * @param[in]    argName          Argument name of the member from which to get the annotation.
+         * @param[in]    annotationName   Annotation name to look for.
+         * @param[out]   value            The value of the annotation, if found.
+         * @return                        true if annotations[name] == value.
+         */
+        bool GetArgAnnotation(const char* argName, const qcc::String& annotationName, qcc::String& value) const;
 
         /**
          * Equality. Two members are defined to be equal if their members are
@@ -190,7 +211,7 @@ class InterfaceDescription {
          *
          * @param o   Member to compare against this member.
          *
-         * @return    true iff o == this member.
+         * @return    true if o == this member.
          */
         bool operator==(const Member& o) const;
     };
@@ -246,7 +267,7 @@ class InterfaceDescription {
          * Get this property's annotation value
          * @param annotationName   name of the annotation to look for
          * @param[out]             value  The value of the annotation, if found
-         * @return                 true iff annotations[name] == value
+         * @return                 true if annotations[name] == value
          */
         bool GetAnnotation(const qcc::String& annotationName, qcc::String& value) const;
 
@@ -742,6 +763,8 @@ class InterfaceDescription {
     InterfaceDescription& operator=(const InterfaceDescription& other);
 
     void AppendDescriptionToAnnotations(AnnotationsMap& annotations, const char* description, Translator* translator) const;
+
+    void AppendDescriptionToArgAnnotations(ArgumentAnnotations& argAnnotations, const char* argName, const char* description, Translator* translator) const;
 
     void AppendDescriptionXml(qcc::String& xml,
                               const char* language,
