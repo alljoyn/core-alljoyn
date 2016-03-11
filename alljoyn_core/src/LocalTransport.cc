@@ -1348,9 +1348,19 @@ QStatus _LocalEndpoint::HandleSignal(Message& message)
             bool unregistering = unregisteringObjects.find(object) != unregisteringObjects.end();
             if (!unregistering) {
                 activeHandlers[object].insert(Thread::GetThread());
-                handlerThreadsLock.Unlock();
-                (object->*callit->handler)(callit->member, message->GetObjectPath(), message);
-                handlerThreadsLock.Lock();
+                if (qcc::ManagedObj<MessageReceiver>::isManaged(object))
+                {
+                    /* This is a managed object so make sure to keep it around while the callback handler
+                       is being called */
+                    qcc::ManagedObj<MessageReceiver> receiver = qcc::ManagedObj<MessageReceiver>::wrap(object);
+                    handlerThreadsLock.Unlock();
+                    (object->*callit->handler)(callit->member, message->GetObjectPath(), message);
+                    handlerThreadsLock.Lock();
+                } else {
+                    handlerThreadsLock.Unlock();
+                    (object->*callit->handler)(callit->member, message->GetObjectPath(), message);
+                    handlerThreadsLock.Lock();
+                }
                 activeHandlers[object].erase(Thread::GetThread());
                 if (activeHandlers[object].empty()) {
                     activeHandlers.erase(object);
