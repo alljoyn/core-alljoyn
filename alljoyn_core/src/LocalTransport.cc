@@ -672,9 +672,9 @@ QStatus _LocalEndpoint::DoPushMessage(Message& message)
             break;
         }
 
-        handlerThreadsLock.Lock();
+        handlerThreadsLock.Lock(MUTEX_CONTEXT);
         handlerThreadsDone.Broadcast();
-        handlerThreadsLock.Unlock();
+        handlerThreadsLock.Unlock(MUTEX_CONTEXT);
     }
     return status;
 }
@@ -982,13 +982,13 @@ bool _LocalEndpoint::PauseReplyHandlerTimeout(Message& methodCallMsg)
 {
     bool paused = false;
     if (methodCallMsg->GetType() == MESSAGE_METHOD_CALL) {
-        replyMapLock.Lock();
+        replyMapLock.Lock(MUTEX_CONTEXT);
         map<uint32_t, ReplyContext*>::iterator iter = replyMap.find(methodCallMsg->GetCallSerial());
         if (iter != replyMap.end()) {
             ReplyContext*rc = iter->second;
             paused = replyTimer.RemoveAlarm(rc->alarm);
         }
-        replyMapLock.Unlock();
+        replyMapLock.Unlock(MUTEX_CONTEXT);
     }
     return paused;
 }
@@ -997,7 +997,7 @@ bool _LocalEndpoint::ResumeReplyHandlerTimeout(Message& methodCallMsg)
 {
     bool resumed = false;
     if (methodCallMsg->GetType() == MESSAGE_METHOD_CALL) {
-        replyMapLock.Lock();
+        replyMapLock.Lock(MUTEX_CONTEXT);
         map<uint32_t, ReplyContext*>::iterator iter = replyMap.find(methodCallMsg->GetCallSerial());
         if (iter != replyMap.end()) {
             ReplyContext*rc = iter->second;
@@ -1008,7 +1008,7 @@ bool _LocalEndpoint::ResumeReplyHandlerTimeout(Message& methodCallMsg)
                 QCC_LogError(status, ("Failed to resume reply handler timeout for %s", methodCallMsg->Description().c_str()));
             }
         }
-        replyMapLock.Unlock();
+        replyMapLock.Unlock(MUTEX_CONTEXT);
     }
     return resumed;
 }
@@ -1224,19 +1224,19 @@ QStatus _LocalEndpoint::HandleMethodCall(Message& message)
     if (status == ER_OK) {
         /* Call the method handler */
         if (entry) {
-            handlerThreadsLock.Lock();
+            handlerThreadsLock.Lock(MUTEX_CONTEXT);
             bool unregistering = unregisteringObjects.find(entry->object) != unregisteringObjects.end();
             if (!unregistering) {
                 activeHandlers[entry->object].insert(Thread::GetThread());
-                handlerThreadsLock.Unlock();
+                handlerThreadsLock.Unlock(MUTEX_CONTEXT);
                 entry->object->CallMethodHandler(entry->handler, entry->member, message, entry->context);
-                handlerThreadsLock.Lock();
+                handlerThreadsLock.Lock(MUTEX_CONTEXT);
                 activeHandlers[entry->object].erase(Thread::GetThread());
                 if (activeHandlers[entry->object].empty()) {
                     activeHandlers.erase(entry->object);
                 }
             }
-            handlerThreadsLock.Unlock();
+            handlerThreadsLock.Unlock(MUTEX_CONTEXT);
         }
     } else if (message->GetType() == MESSAGE_METHOD_CALL && !(message->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED)) {
         /* We are rejecting a method call that expects a response so reply with an error message. */
@@ -1344,19 +1344,28 @@ QStatus _LocalEndpoint::HandleSignal(Message& message)
         list<SignalTable::Entry>::const_iterator callit;
         for (callit = callList.begin(); callit != callList.end(); ++callit) {
             MessageReceiver* object = callit->object;
-            handlerThreadsLock.Lock();
+            handlerThreadsLock.Lock(MUTEX_CONTEXT);
             bool unregistering = unregisteringObjects.find(object) != unregisteringObjects.end();
             if (!unregistering) {
                 activeHandlers[object].insert(Thread::GetThread());
-                handlerThreadsLock.Unlock();
-                (object->*callit->handler)(callit->member, message->GetObjectPath(), message);
-                handlerThreadsLock.Lock();
+                if (qcc::ManagedObj<MessageReceiver>::isManaged(object)) {
+                    /* This is a managed object so make sure to keep it around while the callback handler
+                       is being called */
+                    qcc::ManagedObj<MessageReceiver> receiver = qcc::ManagedObj<MessageReceiver>::wrap(object);
+                    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+                    (object->*callit->handler)(callit->member, message->GetObjectPath(), message);
+                    handlerThreadsLock.Lock(MUTEX_CONTEXT);
+                } else {
+                    handlerThreadsLock.Unlock(MUTEX_CONTEXT);
+                    (object->*callit->handler)(callit->member, message->GetObjectPath(), message);
+                    handlerThreadsLock.Lock(MUTEX_CONTEXT);
+                }
                 activeHandlers[object].erase(Thread::GetThread());
                 if (activeHandlers[object].empty()) {
                     activeHandlers.erase(object);
                 }
             }
-            handlerThreadsLock.Unlock();
+            handlerThreadsLock.Unlock(MUTEX_CONTEXT);
         }
     }
     return status;
@@ -1366,9 +1375,9 @@ QStatus _LocalEndpoint::HandleMethodReply(Message& message)
 {
     QStatus status = ER_OK;
 
-    replyMapLock.Lock();
+    replyMapLock.Lock(MUTEX_CONTEXT);
     ReplyContext* rc = RemoveReplyHandler(message->GetReplySerial());
-    replyMapLock.Unlock();
+    replyMapLock.Unlock(MUTEX_CONTEXT);
     if (rc) {
         if ((rc->callFlags & ALLJOYN_FLAG_ENCRYPTED) && !message->IsEncrypted()) {
             /*
@@ -1407,19 +1416,19 @@ QStatus _LocalEndpoint::HandleMethodReply(Message& message)
             status = ER_OK;
         }
 
-        handlerThreadsLock.Lock();
+        handlerThreadsLock.Lock(MUTEX_CONTEXT);
         bool unregistering = unregisteringObjects.find(rc->receiver) != unregisteringObjects.end();
         if (!unregistering) {
             activeHandlers[rc->receiver].insert(Thread::GetThread());
-            handlerThreadsLock.Unlock();
+            handlerThreadsLock.Unlock(MUTEX_CONTEXT);
             ((rc->receiver)->*(rc->handler))(message, rc->context);
-            handlerThreadsLock.Lock();
+            handlerThreadsLock.Lock(MUTEX_CONTEXT);
             activeHandlers[rc->receiver].erase(Thread::GetThread());
             if (activeHandlers[rc->receiver].empty()) {
                 activeHandlers.erase(rc->receiver);
             }
         }
-        handlerThreadsLock.Unlock();
+        handlerThreadsLock.Unlock(MUTEX_CONTEXT);
 
         delete rc;
     } else {

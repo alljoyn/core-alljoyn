@@ -156,6 +156,22 @@ class ManagedObj {
     }
 
     /**
+     * Static method to determine if a pointer is a managed object.
+     *
+     * @param naked  A pointer to check whether or not it is managed
+     * @returns      true if naked points to an object that is managed, false otherwise
+     */
+    static bool isManaged(T* naked)
+    {
+        static const size_t offset = (sizeof(ManagedCtx) + 7) & ~0x07;
+        ManagedCtx* proposedContext = reinterpret_cast<ManagedCtx*>((char*)naked - offset);
+        if (proposedContext->magic == ManagedCtxMagic) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Static method to convert between managed objects of related types.
      *
      * @param other  A managed object instance of a related type.
