@@ -656,12 +656,17 @@ bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName
                         authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_PSK) == PermissionConfigurator::CAPABLE_ECDHE_PSK);
                         break;
 
+                    case AUTH_SUITE_ECDHE_SPEKE:
+                        authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_SPEKE) == PermissionConfigurator::CAPABLE_ECDHE_SPEKE);
+                        break;
+
                     case AUTH_SUITE_ECDHE_ECDSA:
                         authorized = ((capabilities& PermissionConfigurator::CAPABLE_ECDHE_ECDSA) == PermissionConfigurator::CAPABLE_ECDHE_ECDSA);
                         break;
 
                     default:
                         /* No other suites supported for claiming. */
+                        QCC_DbgPrintf(("%s Claiming is not supported with this suite (%#x)", __FUNCTION__, peerState->GetAuthSuite()));
                         authorized = false;
                         break;
                     }
@@ -731,6 +736,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
         request.mbrName = msg->GetMemberName();
     }
     if (!permissionMgmtObj) {
+        QCC_DbgPrintf(("%s No permission management object", __FUNCTION__));
         return ER_PERMISSION_DENIED;
     }
     bool isPermissionMgmt = IsPermissionMgmtInterface(request.iName);
@@ -740,6 +746,7 @@ QStatus PermissionManager::AuthorizeMessage(bool outgoing, Message& msg, PeerSta
             if (allowed) {
                 return ER_OK;
             } else {
+                QCC_DbgPrintf(("%s AuthorizePermissionMgmt check failed", __FUNCTION__));
                 return ER_PERMISSION_DENIED;
             }
         }
