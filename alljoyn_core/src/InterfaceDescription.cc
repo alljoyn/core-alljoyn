@@ -94,20 +94,19 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
     arg += " type=\"" + argType + "\" direction=\"";
     arg += inOut ? "in\"" : "out\"";
 
+    qcc::String argAnnotations;
     const char* myDesc = NULL;
-    if (withDescriptions) {
-        ArgumentDescriptions::const_iterator search = member.argumentDescriptions->find(argName);
-        if (member.argumentDescriptions->end() != search) {
-            myDesc = search->second.c_str();
-        }
+    ArgumentDescriptions::const_iterator search = member.argumentDescriptions->find(argName);
+    if (member.argumentDescriptions->end() != search) {
+        myDesc = search->second.c_str();
     }
     if (myDesc || member.argumentAnnotations->size() > 0) {
-        arg += ">\n";
         if (myDesc) {
-            if (langTag != NULL) {
+            if (withDescriptions) {
                 AppendDescriptionXml(arg, langTag, myDesc, translator, in);
-            } else {
-                AppendDescriptionToAnnotations(*member.annotations, myDesc, translator);
+            }
+            if (langTag == NULL) {
+                AppendDescriptionToArgAnnotations(*member.argumentAnnotations, argName.c_str(), myDesc, translator);
             }
         }
 
@@ -115,13 +114,16 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
         ArgumentAnnotations::const_iterator ait = member.argumentAnnotations->begin();
         for (; ait != member.argumentAnnotations->end(); ++ait) {
             if (ait->first.first == argName) {
-                arg += in + "  <annotation name=\"" + ait->first.second.c_str() + "\" value=\"" + ait->second + "\"/>\n";
+                argAnnotations += in + "  <annotation name=\"" + ait->first.second.c_str() + "\" value=\"" + ait->second + "\"/>\n";
             }
         }
-        arg += in + "</arg>\n";
+    }
+    if (!argAnnotations.empty()) {
+        arg += ">\n" + argAnnotations + in + "</arg>\n";
     } else {
         arg += "/>\n";
     }
+
     return arg;
 }
 
@@ -239,6 +241,25 @@ InterfaceDescription::Member::~Member()
 size_t InterfaceDescription::Member::GetAnnotations(qcc::String* names, qcc::String* values, size_t size) const
 {
     return GetAnnotationsWithValues(*annotations, names, values, size);
+}
+
+size_t InterfaceDescription::Member::GetArgAnnotations(const char* argName, qcc::String* names, qcc::String* values, size_t size) const
+{
+    size_t count = argumentAnnotations->size();
+
+    if ((names != NULL) && (values != NULL)) {
+        ArgumentAnnotations::const_iterator ait = argumentAnnotations->begin();
+        count = std::min(count, size);
+        for (size_t i = 0; (i < count) && (ait != argumentAnnotations->end()); ++ait) {
+            if (ait->first.first == argName) {
+                names[i] = ait->first.second;
+                values[i] = ait->second;
+                ++i;
+            }
+        }
+    }
+
+    return count;
 }
 
 bool InterfaceDescription::Member::operator==(const Member& o) const {
@@ -381,6 +402,13 @@ bool InterfaceDescription::Member::GetAnnotation(const qcc::String& annotationNa
 {
     AnnotationsMap::const_iterator it = annotations->find(annotationName);
     return (it != annotations->end() ? value = it->second, true : false);
+}
+
+bool InterfaceDescription::Member::GetArgAnnotation(const char* argName, const qcc::String& annotationName, qcc::String& value) const
+{
+    pair<qcc::String, qcc::String> item(qcc::String(argName), annotationName);
+    ArgumentAnnotations::const_iterator ait = argumentAnnotations->find(item);
+    return (ait != argumentAnnotations->end() ? value = ait->second, true : false);
 }
 
 bool InterfaceDescription::Property::GetAnnotation(const qcc::String& annotationName, qcc::String& value) const
@@ -943,9 +971,7 @@ bool InterfaceDescription::GetArgAnnotation(const char* member, const char* arg,
     }
 
     Member& m = it->second;
-    pair<qcc::String, qcc::String> item(qcc::String(arg), name);
-    ArgumentAnnotations::const_iterator ait = m.argumentAnnotations->find(item);
-    return (ait != m.argumentAnnotations->end() ? value = ait->second, true : false);
+    return m.GetArgAnnotation(arg, name, value);
 }
 
 const char* InterfaceDescription::Translate(const char* toLanguage, const char* text, qcc::String& buffer, Translator* translator) const
@@ -1007,7 +1033,7 @@ void InterfaceDescription::AppendDescriptionToAnnotations(AnnotationsMap& annota
             }
         }
     } else {
-        /* Append with no language tag only if it hasn't been annotated */
+        /* Append with default language tag only if it hasn't been annotated */
         bool found = false;
         AnnotationsMap::const_iterator mit = annotations.begin();
         for (; mit != annotations.end(); ++mit) {
@@ -1017,9 +1043,62 @@ void InterfaceDescription::AppendDescriptionToAnnotations(AnnotationsMap& annota
             }
         }
         if (!found) {
-            annotations[docString] = localDescription;
+            qcc::String name = docString;
+            if (!defs->languageTag.empty()) {
+                name += "." + defs->languageTag;
+            }
+            annotations[name] = localDescription;
         }
     }
 }
 
+void InterfaceDescription::AppendDescriptionToArgAnnotations(ArgumentAnnotations& argAnnotations, const char* argName, const char* description, Translator* translator) const
+{
+    if ((description == NULL) || (description[0] == '\0')) {
+        return;
+    }
+
+    qcc::String docString("org.alljoyn.Bus.DocString");
+    qcc::String localDescription(description);
+
+    /* Append description of all languages */
+    qcc::String language;
+    if (translator != NULL) {
+        size_t size = translator->NumTargetLanguages();
+        for (size_t index = 0; index < size; index++) {
+            translator->GetTargetLanguage(index, language);
+
+            if (!language.empty()) {
+                qcc::String buffer;
+                const char* d = Translate(language.c_str(), description, buffer, translator);
+                if ((d == NULL) || (d[0] == '\0')) {
+                    continue;
+                }
+                localDescription = XmlElement::EscapeXml(d);
+                qcc::String name = docString + "." + language;
+
+                pair<qcc::String, qcc::String> item(qcc::String(argName), name);
+                argAnnotations.insert(ArgumentAnnotations::value_type(item, localDescription));
+            }
+        }
+    } else {
+        /* Append with default language tag only if it hasn't been annotated */
+        bool found = false;
+        ArgumentAnnotations::const_iterator ait = argAnnotations.begin();
+        for (; ait != argAnnotations.end(); ++ait) {
+            if (localDescription == ait->second) {
+                found = true;
+                break;
+            }
+        }
+        if (!found) {
+            qcc::String name = docString;
+            if (!defs->languageTag.empty()) {
+                name += "." + defs->languageTag;
+            }
+            pair<qcc::String, qcc::String> item(qcc::String(argName), name);
+            argAnnotations.insert(ArgumentAnnotations::value_type(item, localDescription));
+        }
+    }
+}
 }

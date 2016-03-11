@@ -21,11 +21,70 @@
  ******************************************************************************/
 
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/Translator.h>
 #include <alljoyn_c/InterfaceDescription.h>
 #include <alljoyn_c/Status.h>
 #include <qcc/Debug.h>
+#include <vector>
 
 #define QCC_MODULE "ALLJOYN_C"
+
+namespace ajn {
+
+class TranslatorC : public Translator {
+  public:
+    TranslatorC() : translation_callback_ptr(nullptr)
+    { }
+
+    void SetTranslationCallback(alljoyn_interfacedescription_translation_callback_ptr ptr)
+    {
+        translation_callback_ptr = ptr;
+    }
+
+    alljoyn_interfacedescription_translation_callback_ptr GetTranslationCallback()
+    {
+        return translation_callback_ptr;
+    }
+
+    virtual QStatus AddTargetLanguage(const char* language, bool* added = NULL) {
+        targetLanguages.push_back(language);
+        if (added != NULL) {
+            *added = true;
+        }
+        return ER_OK;
+    }
+
+  private:
+    virtual size_t NumTargetLanguages()
+    {
+        return targetLanguages.size();
+    }
+
+    virtual void GetTargetLanguage(size_t index, qcc::String& ret)
+    {
+        if (index < targetLanguages.size()) {
+            ret = targetLanguages[index];
+        } else {
+            ret = "";
+        }
+    }
+
+    virtual const char* Translate(const char* sourceLanguage, const char* targetLanguage, const char* source)
+    {
+        if (translation_callback_ptr == nullptr) {
+            return Translator::Translate(sourceLanguage, targetLanguage, source);
+        }
+        return translation_callback_ptr(sourceLanguage, targetLanguage, source);
+    }
+
+  private:
+    std::vector<qcc::String> targetLanguages;
+    alljoyn_interfacedescription_translation_callback_ptr translation_callback_ptr;
+};
+
+/* static instances of class used for translation callback */
+static TranslatorC translatorC;
+}
 
 struct _alljoyn_interfacedescription_handle {
     /* Empty by design, this is just to allow the type restrictions to save coders from themselves */
@@ -65,7 +124,6 @@ void AJ_CALL alljoyn_interfacedescription_member_getannotationatindex(alljoyn_in
     *value_size = inner_values[index].size() + 1;
     delete[] inner_names;
     delete[] inner_values;
-    return;
 }
 
 QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getannotation(alljoyn_interfacedescription_member member, const char* name, char* value, size_t* value_size)
@@ -77,7 +135,64 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getannotation(alljoyn_inter
 
     if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
-            ::strncpy(value, out_val.c_str(), *value_size);
+            strncpy(value, out_val.c_str(), *value_size);
+            value[*value_size - 1] = '\0';
+            return_value = QCC_TRUE;
+        } else {
+            //return empty string
+            *value = '\0';
+        }
+    }
+    *value_size = out_val.size() + 1;
+    return return_value;
+}
+
+size_t AJ_CALL alljoyn_interfacedescription_member_getargannotationscount(alljoyn_interfacedescription_member member, const char* argName) {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription::Member*)member.internal_member)->GetArgAnnotations(argName, NULL, NULL, 0);
+}
+
+void AJ_CALL alljoyn_interfacedescription_member_getargannotationatindex(alljoyn_interfacedescription_member member, const char* argName,
+                                                                         size_t index,
+                                                                         char* name, size_t* name_size,
+                                                                         char* value, size_t* value_size)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    size_t annotation_size = ((ajn::InterfaceDescription::Member*)member.internal_member)->GetArgAnnotations(argName, NULL, NULL, 0);
+    qcc::String* inner_names = new qcc::String[annotation_size];
+    qcc::String* inner_values = new qcc::String[annotation_size];
+
+    ((ajn::InterfaceDescription::Member*)member.internal_member)->GetArgAnnotations(argName, inner_names, inner_values, annotation_size);
+
+    if ((name != nullptr) && (value != nullptr)) {
+        if (*name_size >= 1) {
+            strncpy(name, inner_names[index].c_str(), *name_size);
+            name[*name_size - 1] = '\0';
+        }
+
+        if (*value_size >= 1) {
+            strncpy(value, inner_values[index].c_str(), *value_size);
+            value[*value_size - 1] = '\0';
+        }
+    }
+    //size of the string plus the nul character
+    *name_size = inner_names[index].size() + 1;
+    //size of the string plus the nul character
+    *value_size = inner_values[index].size() + 1;
+    delete[] inner_names;
+    delete[] inner_values;
+}
+
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_member_getargannotation(alljoyn_interfacedescription_member member, const char* argName, const char* name, char* value, size_t* value_size)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_BOOL return_value = QCC_FALSE;
+    qcc::String out_val;
+    bool b = ((ajn::InterfaceDescription::Member*)member.internal_member)->GetArgAnnotation(argName, name, out_val);
+
+    if ((value != nullptr) && (*value_size >= 1)) {
+        if (b) {
+            strncpy(value, out_val.c_str(), *value_size);
             value[*value_size - 1] = '\0';
             return_value = QCC_TRUE;
         } else {
@@ -124,7 +239,6 @@ void AJ_CALL alljoyn_interfacedescription_property_getannotationatindex(alljoyn_
     *value_size = inner_values[index].size() + 1;
     delete[] inner_names;
     delete[] inner_values;
-    return;
 }
 
 QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_getannotation(alljoyn_interfacedescription_property property,
@@ -139,7 +253,7 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_property_getannotation(alljoyn_int
 
     if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
-            ::strncpy(value, out_val.c_str(), *value_size);
+            strncpy(value, out_val.c_str(), *value_size);
             value[*value_size - 1] = '\0';
             return_value = QCC_TRUE;
         } else {
@@ -190,7 +304,7 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_getannotation(alljoyn_interfacedes
 
     if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
-            ::strncpy(value, out_val.c_str(), *value_size);
+            strncpy(value, out_val.c_str(), *value_size);
             value[*value_size - 1] = '\0';
             return_value = QCC_TRUE;
         } else {
@@ -237,7 +351,6 @@ void AJ_CALL alljoyn_interfacedescription_getannotationatindex(alljoyn_interface
     *value_size = inner_values[index].size() + 1;
     delete[] inner_names;
     delete[] inner_values;
-    return;
 }
 
 QStatus AJ_CALL alljoyn_interfacedescription_addmember(alljoyn_interfacedescription iface, alljoyn_messagetype type,
@@ -271,7 +384,7 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmemberannotation(alljoyn_interf
 
     if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
-            ::strncpy(value, out_val.c_str(), *value_size);
+            strncpy(value, out_val.c_str(), *value_size);
             value[*value_size - 1] = '\0';
             return_value = QCC_TRUE;
         } else {
@@ -485,7 +598,7 @@ QCC_BOOL AJ_CALL alljoyn_interfacedescription_getpropertyannotation(alljoyn_inte
     //Return the size of the string so memory can be allocated for the string
     if ((value != nullptr) && (*value_size >= 1)) {
         if (b) {
-            ::strncpy(value, out_val.c_str(), *value_size);
+            strncpy(value, out_val.c_str(), *value_size);
             value[*value_size - 1] = '\0';
             return_value = QCC_TRUE;
         } else {
@@ -532,6 +645,119 @@ alljoyn_interfacedescription_securitypolicy AJ_CALL alljoyn_interfacedescription
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return (alljoyn_interfacedescription_securitypolicy)((const ajn::InterfaceDescription*)iface)->GetSecurityPolicy();
+}
+
+void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(alljoyn_interfacedescription iface, const char* language)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    if ((language != nullptr) && (language[0] != '\0')) {
+        ajn::translatorC.AddTargetLanguage(language);
+    }
+    ((ajn::InterfaceDescription*)iface)->SetDescriptionLanguage(language);
+}
+
+size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoyn_interfacedescription iface, const char** languages, size_t size)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    size_t count = 0;
+    ajn::Translator* translator = ((const ajn::InterfaceDescription*)iface)->GetDescriptionTranslator();
+    if (translator == &ajn::translatorC) {
+        /* Get description languages from translator */
+        size_t numTargetLanguages = translator->NumTargetLanguages();
+        if (languages == nullptr) {
+            count = numTargetLanguages;
+        } else {
+            qcc::String language;
+            for (count = 0; (count < numTargetLanguages) && (count < size); count++) {
+                translator->GetTargetLanguage(count, language);
+                languages[count] = language.c_str();
+            }
+        }
+    } else {
+        if (languages == nullptr) {
+            count = 1;
+        } else if (size > 0) {
+            languages[0] = ((const ajn::InterfaceDescription*)iface)->GetDescriptionLanguage();
+            count = 1;
+        } else {
+            count = 0;
+        }
+    }
+    return count;
+}
+
+void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    ((ajn::InterfaceDescription*)iface)->SetDescription(description);
+}
+
+QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription*)iface)->SetMemberDescription(member, description);
+}
+
+QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription*)iface)->SetArgDescription(member, argName, description);
+}
+
+QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription*)iface)->SetPropertyDescription(name, description);
+}
+
+void AJ_CALL alljoyn_interfacedescription_setdescriptiontranslationcallback(alljoyn_interfacedescription iface, alljoyn_interfacedescription_translation_callback_ptr translation_callback)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    ajn::translatorC.SetTranslationCallback(translation_callback);
+    ((ajn::InterfaceDescription*)iface)->SetDescriptionTranslator(&ajn::translatorC);
+}
+
+alljoyn_interfacedescription_translation_callback_ptr AJ_CALL alljoyn_interfacedescription_getdescriptiontranslationcallback(const alljoyn_interfacedescription iface)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    ajn::Translator* translator = ((const ajn::InterfaceDescription*)iface)->GetDescriptionTranslator();
+    if (translator == &ajn::translatorC) {
+        return ajn::translatorC.GetTranslationCallback();
+    }
+    return nullptr;
+}
+
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_hasdescription(const alljoyn_interfacedescription iface)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((const ajn::InterfaceDescription*)iface)->HasDescription();
+}
+
+QStatus AJ_CALL alljoyn_interfacedescription_addargannotation(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* name, const char* value)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription*)iface)->AddArgAnnotation(member, argName, name, value);
+}
+
+QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmemberargannotation(const alljoyn_interfacedescription iface, const char* member, const char* argName, const char* name, char* value, size_t* value_size)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_BOOL return_value = QCC_FALSE;
+    qcc::String out_val;
+    bool b = ((const ajn::InterfaceDescription*)iface)->GetArgAnnotation(member, argName, name, out_val);
+
+    if ((value != nullptr) && (*value_size >= 1)) {
+        if (b) {
+            strncpy(value, out_val.c_str(), *value_size);
+            value[*value_size - 1] = '\0';
+            return_value = QCC_TRUE;
+        } else {
+            //return empty string
+            *value = '\0';
+        }
+    }
+    *value_size = out_val.size() + 1;
+    return return_value;
 }
 
 QCC_BOOL AJ_CALL alljoyn_interfacedescription_eql(const alljoyn_interfacedescription one,
