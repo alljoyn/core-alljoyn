@@ -80,7 +80,7 @@ class PermissionConfigurator {
     typedef uint16_t ClaimCapabilities;
     typedef enum {
         CAPABLE_ECDHE_NULL = 0x01,
-        CAPABLE_ECDHE_PSK = 0x02,
+        CAPABLE_ECDHE_PSK = 0x02,   ///< Deprecated, will be removed in a future release.
         CAPABLE_ECDHE_ECDSA = 0x04,
         CAPABLE_ECDHE_SPEKE = 0x08
     } ClaimCapabilityMasks;

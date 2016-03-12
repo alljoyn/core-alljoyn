@@ -87,8 +87,12 @@ qcc::String qcc::RandomString(const char* prefix, size_t len)
 {
     // 64 filename safe characters
     static const char c[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_+";
-    qcc::String str(prefix);
+    qcc::String str;
     uint8_t* bits = new uint8_t[len];
+
+    if (prefix != nullptr) {
+        str.append(prefix);
+    }
     qcc::Crypto_GetRandomBytes(bits, len);
     for (size_t i = 0; i < len; ++i) {
         str += c[bits[i] & 0x3f];

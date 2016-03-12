@@ -877,7 +877,7 @@ class SecurityAuthentication2AuthListener : public DefaultECDHEAuthListener {
                             0xdd, 0x3f, 0x1e, 0x03,
                             0x79, 0xda, 0x04, 0x6a,
                             0x3a, 0xb6, 0xca, 0x44 };
-        SetPSK(psk, 16);
+        PermissionMgmtTestHelper::CallDeprecatedSetPSK((DefaultECDHEAuthListener*) this, psk, sizeof(psk));
     }
 
     QStatus RequestCredentialsAsync(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, void* context)
@@ -1914,7 +1914,7 @@ class SecurityAuthentication3AuthListener1 : public DefaultECDHEAuthListener {
                             0xdd, 0x3f, 0x1e, 0x03,
                             0x79, 0xda, 0x04, 0x6a,
                             0x3a, 0xb6, 0xca, 0x44 };
-        SetPSK(psk, 16);
+        PermissionMgmtTestHelper::CallDeprecatedSetPSK((DefaultECDHEAuthListener*) this, psk, sizeof(psk));
         calledAuthMechanisms.clear();
     }
 
@@ -1944,7 +1944,7 @@ class SecurityAuthentication3AuthListener2 : public DefaultECDHEAuthListener {
                             0xdd, 0x3f, 0x1e, 0x03,
                             0x79, 0xda, 0x04, 0x6a,
                             0x3a, 0xb6, 0xca, 0x55 };
-        SetPSK(psk, 16);
+        PermissionMgmtTestHelper::CallDeprecatedSetPSK((DefaultECDHEAuthListener*) this, psk, sizeof(psk));
         calledAuthMechanisms.clear();
     }
 

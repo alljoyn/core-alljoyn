@@ -409,7 +409,9 @@ void BasePermissionMgmtTest::GenerateCAKeys()
 static AuthListener* GenAuthListener(const char* keyExchange) {
     if (strstr(keyExchange, "ECDHE_PSK")) {
         qcc::String psk("38347892FFBEF5B2442AEDE9E53C4B32");
-        return new DefaultECDHEAuthListener(reinterpret_cast<const uint8_t*>(psk.data()), psk.size());
+        DefaultECDHEAuthListener* authListener = new DefaultECDHEAuthListener();
+        PermissionMgmtTestHelper::CallDeprecatedSetPSK(authListener, reinterpret_cast<const uint8_t*>(psk.data()), psk.size());
+        return authListener;
     }
     return new DefaultECDHEAuthListener();
 }
@@ -1102,4 +1104,32 @@ QStatus BasePermissionMgmtTest::Set(const char* ifcName, const char* propName, M
         return ER_OK;
     }
     return ER_BUS_NO_SUCH_PROPERTY;
+}
+
+void PermissionMgmtTestHelper::CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const uint8_t* pskBytes, size_t pskLength)
+{
+    /*
+     * This function suppresses compiler warnings when calling SetPSK, which is deprecated.
+     * ECHDE_PSK is deprecated as of 16.04, but we still test it, per the Alliance deprecation policy.
+     * ASACORE-2762 tracks removal of the ECDHE_PSK tests (and this function can be removed as a part of that work).
+     * https://jira.allseenalliance.org/browse/ASACORE-2762
+     */
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+
+    QCC_VERIFY(ER_OK == authListener->SetPSK(pskBytes, pskLength));
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
 }

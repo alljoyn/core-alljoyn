@@ -84,7 +84,6 @@
 #define QCC_DEPRECATED(func) __declspec(deprecated) func /**< mark a function as deprecated in msvc. */
 #define QCC_DEPRECATED_CLASS __declspec(deprecated) /**< mark a class as deprecated in msvc. */
 
-
 #else /* Some unknown compiler */
 
 #define QCC_DEPRECATED(func); /**< mark a function as deprecated. */
