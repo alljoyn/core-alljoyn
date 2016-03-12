@@ -1040,6 +1040,7 @@ bool _LocalEndpoint::OkToUnregisterHandlerObj(MessageReceiver* receiver)
     ActiveHandlers::const_iterator ahit = activeHandlers.find(receiver);
     if ((ahit != activeHandlers.end()) && (ahit->second.find(Thread::GetThread()) != ahit->second.end())) {
         QCC_LogError(ER_DEADLOCK, ("Attempt to unregister MessageReceiver from said MessageReceiver's message handler -- MessageReceiver not unregistered!"));
+        QCC_ASSERT(!"Attempt to unregister MessageReceiver from said MessageReceiver's message handler");
         handlerThreadsLock.Unlock(MUTEX_CONTEXT);
         return false;
     }
