@@ -854,9 +854,6 @@ void BusAttachment::WaitStopInternal()
             /* Clear peer state */
             busInternal->peerStateTable.Clear();
 
-            /* Persist keystore */
-            busInternal->keyStore.Store();
-
             isStarted = false;
             isStopping = false;
         }
