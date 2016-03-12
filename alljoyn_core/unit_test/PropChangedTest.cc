@@ -2462,7 +2462,8 @@ class SecPropChangedTest :
     Condition condition;
     bool evented;
 
-    virtual void SetUp() {
+    virtual void SetUp()
+    {
         ASSERT_EQ(ER_OK, tsm.Init());
         ASSERT_EQ(ER_OK, prov.Init(tsm));
         ASSERT_EQ(ER_OK, cons.Init(tsm));
@@ -2479,6 +2480,11 @@ class SecPropChangedTest :
         proxy->RegisterPropertiesChangedListener(TEST_INTERFACE, props, 1, *this, NULL);
     }
 
+    virtual void TearDown()
+    {
+        proxy->UnregisterPropertiesChangedListener(TEST_INTERFACE, *this);
+    }
+
     void PropertiesChanged(ProxyBusObject& obj,
                            const char* ifaceName,
                            const MsgArg& changed,
@@ -2491,6 +2497,7 @@ class SecPropChangedTest :
         QCC_UNUSED(changed);
         QCC_UNUSED(invalidated);
         QCC_UNUSED(context);
+
         lock.Lock();
         evented = true;
         condition.Signal();
@@ -2566,6 +2573,7 @@ class SecPropChangedTest :
                 return ER_BUS_NO_SUCH_PROPERTY;
             }
         }
+
         return status;
     }
 
@@ -2580,7 +2588,8 @@ class SecPropChangedTest :
         bool prop = !expected;
         status = arg.Get("b", &prop);
         EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
-        return prop == expected ? ER_OK : ER_FAIL;
+        status = ((prop == expected) ? ER_OK : ER_FAIL);
+        return status;
     }
 
 };
@@ -2588,18 +2597,18 @@ class SecPropChangedTest :
 /**
  * Basic test for the property cache with security enabled.
  * Test events being sent when policy is configured properly.
- *
- * Temporarily disabled, until ASACORE-2725 will get fixed.
  */
-TEST_F(SecPropChangedTest, DISABLED_PropertyCache_SecurityEnabled)
+TEST_F(SecPropChangedTest, PropertyCache_SecurityEnabled)
 {
     proxy->EnablePropertyCaching();
+
     // No policy set. So GetProperty should be denied by remote policy.
     ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
 
     // Set Policy on provider & consumer.
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
     ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
     ASSERT_EQ(ER_OK, CheckProperty(false));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov));
     ASSERT_EQ(ER_OK, CheckProperty(true));
