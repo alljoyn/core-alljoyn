@@ -2462,7 +2462,10 @@ class SecPropChangedTest :
     Condition condition;
     bool evented;
 
-    virtual void SetUp() {
+    virtual void SetUp()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << "(0)";
+
         ASSERT_EQ(ER_OK, tsm.Init());
         ASSERT_EQ(ER_OK, prov.Init(tsm));
         ASSERT_EQ(ER_OK, cons.Init(tsm));
@@ -2477,6 +2480,13 @@ class SecPropChangedTest :
         const char* props[1];
         props[0] = TEST_PROP_NAME;
         proxy->RegisterPropertiesChangedListener(TEST_INTERFACE, props, 1, *this, NULL);
+
+        EXPECT_TRUE(false) << __FUNCTION__ << "(1)";
+    }
+
+    void TearDown()
+    {
+        proxy->UnregisterPropertiesChangedListener(TEST_INTERFACE, *this);
     }
 
     void PropertiesChanged(ProxyBusObject& obj,
@@ -2491,14 +2501,21 @@ class SecPropChangedTest :
         QCC_UNUSED(changed);
         QCC_UNUSED(invalidated);
         QCC_UNUSED(context);
+
+        EXPECT_TRUE(false) << __FUNCTION__ << "(0)";
+
         lock.Lock();
         evented = true;
         condition.Signal();
         lock.Unlock();
+
+        EXPECT_TRUE(false) << __FUNCTION__ << "(1)";
     }
 
     QStatus SendAndWaitForEvent(TestSecureApplication& prov, bool newValue = true)
     {
+        EXPECT_TRUE(false) << __FUNCTION__ << "(0)";
+
         lock.Lock();
         evented = false;
         QStatus status = prov.UpdateTestProperty(newValue);
@@ -2511,16 +2528,25 @@ class SecPropChangedTest :
         }
         lock.Unlock();
         return status;
+
+        EXPECT_TRUE(false) << __FUNCTION__ << "(1)";
     }
 
     QStatus GetProperty()
     {
+        EXPECT_TRUE(false) << __FUNCTION__ << "(0)";
+
         MsgArg arg;
-        return proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+        QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+
+        EXPECT_TRUE(false) << __FUNCTION__ << "(1)";
+        return status;
     }
 
     QStatus GetAllProperties(size_t expected = 2)
     {
+        EXPECT_TRUE(false) << __FUNCTION__ << "(0)";
+
         MsgArg props;
         QStatus status = proxy->GetAllProperties(TEST_INTERFACE, props);
         if (ER_OK != status) {
@@ -2566,11 +2592,15 @@ class SecPropChangedTest :
                 return ER_BUS_NO_SUCH_PROPERTY;
             }
         }
+
+        EXPECT_TRUE(false) << __FUNCTION__ << "(1)";
         return status;
     }
 
     QStatus CheckProperty(bool expected)
     {
+        EXPECT_TRUE(false) << __FUNCTION__ << "(0)";
+
         MsgArg arg;
         QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
         EXPECT_EQ(ER_OK, status) << "Failed to GetProperty";
@@ -2580,7 +2610,10 @@ class SecPropChangedTest :
         bool prop = !expected;
         status = arg.Get("b", &prop);
         EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
-        return prop == expected ? ER_OK : ER_FAIL;
+        status = ((prop == expected) ? ER_OK : ER_FAIL);
+
+        EXPECT_TRUE(false) << __FUNCTION__ << "(1)";
+        return status;
     }
 
 };
@@ -2588,22 +2621,36 @@ class SecPropChangedTest :
 /**
  * Basic test for the property cache with security enabled.
  * Test events being sent when policy is configured properly.
- *
- * Temporarily disabled, until ASACORE-2725 will get fixed.
  */
-TEST_F(SecPropChangedTest, DISABLED_PropertyCache_SecurityEnabled)
+TEST_F(SecPropChangedTest, PropertyCache_SecurityEnabled)
 {
+    EXPECT_TRUE(false) << __FUNCTION__ << "(0)";
     proxy->EnablePropertyCaching();
+
     // No policy set. So GetProperty should be denied by remote policy.
+    EXPECT_TRUE(false) << __FUNCTION__ << "(1)";
     ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
 
     // Set Policy on provider & consumer.
+    EXPECT_TRUE(false) << __FUNCTION__ << "(2)";
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+
+    EXPECT_TRUE(false) << __FUNCTION__ << "(3)";
     ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
+    EXPECT_TRUE(false) << __FUNCTION__ << "(4)";
     ASSERT_EQ(ER_OK, CheckProperty(false));
+
+    EXPECT_TRUE(false) << __FUNCTION__ << "(5)";
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov));
+
+    EXPECT_TRUE(false) << __FUNCTION__ << "(6)";
     ASSERT_EQ(ER_OK, CheckProperty(true));
+
+    EXPECT_TRUE(false) << __FUNCTION__ << "(7)";
     ASSERT_EQ(1, prov.GetCurrentGetPropertyCount());
+
+    EXPECT_TRUE(false) << __FUNCTION__ << "(8)";
 }
 
 /**
