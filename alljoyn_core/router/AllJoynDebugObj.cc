@@ -30,7 +30,6 @@
 
 #include <qcc/Log.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 
 #include "AllJoynDebugObj.h"
 #include "Bus.h"
@@ -130,7 +129,7 @@ QStatus AllJoynDebugObj::AddDebugInterface(AllJoynDebugObjAddon* addon,
         }
     }
 
-    properties.insert(std::pair<qcc::StringMapKey, Properties*>(ifaceNameStr, &ifaceProperties));
+    properties.insert(std::pair<std::string, Properties*>(ifaceNameStr, &ifaceProperties));
 
 exit:
     if (methodEntries) {

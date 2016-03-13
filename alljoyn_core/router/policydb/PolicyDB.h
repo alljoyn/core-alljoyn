@@ -26,7 +26,6 @@
 #include <qcc/ManagedObj.h>
 #include <qcc/RWLock.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/STLContainer.h>
 
 #include <alljoyn/Message.h>
@@ -388,10 +387,10 @@ class _PolicyDB {
     };
 
     /** typedef for mapping a string to a numerical value for normalization */
-    typedef std::unordered_map<qcc::StringMapKey, StringID> StringIDMap;
+    typedef std::unordered_map<std::string, StringID> StringIDMap;
 
     /** typedef for mapping a string to a numerical value for normalization */
-    typedef std::unordered_map<qcc::StringMapKey, IDSet> BusNameIDMap;
+    typedef std::unordered_map<std::string, IDSet> BusNameIDMap;
 
     /**
      * Adds rules to specific rule sets.  Called by public AddRule to add

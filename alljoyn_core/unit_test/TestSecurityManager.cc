@@ -197,7 +197,7 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     QStatus status = ER_FAIL;
 
     SessionId sessionId;
-    const char* peerBusName = peerBus.GetUniqueName().c_str();
+    qcc::String peerBusName = peerBus.GetUniqueName();
 
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener);
     if (ER_OK != status) {
@@ -206,13 +206,13 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
 
     /* set claimable */
     peerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    status = bus.JoinSession(peerBusName, ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
+    status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
                              this, sessionId, opts);
     if (ER_OK != status) {
         return status;
     }
 
-    SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
+    SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     ECCPublicKey appPublicKey;
     status = GetAppPublicKey(peerBus, appPublicKey);
@@ -261,20 +261,20 @@ QStatus TestSecurityManager::UpdateIdentity(BusAttachment& peerBus,
     QStatus status = ER_FAIL;
 
     SessionId sessionId;
-    const char* peerBusName = peerBus.GetUniqueName().c_str();
+    qcc::String peerBusName = peerBus.GetUniqueName();
 
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener);
     if (ER_OK != status) {
         return status;
     }
 
-    status = bus.JoinSession(peerBusName, ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
+    status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
                              this, sessionId, opts);
     if (ER_OK != status) {
         return status;
     }
 
-    SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
+    SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     ECCPublicKey appPublicKey;
     status = GetAppPublicKey(peerBus, appPublicKey);
@@ -317,20 +317,20 @@ QStatus TestSecurityManager::InstallMembership(BusAttachment& peerBus, const GUI
     QStatus status = ER_FAIL;
 
     SessionId sessionId;
-    const char* peerBusName = peerBus.GetUniqueName().c_str();
+    qcc::String peerBusName = peerBus.GetUniqueName();
 
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener);
     if (ER_OK != status) {
         return status;
     }
 
-    status = bus.JoinSession(peerBusName, ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
+    status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
                              this, sessionId, opts);
     if (ER_OK != status) {
         return status;
     }
 
-    SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
+    SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     ECCPublicKey appPublicKey;
     status = GetAppPublicKey(peerBus, appPublicKey);
@@ -363,20 +363,20 @@ QStatus TestSecurityManager::UpdatePolicy(const BusAttachment& peerBus, const Pe
     QStatus status = ER_FAIL;
 
     SessionId sessionId;
-    const char* peerBusName = peerBus.GetUniqueName().c_str();
+    qcc::String peerBusName = peerBus.GetUniqueName();
 
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener);
     if (ER_OK != status) {
         return status;
     }
 
-    status = bus.JoinSession(peerBusName, ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
+    status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
                              this, sessionId, opts);
     if (ER_OK != status) {
         return status;
     }
 
-    SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
+    SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     PermissionPolicy copy;
     copy.SetVersion(++policyVersion);
@@ -399,20 +399,20 @@ QStatus TestSecurityManager::Reset(const BusAttachment& peerBus)
     QStatus status = ER_FAIL;
 
     SessionId sessionId;
-    const char* peerBusName = peerBus.GetUniqueName().c_str();
+    qcc::String peerBusName = peerBus.GetUniqueName();
 
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener);
     if (ER_OK != status) {
         return status;
     }
 
-    status = bus.JoinSession(peerBusName, ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
+    status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
                              this, sessionId, opts);
     if (ER_OK != status) {
         return status;
     }
 
-    SecurityApplicationProxy peerProxy(bus, peerBusName, sessionId);
+    SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     status = peerProxy.Reset();
     if (ER_OK != status) {

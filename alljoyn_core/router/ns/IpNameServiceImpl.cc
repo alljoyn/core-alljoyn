@@ -2237,12 +2237,12 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
     // MDNS packet that we will be sending out over unicast to this guid
     //
     m_mutex.Lock(MUTEX_CONTEXT);
-    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.end();
+    std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.end();
     if (!ping) {
         it = m_peerInfoMap.find(guid);
         longGuid = guid;
     } else {
-        for (std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator i = m_peerInfoMap.begin();
+        for (std::unordered_map<std::string, std::set<PeerInfo> >::iterator i = m_peerInfoMap.begin();
              i != m_peerInfoMap.end(); ++i) {
             if (qcc::GUID128(i->first).ToShortString() == guid) {
                 it = i;
@@ -7748,7 +7748,7 @@ qcc::String IpNameServiceImpl::PeerInfo::ToString(const qcc::String& guid) const
 
 void IpNameServiceImpl::PrintPeerInfoMap()
 {
-    for (std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
+    for (std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.begin();
          it != m_peerInfoMap.end(); ++it) {
         for (std::set<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
             QCC_DbgHLPrintf(("  %s", pit->ToString(it->first).c_str()));
@@ -7762,7 +7762,7 @@ bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPE
         return false;
     }
     m_mutex.Lock(MUTEX_CONTEXT);
-    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
         bool foundEntry = false;
         for (std::set<PeerInfo>::iterator pit = it->second.begin(); !foundEntry && pit != it->second.end(); ++pit) {
@@ -7792,7 +7792,7 @@ bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPE
 bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
 {
     m_mutex.Lock(MUTEX_CONTEXT);
-    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
         for (std::set<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
             QCC_DbgHLPrintf(("Remove from peer info map: %s", pit->ToString(guid).c_str()));

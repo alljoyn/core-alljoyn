@@ -257,7 +257,7 @@ size_t AJ_CALL alljoyn_msgarg_array_signature(alljoyn_msgarg values, size_t numV
     if (values == nullptr) {
         return (size_t)0;
     }
-    qcc::String s = ((ajn::MsgArgC*)values)->Signature((ajn::MsgArgC*)values, numValues).c_str();
+    qcc::String s = ((ajn::MsgArgC*)values)->Signature((ajn::MsgArgC*)values, numValues);
     /*
      * it is ok to send in NULL for str when the user is only interested in the
      * size of the resulting string.

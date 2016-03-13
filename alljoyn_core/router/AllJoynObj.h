@@ -28,7 +28,6 @@
 
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 #include <qcc/SocketTypes.h>
@@ -937,7 +936,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
 
     std::map<qcc::String, VirtualEndpoint> virtualEndpoints;   /**< Map of endpoints that reside behind a connected AllJoyn daemon */
 
-    std::map<qcc::StringMapKey, RemoteEndpoint> b2bEndpoints;  /**< Map of bus-to-bus endpoints that are connected to external daemons */
+    std::map<std::string, RemoteEndpoint> b2bEndpoints;  /**< Map of bus-to-bus endpoints that are connected to external daemons */
 
     struct AdvAliasEntry {
         qcc::String name;

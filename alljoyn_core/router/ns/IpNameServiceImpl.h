@@ -37,7 +37,6 @@
 #include <qcc/Timer.h>
 #include <qcc/STLContainer.h>
 #include <qcc/platform.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/Thread.h>
 #include <qcc/time.h>
 
@@ -1595,20 +1594,6 @@ class IpNameServiceImpl : public qcc::Thread {
     qcc::Event* m_unicastEvent;
 
     std::list<BurstResponseHeader> m_burstQueue;
-    /**
-     * Hash functor
-     */
-    struct Hash {
-        inline size_t operator()(const qcc::String& s) const {
-            return qcc::hash_string(s.c_str());
-        }
-    };
-
-    struct Equal {
-        inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
-            return s1 == s2;
-        }
-    };
 
     struct MDNSPacketTrackerEntry {
         uint16_t burstId;
@@ -1621,8 +1606,9 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     struct HashPacketTracker {
         inline size_t operator()(const std::pair<qcc::String, qcc::IPEndpoint>& s) const {
-            qcc::String str = s.first + s.second.ToString();
-            return qcc::hash_string(str.c_str());
+            std::string str = s.first + s.second.ToString();
+            std::hash<std::string> hash_fn;
+            return hash_fn(str);
         }
     };
 
@@ -1654,7 +1640,7 @@ class IpNameServiceImpl : public qcc::Thread {
         }
     };
 
-    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal> m_peerInfoMap;
+    std::unordered_map<std::string, std::set<PeerInfo> > m_peerInfoMap;
     void PrintPeerInfoMap();
 
     class BurstExpiryHandler;

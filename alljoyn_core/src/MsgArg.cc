@@ -740,7 +740,7 @@ qcc::String AJ_CALL MsgArg::ToString(const MsgArg* args, size_t numArgs, size_t 
     qcc::String outStr;
 #ifndef NDEBUG
     for (size_t i = 0; i < numArgs; ++i) {
-        outStr += args[i].ToString(indent) + '\n';
+        outStr += args[i].ToString(indent) + "\n";
     }
 #endif
     return outStr;

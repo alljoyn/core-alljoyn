@@ -184,7 +184,7 @@ class Participant : public SessionPortListener, public SessionListener {
         QStatus status = bus.Start();
         QCC_ASSERT(ER_OK == status);
         qcc::String busAddress;
-        busAddress = getConnectArg().c_str();
+        busAddress = getConnectArg();
         QCC_DbgPrintf(("Fetched bus address is : %s", busAddress.c_str()));
         status = bus.Connect(busAddress.c_str());
         QCC_ASSERT(ER_OK == status);
