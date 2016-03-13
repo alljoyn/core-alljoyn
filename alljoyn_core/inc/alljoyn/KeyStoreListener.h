@@ -29,6 +29,12 @@
 #include <qcc/String.h>
 #include <alljoyn/Status.h>
 
+namespace qcc {
+/**
+ * Forward declaration.
+ */
+class Mutex;
+}
 
 namespace ajn {
 
@@ -45,9 +51,19 @@ class KeyStoreListener {
 
   public:
     /**
+     * Static initialization routine called by AllJoyInit.
+     */
+    static void Init();
+
+    /**
+     * Static cleanup routine called by AllJoynShutdown.
+     */
+    static void Shutdown();
+
+    /**
      * Virtual destructor for derivable class.
      */
-    virtual ~KeyStoreListener() { }
+    virtual ~KeyStoreListener();
 
     /**
      * This method is called when a key store needs to be loaded.
@@ -99,6 +115,24 @@ class KeyStoreListener {
      *      - An error status otherwise
      */
     QStatus GetKeys(KeyStore& keyStore, qcc::String& sink);
+
+    /**
+     * Request to acquire exclusive lock (e.g., file lock) on the keyStore.
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    virtual QStatus AcquireExclusiveLock();
+
+    /**
+     * Release the exclusive lock (e.g., file lock) of the keyStore.
+     */
+    virtual void ReleaseExclusiveLock();
+
+  private:
+
+    static qcc::Mutex* s_exclusiveLock;
 
 };
 
