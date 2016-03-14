@@ -177,20 +177,9 @@ class KeyStore {
      * @param fileName  The filename to be used by the default key store if the default key store is being used.
      *                  This overrides the value in the applicationName parameter passed into the constructor.
      *
-     * @param isShared  Indicates if the key store is being shared between multiple applications.
+     * @param isShared  This parameter is not used as of 16.04. It is ignored internally (always shared).
      */
     QStatus Init(const char* fileName, bool isShared);
-
-    /**
-     * Requests the key store listener to store the contents of the key store
-     * For consistency protection, the Store method will request for
-     * for a consistency lock.  Once the lock is acquired,
-     * the persistent data is loaded, merge with the cached keys, and then asks
-     * the KeyStoreListener to persist the merged data.
-     * The consistency lock is released once the data is persisted.
-     * @return ER_OK if successful; otherwise, error code.
-     */
-    QStatus Store();
 
     /**
      * Re-read keys from the key store. This is a no-op unless the key store is shared.
@@ -260,9 +249,11 @@ class KeyStore {
      * Remove a key blob from the key store
      *
      * @param key  The unique identifier for the key
+     * @param includeAssociatedKeys  True to search for associated keys and also delete them
+     * @param exclusiveLockAlreadyHeld  True to indicate that DelKey() should not try to acquire the exclusive lock
      * return ER_OK
      */
-    QStatus DelKey(const Key& key);
+    QStatus DelKey(const Key& key, bool includeAssociatedKeys = false, bool exclusiveLockAlreadyHeld = false);
 
     /**
      * Set expiration time on a key blob from the key store
@@ -328,7 +319,7 @@ class KeyStore {
     QStatus SetListener(KeyStoreListener& listener);
 
     /**
-     * Setup the key event listener.
+     * Setup the key event listener. This function must be called before the key store is initialized.
      *
      * @param listener  The listener that will listen to key event.
      */
@@ -383,21 +374,22 @@ class KeyStore {
     QStatus Pull(qcc::Source& source, const qcc::String& password);
 
     /**
+     * This is similar to Pull(), but used for initializing in-memory keys (since the file is still empty).
+     *
+     * @param password  The password required to decrypt the key store
+     *
+     */
+    void LoadFromEmptyFile(const qcc::String& password);
+
+    /**
      * Push the current keys from the key store into a sink
      *
-     * @param sink The sink to write the keys to.
+     * @param sink    The sink to write the keys to.
      * @return
      *      - ER_OK if successful
      *      - An error status otherwise
      */
     QStatus Push(qcc::Sink& sink);
-
-    /**
-     * Indicates if this is a shared key store.
-     *
-     * @return  Returns true if the key store is shared between multiple applications.
-     */
-    bool IsShared() { return shared; }
 
     /**
      * Search for associated keys with the given key
@@ -480,11 +472,6 @@ class KeyStore {
     KeyStore();
 
     /**
-     * Internal function to erase expired keys
-     */
-    size_t EraseExpiredKeys();
-
-    /**
      * Internal Load function
      */
     QStatus Load();
@@ -500,22 +487,29 @@ class KeyStore {
     void MarkGuidSet();
 
     /**
-     * synchronized method to invoke the listener load request
-     */
-    QStatus SendLoadRequest(bool waitFor);
-
-    /**
-     * Delete the key from the internal structure.  The lock must be acquired prior to calling this method.
+     * Similar to DelKey, but exclusive lock must be held before called.
+     * This method only modifies in-memory keys (does not call StoreInternal).
      *
      * @param key  The unique identifier for the key
-     * return ER_OK
      */
-    QStatus DeleteKey(const Key& key);
+    void DelKeyInternal(const Key& key);
 
     /**
-     * synchronized method to invoke the listener store request
+     * Requests the key store listener to store the contents of the key store.
+     *
+     * @return ER_OK if successful; otherwise, error code.
      */
-    QStatus SendStoreRequest(bool waitFor);
+    QStatus StoreInternal(std::vector<Key>& expiredKeys);
+
+    /**
+     * Helper function for acquiring exclusive lock.
+     */
+    QStatus AcquireExclusiveLock();
+
+    /**
+     * Helper function for releasing exclusive lock.
+     */
+    void ReleaseExclusiveLock();
 
     /**
      * The application that owns this key store. If the key store is shared this will be the name
@@ -567,23 +561,6 @@ class KeyStore {
     KeyMap* persistentKeys;
 
     /**
-     * Mutex to protect the persistent keys.  This lock is used to synchronize
-     * the loading of the persistence data from the KeyStoreListener.
-     * The KeyStore lock is no longer used in this process to allows for
-     * concurrent access to the keys cache and the KeyStore properties.
-     * During the merge of the key cache and the persistent keys, both locks
-     * have to be acquired in this order: the persistent key lock first, and
-     * then the keystore lock.  They must be released in the reverse order to
-     * prevent deadlock.
-     */
-    qcc::Mutex persistentKeysLock;
-
-    /**
-     * Mutex to protect the consistency of the store process.
-     */
-    qcc::Mutex consistencyLock;
-
-    /**
      * GUID for keys that have been deleted
      */
     std::set<Key> deletions;
@@ -622,10 +599,6 @@ class KeyStore {
      * Revision number for the persistent data store
      */
     uint32_t persistentRevision;
-    /**
-     * Indicates if the key store is shared between multiple applications.
-     */
-    bool shared;
 
     /**
      * Event for synchronizing store requests
@@ -671,6 +644,15 @@ class KeyStore {
      * guidSet ref count
      */
     uint8_t guidSetRefCount;
+
+    /**
+     * If we're holding the exclusive lock, we only need to refresh once. This enum keeps track of that.
+     */
+    enum ExclusiveLockRefreshState {
+        ExclusiveLockNotHeld,     /**< Lock is not held. */
+        ExclusiveLockHeld_Dirty,  /**< Lock is held but keystore contents have not been synchronized. */
+        ExclusiveLockHeld_Clean   /**< Lock is held and keystore contents have been synchronized. */
+    } exclusiveLockRefreshState;
 
 };
 
