@@ -84,12 +84,12 @@ static String ExpandPath(const String& path, const String& srcFileName = String:
          */
         size_t position = path.find_first_of(PATH_SEP);
         String user = path.substr(1, position - 1);
-        String home;
+        char* home;
         struct passwd* pwd = NULL;
         if (user.empty()) {
             home = getenv("HOME");
             /* If HOME is not set get the user's home directory from the /etc/passwd */
-            if (home.empty()) {
+            if (!home) {
                 pwd = getpwuid(getuid());
             }
         } else {
@@ -98,7 +98,7 @@ static String ExpandPath(const String& path, const String& srcFileName = String:
         if (pwd) {
             home = pwd->pw_dir;
         }
-        return home + path.substr(position);
+        return String(home) + path.substr(position);
 #endif
     } else if (srcFileName.empty()) {
         // Use path as is.

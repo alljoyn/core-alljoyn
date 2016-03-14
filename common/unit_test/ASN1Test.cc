@@ -106,7 +106,7 @@ TEST(ASN1Test, encode_base64) {
              * at the appropriate location.
              * Accordingly, we add '\n' to the expected value.
              */
-            expected_base64 = expected_base64.append('\n');
+            expected_base64 = expected_base64.append(1, '\n');
             EXPECT_STREQ(expected_base64.c_str(),
                          actual_encoded_base64.c_str()) <<
                 "The string \"" << raw_string.c_str() << "\" was converted to "
@@ -232,7 +232,7 @@ TEST(ASN1Test, encode_and_decode_base64_stress_test) {
     String raw_data = String(quote_of_atticus_finch);
     uint8_t number_of_rounds = 100;
     for (uint8_t i = 0; i < number_of_rounds; i++) {
-        raw_data.append(' ');
+        raw_data.append(1, ' ');
         if (0 == Rand8() % 2) {
             raw_data.append(quote_of_atticus_finch,
                             strlen(quote_of_atticus_finch));

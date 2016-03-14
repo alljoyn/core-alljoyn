@@ -298,7 +298,7 @@ SessionManager::SessionManager(BusAttachment& bus) : bus(bus), sessionPort(CHAT_
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
 
     name += "OpenWRT_";
-    name += bus.GetGlobalGUIDString().substr(0, 8).c_str();
+    name += bus.GetGlobalGUIDString().substr(0, 8);
 
     bus.RequestName(name.c_str(), DBUS_NAME_FLAG_DO_NOT_QUEUE);
     bus.BindSessionPort(sessionPort, opts, *this);
