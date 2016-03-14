@@ -714,10 +714,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
  *                         Note that this parameter is only meaningful when using the default
  *                         key store implementation.
  *
- * @param isShared         Optional parameter that indicates if the key store is shared between multiple
- *                         applications. It is generally harmless to set this to true even when the
- *                         key store is not shared but it adds some unnecessary calls to the key store
- *                         listener to load and store the key store in this case.
+ * @param isShared         This parameter is not used as of 16.04. It is ignored internally (always shared).
  *
  * @return
  *      - #ER_OK if peer security was enabled.
