@@ -203,6 +203,7 @@ class _Message {
     friend class Crypto;
     friend class _PeerState;
     friend class PermissionMgmtObj;
+    friend class _Manifest;
     friend struct Rule;
 
   public:

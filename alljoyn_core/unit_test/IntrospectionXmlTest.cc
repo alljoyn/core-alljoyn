@@ -594,11 +594,21 @@ TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithSignalEm
 TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithConstants) {
 
     CreateFromXmlAndIntrospect(IntrospectionXmlWithConstants);
+
+    ASSERT_NE(nullptr, m_remoteObj);
+    const InterfaceDescription* testIntf = m_remoteObj->GetInterface(INTERFACE_NAME);
+    ASSERT_NE(nullptr, testIntf);
+    EXPECT_TRUE(testIntf->HasCacheableProperties());
 }
 
 TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithConstantProperties) {
 
     CreateFromXmlAndIntrospect(IntrospectionXmlWithConstantProperties);
+
+    ASSERT_NE(nullptr, m_remoteObj);
+    const InterfaceDescription* testIntf = m_remoteObj->GetInterface(INTERFACE_NAME);
+    ASSERT_NE(nullptr, testIntf);
+    EXPECT_TRUE(testIntf->HasCacheableProperties());
 }
 
 TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithCustomAnnotations) {

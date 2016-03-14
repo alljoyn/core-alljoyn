@@ -1766,6 +1766,84 @@ TEST_F(PropChangedTest, PropertyCache_notupdating)
 }
 
 /*
+ * Basic property caching scenario, with EmitsChanged="const"
+ */
+TEST_F(PropChangedTest, PropertyCache_const)
+{
+    TestParameters tpClient(true, P1, P1, PCM_INTROSPECT);
+    tpClient.AddInterfaceParameters(InterfaceParameters(P1, "const", false, INTERFACE_NAME "1"));
+    TestParameters tpService = tpClient;
+
+    SetupPropChanged(tpService, tpClient);
+    proxy->EnablePropertyCaching();
+    /* Wait a little while for the property cache to be enabled.
+     * We don't have an easy way to detect when this is the case, so we just rely on a long-enough sleep */
+    qcc::Sleep(WAIT_CACHE_ENABLED_MS);
+
+    MsgArg value;
+    int32_t intval = 0;
+
+    /* initial value is 1 */
+    ASSERT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* Change the value in the object. This should actually never happen for
+     * a const property, but we want to verify that the client uses a cache. */
+    obj->ChangePropertyValues(tpService, 100);
+    /* We expect to see the old value because the client does not know the
+     * value has changed */
+    ASSERT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+    /* send update signal, should not arrive */
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
+    ASSERT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
+    EXPECT_EQ(ER_OK, value.Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* GetAllProperties tests */
+    /* There is only one property in the interface, and that property is cacheable,
+     * so we expect to see the cache behavior kick in for GetAllProperties too. */
+    size_t numprops;
+    MsgArg* props;
+    const char* propname;
+    MsgArg* propval;
+
+    ASSERT_EQ(ER_OK, proxy->GetAllProperties(INTERFACE_NAME "1", value));
+    EXPECT_EQ(ER_OK, value.Get("a{sv}", &numprops, &props));
+    EXPECT_EQ(1, (int)numprops);
+    ASSERT_EQ(ER_OK, props[0].Get("{sv}", &propname, &propval));
+    EXPECT_STREQ("P1", propname);
+    EXPECT_EQ(ER_OK, propval->Get("i", &intval));
+    EXPECT_EQ(1, intval);
+
+    /* Change the value in the object. This should actually never happen for
+     * a const property, but we want to verify that the client uses a cache. */
+    obj->ChangePropertyValues(tpService, 200);
+    /* We expect to see the old value because the client does not know the
+     * value has changed */
+    ASSERT_EQ(ER_OK, proxy->GetAllProperties(INTERFACE_NAME "1", value));
+    EXPECT_EQ(ER_OK, value.Get("a{sv}", &numprops, &props));
+    EXPECT_EQ(1, (int)numprops);
+    ASSERT_EQ(ER_OK, props[0].Get("{sv}", &propname, &propval));
+    EXPECT_STREQ("P1", propname);
+    EXPECT_EQ(ER_OK, propval->Get("i", &intval));
+    EXPECT_EQ(1, intval);
+    /* send update signal, should not arrive */
+    obj->EmitSignals(tpService);
+    EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
+    ASSERT_EQ(ER_OK, proxy->GetAllProperties(INTERFACE_NAME "1", value));
+    EXPECT_EQ(ER_OK, value.Get("a{sv}", &numprops, &props));
+    EXPECT_EQ(1, (int)numprops);
+    ASSERT_EQ(ER_OK, props[0].Get("{sv}", &propname, &propval));
+    EXPECT_STREQ("P1", propname);
+    EXPECT_EQ(ER_OK, propval->Get("i", &intval));
+    EXPECT_EQ(1, intval);
+}
+
+/*
  * When the PBO is copied, the new PBO keeps a reference to the underlying state
  * of the original PBO and the reference count for that internal state is
  * incremented.  This allows for both copies to have access to the same cached
@@ -2510,8 +2588,10 @@ class SecPropChangedTest :
 /**
  * Basic test for the property cache with security enabled.
  * Test events being sent when policy is configured properly.
+ *
+ * Temporarily disabled, until ASACORE-2725 will get fixed.
  */
-TEST_F(SecPropChangedTest, PropertyCache_SecurityEnabled)
+TEST_F(SecPropChangedTest, DISABLED_PropertyCache_SecurityEnabled)
 {
     proxy->EnablePropertyCaching();
     // No policy set. So GetProperty should be denied by remote policy.

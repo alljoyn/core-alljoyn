@@ -25,9 +25,11 @@
 #include <qcc/Debug.h>
 #include <qcc/StringUtil.h>
 #include <qcc/Crypto.h>
+#include <qcc/Util.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/BusAttachment.h>
 #include "KeyInfoHelper.h"
+#include <memory>
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -790,7 +792,7 @@ static QStatus BuildRulesFromArg(const MsgArg& msgArg, PermissionPolicy::Rule** 
 {
     MsgArg* args;
     size_t argCount;
-    QStatus status = msgArg.Get("a(ssa(syy))", &argCount, &args);
+    QStatus status = msgArg.Get(_Manifest::s_TemplateMsgArgSignature, &argCount, &args);
     if (ER_OK != status) {
         return status;
     }
@@ -952,11 +954,11 @@ QStatus DefaultPolicyMarshaller::MarshalPrep(const PermissionPolicy::Rule* rules
         return status;
     }
     /**
-     * Use an error message as it is the simplest message without many validition rules.
+     * Use an error message as it is the simplest message without many validation rules.
      * The ALLJOYN_FLAG_SESSIONLESS is set in order to skip the serial number
      * check since the data can be stored for a long time*/
     msg->ErrorMsg("/", 0);
-    return msg->MarshalMessage("a(ssa(syy))", "", "", MESSAGE_ERROR, &msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+    return msg->MarshalMessage(_Manifest::s_TemplateMsgArgSignature, "", "", MESSAGE_ERROR, &msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
 }
 
 QStatus DefaultPolicyMarshaller::Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)
@@ -1069,7 +1071,10 @@ QStatus PermissionPolicy::GenerateRules(const Rule* rules, size_t count, MsgArg&
     if (ER_OK != status) {
         return status;
     }
-    msgArg.Set("a(ssa(syy))", count, rulesArgs);
+    status = msgArg.Set(_Manifest::s_TemplateMsgArgSignature, count, rulesArgs);
+    if (ER_OK != status) {
+        return status;
+    }
     msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     return status;
 }
@@ -1124,6 +1129,673 @@ void PermissionPolicy::SetAcls(size_t count, const PermissionPolicy::Acl* acls) 
         this->acls[i] = acls[i];
     }
     aclsSize = count;
+}
+
+/* _Manifest */
+#undef QCC_MODULE
+#define QCC_MODULE "PERMISSION_MANIFEST"
+
+AJ_PCSTR _Manifest::s_MsgArgArraySignature = "a(ua(ssa(syy))saysay)";
+AJ_PCSTR _Manifest::s_MsgArgSignature = "(ua(ssa(syy))saysay)";
+AJ_PCSTR _Manifest::s_MsgArgDigestSignature = "(ua(ssa(syy))says)";
+AJ_PCSTR _Manifest::s_TemplateMsgArgSignature = "a(ssa(syy))";
+const uint32_t _Manifest::DefaultVersion = 1;
+static AJ_PCSTR TEMPORARY_BUS_ATTACHMENT_NAME = "TemporaryBusAttachment";
+
+_Manifest::_Manifest() : m_version(DefaultVersion), m_rules(), m_thumbprintAlgorithmOid(), m_thumbprint(), m_signatureAlgorithmOid(), m_signature()
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_ASSERT(0 == strcmp(_Manifest::s_MsgArgArraySignature + 1, _Manifest::s_MsgArgSignature));
+}
+
+_Manifest::_Manifest(const _Manifest& other) :
+    m_version(other.m_version),
+    m_rules(other.m_rules),
+    m_thumbprintAlgorithmOid(other.m_thumbprintAlgorithmOid),
+    m_thumbprint(other.m_thumbprint),
+    m_signatureAlgorithmOid(other.m_signatureAlgorithmOid),
+    m_signature(other.m_signature)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+}
+
+_Manifest& _Manifest::operator=(const _Manifest& other)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    if (this != &other) {
+        m_version = other.m_version;
+        m_rules = other.m_rules;
+        m_thumbprintAlgorithmOid = other.m_thumbprintAlgorithmOid;
+        m_thumbprint = other.m_thumbprint;
+        m_signatureAlgorithmOid = other.m_signatureAlgorithmOid;
+        m_signature = other.m_signature;
+    }
+
+    return *this;
+}
+
+_Manifest::~_Manifest()
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+}
+
+QStatus _Manifest::SetFromMsgArg(const MsgArg& manifestArg)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    /* MsgArg::Get will give us pointers into the MsgArg object. We have to make copies
+     * since we can't make assumptions about the lifetime of the MsgArg.
+     */
+    uint32_t inVersion;
+    MsgArg* inRulesArgs;
+    size_t inRuleCount;
+    AJ_PSTR inThumbprintAlgorithmOid;
+    uint8_t* inThumbprint;
+    size_t inThumbprintSize;
+    AJ_PSTR inSignatureAlgorithmOid;
+    uint8_t* inSignature;
+    size_t inSignatureSize;
+
+    QStatus status = manifestArg.Get(_Manifest::s_MsgArgSignature,
+                                     &inVersion,
+                                     &inRuleCount, &inRulesArgs,
+                                     &inThumbprintAlgorithmOid, &inThumbprintSize, &inThumbprint,
+                                     &inSignatureAlgorithmOid, &inSignatureSize, &inSignature);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not get arguments from MsgArg"));
+        return status;
+    }
+
+    if (!_Manifest::IsVersionSupported(inVersion)) {
+        QCC_LogError(ER_INVALID_DATA, ("Manifest is unknown version; received version %u", inVersion));
+        return ER_INVALID_DATA;
+    }
+
+    PermissionPolicy::Rule* parsedRules = nullptr;
+    status = BuildRulesFromArgArray(inRulesArgs, inRuleCount, &parsedRules);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not parse rules from rules MsgArg array"));
+        return status;
+    }
+
+    m_version = inVersion;
+    /* BuildRulesFromArgArray allocates memory which we copy into the vector and then delete. */
+    m_rules.assign(parsedRules, parsedRules + inRuleCount);
+    delete[] parsedRules;
+    m_thumbprintAlgorithmOid.assign(inThumbprintAlgorithmOid);
+    m_thumbprint.assign(inThumbprint, inThumbprint + inThumbprintSize);
+    m_signatureAlgorithmOid.assign(inSignatureAlgorithmOid);
+    m_signature.assign(inSignature, inSignature + inSignatureSize);
+
+    return ER_OK;
+}
+
+QStatus _Manifest::GetArrayMsgArg(const std::vector<Manifest>& manifests, MsgArg& outputArg)
+{
+    return GetArrayMsgArg(manifests.data(), manifests.size(), outputArg);
+}
+
+QStatus _Manifest::GetArrayMsgArg(const Manifest* manifests, size_t manifestCount, MsgArg& outputArg)
+{
+    QStatus status = ER_OK;
+    std::vector<MsgArg> msgArgs(manifestCount);
+
+    for (size_t i = 0; i < manifestCount; i++) {
+        status = manifests[i]->GetMsgArg(MANIFEST_FULL, msgArgs[i]);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not get MsgArg for manifest"));
+            return status;
+        }
+    }
+
+    status = outputArg.Set(_Manifest::s_MsgArgArraySignature, msgArgs.size(), msgArgs.data());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set array MsgArg"));
+        return status;
+    }
+
+    outputArg.Stabilize();
+
+    return status;
+}
+
+QStatus _Manifest::GetMsgArg(ManifestPurpose manifestPurpose, MsgArg& outputArg) const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    MsgArg* rulesArgsRaw = NULL;
+    QStatus status = GenerateRuleArgs(&rulesArgsRaw, m_rules.data(), m_rules.size());
+    if (ER_OK != status) {
+        return status;
+    }
+    /* GenerateRuleArgs allocates memory; take ownership of it. */
+    std::unique_ptr<MsgArg[]> rulesArgs(rulesArgsRaw);
+    rulesArgsRaw = nullptr;
+
+    switch (manifestPurpose) {
+    case MANIFEST_FULL:
+        status = outputArg.Set(_Manifest::s_MsgArgSignature,
+                               m_version,
+                               m_rules.size(), rulesArgs.get(),
+                               m_thumbprintAlgorithmOid.c_str(), m_thumbprint.size(), m_thumbprint.data(),
+                               m_signatureAlgorithmOid.c_str(), m_signature.size(), m_signature.data());
+        break;
+
+    case MANIFEST_FOR_DIGEST:
+        status = outputArg.Set(_Manifest::s_MsgArgDigestSignature,
+                               m_version,
+                               m_rules.size(), rulesArgs.get(),
+                               m_thumbprintAlgorithmOid.c_str(), m_thumbprint.size(), m_thumbprint.data(),
+                               m_signatureAlgorithmOid.c_str());
+        break;
+
+    default:
+        QCC_ASSERT(false && "Unknown value of manifestPurpose");
+        return ER_BAD_ARG_1;
+    }
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    outputArg.Stabilize();
+
+    return ER_OK;
+}
+
+QStatus _Manifest::Sign(const CertificateX509& subjectCertificate, const ECCPrivateKey* issuerPrivateKey)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    m_thumbprint.resize(Crypto_SHA256::DIGEST_SIZE);
+    QStatus status = subjectCertificate.GetSHA256Thumbprint(m_thumbprint.data());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not compute certificate thumbprint"));
+        return status;
+    }
+
+    return Sign(m_thumbprint, issuerPrivateKey);
+}
+
+QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECCPrivateKey* issuerPrivateKey)
+{
+    /* Internally we call this method from the overload that takes a Certificate. In that case, that
+     * overload sets m_thumbprint and then passes it as the parameter, and if so, we don't need to
+     * set the thumbprint again.
+     */
+    if (&subjectThumbprint != &m_thumbprint) {
+        m_thumbprint = subjectThumbprint;
+    }
+
+    /* Only SHA-256 is supported as the thumbprint algorithm. */
+    m_thumbprintAlgorithmOid.assign(qcc::OID_DIG_SHA256.c_str());
+    /* Only ECDSA with SHA-256 is supported as the signature algorithm. */
+    m_signatureAlgorithmOid.assign(qcc::OID_SIG_ECDSA_SHA256.c_str());
+
+    std::vector<uint8_t> digest(Crypto_SHA256::DIGEST_SIZE);
+    QStatus status = GetDigest(digest);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not compute manifest digest"));
+        return status;
+    }
+
+    Crypto_ECC ecc;
+    ecc.SetDSAPrivateKey(issuerPrivateKey);
+    ECCSignature signature;
+    status = ecc.DSASignDigest(digest.data(), digest.size(), &signature);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not sign manifest digest"));
+        return status;
+    }
+
+    status = SetECCSignature(signature);
+
+    return status;
+}
+
+QStatus _Manifest::VerifyByCertificate(const CertificateX509& subjectCertificate, const ECCPublicKey* issuerPublicKey) const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    std::vector<uint8_t> thumbprint(Crypto_SHA256::DIGEST_SIZE);
+    QStatus status = subjectCertificate.GetSHA256Thumbprint(thumbprint.data());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not compute certificate hash"));
+        return status;
+    }
+
+    return VerifyByThumbprint(thumbprint, issuerPublicKey);
+}
+
+QStatus _Manifest::VerifyByThumbprint(const std::vector<uint8_t>& subjectThumbprint, const ECCPublicKey* issuerPublicKey) const
+{
+    /* Only SHA-256 is supported as the thumbprint algorithm. */
+    if (m_thumbprintAlgorithmOid != std::string(qcc::OID_DIG_SHA256.c_str())) {
+        QCC_LogError(ER_NOT_IMPLEMENTED, ("Unsupported thumbprint algorithm %s", m_thumbprintAlgorithmOid.c_str()));
+        return ER_NOT_IMPLEMENTED;
+    }
+
+    if (subjectThumbprint != m_thumbprint) {
+        /* Manifest is not for this subject's certificate. */
+        QCC_LogError(ER_UNKNOWN_CERTIFICATE, ("Thumbprint is not for this subject certificate"));
+        return ER_UNKNOWN_CERTIFICATE;
+    }
+
+    /* Compute our view of the digest. */
+    std::vector<uint8_t> digest;
+    QStatus status = GetDigest(digest);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not compute manifest digest"));
+        return status;
+    }
+
+    /* Make sure the signature agrees. */
+    ECCSignature signature;
+    status = GetECCSignature(signature);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not get ECC signature from manifest"));
+        return status;
+    }
+
+    Crypto_ECC ecc;
+    ecc.SetDSAPublicKey(issuerPublicKey);
+    status = ecc.DSAVerifyDigest(digest.data(), digest.size(), &signature);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Manifest signature failed to verify"));
+        if (ER_CRYPTO_ERROR == status) {
+            return ER_DIGEST_MISMATCH;
+        } else {
+            return status;
+        }
+    }
+
+    return status;
+}
+
+/**
+ * Helper function for GetDigest which requires a BusAttachment to compute the manifest digest.
+ * Try to stop and clean up the BusAttachment, which should never fail, but just in case, don't let
+ * it get in the way of what we're doing. This BusAttachment shouldn't ever actually be connected
+ * to anything, and is just needed to create a Message from which to serialize and hash a set of manifest
+ * rules.
+ */
+static void StopBusAttachment(BusAttachment& bus)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QStatus status = bus.Stop();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not stop temporary bus attachment"));
+    } else {
+        /* Only Join if we succeeded in Stopping; otherwise we'll sit forever. */
+        status = bus.Join();
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not join temporary bus attachment"));
+        }
+    }
+}
+
+QStatus _Manifest::GetDigest(std::vector<uint8_t>& digest) const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    if (m_signatureAlgorithmOid != std::string(qcc::OID_SIG_ECDSA_SHA256.c_str())) {
+        return ER_NOT_IMPLEMENTED;
+    }
+
+    Crypto_SHA256 hash;
+    QStatus status = hash.Init();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not initialize hash object"));
+        return status;
+    }
+
+    /* Serialize manifest without signature field to byte array and hash. */
+    std::vector<uint8_t> serializedForm;
+    status = Serialize(MANIFEST_FOR_DIGEST, serializedForm);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not serialize manifest to hash"));
+        return status;
+    }
+
+    status = hash.Update(serializedForm.data(), serializedForm.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not hash serialized bytes"));
+        return status;
+    }
+
+    digest.resize(Crypto_SHA256::DIGEST_SIZE);
+    status = hash.GetDigest(digest.data(), false);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not get digest from hash object"));
+        return status;
+    }
+
+    return status;
+}
+
+QStatus _Manifest::GetECCSignature(ECCSignature& signature) const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    if (m_signatureAlgorithmOid != std::string(qcc::OID_SIG_ECDSA_SHA256.c_str())) {
+        QCC_LogError(ER_NOT_IMPLEMENTED, ("Unsupported manifest signature algorithm: %s", m_signatureAlgorithmOid.c_str()));
+        return ER_NOT_IMPLEMENTED;
+    }
+
+    if (m_signature.size() != (sizeof(signature.r) + sizeof(signature.s))) {
+        QCC_LogError(ER_INVALID_DATA, ("Wrong size for signature; got %" PRIuSIZET ", expected %" PRIuSIZET,
+                                       m_signature.size(), sizeof(signature.r) + sizeof(signature.s)));
+        return ER_INVALID_DATA;
+    }
+
+    memcpy(signature.r, m_signature.data(), sizeof(signature.r));
+    memcpy(signature.s, m_signature.data() + sizeof(signature.r), sizeof(signature.s));
+
+    return ER_OK;
+}
+
+QStatus _Manifest::SetECCSignature(const ECCSignature& signature)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    if (m_signatureAlgorithmOid != std::string(qcc::OID_SIG_ECDSA_SHA256.c_str())) {
+        QCC_LogError(ER_NOT_IMPLEMENTED, ("Unsupported manifest signature algorithm: %s", m_signatureAlgorithmOid.c_str()));
+        return ER_NOT_IMPLEMENTED;
+    }
+
+    m_signature.resize(sizeof(signature.r) + sizeof(signature.s));
+    memcpy(m_signature.data(), signature.r, sizeof(signature.r));
+    memcpy(m_signature.data() + sizeof(signature.r), signature.s, sizeof(signature.s));
+
+    return ER_OK;
+}
+
+QStatus _Manifest::SetRules(const PermissionPolicy::Rule* rules, size_t rulesCount)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    m_rules.resize(rulesCount);
+    for (size_t i = 0; i < m_rules.size(); i++) {
+        m_rules[i] = rules[i];
+    }
+
+    return ER_OK;
+}
+
+QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_t>& serializedForm) const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    MsgArg msgArg[1];
+    AJ_PCSTR messageSignature;
+    QStatus status;
+
+    switch (manifestPurpose) {
+    case MANIFEST_FULL:
+        messageSignature = _Manifest::s_MsgArgSignature;
+        break;
+
+    case MANIFEST_FOR_DIGEST:
+        messageSignature = _Manifest::s_MsgArgDigestSignature;
+        break;
+
+    default:
+        QCC_ASSERT(false && "Unknown value of manifestPurpose");
+        return ER_BAD_ARG_1;
+    }
+
+    status = GetMsgArg(manifestPurpose, msgArg[0]);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
+    status = bus.Start();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not start temporary BusAttachment"));
+        return status;
+    }
+
+    char savedEndian = _Message::outEndian;
+    _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
+    Message tmpMsg(bus);
+    tmpMsg->ErrorMsg("/", 0);
+    status = tmpMsg->MarshalMessage(messageSignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not marshal message"));
+        _Message::SetEndianess(savedEndian);
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    switch (manifestPurpose) {
+    case MANIFEST_FULL:
+        /* Form for storing in the keystore: store the message headers as well. */
+        serializedForm.assign(tmpMsg->GetBuffer(), tmpMsg->GetBuffer() + tmpMsg->GetBufferSize());
+        break;
+
+    case MANIFEST_FOR_DIGEST:
+        /* Omit the message headers and the signature field. */
+        serializedForm.assign(tmpMsg->GetBodyBuffer(), tmpMsg->GetBodyBuffer() + tmpMsg->GetBodyBufferSize());
+        break;
+
+    default:
+        QCC_ASSERT(false && "Unknown value of manifestPurpose");
+        status = ER_BAD_ARG_1;
+        break;
+    }
+
+    StopBusAttachment(bus);
+    _Message::SetEndianess(savedEndian);
+
+    return status;
+}
+
+QStatus _Manifest::Deserialize(const std::vector<uint8_t>& serializedForm)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    qcc::String endpointName("local");
+
+    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
+    QStatus status = bus.Start();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not start temporary BusAttachment"));
+        return status;
+    }
+    Message tmpMsg(bus);
+    std::vector<uint8_t> serializedFormCopy(serializedForm); /* LoadBytes doesn't take const. */
+    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not populate Message object with serialized form"));
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not Unmarshal"));
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    status = tmpMsg->UnmarshalArgs("*");
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not UnmarshalArgs"));
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    status = SetFromMsgArg(*tmpMsg->GetArg(0));
+    StopBusAttachment(bus);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not SetFromMsgArg"));
+        return status;
+    }
+
+    return ER_OK;
+}
+
+QStatus _Manifest::SerializeArray(const std::vector<Manifest>& manifests, std::vector<uint8_t>& serializedForm)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    MsgArg msgArg[1];
+    QStatus status = GetArrayMsgArg(manifests, msgArg[0]);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
+    status = bus.Start();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not start temporary BusAttachment"));
+        return status;
+    }
+
+    char savedEndian = _Message::outEndian;
+    _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
+    Message tmpMsg(bus);
+    tmpMsg->ErrorMsg("/", 0);
+    status = tmpMsg->MarshalMessage(_Manifest::s_MsgArgArraySignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not marshal message"));
+    } else {
+        serializedForm.assign(tmpMsg->GetBuffer(), tmpMsg->GetBuffer() + tmpMsg->GetBufferSize());
+    }
+
+    StopBusAttachment(bus);
+    _Message::SetEndianess(savedEndian);
+
+    return status;
+}
+
+QStatus _Manifest::DeserializeArray(const std::vector<uint8_t>& serializedForm, std::vector<Manifest>& manifests)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return DeserializeArray(serializedForm.data(), serializedForm.size(), manifests);
+}
+
+QStatus _Manifest::DeserializeArray(const uint8_t* serializedForm, size_t serializedSize, std::vector<Manifest>& manifests)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    qcc::String endpointName("local");
+
+    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
+    QStatus status = bus.Start();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not start temporary BusAttachment"));
+        return status;
+    }
+    Message tmpMsg(bus);
+    std::vector<uint8_t> serializedFormCopy(serializedSize); /* LoadBytes doesn't take const. */
+    serializedFormCopy.assign(serializedForm, serializedForm + serializedSize);
+
+    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not populate Message object with serialized form"));
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not Unmarshal"));
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    status = tmpMsg->UnmarshalArgs("*");
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not UnmarshalArgs"));
+        StopBusAttachment(bus);
+        return status;
+    }
+
+    MsgArg* signedManifestArgs;
+    size_t signedManifestCount;
+
+    status = tmpMsg->GetArg(0)->Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgs);
+    StopBusAttachment(bus);
+    if (ER_OK != status) {
+        return status;
+    }
+    if (signedManifestCount == 0) {
+        return ER_OK; /* nothing to do */
+    }
+
+    for (size_t i = 0; i < signedManifestCount; i++) {
+        Manifest manifest;
+        status = manifest->SetFromMsgArg(signedManifestArgs[i]);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not SetFromMsgArg"));
+            return status;
+        }
+        manifests.push_back(manifest);
+    }
+
+    return ER_OK;
+}
+
+bool _Manifest::IsVersionSupported(uint32_t version)
+{
+    /* Only one version exists at , and so it is the only supported version. */
+    return (version == _Manifest::DefaultVersion);
+}
+
+uint32_t _Manifest::GetVersion() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return m_version;
+}
+
+const std::vector<PermissionPolicy::Rule>& _Manifest::GetRules() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return m_rules;
+}
+
+std::string _Manifest::GetThumbprintAlgorithmOid() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return m_thumbprintAlgorithmOid;
+}
+
+std::vector<uint8_t> _Manifest::GetThumbprint() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return m_thumbprint;
+}
+
+std::string _Manifest::GetSignatureAlgorithmOid() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return m_signatureAlgorithmOid;
+}
+
+std::vector<uint8_t> _Manifest::GetSignature() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return m_signature;
+}
+
+bool _Manifest::operator==(const _Manifest& other) const
+{
+    if ((m_version != other.m_version) ||
+        (m_rules.size() != other.m_rules.size()) ||
+        (m_thumbprintAlgorithmOid != other.m_thumbprintAlgorithmOid) ||
+        (m_thumbprint != other.m_thumbprint) ||
+        (m_signatureAlgorithmOid != other.m_signatureAlgorithmOid) ||
+        (m_signature != other.m_signature)) {
+        return false;
+    }
+
+    for (size_t i = 0; i < m_rules.size(); i++) {
+        if (m_rules.data()[i] != other.m_rules.data()[i]) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool _Manifest::operator!=(const _Manifest& other) const
+{
+    return !(*this == other);
 }
 
 } /* namespace ajn */

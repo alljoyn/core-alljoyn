@@ -287,12 +287,12 @@ class PermissionMgmtObj : public BusObject {
 
     /**
      * Parse the message received from the org.alljoyn.bus.Peer.Authentication's
-     * SendManifest method.
+     * SendManifests method.
      * @param msg the message
      * @param peerState the peer state
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus ParseSendManifest(Message& msg, PeerState& peerState);
+    QStatus ParseSendManifests(Message& msg, PeerState& peerState);
 
     /**
      * Is there any trust anchor installed?
@@ -356,13 +356,12 @@ class PermissionMgmtObj : public BusObject {
      * @param[out] publicKeyFound the flag indicating whether the peer has an ECC public key
      * @param[out] publicKey the buffer to hold the ECC public key.  Pass NULL
      *                       to skip.
-     * @param[out] manifestDigest the buffer to hold the manifest digest. Pass
-     *                            NULL to skip.
+     * @param[out] identityCertificateThumbprint buffer to receive the SHA-256 thumbprint of the identity certificate
      * @param[out] issuerPublicKeys the vector for the list of issuer public
      *                               keys.
      * @return ER_OK if successful; otherwise, error code.
      */
-    QStatus GetConnectedPeerAuthMetadata(const qcc::GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<qcc::ECCPublicKey>& issuerPublicKeys);
+    QStatus GetConnectedPeerAuthMetadata(const qcc::GUID128& guid, qcc::String& authMechanism, bool& publicKeyFound, qcc::ECCPublicKey* publicKey, uint8_t* identityCertificateThumbprint, std::vector<qcc::ECCPublicKey>& issuerPublicKeys);
 
     /**
      * Get the connected peer ECC public key if the connection uses the
@@ -370,13 +369,11 @@ class PermissionMgmtObj : public BusObject {
      * @param guid the peer guid
      * @param[out] publicKey the buffer to hold the ECC public key.  Pass NULL
      *                       to skip.
-     * @param[out] manifestDigest the buffer to hold the manifest digest. Pass
-     *                            NULL to skip.
      * @param[out] issuerPublicKeys the vector for the list of issuer public
      *                               keys.
      * @return ER_OK if successful; otherwise, error code.
      */
-    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey, uint8_t* manifestDigest, std::vector<qcc::ECCPublicKey>& issuerPublicKeys);
+    QStatus GetConnectedPeerPublicKey(const qcc::GUID128& guid, qcc::ECCPublicKey* publicKey, std::vector<qcc::ECCPublicKey>& issuerPublicKeys);
 
     /**
      * Get the connected peer ECC public key if the connection uses the
@@ -404,7 +401,8 @@ class PermissionMgmtObj : public BusObject {
     QStatus StoreIdentityCertChain(MsgArg& certArg);
     QStatus StorePolicy(PermissionPolicy& policy, bool defaultPolicy = false);
     QStatus StoreMembership(const MsgArg& certArg);
-    QStatus StoreManifest(MsgArg& manifestArg);
+    QStatus StoreManifests(MsgArg& signedManifestsArg, bool append);
+
     /**
      * Generate the SHA-256 digest for the manifest data.
      * @param bus the bus attachment
@@ -419,18 +417,10 @@ class PermissionMgmtObj : public BusObject {
 
     /**
      * Retrieve the manifest from persistence store.
-     * @param manifest[out] The variable to hold the manifest.
-     *                      Set to NULL to find out the size of the manifest.
-     * @param count[in,out] the number of rules in the manifest.
-     *                      If manifest is NULL count will be set to the number
-     *                      of rules in the manifest. If manifest is not NULL
-     *                      count will return the number of rule placed in the
-     *                      manifest. If count is smaller than the number of
-     *                      rules found in the manifest ER_BUFFER_TOO_SMALL will
-     *                      be returned.
+     * @param[out] manifests The variable to hold the manifests.
      * @return ER_OK for success; error code otherwise.
      */
-    QStatus RetrieveManifest(PermissionPolicy::Rule* manifest, size_t* count);
+    QStatus RetrieveManifests(std::vector<Manifest>& manifests);
     /**
      * Reply to a method call with an error message.
      *
@@ -581,6 +571,7 @@ class PermissionMgmtObj : public BusObject {
     void RemoveMembership(const InterfaceDescription::Member* member, Message& msg);
     void StartManagement(const InterfaceDescription::Member* member, Message& msg);
     void EndManagement(const InterfaceDescription::Member* member, Message& msg);
+    void InstallManifests(const InterfaceDescription::Member* member, Message& msg);
     QStatus GetMembershipSummaries(MsgArg& arg);
     QStatus GetManifestTemplate(MsgArg& arg);
     QStatus GetManifestTemplateDigest(MsgArg& arg);

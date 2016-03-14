@@ -137,6 +137,11 @@ QStatus SecurityApplicationObj::Init()
             QCC_LogError(status, ("Failed to add method handler for  %s.EndManagement", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
             return status;
         }
+        status = AddMethodHandler(ifc->GetMember("InstallManifests"), static_cast<MessageReceiver::MethodHandler>(&SecurityApplicationObj::InstallManifests));
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Failed to add method handler for %s.InstallManifests", org::alljoyn::Bus::Security::ManagedApplication::InterfaceName));
+            return status;
+        }
     }
     if (ER_OK == status) {
         status = PermissionMgmtObj::Init();
@@ -225,6 +230,12 @@ void SecurityApplicationObj::EndManagement(const ajn::InterfaceDescription::Memb
     PermissionMgmtObj::EndManagement(member, msg);
 }
 
+void SecurityApplicationObj::InstallManifests(const ajn::InterfaceDescription::Member* member, ajn::Message& msg)
+{
+    QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
+    PermissionMgmtObj::InstallManifests(member, msg);
+}
+
 QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, MsgArg& val)
 {
     QCC_DbgTrace(("SecurityApplicationObj::%s", __FUNCTION__));
@@ -251,7 +262,7 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("ManifestTemplate", propName)) {
             status = GetManifestTemplate(val);
             if (ER_MANIFEST_NOT_FOUND == status) {
-                status = val.Set("a(ssa(syy))", 0, NULL);
+                status = val.Set(_Manifest::s_TemplateMsgArgSignature, 0, NULL);
             }
         } else if (0 == strcmp("ClaimCapabilities", propName)) {
             status = val.Set("q", claimCapabilities);
@@ -263,29 +274,15 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
             status = val.Set("q", SecurityApplicationObj::SECURITY_MANAGED_APPLICATION_VERSION);
         } else if (0 == strcmp("Identity", propName)) {
             status = GetIdentity(val);
-        } else if (0 == strcmp("Manifest", propName)) {
-            PermissionPolicy::Rule* manifest = NULL;
-            size_t manifestSize = 0;
-            /* retrieve the size of the manifest */
-            status = RetrieveManifest(NULL, &manifestSize);
+        } else if (0 == strcmp("Manifests", propName)) {
+            std::vector<Manifest> manifests;
+            status = RetrieveManifests(manifests);
             if (ER_OK != status) {
                 if (ER_MANIFEST_NOT_FOUND == status) {
-                    status = val.Set("a(ssa(syy))", 0, NULL);
+                    status = val.Set(_Manifest::s_MsgArgArraySignature, 0, NULL);
                 }
             } else {
-                if (manifestSize > 0) {
-                    manifest = new PermissionPolicy::Rule[manifestSize];
-                }
-                status = RetrieveManifest(manifest, &manifestSize);
-                if (ER_OK != status) {
-                    delete [] manifest;
-                    if (ER_MANIFEST_NOT_FOUND == status) {
-                        status = val.Set("a(ssa(syy))", 0, NULL);
-                    }
-                } else {
-                    status = PermissionPolicy::GenerateRules(manifest, manifestSize, val);
-                    delete [] manifest;
-                }
+                status = _Manifest::GetArrayMsgArg(manifests, val);
             }
         } else if (0 == strcmp("IdentityCertificateId", propName)) {
             qcc::String serial;

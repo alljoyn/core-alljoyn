@@ -37,7 +37,7 @@ using namespace qcc;
 namespace ajn {
 
 /* Keep this definition in sync with the doc comment for this constant in PermissionConfigurator.h. */
-const uint16_t PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT = (CAPABLE_ECDHE_NULL | CAPABLE_ECDHE_PSK);
+const uint16_t PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT = (CAPABLE_ECDHE_NULL | CAPABLE_ECDHE_PSK | CAPABLE_ECDHE_SPEKE);
 
 /**
  * Class for internal state of a PermissionConfigurator object.
