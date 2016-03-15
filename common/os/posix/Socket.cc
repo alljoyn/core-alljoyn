@@ -48,6 +48,7 @@
 #include <qcc/IPAddress.h>
 #include <qcc/Util.h>
 #include <qcc/Thread.h>
+#include <qcc/PerfCounters.h>
 
 #include <Status.h>
 
@@ -527,7 +528,6 @@ QStatus GetLocalAddress(SocketFd sockfd, IPAddress& addr, uint16_t& port)
     return status;
 }
 
-
 QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
 {
     QStatus status = ER_OK;
@@ -535,6 +535,7 @@ QStatus Send(SocketFd sockfd, const void* buf, size_t len, size_t& sent)
 
     QCC_DbgTrace(("Send(sockfd = %d, *buf = <>, len = %lu, sent = <>)",
                   sockfd, len));
+    IncrementPerfCounter(PERF_COUNTER_SOCKET_SEND);
     QCC_ASSERT(buf != NULL);
 
     QCC_DbgLocalData(buf, len);
@@ -566,6 +567,7 @@ QStatus SendTo(SocketFd sockfd, IPAddress& remoteAddr, uint16_t remotePort, uint
 
     QCC_DbgTrace(("SendTo(sockfd = %d, remoteAddr = %s, remotePort = %u, *buf = <>, len = %lu, sent = <>, flags = 0x%x)",
                   sockfd, remoteAddr.ToString().c_str(), remotePort, len, (int)flags));
+    IncrementPerfCounter(PERF_COUNTER_SOCKET_SENDTO);
     QCC_ASSERT(buf != NULL);
 
     QCC_DbgLocalData(buf, len);
@@ -607,6 +609,7 @@ QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received)
     ssize_t ret;
 
     QCC_DbgTrace(("Recv(sockfd = %d, buf = <>, len = %lu, received = <>)", sockfd, len));
+    IncrementPerfCounter(PERF_COUNTER_SOCKET_RECV);
     QCC_ASSERT(buf != NULL);
 
     ret = recv(static_cast<int>(sockfd), buf, len, 0);
@@ -625,7 +628,6 @@ QStatus Recv(SocketFd sockfd, void* buf, size_t len, size_t& received)
     return status;
 }
 
-
 QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
                  void* buf, size_t len, size_t& received)
 {
@@ -637,6 +639,7 @@ QStatus RecvFrom(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& remotePort,
 
     QCC_DbgTrace(("RecvFrom(sockfd = %d, remoteAddr = %s, remotePort = %u, buf = <>, len = %lu, received = <>)",
                   sockfd, remoteAddr.ToString().c_str(), remotePort, len));
+    IncrementPerfCounter(PERF_COUNTER_SOCKET_RECV_FROM);
     QCC_ASSERT(buf != NULL);
 
     ret = recvfrom(static_cast<int>(sockfd), buf, len, 0,
@@ -663,6 +666,7 @@ QStatus RecvWithAncillaryData(SocketFd sockfd, IPAddress& remoteAddr, uint16_t& 
     received = 0;
     interfaceIndex = -1;
     uint16_t localPort;
+    IncrementPerfCounter(PERF_COUNTER_SOCKET_RECV_WITH_ANCILLARY_DATA);
 
     struct iovec iov[] = { { buf, len } };
 
@@ -748,13 +752,15 @@ QStatus RecvWithFds(SocketFd sockfd, void* buf, size_t len, size_t& received, So
 {
     QStatus status = ER_OK;
 
+    QCC_DbgHLPrintf(("RecvWithFds"));
+    IncrementPerfCounter(PERF_COUNTER_SOCKET_RECV_WITH_FDS);
+
     if (!fdList) {
         return ER_BAD_ARG_5;
     }
     if (!maxFds) {
         return ER_BAD_ARG_6;
     }
-    QCC_DbgHLPrintf(("RecvWithFds"));
 
     recvdFds = 0;
     maxFds = std::min(maxFds, SOCKET_MAX_FILE_DESCRIPTORS);
@@ -808,14 +814,15 @@ QStatus SendWithFds(SocketFd sockfd, const void* buf, size_t len, size_t& sent, 
     QCC_UNUSED(pid);
     QStatus status = ER_OK;
 
+    QCC_DbgHLPrintf(("SendWithFds"));
+    IncrementPerfCounter(PERF_COUNTER_SOCKET_SEND_WITH_FDS);
+
     if (!fdList) {
         return ER_BAD_ARG_5;
     }
     if (!numFds || (numFds > SOCKET_MAX_FILE_DESCRIPTORS)) {
         return ER_BAD_ARG_6;
     }
-
-    QCC_DbgHLPrintf(("SendWithFds"));
 
     struct iovec iov[] = { { const_cast<void*>(buf), len } };
     size_t sz = numFds * sizeof(SocketFd);
