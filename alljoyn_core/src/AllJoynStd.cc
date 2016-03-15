@@ -74,12 +74,12 @@ const char* org::alljoyn::Daemon::WellKnownName = "org.alljoyn.Daemon";
 const char* org::alljoyn::Daemon::Debug::ObjectPath = "/org/alljoyn/Debug";
 const char* org::alljoyn::Daemon::Debug::InterfaceName = "org.alljoyn.Debug";
 
-/** org.allseen.Introsoectable interface definitions */
+/** org.allseen.Introspectable interface definitions */
 const char* org::allseen::Introspectable::InterfaceName = "org.allseen.Introspectable";
 const char* org::allseen::Introspectable::IntrospectDocType =
     "<!DOCTYPE"
-    " node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\""
+    " node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\""
     ">\n";
 
 QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
