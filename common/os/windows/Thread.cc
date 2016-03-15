@@ -32,6 +32,7 @@
 #include <qcc/Thread.h>
 #include <qcc/Mutex.h>
 #include <qcc/LockLevel.h>
+#include <qcc/PerfCounters.h>
 
 #include <Status.h>
 
@@ -186,6 +187,8 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     auxListenersLock(LOCK_LEVEL_THREAD_AUXLISTENERSLOCK),
     threadId(isExternal ? GetCurrentThreadId() : 0)
 {
+    IncrementPerfCounter(PERF_COUNTER_THREAD_CREATED);
+
     /* qcc::String is not thread safe.  Don't use it here. */
     funcName[0] = '\0';
     strncpy(funcName, name.c_str(), sizeof(funcName));
@@ -222,6 +225,7 @@ Thread::~Thread(void)
         }
     }
     QCC_DbgHLPrintf(("Thread::~Thread() [%s,%x] started:%d running:%d stopped:%d", GetName(), this, started, running, stopped));
+    IncrementPerfCounter(PERF_COUNTER_THREAD_DESTROYED);
 }
 
 

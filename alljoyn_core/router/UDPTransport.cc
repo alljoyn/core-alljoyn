@@ -29,6 +29,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/IfConfig.h>
 #include <qcc/LockLevel.h>
+#include <qcc/PerfCounters.h>
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
@@ -4244,6 +4245,8 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
     m_pump->m_lock.Lock(MUTEX_CONTEXT);
     while (!m_pump->m_stopping && !IsStopping() && status != ER_TIMEOUT) {
         QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Top."));
+        IncrementPerfCounter(PERF_COUNTER_UDP_TRANSPORT_PUMP_OUTER_LOOP);
+
         /*
          * Note that if the condition returns an unexpected status we loop in
          * the hope that it is recoverable.
@@ -4303,10 +4306,13 @@ ThreadReturn STDCALL MessagePump::PumpThread::Run(void* arg)
                     ep->IncrementRefs();
                     m_pump->m_transport->m_endpointListLock.Unlock(MUTEX_CONTEXT);
                     m_pump->m_lock.Unlock(MUTEX_CONTEXT);
+
                     QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Call out to endopint with connId=%d.", entry.m_connId));
+                    IncrementPerfCounter(PERF_COUNTER_UDP_TRANSPORT_PUMP_RECVCB);
                     ep->RecvCb(entry.m_handle, entry.m_conn, entry.m_connId, entry.m_rcv, entry.m_status);
                     QCC_DbgPrintf(("MessagePump::PumpThread::Run(): Back from endpoint RecvCb()"));
                     handled = true;
+
                     m_pump->m_lock.Lock(MUTEX_CONTEXT);
                     m_pump->m_transport->m_endpointListLock.Lock(MUTEX_CONTEXT);
                     /*
@@ -4578,6 +4584,7 @@ ThreadReturn STDCALL UDPTransport::DispatcherThread::Run(void* arg)
 
     while (!IsStopping()) {
         QCC_DbgTrace(("UDPTransport::DispatcherThread::Run(): Wait for some action"));
+        IncrementPerfCounter(PERF_COUNTER_UDP_TRANSPORT_DISPATCHER_OUTER_LOOP);
 
         signaledEvents.clear();
 
@@ -8420,6 +8427,8 @@ void* UDPTransport::Run(void* arg)
      * (3) drive/whip the ARDP protocol to do our bidding.
      */
     for (;;) {
+        IncrementPerfCounter(PERF_COUNTER_UDP_TRANSPORT_RUN_OUTER_LOOP);
+
         m_endpointListLock.Lock(MUTEX_CONTEXT);
         m_preListLock.Lock(MUTEX_CONTEXT);
         m_listenFdsLock.Lock(MUTEX_CONTEXT);
@@ -8642,6 +8651,7 @@ void* UDPTransport::Run(void* arg)
 
             QCC_DbgPrintf(("UDPTransport::Run(): ARDP_Run(): readReady=\"%s\", writeReady=\"%s\"",
                            readReady ? "true" : "false", writeReady ? "true" : "false"));
+            IncrementPerfCounter(PERF_COUNTER_UDP_TRANSPORT_ARDP_RUN);
 
             uint32_t ms;
             QStatus ardpStatus;

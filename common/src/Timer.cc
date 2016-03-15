@@ -27,6 +27,7 @@
 #include <qcc/Timer.h>
 #include <qcc/StringUtil.h>
 #include <qcc/LockLevel.h>
+#include <qcc/PerfCounters.h>
 #include <Status.h>
 #include <algorithm>
 
@@ -967,6 +968,7 @@ ThreadReturn STDCALL TimerThread::Run(void* arg)
                     timer->lock.Unlock(MUTEX_CONTEXT);
 
                     QCC_DbgPrintf(("TimerThread::Run(): ******** AlarmTriggered()"));
+                    IncrementPerfCounter(PERF_COUNTER_ALARM_TRIGGERED);
                     (top->listener->AlarmTriggered)(top, ER_OK);
                     if (hasTimerLock) {
                         hasTimerLock = false;
@@ -1107,6 +1109,8 @@ void TimerImpl::ThreadExit(Thread* thread)
             if (tt->hasTimerLock) {
                 reentrancyLock.Lock(MUTEX_CONTEXT);
             }
+
+            IncrementPerfCounter(PERF_COUNTER_ALARM_TRIGGERED);
             alarm->listener->AlarmTriggered(alarm, ER_TIMER_EXITING);
             if (tt->hasTimerLock) {
                 tt->hasTimerLock = false;

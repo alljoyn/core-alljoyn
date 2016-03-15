@@ -23,6 +23,7 @@
 #include <qcc/atomic.h>
 #include <qcc/String.h>
 #include <qcc/Util.h>
+#include <qcc/PerfCounters.h>
 #include <assert.h>
 #include <algorithm>
 #include <limits>
@@ -59,10 +60,10 @@ void String::Shutdown()
     }
 }
 
-
-
 String::String(const char* str, std::string::size_type strLen, size_t sizeHint)
 {
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_1);
+
     if (str) {
         s.reserve(sizeHint);
         s.assign(str, strLen);
@@ -74,6 +75,8 @@ String::String(const char* str, std::string::size_type strLen, size_t sizeHint)
 
 String::String(const char* str, std::string::size_type strLen)
 {
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_2);
+
     if (str) {
         s.assign(str, strLen);
     } else {
@@ -84,6 +87,8 @@ String::String(const char* str, std::string::size_type strLen)
 
 String::String(const char* str)
 {
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_3);
+
     if (str) {
         s = str;
     } else {
@@ -92,6 +97,40 @@ String::String(const char* str)
     }
 }
 
+String::String(const String& str) : s(str.s)
+{
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_4);
+}
+
+String::String(std::string&& str) : s(str)
+{
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_5);
+}
+
+String::String(const std::string& str) : s(str)
+{
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_6);
+}
+
+String::String(const const_iterator& start, const const_iterator& end) : s(start, end)
+{
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_7);
+}
+
+String::String(size_type n, char c) : s(n, c)
+{
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_8);
+}
+
+String::String() : s()
+{
+    IncrementPerfCounter(PERF_COUNTER_STRING_CREATED_9);
+}
+
+String::~String()
+{
+    IncrementPerfCounter(PERF_COUNTER_STRING_DESTROYED);
+}
 
 std::string String::assign(const char* str, std::string::size_type len)
 {
