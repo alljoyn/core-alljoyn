@@ -210,6 +210,11 @@ void LockOrderChecker::AcquiringLock(const Mutex* lock, const char* file, uint32
                 previousTrace.m_level,
                 MutexInternal::GetLatestOwnerFileName(*previousTrace.m_lock) ? MutexInternal::GetLatestOwnerFileName(*previousTrace.m_lock) : "unknown file",
                 MutexInternal::GetLatestOwnerLineNumber(*previousTrace.m_lock));
+
+
+/// WAY: to be removed
+        lock->PrintHints();
+
         fflush(stderr);
         QCC_ASSERT(false && "Detected out-of-order lock acquire");
     }

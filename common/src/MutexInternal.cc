@@ -30,6 +30,7 @@ using namespace qcc;
 
 MutexInternal::MutexInternal(Mutex* ownerLock, LockLevel level)
 {
+    m_hint[0] = '\0';
 #ifdef NDEBUG
     QCC_UNUSED(ownerLock);
     QCC_UNUSED(level);
