@@ -139,6 +139,12 @@ class Mutex {
      */
     void AssertOwnedByCurrentThread() const;
 
+
+    /// WAY: to be removed
+    void AddHint(const char* file, uint32_t line);
+    void AddHint();
+    void PrintHints() const;
+
   private:
 
     Mutex(const Mutex& other);

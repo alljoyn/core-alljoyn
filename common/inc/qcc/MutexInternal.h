@@ -149,6 +149,8 @@ public:
     void AcquiringLock(const char* file, uint32_t line);
 #endif 
 
+    char m_hint[300];
+
 private:
     bool PlatformSpecificInit();
     void PlatformSpecificDestroy();
