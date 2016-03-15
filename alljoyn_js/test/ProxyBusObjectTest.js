@@ -295,8 +295,8 @@ AsyncTestCase("ProxyBusObjectTest", {
 
     testParseIntrospection: function(queue) {
         var xml =
-            '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"' +
-            '"http://standards.freedesktop.org/dbus/introspect-1.0.dtd">' +
+            '<!DOCTYPE node PUBLIC "-//allseen//DTD ALLJOYN Object Introspection 1.1//EN"' +
+            '"http://www.allseen.org/alljoyn/introspect-1.1.dtd">' +
             '<node>' +
             '  <interface name="test.Interface">' +
             '    <method name="method1">' +

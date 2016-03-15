@@ -58,8 +58,8 @@ static const char* methId = "method";
 static const char* pingMethodDescription[] = { "DE: This is the ping description", "This is the ping description" };
 
 static const char* IntrospectWithDescriptionString1[] = {
-    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <description>This is the object</description>\n"
     "  <node name=\"org\"/>\n"
@@ -91,8 +91,8 @@ static const char* IntrospectWithDescriptionString1[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <description>DE: This is the object</description>\n"
     "  <node name=\"org\"/>\n"
@@ -124,8 +124,8 @@ static const char* IntrospectWithDescriptionString1[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the object\"/>\n"
     "  <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the object\"/>\n"
@@ -157,8 +157,8 @@ static const char* IntrospectWithDescriptionString1[] = {
 };
 
 static const char* IntrospectWithDescriptionString2[] = {
-    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -196,8 +196,8 @@ static const char* IntrospectWithDescriptionString2[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -235,8 +235,8 @@ static const char* IntrospectWithDescriptionString2[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -272,8 +272,8 @@ static const char* IntrospectWithDescriptionString2[] = {
 };
 
 static const char* IntrospectWithDescriptionString3[] = {
-    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <description>This is the object</description>\n"
     "  <node name=\"org\"/>\n"
@@ -300,8 +300,8 @@ static const char* IntrospectWithDescriptionString3[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <description>DE: This is the object</description>\n"
     "  <node name=\"org\"/>\n"
@@ -328,8 +328,8 @@ static const char* IntrospectWithDescriptionString3[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the object\"/>\n"
     "  <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the object\"/>\n"
@@ -357,8 +357,8 @@ static const char* IntrospectWithDescriptionString3[] = {
 };
 
 static const char* IntrospectWithDescriptionString4[] = {
-    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"
-    "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <description>This is the object</description>\n"
     "  <node name=\"org\"/>\n"
@@ -414,8 +414,8 @@ static const char* IntrospectWithDescriptionString4[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <annotation name=\"org.alljoyn.Bus.DocString.de\" value=\"DE: This is the object\"/>\n"
     "  <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"This is the object\"/>\n"
