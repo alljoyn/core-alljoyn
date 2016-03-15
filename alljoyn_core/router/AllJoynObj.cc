@@ -1871,6 +1871,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     CallerType type = HOST;
     QStatus status = MsgArg::Get(args, 6, "qsssss", &sessionPort, &src, &sessionHost, &dest, &srcB2B, &busAddr);
     const String srcB2BStr = srcB2B;
+    vector<String> replyMembers;
 
     QCC_DbgPrintf(("JoinSessionThread::RunAttach(): sessionPort=%d, src=\"%s\", sessionHost=\"%s\", dest=\"%s\", srcB2B=\"%s\", busAddr=\"%s\"",
                    sessionPort, src, sessionHost, dest, srcB2B, busAddr));
@@ -2082,13 +2083,13 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                              * Include every member from this session map entry, apart from a self-joined host.
                              * We can't include that one because it would confuse legacy routers. They'd end up
                              * creating double session routes and corrupting their session cast set */
-                            vector<String> replyMembers;
                             for (vector<String>::const_iterator mit = smEntry->memberNames.begin();
                                  mit != smEntry->memberNames.end(); ++mit) {
                                 if (*mit != smEntry->sessionHost) {
                                     replyMembers.push_back(*mit);
                                 }
                             }
+
                             replyArgs[3].Set("a$", replyMembers.size(), &replyMembers.front());
 
                         } else {
