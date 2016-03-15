@@ -35,6 +35,7 @@
 #include <qcc/Mutex.h>
 #include <qcc/Thread.h>
 #include <qcc/LockLevel.h>
+#include <qcc/PerfCounters.h>
 
 #include <Status.h>
 
@@ -192,6 +193,8 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     hasBeenJoined(false),
     hbjMutex(LOCK_LEVEL_THREAD_HBJMUTEX)
 {
+    IncrementPerfCounter(PERF_COUNTER_THREAD_CREATED);
+
     /* qcc::String is not thread safe.  Don't use it here. */
     funcName[0] = '\0';
     strncpy(funcName, name.c_str(), sizeof(funcName));
@@ -230,6 +233,7 @@ Thread::~Thread(void)
     }
 
     QCC_DbgHLPrintf(("Thread::~Thread() destroyed %s - %x -- started:%d running:%d joined:%d", funcName, handle, started, running, joined));
+    IncrementPerfCounter(PERF_COUNTER_THREAD_DESTROYED);
 }
 
 

@@ -27,6 +27,7 @@
 #include <qcc/String.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
+#include <qcc/PerfCounters.h>
 #ifdef QCC_OS_GROUP_WINDOWS
 #include <qcc/windows/utility.h>
 #include <qcc/windows/NamedPipeWrapper.h>
@@ -38,6 +39,9 @@
 #define QCC_MODULE "STATICGLOBALS"
 
 namespace qcc {
+
+/* Counters easily found from a debugger, incremented for frequent SCL actions */
+volatile uint32_t s_PerfCounters[PERF_COUNTER_COUNT];
 
 class StaticGlobals {
   public:

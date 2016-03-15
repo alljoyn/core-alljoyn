@@ -45,6 +45,7 @@
 #include <qcc/GUID.h>
 #include <qcc/Event.h>
 #include <qcc/LockLevel.h>
+#include <qcc/PerfCounters.h>
 
 #include "BusUtil.h"
 #include "IpNameServiceImpl.h"
@@ -3528,6 +3529,7 @@ void IpNameServiceImpl::SendProtocolMessage(
     const qcc::IPAddress& localAddress)
 {
     QCC_DbgPrintf(("**********IpNameServiceImpl::SendProtocolMessage()"));
+    IncrementPerfCounter(PERF_COUNTER_IPNS_SEND_PROTOCOL_MESSAGE);
 
 #if HAPPY_WANDERER
     if (Wander() == false) {
@@ -5400,6 +5402,8 @@ void* IpNameServiceImpl::Run(void* arg)
 
     m_mutex.Lock(MUTEX_CONTEXT);
     while ((m_state == IMPL_RUNNING) || (m_state == IMPL_STOPPING) || m_terminal) {
+        IncrementPerfCounter(PERF_COUNTER_IPNS_OUTER_LOOP);
+
         //
         // If we are shutting down, we need to make sure that we send out the
         // terminal is-at messages that correspond to a CancelAdvertiseName for
@@ -7653,6 +7657,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
 void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local, int32_t interfaceIndex)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(0x%x, %d, %s)", buffer, nbytes, remote.ToString().c_str()));
+    IncrementPerfCounter(PERF_COUNTER_IPNS_HANDLE_PROTOCOL_MESSAGE);
 
 #if HAPPY_WANDERER
     if (Wander() == false) {

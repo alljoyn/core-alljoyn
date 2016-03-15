@@ -54,7 +54,7 @@ class String {
     /**
      * Construct an empty string.
      */
-    String() : s() { }
+    String();
 
     /**
      * Construct a single character string.
@@ -76,7 +76,7 @@ class String {
         s.reserve(sizeHint);
         s.assign(n, c);
     }
-    String(size_type n, char c) : s(n, c) { }
+    String(size_type n, char c);
 
     /**
      * Construct a string from a const char*
@@ -94,16 +94,14 @@ class String {
      *
      * @param str        String to copy
      */
-    String(const String& str) : s(str.s) { }
+    String(const String& str);
+    String(std::string&& str);
+    String(const std::string& str);
 
-    String(std::string&& str) : s(str) { }
-    String(const std::string& str) : s(str) { }
-
-    String(const const_iterator& start, const const_iterator& end) : s(start, end) { }
-
+    String(const const_iterator& start, const const_iterator& end);
 
     /** Destructor */
-    virtual ~String() { }
+    virtual ~String();
 
     operator const std::string & () const { return s; }
     operator std::string & () { return s; }
