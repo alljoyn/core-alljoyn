@@ -55,6 +55,7 @@ void XmlRulesConverter::InitInverseMemberTypeMap()
 
 void XmlRulesConverter::InitMemberMasksMap()
 {
+    s_memberMasksMap[DENY_MEMBER_MASK] = 0;
     s_memberMasksMap[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
     s_memberMasksMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
     s_memberMasksMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
@@ -79,7 +80,33 @@ QStatus XmlRulesConverter::XmlToRules(AJ_PCSTR rulesXml, std::vector<PermissionP
     return status;
 }
 
-QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules, const size_t rulesCount, AJ_PSTR* rulesXml)
+QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules,
+                                      const size_t rulesCount,
+                                      AJ_PSTR* rulesXml,
+                                      AJ_PCSTR rootElement)
+{
+    QCC_ASSERT(nullptr != rulesXml);
+    QCC_ASSERT(nullptr != rules);
+
+    qcc::XmlElement* rulesXmlElement = nullptr;
+    QStatus status = RulesToXml(rules,
+                                rulesCount,
+                                &rulesXmlElement,
+                                rootElement);
+
+    if (ER_OK == status) {
+        *rulesXml = rulesXmlElement->ToString();
+    }
+
+    delete rulesXmlElement;
+
+    return status;
+}
+
+QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules,
+                                      const size_t rulesCount,
+                                      qcc::XmlElement** rulesXml,
+                                      AJ_PCSTR rootElement)
 {
     QCC_ASSERT(nullptr != rulesXml);
     QCC_ASSERT(nullptr != rules);
@@ -87,12 +114,9 @@ QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules, const
     QStatus status = XmlRulesValidator::ValidateRules(rules, rulesCount);
 
     if (ER_OK == status) {
-        qcc::XmlElement* rulesElement = new qcc::XmlElement(MANIFEST_XML_ELEMENT);
+        *rulesXml = new qcc::XmlElement(rootElement);
 
-        BuildXmlManifest(rules, rulesCount, rulesElement);
-        *rulesXml = CopyXml(rulesElement);
-
-        delete rulesElement;
+        BuildRulesContents(rules, rulesCount, *rulesXml);
     }
 
     return status;
@@ -189,20 +213,20 @@ void XmlRulesConverter::BuildActionMask(const qcc::XmlElement* xmlMember, uint8_
     }
 }
 
-void XmlRulesConverter::BuildXmlManifest(const PermissionPolicy::Rule* rules, const size_t rulesCount, qcc::XmlElement* manifestXml)
+void XmlRulesConverter::BuildRulesContents(const PermissionPolicy::Rule* rules, const size_t rulesCount, qcc::XmlElement* rulesXml)
 {
     std::map<std::string, std::vector<PermissionPolicy::Rule> > objectToRulesMap;
     XmlRulesValidator::AssignRulesToObjects(rules, rulesCount, objectToRulesMap);
 
     for (auto objectAndRulesPair : objectToRulesMap) {
-        BuildXmlNode(objectAndRulesPair.second, manifestXml);
+        BuildXmlNode(objectAndRulesPair.second, rulesXml);
     }
 }
 
-void XmlRulesConverter::BuildXmlNode(const std::vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* manifestElement)
+void XmlRulesConverter::BuildXmlNode(const std::vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* rulesElement)
 {
     qcc::XmlElement* nodeElement = nullptr;
-    CreateChildWithNameAttribute(manifestElement, NODE_XML_ELEMENT, rules[0].GetObjPath().c_str(), &nodeElement);
+    CreateChildWithNameAttribute(rulesElement, NODE_XML_ELEMENT, rules[0].GetObjPath().c_str(), &nodeElement);
 
     for (auto rule : rules) {
         BuildXmlInterface(rule, nodeElement);
@@ -267,14 +291,6 @@ void XmlRulesConverter::CopyRules(std::vector<ajn::PermissionPolicy::Rule>& rule
     for (size_t index = 0; index < rulesVector.size(); index++) {
         (*rules)[index] = rulesVector[index];
     }
-}
-
-AJ_PSTR XmlRulesConverter::CopyXml(const qcc::XmlElement* xmlElement)
-{
-    std::string tempXml = xmlElement->Generate().c_str();
-    AJ_PSTR xml = new char[tempXml.size() + 1];
-    strcpy(xml, tempXml.c_str());
-    return xml;
 }
 
 bool XmlRulesConverter::MasksContainAction(uint8_t masks, uint8_t action)

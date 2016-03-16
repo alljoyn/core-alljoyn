@@ -427,6 +427,14 @@ qcc::String XmlElement::Generate(qcc::String* outStr) const
     return *outStr;
 }
 
+AJ_PSTR XmlElement::ToString() const
+{
+    String tempXml = Generate();
+    AJ_PSTR xml = new char[tempXml.size() + 1];
+    strcpy(xml, tempXml.c_str());
+    return xml;
+}
+
 XmlElement* XmlElement::CreateChild(const qcc::String& elementName)
 {
     QCC_DbgTrace(("XmlElement::CreateChild(\"%s\")", elementName.c_str()));
@@ -472,6 +480,12 @@ const qcc::String& XmlElement::GetAttribute(const qcc::String& attName) const
     } else {
         return it->second;
     }
+}
+
+void XmlElement::AddChild(XmlElement* child)
+{
+    child->parentOwned = true;
+    children.push_back(child);
 }
 
 std::vector<const XmlElement*> XmlElement::GetPath(const qcc::String& inPath) const

@@ -56,7 +56,7 @@ static AJ_PCSTR EMPTY_POLICY_ELEMENT =
     "</policy>";
 static AJ_PCSTR MISSING_POLICY_VERSION_ELEMENT =
     "<policy>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -85,18 +85,18 @@ static AJ_PCSTR MISSING_SERIAL_NUMBER_ELEMENT =
 static AJ_PCSTR MISSING_ACLS_ELEMENT =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "</policy>";
 static AJ_PCSTR MISSING_ACL_ELEMENT =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls></acls>"
     "</policy>";
 static AJ_PCSTR MISSING_PEERS_ELEMENT =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     BASIC_VALID_RULES
@@ -106,7 +106,7 @@ static AJ_PCSTR MISSING_PEERS_ELEMENT =
 static AJ_PCSTR MISSING_RULES_ELEMENT =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -120,7 +120,7 @@ static AJ_PCSTR MISSING_RULES_ELEMENT =
 static AJ_PCSTR MISSING_PEER_ELEMENT =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers></peers>"
@@ -131,7 +131,7 @@ static AJ_PCSTR MISSING_PEER_ELEMENT =
 static AJ_PCSTR MISSING_TYPE_ELEMENT =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -144,7 +144,7 @@ static AJ_PCSTR MISSING_TYPE_ELEMENT =
 static AJ_PCSTR EMPTY_POLICY_VERSION_ELEMENT =
     "<policy>"
     "<policyVersion></policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -174,7 +174,7 @@ static AJ_PCSTR EMPTY_SERIAL_NUMBER_ELEMENT =
 static AJ_PCSTR EMPTY_TYPE_ELEMENT =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -188,7 +188,7 @@ static AJ_PCSTR EMPTY_TYPE_ELEMENT =
     "</policy>";
 static AJ_PCSTR POLICY_ELEMENTS_INCORRECT_ORDER =
     "<policy>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<policyVersion>1</policyVersion>"
     "<acls>"
     "<acl>"
@@ -204,7 +204,7 @@ static AJ_PCSTR POLICY_ELEMENTS_INCORRECT_ORDER =
 static AJ_PCSTR ACL_ELEMENTS_INCORRECT_ORDER =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     BASIC_VALID_RULES
@@ -219,7 +219,7 @@ static AJ_PCSTR ACL_ELEMENTS_INCORRECT_ORDER =
 static AJ_PCSTR PEER_ELEMENTS_INCORRECT_ORDER =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -237,7 +237,7 @@ static AJ_PCSTR PEER_ELEMENTS_INCORRECT_ORDER =
 static AJ_PCSTR INVALID_PUBLIC_KEY =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -254,7 +254,7 @@ static AJ_PCSTR INVALID_PUBLIC_KEY =
 static AJ_PCSTR INVALID_SGID =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -273,7 +273,7 @@ static AJ_PCSTR INVALID_SGID =
 static AJ_PCSTR POLICY_VERSION_NOT_ONE =
     "<policy>"
     "<policyVersion>100</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -303,7 +303,7 @@ static AJ_PCSTR SERIAL_NUMBER_NEGATIVE =
 static AJ_PCSTR UNKNOWN_PEER_TYPE =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -318,7 +318,7 @@ static AJ_PCSTR UNKNOWN_PEER_TYPE =
 static AJ_PCSTR ALL_TYPE_WITH_OTHER =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -336,7 +336,7 @@ static AJ_PCSTR ALL_TYPE_WITH_OTHER =
 static AJ_PCSTR ANY_TRUSTED_TWICE =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -354,7 +354,7 @@ static AJ_PCSTR ANY_TRUSTED_TWICE =
 static AJ_PCSTR SAME_FROM_CA_TWICE =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -378,7 +378,7 @@ static AJ_PCSTR SAME_FROM_CA_TWICE =
 static AJ_PCSTR SAME_WITH_PUBLIC_KEY_TWICE =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -402,7 +402,7 @@ static AJ_PCSTR SAME_WITH_PUBLIC_KEY_TWICE =
 static AJ_PCSTR SAME_WITH_MEMBERSHIP_TWICE =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -430,7 +430,7 @@ static AJ_PCSTR SAME_WITH_MEMBERSHIP_TWICE =
 static AJ_PCSTR VALID_ALL_TYPE_PEER =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -445,7 +445,7 @@ static AJ_PCSTR VALID_ALL_TYPE_PEER =
 static AJ_PCSTR VALID_TWO_ACLS =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -468,7 +468,7 @@ static AJ_PCSTR VALID_TWO_ACLS =
 static AJ_PCSTR VALID_WHITESPACE_IN_POLICY_VERSION =
     "<policy>"
     "<policyVersion> 1 </policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -498,7 +498,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_SERIAL_NUMBER =
 static AJ_PCSTR VALID_WHITESPACE_IN_TYPE =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -513,7 +513,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_TYPE =
 static AJ_PCSTR VALID_WHITESPACE_IN_PUBLIC_KEY =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -531,7 +531,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_PUBLIC_KEY =
 static AJ_PCSTR VALID_WHITESPACE_IN_SGID =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -550,7 +550,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_SGID =
 static AJ_PCSTR VALID_ANY_TRUSTED_PEER =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -565,7 +565,7 @@ static AJ_PCSTR VALID_ANY_TRUSTED_PEER =
 static AJ_PCSTR VALID_FROM_CA =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -583,7 +583,7 @@ static AJ_PCSTR VALID_FROM_CA =
 static AJ_PCSTR VALID_WITH_MEMBERSHIP =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -602,7 +602,7 @@ static AJ_PCSTR VALID_WITH_MEMBERSHIP =
 static AJ_PCSTR VALID_WITH_PUBLIC_KEY =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -620,7 +620,7 @@ static AJ_PCSTR VALID_WITH_PUBLIC_KEY =
 static AJ_PCSTR VALID_ANY_TRUSTED_PEER_WITH_OTHER =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -641,7 +641,7 @@ static AJ_PCSTR VALID_ANY_TRUSTED_PEER_WITH_OTHER =
 static AJ_PCSTR VALID_TWO_DIFFERENT_CA =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -665,7 +665,7 @@ static AJ_PCSTR VALID_TWO_DIFFERENT_CA =
 static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_KEYS =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -691,7 +691,7 @@ static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_KEYS =
 static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_SGIDS =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -717,7 +717,7 @@ static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_SGIDS =
 static AJ_PCSTR VALID_TWO_DIFFERENT_WITH_PUBLIC_KEY =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -741,7 +741,7 @@ static AJ_PCSTR VALID_TWO_DIFFERENT_WITH_PUBLIC_KEY =
 static AJ_PCSTR VALID_SAME_KEY_CA_AND_WITH_PUBLIC_KEY =
     "<policy>"
     "<policyVersion>1</policyVersion>"
-    "<serialNumber>1</serialNumber>"
+    "<serialNumber>10</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -813,14 +813,14 @@ TEST_F(XmlPoliciesConverterDetailedTest, shouldGetPolicyVersion)
 {
     ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ALL_TYPE_PEER, policy));
 
-    EXPECT_EQ(1U, policy.GetVersion());
+    EXPECT_EQ(1U, policy.GetSpecificationVersion());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetSerialNumber)
 {
     ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ALL_TYPE_PEER, policy));
 
-    EXPECT_EQ((uint16_t)1, policy.GetSpecificationVersion());
+    EXPECT_EQ((uint16_t)10, policy.GetVersion());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetOneAcl)
