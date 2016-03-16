@@ -61,3 +61,17 @@ void Mutex::AssertOwnedByCurrentThread() const
 {
     m_mutexInternal->AssertOwnedByCurrentThread();
 }
+
+/// WAY: to be removed
+void Mutex::AddHint(const char* file, uint32_t line)
+{
+    sprintf(m_mutexInternal->m_hint, "%s:%u", file, line);
+}
+void Mutex::AddHint()
+{
+}
+void Mutex::PrintHints() const
+{
+    fprintf(stderr, "Hint: %s\n", m_mutexInternal->m_hint);
+}
+
