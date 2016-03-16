@@ -28,6 +28,7 @@
 #include <qcc/platform.h>
 
 #include <map>
+#include <unordered_map>
 #include <limits>
 
 #include <alljoyn/Message.h>
@@ -91,19 +92,6 @@ namespace ajn {
  */
 #define CONVERSATION_V1 ((uint32_t)0x0000)
 #define CONVERSATION_V4 ((uint32_t)0x0004)
-
-/**
- * Container for a peer's manifest.
- */
-struct _PeerManifestState {
-    Manifest m_manifest;
-
-    _PeerManifestState(Manifest manifest) : m_manifest(manifest)
-    {
-    }
-};
-
-typedef qcc::ManagedObj<_PeerManifestState> PeerManifestState;
 
 /* Forward declaration */
 class _PeerState;
@@ -178,7 +166,9 @@ class _PeerState {
         responderHashLock(qcc::LOCK_LEVEL_CHECKING_DISABLED),
         keyExchangeMode(KEY_EXCHANGE_NONE),
         m_authSuite(0),
-        m_manifests()
+        m_manifests(),
+        m_manifestsSent(),
+        m_haveExchangedManifests(false)
     {
         ::memset(authorizations, 0, sizeof(authorizations));
     }
@@ -590,16 +580,16 @@ class _PeerState {
      * This manifest should be cryptographically verified before calling this.
      *
      * @param[in] manifest The verified manifest to be associated with this peer.
-     * @return #ER_OK if the manifest was successfully added
-     *         error code otherwise
+     * @return - #ER_OK if the manifest was successfully added
+     *         - error code otherwise
      */
     QStatus StoreManifest(const Manifest& manifest);
 
     /**
      * Clear out all previously-received manifests from this peer.
      *
-     * @return #ER_OK if the manifest list was successfully cleared
-     *         error code otherwise
+     * @return - #ER_OK if the manifest list was successfully cleared
+     *         - error code otherwise
      */
     QStatus ClearManifests();
 
@@ -609,6 +599,47 @@ class _PeerState {
      * @return Vector of Manifest objects
      */
     const std::vector<Manifest> GetManifests() const;
+
+    /**
+     * Store a manifest we sent to the remote peer.
+     *
+     * @param[in] manifest The manifest we sent to this peer.
+     * @return - #ER_OK if the manifest was successfully added
+     *         - error code otherwise
+     */
+    QStatus StoreSentManifest(const Manifest& manifest);
+
+    /**
+     * Determine if a manifest has been sent to the remote peer.
+     *
+     * @param[in] manifest The manifest to check for.
+     * @return true if the manifest has been sent to this peer, false if not.
+     */
+    bool IsManifestSent(const Manifest& manifest) const;
+
+    /**
+     * Clear out all previously-sent manifests to this peer.
+     *
+     * @return - #ER_OK if the sent manifest list was successfully cleared
+     *         - error code otherwise
+     */
+    QStatus ClearSentManifests();
+
+    /**
+     * Get the field that indicates if we have exchanged manifests with
+     * this peer before.
+     *
+     * @return true if a manifest exchange has happened at least once, false otherwise
+     */
+    bool GetHaveExchangedManifests() const;
+
+    /**
+     * Set the field that indicates if we have exchanged manifests with
+     * this peer before.
+     *
+     * @param[in] haveExchangedManifests  The value to set
+     */
+    void SetHaveExchangedManifests(bool haveExchangedManifests);
 
     /*
      * Destructor
@@ -738,7 +769,17 @@ class _PeerState {
     /**
      * Manifests received from the peer.
      */
-    std::vector<PeerManifestState> m_manifests;
+    std::vector<Manifest> m_manifests;
+
+    /**
+     * Manifests we've sent to this peer.
+     */
+    std::unordered_map<std::string, Manifest> m_manifestsSent;
+
+    /**
+     * Have we exchanged manifests with this peer at least once?
+     */
+    bool m_haveExchangedManifests;
 
 };
 

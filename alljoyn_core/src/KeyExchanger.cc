@@ -1584,6 +1584,11 @@ QStatus KeyExchangerECDHE_ECDSA::ValidateRemoteVerifierVariant(const char* peerN
         if (ER_OK != status) {
             return status;
         }
+        status = peerState->ClearSentManifests();
+        if (ER_OK != status) {
+            return status;
+        }
+        peerState->SetHaveExchangedManifests(false);
         peerIdentityCertificateThumbprint.resize(Crypto_SHA256::DIGEST_SIZE);
         status = certs[0].GetSHA256Thumbprint(peerIdentityCertificateThumbprint.data());
         if (ER_OK != status) {

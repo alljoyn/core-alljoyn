@@ -995,6 +995,13 @@ class _Manifest {
      */
     std::vector<uint8_t> GetSignature() const;
 
+    /**
+     * Get a string representation of this manifest.
+     *
+     * @return String containing the representation.
+     */
+    std::string ToString() const;
+
   private:
 
     typedef enum {

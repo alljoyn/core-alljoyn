@@ -104,6 +104,18 @@ class PermissionManager {
         return permissionMgmtObj;
     }
 
+    /**
+     * Parse the object path, interface name, and member name from a properties message.
+     *
+     * @param[in] msg Message which is a property method call
+     * @param[out] interfaceName Interface name
+     * @param[out] memberName Member name
+     *
+     * @return #ER_OK if object path, interface name, and member name are successfully parsed and set
+     *         - other error code indicating failure
+     */
+    static QStatus ParsePropertiesMessageHeaders(Message& msg, qcc::String& interfaceName, qcc::String& memberName);
+
   private:
     /* Private assigment operator to prevent double freeing of memory */
     PermissionManager& operator=(const PermissionManager& src);
