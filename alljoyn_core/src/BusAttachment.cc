@@ -37,6 +37,7 @@
 #endif
 
 #include <algorithm>
+#include <set>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
@@ -154,6 +155,28 @@ struct RemoveMatchCBContext {
 
 namespace ajn {
 
+// Maintain a list of all BusAttachment objects that can be found easily in a debugger
+struct BusAttachmentSet {
+    std::set<BusAttachment::Internal*> busInternalSet;
+    qcc::Mutex lock;
+
+    BusAttachmentSet() : lock(qcc::LOCK_LEVEL_BUSATTACHMENT_INTERNAL_BUSATTACHMENTSETLOCK) { }
+
+    void Add(BusAttachment::Internal* busInternal)
+    {
+        lock.Lock(MUTEX_CONTEXT);
+        busInternalSet.insert(busInternal);
+        lock.Unlock(MUTEX_CONTEXT);
+    }
+
+    void Delete(BusAttachment::Internal* busInternal)
+    {
+        lock.Lock(MUTEX_CONTEXT);
+        busInternalSet.erase(busInternal);
+        lock.Unlock(MUTEX_CONTEXT);
+    }
+};
+static BusAttachmentSet* s_allBusAttachments = nullptr;
 
 AJ_PCSTR BusAttachment::Internal::STATE_MATCH_RULE = "type='signal',interface='org.alljoyn.Bus.Application',member='State',sessionless='t'";
 uint32_t BusAttachment::Internal::APPLICATION_STATE_LISTENER_UNREGISTER_WAIT_INTERVAL = 5U;
@@ -217,6 +240,9 @@ BusAttachment::Internal::Internal(const char* appName,
     authManager.RegisterMechanism(AuthMechExternal::Factory, AuthMechExternal::AuthName());
     authManager.RegisterMechanism(AuthMechAnonymous::Factory, AuthMechAnonymous::AuthName());
 
+    if (s_allBusAttachments) {
+        s_allBusAttachments->Add(this);
+    }
 }
 
 BusAttachment::Internal::~Internal()
@@ -237,6 +263,10 @@ BusAttachment::Internal::~Internal()
     transportList.Join();
     delete router;
     router = NULL;
+
+    if (s_allBusAttachments) {
+        s_allBusAttachments->Delete(this);
+    }
 }
 
 /*
@@ -3434,12 +3464,15 @@ PermissionConfigurator& BusAttachment::GetPermissionConfigurator()
 void BusAttachment::Internal::Init()
 {
     clientTransportsContainer = new ClientTransportFactoryContainer();
+    s_allBusAttachments = new BusAttachmentSet();
 }
 
 void BusAttachment::Internal::Shutdown()
 {
     delete clientTransportsContainer;
     clientTransportsContainer = NULL;
+    delete s_allBusAttachments;
+    s_allBusAttachments = nullptr;
 }
 
 QStatus BusAttachment::Internal::CallFactoryResetCallback()

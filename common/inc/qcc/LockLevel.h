@@ -202,6 +202,9 @@ typedef enum {
     LOCK_LEVEL_THREAD_WAITLOCK = 38000,
     LOCK_LEVEL_THREAD_HBJMUTEX = 38100,
 
+    /* BusAttachment.cc */
+    LOCK_LEVEL_BUSATTACHMENT_INTERNAL_BUSATTACHMENTSETLOCK = 40000,
+
 } LockLevel;
 
 } /* namespace */
