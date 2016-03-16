@@ -854,9 +854,6 @@ void BusAttachment::WaitStopInternal()
             /* Clear peer state */
             busInternal->peerStateTable.Clear();
 
-            /* Persist keystore */
-            busInternal->keyStore.Store();
-
             isStarted = false;
             isStopping = false;
         }
@@ -3391,29 +3388,7 @@ void BusAttachment::Internal::GetNameOwnerAsyncCB(Message& reply, void* context)
 
 bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const KeyStore::Key& key)
 {
-    KeyBlob kb;
-    QStatus status = holder->GetKey(key, kb);
-    if (status != ER_OK) {
-        return false;
-    }
-    if ((kb.GetAssociationMode() != KeyBlob::ASSOCIATE_HEAD) &&
-        (kb.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
-        return false;
-    }
-    KeyStore::Key* list;
-    size_t numItems;
-    status = holder->SearchAssociatedKeys(key, &list, &numItems);
-    if (status != ER_OK) {
-        return false;
-    }
-    if (numItems == 0) {
-        return false;
-    }
-    for (size_t cnt = 0; cnt < numItems; cnt++) {
-        status = holder->DelKey(list[cnt]);
-    }
-    delete [] list;
-    return true;
+    return holder->DelKey(key, true);
 }
 
 void BusAttachment::SetDescriptionTranslator(Translator* newTranslator)
