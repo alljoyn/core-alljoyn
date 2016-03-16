@@ -41,6 +41,7 @@
 #include "ProtectedAuthListener.h"
 #include "PeerState.h"
 #include "KeyStore.h"
+#include "BusUtil.h"
 
 namespace ajn {
 
@@ -552,6 +553,20 @@ class PermissionMgmtObj : public BusObject {
     {
         return ready;
     }
+
+    /**
+     * Send any needed manifests in advance of a message about to be sent.
+     *
+     * @param[in] remotePeerObj The ProxyBusObject being asked to send the message, and that we can use to send manifests.
+     * @param[in] msg The message about to be sent. If nullptr, all manifests will be sent.
+     *
+     * @remarks remotePeerObj and msg cannot both be nullptr.
+     *
+     * @return #ER_OK if all needed manifests were sent, possibly none.
+     * @return #ER_BAD_ARG_1 if both remotePeerObj and msgPtr are nullptr
+     *         - other error indicating failure
+     */
+    QStatus SendManifests(const ProxyBusObject* remotePeerObj, Message* msg);
 
   protected:
     void Claim(const InterfaceDescription::Member* member, Message& msg);
