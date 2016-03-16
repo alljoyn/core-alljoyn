@@ -23,7 +23,6 @@
 #include <qcc/atomic.h>
 #include <qcc/String.h>
 #include <qcc/Util.h>
-#include <assert.h>
 #include <algorithm>
 #include <limits>
 #include <new>
@@ -68,7 +67,7 @@ String::String(const char* str, std::string::size_type strLen, size_t sizeHint)
         s.assign(str, strLen);
     } else {
         QCC_LogError(ER_WARNING, ("Constructing string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
 }
 
@@ -78,7 +77,7 @@ String::String(const char* str, std::string::size_type strLen)
         s.assign(str, strLen);
     } else {
         QCC_LogError(ER_WARNING, ("Constructing string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
 }
 
@@ -88,7 +87,7 @@ String::String(const char* str)
         s = str;
     } else {
         QCC_LogError(ER_WARNING, ("Constructing string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
 }
 
@@ -98,7 +97,7 @@ std::string String::assign(const char* str, std::string::size_type len)
     if (str) {
         if (len == 0) {
             QCC_LogError(ER_WARNING, ("Passing len = 0 will not copy entire contents of str in the future!"));
-            assert(len != 0);  // Assert fail in debug mode
+            QCC_ASSERT(len != 0);  // Assert fail in debug mode
             if (str) {
                 s.assign(str);
             } else {
@@ -109,7 +108,7 @@ std::string String::assign(const char* str, std::string::size_type len)
         }
     } else {
         QCC_LogError(ER_WARNING, ("Assigning string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
         s = "";
     }
     return s;
@@ -121,7 +120,7 @@ std::string String::assign(const char* str)
         s.assign(str);
     } else {
         QCC_LogError(ER_WARNING, ("Assigning string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
         s = "";
     }
     return s;
@@ -140,7 +139,7 @@ std::string String::append(const char* str, std::string::size_type len)
         s.append(str, len);
     } else {
         QCC_LogError(ER_WARNING, ("Appending string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
     return s;
 }
@@ -151,7 +150,7 @@ std::string String::append(const char* str)
         s.append(str);
     } else {
         QCC_LogError(ER_WARNING, ("Appending string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
     return s;
 }
@@ -162,7 +161,7 @@ std::string String::insert(std::string::size_type pos, const char* str, std::str
         s.insert(pos, str, len);
     } else {
         QCC_LogError(ER_WARNING, ("Appending string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
     return s;
 }
@@ -173,7 +172,7 @@ std::string String::insert(std::string::size_type pos, const char* str)
         s.insert(pos, str);
     } else {
         QCC_LogError(ER_WARNING, ("Constructing string from nullptr will cause a crash in future versions!"));
-        assert(str != nullptr);  // Assert fail in debug mode
+        QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
     return s;
 }
