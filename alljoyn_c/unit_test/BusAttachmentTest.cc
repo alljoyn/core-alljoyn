@@ -148,30 +148,9 @@ class BusAttachmentSecurity20Test : public testing::Test {
     }
 };
 
-TEST_F(BusAttachmentSecurity20Test, shouldDieWhenUsingNullBusToGetPermissionConfigurator)
-{
-    EXPECT_DEATH(alljoyn_busattachment_getpermissionconfigurator(nullptr), DEATH_TEST_EMPTY_MESSAGE);
-}
-
 TEST_F(BusAttachmentSecurity20Test, shouldReturnNonNullPermissionConfigurator)
 {
     EXPECT_NE(alljoyn_busattachment_getpermissionconfigurator(securityAgent), nullptr);
-}
-
-TEST_F(BusAttachmentSecurity20Test, shouldDieWhenRegisteringWithNullBus)
-{
-    alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
-
-    EXPECT_DEATH(alljoyn_busattachment_registerapplicationstatelistener(nullptr, listener), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(BusAttachmentSecurity20Test, shouldDieWhenUnregisteringWithNullBus)
-{
-    alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
-
-    EXPECT_DEATH(alljoyn_busattachment_unregisterapplicationstatelistener(nullptr, listener), DEATH_TEST_EMPTY_MESSAGE);
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenRegisteringWithNullListener)

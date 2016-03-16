@@ -267,64 +267,6 @@ TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenResetingW
     EXPECT_EQ(ER_FEATURE_NOT_AVAILABLE, alljoyn_permissionconfigurator_reset(configuratorUnderTest));
 }
 
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenSettingApplicationStateWithNullPermissionConfigurator)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_setapplicationstate(nullptr, NOT_CLAIMABLE), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenGettingApplicationStateWithNullPermissionConfigurator)
-{
-    alljoyn_applicationstate state;
-    EXPECT_DEATH(alljoyn_permissionconfigurator_getapplicationstate(nullptr, &state), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenGettingApplicationStateWithNullState)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_getapplicationstate(configuratorUnderTest, nullptr), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenSettingClaimCapabilitiesWithNullPermissionConfigurator)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_setclaimcapabilities(nullptr, CAPABLE_ECDHE_NULL), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenGettingClaimCapabilitiesWithNullPermissionConfigurator)
-{
-    alljoyn_claimcapabilities claimCapabilities;
-    EXPECT_DEATH(alljoyn_permissionconfigurator_getclaimcapabilities(nullptr, &claimCapabilities), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenGettingClaimCapabilitiesWithNullCapabilities)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_getclaimcapabilities(configuratorUnderTest, nullptr), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenSettingClaimCapabilitiesAdditionalInfoWithNullPermissionConfigurator)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_setclaimcapabilitiesadditionalinfo(nullptr, PASSWORD_GENERATED_BY_APPLICATION), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenGettingClaimCapabilitiesAdditionalInfoWithNullPermissionConfigurator)
-{
-    alljoyn_claimcapabilitiesadditionalinfo claimCapabilitiesAdditionalInfo;
-    EXPECT_DEATH(alljoyn_permissionconfigurator_getclaimcapabilitiesadditionalinfo(nullptr, &claimCapabilitiesAdditionalInfo), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenGettingClaimCapabilitiesAdditionalInfoWithNullAdditionalInfo)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_getclaimcapabilitiesadditionalinfo(configuratorUnderTest, nullptr), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenResettingWithNullPermissionConfigurator)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_reset(nullptr), DEATH_TEST_EMPTY_MESSAGE);
-}
-
-TEST_F(PermissionConfiguratorTestWithSecurity, ShouldFailWhenSettingManifestTemplateWithNullPermissionConfigurator)
-{
-    EXPECT_DEATH(alljoyn_permissionconfigurator_setmanifestfromxml(nullptr, VALID_ALLOW_ALL_MANIFEST_TEMPLATE), DEATH_TEST_EMPTY_MESSAGE);
-}
-
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithEmptyString)
 {
     EXPECT_EQ(ER_EOF, alljoyn_permissionconfigurator_setmanifestfromxml(configuratorUnderTest, ""));
