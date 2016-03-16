@@ -119,10 +119,12 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     /**
      * Authenticate the connection to a remote peer. Authentication establishes a session key with a remote peer.
      *
+     * @param msgType   Message type we're trying to send.
      * @param busName   The bus name of the remote peer we are securing.
      * @param wait      If true the function will block if there is an authentication already in
      *                  progress with the peer on a separate thread. If false, the function will
      *                  return an ER_WOULD_BLOCK status instead of waiting.
+     * @param msg       If available, the message to be sent to determine manifests to send.
      *
      * @return
      *      - ER_OK if successful
@@ -130,7 +132,7 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      *        and the wait parameter was false.
      *      - An error status otherwise
      */
-    QStatus AuthenticatePeer(AllJoynMessageType msgType,  const qcc::String& busName, bool wait = true);
+    QStatus AuthenticatePeer(AllJoynMessageType msgType,  const qcc::String& busName, bool wait = true, Message* msg = nullptr);
 
     /**
      * Authenticate the connection to a remote peer asynchronously. Authentication establishes a session key with
@@ -439,14 +441,6 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
      * @param msg     The method call message
      */
     void HandleSendManifests(const InterfaceDescription::Member* member, Message& msg);
-    /**
-     * Send manifests to the peer
-     * @param remotePeerObj  The remote peer
-     * @param ifc     The interface object
-     * @param peerState the peer state object
-     * @return ER_OK if successful; otherwise, an error code.
-     */
-    QStatus SendManifests(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, PeerState& peerState);
 
     /**
      * Send an SendMembership to the peer
