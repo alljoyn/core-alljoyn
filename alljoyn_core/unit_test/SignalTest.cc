@@ -35,12 +35,12 @@
 
 #include <alljoyn/Status.h>
 
-#include "TestSecureApplication.h"
-#include "TestSecurityManager.h"
-
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
+
+#include "TestSecureApplication.h"
+#include "TestSecurityManager.h"
 
 using namespace std;
 using namespace qcc;

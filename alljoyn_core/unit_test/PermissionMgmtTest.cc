@@ -57,17 +57,24 @@ void TestApplicationStateListener::State(const char* busName, const qcc::KeyInfo
     QCC_UNUSED(busName);
     QCC_UNUSED(publicKeyInfo);
     QCC_UNUSED(state);
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
     signalApplicationStateReceived = true;
 }
 
 QStatus TestPermissionConfigurationListener::FactoryReset()
 {
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
     factoryResetReceived = true;
     return ER_OK;
 }
 
 void TestPermissionConfigurationListener::PolicyChanged()
 {
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
     policyChangedReceived = true;
 }
 
@@ -328,12 +335,19 @@ QStatus BasePermissionMgmtTest::InterestInChannelChangedSignal(BusAttachment* bu
 
 void BasePermissionMgmtTest::RegisterKeyStoreListeners()
 {
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this << " adminBus = " << &adminBus << " adminKeyStoreListener = " << &adminKeyStoreListener;
     status = adminBus.RegisterKeyStoreListener(adminKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 1 - " << this << " serviceBus = " << &serviceBus << " serviceKeyStoreListener " << &serviceKeyStoreListener;
     status = serviceBus.RegisterKeyStoreListener(serviceKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 2 - " << this << " consumerBus = " << &consumerBus  << " consumerKeyStoreListener " <<  &consumerKeyStoreListener;
     status = consumerBus.RegisterKeyStoreListener(consumerKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 3 - " << this << " remoteControlBus = " << &remoteControlBus  << " remoteControlKeyStoreListener " << &remoteControlKeyStoreListener;
     status = remoteControlBus.RegisterKeyStoreListener(remoteControlKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
@@ -346,6 +360,8 @@ static void GenerateSecurityGroupKey(BusAttachment& bus, KeyInfoNISTP256& keyInf
 
 void BasePermissionMgmtTest::SetUp()
 {
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
     status = SetupBus(adminBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = SetupBus(serviceBus);
@@ -359,11 +375,14 @@ void BasePermissionMgmtTest::SetUp()
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     RegisterKeyStoreListeners();
 
+    EXPECT_TRUE(false) << __FUNCTION__ " - 1 - " << this << " adminBus = " << &adminBus << " testASL " << &testASL;
     EXPECT_EQ(ER_OK, adminBus.RegisterApplicationStateListener(testASL));
 }
 
 void BasePermissionMgmtTest::TearDown()
 {
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
     status = TeardownBus(adminBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = serviceBus.UnbindSessionPort(servicePort);
@@ -382,6 +401,8 @@ void BasePermissionMgmtTest::TearDown()
     consumerKeyListener = NULL;
     delete remoteControlKeyListener;
     remoteControlKeyListener = NULL;
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 1 - " << this;
 }
 
 void BasePermissionMgmtTest::PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
@@ -392,6 +413,9 @@ void BasePermissionMgmtTest::PropertiesChanged(ProxyBusObject& obj, const char* 
     QCC_UNUSED(changed);
     QCC_UNUSED(invalidated);
     QCC_UNUSED(context);
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
     propertiesChangedSignalReceived = true;
 }
 

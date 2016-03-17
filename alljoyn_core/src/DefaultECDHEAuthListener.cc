@@ -35,10 +35,13 @@ namespace ajn {
 
 DefaultECDHEAuthListener::DefaultECDHEAuthListener() : AuthListener(), m_psk(nullptr), m_pskSize(0), m_password(nullptr), m_passwordSize(0)
 {
+    QCC_LogError(ER_FAIL, ("%s - this = %p", __FUNCTION__, this));
 }
 
 DefaultECDHEAuthListener::~DefaultECDHEAuthListener()
 {
+    QCC_LogError(ER_FAIL, ("%s - this = %p", __FUNCTION__, this));
+
     if (m_pskSize > 0) {
         ClearMemory(m_psk, m_pskSize);
         delete[] m_psk;
@@ -53,6 +56,8 @@ DefaultECDHEAuthListener::~DefaultECDHEAuthListener()
 /* Note that this constructor is deprecated because it only supports PSK. */
 DefaultECDHEAuthListener::DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize) : AuthListener(), m_password(nullptr), m_passwordSize(0)
 {
+    QCC_LogError(ER_FAIL, ("%s - this = %p", __FUNCTION__, this));
+
     /* A secret must be supplied, and have the minimum length. */
     QCC_ASSERT(pskSize >= 16);
 
@@ -60,8 +65,6 @@ DefaultECDHEAuthListener::DefaultECDHEAuthListener(const uint8_t* psk, size_t ps
     memcpy(m_psk, psk, pskSize);
     m_pskSize = pskSize;
 }
-
-
 
 QStatus DefaultECDHEAuthListener::SetPSK(const uint8_t* psk, size_t pskSize)
 {

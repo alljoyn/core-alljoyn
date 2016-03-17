@@ -793,6 +793,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_refCount(0),
         m_pushCount(0),
         m_stateLock(LOCK_LEVEL_UDPTRANSPORT_UDPENDPOINT_STATELOCK),
+        // m_stateLock(LOCK_LEVEL_CHECKING_DISABLED),
         m_wait(true)
     {
         QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d., connectSpec=\"%s\")",
@@ -4423,7 +4424,9 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_routerName(), m_maxRemoteClientsUdp(0), m_numUntrustedClients(0),
     m_authTimeout(0), m_sessionSetupTimeout(0),
     m_maxAuth(0), m_maxConn(0), m_currAuth(0), m_currConn(0),
-    m_connLock(LOCK_LEVEL_UDPTRANSPORT_CONNLOCK), m_dynamicScoreUpdater(*this), m_ardpLock(LOCK_LEVEL_UDPTRANSPORT_ARDPLOCK),
+    m_connLock(LOCK_LEVEL_UDPTRANSPORT_CONNLOCK), m_dynamicScoreUpdater(*this),
+    // DMFIX - m_ardpLock(LOCK_LEVEL_UDPTRANSPORT_ARDPLOCK),
+    m_ardpLock(LOCK_LEVEL_CHECKING_DISABLED),
     /* Workaround for known deadlock ASACORE-2094 */
     m_cbLock(LOCK_LEVEL_CHECKING_DISABLED),
     m_handle(NULL), m_dispatcher(NULL), m_exitDispatcher(NULL),

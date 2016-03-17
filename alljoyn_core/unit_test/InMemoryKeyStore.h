@@ -39,16 +39,21 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
 
     InMemoryKeyStoreListener() : KeyStoreListener()
     {
+        EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
         qcc::GUID128 guid;
         pwd = guid.ToString();
     }
 
     InMemoryKeyStoreListener(qcc::String& source, qcc::String& pwd) : KeyStoreListener(), pwd(pwd)
     {
+        EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
         CopySink(source);
     }
 
-    QStatus LoadRequest(KeyStore& keyStore) {
+    QStatus LoadRequest(KeyStore& keyStore)
+    {
         lock.Lock(MUTEX_CONTEXT);
         qcc::StringSource source(sink.GetString());
         QStatus status = keyStore.Pull(source, pwd);
@@ -56,7 +61,8 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         return status;
     }
 
-    QStatus StoreRequest(KeyStore& keyStore) {
+    QStatus StoreRequest(KeyStore& keyStore)
+    {
         qcc::StringSink newSink;
         QStatus status = keyStore.Push(newSink);
         if (ER_OK != status) {
@@ -74,6 +80,8 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
      */
     InMemoryKeyStoreListener(const InMemoryKeyStoreListener& other)
     {
+        EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+
         *this = other;
     }
 
@@ -87,6 +95,11 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
             CopySink(other.sink);
         }
         return *this;
+    }
+
+    virtual ~InMemoryKeyStoreListener()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
     }
 
   private:

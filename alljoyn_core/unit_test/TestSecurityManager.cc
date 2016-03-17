@@ -20,10 +20,10 @@
 #include <alljoyn/SecurityApplicationProxy.h>
 #include <qcc/Util.h>
 
-#include "TestSecurityManager.h"
-
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
+
+#include "TestSecurityManager.h"
 
 using namespace std;
 using namespace ajn;

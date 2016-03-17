@@ -28,6 +28,7 @@
 #include <winsock2.h>
 #include <windows.h>
 #include <string>
+#include <memory>
 
 #include <qcc/String.h>
 #include <qcc/Stream.h>
@@ -35,7 +36,6 @@
 #include <Status.h>
 
 namespace qcc {
-
 
 /**
  * Platform abstraction for deleting a file
@@ -62,7 +62,7 @@ class FileSource : public Source {
   public:
 
     /**
-     * Create an FileSource
+     * Create a FileSource
      *
      * @param fileName   Name of file to read/write
      */
@@ -79,6 +79,14 @@ class FileSource : public Source {
      * @param other   FileSource to copy from.
      */
     FileSource(const FileSource& other);
+
+    /**
+     * Create a FileSource from an existing OS handle already opened.
+     *
+     * @param osHandle   Existing handle to duplicate.
+     * @param own        Set this to false to prevent this class from closing the handle.
+     */
+    FileSource(HANDLE osHandle, bool own);
 
     /**
      * Assignment.
@@ -194,6 +202,11 @@ class FileSink : public Sink {
     virtual ~FileSink();
 
     /**
+     * Retuern the OS handle.
+     */
+    HANDLE GetOsHandle() const;
+
+    /**
      * Push bytes into the sink.
      *
      * @param buf          Buffer to store pulled bytes
@@ -238,6 +251,46 @@ class FileSink : public Sink {
     Event* event;         /**< I/O event */
     bool ownsHandle;      /**< True if Source is responsible for closing handle */
     bool locked;          /**< true if the sink has been locked for exclusive access */
+};
+
+class FileLocker;
+
+class FileLock {
+    friend class FileLocker;
+  public:
+    FileSource* GetSource();
+    FileSink* GetSink();
+    void Release();
+
+  private:
+    QStatus InitReadOnly(const char* fullFileName);
+    QStatus InitReadWrite(std::shared_ptr<FileSink> sink);
+
+    std::unique_ptr<FileSource> m_source;
+    std::shared_ptr<FileSink> m_sink;
+};
+
+class FileLocker {
+  public:
+    FileLocker(const char* fullFileName);
+    ~FileLocker();
+
+    const char* GetFileName() const;
+
+    bool HasWriteLock() const;
+
+    /* Request read lock on the shared file. Once the caller's FileLock goes out of scope, the read lock is released. */
+    QStatus GetFileLockForRead(FileLock* fileLock);
+    QStatus GetFileLockForWrite(FileLock* fileLock);
+
+    /* Request write lock on the shared file. Caller must call ReleaseWriteLock. */
+    QStatus AcquireWriteLock();
+    void ReleaseWriteLock();
+
+  private:
+    qcc::String m_fileName;
+    std::shared_ptr<FileSink> m_sink;
+    mutable qcc::Mutex m_sinkLock;
 };
 
 }  /* namespace */

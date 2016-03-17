@@ -1133,6 +1133,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
     }
 
+    virtual ~PermissionMgmtUseCaseTest()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
+    }
+
     void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
     {
         KeyInfoNISTP256 keyInfo;
@@ -3280,31 +3285,55 @@ TEST_F(PermissionMgmtUseCaseTest, InstallMembershipBeforeClaimMustFail)
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
 {
+    EXPECT_TRUE(false) << __FUNCTION__ " - 0 - " << this;
     EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 1 - " << this;
     ClaimAdmin();
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 2 - " << this;
     SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 3 - " << this;
     /* retrieve public key from to-be-claimed app to create identity cert */
     ECCPublicKey claimedPubKey;
     EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
     qcc::GUID128 guid;
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 4 - " << this;
     PermissionMgmtTestHelper::GetGUID(consumerBus, guid);
     IdentityCertificate identityCertChain[3];
     size_t certChainCount = 3;
     std::vector<Manifest> manifests;
 
+    EXPECT_TRUE(false) << __FUNCTION__ " - 5 - " << this;
     EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 6 - " << this;
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(remoteControlBus, adminBus, "303030", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain, certChainCount)) << "  CreateIdentityCert failed";
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 7 - " << this;
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
+    EXPECT_TRUE(false) << __FUNCTION__ " - 8 - " << this;
     SetManifestTemplate(consumerBus);
     Crypto_ECC ecc;
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 9 - " << this;
     ecc.GenerateDSAKeyPair();
     KeyInfoNISTP256 keyInfo;
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 10 - " << this;
     keyInfo.SetPublicKey(ecc.GetDSAPublicKey());
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 11 - " << this;
     KeyInfoHelper::GenerateKeyId(keyInfo);
+
+    EXPECT_TRUE(false) << __FUNCTION__ " - 12 - " << this;
     EXPECT_EQ(ER_OK, saProxy.Claim(keyInfo, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size())) << " saProxy.Claim failed";
 
+    EXPECT_TRUE(false) << __FUNCTION__ " - 13 - " << this;
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
