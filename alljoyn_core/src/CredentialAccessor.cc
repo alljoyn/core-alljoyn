@@ -128,50 +128,13 @@ QStatus CredentialAccessor::GetKey(const KeyStore::Key& key, qcc::KeyBlob& keyBl
 
 QStatus CredentialAccessor::DeleteKey(const KeyStore::Key& key)
 {
-    KeyBlob kb;
-    QStatus status = bus.GetInternal().GetKeyStore().GetKey(key, kb);
-    if (status == ER_BUS_KEY_UNAVAILABLE) {
-        return ER_OK;     /* not found */
-    } else if (status != ER_OK) {
-        return status;
-    }
-    status = bus.GetInternal().GetKeyStore().DelKey(key);
-    if ((status != ER_OK) && (status != ER_BUS_KEY_UNAVAILABLE)) {
-        return status;
-    }
-    bool deleteAssociates = false;
-    if ((kb.GetAssociationMode() == KeyBlob::ASSOCIATE_HEAD) ||
-        (kb.GetAssociationMode() == KeyBlob::ASSOCIATE_BOTH)) {
-        deleteAssociates = true;
-    }
-    if (!deleteAssociates) {
-        return ER_OK;
-    }
-    KeyStore::Key* list;
-    size_t numItems;
-    status = bus.GetInternal().GetKeyStore().SearchAssociatedKeys(key, &list, &numItems);
-    if (status != ER_OK) {
-        return ER_OK;
-    }
-    if (numItems == 0) {
-        return ER_OK;
-    }
-    for (size_t cnt = 0; cnt < numItems; cnt++) {
-        status = DeleteKey(list[cnt]);      /* do not call KeyStore::DelKey directly since it is neccesary to handle the associated deletes for each member */
-    }
-    delete [] list;
-    return ER_OK;
+    return bus.GetInternal().GetKeyStore().DelKey(key, true);
 }
 
 QStatus CredentialAccessor::StoreKey(KeyStore::Key& key, qcc::KeyBlob& keyBlob)
 {
     KeyStore& ks = bus.GetInternal().GetKeyStore();
-    QStatus status = ks.AddKey(key, keyBlob);
-    if (status != ER_OK) {
-        return status;
-    }
-    /* persist the changes */
-    return ks.Store();
+    return ks.AddKey(key, keyBlob);
 }
 
 QStatus CredentialAccessor::GetKeys(const KeyStore::Key& headerKey, KeyStore::Key** list, size_t* numItems)
