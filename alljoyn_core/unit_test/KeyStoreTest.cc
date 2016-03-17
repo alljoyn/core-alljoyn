@@ -40,17 +40,28 @@
 #include "KeyStore.h"
 
 #include <alljoyn/Status.h>
-#include "InMemoryKeyStore.h"
 
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
+#include "InMemoryKeyStore.h"
 
 using namespace qcc;
 using namespace std;
 using namespace ajn;
 
+static const char keyStoreName[] = "keystoretest_shared_keystore";
 static const char testData[] = "This is the message that we are going to store and then load and verify";
 
+namespace ajn {
+#if defined(QCC_OS_GROUP_WINDOWS)
+extern qcc::String GetDefaultKeyStoreFileName(const char* application, const char* fname);
+#else
+static qcc::String GetDefaultKeyStoreFileName(const char* application, const char* fname) {
+    QCC_UNUSED(fname);
+    return application;
+}
+#endif
+}
 
 
 TEST(KeyStoreTest, basic_store_load) {
@@ -145,12 +156,9 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         keyStore.Clear();
 
         key.Rand(620, KeyBlob::GENERIC);
-        keyStore.AddKey(idx1, key);
+        ASSERT_EQ(ER_OK, keyStore.AddKey(idx1, key)) << " Failed to add key";
         key.Rand(620, KeyBlob::GENERIC);
-        keyStore.AddKey(idx2, key);
-
-        status = keyStore.Store();
-        ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
+        ASSERT_EQ(ER_OK, keyStore.AddKey(idx2, key)) << " Failed to add key";
     }
 
     /*
@@ -191,9 +199,6 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
 
             /* Delete a key */
             keyStore2.DelKey(idx2);
-
-            status = keyStore2.Store();
-            ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
         }
 
         status = keyStore.Reload();
@@ -210,23 +215,29 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
 
         status = keyStore.GetKey(idx4, key);
         ASSERT_EQ(ER_OK, status) << " Failed to load idx4";
-
-        /* Store merged key store */
-        status = keyStore.Store();
-        ASSERT_EQ(ER_OK, status) << " Failed to store keystore";
     }
     DeleteFile("keystore_test");
 }
 
 class KeyStoreThread : public Thread {
   public:
-    KeyStoreThread(String name, KeyStore& keyStore, vector<KeyStore::Key> workList, vector<KeyStore::Key> deleteList) : Thread(name), keyStore(keyStore), workList(workList), deleteList(deleteList)
+    KeyStoreThread(String name, KeyStore* keyStore, vector<KeyStore::Key> workList, vector<KeyStore::Key> deleteList) :
+        Thread(name), keyStore(keyStore), workList(workList), deleteList(deleteList)
     {
+        if (keyStore == NULL) {
+            this->keyStore = new KeyStore(keyStoreName);
+            QStatus status = this->keyStore->Init(NULL, true);
+            EXPECT_EQ(ER_OK, status);
+        }
     }
     ~KeyStoreThread()
     {
         workList.clear();
         deleteList.clear();
+    }
+    KeyStore* GetKeyStore() const
+    {
+        return keyStore;
     }
   protected:
     ThreadReturn STDCALL Run(void* arg) {
@@ -235,20 +246,15 @@ class KeyStoreThread : public Thread {
         kb.Set((const uint8_t*)testData, sizeof(testData), KeyBlob::GENERIC);
         size_t cnt = 0;
         for (vector<KeyStore::Key>::iterator it = workList.begin(); it != workList.end(); it++, cnt++) {
-            EXPECT_EQ(ER_OK, keyStore.AddKey(*it, kb));
-            /* random store call */
-            if (cnt % 19 == 0) {
-                EXPECT_EQ(ER_OK, keyStore.Store());
-            }
+            EXPECT_EQ(ER_OK, keyStore->AddKey(*it, kb));
         }
         for (vector<KeyStore::Key>::iterator it = deleteList.begin(); it != deleteList.end(); it++) {
-            EXPECT_EQ(ER_OK, keyStore.DelKey(*it));
+            EXPECT_EQ(ER_OK, keyStore->DelKey(*it));
         }
-        EXPECT_EQ(ER_OK, keyStore.Store());
         return static_cast<ThreadReturn>(0);
     }
   private:
-    KeyStore& keyStore;
+    KeyStore* keyStore;
     vector<KeyStore::Key> workList;
     vector<KeyStore::Key> deleteList;
 };
@@ -279,16 +285,12 @@ static bool VerifyExistence(KeyStore& keyStore, vector<KeyStore::Key>& workList,
     return passed;
 }
 
-/**
- * Test two threads using one keystore instance.
- * @param useSharedKeyStore keyStore is marked shared or private
- */
-static void TestConcurrentKeyStoreAccess(bool useSharedKeyStore)
+TEST(KeyStoreTest, concurrent_access_single_keystore)
 {
     InMemoryKeyStoreListener keyStoreListener;
-    KeyStore keyStore("shared_keystore");
+    KeyStore keyStore(keyStoreName);
     keyStore.SetListener(keyStoreListener);
-    keyStore.Init(NULL, useSharedKeyStore);
+    keyStore.Init(NULL, true);
 
     vector<KeyStore::Key> workList1;
     vector<KeyStore::Key> deleteList1;
@@ -310,8 +312,8 @@ static void TestConcurrentKeyStoreAccess(bool useSharedKeyStore)
             deleteList2.push_back(key);
         }
     }
-    KeyStoreThread thread1("thread1", keyStore, workList1, deleteList1);
-    KeyStoreThread thread2("thread2", keyStore, workList2, deleteList2);
+    KeyStoreThread thread1("thread1", &keyStore, workList1, deleteList1);
+    KeyStoreThread thread2("thread2", &keyStore, workList2, deleteList2);
     thread1.Start();
     thread2.Start();
     thread1.Join();
@@ -333,14 +335,56 @@ static void TestConcurrentKeyStoreAccess(bool useSharedKeyStore)
     EXPECT_EQ(deletedCount, deleteList2.size());
 }
 
-TEST(KeyStoreTest, concurrent_access_shared_keystore)
+TEST(KeyStoreTest, concurrent_access_multiple_keystores)
 {
-    TestConcurrentKeyStoreAccess(true);
+    qcc::String filename = ajn::GetDefaultKeyStoreFileName(keyStoreName, nullptr);
+    (void)DeleteFile(filename);
+
+    vector<KeyStore::Key> workList1;
+    vector<KeyStore::Key> deleteList1;
+    for (int cnt = 0; cnt < 100; cnt++) {
+        qcc::GUID128 guid;
+        KeyStore::Key key(KeyStore::Key::LOCAL, guid);
+        workList1.push_back(key);
+        if (cnt % 13 == 0) {
+            deleteList1.push_back(key);
+        }
+    }
+    vector<KeyStore::Key> workList2;
+    vector<KeyStore::Key> deleteList2;
+    for (int cnt = 0; cnt < 158; cnt++) {
+        qcc::GUID128 guid;
+        KeyStore::Key key(KeyStore::Key::LOCAL, guid);
+        workList2.push_back(key);
+        if (cnt % 37 == 0) {
+            deleteList2.push_back(key);
+        }
+    }
+    KeyStoreThread thread1("thread1", NULL, workList1, deleteList1);
+    KeyStoreThread thread2("thread2", NULL, workList2, deleteList2);
+    thread1.Start();
+    thread2.Start();
+    thread1.Join();
+    thread2.Join();
+
+    for (int i = 0; i < 2; ++i) {
+        KeyStore* keyStore = (i == 0) ? thread1.GetKeyStore() : thread2.GetKeyStore();
+        keyStore->Reload();
+    }
+
+    for (int i = 0; i < 2; ++i) {
+        KeyStore* keyStore = (i == 0) ? thread1.GetKeyStore() : thread2.GetKeyStore();
+        size_t existenceCount = 0;
+        size_t deletedCount = 0;
+        /* check to make sure the expected keys are in the keystore */
+        EXPECT_TRUE(VerifyExistence(*keyStore, workList1, deleteList1, existenceCount, deletedCount));
+        EXPECT_EQ(existenceCount, (workList1.size() - deleteList1.size()));
+        EXPECT_EQ(deletedCount, deleteList1.size());
+
+        existenceCount = 0;
+        deletedCount = 0;
+        EXPECT_TRUE(VerifyExistence(*keyStore, workList2, deleteList2, existenceCount, deletedCount));
+        EXPECT_EQ(existenceCount, (workList2.size() - deleteList2.size()));
+        EXPECT_EQ(deletedCount, deleteList2.size());
+    }
 }
-
-TEST(KeyStoreTest, concurrent_access_private_keystore)
-{
-    TestConcurrentKeyStoreAccess(false);
-}
-
-

@@ -835,7 +835,7 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldGetClaimableApplicationState)
     EXPECT_EQ(CLAIMABLE, retrievedManagedAppApplicationState);
 }
 
-TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingClaimCapabilitiesWithInvalidProxy)
+TEST_F(SecurityApplicationProxyPreClaimTest, DISABLED_shouldReturnErrorWhileGettingClaimCapabilitiesWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_getclaimcapabilities(invalidProxy, &retrievedManagedAppClaimCapabilities));
 }

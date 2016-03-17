@@ -19,10 +19,10 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/SecurityApplicationProxy.h>
 
-#include "TestSecureApplication.h"
-
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
+
+#include "TestSecureApplication.h"
 
 using namespace std;
 using namespace ajn;

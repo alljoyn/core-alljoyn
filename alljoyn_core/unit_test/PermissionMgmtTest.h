@@ -49,14 +49,32 @@ namespace ajn {
 
 class TestApplicationStateListener : public ApplicationStateListener {
   public:
-    TestApplicationStateListener() : signalApplicationStateReceived(false) { }
+    TestApplicationStateListener() : signalApplicationStateReceived(false)
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
+    }
+
+    virtual ~TestApplicationStateListener()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
+    }
+
     void State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state);
     bool signalApplicationStateReceived;
 };
 
 class TestPermissionConfigurationListener : public PermissionConfigurationListener {
   public:
-    TestPermissionConfigurationListener() : factoryResetReceived(false), policyChangedReceived(false) { }
+    TestPermissionConfigurationListener() : factoryResetReceived(false), policyChangedReceived(false)
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
+    }
+
+    ~TestPermissionConfigurationListener()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
+    }
+
     QStatus FactoryReset();
     void PolicyChanged();
     bool factoryResetReceived;
@@ -65,25 +83,38 @@ class TestPermissionConfigurationListener : public PermissionConfigurationListen
 
 class TestPortListener : public SessionPortListener {
   public:
+    TestPortListener()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
+    }
+
+    ~TestPortListener()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
+    }
+
     qcc::String lastJoiner;
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(joiner);
         QCC_UNUSED(opts);
+
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
         return true;
     }
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner) {
         QCC_UNUSED(sessionPort);
         QCC_UNUSED(id);
+
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
         lastJoiner = joiner;
     }
 };
 
 class BasePermissionMgmtTest : public testing::Test, public BusObject,
     public ProxyBusObject::PropertiesChangedListener {
+
   public:
-
-
     static const char* INTERFACE_NAME;
     static const char* NOTIFY_INTERFACE_NAME;
     static const char* ONOFF_IFC_NAME;
@@ -113,6 +144,12 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
         testASL(),
         testPCL()
     {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
+    }
+
+    virtual ~BasePermissionMgmtTest()
+    {
+        EXPECT_TRUE(false) << __FUNCTION__ << " - 0 - " << this;
     }
 
     virtual void SetUp();

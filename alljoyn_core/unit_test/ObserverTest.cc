@@ -34,12 +34,12 @@
 
 #include <alljoyn/Status.h>
 
-#include "TestSecurityManager.h"
-#include "InMemoryKeyStore.h"
-
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
+
+#include "TestSecurityManager.h"
+#include "InMemoryKeyStore.h"
 
 namespace test_unit_observer {
 
