@@ -26,6 +26,7 @@
 #include <alljoyn/PasswordManager.h>
 #include "AutoPingerInternal.h"
 #include "BusInternal.h"
+#include "KeyStoreListener.h"
 #include "NamedPipeClientTransport.h"
 #include "XmlPoliciesValidator.h"
 #include "XmlRulesConverter.h"
@@ -37,6 +38,7 @@ class StaticGlobals {
   public:
     static void Init()
     {
+        KeyStoreListener::Init();
         NamedPipeClientTransport::Init();
         AutoPingerInternal::Init();
         PasswordManager::Init();
@@ -52,6 +54,7 @@ class StaticGlobals {
         PasswordManager::Shutdown();
         AutoPingerInternal::Shutdown();
         NamedPipeClientTransport::Shutdown();
+        KeyStoreListener::Shutdown();
     }
 };
 
