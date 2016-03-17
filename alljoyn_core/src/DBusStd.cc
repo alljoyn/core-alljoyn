@@ -51,8 +51,8 @@ const char* org::freedesktop::DBus::Peer::InterfaceName = "org.freedesktop.DBus.
 const char* org::freedesktop::DBus::Introspectable::InterfaceName = "org.freedesktop.DBus.Introspectable";
 const char* org::freedesktop::DBus::Introspectable::IntrospectDocType =
     "<!DOCTYPE"
-    " node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\""
+    " node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\""
     ">\n";
 
 

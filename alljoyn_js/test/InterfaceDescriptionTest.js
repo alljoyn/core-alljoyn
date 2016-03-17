@@ -26,8 +26,8 @@ AsyncTestCase("InterfaceDescriptionTest", {
 
     testRegisterIntrospect: function(queue) {
         var expectedXML =
-            '<!DOCTYPE node PUBLIC "-//freedesktop//DTD D-BUS Object Introspection 1.0//EN"\n' +
-            '"http://standards.freedesktop.org/dbus/introspect-1.0.dtd">\n' +
+            '<!DOCTYPE node PUBLIC "-//allseen//DTD ALLJOYN Object Introspection 1.1//EN"\n' +
+            '"http://www.allseen.org/alljoyn/introspect-1.1.dtd">\n' +
             '<node>\n' +
             '  <interface name="test.Interface">\n' +
             '    <method name="method1">\n' +
