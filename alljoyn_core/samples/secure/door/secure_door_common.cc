@@ -257,6 +257,36 @@ QStatus DoorCommon::AnnounceAbout()
     return aboutObj->Announce(DOOR_APPLICATION_PORT, aboutData);
 }
 
+static void CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const uint8_t* pskBytes, size_t pskLength)
+{
+    /*
+     * This function suppresses compiler warnings when calling SetPSK, which is deprecated.
+     * Use of PSK will be replaced by SPEKE in this sample.
+     * https://jira.allseenalliance.org/browse/ASACORE-2761
+     */
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+
+    QStatus status = authListener->SetPSK(pskBytes, pskLength);
+    if (status != ER_OK) {
+        fprintf(stderr, "Failed to set PSK - status (%s)\n", QCC_StatusText(status));
+    }
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
+}
+
 QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
 {
     CreateInterface();
@@ -274,9 +304,15 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     }
 
     GUID128 psk;
-    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK,
-                                    provider ? new DefaultECDHEAuthListener(
-                                        psk.GetBytes(), GUID128::SIZE) : new DefaultECDHEAuthListener(), nullptr, false, pcl);
+    DefaultECDHEAuthListener* authListener;
+    if (provider) {
+        authListener = new DefaultECDHEAuthListener();
+        CallDeprecatedSetPSK(authListener, psk.GetBytes(), GUID128::SIZE);
+    } else {
+        authListener = new DefaultECDHEAuthListener();
+    }
+
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK, authListener, nullptr, false, pcl);
     if (ER_OK != status) {
         fprintf(stderr, "Failed to EnablePeerSecurity - status (%s)\n", QCC_StatusText(status));
         return status;

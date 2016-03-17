@@ -825,7 +825,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     appStateListener.stateChanged = false;
     //EnablePeerSecurity
     const uint8_t psk[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16 };
-    securityManagerKeyListener = new DefaultECDHEAuthListener(psk, 16);
+    securityManagerKeyListener = new DefaultECDHEAuthListener();
+    PermissionMgmtTestHelper::CallDeprecatedSetPSK(securityManagerKeyListener, psk, sizeof(psk));
     securityManagerBus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", securityManagerKeyListener);
 
     /* The State signal is only emitted if manifest template is installed */
@@ -841,7 +842,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
 
     appStateListener.stateChanged = false;
 
-    peer1KeyListener = new DefaultECDHEAuthListener(psk, 16);
+    peer1KeyListener = new DefaultECDHEAuthListener();
+    PermissionMgmtTestHelper::CallDeprecatedSetPSK(peer1KeyListener, psk, sizeof(psk));
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_PSK", peer1KeyListener);
 
     EXPECT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().SetClaimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_PSK));
