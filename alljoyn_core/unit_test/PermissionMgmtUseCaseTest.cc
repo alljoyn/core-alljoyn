@@ -3280,31 +3280,55 @@ TEST_F(PermissionMgmtUseCaseTest, InstallMembershipBeforeClaimMustFail)
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
 {
+    EXPECT_TRUE(false && "0");
     EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+
+    EXPECT_TRUE(false && "1");
     ClaimAdmin();
+
+    EXPECT_TRUE(false && "2");
     SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+
+    EXPECT_TRUE(false && "3");
     /* retrieve public key from to-be-claimed app to create identity cert */
     ECCPublicKey claimedPubKey;
     EXPECT_EQ(ER_OK, saProxy.GetEccPublicKey(claimedPubKey)) << " Fail to retrieve to-be-claimed public key.";
     qcc::GUID128 guid;
+
+    EXPECT_TRUE(false && "4");
     PermissionMgmtTestHelper::GetGUID(consumerBus, guid);
     IdentityCertificate identityCertChain[3];
     size_t certChainCount = 3;
     std::vector<Manifest> manifests;
 
+    EXPECT_TRUE(false && "5");
     EXPECT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
+
+    EXPECT_TRUE(false && "6");
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(remoteControlBus, adminBus, "303030", guid.ToString(), &claimedPubKey, "alias", 3600, identityCertChain, certChainCount)) << "  CreateIdentityCert failed";
+
+    EXPECT_TRUE(false && "7");
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifests(adminBus, identityCertChain[0], manifests));
 
     /* app is claimable after installing manifest template or explicitly set to be claimable */
+    EXPECT_TRUE(false && "8");
     SetManifestTemplate(consumerBus);
     Crypto_ECC ecc;
+
+    EXPECT_TRUE(false && "9");
     ecc.GenerateDSAKeyPair();
     KeyInfoNISTP256 keyInfo;
+
+    EXPECT_TRUE(false && "10");
     keyInfo.SetPublicKey(ecc.GetDSAPublicKey());
+
+    EXPECT_TRUE(false && "11");
     KeyInfoHelper::GenerateKeyId(keyInfo);
+
+    EXPECT_TRUE(false && "12");
     EXPECT_EQ(ER_OK, saProxy.Claim(keyInfo, consumerAdminGroupGUID, consumerAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size())) << " saProxy.Claim failed";
 
+    EXPECT_TRUE(false && "13");
 }
 
 TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
