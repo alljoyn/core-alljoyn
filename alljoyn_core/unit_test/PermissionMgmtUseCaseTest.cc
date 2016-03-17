@@ -3278,7 +3278,7 @@ TEST_F(PermissionMgmtUseCaseTest, InstallMembershipBeforeClaimMustFail)
     InstallMembershipToAdmin(adminMembershipSerial1, adminAdminGroupGUID, adminBus, false);
 }
 
-TEST_F(PermissionMgmtUseCaseTest, ClaimWithIdentityCertSignedByUnknownCA)
+TEST_F(PermissionMgmtUseCaseTest, DISABLED_ClaimWithIdentityCertSignedByUnknownCA)
 {
     EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
     ClaimAdmin();

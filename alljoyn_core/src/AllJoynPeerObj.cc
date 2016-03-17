@@ -490,10 +490,6 @@ QStatus AllJoynPeerObj::KeyGen(PeerState& peerState, const vector<uint8_t, Secur
         ClearMemory(keymatter, keylen);
         delete [] keymatter;
     }
-    /*
-     * Store any changes to the key store.
-     */
-    keyStore.Store();
     return status;
 }
 
@@ -645,9 +641,6 @@ void AllJoynPeerObj::AuthAdvance(Message& msg)
                 masterSecret.SetTag(mech, KeyBlob::RESPONDER);
                 KeyStore::Key key(KeyStore::Key::REMOTE, remotePeerGuid);
                 status = keyStore.AddKey(key, masterSecret, peerState->authorizations);
-                if (ER_OK == status) {
-                    status = keyStore.Store();
-                }
             }
         }
         /*
@@ -1247,18 +1240,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
          */
 
         if (!keyStore.HasKey(remotePeerKey)) {
-            /*
-             * If the key store is shared try reloading in case another application has already
-             * authenticated this peer.
-             */
-            if (keyStore.IsShared()) {
-                keyStore.Reload();
-                if (!keyStore.HasKey(remotePeerKey)) {
-                    status = ER_AUTH_FAIL;
-                }
-            } else {
-                status = ER_AUTH_FAIL;
-            }
+            status = ER_AUTH_FAIL;
         }
         if (status == ER_OK) {
             /*
@@ -1465,9 +1447,6 @@ QStatus AllJoynPeerObj::AuthenticatePeerUsingSASL(const qcc::String& busName, Pe
                     /* Tag the master secret with the auth mechanism used to generate it */
                     masterSecret.SetTag(mech, KeyBlob::INITIATOR);
                     status = bus->GetInternal().GetKeyStore().AddKey(remotePeerKey, masterSecret, peerState->authorizations);
-                    if (ER_OK == status) {
-                        status = bus->GetInternal().GetKeyStore().Store();
-                    }
                 }
             }
         } else {
