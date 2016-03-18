@@ -3,7 +3,7 @@
 /**
  * @file
  * This file defines a wrapper class for ajn::KeyStoreListener that protects against asynchronous
- * deregistration of the listener instance.
+ * unregistration of the listener instance.
  */
 
 /******************************************************************************
@@ -27,85 +27,81 @@
 
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
-#include <qcc/String.h>
-#include <qcc/Thread.h>
-#include <qcc/LockLevel.h>
-
 #include <alljoyn/KeyStoreListener.h>
-
 #include <alljoyn/Status.h>
 
 namespace ajn {
 
+class KeyStore;
 
 /**
  * This class adds a level of indirection to an AuthListener so the actual AuthListener can
- * asynchronously be set or removed safely. If the
+ * asynchronously be set or removed safely.
  */
-class ProtectedKeyStoreListener : public KeyStoreListener {
+class ProtectedKeyStoreListener {
+
   public:
 
-    ProtectedKeyStoreListener(KeyStoreListener* kslistener)
-        : listener(kslistener), lock(qcc::LOCK_LEVEL_PROTECTEDKEYSTORELISTENER_LOCK), refCount(0) { }
+    ProtectedKeyStoreListener(KeyStoreListener* kslistener);
+
     /**
-     * Virtual destructor for derivable class.
+     * Increment reference count of this class.
      */
-    virtual ~ProtectedKeyStoreListener() {
-        lock.Lock(MUTEX_CONTEXT);
-        /*
-         * Clear the current listener to prevent any more calls to this listener.
-         */
-        this->listener = NULL;
-        /*
-         * Poll and sleep until the current listener is no longer in use.
-         */
-        while (refCount) {
-            lock.Unlock(MUTEX_CONTEXT);
-            qcc::Sleep(10);
-            lock.Lock(MUTEX_CONTEXT);
-        }
-        lock.Unlock(MUTEX_CONTEXT);
-    }
+    void AddRef();
+
+    /**
+     * Decrement reference count of this class. The class is deleted when the count goes to zero.
+     */
+    void DelRef();
+
+    /**
+     * Clear the current listener to prevent any more calls to this listener.
+     */
+    void ClearListener();
+
+    /**
+     * Request to acquire exclusive lock of the keystore - used during data commit.
+     *
+     * NOTE: Best practice is to call `AcquireExclusiveLock(MUTEX_CONTEXT)`
+     *
+     * @see MUTEX_CONTEXT
+     *
+     * @param file the name of the file this lock was called from
+     * @param line the line number of the file this lock was called from
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus AcquireExclusiveLock(const char* file, uint32_t line);
+
+    /**
+     * Release exclusive lock of the keystore - for completing data commit.
+     *
+     * NOTE: Best practice is to call `ReleaseExclusiveLock(MUTEX_CONTEXT)`
+     *
+     * @see MUTEX_CONTEXT
+     *
+     * @param file the name of the file this lock was called from
+     * @param line the line number of the file this lock was called from
+     */
+    void ReleaseExclusiveLock(const char* file, uint32_t line);
 
     /**
      * Simply wraps the call of the same name to the inner KeyStoreListener
      */
-    QStatus LoadRequest(KeyStore& keyStore)
-    {
-        QStatus status = ER_FAIL;
-        lock.Lock(MUTEX_CONTEXT);
-        KeyStoreListener* keyStoreListener = this->listener;
-        ++refCount;
-        lock.Unlock(MUTEX_CONTEXT);
-        if (keyStoreListener) {
-            status = keyStoreListener->LoadRequest(keyStore);
-        }
-        lock.Lock(MUTEX_CONTEXT);
-        --refCount;
-        lock.Unlock(MUTEX_CONTEXT);
-        return status;
-    }
+    QStatus LoadRequest(KeyStore& keyStore);
 
     /**
      * Simply wraps the call of the same name to the inner KeyStoreListener
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
      */
-    QStatus StoreRequest(KeyStore& keyStore)
-    {
-        QStatus status = ER_FAIL;
-        lock.Lock(MUTEX_CONTEXT);
-        KeyStoreListener* keyStoreListener = this->listener;
-        ++refCount;
-        lock.Unlock(MUTEX_CONTEXT);
-        if (keyStoreListener) {
-            status = keyStoreListener->StoreRequest(keyStore);
-        }
-        lock.Lock(MUTEX_CONTEXT);
-        --refCount;
-        lock.Unlock(MUTEX_CONTEXT);
-        return status;
-    }
+    QStatus StoreRequest(KeyStore& keyStore);
 
-  private:
+  private: ~ProtectedKeyStoreListener();
 
     /*
      * The inner listener that is being protected.
@@ -116,7 +112,8 @@ class ProtectedKeyStoreListener : public KeyStoreListener {
      * Reference count so we know when the inner listener is no longer in use.
      */
     qcc::Mutex lock;
-    int32_t refCount;
+    int32_t refCount;                /**< The reference count of the child object. */
+    volatile int32_t refCountSelf;   /**< The reference count of this class. The class is deleted when this goes to zero. */
 };
 }
 #endif
