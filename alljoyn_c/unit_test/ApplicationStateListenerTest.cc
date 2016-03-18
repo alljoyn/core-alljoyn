@@ -32,6 +32,7 @@ class ApplicationStateListenerTest : public testing::Test {
     AJ_PSTR contextBusName;
     qcc::KeyInfoNISTP256 someValidKey;
     PermissionConfigurator::ApplicationState someValidApplicationState;
+    alljoyn_applicationstatelistener listener;
     alljoyn_applicationstatelistener_callbacks callbacksWithNullStateCallback;
     alljoyn_applicationstatelistener_callbacks nonNullCallbacks;
     alljoyn_applicationstatelistener_callbacks callbacksPassingPublicKeyToContext;
@@ -41,7 +42,8 @@ class ApplicationStateListenerTest : public testing::Test {
     ApplicationStateListenerTest() :
         someValidBusName("someBusName"),
         contextBusName(nullptr),
-        someValidApplicationState(PermissionConfigurator::CLAIMED)
+        someValidApplicationState(PermissionConfigurator::CLAIMED),
+        listener(nullptr)
     {
         setCallback(callbacksWithNullStateCallback, nullptr);
         setCallback(nonNullCallbacks, someCallback);
@@ -69,6 +71,10 @@ class ApplicationStateListenerTest : public testing::Test {
     virtual void TearDown()
     {
         delete[] contextBusName;
+
+        if (nullptr != listener) {
+            alljoyn_applicationstatelistener_destroy(listener);
+        }
     }
 
   private:
@@ -125,7 +131,7 @@ class ApplicationStateListenerTest : public testing::Test {
         ASSERT_NE(nullptr, context);
 
         size_t busNameSize = strlen(busName) + 1;
-        char** contextBusNamePointer = (char**)context;
+        AJ_PSTR* contextBusNamePointer = (AJ_PSTR*)context;
 
         *contextBusNamePointer = new(std::nothrow) char[busNameSize];
         ASSERT_NE(nullptr, *contextBusNamePointer);
@@ -157,16 +163,17 @@ TEST_F(ApplicationStateListenerTest, shouldDestroyNullListenerWithoutException)
 
 TEST_F(ApplicationStateListenerTest, shouldDestroyNonNullListenerWithoutException)
 {
-    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr);
+    listener = alljoyn_applicationstatelistener_create(&nonNullCallbacks, nullptr);
 
     alljoyn_applicationstatelistener_destroy(listener);
+    listener = nullptr;
 }
 
 TEST_F(ApplicationStateListenerTest, shouldPassBusNameToCallback)
 {
     contextBusName = nullptr;
     AJ_PCSTR passedBusName = someValidBusName;
-    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&callbacksPassingBusNameToContext, &contextBusName);
+    listener = alljoyn_applicationstatelistener_create(&callbacksPassingBusNameToContext, &contextBusName);
 
     ((ajn::ApplicationStateListener*)listener)->State(passedBusName, someValidKey, someValidApplicationState);
 
@@ -177,7 +184,7 @@ TEST_F(ApplicationStateListenerTest, shouldPassPublicKeyToCallback)
 {
     qcc::ECCPublicKey contextPublicKey;
     qcc::KeyInfoNISTP256 passedKeyInfo = someValidKey;
-    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&callbacksPassingPublicKeyToContext, &contextPublicKey);
+    listener = alljoyn_applicationstatelistener_create(&callbacksPassingPublicKeyToContext, &contextPublicKey);
 
     ((ajn::ApplicationStateListener*)listener)->State(someValidBusName, passedKeyInfo, someValidApplicationState);
 
@@ -188,7 +195,7 @@ TEST_F(ApplicationStateListenerTest, shouldPassApplicationStateToCallback)
 {
     alljoyn_applicationstate contextApplicationState;
     PermissionConfigurator::ApplicationState passedApplicationState = someValidApplicationState;
-    alljoyn_applicationstatelistener listener = alljoyn_applicationstatelistener_create(&callbacksPassingApplicationStateToContext, &contextApplicationState);
+    listener = alljoyn_applicationstatelistener_create(&callbacksPassingApplicationStateToContext, &contextApplicationState);
 
     ((ajn::ApplicationStateListener*)listener)->State(someValidBusName, someValidKey, passedApplicationState);
 
