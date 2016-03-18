@@ -403,7 +403,9 @@ static bool IsPeerAuthorized(const Request& request, const PermissionPolicy* pol
     bool qualifiedPeerWithPublicKey = false;
     const PermissionPolicy::Acl* acls = policy->GetAcls();
     size_t aclsSize = policy->GetAclsSize();
-    QCC_DbgTrace(("%s: Authorizing peer (public key: %s) against %u ACLs", __FUNCTION__, peerPublicKey->ToString().c_str(), aclsSize));
+    QCC_DbgTrace(("%s: Authorizing peer (public key: %s) against %u ACLs", __FUNCTION__,
+                  nullptr == peerPublicKey ? "null" : peerPublicKey->ToString().c_str(),
+                  aclsSize));
     for (size_t cnt = 0; cnt < aclsSize; cnt++) {
         if (!IsPeerQualifiedForAcl(acls[cnt], peerState, trustedPeer, peerPublicKey, issuerChain, qualifiedPeerWithPublicKey)) {
             QCC_DbgTrace(("%s: Peer did not qualify for ACL numer %u.", __FUNCTION__, cnt));
