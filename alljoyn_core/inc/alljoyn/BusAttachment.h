@@ -812,10 +812,7 @@ class BusAttachment : public MessageReceiver {
      *                             Note that this parameter is only meaningful when using the default
      *                             key store implementation.
      *
-     * @param isShared             optional parameter that indicates if the key store is shared between multiple
-     *                             applications. It is generally harmless to set this to true even when the
-     *                             key store is not shared but it adds some unnecessary calls to the key store
-     *                             listener to load and store the key store in this case.
+     * @param isShared             This parameter is not used as of 16.04. It is ignored internally (always shared).
      * @param permissionConfigurationListener   Passes security 2.0 callbacks to the application.
      *
      * @return
@@ -825,7 +822,7 @@ class BusAttachment : public MessageReceiver {
     QStatus EnablePeerSecurity(const char* authMechanisms,
                                AuthListener* authListener,
                                const char* keyStoreFileName = NULL,
-                               bool isShared = false,
+                               bool isShared = true,
                                PermissionConfigurationListener* permissionConfigurationListener = NULL);
 
     /**
