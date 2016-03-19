@@ -30,13 +30,13 @@ typedef std::pair<AJ_PCSTR, AJ_PCSTR> Base64TestInput;
 class ASN1Base64Test : public testing::TestWithParam<Base64TestInput> {
   public:
     ASN1Base64Test() :
-        input(GetParam().first),
-        expectedOutput(GetParam().second)
+        m_input(GetParam().first),
+        m_expectedOutput(GetParam().second)
     { }
 
   protected:
-    String input;
-    String expectedOutput;
+    String m_input;
+    String m_expectedOutput;
 };
 
 class ANS1DecodeBase64Test : public ASN1Base64Test { };
@@ -45,41 +45,41 @@ class ANS1EncodeBase64Test : public ASN1Base64Test { };
 class ASN1DecodeBase64VectorTest : public testing::TestWithParam<Base64TestInput> {
   public:
     ASN1DecodeBase64VectorTest() :
-        input(GetParam().first)
+        m_input(GetParam().first)
     { }
 
     virtual void SetUp()
     {
         String outputString = GetParam().second;
-        expectedOutput.resize(outputString.size() / 2);
+        m_expectedOutput.resize(outputString.size() / 2);
 
-        HexStringToBytes(outputString, expectedOutput.data(), expectedOutput.size());
+        HexStringToBytes(outputString, m_expectedOutput.data(), m_expectedOutput.size());
     }
 
   protected:
-    String input;
-    std::vector<uint8_t> decodedVector;
-    std::vector<uint8_t> expectedOutput;
+    String m_input;
+    std::vector<uint8_t> m_decodedVector;
+    std::vector<uint8_t> m_expectedOutput;
 };
 
 class ASN1EncodeBase64VectorTest : public testing::TestWithParam<Base64TestInput> {
   public:
     ASN1EncodeBase64VectorTest() :
-        expectedOutput(GetParam().second)
+        m_expectedOutput(GetParam().second)
     { }
 
     virtual void SetUp()
     {
         String inputString = GetParam().first;
-        input.resize(inputString.size() / 2);
+        m_input.resize(inputString.size() / 2);
 
-        HexStringToBytes(inputString, input.data(), input.size());
+        HexStringToBytes(inputString, m_input.data(), m_input.size());
     }
 
   protected:
-    std::vector<uint8_t> input;
-    String encodedString;
-    String expectedOutput;
+    std::vector<uint8_t> m_input;
+    String m_encodedString;
+    String m_expectedOutput;
 };
 
 // The following test vectors were taken from
@@ -96,11 +96,11 @@ INSTANTIATE_TEST_CASE_P(ASN1EncodeBase64Tests,
 TEST_P(ANS1EncodeBase64Test, shouldPassEncodeBase64)
 {
     String actualEncodedBase64;
-    QStatus status = Crypto_ASN1::EncodeBase64(input, actualEncodedBase64);
+    QStatus status = Crypto_ASN1::EncodeBase64(m_input, actualEncodedBase64);
 
     EXPECT_EQ(ER_OK, status) <<
         "The function EncodeBase64 was unable to encode the string \"" <<
-        input.c_str() << "\" to Base64 format. "
+        m_input.c_str() << "\" to Base64 format. "
         "The status returned was: " << QCC_StatusText(status);
 }
 
@@ -108,13 +108,13 @@ TEST_P(ANS1EncodeBase64Test, shouldCorrectlyEncodeBase64)
 {
     String actualEncodedBase64;
 
-    ASSERT_EQ(ER_OK, Crypto_ASN1::EncodeBase64(input, actualEncodedBase64));
+    ASSERT_EQ(ER_OK, Crypto_ASN1::EncodeBase64(m_input, actualEncodedBase64));
 
-    EXPECT_EQ(expectedOutput, actualEncodedBase64) <<
-        "The string \"" << input.c_str() << "\" was converted to "
+    EXPECT_EQ(m_expectedOutput, actualEncodedBase64) <<
+        "The string \"" << m_input.c_str() << "\" was converted to "
         "Base64 format. The result \"" << actualEncodedBase64.c_str() <<
         "\" did not match the expected value \"" <<
-        expectedOutput.c_str() << "\".";
+        m_expectedOutput.c_str() << "\".";
 }
 
 INSTANTIATE_TEST_CASE_P(ASN1DecodeBase64Tests,
@@ -129,24 +129,24 @@ INSTANTIATE_TEST_CASE_P(ASN1DecodeBase64Tests,
 TEST_P(ANS1DecodeBase64Test, shouldPassDecodeBase64)
 {
     String actualDecodedString;
-    QStatus status = Crypto_ASN1::DecodeBase64(input, actualDecodedString);
+    QStatus status = Crypto_ASN1::DecodeBase64(m_input, actualDecodedString);
 
     EXPECT_EQ(ER_OK, status) <<
         "The function DecodeBase64 was unable to decode the string \"" <<
-        expectedOutput.c_str() << "\".";
+        m_expectedOutput.c_str() << "\".";
 }
 
 TEST_P(ANS1DecodeBase64Test, shouldCorrectlyDecodeBase64)
 {
     String actualDecodedString;
 
-    ASSERT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(input, actualDecodedString));
+    ASSERT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(m_input, actualDecodedString));
 
-    EXPECT_EQ(expectedOutput, actualDecodedString) <<
-        "The string \"" << input.c_str() << "\" was decoded from "
+    EXPECT_EQ(m_expectedOutput, actualDecodedString) <<
+        "The string \"" << m_input.c_str() << "\" was decoded from "
         "Base64 format. The result \"" << actualDecodedString.c_str() <<
         "\" did not match the expected value \"" <<
-        expectedOutput.c_str() << "\".";
+        m_expectedOutput.c_str() << "\".";
 }
 
 INSTANTIATE_TEST_CASE_P(ASN1EncodeBase64VectorTests,
@@ -160,27 +160,27 @@ INSTANTIATE_TEST_CASE_P(ASN1EncodeBase64VectorTests,
                                           Base64TestInput("666f6f626172", "NjY2ZjZmNjI2MTcy\n")));
 TEST_P(ASN1EncodeBase64VectorTest, shouldCorrectlyEncodeBase64)
 {
-    ASSERT_EQ(ER_OK, Crypto_ASN1::EncodeBase64(input, encodedString));
+    ASSERT_EQ(ER_OK, Crypto_ASN1::EncodeBase64(m_input, m_encodedString));
 
-    EXPECT_EQ(expectedOutput, encodedString);
+    EXPECT_EQ(m_expectedOutput, m_encodedString);
 }
 
 TEST(ASN1DecodeBase64VectorErrorTest, shouldReturnErrorIfBinaryValueNotMultipleOf2)
 {
-    std::vector<uint8_t> decodedVector;
-    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("NjZm", decodedVector));
+    std::vector<uint8_t> m_decodedVector;
+    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("NjZm", m_decodedVector));
 }
 
 TEST(ASN1DecodeBase64VectorErrorTest, shouldReturnErrorIfBase64DoesNotMapToBinary)
 {
-    std::vector<uint8_t> decodedVector;
-    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("ZHVwYXRhaw==", decodedVector));
+    std::vector<uint8_t> m_decodedVector;
+    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("ZHVwYXRhaw==", m_decodedVector));
 }
 
 TEST(ASN1DecodeBase64VectorErrorTest, shouldReturnErrorIfInputNotMultipleOf4)
 {
-    std::vector<uint8_t> decodedVector;
-    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("ZHVwYXRhaw=", decodedVector));
+    std::vector<uint8_t> m_decodedVector;
+    EXPECT_EQ(ER_FAIL, Crypto_ASN1::DecodeBase64("ZHVwYXRhaw=", m_decodedVector));
 }
 
 INSTANTIATE_TEST_CASE_P(ASN1DecodeBase64VectorTests,
@@ -194,14 +194,14 @@ INSTANTIATE_TEST_CASE_P(ASN1DecodeBase64VectorTests,
                                           Base64TestInput("NjY2ZjZmNjI2MTcy", "666f6f626172")));
 TEST_P(ASN1DecodeBase64VectorTest, shouldPassEncodeBase64ForVectorInput)
 {
-    EXPECT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(input, decodedVector));
+    EXPECT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(m_input, m_decodedVector));
 }
 
 TEST_P(ASN1DecodeBase64VectorTest, shouldCorrectlyEncodeBase64ForVectorInput)
 {
-    ASSERT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(input, decodedVector));
+    ASSERT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(m_input, m_decodedVector));
 
-    EXPECT_EQ(expectedOutput, decodedVector);
+    EXPECT_EQ(m_expectedOutput, m_decodedVector);
 }
 
 
