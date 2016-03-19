@@ -636,7 +636,7 @@ class DaemonRouterTest : public TestParamTuple {
                 TestEndpointInfo dot1Info(epInfo, true);
                 dot1Info->name = ToDot1(epInfo->name);
                 String b2bName = String(":bus2bus_") + epInfo->name.substr(9, epInfo->name.find_last_of('.') - 9);
-                map<StringMapKey, TestRemoteEndpoint>::iterator it = b2bEps.find(b2bName);
+                map<std::string, TestRemoteEndpoint>::iterator it = b2bEps.find(b2bName);
                 assert(it != b2bEps.end());
                 TestRemoteEndpoint& trep = it->second;
                 trep->SetRemoteName(dot1Info->name);
@@ -787,7 +787,7 @@ class DaemonRouterTest : public TestParamTuple {
     Rule matchRule1;
     Rule matchRule2;
     list<BusEndpoint> epList;
-    map<StringMapKey, TestRemoteEndpoint> b2bEps;
+    map<std::string, TestRemoteEndpoint> b2bEps;
 
     static ConfigDB* configDb;
     static BusAttachment* bus;

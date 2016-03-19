@@ -348,6 +348,20 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     void DoSessionLost(SessionId sid, SessionLostReason reason);
 
+    static qcc::String MakeSessionlessMessageKey(const char* sender,
+                                                 const char* iface,
+                                                 const char* member,
+                                                 const char* objPath) {
+        qcc::String r = sender;
+        r.append(1, ':');
+        r.append(iface);
+        r.append(1, ':');
+        r.append(member);
+        r.append(1, ':');
+        r.append(objPath);
+        return r;
+    }
+
     Bus& bus;                             /**< The bus */
     BusController* busController;         /**< BusController that created this BusObject */
     DaemonRouter& router;                 /**< The router */
@@ -365,21 +379,6 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     qcc::Timer timer;                     /**< Timer object for reaping expired names */
 
-    /** A key into the local sessionless message queue */
-    class SessionlessMessageKey : public qcc::String {
-      public:
-        SessionlessMessageKey(const char* sender, const char* iface, const char* member, const char* objPath) :
-            qcc::String(sender, 0, ::strlen(sender) + ::strlen(iface) + ::strlen(member) + ::strlen(objPath) + 4)
-        {
-            append(':');
-            append(iface);
-            append(':');
-            append(member);
-            append(':');
-            append(objPath);
-        }
-    };
-
     /** A structure for keeping track of stored sessionless signals */
     struct _SessionlessMessage {
         _SessionlessMessage(Message message);
@@ -388,9 +387,10 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
         Message msg;
         std::set<qcc::String>* cachedWhoImplements; /**< For About signals, this field caches 'implements' interfaces (to avoid future cost of re-parsing) */
     };
+
     typedef qcc::ManagedObj<_SessionlessMessage> SessionlessMessage;
 
-    typedef std::map<SessionlessMessageKey, SessionlessMessage> LocalCache;
+    typedef std::map<qcc::String, SessionlessMessage> LocalCache;
     /** Storage for sessionless messages waiting to be delivered */
     LocalCache localCache;
 

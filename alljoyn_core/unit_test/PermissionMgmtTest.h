@@ -19,6 +19,9 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#ifndef _ALLJOYN_PERMISSION_MGMT_TEST_H
+#define _ALLJOYN_PERMISSION_MGMT_TEST_H
+
 #include <qcc/platform.h>
 #include <gtest/gtest.h>
 #include <qcc/GUID.h>
@@ -240,6 +243,8 @@ class PermissionMgmtTestHelper {
     static QStatus GetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t& volume);
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
     static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj, size_t& propertyCount);
+    static void CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const uint8_t* pskBytes, size_t pskLength);
 };
 
 }
+#endif

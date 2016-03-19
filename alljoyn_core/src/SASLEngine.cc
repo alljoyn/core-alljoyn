@@ -102,7 +102,7 @@ static const char* StateText[] = {
 
 
 
-static qcc::String HexToAscii(qcc::String& hex)
+static qcc::String HexToAscii(qcc::String&& hex)
 {
     qcc::String ascii;
     size_t len = hex.length() / 2;
@@ -175,13 +175,12 @@ static void ComposeAuth(qcc::String& outStr, AuthCmdType cmd, const qcc::String&
 {
     outStr = AllJoynAuthCmdList[cmd].cmdStr;
     if (!str1.empty()) {
-        outStr += ' ' + str1;
+        outStr += " " + str1;
     }
     if (!str2.empty()) {
-        outStr += ' ' + str2;
+        outStr += " " + str2;
     }
-    outStr.push_back('\r');
-    outStr.push_back('\n');
+    outStr += "\r\n";
 }
 
 static void ComposeAuth(qcc::String& outStr, AuthCmdType cmd, const qcc::String& str1)
@@ -686,7 +685,7 @@ QStatus SASLEngine::Advance(qcc::String authIn, qcc::String& authOut, AuthState&
 SASLEngine::SASLEngine(BusAttachment& bus, AuthMechanism::AuthRole authRole, const qcc::String& mechanisms, const char* authPeer, ProtectedAuthListener& listener, ExtensionHandler* extHandler) :
     bus(bus),
     authRole(authRole),
-    authPeer(authPeer),
+    authPeer(authPeer ? authPeer : ""),
     listener(listener),
     authCount(0),
     authMechanism(NULL),

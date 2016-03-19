@@ -29,7 +29,6 @@
 #include <qcc/ManagedObj.h>
 #include <qcc/RWLock.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/XmlElement.h>
 
 #include "Bus.h"
@@ -54,10 +53,10 @@ class ConfigDB {
     typedef qcc::ManagedObj<_ListenList> ListenList;
 
     /** Typedef for map of certain resource limits - also used for flags. */
-    typedef std::unordered_map<qcc::StringMapKey, uint32_t> LimitMap;
+    typedef std::unordered_map<std::string, uint32_t> LimitMap;
 
     /** Typedef for map of properties. */
-    typedef std::unordered_map<qcc::StringMapKey, qcc::String> PropertyMap;
+    typedef std::unordered_map<std::string, qcc::String> PropertyMap;
 
     /**
      * Get a pointer to the ConfigDB singleton object.

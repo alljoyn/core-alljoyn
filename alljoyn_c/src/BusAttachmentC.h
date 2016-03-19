@@ -175,8 +175,17 @@ class BusAttachmentC : public BusAttachment, public BusAttachment::JoinSessionAs
         delete in;
     }
 
-  private:
+    const char* GetConnectSpec() {
+        connectSpec = BusAttachment::GetConnectSpec();
+        return connectSpec.c_str();
+    }
 
+    const char* GetUniqueName() {
+        uniqueName = BusAttachment::GetUniqueName();
+        return uniqueName.c_str();
+    }
+
+  private:
     struct SignalHandlerC : ajn::MessageReceiver {
         struct Subscription {
             const ajn::InterfaceDescription::Member* member;
@@ -225,6 +234,8 @@ class BusAttachmentC : public BusAttachment, public BusAttachment::JoinSessionAs
     typedef std::map<alljoyn_messagereceiver_signalhandler_ptr, SignalHandlerC*> SignalHandlerMap;
     SignalHandlerMap signalHandlerMap;
     qcc::Mutex signalHandlerMapLock;
+    qcc::String connectSpec;
+    qcc::String uniqueName;
 };
 }
 #endif

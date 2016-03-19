@@ -1421,6 +1421,10 @@ void ToDOMString(Plugin& plugin, const char* str, uint32_t len, NPVariant& varia
         }
     }
     char* val = reinterpret_cast<char*>(NPN_MemAlloc(len + 1));
-    strncpy(val, str, len + 1);
+    if (!str) {
+        val[0] = 0;
+    } else {
+        strncpy(val, str, len + 1);
+    }
     STRINGZ_TO_NPVARIANT(val, variant);
 }

@@ -1,0 +1,215 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Copyright AllSeen Alliance. All rights reserved. Permission to use, copy, modify, and/or distribute this software for any purpose with or without fee is hereby granted, provided that the above copyright notice and this permission notice appear in all copies. THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE. -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+
+    <xs:element name="manifest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element ref="version"/>
+                <xs:element ref="rules"/>
+                <xs:element ref="thumbprint"/>
+                <xs:element ref="signature"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:element name="version">
+        <xs:simpleType>
+            <xs:restriction base="xs:positiveInteger">
+                <xs:enumeration value="1"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+
+    <xs:element name="rules">
+        <xs:complexType>
+            <xs:sequence maxOccurs="unbounded">
+                <xs:element ref="node"/>
+            </xs:sequence>
+        </xs:complexType>
+        <xs:unique name="nodeNamesUnique">
+            <xs:selector xpath="node"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:element name="node">
+        <xs:complexType>
+            <xs:sequence maxOccurs="unbounded">
+                <xs:element ref="interface"/>
+            </xs:sequence>
+            <xs:attribute name="name" use="optional" default="*">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:pattern value="(\*|/(\*)?|(/[a-zA-Z0-9_]+)+(/\*)?)"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+        </xs:complexType>
+        <xs:unique name="interfaceNamesUnique">
+            <xs:selector xpath="interface"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:element name="interface">
+        <xs:complexType>
+            <xs:choice maxOccurs="unbounded">
+                <xs:element ref="method"/>
+                <xs:element ref="property"/>
+                <xs:element ref="signal"/>
+            </xs:choice>
+            <xs:attribute name="name" use="optional" default="*">
+                <xs:simpleType>
+                    <xs:restriction base="xs:string">
+                        <xs:pattern value="(\*|[a-zA-Z_][a-zA-Z0-9_]*((\.[a-zA-Z_][a-zA-Z0-9_]*)*(\.\*)|(\.[a-zA-Z_][a-zA-Z0-9_]*)+))"/>
+                        <xs:maxLength value="255"/>
+                    </xs:restriction>
+                </xs:simpleType>
+            </xs:attribute>
+        </xs:complexType>
+        <xs:unique name="methodNamesUnique">
+            <xs:selector xpath="method"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+        <xs:unique name="propertyNamesUnique">
+            <xs:selector xpath="property"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+        <xs:unique name="signalNamesUnique">
+            <xs:selector xpath="signal"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:element name="method">
+        <xs:complexType>
+            <xs:sequence maxOccurs="2">
+                <xs:element name="annotation" type="methodAnnotation"/>
+            </xs:sequence>
+            <xs:attribute name="name" type="memberName" use="optional" default="*"/>
+            <!-- "Deny" annotation cannot appear with other annotations. -->
+            <xs:assert test="(annotation[@value = 'Deny'] and (count(annotation) = 1))
+                       or not(annotation[@value = 'Deny'])"/>
+        </xs:complexType>
+        <xs:unique name="methodActionNamesUnique">
+            <xs:selector xpath="annotation"/>
+            <xs:field xpath="@value"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:element name="property">
+        <xs:complexType>
+            <xs:sequence maxOccurs="3">
+                <xs:element name="annotation" type="propertyAnnotation"/>
+            </xs:sequence>
+            <xs:attribute name="name" type="memberName" use="optional" default="*"/>
+            <!-- "Deny" annotation cannot appear with other annotations. -->
+            <xs:assert test="(annotation[@value = 'Deny'] and (count(annotation) = 1))
+                       or not(annotation[@value = 'Deny'])"/>
+        </xs:complexType>
+        <xs:unique name="propertyActionNamesUnique">
+            <xs:selector xpath="annotation"/>
+            <xs:field xpath="@value"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:element name="signal">
+        <xs:complexType>
+            <xs:sequence maxOccurs="2">
+                <xs:element name="annotation" type="signalAnnotation"/>
+            </xs:sequence>
+            <xs:attribute name="name" type="memberName" use="optional" default="*"/>
+            <!-- "Deny" annotation cannot appear with other annotations. -->
+            <xs:assert test="(annotation[@value = 'Deny'] and (count(annotation) = 1))
+                       or not(annotation[@value = 'Deny'])"/>
+        </xs:complexType>
+        <xs:unique name="signalActionNamesUnique">
+            <xs:selector xpath="annotation"/>
+            <xs:field xpath="@value"/>
+        </xs:unique>
+    </xs:element>
+
+    <xs:simpleType name="memberName">
+        <xs:restriction base="xs:string">
+            <xs:pattern value="(\*|([a-zA-Z_][a-zA-Z0-9_]*)(\*)?)"/>
+            <xs:maxLength value="255"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="methodAnnotation">
+        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="value" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Deny"/>
+                    <xs:enumeration value="Modify"/>
+                    <xs:enumeration value="Provide"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="propertyAnnotation">
+        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="value" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Deny"/>
+                    <xs:enumeration value="Modify"/>
+                    <xs:enumeration value="Provide"/>
+                    <xs:enumeration value="Observe"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="signalAnnotation">
+        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="value" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Deny"/>
+                    <xs:enumeration value="Provide"/>
+                    <xs:enumeration value="Observe"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:simpleType name="annotationName">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="org.alljoyn.Bus.Action"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="thumbprint">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="oid" type="thumbprintOid"/>
+                <xs:element name="value" type="xs:base64Binary"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="thumbprintOid">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="2.16.840.1.101.3.4.2.1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="signature">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="oid" type="signatureOid"/>
+                <xs:element name="value" type="xs:base64Binary"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="signatureOid">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="1.2.840.10045.4.3.2"/>
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>

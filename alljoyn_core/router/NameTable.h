@@ -31,7 +31,6 @@
 #include <qcc/Mutex.h>
 #include <qcc/Environ.h>
 #include <qcc/String.h>
-#include <qcc/StringMapKey.h>
 #include <qcc/LockLevel.h>
 
 #include <alljoyn/Status.h>
@@ -259,23 +258,8 @@ class NameTable {
         SessionOpts::NameTransferType nameTransfer;
     }  VirtualAliasEntry;
 
-    /**
-     * Hash functor
-     */
-    struct Hash {
-        inline size_t operator()(const qcc::String& s) const {
-            return qcc::hash_string(s.c_str());
-        }
-    };
-
-    struct Equal {
-        inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
-            return s1 == s2;
-        }
-    };
-
-    typedef std::unordered_map<qcc::String, std::deque<NameQueueEntry>, Hash, Equal> AliasMap;
-    typedef std::unordered_map<qcc::String, UniqueNameEntry, Hash, Equal> UniqueNameMap;
+    typedef std::unordered_map<std::string, std::deque<NameQueueEntry> > AliasMap;
+    typedef std::unordered_map<std::string, UniqueNameEntry> UniqueNameMap;
 
     mutable qcc::Mutex lock;                                             /**< Lock protecting name tables */
     UniqueNameMap uniqueNames;   /**< Unique name table */
@@ -285,7 +269,7 @@ class NameTable {
 
     typedef qcc::ManagedObj<NameListener*> ProtectedNameListener;
     std::set<ProtectedNameListener> listeners;                         /**< Listeners regsitered with name table */
-    std::map<qcc::StringMapKey, VirtualAliasEntry> virtualAliasNames;    /**< map of virtual aliases to virtual endpts */
+    std::map<std::string, VirtualAliasEntry> virtualAliasNames;    /**< map of virtual aliases to virtual endpts */
 
     /**
      * Returns the minimum name transfer value for sessions with the endpoint.

@@ -42,7 +42,6 @@ typedef enum {
     NEED_UPDATE         /**< The application is claimed, but requires a configuration update (after a software upgrade). */
 } alljoyn_applicationstate;
 
-extern const uint16_t CLAIM_CAPABILITIES_DEFAULT;
 /**
  *  Bitmasks used to indicate possible ways to claim the app.
  */
@@ -52,6 +51,8 @@ typedef enum {
     CAPABLE_ECDHE_ECDSA = 0x0004,
     CAPABLE_ECDHE_SPEKE = 0x0008
 } alljoyn_claimcapability_masks;
+
+extern const alljoyn_claimcapabilities CLAIM_CAPABILITIES_DEFAULT;
 
 /**
  *  Bitmasks used to indicate password source.
@@ -160,7 +161,7 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_setclaimcapabilitiesadditi
  * @param[in]   configurator    The alljoyn_permissionconfigurator performing the reset.
  *
  * @return
- *          #ER_OK if successful
+ *          #ER_OK if successful.
  *          An error code otherwise.
  */
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_reset(alljoyn_permissionconfigurator configurator);

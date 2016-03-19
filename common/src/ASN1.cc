@@ -148,6 +148,26 @@ QStatus AJ_CALL Crypto_ASN1::DecodeBase64(const qcc::String& b64in, qcc::String&
     return status;
 }
 
+QStatus AJ_CALL Crypto_ASN1::DecodeBase64(const qcc::String& b64, std::vector<uint8_t>& bin)
+{
+    size_t decodedBytes;
+    qcc::String binValue;
+    QStatus status = DecodeBase64(b64, binValue);
+
+    if (ER_OK == status) {
+        status = (binValue.size() % 2 == 0) ? ER_OK : ER_FAIL;
+    }
+
+    if (ER_OK == status) {
+        bin.resize(binValue.size() / 2);
+        decodedBytes = HexStringToBytes(binValue, bin.data(), bin.size());
+
+        status = (decodedBytes == bin.size()) ? ER_OK : ER_FAIL;
+    }
+
+    return status;
+}
+
 QStatus Crypto_ASN1::EncodeV(const char*& syntax, qcc::String& asn, va_list* argpIn)
 {
     va_list& argp = *argpIn;
@@ -749,6 +769,12 @@ qcc::String Crypto_ASN1::DecodeOID(const uint8_t* p, size_t len)
         }
     }
     return oid;
+}
+
+QStatus AJ_CALL Crypto_ASN1::EncodeBase64(const std::vector<uint8_t>& bin, qcc::String& b64)
+{
+    qcc::String binValue = BytesToHexString(bin.data(), bin.size(), true);
+    return EncodeBase64(binValue, b64);
 }
 
 qcc::String AJ_CALL Crypto_ASN1::ToString(const uint8_t* asn, size_t len, size_t indent)

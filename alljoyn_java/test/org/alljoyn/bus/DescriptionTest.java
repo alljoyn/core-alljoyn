@@ -97,8 +97,8 @@ public class DescriptionTest extends TestCase {
     }
 
     public static final String IntrospectWithDescriptionEn1 =
-            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
-            "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
+            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"+
+            "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"+
             "<node>\n"+
             "  <description>My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleDescriptionInterface\">\n"+
@@ -127,8 +127,8 @@ public class DescriptionTest extends TestCase {
             "</node>\n";
 
     public static final String IntrospectWithDescriptionDe1 =
-        "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
-        "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
+        "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"+
+        "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"+
         "<node>\n"+
         "  <description>DE: My service object</description>\n"+
         "  <interface name=\"org.alljoyn.bus.SimpleDescriptionInterface\">\n"+
@@ -192,8 +192,8 @@ public class DescriptionTest extends TestCase {
     }
 
     public static final String IntrospectWithDescriptionEn2 =
-            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
-            "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
+            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"+
+            "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"+
             "<node>\n"+
             "  <description>My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleDescriptionNoTranslateInterface\">\n"+
@@ -222,8 +222,8 @@ public class DescriptionTest extends TestCase {
             "</node>\n";
 
     public static final String IntrospectWithDescriptionDe2 =
-            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
-            "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
+            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"+
+            "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"+
             "<node>\n"+
             "  <description>DE: My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleDescriptionNoTranslateInterface\">\n"+
@@ -288,8 +288,8 @@ public class DescriptionTest extends TestCase {
     }
 
     public static final String IntrospectWithDescriptionEn3 =
-            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
-            "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
+            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"+
+            "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"+
             "<node>\n"+
             "  <description>My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleNoDescriptionInterface\">\n"+
@@ -318,8 +318,8 @@ public class DescriptionTest extends TestCase {
             "</node>\n";
 
     public static final String IntrospectWithDescriptionDe3 =
-            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
-            "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
+            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"+
+            "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"+
             "<node>\n"+
             "  <description>DE: My service object</description>\n"+
             "  <interface name=\"org.alljoyn.bus.SimpleNoDescriptionInterface\">\n"+
@@ -384,8 +384,8 @@ public class DescriptionTest extends TestCase {
     }
 
     public static final String IntrospectWithDescriptionDe4 =
-            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.0//EN\"\n"+
-            "\"http://www.allseen.org/alljoyn/introspect-1.0.dtd\">\n"+
+            "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"+
+            "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"+
             "<node>\n"+
             "  <description>My service object</description>\n" + 
             "  <interface name=\"org.alljoyn.bus.SimpleDescriptionInterface\">\n"+

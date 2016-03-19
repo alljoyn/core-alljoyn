@@ -287,7 +287,7 @@ int daemon(OptParse& opts)
         } else {
             Log(LOG_INFO, "Setting up transport for address: %s\n", it->c_str());
             if (!listenSpecs.empty()) {
-                listenSpecs.append(';');
+                listenSpecs.append(1, ';');
             }
             listenSpecs.append(*it);
         }
@@ -394,13 +394,13 @@ DAEMONLIBRARY_API int LoadDaemon(int argc, char** argv)
 
     ConfigDB config(configStr, opts.GetConfigFile());
     if (!config.LoadConfig()) {
-        const char* errsrc;
+        String errsrc;
         if (opts.UseInternalConfig()) {
             errsrc = "internal default config";
         } else {
-            errsrc = opts.GetConfigFile().c_str();
+            errsrc = opts.GetConfigFile();
         }
-        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc);
+        Log(LOG_ERR, "Failed to load the configuration - problem with %s.\n", errsrc.c_str());
         return DAEMON_EXIT_CONFIG_ERROR;
     }
 

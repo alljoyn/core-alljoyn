@@ -45,6 +45,7 @@
 #include <qcc/GUID.h>
 #include <qcc/Event.h>
 #include <qcc/LockLevel.h>
+#include <qcc/PerfCounters.h>
 
 #include "BusUtil.h"
 #include "IpNameServiceImpl.h"
@@ -2237,12 +2238,12 @@ QStatus IpNameServiceImpl::RefreshCache(TransportMask transportMask, const qcc::
     // MDNS packet that we will be sending out over unicast to this guid
     //
     m_mutex.Lock(MUTEX_CONTEXT);
-    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.end();
+    std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.end();
     if (!ping) {
         it = m_peerInfoMap.find(guid);
         longGuid = guid;
     } else {
-        for (std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator i = m_peerInfoMap.begin();
+        for (std::unordered_map<std::string, std::set<PeerInfo> >::iterator i = m_peerInfoMap.begin();
              i != m_peerInfoMap.end(); ++i) {
             if (qcc::GUID128(i->first).ToShortString() == guid) {
                 it = i;
@@ -3528,6 +3529,7 @@ void IpNameServiceImpl::SendProtocolMessage(
     const qcc::IPAddress& localAddress)
 {
     QCC_DbgPrintf(("**********IpNameServiceImpl::SendProtocolMessage()"));
+    IncrementPerfCounter(PERF_COUNTER_IPNS_SEND_PROTOCOL_MESSAGE);
 
 #if HAPPY_WANDERER
     if (Wander() == false) {
@@ -5400,6 +5402,8 @@ void* IpNameServiceImpl::Run(void* arg)
 
     m_mutex.Lock(MUTEX_CONTEXT);
     while ((m_state == IMPL_RUNNING) || (m_state == IMPL_STOPPING) || m_terminal) {
+        IncrementPerfCounter(PERF_COUNTER_IPNS_OUTER_LOOP);
+
         //
         // If we are shutting down, we need to make sure that we send out the
         // terminal is-at messages that correspond to a CancelAdvertiseName for
@@ -7653,6 +7657,7 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
 void IpNameServiceImpl::HandleProtocolMessage(uint8_t const* buffer, uint32_t nbytes, const qcc::IPEndpoint& remote, const qcc::IPEndpoint& local, int32_t interfaceIndex)
 {
     QCC_DbgPrintf(("IpNameServiceImpl::HandleProtocolMessage(0x%x, %d, %s)", buffer, nbytes, remote.ToString().c_str()));
+    IncrementPerfCounter(PERF_COUNTER_IPNS_HANDLE_PROTOCOL_MESSAGE);
 
 #if HAPPY_WANDERER
     if (Wander() == false) {
@@ -7748,7 +7753,7 @@ qcc::String IpNameServiceImpl::PeerInfo::ToString(const qcc::String& guid) const
 
 void IpNameServiceImpl::PrintPeerInfoMap()
 {
-    for (std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.begin();
+    for (std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.begin();
          it != m_peerInfoMap.end(); ++it) {
         for (std::set<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
             QCC_DbgHLPrintf(("  %s", pit->ToString(it->first).c_str()));
@@ -7762,7 +7767,7 @@ bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPE
         return false;
     }
     m_mutex.Lock(MUTEX_CONTEXT);
-    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
         bool foundEntry = false;
         for (std::set<PeerInfo>::iterator pit = it->second.begin(); !foundEntry && pit != it->second.end(); ++pit) {
@@ -7792,7 +7797,7 @@ bool IpNameServiceImpl::AddToPeerInfoMap(const qcc::String& guid, const qcc::IPE
 bool IpNameServiceImpl::RemoveFromPeerInfoMap(const qcc::String& guid)
 {
     m_mutex.Lock(MUTEX_CONTEXT);
-    std::unordered_map<qcc::String, std::set<PeerInfo>, Hash, Equal>::iterator it = m_peerInfoMap.find(guid);
+    std::unordered_map<std::string, std::set<PeerInfo> >::iterator it = m_peerInfoMap.find(guid);
     if (it != m_peerInfoMap.end()) {
         for (std::set<PeerInfo>::iterator pit = it->second.begin(); pit != it->second.end(); ++pit) {
             QCC_DbgHLPrintf(("Remove from peer info map: %s", pit->ToString(guid).c_str()));

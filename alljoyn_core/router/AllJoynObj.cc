@@ -1706,7 +1706,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
 
     /* Create a virtual endpoint for each unique name in args */
     AcquireLocks();
-    map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+    map<std::string, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
 
     if (bit == b2bEndpoints.end()) {
         QCC_LogError(ER_BUS_NO_ENDPOINT, ("Cannot find b2b endpoint %s", msg->GetRcvEndpointName()));
@@ -1720,7 +1720,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
     QCC_DbgTrace(("AllJoynObj::NamesHandler processing %d unique names", numItems));
 
     const String& shortOtherGuidStr = senderGuid.ToShortString();
-    StringMapKey key = bit->first;
+    std::string key = bit->first;
     for (size_t i = 0; i < numItems; ++i) {
         if (bit == b2bEndpoints.end()) {
             QCC_DbgPrintf(("b2bEp %s disappeared during NamesHandler", key.c_str()));
@@ -1812,7 +1812,7 @@ bool AllJoynObj::NamesHandler(Message msg, MsgArg arg)
                                    0);
         }
 
-        map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
+        map<std::string, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
             if ((it->second->GetFeatures().nameTransfer == SessionOpts::ALL_NAMES) && (senderGuid != it->second->GetRemoteGUID())) {
                 QCC_DbgPrintf(("Sending ExchangeName signal to %s", it->second->GetUniqueName().c_str()));
@@ -1853,9 +1853,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
 
     /* Parse message args */
     SessionPort sessionPort;
-    const char* src;
+    const char* src = nullptr;
     const char* sessionHost;
-    const char* dest;
+    const char* dest = nullptr;
     const char* srcB2B;
     const char* busAddr;
     SessionOpts optsIn;
@@ -1871,12 +1871,15 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     CallerType type = HOST;
     QStatus status = MsgArg::Get(args, 6, "qsssss", &sessionPort, &src, &sessionHost, &dest, &srcB2B, &busAddr);
     const String srcB2BStr = srcB2B;
+    vector<String> replyMembers;
 
     QCC_DbgPrintf(("JoinSessionThread::RunAttach(): sessionPort=%d, src=\"%s\", sessionHost=\"%s\", dest=\"%s\", srcB2B=\"%s\", busAddr=\"%s\"",
                    sessionPort, src, sessionHost, dest, srcB2B, busAddr));
 
     bool sendSessionJoined = false;
-    srcStr = src;
+    if (src) {
+        srcStr = src;
+    }
     bool attachSessionWithNames = false;
     bool isHostAttach = false;
 
@@ -1899,7 +1902,9 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
     } else {
         QCC_DbgPrintf(("AllJoynObj::RunAttach(): Good request.  Starting."));
 
-        destStr = dest;
+        if (dest) {
+            destStr = dest;
+        }
 
         ajObj.AcquireLocks();
         /*
@@ -2078,13 +2083,13 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                              * Include every member from this session map entry, apart from a self-joined host.
                              * We can't include that one because it would confuse legacy routers. They'd end up
                              * creating double session routes and corrupting their session cast set */
-                            vector<String> replyMembers;
                             for (vector<String>::const_iterator mit = smEntry->memberNames.begin();
                                  mit != smEntry->memberNames.end(); ++mit) {
                                 if (*mit != smEntry->sessionHost) {
                                     replyMembers.push_back(*mit);
                                 }
                             }
+
                             replyArgs[3].Set("a$", replyMembers.size(), &replyMembers.front());
 
                         } else {
@@ -2288,7 +2293,7 @@ qcc::ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunAttach()
                 SocketStream* ss1 = new SocketStream(srcB2bFd);
                 SocketStream* ss2 = new SocketStream(b2bFd);
                 size_t chunkSize = 4096;
-                String threadNameStr = id;
+                String threadNameStr = U32ToString(id);
                 threadNameStr.append("-pump");
                 const char* threadName = threadNameStr.c_str();
                 bool isManaged = true;
@@ -2653,7 +2658,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
         /* Let directly connected daemons that are in the same session know that this session endpoint is gone.
          * Note: This must be done only for non-router endpoints
          */
-        map<qcc::StringMapKey, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
+        map<std::string, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
         const qcc::GUID128& otherSideGuid = b2bEp->GetRemoteGUID();
         /* Send a DetachSession message over bus-to-bus endpoints in an MP session
          * if the session Id of the endpoint which is leaving matches this session id.
@@ -2675,7 +2680,7 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                                                    0,
                                                    0);
                 if (ER_OK == status) {
-                    String key2 = it2->first.c_str();
+                    std::string key2 = it2->first;
                     RemoteEndpoint ep = it2->second;
                     ReleaseLocks();
                     status = ep->PushMessage(sigMsg);
@@ -4011,7 +4016,9 @@ QStatus AllJoynObj::AddBusToBusEndpoint(RemoteEndpoint& endpoint)
 
     /* Create a virtual endpoint for talking to the remote bus control object */
     /* This endpoint will also carry broadcast messages for the remote bus */
-    String remoteControllerName(":", 1, 16);
+    String remoteControllerName;
+    remoteControllerName.reserve(16);
+    remoteControllerName.append(":");
     remoteControllerName.append(shortGuidStr);
     remoteControllerName.append(".1");
     AddVirtualEndpoint(remoteControllerName, endpoint->GetUniqueName());
@@ -4082,7 +4089,7 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
                 String exitingEpName = it->second->GetUniqueName();
 
                 /* Let directly connected daemons that are interested know that this virtual endpoint is gone. */
-                map<qcc::StringMapKey, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
+                map<std::string, RemoteEndpoint>::iterator it2 = b2bEndpoints.begin();
                 const qcc::GUID128& otherSideGuid = endpoint->GetRemoteGUID();
                 guidToBeChecked = otherSideGuid.ToString();
                 /* Forward the message over bus-to-bus endpoints with name transfer ALL_NAMES or over an MP session
@@ -4109,8 +4116,8 @@ void AllJoynObj::RemoveBusToBusEndpoint(RemoteEndpoint& endpoint)
                                                            0,
                                                            0);
                         if (ER_OK == status) {
-                            String key = it->first;
-                            String key2 = it2->first.c_str();
+                            std::string key = it->first;
+                            std::string key2 = it2->first;
                             RemoteEndpoint ep = it2->second;
                             ReleaseLocks();
                             status = ep->PushMessage(sigMsg);
@@ -4376,7 +4383,7 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
 
     /* Ignore a NameChange for non-local names from routers that predate the DAEMON_NAMES(now SLS_NAMES) flag */
     AcquireLocks();
-    map<qcc::StringMapKey, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
+    map<std::string, RemoteEndpoint>::iterator bit = b2bEndpoints.find(msg->GetRcvEndpointName());
     if (bit != b2bEndpoints.end() && (bit->second->GetFeatures().nameTransfer == SessionOpts::SLS_NAMES)) {
         qcc::GUID128 otherGuid = bit->second->GetRemoteGUID();
         const String& shortOtherGuidStr = otherGuid.ToShortString();
@@ -4454,8 +4461,8 @@ void AllJoynObj::NameChangedSignalHandler(const InterfaceDescription::Member* me
     if (madeChanges) {
         /* Forward message to directly connected controllers that are interested except the one that sent us this NameChanged */
         AcquireLocks();
-        map<qcc::StringMapKey, RemoteEndpoint>::const_iterator cBit = b2bEndpoints.find(msg->GetRcvEndpointName());
-        map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
+        map<std::string, RemoteEndpoint>::const_iterator cBit = b2bEndpoints.find(msg->GetRcvEndpointName());
+        map<std::string, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
 
             /* Forward the message over bus-to-bus endpoints with name transfer ALL_NAMES or over an MP session
@@ -4738,7 +4745,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
 
         /* Send NameChanged to all directly connected controllers */
         AcquireLocks();
-        map<qcc::StringMapKey, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
+        map<std::string, RemoteEndpoint>::iterator it = b2bEndpoints.begin();
         while (it != b2bEndpoints.end()) {
 
             bool sendInfo = false;
@@ -4849,7 +4856,7 @@ void AllJoynObj::NameOwnerChanged(const qcc::String& alias,
                                            0);
 
                 if (ER_OK == status) {
-                    StringMapKey key = it->first;
+                    std::string key = it->first;
                     RemoteEndpoint ep = it->second;
                     ReleaseLocks();
 
@@ -5920,5 +5927,5 @@ void AllJoynObj::PingResponse(TransportMask transport, const qcc::IPEndpoint& ds
         QCC_LogError(status, ("Response failed"));
     }
 }
-
 }
+

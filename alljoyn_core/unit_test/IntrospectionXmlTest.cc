@@ -46,8 +46,8 @@ static const char* INTERFACE_NAME = "org.alljoyn.Bus.DescriptionInterface";
 static const char* SERVICE_PATH = "/";
 
 static const char* IntrospectionXmlWithVersion =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -78,8 +78,8 @@ static const char* IntrospectionXmlWithVersion =
     "</node>\n";
 
 static const char* IntrospectionXmlWithTypeSignatures =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -122,8 +122,8 @@ static const char* IntrospectionXmlWithTypeSignatures =
     "</node>\n";
 
 static const char* IntrospectionXmlWithTypeSignatureAnnotations =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -154,8 +154,8 @@ static const char* IntrospectionXmlWithTypeSignatureAnnotations =
     "</node>\n";
 
 static const char* IntrospectionXmlWithDescriptions =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -200,8 +200,8 @@ static const char* IntrospectionXmlWithDescriptions =
     "</node>\n";
 
 static const char* IntrospectionXmlWithSignalEmissionBehaviors =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -257,8 +257,8 @@ static const char* IntrospectionXmlWithSignalEmissionBehaviors =
     "</node>\n";
 
 static const char* IntrospectionXmlWithConstants =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -289,8 +289,8 @@ static const char* IntrospectionXmlWithConstants =
     "</node>\n";
 
 static const char* IntrospectionXmlWithConstantProperties =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -316,8 +316,8 @@ static const char* IntrospectionXmlWithConstantProperties =
     "</node>\n";
 
 static const char* IntrospectionXmlWithCustomAnnotations =
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -343,8 +343,8 @@ static const char* IntrospectionXmlWithCustomAnnotations =
     "</node>\n";
 
 static const char* IntrospectionXmlLegacy[] = {
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
@@ -390,8 +390,8 @@ static const char* IntrospectionXmlLegacy[] = {
     "</node>\n"
     ,
 
-    "<!DOCTYPE node PUBLIC \"-//freedesktop//DTD D-BUS Object Introspection 1.0//EN\"\n"
-    "\"http://standards.freedesktop.org/dbus/introspect-1.0.dtd\">\n"
+    "<!DOCTYPE node PUBLIC \"-//allseen//DTD ALLJOYN Object Introspection 1.1//EN\"\n"
+    "\"http://www.allseen.org/alljoyn/introspect-1.1.dtd\">\n"
     "<node>\n"
     "  <node name=\"org\"/>\n"
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"

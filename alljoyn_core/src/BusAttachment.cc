@@ -37,6 +37,7 @@
 #endif
 
 #include <algorithm>
+#include <set>
 
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/BusListener.h>
@@ -154,6 +155,28 @@ struct RemoveMatchCBContext {
 
 namespace ajn {
 
+// Maintain a list of all BusAttachment objects that can be found easily in a debugger
+struct BusAttachmentSet {
+    std::set<BusAttachment::Internal*> busInternalSet;
+    qcc::Mutex lock;
+
+    BusAttachmentSet() : lock(qcc::LOCK_LEVEL_BUSATTACHMENT_INTERNAL_BUSATTACHMENTSETLOCK) { }
+
+    void Add(BusAttachment::Internal* busInternal)
+    {
+        lock.Lock(MUTEX_CONTEXT);
+        busInternalSet.insert(busInternal);
+        lock.Unlock(MUTEX_CONTEXT);
+    }
+
+    void Delete(BusAttachment::Internal* busInternal)
+    {
+        lock.Lock(MUTEX_CONTEXT);
+        busInternalSet.erase(busInternal);
+        lock.Unlock(MUTEX_CONTEXT);
+    }
+};
+static BusAttachmentSet* s_allBusAttachments = nullptr;
 
 AJ_PCSTR BusAttachment::Internal::STATE_MATCH_RULE = "type='signal',interface='org.alljoyn.Bus.Application',member='State',sessionless='t'";
 uint32_t BusAttachment::Internal::APPLICATION_STATE_LISTENER_UNREGISTER_WAIT_INTERVAL = 5U;
@@ -217,6 +240,9 @@ BusAttachment::Internal::Internal(const char* appName,
     authManager.RegisterMechanism(AuthMechExternal::Factory, AuthMechExternal::AuthName());
     authManager.RegisterMechanism(AuthMechAnonymous::Factory, AuthMechAnonymous::AuthName());
 
+    if (s_allBusAttachments) {
+        s_allBusAttachments->Add(this);
+    }
 }
 
 BusAttachment::Internal::~Internal()
@@ -237,6 +263,10 @@ BusAttachment::Internal::~Internal()
     transportList.Join();
     delete router;
     router = NULL;
+
+    if (s_allBusAttachments) {
+        s_allBusAttachments->Delete(this);
+    }
 }
 
 /*
@@ -472,7 +502,7 @@ QStatus BusAttachment::Start()
 QStatus BusAttachment::Internal::TransportConnect(const char* requestedConnectSpec)
 {
     QStatus status;
-    Transport* trans = transportList.GetTransport(requestedConnectSpec);
+    Transport* trans = requestedConnectSpec ? transportList.GetTransport(requestedConnectSpec) : nullptr;
     if (trans) {
         SessionOpts emptyOpts;
         BusEndpoint tempEp;
@@ -854,9 +884,6 @@ void BusAttachment::WaitStopInternal()
             /* Clear peer state */
             busInternal->peerStateTable.Clear();
 
-            /* Persist keystore */
-            busInternal->keyStore.Store();
-
             isStarted = false;
             isStopping = false;
         }
@@ -877,16 +904,16 @@ QStatus BusAttachment::CreateInterface(const char* name, InterfaceDescription*& 
         iface = NULL;
         return ER_BUS_IFACE_ALREADY_EXISTS;
     }
-    StringMapKey key = String(name);
+    std::string key = String(name);
     InterfaceDescription intf(name, secPolicy);
-    iface = &(busInternal->ifaceDescriptions.insert(pair<StringMapKey, InterfaceDescription>(key, intf)).first->second);
+    iface = &(busInternal->ifaceDescriptions.insert(pair<std::string, InterfaceDescription>(key, intf)).first->second);
     return ER_OK;
 }
 
 QStatus BusAttachment::DeleteInterface(InterfaceDescription& iface)
 {
     /* Get the (hopefully) unactivated interface */
-    map<StringMapKey, InterfaceDescription>::iterator it = busInternal->ifaceDescriptions.find(StringMapKey(iface.GetName()));
+    map<std::string, InterfaceDescription>::iterator it = busInternal->ifaceDescriptions.find(std::string(iface.GetName()));
     if ((it != busInternal->ifaceDescriptions.end()) && !it->second.isActivated) {
         busInternal->ifaceDescriptions.erase(it);
         return ER_OK;
@@ -898,7 +925,7 @@ QStatus BusAttachment::DeleteInterface(InterfaceDescription& iface)
 size_t BusAttachment::GetInterfaces(const InterfaceDescription** ifaces, size_t numIfaces) const
 {
     size_t count = 0;
-    map<qcc::StringMapKey, InterfaceDescription>::const_iterator it;
+    map<std::string, InterfaceDescription>::const_iterator it;
     for (it = busInternal->ifaceDescriptions.begin(); it != busInternal->ifaceDescriptions.end(); it++) {
         if (it->second.isActivated) {
             if (ifaces && (count < numIfaces)) {
@@ -912,11 +939,15 @@ size_t BusAttachment::GetInterfaces(const InterfaceDescription** ifaces, size_t 
 
 const InterfaceDescription* BusAttachment::GetInterface(const char* name) const
 {
-    map<StringMapKey, InterfaceDescription>::const_iterator it = busInternal->ifaceDescriptions.find(StringMapKey(name));
+    if (name == nullptr) {
+        return nullptr;
+    }
+
+    map<std::string, InterfaceDescription>::const_iterator it = busInternal->ifaceDescriptions.find(std::string(name));
     if ((it != busInternal->ifaceDescriptions.end()) && it->second.isActivated) {
         return &(it->second);
     } else {
-        return NULL;
+        return nullptr;
     }
 }
 
@@ -1134,7 +1165,7 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     if (status == ER_OK) {
         AllJoynPeerObj* peerObj = busInternal->localEndpoint->GetPeerObj();
         if (peerObj) {
-            peerObj->SetupPeerAuthentication(authMechanisms, authMechanisms ? authListener : NULL, *this);
+            peerObj->SetupPeerAuthentication(authMechanisms ? String(authMechanisms) : String(), authMechanisms ? authListener : NULL, *this);
         } else {
             return ER_BUS_SECURITY_NOT_ENABLED;
         }
@@ -3387,29 +3418,7 @@ void BusAttachment::Internal::GetNameOwnerAsyncCB(Message& reply, void* context)
 
 bool KeyStoreKeyEventListener::NotifyAutoDelete(KeyStore* holder, const KeyStore::Key& key)
 {
-    KeyBlob kb;
-    QStatus status = holder->GetKey(key, kb);
-    if (status != ER_OK) {
-        return false;
-    }
-    if ((kb.GetAssociationMode() != KeyBlob::ASSOCIATE_HEAD) &&
-        (kb.GetAssociationMode() != KeyBlob::ASSOCIATE_BOTH)) {
-        return false;
-    }
-    KeyStore::Key* list;
-    size_t numItems;
-    status = holder->SearchAssociatedKeys(key, &list, &numItems);
-    if (status != ER_OK) {
-        return false;
-    }
-    if (numItems == 0) {
-        return false;
-    }
-    for (size_t cnt = 0; cnt < numItems; cnt++) {
-        status = holder->DelKey(list[cnt]);
-    }
-    delete [] list;
-    return true;
+    return holder->DelKey(key, true);
 }
 
 void BusAttachment::SetDescriptionTranslator(Translator* newTranslator)
@@ -3430,12 +3439,15 @@ PermissionConfigurator& BusAttachment::GetPermissionConfigurator()
 void BusAttachment::Internal::Init()
 {
     clientTransportsContainer = new ClientTransportFactoryContainer();
+    s_allBusAttachments = new BusAttachmentSet();
 }
 
 void BusAttachment::Internal::Shutdown()
 {
     delete clientTransportsContainer;
     clientTransportsContainer = NULL;
+    delete s_allBusAttachments;
+    s_allBusAttachments = nullptr;
 }
 
 QStatus BusAttachment::Internal::CallFactoryResetCallback()

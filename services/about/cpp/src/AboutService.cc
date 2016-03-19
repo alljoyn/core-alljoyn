@@ -134,7 +134,6 @@ QStatus AboutService::Announce() {
     for (std::map<qcc::String, std::vector<qcc::String> >::const_iterator it = m_AnnounceObjectsMap.begin();
          it != m_AnnounceObjectsMap.end(); ++it) {
 
-        qcc::String objectPath = it->first;
         std::vector<const char*> interfacesVector(it->second.size());
         std::vector<qcc::String>::const_iterator interfaceIt;
         int interfaceIndex = 0;
@@ -143,7 +142,7 @@ QStatus AboutService::Announce() {
             interfacesVector[interfaceIndex++] = interfaceIt->c_str();
         }
 
-        status = announceObjectsArg[objIndex].Set("(oas)", objectPath.c_str(), interfacesVector.size(), (interfacesVector.empty()) ? NULL : &interfacesVector.front());
+        status = announceObjectsArg[objIndex].Set("(oas)", it->first.c_str(), interfacesVector.size(), (interfacesVector.empty()) ? NULL : &interfacesVector.front());
         if (status != ER_OK) {
             m_announceObjectsLock.Unlock(MUTEX_CONTEXT);
             return status;

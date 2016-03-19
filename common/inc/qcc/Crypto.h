@@ -28,6 +28,7 @@
 #include <stdarg.h>
 
 #include <qcc/KeyBlob.h>
+#include <qcc/SecureAllocator.h>
 #include <qcc/Stream.h>
 #include <qcc/String.h>
 
@@ -291,6 +292,15 @@ class Crypto_Hash {
     QStatus Update(const qcc::String& str);
 
     /**
+     * Update the digest with the contents of a string
+     *
+     * @param d   The vector<uint8_t> to hash.
+     *
+     * @return  Indication of success or failure.
+     */
+    QStatus Update(const std::vector<uint8_t, SecureAllocator<uint8_t> >& d);
+
+    /**
      * Retrieve the digest into the supplied buffer.  It is assumed that buffer is large enough to
      * store the digest. Unless keepAlive is true, after the digest has been computed the hash
      * instance is not longer usable until re-initialized. Keep alive is not allowed for HMAC.
@@ -384,7 +394,7 @@ class Crypto_SHA256 : public Crypto_Hash {
  * @param out     Output data
  * @param outLen  The required length of the output data.
  */
-QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const qcc::String& seed, uint8_t* out, size_t outLen);
+QStatus Crypto_PseudorandomFunction(const KeyBlob& secret, const char* label, const std::vector<uint8_t, SecureAllocator<uint8_t> >& seed, uint8_t* out, size_t outLen);
 
 /**
  *  Secure Remote Password (SRP6) class. This implements the core algorithm for Secure Remote
@@ -706,6 +716,17 @@ class Crypto_ASN1 {
     static QStatus AJ_CALL DecodeBase64(const qcc::String& b64, qcc::String& bin);
 
     /**
+     * Decode a PEM base-64 ANSI string to a vector of bytes.
+     *
+     * @param b64  The base-64 string to decode.
+     * @param bin  The vector of bytes output of the decoding.
+     *
+     * @return ER_OK if the decode succeeded.
+     *         An error status otherwise.
+     */
+    static QStatus AJ_CALL DecodeBase64(const qcc::String& b64, std::vector<uint8_t>& bin);
+
+    /**
      * Encode a binary string as a PEM base-64 ANSI string.
      *
      * @param bin  The binary string to encode.
@@ -715,6 +736,17 @@ class Crypto_ASN1 {
      *         An error status otherwise.
      */
     static QStatus AJ_CALL EncodeBase64(const qcc::String& bin, qcc::String& b64);
+
+    /**
+     * Encode a vector of bytes as a PEM base-64 ANSI string.
+     *
+     * @param bin  The vector of bytes to encode.
+     * @param b64  The base-64 output of the decoding.
+     *
+     * @return ER_OK if the encode succeeded.
+     *         An error status otherwise.
+     */
+    static QStatus AJ_CALL EncodeBase64(const std::vector<uint8_t>& bin, qcc::String& b64);
 
     /*
      * Render ASN.1 as a "human" readable string

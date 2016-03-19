@@ -407,9 +407,12 @@ class DefaultECDHEAuthListener : public AuthListener {
      * @param[in] pskSize the size of the pre-shared key.  Must be zero or at
      *                    least 16 bytes.  See the remark below on secret length.
      *
-     * @remarks
+     * @remarks This constructor is deprecated because ECHDE_PSK is deprecated.
+     *          See the constructor DefaultECDHEAuthListener() and the
+     *          SetPassword() method, to set a shared credential for the ECDHE_SPEKE
+     *          mechanism.
      */
-    DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize);
+    QCC_DEPRECATED(DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize));
 
     ~DefaultECDHEAuthListener();
 
@@ -430,7 +433,7 @@ class DefaultECDHEAuthListener : public AuthListener {
      *          See SetPassword(), to set a shared credential for the ECDHE_SPEKE
      *          mechanism.
      */
-    virtual QStatus SetPSK(const uint8_t* secret, size_t secretSize);
+    QCC_DEPRECATED(virtual QStatus SetPSK(const uint8_t * secret, size_t secretSize));
 
     /**
      * @brief updates the password used by this DefaultECDHEAuthListener.

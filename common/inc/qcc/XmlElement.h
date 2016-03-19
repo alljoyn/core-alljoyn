@@ -91,6 +91,14 @@ class XmlElement {
     qcc::String Generate(qcc::String* outStr = NULL) const;
 
     /**
+     * Return a C string representation of the XmlElement
+     *
+     * @return   XML in form of a zero-terminated string.
+     *           Must be destroyed by the caller using "delete[]".
+     */
+    AJ_PSTR ToString() const;
+
+    /**
      * Get the element name
      *
      * @return XML element name or empty string if not set.
@@ -138,6 +146,13 @@ class XmlElement {
      * @param value            Attribute value.
      */
     void AddAttribute(const qcc::String& attributeName, const qcc::String& value) { attributes[attributeName] = value; }
+
+    /**
+     * Add a child element. The parent will take over memory managment for the child.
+     *
+     * @param child  The child XmlElement.
+     */
+    void AddChild(XmlElement* child);
 
     /**
      * Get the element map.

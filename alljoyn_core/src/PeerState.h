@@ -67,11 +67,11 @@ namespace ajn {
 
 #define AUTH_SUITE_ANONYMOUS    AUTH_KEYX_ANONYMOUS
 #define AUTH_SUITE_EXTERNAL     AUTH_KEYX_EXTERNAL
-#define AUTH_SUITE_SRP_KEYX     AUTH_KEYX_SRP
-#define AUTH_SUITE_SRP_LOGON    AUTH_KEYX_SRP_LOGON
+#define AUTH_SUITE_SRP_KEYX     AUTH_KEYX_SRP               /* Depreceated, will be removed in a future release. */
+#define AUTH_SUITE_SRP_LOGON    AUTH_KEYX_SRP_LOGON         /* Depreceated, will be removed in a future release. */
 
 #define AUTH_SUITE_ECDHE_NULL   (AUTH_KEYX_ECDHE | 0x0001)
-#define AUTH_SUITE_ECDHE_PSK    (AUTH_KEYX_ECDHE | 0x0002)
+#define AUTH_SUITE_ECDHE_PSK    (AUTH_KEYX_ECDHE | 0x0002)  /* Depreceated, will be removed in a future release. */
 #define AUTH_SUITE_ECDHE_ECDSA  (AUTH_KEYX_ECDHE | 0x0004)
 #define AUTH_SUITE_ECDHE_SPEKE  (AUTH_KEYX_ECDHE | 0x0008)
 

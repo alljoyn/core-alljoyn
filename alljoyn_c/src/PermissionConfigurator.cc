@@ -31,7 +31,7 @@
 using namespace qcc;
 using namespace ajn;
 
-const uint16_t CLAIM_CAPABILITIES_DEFAULT = PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT;
+const alljoyn_claimcapabilities CLAIM_CAPABILITIES_DEFAULT = PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT;
 
 QStatus AJ_CALL alljoyn_permissionconfigurator_getapplicationstate(const alljoyn_permissionconfigurator configurator, alljoyn_applicationstate* state)
 {
