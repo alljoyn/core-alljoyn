@@ -255,8 +255,6 @@ uint32_t AJ_CALL qcc::StringToU32(const qcc::String& inStr, unsigned int base, u
             ++it;
             if ((it != inStr.end()) && ((*it == 'x') || (*it == 'X'))) {
                 ++it;
-            } else {
-                it = inStr.begin();
             }
         }
     }
@@ -328,8 +326,6 @@ uint64_t AJ_CALL qcc::StringToU64(const qcc::String& inStr, unsigned int base, u
             ++it;
             if ((it != inStr.end()) && ((*it == 'x') || (*it == 'X'))) {
                 ++it;
-            } else {
-                it = inStr.begin();
             }
         }
     }

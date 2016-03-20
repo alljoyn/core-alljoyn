@@ -73,8 +73,8 @@ void LookupTableTranslator::GetTargetLanguage(size_t index, qcc::String& ret)
 
 QStatus LookupTableTranslator::AddTargetLanguage(const char* language, bool* added)
 {
-    std::pair<supportedLanguagesIterator, bool> ret = supportedLanguages.insert(language);
-    if (added != NULL) {
+    std::pair<supportedLanguagesIterator, bool> ret = supportedLanguages.insert((language == nullptr) ? "" : language);
+    if (added != nullptr) {
         *added = ret.second;
     }
     return ER_OK;

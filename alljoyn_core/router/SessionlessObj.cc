@@ -1183,7 +1183,9 @@ QStatus SessionlessObj::ParseAdvertisedName(const qcc::String& name, uint32_t* v
         if (changeId) {
             *changeId = StringToU32(name.substr(changePos + 2), 16);
         }
-        guidPos = name.find_last_of('.', changePos);
+        if (changePos > 0) {
+            guidPos = name.find_last_of('.', changePos - 1);
+        }
     }
     if (guidPos == String::npos) {
         return ER_FAIL;
