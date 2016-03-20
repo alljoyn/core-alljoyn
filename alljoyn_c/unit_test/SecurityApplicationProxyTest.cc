@@ -614,12 +614,14 @@ bool SecurityApplicationProxyPreProxyTest::endManagementHappened;
 
 TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenCreatingWithNonExistingRemoteApp)
 {
-    EXPECT_NE(nullptr, alljoyn_securityapplicationproxy_create(securityManager, INVALID_BUS_NAME, securityManagerSessionId));
+    securityManagerSecurityApplicationProxy = alljoyn_securityapplicationproxy_create(securityManager, INVALID_BUS_NAME, securityManagerSessionId);
+    EXPECT_NE(nullptr, securityManagerSecurityApplicationProxy);
 }
 
 TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenCreatingWithInvalidSessionId)
 {
-    EXPECT_NE(nullptr, alljoyn_securityapplicationproxy_create(securityManager, securityManagerUniqueName, 0));
+    securityManagerSecurityApplicationProxy = alljoyn_securityapplicationproxy_create(securityManager, securityManagerUniqueName, 0);
+    EXPECT_NE(nullptr, securityManagerSecurityApplicationProxy);
 }
 
 TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenDestroyingNull)
