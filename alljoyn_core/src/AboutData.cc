@@ -579,23 +579,32 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
     //     tags conform to this RFC
     bool added;
     QStatus status = aboutDataInternal->translator->AddTargetLanguage(language, &added);
+
     if ((status == ER_OK) && added) {
         // A new language has been added. Rebuild the MsgArg and update the field.
         size_t supportedLangsNum = aboutDataInternal->translator->NumTargetLanguages();
-        const char** supportedLangs = new const char*[supportedLangsNum];
+        char** supportedLangs = new char*[supportedLangsNum];
+
         for (size_t count = 0; count < supportedLangsNum; count++) {
             qcc::String lang;
             aboutDataInternal->translator->GetTargetLanguage(count, lang);
-            supportedLangs[count] = lang.c_str();
+            supportedLangs[count] = new char[lang.length() + 1];
+            strcpy(supportedLangs[count], lang.c_str());
         }
+
         MsgArg arg;
         status = arg.Set(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
         if (status != ER_OK) {
             return status;
         }
         status = SetField(SUPPORTED_LANGUAGES, arg);
+
+        for (size_t count = 0; count < supportedLangsNum; count++) {
+            delete [] (supportedLangs[count]);
+        }
         delete [] supportedLangs;
     }
+
     return status;
 }
 
