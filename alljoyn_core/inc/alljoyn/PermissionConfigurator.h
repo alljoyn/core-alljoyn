@@ -119,11 +119,11 @@ class PermissionConfigurator {
     /**
      * Set the manifest template for the application from an XML.
      *
-     * @params manifestXml XML containing the manifest template.
+     * @params manifestTemplateXml XML containing the manifest template.
      *
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus SetManifestTemplateFromXml(AJ_PCSTR manifestXml);
+    QStatus SetManifestTemplateFromXml(AJ_PCSTR manifestTemplateXml);
 
     /**
      * Retrieve the state of the application.
