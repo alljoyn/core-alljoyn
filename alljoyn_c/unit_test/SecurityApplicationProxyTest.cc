@@ -302,7 +302,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
     void SetUpManifest(alljoyn_busattachment bus, AJ_PCSTR manifestTemplate)
     {
         alljoyn_permissionconfigurator configurator = alljoyn_busattachment_getpermissionconfigurator(bus);
-        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(configurator, manifestTemplate));
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configurator, manifestTemplate));
     }
 };
 

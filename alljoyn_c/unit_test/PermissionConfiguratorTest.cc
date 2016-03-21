@@ -259,7 +259,7 @@ TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenSettingCl
 
 TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithoutPeerSecurity)
 {
-    EXPECT_EQ(ER_FEATURE_NOT_AVAILABLE, alljoyn_permissionconfigurator_setmanifestfromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
+    EXPECT_EQ(ER_FEATURE_NOT_AVAILABLE, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
 }
 
 TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenResetingWithoutPeerSecurity)
@@ -269,12 +269,12 @@ TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenResetingW
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithEmptyString)
 {
-    EXPECT_EQ(ER_EOF, alljoyn_permissionconfigurator_setmanifestfromxml(configuratorUnderTest, ""));
+    EXPECT_EQ(ER_EOF, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configuratorUnderTest, ""));
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithInvalidXml)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, alljoyn_permissionconfigurator_setmanifestfromxml(configuratorUnderTest, INVALID_MANIFEST_TEMPLATE));
+    EXPECT_EQ(ER_XML_MALFORMED, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configuratorUnderTest, INVALID_MANIFEST_TEMPLATE));
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyBeNotClaimable)
@@ -303,13 +303,13 @@ TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyHaveNoClaimCapabil
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldPassWhenSettingManifestTemplateWithValidXml)
 {
-    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldChangeStateToClaimableAfterSettingManifestTemplate)
 {
     alljoyn_applicationstate state;
-    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getapplicationstate(configuratorUnderTest, &state));
 
     EXPECT_EQ(CLAIMABLE, state);
@@ -335,7 +335,7 @@ TEST_F(PermissionConfiguratorTestWithSecurity, DISABLED_ShouldNotMakeAppClaimabl
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldMakeAppClaimableAfterResetForSetTemplateAndInNeedOfUpdate)
 {
     alljoyn_applicationstate state;
-    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configuratorUnderTest, VALID_ALLOW_ALL_MANIFEST_TEMPLATE));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setapplicationstate(configuratorUnderTest, NEED_UPDATE));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_reset(configuratorUnderTest));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getapplicationstate(configuratorUnderTest, &state));
