@@ -69,11 +69,30 @@ Transport* TransportList::GetTransport(const qcc::String& transportSpec)
 {
     Transport* transport = nullptr;
 
-    if (isInitialized && isStarted) {
+    if (isInitialized && isStarted && (transportList.size() != 0)) {
         /* ':' separates the transport name from transport args */
         size_t colonOff = transportSpec.find_first_of(':');
 
-        if (colonOff != 0) {
+        /*
+         * When the connect spec is empty, connect using the first Transport
+         * from this list.
+         */
+        bool useFirstTransport = transportSpec.empty();
+
+        if (!useFirstTransport) {
+            /*
+             * When the connect spec has the format ":example", try to connect
+             * using the first Transport from this list, and use "example" as the
+             * transport args. This behavior is fragile, because replacing the
+             * first Transport from this list with a different type of Transport
+             * could lead to "example" containing invalig args for the new Transport.
+             */
+            useFirstTransport = (colonOff == 0);
+        }
+
+        if (useFirstTransport) {
+            transport = transportList[0];
+        } else {
             for (size_t i = 0; i < transportList.size(); ++i) {
                 Transport*& trans = transportList[i];
                 if (0 == transportSpec.compare(0, colonOff, trans->GetTransportName())) {
