@@ -46,4 +46,19 @@ qcc::String getConnectArg();
 qcc::String genUniqueName(alljoyn_busattachment bus);
 
 }
+
+/*
+ * Calculates the path to the default key store file corresponding to the
+ * application and fname parameters, and then deletes that file.
+ *
+ * @remark The parameters of this method correspond to the parameters of the DefaultKeyStoreListener constructor
+ *
+ * @param application the appName parameter used when constructing a BusAttachment using this key store
+ * @param fname key store file used the application, or nullptr if using the default file name
+ * @return
+ *      - ER_OK if the file was not present, of if it has been deleted successfully
+ *      - An error status otherwise
+ */
+QStatus DeleteDefaultKeyStoreFileCTest(AJ_PCSTR application, AJ_PCSTR fname = nullptr);
+
 #endif //AJTESTCOMMON_H

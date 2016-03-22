@@ -48,6 +48,7 @@ static AJ_PCSTR INVALID_MANIFEST_TEMPLATE =
 static void basicBusSetup(alljoyn_busattachment* bus, AJ_PCSTR busName, ajn::InMemoryKeyStoreListener* keyStoreListener)
 {
     *bus = alljoyn_busattachment_create(busName, QCC_FALSE);
+    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(busName));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_registerkeystorelistener(*bus, (alljoyn_keystorelistener)keyStoreListener));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_start(*bus));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_connect(*bus, ajn::getConnectArg().c_str()));
