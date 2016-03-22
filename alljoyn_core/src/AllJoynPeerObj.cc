@@ -2110,14 +2110,17 @@ void AllJoynPeerObj::HandleSendManifests(const InterfaceDescription::Member* mem
          * If limiting this information disclosure is important, the security manager must assign more
          * carefully-scoped manifests to take advantage of this selection process.
          */
+
         for (const Manifest peerManifest : peerState->GetManifests()) {
             if (ManifestMatches(myManifest, peerManifest)) {
                 QCC_DbgTrace(("Sending manifest: %s", myManifest->ToString().c_str()));
                 manifestsToSend.push_back(myManifest);
+                break;
             } else {
                 QCC_DbgTrace(("Skipping manifest: %s", myManifest->ToString().c_str()));
             }
         }
+
     }
 
     QCC_DbgTrace(("Manifest selection done; sending %" PRIuSIZET, manifestsToSend.size()));

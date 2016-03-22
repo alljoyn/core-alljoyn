@@ -2029,10 +2029,32 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
         }
 
         status = ER_CRYPTO_ERROR;
-        for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
-            status = signedManifest->VerifyByThumbprint(thumbprintVector, &(issuerPublicKeys[i]));
-            if (ER_OK == status) {
-                break;
+        if (0 == issuerPublicKeys.size()) {
+            /* Sometimes we don't get a full cert chain if the chain is just the leaf and then
+             * a trust anchor. In this case, try to validate the manifest with all the CA trust
+             * anchors.
+             */
+            trustAnchors.Lock(MUTEX_CONTEXT);
+
+            for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+                if ((*it)->use == TRUST_ANCHOR_CA) {
+                    status = signedManifest->VerifyByThumbprint(thumbprintVector, (*it)->keyInfo.GetPublicKey());
+                    if (ER_OK == status) {
+                        break;
+                    }
+                }
+            }
+
+            trustAnchors.Unlock(MUTEX_CONTEXT);
+        } else {
+            /* If we did get the public key of the leaf cert issuer, though, that key must have
+             * signed the manifest.
+             */
+            for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
+                status = signedManifest->VerifyByThumbprint(thumbprintVector, &(issuerPublicKeys[i]));
+                if (ER_OK == status) {
+                    break;
+                }
             }
         }
 
@@ -2790,7 +2812,6 @@ static bool MatchesPrefix(const String& str, const String& prefix)
 
 QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Message* msg)
 {
-    QCC_DbgTrace(("%s", __FUNCTION__));
     if ((nullptr == remotePeerObj) && (nullptr == msg)) {
         return ER_BAD_ARG_1;
     }
@@ -2817,8 +2838,6 @@ QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Me
 
     PeerState peerState = bus.GetInternal().GetPeerStateTable()->GetPeerState(destination, false);
 
-    QCC_DbgTrace(("destination is %s", destination));
-
     /* This will be false for peers that aren't secure, and unknown peers.
      * In both cases, nothing to do.
      */
@@ -2829,11 +2848,14 @@ QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Me
     /*
      * Manifests also only apply to ECDSA sessions. This may not yet be set if the peer hasn't
      * been authenticated; if so, skip for now, because authentication will get triggered and we'll
-     * have another chance to send manifests from AllJoynPeerObj.
+     * have another chance to send manifests from AllJoynPeerObj::AuthenticatePeer.
      */
     if ((peerState->GetAuthSuite() & AUTH_SUITE_ECDHE_ECDSA) != AUTH_SUITE_ECDHE_ECDSA) {
         return ER_OK;
     }
+
+    QCC_DbgTrace(("%s: passed early exit checks. Destination is %s, peer GUID is %s",
+                  __FUNCTION__, destination, peerState->GetGuid().ToString().c_str()));
 
     std::vector<Manifest> manifests;
     QStatus status = RetrieveManifests(manifests);
