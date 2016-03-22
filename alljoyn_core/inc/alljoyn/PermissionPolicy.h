@@ -995,6 +995,13 @@ class _Manifest {
      */
     std::vector<uint8_t> GetSignature() const;
 
+    /**
+     * Get a string representation of this manifest.
+     *
+     * @return String containing the representation.
+     */
+    std::string ToString() const;
+
   private:
 
     typedef enum {
@@ -1162,6 +1169,18 @@ class _Manifest {
      * @return true if manifest version is supported, false otherwise
      */
     static bool IsVersionSupported(uint32_t version);
+
+    /**
+     * @internal
+     *
+     * Determine if a manifest has been signed by looking for the presence of the thumbprint and
+     * signature fields. This does not verify the cryptographic signature, as that requires access
+     * to the public key of the signer which may not be available. Instead, this allows rejecting
+     * unsigned manifests which can never be valid.
+     *
+     * @return true if the manifest has been signed, false otherwise
+     */
+    bool HasSignature() const;
 
     QStatus GetDigest(std::vector<uint8_t>& digest) const;
     QStatus GetECCSignature(qcc::ECCSignature& signature) const;
