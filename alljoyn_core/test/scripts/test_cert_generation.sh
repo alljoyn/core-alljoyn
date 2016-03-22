@@ -104,7 +104,7 @@ openssl req -new -key caeckey.pem -out cacsr.pem \
 #     EKUs (both identity and membership)
 
 openssl x509 -req -in cacsr.pem -out cacert.pem -signkey caeckey.pem \
--days 5000 -extfile openssl-ajekus.cnf -extensions unrestricted
+-days 5000 -extfile openssl-ajekus-CA.cnf -extensions unrestricted
 
 #
 #  5. [Optional] View the certificate with:
@@ -126,7 +126,7 @@ openssl req -new -key clieckey.pem -out clicsr.pem \
 #  8. Sign the certificate with the CA key and add the 'identity' EKU
 
 openssl x509 -req -in clicsr.pem -out clicert.pem -CA cacert.pem \
--days 5000 -CAkey caeckey.pem -extfile openssl-ajekus.cnf -extensions identity \
+-days 5000 -CAkey caeckey.pem -extfile openssl-ajekus-client.cnf -extensions identity \
 -CAcreateserial
 
 #
@@ -146,7 +146,7 @@ openssl req -new -key srveckey.pem -out srvcsr.pem \
 #  12. Sign the certificate with the service's key and add the 'identity' EKU
 
 openssl x509 -req -in srvcsr.pem -out srvcert.pem -signkey srveckey.pem \
--days 5000 -extfile openssl-ajekus.cnf -extensions identity 
+-days 5000 -extfile openssl-ajekus-service.cnf -extensions identity 
 
 #  13. Compute the public key from the private key for the service and output it to srvpubkey.pem.
 
