@@ -1300,7 +1300,15 @@ QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool appen
             continue;
         }
 
-        newManifests.push_back(signedManifest);
+        /*
+         * This doesn't verify the signature is valid, merely that a signature has been applied,
+         * so we don't waste time and space with manifests that can't possibly be valid.
+         */
+        if (signedManifest->HasSignature()) {
+            newManifests.push_back(signedManifest);
+        } else {
+            QCC_DbgTrace(("Not storing this manifest because it's unsigned: %s", signedManifest->ToString().c_str()));
+        }
     }
 
     if (0 == newManifests.size()) {

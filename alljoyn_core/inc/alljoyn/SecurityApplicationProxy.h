@@ -607,7 +607,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - #ER_OK if successful
      *  - an error status indicating failure
      */
-    static QStatus MsgArgToIdentityCertChain(const MsgArg& arg, qcc::IdentityCertificate* certs, size_t expectedSize);
+    static QStatus MsgArgToIdentityCertChain(const MsgArg& arg, qcc::CertificateX509* certs, size_t expectedSize);
 
     /**
      * Populate the array of serial numbers and issuer key infos with data from
