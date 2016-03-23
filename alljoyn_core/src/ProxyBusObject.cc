@@ -408,6 +408,21 @@ static void GetReplyErrorStatus(Message& reply, QStatus& status)
 }
 
 /**
+ * Figure out the new status code based on the the reply message's error.
+ * If the status code is ER_BUS_REPLY_IS_ERROR_MESSAGE then the error
+ * message is searched to compute the status code.
+ * @param reply the reply message
+ * @param[in,out] status the status code
+ * @param[out] errorName the error name
+ * @param[out] errorMessage the error message
+ */
+static void GetReplyErrorStatusMessage(Message& reply, QStatus& status, qcc::String& errorName, qcc::String& errorMessage)
+{
+    GetReplyErrorStatus(reply, status);
+    errorName = reply->GetErrorName(&errorMessage);
+}
+
+/**
  * Figure out whether the reply message is a permission denied error message.
  * If so, the status code will be replaced with ER_PERMISSION_DENIED.
  * @param reply the reply message
@@ -439,7 +454,7 @@ static inline bool SecurityApplies(const ProxyBusObject* obj, const InterfaceDes
     }
 }
 
-QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint32_t timeout, qcc::String& errorName, qcc::String& errorMessage) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -489,6 +504,8 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
                     }
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
+            } else {
+                GetReplyErrorStatusMessage(reply, status, errorName, errorMessage);
             }
         }
     }
@@ -593,7 +610,7 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
     return status;
 }
 
-QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout, qcc::String& errorName, qcc::String& errorMessage) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -646,7 +663,7 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
             } else {
-                GetReplyErrorStatus(reply, status);
+                GetReplyErrorStatusMessage(reply, status, errorName, errorMessage);
             }
         }
     }
@@ -753,7 +770,70 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
     return status;
 }
 
-QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
+                                         const char* property,
+                                         ProxyBusObject::Listener* listener,
+                                         ProxyBusObject::Listener::GetPropertyAsyncCB callback,
+                                         void* context,
+                                         uint32_t timeout)
+{
+    QStatus status;
+    const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
+    if (!valueIface) {
+        status = ER_BUS_OBJECT_NO_SUCH_INTERFACE;
+    } else {
+        /* if the property is cached, we can reply immediately */
+        bool cached = false;
+        MsgArg value;
+        internal->lock.Lock(MUTEX_CONTEXT);
+        if (internal->cacheProperties) {
+            map<std::string, CachedProps>::iterator it = internal->caches.find(iface);
+            if (it != internal->caches.end()) {
+                cached = it->second.Get(property, value);
+            }
+        }
+        internal->lock.Unlock(MUTEX_CONTEXT);
+        if (cached) {
+            QCC_DbgPrintf(("GetPropertyAsync(%s, %s) -> cache hit", iface, property));
+            internal->bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callback, context, value);
+            return ER_OK;
+        }
+
+        QCC_DbgPrintf(("GetProperty(%s, %s) -> perform method call", iface, property));
+        uint8_t flags = 0;
+        if (SecurityApplies(this, valueIface)) {
+            flags |= ALLJOYN_FLAG_ENCRYPTED;
+        }
+        MsgArg inArgs[2];
+        size_t numArgs = ArraySize(inArgs);
+        MsgArg::Set(inArgs, numArgs, "ss", iface, property);
+        const InterfaceDescription* propIface = internal->bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
+        if (propIface == NULL) {
+            status = ER_BUS_NO_SUCH_INTERFACE;
+        } else {
+            /* we need to keep track of interface and property name to cache the GetProperty reply */
+            std::pair<void*, std::pair<qcc::String, qcc::String> >* wrappedContext = new std::pair<void*, std::pair<qcc::String, qcc::String> >(context, std::make_pair(qcc::String(iface), qcc::String(property)));
+            CBContext<Listener::GetPropertyAsyncCB>* ctx = new CBContext<Listener::GetPropertyAsyncCB>(listener, callback, wrappedContext);
+            const InterfaceDescription::Member* getProperty = propIface->GetMember("Get");
+            QCC_ASSERT(getProperty);
+            status = MethodCallAsync(*getProperty,
+                                     this,
+                                     static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetPropMethodCB),
+                                     inArgs,
+                                     numArgs,
+                                     reinterpret_cast<void*>(ctx),
+                                     timeout,
+                                     flags);
+            if (status != ER_OK) {
+                delete ctx;
+                delete wrappedContext;
+            }
+        }
+    }
+    return status;
+}
+
+QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout, qcc::String& errorName, qcc::String& errorMessage) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -784,7 +864,7 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
                                 timeout,
                                 flags);
             if (ER_OK != status) {
-                GetReplyErrorStatus(reply, status);
+                GetReplyErrorStatusMessage(reply, status, errorName, errorMessage);
             }
         }
     }
