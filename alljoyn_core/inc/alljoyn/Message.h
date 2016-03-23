@@ -648,6 +648,20 @@ class _Message {
      * Generate an error message from a method call.
      *
      * @param call        The call message - can be this message.
+     * @param errorName   The name of this error
+     * @param status      The status code for this error
+     * @param description Informational string describing details of the error
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus ErrorMsg(const Message& call, QStatus status, const char* errorName, const char* description);
+
+    /**
+     * @internal
+     * Generate an error message from a method call.
+     *
+     * @param call        The call message - can be this message.
      * @param sender      The sender of the message
      * @param errorName   The name of this error
      * @param description Informational string describing details of the error
@@ -656,6 +670,20 @@ class _Message {
      *      - An error status otherwise
      */
     QStatus ErrorMsg(const Message& call, const qcc::String& sender, const char* errorName, const char* description);
+
+    /**
+     * @internal
+     * Generate an error message from a method call.
+     * @param status      The status code for this error
+     * @param call        The call message - can be this message.
+     * @param sender      The sender of the message
+     * @param errorName   The name of this error
+     * @param description Informational string describing details of the error
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus ErrorMsg(const Message& call, const qcc::String& sender, QStatus status, const char* errorName, const char* description);
 
     /**
      * @internal
