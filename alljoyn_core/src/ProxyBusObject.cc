@@ -408,6 +408,21 @@ static void GetReplyErrorStatus(Message& reply, QStatus& status)
 }
 
 /**
+ * Figure out the new status code based on the the reply message's error.
+ * If the status code is ER_BUS_REPLY_IS_ERROR_MESSAGE then the error
+ * message is searched to compute the status code.
+ * @param reply the reply message
+ * @param[in,out] status the status code
+ * @param[out] errorName the error name
+ * @param[out] errorMessage the error message
+ */
+static void GetReplyErrorStatusMessage(Message& reply, QStatus& status, qcc::String& errorName, qcc::String& errorMessage)
+{
+    GetReplyErrorStatus(reply, status);
+    errorName = reply->GetErrorName(&errorMessage);
+}
+
+/**
  * Figure out whether the reply message is a permission denied error message.
  * If so, the status code will be replaced with ER_PERMISSION_DENIED.
  * @param reply the reply message
@@ -439,7 +454,7 @@ static inline bool SecurityApplies(const ProxyBusObject* obj, const InterfaceDes
     }
 }
 
-QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint32_t timeout, qcc::String& errorName, qcc::String& errorMessage) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -489,6 +504,8 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
                     }
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
+            } else   {
+                GetReplyErrorStatusMessage(reply, status, errorName, errorMessage);
             }
         }
     }
@@ -593,7 +610,7 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
     return status;
 }
 
-QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout, qcc::String& errorName, qcc::String& errorMessage) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -646,7 +663,7 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
             } else {
-                GetReplyErrorStatus(reply, status);
+                GetReplyErrorStatusMessage(reply, status, errorName, errorMessage);
             }
         }
     }
@@ -753,7 +770,7 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
     return status;
 }
 
-QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout, qcc::String& errorName, qcc::String& errorMessage) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -784,7 +801,7 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
                                 timeout,
                                 flags);
             if (ER_OK != status) {
-                GetReplyErrorStatus(reply, status);
+                GetReplyErrorStatusMessage(reply, status, errorName, errorMessage);
             }
         }
     }
