@@ -173,8 +173,11 @@ class _LocalEndpoint::CachedGetPropertyReplyContext {
     ProxyBusObject* proxy;
     ProxyBusObject::Listener* listener;
     ProxyBusObject::Listener::GetPropertyCB callback;
+    ProxyBusObject::Listener::GetPropertyAsyncCB asyncCallback;
     void* context;
     MsgArg value;
+    qcc::String errorName;
+    qcc::String errorMessage;
 
     CachedGetPropertyReplyContext(
         ProxyBusObject* proxy,
@@ -182,7 +185,15 @@ class _LocalEndpoint::CachedGetPropertyReplyContext {
         ProxyBusObject::Listener::GetPropertyCB callback,
         void* context,
         const MsgArg& value) :
-        proxy(proxy), listener(listener), callback(callback), context(context), value(value) { }
+        proxy(proxy), listener(listener), callback(callback), asyncCallback(NULL), context(context), value(value) { }
+
+    CachedGetPropertyReplyContext(
+        ProxyBusObject* proxy,
+        ProxyBusObject::Listener* listener,
+        ProxyBusObject::Listener::GetPropertyAsyncCB callback,
+        void* context,
+        const MsgArg& value) :
+        proxy(proxy), listener(listener), callback(NULL), asyncCallback(callback), context(context), value(value) { }
 
 };
 
@@ -1444,6 +1455,22 @@ void _LocalEndpoint::ScheduleCachedGetPropertyReply(
     ProxyBusObject* proxy,
     ProxyBusObject::Listener* listener,
     ProxyBusObject::Listener::GetPropertyCB callback,
+    void* context,
+    const MsgArg& value)
+{
+    if (dispatcher) {
+        CachedGetPropertyReplyContext* ctx = new CachedGetPropertyReplyContext(proxy, listener, callback, context, value);
+        replyMapLock.Lock(MUTEX_CONTEXT);
+        cachedGetPropertyReplyContexts.insert(ctx);
+        replyMapLock.Unlock(MUTEX_CONTEXT);
+        dispatcher->TriggerCachedPropertyReplyWork();
+    }
+}
+
+void _LocalEndpoint::ScheduleCachedGetPropertyReply(
+    ProxyBusObject* proxy,
+    ProxyBusObject::Listener* listener,
+    ProxyBusObject::Listener::GetPropertyAsyncCB callback,
     void* context,
     const MsgArg& value)
 {
