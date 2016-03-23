@@ -274,17 +274,18 @@ class ProxyBusObject : public MessageReceiver {
     /**
      * Get a property from an interface on the remote object.
      *
-     * @param iface       Name of interface to retrieve property from.
-     * @param property    The name of the property to get.
-     * @param[out] value  Property value.
-     * @param timeout     Timeout specified in milliseconds to wait for a reply
+     * @param iface          Name of interface to retrieve property from.
+     * @param property       The name of the property to get.
+     * @param[out] value     Property value.
+     * @param timeout        Timeout specified in milliseconds to wait for a reply
+     * @param[out] replyMsg  Optional pointer to the reply message
      *
      * @return
      *      - #ER_OK if the property was obtained.
      *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
-    QStatus GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout = DefaultCallTimeout) const;
+    QStatus GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout = DefaultCallTimeout, Message* replyMsg = NULL) const;
 
     /**
      * Make an asynchronous request to get a property from an interface on the remote object.
@@ -344,17 +345,18 @@ class ProxyBusObject : public MessageReceiver {
     /**
      * Set a property on an interface on the remote object.
      *
-     * @param iface     Remote object's interface on which the property is defined.
-     * @param property  The name of the property to set
-     * @param value     The value to set
-     * @param timeout   Timeout specified in milliseconds to wait for a reply
+     * @param iface          Remote object's interface on which the property is defined.
+     * @param property       The name of the property to set
+     * @param value          The value to set
+     * @param timeout        Timeout specified in milliseconds to wait for a reply
+     * @param[out] replyMsg  Optional pointer to the reply message
      *
      * @return
      *      - #ER_OK if the property was set
      *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
-    QStatus SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout = DefaultCallTimeout) const;
+    QStatus SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout = DefaultCallTimeout, Message* replyMsg = NULL) const;
 
     /**
      * Make an asynchronous request to set a property on an interface on the remote object.

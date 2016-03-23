@@ -255,6 +255,11 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
 
 void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg)
 {
+    GetProp(member, msg, NULL, NULL);
+}
+
+void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg, const char* errorName, const char* errorMessage)
+{
     QCC_UNUSED(member);
 
     QStatus status;
@@ -275,7 +280,9 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
             const InterfaceDescription::Property* prop = ifc->GetProperty(property->v_string.str);
             if (prop) {
                 if (prop->access & PROP_ACCESS_READ) {
-                    status = Get(iface->v_string.str, property->v_string.str, val);
+                    status = errorName ?
+                             Get(iface->v_string.str, property->v_string.str, val, errorName, errorMessage) :
+                             Get(iface->v_string.str, property->v_string.str, val);
                 } else {
                     QCC_DbgPrintf(("No read access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -288,7 +295,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
         status = ER_BUS_UNKNOWN_INTERFACE;
     }
     QCC_DbgPrintf(("Properties.Get %s", QCC_StatusText(status)));
-    if (status == ER_OK) {
+    if ((status == ER_OK) || (errorName == NULL)) {
         /* Properties are returned as variants */
         MsgArg arg = MsgArg(ALLJOYN_VARIANT);
         arg.v_variant.val = &val;
@@ -296,7 +303,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
         /* Prevent destructor from attempting to free val */
         arg.v_variant.val = NULL;
     } else {
-        MethodReply(msg, status);
+        MethodReply(msg, errorName, errorMessage);
     }
 }
 
@@ -422,7 +429,7 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
     return status;
 }
 
-void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg)
+void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg, const char* errorName, const char* errorMessage)
 {
     QCC_UNUSED(member);
 
@@ -447,7 +454,9 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
                     QCC_DbgPrintf(("Property value for %s has wrong type %s", property->v_string.str, prop->signature.c_str()));
                     status = ER_BUS_SET_WRONG_SIGNATURE;
                 } else if (prop->access & PROP_ACCESS_WRITE) {
-                    status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val));
+                    status = errorName ?
+                             Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val), errorName, errorMessage) :
+                             Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val));
                 } else {
                     QCC_DbgPrintf(("No write access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -460,7 +469,16 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
         status = ER_BUS_UNKNOWN_INTERFACE;
     }
     QCC_DbgPrintf(("Properties.Set %s", QCC_StatusText(status)));
-    MethodReply(msg, status);
+    if ((status == ER_OK) || (errorName == NULL)) {
+        MethodReply(msg, status);
+    } else   {
+        MethodReply(msg, errorName, errorMessage);
+    }
+}
+
+void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg)
+{
+    SetProp(member, msg, NULL, NULL);
 }
 
 void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message& msg)

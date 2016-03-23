@@ -593,7 +593,7 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
     return status;
 }
 
-QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout, Message* replyMsg) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -648,6 +648,9 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
             } else {
                 GetReplyErrorStatus(reply, status);
             }
+        }
+        if (replyMsg) {
+            *replyMsg = reply;
         }
     }
     return status;
@@ -753,7 +756,7 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
     return status;
 }
 
-QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout, Message* replyMsg) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -786,6 +789,9 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
             if (ER_OK != status) {
                 GetReplyErrorStatus(reply, status);
             }
+        }
+        if (replyMsg) {
+            *replyMsg = reply;
         }
     }
     return status;
