@@ -33,7 +33,7 @@ class ManifestTests :
         idInfo.name = "testName";
     }
 
-    void GetManifest(Manifest& mf)
+    void GetManifest(ajn::securitymgr::Manifest& mf)
     {
         PermissionPolicy::Rule rules[1];
 
@@ -53,7 +53,7 @@ class ManifestTests :
         mf.SetFromRules(rules, 1);
     }
 
-    void GetExtendedManifest(Manifest& mf)
+    void GetExtendedManifest(ajn::securitymgr::Manifest& mf)
     {
         PermissionPolicy::Rule rules[2];
 
@@ -95,7 +95,7 @@ class ManifestTests :
  *       -# Make sure no additional ManifestUpdate events are triggered.
  **/
 TEST_F(ManifestTests, UpdateManifest) {
-    Manifest manifest;
+    ajn::securitymgr::Manifest manifest;
     GetManifest(manifest);
     TestApplication testApp;
     testApp.SetManifest(manifest);
@@ -108,7 +108,7 @@ TEST_F(ManifestTests, UpdateManifest) {
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
     ASSERT_TRUE(CheckIdentity(app, idInfo, manifest));
 
-    Manifest extendedManifest;
+    ajn::securitymgr::Manifest extendedManifest;
     GetExtendedManifest(extendedManifest);
     testApp.UpdateManifest(extendedManifest);
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::NEED_UPDATE));

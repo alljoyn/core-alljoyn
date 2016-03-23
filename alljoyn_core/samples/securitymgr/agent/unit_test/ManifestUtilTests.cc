@@ -59,7 +59,7 @@ class ManifestUtilTests :
         return ER_OK;
     }
 
-    void GetManifest(Manifest& mf)
+    void GetManifest(ajn::securitymgr::Manifest& mf)
     {
         PermissionPolicy::Rule rules[1];
         rules[0].SetInterfaceName("org.allseenalliance.control.TV");
@@ -78,7 +78,7 @@ class ManifestUtilTests :
         mf.SetFromRules(rules, 1);
     }
 
-    void GetPermutedManifest(Manifest& mf)
+    void GetPermutedManifest(ajn::securitymgr::Manifest& mf)
     {
         PermissionPolicy::Rule rules[1];
         rules[0].SetInterfaceName("org.allseenalliance.control.TV");
@@ -97,7 +97,7 @@ class ManifestUtilTests :
         mf.SetFromRules(rules, 1);
     }
 
-    void GetSplitManifest(Manifest& mf)
+    void GetSplitManifest(ajn::securitymgr::Manifest& mf)
     {
         PermissionPolicy::Rule rules[2];
         rules[0].SetInterfaceName("org.allseenalliance.control.TV");
@@ -120,7 +120,7 @@ class ManifestUtilTests :
         mf.SetFromRules(rules, 2);
     }
 
-    void GetExtendedManifest(Manifest& mf)
+    void GetExtendedManifest(ajn::securitymgr::Manifest& mf)
     {
         PermissionPolicy::Rule rules[2];
 
@@ -148,17 +148,6 @@ class ManifestUtilTests :
     }
 };
 
-static void PrintDigest(const uint8_t* const buf)
-{
-    for (size_t i = 0; i < Crypto_SHA256::DIGEST_SIZE; i++) {
-        if (i > 0) {
-            printf(":");
-        }
-        printf("%02X", buf[i]);
-    }
-    printf("\n");
-}
-
 /**
  * @test Verify the construction of valid Manifest objects using the Manifest
  *       class. Also verify the provided operators and the digest matching.
@@ -183,7 +172,7 @@ static void PrintDigest(const uint8_t* const buf)
  *          copyManifest and make sure they are all identical.
  **/
 TEST_F(ManifestUtilTests, ManifestConstruction) {
-    Manifest emptyManifest;
+    ajn::securitymgr::Manifest emptyManifest;
     uint8_t* byteArray = nullptr;
     size_t sizeOfByteArray;
     PermissionPolicy::Rule* rules = nullptr;
@@ -201,7 +190,7 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
 
     // Test construction by rules
     EXPECT_EQ(ER_OK, GenerateManifest(&otherRules, &count));
-    Manifest manifestFromRules(otherRules, count);
+    ajn::securitymgr::Manifest manifestFromRules(otherRules, count);
     EXPECT_EQ(ER_OK, manifestFromRules.GetByteArray(&byteArray, &sizeOfByteArray));
     EXPECT_EQ(ER_OK, manifestFromRules.GetRules(&rules, &count));
     EXPECT_TRUE(byteArray != nullptr);
@@ -214,7 +203,7 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
     EXPECT_TRUE(otherRules != rules);
 
     // Test construction by byteString
-    Manifest manifestFromByteArray(byteArray, sizeOfByteArray);
+    ajn::securitymgr::Manifest manifestFromByteArray(byteArray, sizeOfByteArray);
     uint8_t* byteArray2 = nullptr;
     size_t sizeOfByteArray2;
 
@@ -235,57 +224,23 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
     delete[]byteArray;
     byteArray = nullptr;
 
-    uint8_t* digestMfromRules = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-    uint8_t* digestMFromByteStr = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-
-    EXPECT_EQ(ER_OK, manifestFromByteArray.GetDigest(digestMFromByteStr));
-    EXPECT_EQ(ER_OK, manifestFromRules.GetDigest(digestMfromRules));
-
-    EXPECT_EQ(0, memcmp(digestMfromRules, digestMFromByteStr, Crypto_SHA256::DIGEST_SIZE));
 
     // Test copy constructor and comparison
-    Manifest copyManifest(manifestFromByteArray);
+    ajn::securitymgr::Manifest copyManifest(manifestFromByteArray);
     EXPECT_TRUE(copyManifest == manifestFromByteArray);
     EXPECT_FALSE(copyManifest != manifestFromByteArray);
     EXPECT_TRUE(copyManifest == manifestFromRules);
     EXPECT_FALSE(copyManifest != manifestFromRules);
 
     //Test assignment operator
-    Manifest manifestAssignee;
+    ajn::securitymgr::Manifest manifestAssignee;
     manifestAssignee = manifestFromByteArray;
     EXPECT_TRUE(manifestAssignee == manifestFromByteArray);
     EXPECT_TRUE(manifestAssignee == manifestFromRules);
     EXPECT_TRUE(manifestAssignee != emptyManifest);
 
-    // Test GetDigest after copy and assignment
-    uint8_t* digest = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-    uint8_t* otherDigest = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-
-    EXPECT_EQ(ER_OK, copyManifest.GetDigest(digest));
-    EXPECT_EQ(ER_OK, manifestFromByteArray.GetDigest(otherDigest));
-
-    cout << "Digest is \n";
-    PrintDigest(digest);
-
-    cout << "otherDigest is \n";
-    PrintDigest(otherDigest);
-
-    EXPECT_EQ(0, memcmp(digest, otherDigest, Crypto_SHA256::DIGEST_SIZE));
-
-    uint8_t* assigneeDigest = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-    // Manifest assigneeManifest = copyManifest;
-    EXPECT_EQ(ER_OK, manifestAssignee.GetDigest(assigneeDigest));
-    cout << "assigneeDigest is \n";
-    PrintDigest(assigneeDigest);
-    EXPECT_EQ(0, memcmp(assigneeDigest, otherDigest, Crypto_SHA256::DIGEST_SIZE));
-
     delete[]otherRules;
     delete[]rules;
-    delete digest;
-    delete otherDigest;
-    delete assigneeDigest;
-    delete digestMfromRules;
-    delete digestMFromByteStr;
     ASSERT_EQ(ER_OK, Util::Fini());
 }
 
@@ -390,23 +345,22 @@ TEST_F(ManifestUtilTests, ManifestIllegalArgs) {
 
     PermissionPolicy::Rule* rules = nullptr;
     size_t count;
-    Manifest defaultManifest;
+    ajn::securitymgr::Manifest defaultManifest;
 
-    Manifest* m = nullptr;
-    m = new Manifest(rules, 0);
+    ajn::securitymgr::Manifest* m = nullptr;
+    m = new ajn::securitymgr::Manifest(rules, 0);
     ASSERT_TRUE(*m == defaultManifest);
     delete m;
     m = nullptr;
 
     uint8_t* nullByteArray = nullptr;
-    m = new Manifest(nullByteArray, 0);
+    m = new ajn::securitymgr::Manifest(nullByteArray, 0);
     ASSERT_TRUE(*m == defaultManifest);
     delete m;
     m = nullptr;
 
     ASSERT_NE(ER_OK, defaultManifest.GetByteArray(nullptr, nullptr));
     ASSERT_NE(ER_OK, defaultManifest.GetRules(nullptr, nullptr));
-    ASSERT_NE(ER_OK, defaultManifest.GetDigest(nullptr));
     ASSERT_NE(ER_OK, defaultManifest.SetFromByteArray(nullptr, 0));
     ASSERT_NE(ER_OK, defaultManifest.SetFromRules(nullptr, 0));
 
@@ -420,7 +374,7 @@ TEST_F(ManifestUtilTests, ManifestIllegalArgs) {
     ASSERT_EQ(ER_OK, GenerateManifest(&rules, &count));
     ASSERT_NE(ER_OK, defaultManifest.SetFromRules(rules, 0));
 
-    Manifest manifestFromRules(rules, count);
+    ajn::securitymgr::Manifest manifestFromRules(rules, count);
     uint8_t* byteArray = nullptr;
     size_t sizeOfByteArray;
     EXPECT_EQ(ER_OK, manifestFromRules.GetByteArray(&byteArray, &sizeOfByteArray));
@@ -457,7 +411,7 @@ TEST_F(ManifestUtilTests, UtilIllegalArgs) {
     PermissionPolicy::Rule* rules = nullptr;
     size_t count;
     ASSERT_EQ(ER_OK, GenerateManifest(&rules, &count));
-    Manifest manifestFromRules(rules, count);
+    ajn::securitymgr::Manifest manifestFromRules(rules, count);
     uint8_t* byteArray = nullptr;
     size_t sizeOfByteArray;
     EXPECT_EQ(ER_OK, manifestFromRules.GetByteArray(&byteArray, &sizeOfByteArray));
@@ -499,81 +453,81 @@ TEST_F(ManifestUtilTests, UtilIllegalArgs) {
 TEST_F(ManifestUtilTests, Difference) {
     ASSERT_EQ(ER_OK, Util::Init(ba));
 
-    Manifest manifest;
+    ajn::securitymgr::Manifest manifest;
     GetManifest(manifest);
-    Manifest permutedManifest;
+    ajn::securitymgr::Manifest permutedManifest;
     GetPermutedManifest(permutedManifest);
-    Manifest splitManifest;
+    ajn::securitymgr::Manifest splitManifest;
     GetSplitManifest(splitManifest);
-    Manifest extendedManifest;
+    ajn::securitymgr::Manifest extendedManifest;
     GetExtendedManifest(extendedManifest);
 
     // compare two identical manifests
-    Manifest differenceMM;
+    ajn::securitymgr::Manifest differenceMM;
     manifest.Difference(manifest, differenceMM);
     ASSERT_EQ((size_t)0, differenceMM.GetRulesSize());
 
-    Manifest differencePP;
+    ajn::securitymgr::Manifest differencePP;
     permutedManifest.Difference(permutedManifest, differencePP);
     ASSERT_EQ((size_t)0, differencePP.GetRulesSize());
 
-    Manifest differenceSS;
+    ajn::securitymgr::Manifest differenceSS;
     splitManifest.Difference(splitManifest, differenceSS);
     ASSERT_EQ((size_t)0, differenceSS.GetRulesSize());
 
-    Manifest differenceEE;
+    ajn::securitymgr::Manifest differenceEE;
     extendedManifest.Difference(extendedManifest, differenceEE);
     ASSERT_EQ((size_t)0, differenceEE.GetRulesSize());
 
     // compare permuted manifest
-    Manifest differenceMP;
+    ajn::securitymgr::Manifest differenceMP;
     manifest.Difference(permutedManifest, differenceMP);
     ASSERT_EQ((size_t)0, differenceMP.GetRulesSize());
 
-    Manifest differencePM;
+    ajn::securitymgr::Manifest differencePM;
     permutedManifest.Difference(manifest, differencePM);
     ASSERT_EQ((size_t)0, differencePM.GetRulesSize());
 
     // compare split manifest
-    Manifest differenceSM;
+    ajn::securitymgr::Manifest differenceSM;
     splitManifest.Difference(manifest, differenceSM);
     ASSERT_EQ((size_t)0, differenceSM.GetRulesSize());
 
-    Manifest differenceMS;
+    ajn::securitymgr::Manifest differenceMS;
     manifest.Difference(splitManifest, differenceMS);
     ASSERT_EQ((size_t)0, differenceMS.GetRulesSize());
 
     // compare split with permuted manifest
-    Manifest differencePS;
+    ajn::securitymgr::Manifest differencePS;
     permutedManifest.Difference(splitManifest, differencePS);
     ASSERT_EQ((size_t)0, differencePS.GetRulesSize());
 
-    Manifest differenceSP;
+    ajn::securitymgr::Manifest differenceSP;
     splitManifest.Difference(permutedManifest, differenceSP);
     ASSERT_EQ((size_t)0, differencePS.GetRulesSize());
 
     // compare extended manifest
-    Manifest differenceEM;
+    ajn::securitymgr::Manifest differenceEM;
     extendedManifest.Difference(manifest, differenceEM);
     ASSERT_EQ((size_t)2, differenceEM.GetRulesSize());
 
-    Manifest differenceES;
+    ajn::securitymgr::Manifest differenceES;
     extendedManifest.Difference(splitManifest, differenceES);
     ASSERT_EQ((size_t)2, differenceES.GetRulesSize());
 
-    Manifest differenceEP;
+    ajn::securitymgr::Manifest differenceEP;
     extendedManifest.Difference(permutedManifest, differenceEP);
     ASSERT_EQ((size_t)2, differenceEP.GetRulesSize());
 
-    Manifest differenceME;
+    ajn::securitymgr::Manifest differenceME;
     manifest.Difference(extendedManifest, differenceME);
     ASSERT_EQ((size_t)0, differenceME.GetRulesSize());
 
-    Manifest differenceSE;
+    ajn::securitymgr::Manifest differenceSE;
     splitManifest.Difference(extendedManifest, differenceSE);
     ASSERT_EQ((size_t)0, differenceSE.GetRulesSize());
 
-    Manifest differencePE;
+    ajn::securitymgr::Manifest differencePE;
     permutedManifest.Difference(permutedManifest, differencePE);
     ASSERT_EQ((size_t)0, differencePE.GetRulesSize());
 

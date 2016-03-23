@@ -113,7 +113,7 @@ class AutoAccepter :
     }
 
   public:
-    Manifest lastManifest;
+    ajn::securitymgr::Manifest lastManifest;
 };
 
 class BasicTest :
@@ -170,13 +170,13 @@ class BasicTest :
 
     bool CheckRemoteIdentity(const OnlineApplication& app,
                              IdentityInfo& expectedIdentity,
-                             Manifest& expectedManifest,
+                             ajn::securitymgr::Manifest& expectedManifest,
                              IdentityCertificate& remoteIdentity,
-                             Manifest& remoteManifest);
+                             ajn::securitymgr::Manifest& remoteManifest);
 
     bool CheckIdentity(const OnlineApplication& app,
                        IdentityInfo& expectedIdentity,
-                       Manifest& expectedManifest);
+                       ajn::securitymgr::Manifest& expectedManifest);
 
     bool CheckMemberships(const OnlineApplication& app,
                           vector<GroupInfo> expectedGroups);
@@ -290,9 +290,9 @@ class ClaimedTest :
     }
 
     bool CheckRemoteIdentity(IdentityInfo& expectedIdentity,
-                             Manifest& expectedManifest,
+                             ajn::securitymgr::Manifest& expectedManifest,
                              IdentityCertificate& remoteIdentity,
-                             Manifest& remoteManifest)
+                             ajn::securitymgr::Manifest& remoteManifest)
     {
         UpdateBusname();
         return BasicTest::CheckRemoteIdentity(testAppInfo,
@@ -303,7 +303,7 @@ class ClaimedTest :
     }
 
     bool CheckIdentity(IdentityInfo& expectedIdentity,
-                       Manifest& expectedManifest)
+                       ajn::securitymgr::Manifest& expectedManifest)
     {
         UpdateBusname();
         return BasicTest::CheckIdentity(testAppInfo, expectedIdentity, expectedManifest);

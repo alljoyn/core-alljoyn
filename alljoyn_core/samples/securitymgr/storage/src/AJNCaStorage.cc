@@ -71,16 +71,24 @@ QStatus AJNCaStorage::StartApplicationClaiming(const Application& app,
     }
 
     IdentityCertificate idCert;
-    status = GenerateIdentityCertificate(app, idInfo, mf, idCert);
+    status = GenerateIdentityCertificate(app, idInfo, idCert);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to create IdentityCertificate"));
         return status;
     }
     idCertChain.push_back(idCert);
 
+    ajn::Manifest signedManifest;
+    status = GenerateSignedManifest(idCert, mf, signedManifest);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to generate signed manifest"));
+        return status;
+    }
+
     CachedData data;
     data.cert = idCert;
     data.mnf = mf;
+    data.signedMnf = signedManifest;
     pendingLock.Lock();
     claimPendingApps[app] = data;
     pendingLock.Unlock();
@@ -130,6 +138,7 @@ QStatus AJNCaStorage::RegisterAgent(const KeyInfoNISTP256& agentKey,
                                     const Manifest& manifest,
                                     GroupInfo& adminGroup,
                                     IdentityCertificateChain& identityCertificates,
+                                    ajn::Manifest& signedManifest,
                                     vector<MembershipCertificateChain>& adminGroupMemberships)
 {
     QStatus status = GetAdminGroup(adminGroup);
@@ -154,12 +163,18 @@ QStatus AJNCaStorage::RegisterAgent(const KeyInfoNISTP256& agentKey,
     agentID.name = "Admin";
     agentID.guid = GUID128(0xab);
     IdentityCertificate idCert;
-    status = GenerateIdentityCertificate(agentInfo, agentID, manifest, idCert);
+    status = GenerateIdentityCertificate(agentInfo, agentID, idCert);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to generate identity certificate for agent"));
         return status;
     }
     identityCertificates.push_back(idCert);
+
+    status = GenerateSignedManifest(idCert, manifest, signedManifest);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Could not generate signed manifest"));
+    }
+
     return ER_OK;
 }
 
@@ -191,17 +206,49 @@ QStatus AJNCaStorage::SignCertifcate(CertificateX509& certificate) const
 
 QStatus AJNCaStorage::GenerateIdentityCertificate(const Application& app,
                                                   const IdentityInfo& idInfo,
-                                                  const Manifest& mf,
                                                   IdentityCertificate& idCertificate)
 {
     QStatus status = CertificateUtil::ToIdentityCertificate(app, idInfo, 3600 * 24 * 10 * 365, idCertificate);
     if (status != ER_OK) {
         return status;
     }
-    uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    mf.GetDigest(digest);
-    idCertificate.SetDigest(digest, Crypto_SHA256::DIGEST_SIZE);
     return SignCertifcate(idCertificate);
+}
+
+QStatus AJNCaStorage::GenerateSignedManifest(const qcc::CertificateX509& idCert,
+                                             const Manifest& manifest,
+                                             ajn::Manifest& signedManifest)
+{
+    PermissionPolicy::Rule* manifestRulesRaw;
+    size_t manifestCount;
+    QStatus status = manifest.GetRules(&manifestRulesRaw, &manifestCount);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to get rules from input manifest"));
+        return status;
+    }
+    std::unique_ptr<PermissionPolicy::Rule[]> manifestRules(manifestRulesRaw);
+    manifestRulesRaw = nullptr;
+
+    status = signedManifest->SetRules(manifestRules.get(), manifestCount);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set rules in signed manifest"));
+        return status;
+    }
+
+    ECCPrivateKey epk;
+    status = ca->GetDSAPrivateKey(epk);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to load key"));
+        return status;
+    }
+
+    status = signedManifest->Sign(idCert, &epk);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to sign manifest"));
+        return status;
+    }
+
+    return ER_OK;
 }
 
 QStatus AJNCaStorage::GenerateMembershipCertificate(const Application& app,

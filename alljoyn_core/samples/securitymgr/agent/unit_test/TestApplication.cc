@@ -119,7 +119,7 @@ QStatus TestApplication::Stop()
     return status;
 }
 
-QStatus TestApplication::SetManifest(const Manifest& manifest)
+QStatus TestApplication::SetManifest(const ajn::securitymgr::Manifest& manifest)
 {
     delete[] manifestRules;
     manifestRules = nullptr;
@@ -139,7 +139,7 @@ QStatus TestApplication::AnnounceManifest()
     return status;
 }
 
-QStatus TestApplication::UpdateManifest(const Manifest& manifest)
+QStatus TestApplication::UpdateManifest(const ajn::securitymgr::Manifest& manifest)
 {
     QStatus status = ER_FAIL;
 

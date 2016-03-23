@@ -996,8 +996,6 @@ int CDECL_CALL main(int argc, char** argv)
     if (ER_OK != uiStorage->GetCaStorage(caStorage)) {
         cerr << "No CaStorage\n";
         return EXIT_FAILURE;
-        cerr << "GetStorage call FAILED\n";
-        return EXIT_FAILURE;
     }
 
     BusAttachment* ba = new BusAttachment("Security Agent", true);

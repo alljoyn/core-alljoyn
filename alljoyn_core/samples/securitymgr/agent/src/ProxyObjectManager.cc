@@ -98,7 +98,7 @@ QStatus ProxyObjectManager::ReleaseProxyObject(SecurityApplicationProxy* remoteO
 ProxyObjectManager::ManagedProxyObject::~ManagedProxyObject()
 {
     if (remoteObj != nullptr) {
-        assert(proxyObjectManager);
+        QCC_ASSERT(proxyObjectManager);
         proxyObjectManager->ReleaseProxyObject(remoteObj, resetAuthListener);
     }
 }
@@ -109,29 +109,21 @@ QStatus ProxyObjectManager::ManagedProxyObject::Claim(KeyInfoNISTP256& certifica
                                                       const Manifest& manifest)
 {
     CheckReAuthenticate();
-    PermissionPolicy::Rule* manifestRules;
-    size_t manifestRulesCount;
-    QStatus status = manifest.GetRules(&manifestRules, &manifestRulesCount);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to get manifest rules"));
-    }
-    if (ER_OK == status) {
-        size_t identityCertChainSize = identityCertChain.size();
-        IdentityCertificate* identityCertChainArray = new IdentityCertificate[identityCertChainSize];
-        for (size_t i = 0; i < identityCertChainSize; i++) {
-            identityCertChainArray[i] = identityCertChain[i];
-        }
-
-        status = remoteObj->Claim(certificateAuthority,
-                                  adminGroup.guid, adminGroup.authority,
-                                  identityCertChainArray, identityCertChainSize,
-                                  manifestRules, manifestRulesCount);
-        delete[] identityCertChainArray;
-        identityCertChainArray = nullptr;
+    size_t identityCertChainSize = identityCertChain.size();
+    IdentityCertificate* identityCertChainArray = new IdentityCertificate[identityCertChainSize];
+    for (size_t i = 0; i < identityCertChainSize; i++) {
+        identityCertChainArray[i] = identityCertChain[i];
     }
 
-    delete[] manifestRules;
-    manifestRules = nullptr;
+    ajn::Manifest signedManifest = manifest.GetManifest();
+
+    QStatus status = remoteObj->Claim(certificateAuthority,
+                                      adminGroup.guid, adminGroup.authority,
+                                      identityCertChainArray, identityCertChainSize,
+                                      &signedManifest, 1);
+
+    delete[] identityCertChainArray;
+    identityCertChainArray = nullptr;
 
     return status;
 }
@@ -168,7 +160,7 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetIdentity(IdentityCertificateC
 }
 
 QStatus ProxyObjectManager::ManagedProxyObject::UpdateIdentity(IdentityCertificateChain certChain,
-                                                               const Manifest& mf)
+                                                               const Manifest& manifest)
 {
     CheckReAuthenticate();
     size_t chainSize = certChain.size();
@@ -178,21 +170,15 @@ QStatus ProxyObjectManager::ManagedProxyObject::UpdateIdentity(IdentityCertifica
         certArray[i] = certChain[i];
     }
 
-    PermissionPolicy::Rule* manifestRules;
-    size_t manifestRuleCount;
-    QStatus status = mf.GetRules(&manifestRules, &manifestRuleCount);
+    ajn::Manifest signedManifest = manifest.GetManifest();
 
+    QStatus status = remoteObj->UpdateIdentity(certArray, chainSize, &signedManifest, 1);
     if (ER_OK == status) {
-        status = remoteObj->UpdateIdentity(certArray, chainSize, manifestRules, manifestRuleCount);
-        if (ER_OK == status) {
-            needReAuth = true;
-        }
+        needReAuth = true;
     }
 
     delete[] certArray;
     certArray = nullptr;
-    delete[] manifestRules;
-    manifestRules = nullptr;
 
     return status;
 }
@@ -403,30 +389,23 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetMembershipSummaries(vector<Me
 QStatus ProxyObjectManager::ManagedProxyObject::GetManifest(Manifest& manifest)
 {
     CheckReAuthenticate();
-    MsgArg rulesMsgArg;
-    QStatus status = remoteObj->GetManifest(rulesMsgArg);
+    std::vector<ajn::Manifest> manifests;
+    QStatus status = remoteObj->GetManifests(manifests);
     if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to GetManifest"));
+        QCC_LogError(status, ("Failed to GetManifests"));
         return status;
     }
 
-    PermissionPolicy::Rule* manifestRules;
-    size_t manifestRulesCount;
-    status = PermissionPolicy::ParseRules(rulesMsgArg, &manifestRules, &manifestRulesCount);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to ParseRules"));
-        goto Exit;
+    if (manifests.size() == 0) {
+        return ER_END_OF_DATA;
     }
 
-    status = manifest.SetFromRules(manifestRules, manifestRulesCount);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to SetFromRules"));
-        goto Exit;
+    if (manifests.size() > 1) {
+        return ER_BUFFER_TOO_SMALL;
     }
 
-Exit:
-    delete[] manifestRules;
-    manifestRules = nullptr;
+    manifest.SetFromSignedManifest(manifests[0]);
+
     return status;
 }
 
