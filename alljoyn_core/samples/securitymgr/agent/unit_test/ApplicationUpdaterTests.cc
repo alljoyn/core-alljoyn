@@ -64,7 +64,7 @@ class SyncErrorStorageWrapper :
 
     QStatus GetIdentityCertificatesAndManifest(const Application& app,
                                                IdentityCertificateChain& identityCertificates,
-                                               Manifest& _manifest) const
+                                               ajn::securitymgr::Manifest& _manifest) const
     {
         QStatus status = ca->GetIdentityCertificatesAndManifest(app, identityCertificates, _manifest);
 
@@ -100,7 +100,7 @@ class SyncErrorStorageWrapper :
         returnWrappedPolicy = false;
     }
 
-    void SetManifest(Manifest _manifest)
+    void SetManifest(ajn::securitymgr::Manifest _manifest)
     {
         manifest = _manifest;
         returnWrappedManifest = true;
@@ -121,7 +121,7 @@ class SyncErrorStorageWrapper :
     shared_ptr<UIStorage>& storage;
     PermissionPolicy policy;
     bool returnWrappedPolicy;
-    Manifest manifest;
+    ajn::securitymgr::Manifest manifest;
     bool returnWrappedManifest;
 };
 
@@ -445,7 +445,7 @@ TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
     prms[0].SetMemberName("*");
     prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY);
     rules[0].SetMembers(1, prms);
-    Manifest testManifest(rules, 1);
+    ajn::securitymgr::Manifest testManifest(rules, 1);
     delete[] rules;
     rules = nullptr;
     delete[] prms;
@@ -468,7 +468,7 @@ TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
     wrappedCA->UnsetManifest();
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     IdentityCertificate remoteIdCert;
-    Manifest remoteManifest;
+    ajn::securitymgr::Manifest remoteManifest;
     ASSERT_TRUE(CheckRemoteIdentity(idInfo, aa.lastManifest, remoteIdCert, remoteManifest));
 }
 

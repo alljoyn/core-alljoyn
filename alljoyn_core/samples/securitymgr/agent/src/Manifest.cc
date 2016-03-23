@@ -23,30 +23,20 @@ using namespace std;
 
 namespace ajn {
 namespace securitymgr {
-Manifest::Manifest() : byteArray(nullptr), size(0)
+Manifest::Manifest()
 {
 }
 
 Manifest::Manifest(const Manifest& other)
 {
-    if (other.size > 0) {
-        size = other.size;
-        byteArray = new uint8_t[size];
-        memcpy(byteArray, other.byteArray, size);
-        manifest = other.manifest;
-    } else {
-        byteArray = nullptr;
-        size = 0;
-    }
+    manifest = other.manifest;
 }
 
 Manifest::~Manifest()
 {
-    delete[]byteArray;
-    byteArray = nullptr;
 }
 
-Manifest::Manifest(const uint8_t* manifestByteArray, const size_t _size) : byteArray(nullptr), size(0)
+Manifest::Manifest(const uint8_t* manifestByteArray, const size_t _size)
 {
     QStatus status;
     if (ER_OK != (status = SetFromByteArray(manifestByteArray, _size))) {
@@ -55,7 +45,7 @@ Manifest::Manifest(const uint8_t* manifestByteArray, const size_t _size) : byteA
 }
 
 Manifest::Manifest(const PermissionPolicy::Rule* _rules,
-                   const size_t manifestRulesCount) : byteArray(nullptr), size(0)
+                   const size_t manifestRulesCount)
 {
     QStatus status = ER_OK;
     if (_rules && manifestRulesCount != 0) {
@@ -64,6 +54,11 @@ Manifest::Manifest(const PermissionPolicy::Rule* _rules,
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to create manifest"));
     }
+}
+
+Manifest::Manifest(const ajn::Manifest& signedManifest)
+{
+    manifest = signedManifest;
 }
 
 QStatus Manifest::GetByteArray(uint8_t** manifestByteArray, size_t* _size) const
@@ -77,14 +72,23 @@ QStatus Manifest::GetByteArray(uint8_t** manifestByteArray, size_t* _size) const
 
     *manifestByteArray = nullptr;
     *_size = 0;
-    if (byteArray != nullptr && size > 0) {
-        *manifestByteArray = new uint8_t[size];
-        *_size = size;
-        memcpy(*manifestByteArray, byteArray, size);
-        return ER_OK;
+
+    std::vector<uint8_t> serializedForm;
+
+    QStatus status = manifest->Serialize(serializedForm);
+    if (ER_OK != status) {
+        return status;
     }
 
-    return ER_END_OF_DATA;
+    *manifestByteArray = new (std::nothrow) uint8_t[serializedForm.size()];
+    if (nullptr == *manifestByteArray) {
+        return ER_OUT_OF_MEMORY;
+    }
+
+    *_size = serializedForm.size();
+    memcpy(*manifestByteArray, serializedForm.data(), serializedForm.size());
+
+    return ER_OK;
 }
 
 QStatus Manifest::GetRules(PermissionPolicy::Rule** manifestRules,
@@ -99,11 +103,7 @@ QStatus Manifest::GetRules(PermissionPolicy::Rule** manifestRules,
 
     QStatus status = ER_OK;
 
-    if (manifest.GetAclsSize() <= 0) {
-        return ER_END_OF_DATA;
-    }
-
-    size_t numOfRules = manifest.GetAcls()[0].GetRulesSize();
+    size_t numOfRules = manifest->GetRules().size();
 
     if (numOfRules <= 0) {
         *manifestRules = nullptr;
@@ -111,7 +111,7 @@ QStatus Manifest::GetRules(PermissionPolicy::Rule** manifestRules,
         return ER_END_OF_DATA;
     }
 
-    PermissionPolicy::Rule* localRules =  const_cast<PermissionPolicy::Rule*>(manifest.GetAcls()[0].GetRules());
+    const PermissionPolicy::Rule* localRules = manifest->GetRules().data();
     PermissionPolicy::Rule* ruleArray = new PermissionPolicy::Rule[numOfRules];
 
     for (size_t i = 0; i < numOfRules; i++) {
@@ -125,46 +125,7 @@ QStatus Manifest::GetRules(PermissionPolicy::Rule** manifestRules,
 
 const size_t Manifest::GetRulesSize() const
 {
-    if (manifest.GetAclsSize() <= 0) {
-        return 0;
-    }
-
-    return manifest.GetAcls()[0].GetRulesSize();
-}
-
-QStatus Manifest::GetDigest(uint8_t* digest) const
-{
-    if (!digest) {
-        return ER_BAD_ARG_1;
-    }
-    if (byteArray == nullptr || size <= 0) {
-        return ER_END_OF_DATA;
-    }
-
-    QStatus status = ER_FAIL;
-
-    PermissionPolicy::Rule* rules;
-    size_t count;
-    status = GetRules(&rules, &count);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to GetRules"));
-    }
-
-    Message* msg = nullptr;
-    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(&msg);
-
-    if (marshaller) {
-        status = marshaller->Digest(rules, count, digest, Crypto_SHA256::DIGEST_SIZE);
-    }
-
-    delete[] rules;
-    rules = nullptr;
-    delete msg;
-    msg = nullptr;
-    delete marshaller;
-    marshaller = nullptr;
-
-    return status;
+    return manifest->GetRules().size();
 }
 
 QStatus Manifest::SetFromByteArray(const uint8_t* manifestByteArray, const size_t _size)
@@ -179,21 +140,9 @@ QStatus Manifest::SetFromByteArray(const uint8_t* manifestByteArray, const size_
         return ER_BAD_ARG_2;
     }
 
-    // Reconstruct policy containing manifest
-    Message* msg = nullptr;
-    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(&msg);
-    if (marshaller) {
-        if (ER_OK == (status = manifest.Import(*marshaller, manifestByteArray, _size))) {
-            size = _size;
-            byteArray = new uint8_t[size];
-            memcpy(byteArray, manifestByteArray, size);
-        }
-    }
-
-    delete msg;
-    msg = nullptr;
-    delete marshaller;
-    marshaller = nullptr;
+    std::vector<uint8_t> serializedForm(_size);
+    serializedForm.assign(manifestByteArray, manifestByteArray + _size);
+    status = manifest->Deserialize(serializedForm);
 
     return status;
 }
@@ -208,55 +157,21 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
         return ER_BAD_ARG_2;
     }
 
-    QStatus status = ER_FAIL;
+    return manifest->SetRules(manifestRules, manifestRulesNumber);
+}
 
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[1];
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[manifestRulesNumber];
+QStatus Manifest::SetFromSignedManifest(const ajn::Manifest& signedManifest)
+{
+    manifest = signedManifest;
 
-    for (size_t i = 0; i < manifestRulesNumber; i++) {
-        rules[i] = manifestRules[i]; //copies members
-    }
-    acls[0].SetRules(manifestRulesNumber, rules);
-    manifest.SetAcls(1, acls);
-
-    delete[] acls;
-    acls = nullptr;
-    delete[] rules;
-    rules = nullptr;
-
-    // Serialize wrapped manifest to a byte array
-    uint8_t* buf = nullptr;
-    size_t _size = 0;
-
-    Message* msg = nullptr;
-    DefaultPolicyMarshaller* marshaller = Util::GetDefaultMarshaller(&msg);
-    if (marshaller) {
-        status = manifest.Export(*marshaller, &buf, &_size);
-
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to serialize manifest"));
-            goto Exit;
-        }
-
-        size = _size;
-        byteArray = new uint8_t[size];
-        memcpy(byteArray, buf, size);
-    }
-
-Exit:
-    delete[]buf;
-    buf = nullptr;
-    delete msg;
-    msg = nullptr;
-    delete marshaller;
-    marshaller = nullptr;
-
-    return status;
+    return ER_OK;
 }
 
 string Manifest::ToString() const
 {
-    return manifest.ToString().c_str();
+    // The implementation for manifest->ToString() is currently in the feature/ASACORE-2710 branch.
+    // When it gets into master, this can be corrected.
+    return string(); // manifest->ToString();
 }
 
 Manifest& Manifest::operator=(const Manifest& rhs)
@@ -266,15 +181,7 @@ Manifest& Manifest::operator=(const Manifest& rhs)
     }
 
     manifest = rhs.manifest;
-    delete[]byteArray;
-    byteArray = nullptr;
-    size = 0;
 
-    if (rhs.size > 0) {
-        size = rhs.size;
-        byteArray = new uint8_t[size];
-        memcpy(byteArray, rhs.byteArray, size);
-    }
     return *this;
 }
 
@@ -362,6 +269,11 @@ QStatus Manifest::Difference(const Manifest& rhs,
     }
 
     return status;
+}
+
+ajn::Manifest Manifest::GetManifest() const
+{
+    return manifest;
 }
 }
 }

@@ -34,10 +34,29 @@ namespace secmgr_tests {
 class TestAppAuthListener :
     public DefaultECDHEAuthListener {
   public:
+
     TestAppAuthListener(GUID128& psk) :
+        /*
+         * ECHDE_PSK is deprecated as of 16.04. These stanzas suppress the deprecation warnings.
+         */
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
         DefaultECDHEAuthListener(psk.GetBytes(), GUID128::SIZE)
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     {
     }
+
 
     void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
     {
@@ -64,7 +83,7 @@ class TestApplication {
     /**
      * Sets the manifest of this TestApplication.
      */
-    QStatus SetManifest(const Manifest& manifest);
+    QStatus SetManifest(const ajn::securitymgr::Manifest& manifest);
 
     /**
      * Sets the manifest on the BusAttachment.
@@ -74,7 +93,7 @@ class TestApplication {
     /**
      * Updates the manifest of this TestApplication.
      */
-    QStatus UpdateManifest(const Manifest& manifest);
+    QStatus UpdateManifest(const ajn::securitymgr::Manifest& manifest);
 
     /**
      * Sets the application state as permitted by PermissionConfigurator

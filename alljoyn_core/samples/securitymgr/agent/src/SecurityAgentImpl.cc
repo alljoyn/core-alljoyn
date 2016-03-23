@@ -50,7 +50,29 @@ class ClaimContextImpl :
 
     QStatus SetPreSharedKey(const uint8_t* psk, size_t pskSize)
     {
+        /*
+         * This function suppresses compiler warnings when calling SetPSK, which is deprecated.
+         * ECHDE_PSK is deprecated as of 16.04, but we still test it, per the Alliance deprecation policy.
+         * ASACORE-2762 tracks removal of the ECDHE_PSK tests (and this function can be removed as a part of that work).
+         * https://jira.allseenalliance.org/browse/ASACORE-2762
+         */
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+
         return SetPSK(psk, pskSize);
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     }
 
     ProxyObjectManager::SessionType GetSessionType()
@@ -124,7 +146,9 @@ QStatus SecurityAgentImpl::ClaimSelf()
     // Obliged to cast bcz of GenerateAuthorityKeyId String key ID output.
     agentKeyInfo.SetKeyId((const uint8_t*)ownPubKeyID.c_str(), ownPubKeyID.size());
 
-    status = caStorage->RegisterAgent(agentKeyInfo, mf, adminGroup, idCerts, memberships);
+    ajn::Manifest signedManifest;
+
+    status = caStorage->RegisterAgent(agentKeyInfo, mf, adminGroup, idCerts, signedManifest, memberships);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to register agent"));
         return status;
@@ -140,7 +164,26 @@ QStatus SecurityAgentImpl::ClaimSelf()
     // Claim
     {   // Open new scope to shorten life-time of local variables.
         GUID128 psk;
+
+        /*
+         * DefaultECDHEAuthListener constructor that takes a PSK is deprecated.
+         * These stanzas suppress the deprecation warning.
+         */
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
         DefaultECDHEAuthListener el(psk.GetBytes(), GUID128::SIZE);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
         ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
         status = proxyObjectManager->GetProxyObject(me, ProxyObjectManager::ECDHE_PSK, &el);
         if (ER_OK != status) {
@@ -148,7 +191,7 @@ QStatus SecurityAgentImpl::ClaimSelf()
             return status;
         }
 
-        status = me.Claim(publicKeyInfo, adminGroup, idCerts, mf);
+        status = me.Claim(publicKeyInfo, adminGroup, idCerts, signedManifest);
     }
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to Claim"));
@@ -220,7 +263,8 @@ SecurityAgentImpl::SecurityAgentImpl(const shared_ptr<AgentCAStorage>& _caStorag
     appMonitor(nullptr),
     ownBa(false),
     caStorage(_caStorage),
-    queue(TaskQueue<AppListenerEvent*, SecurityAgentImpl>(this)), claimListener(nullptr)
+    queue(this),
+    claimListener(nullptr)
 {
     proxyObjectManager = nullptr;
     applicationUpdater = nullptr;
