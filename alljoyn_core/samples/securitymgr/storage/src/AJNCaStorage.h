@@ -78,6 +78,7 @@ class AJNCaStorage :
                                   const Manifest& manifest,
                                   GroupInfo& adminGroup,
                                   IdentityCertificateChain& identityCertificates,
+                                  ajn::Manifest& signedManifest,
                                   vector<MembershipCertificateChain>& adminGroupMemberships);
 
     virtual QStatus FinishApplicationClaiming(const Application& app,
@@ -125,8 +126,11 @@ class AJNCaStorage :
 
     QStatus GenerateIdentityCertificate(const Application& app,
                                         const IdentityInfo& idInfo,
-                                        const Manifest& mf,
                                         IdentityCertificate& idCertificate);
+
+    QStatus GenerateSignedManifest(const qcc::CertificateX509& idCert,
+                                   const Manifest& manifest,
+                                   ajn::Manifest& signedManifest);
 
     virtual QStatus GetPolicy(const Application& app,
                               PermissionPolicy& policy) const;
@@ -144,6 +148,7 @@ class AJNCaStorage :
     struct CachedData {
         IdentityCertificate cert;
         Manifest mnf;
+        ajn::Manifest signedMnf;
     };
 
     map<Application, CachedData> claimPendingApps;

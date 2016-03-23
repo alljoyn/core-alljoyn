@@ -1521,6 +1521,11 @@ QStatus _Manifest::SetRules(const PermissionPolicy::Rule* rules, size_t rulesCou
     return ER_OK;
 }
 
+QStatus _Manifest::Serialize(std::vector<uint8_t>& serializedForm) const
+{
+    return this->Serialize(MANIFEST_FULL, serializedForm);
+}
+
 QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_t>& serializedForm) const
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
