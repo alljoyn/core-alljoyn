@@ -34,17 +34,18 @@ class AgentStorageWrapper :
     }
 
     virtual QStatus RegisterAgent(const KeyInfoNISTP256& agentKey,
-                                  const Manifest& manifest,
+                                  const ajn::securitymgr::Manifest& manifest,
                                   GroupInfo& adminGroup,
                                   IdentityCertificateChain& identityCertificates,
+                                  ajn::Manifest& signedManifest,
                                   vector<MembershipCertificateChain>& adminGroupMemberships)
     {
-        return ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, adminGroupMemberships);
+        return ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, signedManifest, adminGroupMemberships);
     }
 
     virtual QStatus StartApplicationClaiming(const Application& app,
                                              const IdentityInfo& idInfo,
-                                             const Manifest& manifest,
+                                             const ajn::securitymgr::Manifest& manifest,
                                              GroupInfo& adminGroup,
                                              IdentityCertificateChain& idCert)
     {
@@ -85,7 +86,7 @@ class AgentStorageWrapper :
 
     virtual QStatus GetIdentityCertificatesAndManifest(const Application& app,
                                                        IdentityCertificateChain& identityCertificates,
-                                                       Manifest& manifest) const
+                                                       ajn::securitymgr::Manifest& manifest) const
     {
         return ca->GetIdentityCertificatesAndManifest(app, identityCertificates, manifest);
     }

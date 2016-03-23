@@ -28,7 +28,7 @@ class TestClaimContext :
     public ClaimContext {
   public:
     TestClaimContext(const OnlineApplication& _app,
-                     const Manifest& _mnf,
+                     const ajn::securitymgr::Manifest& _mnf,
                      const PermissionConfigurator::ClaimCapabilities _capabilities,
                      const PermissionConfigurator::ClaimCapabilityAdditionalInfo _capInfo) :
         ClaimContext(_app,
@@ -71,7 +71,7 @@ class ClaimContextTests :
  **/
 TEST_F(ClaimContextTests, BasicConstructor) {
     OnlineApplication app;
-    Manifest mnf;
+    ajn::securitymgr::Manifest mnf;
     PermissionConfigurator::ClaimCapabilities caps = 0x1234;
     PermissionConfigurator::ClaimCapabilityAdditionalInfo info = 0x4321;
 
@@ -93,7 +93,7 @@ TEST_F(ClaimContextTests, BasicConstructor) {
  **/
 TEST_F(ClaimContextTests, ApproveManifest) {
     OnlineApplication app;
-    Manifest mnf;
+    ajn::securitymgr::Manifest mnf;
     PermissionConfigurator::ClaimCapabilities caps = 0x1234;
     PermissionConfigurator::ClaimCapabilityAdditionalInfo info = 0x4321;
 
@@ -117,7 +117,7 @@ TEST_F(ClaimContextTests, ApproveManifest) {
  **/
 TEST_F(ClaimContextTests, SetClaimType) {
     OnlineApplication app;
-    Manifest mnf;
+    ajn::securitymgr::Manifest mnf;
     PermissionConfigurator::ClaimCapabilities caps = 0x1238;
     PermissionConfigurator::ClaimCapabilityAdditionalInfo info = 0x4321;
 

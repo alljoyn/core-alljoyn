@@ -536,9 +536,9 @@ bool BasicTest::CheckDefaultPolicy(const OnlineApplication& app)
 
 bool BasicTest::CheckRemoteIdentity(const OnlineApplication& app,
                                     IdentityInfo& expected,
-                                    Manifest& expectedManifest,
+                                    ajn::securitymgr::Manifest& expectedManifest,
                                     IdentityCertificate& remoteIdentity,
-                                    Manifest& remoteManifest)
+                                    ajn::securitymgr::Manifest& remoteManifest)
 {
     CreateProxyObjectManager();
     printf("Checking remote identity ... \n");
@@ -585,10 +585,10 @@ bool BasicTest::CheckRemoteIdentity(const OnlineApplication& app,
 
 bool BasicTest::CheckIdentity(const OnlineApplication& app,
                               IdentityInfo& expected,
-                              Manifest& expectedManifest)
+                              ajn::securitymgr::Manifest& expectedManifest)
 {
     IdentityCertificate remoteIdentity;
-    Manifest remoteManifest;
+    ajn::securitymgr::Manifest remoteManifest;
 
     if (!CheckRemoteIdentity(app, expected, expectedManifest,
                              remoteIdentity, remoteManifest)) {
@@ -599,7 +599,7 @@ bool BasicTest::CheckIdentity(const OnlineApplication& app,
     QStatus status = ER_OK;
 
     IdentityCertificateChain storedIdCerts;
-    Manifest storedManifest;
+    ajn::securitymgr::Manifest storedManifest;
     status = ca->GetIdentityCertificatesAndManifest(app, storedIdCerts, storedManifest);
     if (ER_OK != status) {
         printf("failed to GetIdentityCertificateAndManifest\n");
@@ -823,7 +823,7 @@ bool BasicTest::CheckUnexpectedSyncErrors()
     printf("Checking for unexpected sync errors ... ");
     if (tal && tal->syncErrors.size() > 0) {
         printf("%lu unexpected sync error(s)\n",
-               tal->syncErrors.size());
+               (unsigned long)tal->syncErrors.size());
         return false;
     }
     printf("ok\n");
@@ -835,7 +835,7 @@ bool BasicTest::CheckUnexpectedManifestUpdates()
     printf("Checking for unexpected manifest updates ... ");
     if (tal && tal->manifestUpdates.size() > 0) {
         printf("%lu unexpected manifest update(s)\n",
-               tal->manifestUpdates.size());
+               (unsigned long)tal->manifestUpdates.size());
         return false;
     }
     printf("ok\n");

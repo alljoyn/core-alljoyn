@@ -420,7 +420,7 @@ QStatus UIStorageImpl::UpdateIdentity(Application& app,
     }
 
     IdentityCertificate cert;
-    status = ca->GenerateIdentityCertificate(app, identityInfo, manifest, cert);
+    status = ca->GenerateIdentityCertificate(app, identityInfo, cert);
     if (ER_OK != status) {
         return status;
     }

@@ -68,6 +68,13 @@ class Manifest {
              const size_t manifestRulesCount);
 
     /**
+     * @brief Construct manifest from a signed manifest object.
+     *
+     * @param[in] signedManifest           The signed ajn::Manifest object.
+     */
+    Manifest(const ajn::Manifest& signedManifest);
+
+    /**
      * @brief Retrieve the byte array representing the manifest.
      *
      * @param[in,out] manifestByteArray    A byte array to be filled-in.
@@ -78,6 +85,13 @@ class Manifest {
      */
     QStatus GetByteArray(uint8_t** manifestByteArray,
                          size_t* size) const;
+
+    /**
+     * @brief Retrieve the manifest as an ajn::Manifest object.
+     *
+     * @return Manifest object.
+     */
+    ajn::Manifest GetManifest() const;
 
     /**
      * @brief Retrieve the rules representing the manifest.
@@ -92,17 +106,6 @@ class Manifest {
      */
     QStatus GetRules(PermissionPolicy::Rule** manifestRules,
                      size_t* manifestRulesCount) const;
-
-    /**
-     * @brief Retrieve the digest representing the manifest.
-     *
-     * @param[in,out] digest               A previously allocated (new) byte array with the correct size.
-     *
-     * @return ER_OK                       If the digest was computed correctly.
-     * @return ER_END_OF_DATA              In case the manifest is empty.
-     * @return others
-     */
-    QStatus GetDigest(uint8_t* digest) const;
 
     /**
      * @brief Populate the manifest based on the passed on byte array.
@@ -129,6 +132,16 @@ class Manifest {
      */
     QStatus SetFromRules(const PermissionPolicy::Rule* manifestRules,
                          const size_t manifestRulesCount);
+
+    /**
+     * @brief Populate the manifest from an ajn::Manifest object.
+     *
+     * @param[in] signedManifest           ajn::Manifest object
+     *
+     * @return ER_OK                       If the manifest was populated successfully.
+     *         other error indicating failure
+     */
+    QStatus SetFromSignedManifest(const ajn::Manifest& signedManifest);
 
     /**
      * @brief Return a string representation of this Manifest.
@@ -182,17 +195,9 @@ class Manifest {
   private:
 
     /**
-     * @brief A PermissionPolicy encapsulating the manifest rules.
+     * @brief An ajn::Manifest encapsulating the manifest rules.
      */
-    mutable PermissionPolicy manifest;
-    /**
-     * @brief A byte array representation of the manifest rules.
-     */
-    uint8_t* byteArray;
-    /**
-     * @brief The size of the byte array representation of the manifest rules.
-     */
-    size_t size;
+    mutable ajn::Manifest manifest;
 };
 }
 }

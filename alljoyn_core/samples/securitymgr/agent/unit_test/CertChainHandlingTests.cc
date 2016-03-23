@@ -39,12 +39,13 @@ class CertChainAgentStorageWrapper :
     }
 
     QStatus RegisterAgent(const KeyInfoNISTP256& agentKey,
-                          const Manifest& manifest,
+                          const ajn::securitymgr::Manifest& manifest,
                           GroupInfo& adminGroup,
                           IdentityCertificateChain& identityCertificates,
+                          ajn::Manifest& signedManifest,
                           vector<MembershipCertificateChain>& adminGroupMemberships)
     {
-        QStatus status = ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, adminGroupMemberships);
+        QStatus status = ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, signedManifest, adminGroupMemberships);
         if (ER_OK == status) {
             identityCertificates.push_back(rootIdCert);
             agentIdChain = identityCertificates;
@@ -76,7 +77,7 @@ class CertChainAgentStorageWrapper :
     QStatus GetIdentityCertificatesAndManifest(const Application& app,
 
                                                IdentityCertificateChain& identityCertificates,
-                                               Manifest& manifest) const
+                                               ajn::securitymgr::Manifest& manifest) const
     {
         QStatus status = ca->GetIdentityCertificatesAndManifest(app, identityCertificates, manifest);
         if ((ER_OK == status) && addIdRootCert) {
@@ -87,7 +88,7 @@ class CertChainAgentStorageWrapper :
 
     virtual QStatus StartApplicationClaiming(const Application& app,
                                              const IdentityInfo& idInfo,
-                                             const Manifest& manifest,
+                                             const ajn::securitymgr::Manifest& manifest,
                                              GroupInfo& adminGroup,
                                              IdentityCertificateChain& identityCertificates)
     {
@@ -196,7 +197,7 @@ class CertChainHandlingTests :
 
     void CheckIdentyCertificateChain(IdentityCertificateChain chain, bool& failure, const char* function, int line)
     {
-        Manifest ignored;
+        ajn::securitymgr::Manifest ignored;
         IdentityCertificateChain expectedChain;
 
         ASSERT_EQ(ER_OK, wrappedCa->GetIdentityCertificatesAndManifest(testAppInfo, expectedChain, ignored))

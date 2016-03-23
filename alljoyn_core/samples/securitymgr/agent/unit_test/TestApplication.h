@@ -64,7 +64,7 @@ class TestApplication {
     /**
      * Sets the manifest of this TestApplication.
      */
-    QStatus SetManifest(const Manifest& manifest);
+    QStatus SetManifest(const ajn::securitymgr::Manifest& manifest);
 
     /**
      * Sets the manifest on the BusAttachment.
@@ -74,7 +74,7 @@ class TestApplication {
     /**
      * Updates the manifest of this TestApplication.
      */
-    QStatus UpdateManifest(const Manifest& manifest);
+    QStatus UpdateManifest(const ajn::securitymgr::Manifest& manifest);
 
     /**
      * Sets the application state as permitted by PermissionConfigurator
