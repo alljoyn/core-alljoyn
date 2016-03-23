@@ -986,6 +986,12 @@ QStatus KeyStore::DelKey(const Key& key, bool includeAssociatedKeys, bool exclus
     }
 
     if (includeAssociatedKeys) {
+        /*
+         * Delete the associated keys. Do not call DelKeyInternal directly since it
+         * is neccessary to handle the associated deletes for each member. If a delete
+         * fails, we save the status and continue trying to delete other associated keys.
+         */
+        QStatus savedStatus = ER_OK;
         KeyBlob& kb = (*keys)[key].keyBlob;
         if ((kb.GetAssociationMode() == KeyBlob::ASSOCIATE_HEAD) ||
             (kb.GetAssociationMode() == KeyBlob::ASSOCIATE_BOTH)) {
@@ -993,11 +999,16 @@ QStatus KeyStore::DelKey(const Key& key, bool includeAssociatedKeys, bool exclus
             size_t numItems = 0;
             if (SearchAssociatedKeys(key, &list, &numItems) == ER_OK) {
                 for (size_t cnt = 0; cnt < numItems; cnt++) {
-                    (void)DelKey(list[cnt], true, true);
+                    status = DelKey(list[cnt], true, true);
+                    if (status != ER_OK) {
+                        savedStatus = status;
+                    }
                 }
             }
         }
+        status = savedStatus;
     }
+
 
     DelKeyInternal(key);
 

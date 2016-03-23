@@ -540,12 +540,21 @@ class String {
      * @overload
      * Compare a substring of this string with other.
      *
+     * @remark The behavior of this method has changed between AllJoyn 15.09 and 16.04.
+     *
      * @param pos    Start position of this string.
      * @param n      Number of characters of this string to use for compare.
      * @param other  String to compare with.
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
     int compare(size_type pos, size_type n, const char* other) const {
+        /*
+         * In 15.09, calling this method with n = 0 returned 0 as the compare result.
+         * In 16.04, calling this method with n = 0 returns -1 as the compare result.
+         * Therefore trigger a failed assertion (at least temporarily) when calling this
+         * method with n = 0, thus warning the caller about this behavior change.
+         */
+        QCC_ASSERT(n != 0);
         return s.compare(pos, n, other);
     }
 

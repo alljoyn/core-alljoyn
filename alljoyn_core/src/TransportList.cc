@@ -67,17 +67,19 @@ QStatus TransportList::NormalizeTransportSpec(const char* inSpec, qcc::String& o
 
 Transport* TransportList::GetTransport(const qcc::String& transportSpec)
 {
-    Transport* transport = NULL;
+    Transport* transport = nullptr;
 
     if (isInitialized && isStarted) {
-
-        /* Try to get existing transport */
+        /* ':' separates the transport name from transport args */
         size_t colonOff = transportSpec.find_first_of(':');
-        for (size_t i = 0; i < transportList.size(); ++i) {
-            Transport*& trans = transportList[i];
-            if (0 == transportSpec.compare(0, colonOff, trans->GetTransportName())) {
-                transport = trans;
-                break;
+
+        if (colonOff != 0) {
+            for (size_t i = 0; i < transportList.size(); ++i) {
+                Transport*& trans = transportList[i];
+                if (0 == transportSpec.compare(0, colonOff, trans->GetTransportName())) {
+                    transport = trans;
+                    break;
+                }
             }
         }
     }
