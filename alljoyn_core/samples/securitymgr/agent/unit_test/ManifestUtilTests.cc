@@ -235,13 +235,6 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
     delete[]byteArray;
     byteArray = nullptr;
 
-    uint8_t* digestMfromRules = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-    uint8_t* digestMFromByteStr = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-
-    EXPECT_EQ(ER_OK, manifestFromByteArray.GetDigest(digestMFromByteStr));
-    EXPECT_EQ(ER_OK, manifestFromRules.GetDigest(digestMfromRules));
-
-    EXPECT_EQ(0, memcmp(digestMfromRules, digestMFromByteStr, Crypto_SHA256::DIGEST_SIZE));
 
     // Test copy constructor and comparison
     Manifest copyManifest(manifestFromByteArray);
@@ -256,28 +249,6 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
     EXPECT_TRUE(manifestAssignee == manifestFromByteArray);
     EXPECT_TRUE(manifestAssignee == manifestFromRules);
     EXPECT_TRUE(manifestAssignee != emptyManifest);
-
-    // Test GetDigest after copy and assignment
-    uint8_t* digest = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-    uint8_t* otherDigest = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-
-    EXPECT_EQ(ER_OK, copyManifest.GetDigest(digest));
-    EXPECT_EQ(ER_OK, manifestFromByteArray.GetDigest(otherDigest));
-
-    cout << "Digest is \n";
-    PrintDigest(digest);
-
-    cout << "otherDigest is \n";
-    PrintDigest(otherDigest);
-
-    EXPECT_EQ(0, memcmp(digest, otherDigest, Crypto_SHA256::DIGEST_SIZE));
-
-    uint8_t* assigneeDigest = new uint8_t[Crypto_SHA256::DIGEST_SIZE];
-    // Manifest assigneeManifest = copyManifest;
-    EXPECT_EQ(ER_OK, manifestAssignee.GetDigest(assigneeDigest));
-    cout << "assigneeDigest is \n";
-    PrintDigest(assigneeDigest);
-    EXPECT_EQ(0, memcmp(assigneeDigest, otherDigest, Crypto_SHA256::DIGEST_SIZE));
 
     delete[]otherRules;
     delete[]rules;
@@ -406,7 +377,6 @@ TEST_F(ManifestUtilTests, ManifestIllegalArgs) {
 
     ASSERT_NE(ER_OK, defaultManifest.GetByteArray(nullptr, nullptr));
     ASSERT_NE(ER_OK, defaultManifest.GetRules(nullptr, nullptr));
-    ASSERT_NE(ER_OK, defaultManifest.GetDigest(nullptr));
     ASSERT_NE(ER_OK, defaultManifest.SetFromByteArray(nullptr, 0));
     ASSERT_NE(ER_OK, defaultManifest.SetFromRules(nullptr, 0));
 

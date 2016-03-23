@@ -67,7 +67,7 @@ class ApplicationUpdater :
                        ) :
         busAttachment(ba), storage(s), proxyObjectManager(_pom),
         monitor(_monitor), securityAgentImpl(smi),
-        queue(TaskQueue<SecurityEvent*, ApplicationUpdater>(this))
+        queue(this)
     {
         monitor->RegisterSecurityInfoListener(this);
         storage->RegisterStorageListener(this);

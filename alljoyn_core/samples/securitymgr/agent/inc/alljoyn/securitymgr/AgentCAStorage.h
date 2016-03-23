@@ -117,10 +117,11 @@ class AgentCAStorage {
      * @brief Register a Security Agent with storage.
      *
      * @param[in] agentKey                   A KeyInfoNISTP256 unique to this agent.
-     * @param[in] manifest                   The manifest used in generating the identity certificate chain
+     * @param[in] manifest                   The manifest used in generating the signed manifest
      *                                       for the registering agent.
      * @param[in,out] adminGroup             The group info that will be filled-in for the registering agent.
      * @param[in,out] identityCertificates   The identity certificate chain generated for the registering agent.
+     * @param[out] signedManifest            The signed manifest built from manifest.
      * @param[in,out] adminGroupMemberships  The membership certificate chain generated for the registering agent.
      *
      * @return ER_OK  On success.
@@ -130,6 +131,7 @@ class AgentCAStorage {
                                   const Manifest& manifest,
                                   GroupInfo& adminGroup,
                                   IdentityCertificateChain& identityCertificates,
+                                  ajn::Manifest& signedManifest,
                                   vector<MembershipCertificateChain>& adminGroupMemberships) = 0;
 
     /**
