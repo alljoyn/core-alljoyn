@@ -261,6 +261,9 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
     const MsgArg* iface = msg->GetArg(0);
     const MsgArg* property = msg->GetArg(1);
     MsgArg val = MsgArg();
+    String errorMessage;
+    const char* temp = msg->GetErrorName(&errorMessage);
+    String errorName = temp ? temp : "";    //to avoid str != nullptr assertion failure in String
 
     /* Check property exists on this interface and is readable */
     const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
@@ -275,7 +278,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
             const InterfaceDescription::Property* prop = ifc->GetProperty(property->v_string.str);
             if (prop) {
                 if (prop->access & PROP_ACCESS_READ) {
-                    status = Get(iface->v_string.str, property->v_string.str, val);
+                    status = Get(iface->v_string.str, property->v_string.str, val, errorName, errorMessage);
                 } else {
                     QCC_DbgPrintf(("No read access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -296,7 +299,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
         /* Prevent destructor from attempting to free val */
         arg.v_variant.val = NULL;
     } else {
-        MethodReply(msg, status);
+        MethodReply(msg, errorName.c_str(), errorMessage.c_str());
     }
 }
 
@@ -430,6 +433,9 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
     const MsgArg* iface = msg->GetArg(0);
     const MsgArg* property = msg->GetArg(1);
     const MsgArg* val = msg->GetArg(2);
+    String errorMessage;
+    const char* temp = msg->GetErrorName(&errorMessage);
+    String errorName = temp ? temp : "";    //to avoid str != nullptr assertion failure in String
 
     /* Check property exists on this interface has correct signature and is writeable */
     const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
@@ -447,7 +453,7 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
                     QCC_DbgPrintf(("Property value for %s has wrong type %s", property->v_string.str, prop->signature.c_str()));
                     status = ER_BUS_SET_WRONG_SIGNATURE;
                 } else if (prop->access & PROP_ACCESS_WRITE) {
-                    status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val));
+                    status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val), errorName, errorMessage);
                 } else {
                     QCC_DbgPrintf(("No write access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -460,7 +466,11 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
         status = ER_BUS_UNKNOWN_INTERFACE;
     }
     QCC_DbgPrintf(("Properties.Set %s", QCC_StatusText(status)));
-    MethodReply(msg, status);
+    if (status == ER_OK) {
+        MethodReply(msg, status);
+    } else {
+        MethodReply(msg, errorName.c_str(), errorMessage.c_str());
+    }
 }
 
 void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message& msg)
