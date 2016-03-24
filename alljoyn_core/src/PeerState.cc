@@ -36,7 +36,7 @@
 
 #include <alljoyn/Status.h>
 
-#define QCC_MODULE "ALLJOYN"
+#define QCC_MODULE "ALLJOYN_PEERSTATE"
 
 using namespace std;
 using namespace qcc;
@@ -322,7 +322,9 @@ PeerState PeerStateTable::GetPeerState(const qcc::String& busName, bool createIf
 {
     lock.Lock(MUTEX_CONTEXT);
     std::map<const qcc::String, PeerState>::iterator iter = peerMap.find(busName);
-    QCC_DbgHLPrintf(("PeerStateTable::GetPeerState() %s state for %s", (iter == peerMap.end()) ? "no" : "got", busName.c_str()));
+    QCC_DbgHLPrintf(("PeerStateTable(%p)::GetPeerState() %s state for %s: %p",
+                     this, (iter == peerMap.end()) ? "no" : "got", busName.c_str(),
+                     (iter != peerMap.end()) ? peerMap[busName].unwrap() : (void*)0));
     if (iter != peerMap.end() || createIfUnknown) {
         PeerState result = peerMap[busName];
         lock.Unlock(MUTEX_CONTEXT);
@@ -340,11 +342,13 @@ PeerState PeerStateTable::GetPeerState(const qcc::String& uniqueName, const qcc:
     lock.Lock(MUTEX_CONTEXT);
     std::map<const qcc::String, PeerState>::iterator iter = peerMap.find(uniqueName);
     if (iter == peerMap.end()) {
-        QCC_DbgHLPrintf(("PeerStateTable::GetPeerState() no state stored for %s aka %s", uniqueName.c_str(), aliasName.c_str()));
+        QCC_DbgHLPrintf(("PeerStateTable(%p)::GetPeerState() no state stored for %s aka %s",
+                         this, uniqueName.c_str(), aliasName.c_str()));
         result = peerMap[aliasName];
         peerMap[uniqueName] = result;
     } else {
-        QCC_DbgHLPrintf(("PeerStateTable::GetPeerState() got state for %s aka %s", uniqueName.c_str(), aliasName.c_str()));
+        QCC_DbgHLPrintf(("PeerStateTable(%p)::GetPeerState() got state for %s aka %s: %p",
+                         this, uniqueName.c_str(), aliasName.c_str(), iter->second.unwrap()));
         result = iter->second;
         peerMap[aliasName] = result;
     }
@@ -355,7 +359,7 @@ PeerState PeerStateTable::GetPeerState(const qcc::String& uniqueName, const qcc:
 void PeerStateTable::DelPeerState(const qcc::String& busName)
 {
     lock.Lock(MUTEX_CONTEXT);
-    QCC_DbgHLPrintf(("PeerStateTable::DelPeerState() %s for %s", peerMap.count(busName) ? "remove state" : "no state to remove", busName.c_str()));
+    QCC_DbgHLPrintf(("PeerStateTable(%p)::DelPeerState() %s for %s", this, peerMap.count(busName) ? "remove state" : "no state to remove", busName.c_str()));
     peerMap.erase(busName);
     lock.Unlock(MUTEX_CONTEXT);
 }
@@ -539,7 +543,7 @@ QStatus _PeerState::SetAuthSuite(const String& authSuite)
 
 QStatus _PeerState::StoreManifest(const Manifest& manifest)
 {
-    m_manifests.push_back(PeerManifestState(manifest));
+    m_manifests.push_back(manifest);
 
     return ER_OK;
 }
@@ -553,12 +557,54 @@ QStatus _PeerState::ClearManifests()
 
 const std::vector<Manifest> _PeerState::GetManifests() const
 {
-    std::vector<Manifest> output(m_manifests.size());
-    for (PeerManifestState manifestState : m_manifests) {
-        output.push_back(manifestState->m_manifest);
-    }
+    return m_manifests;
+}
 
-    return output;
+/* Since we're using the signature as the key which has good randomness, we don't need to use
+ * the entire signature as the key; this many bytes will do.
+ */
+static const size_t MAXIMUM_MANIFEST_KEY_SIZE = 8U;
+
+static std::string ComputeManifestKey(const Manifest& manifest)
+{
+    if (manifest->GetSignature().size() > 0) {
+        return string(reinterpret_cast<AJ_PCSTR>(manifest->GetSignature().data()),
+                      min(manifest->GetSignature().size(), MAXIMUM_MANIFEST_KEY_SIZE));
+    } else {
+        /* If we don't have a signature, we just need something that isn't an empty string. Any
+         * such manifest won't ever be valid, anyway.
+         */
+        return string("UnsignedManifest");
+    }
+}
+
+bool _PeerState::IsManifestSent(const Manifest& manifest) const
+{
+    return (m_manifestsSent.find(ComputeManifestKey(manifest)) != m_manifestsSent.end());
+}
+
+QStatus _PeerState::StoreSentManifest(const Manifest& manifest)
+{
+    m_manifestsSent[ComputeManifestKey(manifest)] = manifest;
+
+    return ER_OK;
+}
+
+QStatus _PeerState::ClearSentManifests()
+{
+    m_manifestsSent.clear();
+
+    return ER_OK;
+}
+
+bool _PeerState::GetHaveExchangedManifests() const
+{
+    return m_haveExchangedManifests;
+}
+
+void _PeerState::SetHaveExchangedManifests(bool haveExchangedManifests)
+{
+    m_haveExchangedManifests = haveExchangedManifests;
 }
 
 }

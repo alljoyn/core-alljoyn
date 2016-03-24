@@ -1135,7 +1135,8 @@ TEST_F(SecSignalTest, SendSignalAllowedAfterProviderPolicyUpdate)
 
 #define NR_OF_CONSUMERS 3
 
-TEST_F(SecSignalTest, SendSignalToAllHostedSession)
+/* Disabled pending investigation under ASACORE-2775. */
+TEST_F(SecSignalTest, DISABLED_SendSignalToAllHostedSession)
 {
     // Define policy for basic consumer and provider
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
