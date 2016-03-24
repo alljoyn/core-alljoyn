@@ -137,6 +137,25 @@ bool MutexInternal::TryLock()
         return false;
     }
 
+    /*
+     * Calling AcquiringLock here means that the SCL internal locks that opted-in
+     * for lock order verification do NOT support the following pattern of using Mutex:
+     *
+     * Thread1:
+     *      a.Lock();
+     *      b.Lock();
+     *
+     * Thread2:
+     *      b.Lock();
+     *      if(!a.TryLock()) {
+     *          b.Unlock();
+     *          a.Lock();
+     *      }
+     *
+     * The a.TryLock() call above gets flagged as an out-of-order acquire. If the SCL
+     * will ever need to support that pattern, AcquiringLock will need to be changed
+     * to support it. Currently there are no TryLock calls in the SCL.
+     */
     AcquiringLock();
     bool locked = PlatformSpecificTryLock();
     if (locked) {
