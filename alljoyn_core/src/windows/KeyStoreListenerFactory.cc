@@ -58,14 +58,33 @@ class DefaultKeyStoreListener : public KeyStoreListener {
     FileLocker m_fileLocker;
 };
 
-/* Note: this function is also used by test code. */
-qcc::String GetDefaultKeyStoreFileName(const char* application, const char* fname)
+static qcc::String GetDefaultKeyStoreFileName(const char* application, const char* fname)
 {
+    qcc::String path = qcc::GetHomeDir() + "/.alljoyn_secure_keystore/";
+
     if (fname != nullptr) {
-        return GetHomeDir() + "/.alljoyn_secure_keystore/" + fname;
+        path += fname;
     } else {
-        return GetHomeDir() + "/.alljoyn_secure_keystore/" + application;
+        path += application;
     }
+
+    return path;
+}
+
+/* Note: this function is used by test code. */
+QStatus DeleteDefaultKeyStoreFile(const qcc::String& application, const char* fname)
+{
+    QStatus status = ER_OK;
+    qcc::String path = GetDefaultKeyStoreFileName(application.c_str(), fname);
+
+    if (qcc::FileExists(path) == ER_OK) {
+        status = qcc::DeleteFile(path);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("DeleteFile(%s) failed", path.c_str()));
+        }
+    }
+
+    return status;
 }
 
 DefaultKeyStoreListener::DefaultKeyStoreListener(const qcc::String& application, const char* fname) :

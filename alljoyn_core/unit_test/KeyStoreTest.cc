@@ -52,28 +52,20 @@ using namespace ajn;
 static const char keyStoreName[] = "keystoretest_shared_keystore";
 static const char testData[] = "This is the message that we are going to store and then load and verify";
 
-namespace ajn {
-#if defined(QCC_OS_GROUP_WINDOWS)
-extern qcc::String GetDefaultKeyStoreFileName(const char* application, const char* fname);
-#else
-static qcc::String GetDefaultKeyStoreFileName(const char* application, const char* fname) {
-    QCC_UNUSED(fname);
-    return application;
-}
-#endif
-}
-
-
 TEST(KeyStoreTest, basic_store_load) {
     QStatus status = ER_OK;
     KeyBlob key;
+    const char* fileName = "keystore_test";
 
     /*
      *  Testing basic key encryption/decryption
      */
     /* Store step */
     {
-        FileSink sink("keystore_test");
+        if (qcc::FileExists(fileName) == ER_OK) {
+            ASSERT_EQ(ER_OK, qcc::DeleteFile(fileName));
+        }
+        FileSink sink(fileName);
 
         key.Set((const uint8_t*)testData, sizeof(testData), KeyBlob::GENERIC);
         //printf("Key %d in  %s\n", key.GetType(), BytesToHexString(key.GetData(), key.GetSize()).c_str());
@@ -104,7 +96,7 @@ TEST(KeyStoreTest, basic_store_load) {
 
     /* Load step */
     {
-        FileSource source("keystore_test");
+        FileSource source(fileName);
 
         /*
          * Read the key from a stream
@@ -131,7 +123,8 @@ TEST(KeyStoreTest, basic_store_load) {
 
         ASSERT_STREQ(testData, (const char*)inKey.GetData()) << "Key data was incorrect";
     }
-    DeleteFile("keystore_test");
+
+    ASSERT_EQ(ER_OK, qcc::DeleteFile(fileName));
 }
 
 TEST(KeyStoreTest, keystore_store_load_merge) {
@@ -145,13 +138,14 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
     KeyStore::Key idx4(KeyStore::Key::LOCAL, guid4);
     QStatus status = ER_OK;
     KeyBlob key;
+    const char* fileName = "keystore_test";
 
     /*
      * Testing key store STORE
      */
     {
-        KeyStore keyStore("keystore_test");
-
+        KeyStore keyStore(fileName);
+        ASSERT_EQ(ER_OK, DeleteDefaultKeyStoreFile(fileName));
         keyStore.Init(NULL, true);
         keyStore.Clear();
 
@@ -165,7 +159,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
      * Testing key store LOAD
      */
     {
-        KeyStore keyStore("keystore_test");
+        KeyStore keyStore(fileName);
         keyStore.Init(NULL, true);
 
         status = keyStore.GetKey(idx1, key);
@@ -179,14 +173,14 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
      * Testing key store MERGE
      */
     {
-        KeyStore keyStore("keystore_test");
+        KeyStore keyStore(fileName);
         keyStore.Init(NULL, true);
 
         key.Rand(620, KeyBlob::GENERIC);
         keyStore.AddKey(idx4, key);
 
         {
-            KeyStore keyStore2("keystore_test");
+            KeyStore keyStore2(fileName);
             keyStore2.Init(NULL, true);
 
             /* Replace a key */
@@ -216,7 +210,6 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
         status = keyStore.GetKey(idx4, key);
         ASSERT_EQ(ER_OK, status) << " Failed to load idx4";
     }
-    DeleteFile("keystore_test");
 }
 
 class KeyStoreThread : public Thread {
@@ -337,8 +330,7 @@ TEST(KeyStoreTest, concurrent_access_single_keystore)
 
 TEST(KeyStoreTest, concurrent_access_multiple_keystores)
 {
-    qcc::String filename = ajn::GetDefaultKeyStoreFileName(keyStoreName, nullptr);
-    (void)DeleteFile(filename);
+    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile(keyStoreName));
 
     vector<KeyStore::Key> workList1;
     vector<KeyStore::Key> deleteList1;

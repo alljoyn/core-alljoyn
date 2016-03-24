@@ -220,6 +220,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
                        alljoyn_permissionconfigurationlistener configurationListener)
     {
         *bus = alljoyn_busattachment_create(busName, QCC_FALSE);
+        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(busName));
         ASSERT_EQ(ER_OK, alljoyn_busattachment_start(*bus));
         ASSERT_EQ(ER_OK, alljoyn_busattachment_connect(*bus, getConnectArg().c_str()));
         ASSERT_EQ(ER_OK, alljoyn_busattachment_registerkeystorelistener(*bus, (alljoyn_keystorelistener)keyStoreListener));

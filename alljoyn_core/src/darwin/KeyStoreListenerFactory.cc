@@ -38,16 +38,43 @@ using namespace qcc;
 
 namespace ajn {
 
+static qcc::String GetDefaultKeyStoreFileName(const char* application, const char* fname)
+{
+    qcc::String path = qcc::GetHomeDir();
+
+    if (fname != nullptr) {
+        path += "/";
+        path += fname;
+    } else {
+        path += "/.alljoyn_keystore/";
+        path += application;
+    }
+
+    return path;
+}
+
+/* Note: this function is used by test code. */
+QStatus DeleteDefaultKeyStoreFile(const qcc::String& application, const char* fname)
+{
+    QStatus status = ER_OK;
+    qcc::String path = GetDefaultKeyStoreFileName(application.c_str(), fname);
+
+    if (qcc::FileExists(path) == ER_OK) {
+        status = qcc::DeleteFile(path);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("DeleteFile(%s) failed", path.c_str()));
+        }
+    }
+
+    return status;
+}
+
 class DefaultKeyStoreListener : public KeyStoreListener {
 
   public:
 
     DefaultKeyStoreListener(const qcc::String& application, const char* fname) {
-        if (fname) {
-            fileName = GetHomeDir() + "/" + fname;
-        } else {
-            fileName = GetHomeDir() + "/.alljoyn_keystore/" + application;
-        }
+        fileName = GetDefaultKeyStoreFileName(application.c_str(), fname);
     }
 
     QStatus LoadRequest(KeyStore& keyStore) {
