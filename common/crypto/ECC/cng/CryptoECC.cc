@@ -746,6 +746,8 @@ Crypto_ECC::Crypto_ECC()
 
         memset(eccState, 0, sizeof(*eccState));
     } else {
+        QCC_ASSERT(!"InitializeBCryptProviderHandles failed");
+
         /*
          *  Don't clean up any of the BCrypt Algorithm provider handles.
          *  If they have been created on the CNG Cache they'll be freed when that is cleaned up.
@@ -795,9 +797,9 @@ void Crypto_ECC::SetDHPublicKey(const ECCPublicKey* pubKey)
 
     QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
+        QCC_ASSERT(!"Crypto_ECC_SetPublicKey failed");
         abort();
     }
-
 }
 
 const ECCPrivateKey* Crypto_ECC::GetDHPrivateKey() const
@@ -834,6 +836,7 @@ void Crypto_ECC::SetDHPrivateKey(const ECCPrivateKey* privateKey)
 
     QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
+        QCC_ASSERT(!"Crypto_ECC_SetPrivateKey failed");
         abort();
     }
 }
@@ -968,6 +971,7 @@ void Crypto_ECC::SetDSAPublicKey(const ECCPublicKey* pubKey)
 
     if (ER_OK != status) {
         QCC_LogError(status, ("Crypto_ECC_SetPublicKey failed and aborting."));
+        QCC_ASSERT(!"Crypto_ECC_SetPublicKey failed");
         abort();
     }
 
@@ -1006,6 +1010,7 @@ void Crypto_ECC::SetDSAPrivateKey(const ECCPrivateKey* privateKey)
                                       &eccState->ecdsaPrivateKey);
 
     if (ER_OK != status) {
+        QCC_ASSERT(!"Crypto_ECC_SetPrivateKey failed");
         abort();
     }
 
