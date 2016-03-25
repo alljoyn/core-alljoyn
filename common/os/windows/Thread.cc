@@ -54,7 +54,7 @@ static const uint32_t MAX_SELECT_WAIT_MS = 10000;
 Mutex* Thread::threadListLock = NULL;
 map<ThreadId, Thread*>* Thread::threadList = NULL;
 
-static DWORD cleanExternalThreadKey;
+static DWORD cleanExternalThreadKey = FLS_OUT_OF_INDEXES;
 bool Thread::initialized = false;
 
 void Thread::CleanExternalThread(void* t)
@@ -75,7 +75,7 @@ void Thread::CleanExternalThread(void* t)
     threadListLock->Unlock();
 }
 
-QStatus Thread::Init()
+QStatus Thread::StaticInit()
 {
     if (!initialized) {
         /* Disable LockChecker for the threadListLock, thus allowing LockChecker to call GetThread() */
@@ -93,12 +93,16 @@ QStatus Thread::Init()
     return ER_OK;
 }
 
-QStatus Thread::Shutdown()
+QStatus Thread::StaticShutdown()
 {
     if (initialized) {
-        // Note that FlsFree will call the callback function for all
-        // fibers with a valid key in the Fls slot.
-        FlsFree(cleanExternalThreadKey);
+        if (cleanExternalThreadKey != FLS_OUT_OF_INDEXES) {
+            /* Free all external threads, by triggering their FLS callback */
+            QCC_VERIFY(FlsFree(cleanExternalThreadKey));
+            cleanExternalThreadKey = FLS_OUT_OF_INDEXES;
+        }
+
+        QCC_ASSERT(Thread::threadList->size() == 0);
         delete Thread::threadList;
         delete Thread::threadListLock;
         initialized = false;
