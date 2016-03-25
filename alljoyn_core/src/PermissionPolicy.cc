@@ -1241,6 +1241,11 @@ QStatus _Manifest::GetArrayMsgArg(const std::vector<Manifest>& manifests, MsgArg
 QStatus _Manifest::GetArrayMsgArg(const Manifest* manifests, size_t manifestCount, MsgArg& outputArg)
 {
     QStatus status = ER_OK;
+
+    if (0 == manifestCount) {
+        return outputArg.Set(_Manifest::s_MsgArgArraySignature, 0, nullptr);
+    }
+
     std::vector<MsgArg> msgArgs(manifestCount);
 
     for (size_t i = 0; i < manifestCount; i++) {
@@ -1800,6 +1805,40 @@ bool _Manifest::operator==(const _Manifest& other) const
 bool _Manifest::operator!=(const _Manifest& other) const
 {
     return !(*this == other);
+}
+
+std::string _Manifest::ToString() const
+{
+    std::string output;
+    char versionBuf[20];
+
+    /* Unfortunately Android doesn't have std::to_string, so we have to stringify the version
+     * number this way.
+     */
+    snprintf(versionBuf, sizeof(versionBuf), "%u", m_version);
+
+    output += "Manifest:\n";
+    output += "=====================\n";
+    output += "Version: ";
+    output += versionBuf;
+    output += "Thumbprint algorithm OID: " + m_thumbprintAlgorithmOid + "\n";
+    output += "Thumbprint: ";
+    output += BytesToHexString(m_thumbprint.data(), m_thumbprint.size()).c_str();
+    output += "\n";
+    output += "Signature algorithm OID: " + m_signatureAlgorithmOid + "\n";
+    output += "Signature: ";
+    output += BytesToHexString(m_signature.data(), m_signature.size()).c_str();
+    output += "\n";
+    output += "Rules:\n";
+
+    for (const PermissionPolicy::Rule& rule : GetRules()) {
+        output += rule.ToString().c_str();
+        output += "\n";
+    }
+
+    output += "=====================\n";
+
+    return output;
 }
 
 } /* namespace ajn */

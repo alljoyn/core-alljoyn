@@ -45,6 +45,7 @@
 #include "SASLEngine.h"
 #include "AllJoynCrypto.h"
 #include "BusInternal.h"
+#include "BusUtil.h"
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -1049,7 +1050,7 @@ void AllJoynPeerObj::ForceAuthentication(const qcc::String& busName)
 #define AUTH_TIMEOUT      120000
 #define DEFAULT_TIMEOUT   10000
 
-QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::String& busName, bool wait)
+QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::String& busName, bool wait, Message* msg)
 {
     QCC_ASSERT(bus);
     QStatus status;
@@ -1359,19 +1360,19 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
             if (status == ER_OK) {
                 /* exchange membership guilds */
                 if (useKeyExchanger && IsMembershipCertCapable(peerState->GetAuthVersion())) {
-                    bool sendManifest = false;
+                    bool sendManifests = false;
                     if (mech == "ALLJOYN_ECDHE_ECDSA") {
-                        sendManifest = true;
+                        sendManifests = true;
                     } else if (mech.empty()) {
                         /* key exchange step was skipped.
                            Send manifest if the local peer already cached the
                            remote peer's public key */
                         ECCPublicKey pubKey;
                         QStatus aStatus = securityApplicationObj.GetConnectedPeerPublicKey(peerState->GetGuid(), &pubKey);
-                        sendManifest = (ER_OK == aStatus);
+                        sendManifests = (ER_OK == aStatus);
                     }
-                    if (sendManifest) {
-                        status = SendManifests(remotePeerObj, ifc, peerState);
+                    if (sendManifests) {
+                        status = securityApplicationObj.SendManifests(&remotePeerObj, msg);
                         if (status == ER_OK) {
                             status = SendMembershipData(remotePeerObj, ifc, remotePeerGuid);
                         }
@@ -1638,7 +1639,7 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         if (req->msg->GetType() == MESSAGE_METHOD_CALL) {
             bus->GetInternal().GetLocalEndpoint()->PauseReplyHandlerTimeout(req->msg);
         }
-        status = AuthenticatePeer(req->msg->GetType(), req->msg->GetDestination(), false);
+        status = AuthenticatePeer(req->msg->GetType(), req->msg->GetDestination(), false, &req->msg);
         if (status != ER_WOULDBLOCK) {
             PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
             /*
@@ -2011,30 +2012,51 @@ void AllJoynPeerObj::SetupPeerAuthentication(const qcc::String& authMechanisms, 
     peerAuthListener.SetPermissionMgmtObj(&securityApplicationObj);
 }
 
-QStatus AllJoynPeerObj::SendManifests(ProxyBusObject& remotePeerObj, const InterfaceDescription* ifc, PeerState& peerState)
+static bool MatchesPrefix(const String& str, const String& prefix)
 {
-    std::vector<Manifest> manifests;
-    QStatus status = securityApplicationObj.RetrieveManifests(manifests);
-    if (ER_OK != status) {
-        if (ER_MANIFEST_NOT_FOUND == status) {
-            return ER_OK;  /* nothing to send */
+    return !WildcardMatch(str, prefix);
+}
+
+static bool ObjPathMatches(const PermissionPolicy::Rule& myRule, const PermissionPolicy::Rule& peerRule)
+{
+    return ((myRule.GetObjPath() == peerRule.GetObjPath()) ||
+            MatchesPrefix(myRule.GetObjPath(), peerRule.GetObjPath()) ||
+            MatchesPrefix(peerRule.GetObjPath(), myRule.GetObjPath()));
+}
+
+static bool InterfaceMatches(const PermissionPolicy::Rule& myRule, const PermissionPolicy::Rule& peerRule)
+{
+    return ((myRule.GetInterfaceName() == peerRule.GetInterfaceName()) ||
+            MatchesPrefix(myRule.GetInterfaceName(), peerRule.GetInterfaceName()) ||
+            MatchesPrefix(peerRule.GetInterfaceName(), myRule.GetInterfaceName()));
+}
+
+static bool ManifestMatches(const Manifest& myManifest, const Manifest& peerManifest)
+{
+    for (const PermissionPolicy::Rule peerRule : peerManifest->GetRules()) {
+        if ((peerRule.GetMembersSize() == 0) ||
+            peerRule.GetObjPath().empty() ||
+            peerRule.GetInterfaceName().empty()) {
+            /* Can't match. */
+            QCC_DbgTrace(("Skipping unmatchable manifest rule"));
+            continue;
         }
-        return status;
+
+        QCC_DbgTrace(("Considering peer manifest rule with object path %s, interface name %s",
+                      peerRule.GetObjPath().c_str(), peerRule.GetInterfaceName().c_str()));
+
+        for (const PermissionPolicy::Rule myRule : myManifest->GetRules()) {
+
+            if (ObjPathMatches(myRule, peerRule) &&
+                InterfaceMatches(myRule, peerRule)) {
+                QCC_DbgTrace(("Sending manifest: matched on my manifest rule with object path %s, interface name %s",
+                              myRule.GetObjPath().c_str(), myRule.GetInterfaceName().c_str()));
+                return true;
+            }
+        }
     }
 
-    MsgArg sendManifestsArg;
-    status = _Manifest::GetArrayMsgArg(manifests, sendManifestsArg);
-    if (ER_OK != status) {
-        return status;
-    }
-    Message replyMsg(*bus);
-    const InterfaceDescription::Member* sendManifests = ifc->GetMember("SendManifests");
-    status = remotePeerObj.MethodCall(*sendManifests, &sendManifestsArg, 1, replyMsg, DEFAULT_TIMEOUT);
-    if (status != ER_OK) {
-        return status;
-    }
-    /* process the reply */
-    return securityApplicationObj.ParseSendManifests(replyMsg, peerState);
+    return false;
 }
 
 void AllJoynPeerObj::HandleSendManifests(const InterfaceDescription::Member* member, Message& msg)
@@ -2042,6 +2064,7 @@ void AllJoynPeerObj::HandleSendManifests(const InterfaceDescription::Member* mem
     QCC_UNUSED(member);
     PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
     PeerState peerState = peerStateTable->GetPeerState(msg->GetSender());
+
     QStatus status = securityApplicationObj.ParseSendManifests(msg, peerState);
     if (ER_OK != status) {
         QStatus rStatus = MethodReply(msg, status);
@@ -2060,30 +2083,84 @@ void AllJoynPeerObj::HandleSendManifests(const InterfaceDescription::Member* mem
         }
         return;
     }
+
+    /* If RetrieveManifests returned ER_MANIFEST_NOT_FOUND, it shouldn't have added
+     * anything to manifests.
+     */
+    QCC_ASSERT((ER_MANIFEST_NOT_FOUND != status) || manifests.empty());
+
+    std::vector<Manifest> manifestsToSend;
+
+    /* Filter manifests based on manifests we've seen from calling peer. */
+    for (const Manifest myManifest : manifests) {
+        if (peerState->IsManifestSent(myManifest)) {
+            QCC_DbgTrace(("Skipping already-sent manifest: %s", myManifest->ToString().c_str()));
+            continue;
+        }
+
+        /* This logic looks similar to PermissionMgmtObj::SendManifests, but there is an important
+         * difference: In SendManifests, this peer is acting as the initiator, and it (usually) has
+         * a message it is trying to send, and it selects manifests to send based on that.
+         *
+         * Here, this peer is acting as the responder, and it doesn't know what the message is. Instead,
+         * it knows what manifests it's seen from the initiator, and sends back manifests based on those.
+         * This does mean, out of necessity, an overly broad manifest from the initiator, particularly
+         * a wildcard one, will cause all manifests to be returned.
+         *
+         * If limiting this information disclosure is important, the security manager must assign more
+         * carefully-scoped manifests to take advantage of this selection process.
+         */
+
+        for (const Manifest peerManifest : peerState->GetManifests()) {
+            if (ManifestMatches(myManifest, peerManifest)) {
+                QCC_DbgTrace(("Sending manifest: %s", myManifest->ToString().c_str()));
+                manifestsToSend.push_back(myManifest);
+                break;
+            } else {
+                QCC_DbgTrace(("Skipping manifest: %s", myManifest->ToString().c_str()));
+            }
+        }
+
+    }
+
+    QCC_DbgTrace(("Manifest selection done; sending %" PRIuSIZET, manifestsToSend.size()));
+
     MsgArg replyArg;
-    if (ER_MANIFEST_NOT_FOUND == status) {
+    if ((ER_MANIFEST_NOT_FOUND == status) || manifestsToSend.empty()) {
         /* return empty array */
         status = replyArg.Set(_Manifest::s_MsgArgArraySignature, 0, nullptr);
     } else {
-        status = _Manifest::GetArrayMsgArg(manifests, replyArg);
+        status = _Manifest::GetArrayMsgArg(manifestsToSend, replyArg);
         if (ER_OK != status) {
             QCC_LogError(status, ("Could not GetArrayMsgArg"));
             QStatus rStatus = MethodReply(msg, status);
             if (ER_OK != rStatus) {
-                QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+                QCC_LogError(rStatus, ("%s: Could not MethodReply with error status %X", __FUNCTION__, status));
             }
             return;
         }
     }
+
     if (ER_OK == status) {
         QStatus rStatus = MethodReply(msg, &replyArg, 1);
         if (ER_OK != rStatus) {
             QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+        } else {
+            /* Now that we've successfully sent our manifests to the other peer, mark them
+             * as sent.
+             */
+            for (const Manifest manifest : manifestsToSend) {
+                QStatus sStatus = peerState->StoreSentManifest(manifest);
+                if (ER_OK != sStatus) {
+                    QCC_LogError(sStatus, ("%s: Could not StoreSentManifest", __FUNCTION__));
+                    QCC_ASSERT((ER_OK == sStatus) && "StoreSentManifest should never fail");
+                }
+            }
         }
     } else {
         QStatus rStatus = MethodReply(msg, status);
         if (ER_OK != rStatus) {
-            QCC_LogError(rStatus, ("%s: Could not MethodReply", __FUNCTION__));
+            QCC_LogError(rStatus, ("%s: Could not MethodReply with error status %X", __FUNCTION__, status));
         }
     }
 }

@@ -2004,9 +2004,6 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
     if (ER_OK != status) {
         return status;
     }
-    if (signedManifestCount == 0) {
-        return ER_OK; /* nothing to do */
-    }
 
     ECCPublicKey peerPublicKey;
     std::vector<ECCPublicKey> issuerPublicKeys;
@@ -2032,10 +2029,32 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
         }
 
         status = ER_CRYPTO_ERROR;
-        for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
-            status = signedManifest->VerifyByThumbprint(thumbprintVector, &(issuerPublicKeys[i]));
-            if (ER_OK == status) {
-                break;
+        if (0 == issuerPublicKeys.size()) {
+            /* Sometimes we don't get a full cert chain if the chain is just the leaf and then
+             * a trust anchor. In this case, try to validate the manifest with all the CA trust
+             * anchors.
+             */
+            trustAnchors.Lock(MUTEX_CONTEXT);
+
+            for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
+                if ((*it)->use == TRUST_ANCHOR_CA) {
+                    status = signedManifest->VerifyByThumbprint(thumbprintVector, (*it)->keyInfo.GetPublicKey());
+                    if (ER_OK == status) {
+                        break;
+                    }
+                }
+            }
+
+            trustAnchors.Unlock(MUTEX_CONTEXT);
+        } else {
+            /* If we did get the public key of the leaf cert issuer, though, that key must have
+             * signed the manifest.
+             */
+            for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
+                status = signedManifest->VerifyByThumbprint(thumbprintVector, &(issuerPublicKeys[i]));
+                if (ER_OK == status) {
+                    break;
+                }
             }
         }
 
@@ -2050,6 +2069,8 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
             continue;
         }
     }
+
+    peerState->SetHaveExchangedManifests(true);
 
     /* It's possible no manifests get installed if none validate. Don't fail because that will
      * prevent the secure session from being established, and the peers may only do things that
@@ -2745,6 +2766,219 @@ bool PermissionMgmtObj::HasTrustAnchors()
     bool hasTrustAnchors = !trustAnchors.empty();
     trustAnchors.Unlock(MUTEX_CONTEXT);
     return hasTrustAnchors;
+}
+
+static bool IsStdInterface(const char* iName)
+{
+    if (strcmp(iName, org::alljoyn::Bus::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Daemon::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Daemon::Debug::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Bus::Peer::Authentication::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Bus::Peer::Session::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::allseen::Introspectable::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::alljoyn::Bus::Peer::HeaderCompression::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::freedesktop::DBus::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::freedesktop::DBus::Peer::InterfaceName) == 0) {
+        return true;
+    }
+    if (strcmp(iName, org::freedesktop::DBus::Introspectable::InterfaceName) == 0) {
+        return true;
+    }
+
+    return false;
+}
+
+/* Helper function borrowed from PermissionManager.cc. */
+static bool MatchesPrefix(const String& str, const String& prefix)
+{
+    return !WildcardMatch(str, prefix);
+}
+
+QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Message* msg)
+{
+    if ((nullptr == remotePeerObj) && (nullptr == msg)) {
+        return ER_BAD_ARG_1;
+    }
+
+    const InterfaceDescription* ifc = bus.GetInterface(org::alljoyn::Bus::Peer::Authentication::InterfaceName);
+    if (ifc == NULL) {
+        return ER_BUS_NO_SUCH_INTERFACE;
+    }
+
+    if (nullptr != msg) {
+        /* Manifests only apply to method calls and signals. */
+        AllJoynMessageType msgType = (*msg)->GetType();
+        if ((MESSAGE_METHOD_CALL != msgType) && (MESSAGE_SIGNAL != msgType)) {
+            return ER_OK;
+        }
+
+        /* And only to messages not from one of the standard interfaces. */
+        if (IsStdInterface((*msg)->GetInterface())) {
+            return ER_OK;
+        }
+    }
+
+    AJ_PCSTR destination = ((nullptr != msg) ? (*msg)->GetDestination() : remotePeerObj->GetUniqueName().c_str());
+
+    PeerState peerState = bus.GetInternal().GetPeerStateTable()->GetPeerState(destination, false);
+
+    /* This will be false for peers that aren't secure, and unknown peers.
+     * In both cases, nothing to do.
+     */
+    if (!peerState->IsSecure()) {
+        return ER_OK;
+    }
+
+    /*
+     * Manifests also only apply to ECDSA sessions. This may not yet be set if the peer hasn't
+     * been authenticated; if so, skip for now, because authentication will get triggered and we'll
+     * have another chance to send manifests from AllJoynPeerObj::AuthenticatePeer.
+     */
+    if ((peerState->GetAuthSuite() & AUTH_SUITE_ECDHE_ECDSA) != AUTH_SUITE_ECDHE_ECDSA) {
+        return ER_OK;
+    }
+
+    QCC_DbgTrace(("%s: passed early exit checks. Destination is %s, peer GUID is %s",
+                  __FUNCTION__, destination, peerState->GetGuid().ToString().c_str()));
+
+    std::vector<Manifest> manifests;
+    QStatus status = RetrieveManifests(manifests);
+    if (ER_OK != status) {
+        if (ER_MANIFEST_NOT_FOUND == status) {
+            status = ER_OK;  /* nothing to send */
+        } else {
+            return status;
+        }
+    }
+
+    std::vector<Manifest> manifestsToSend;
+
+    /* We don't have a copy of the message, probably because the app is calling SecureConnection
+     * explicitly. This gives us no basis on which to send manifests.
+     *
+     * In this case send none, and rely on future calls to send the needed ones.
+     *
+     * See the comment in AllJoynPeerObj::HandleSendManifests for the difference between the selection logic
+     * here and the selection logic there.
+     */
+    if (nullptr != msg) {
+        qcc::String objectPath((*msg)->GetObjectPath());
+        qcc::String interfaceName;
+        qcc::String memberName;
+
+        /* If this is a property message, we have to pick the object path, interface, and member name
+         * from the fields of the property instead of the enclosing method call.
+         */
+        if (strcmp((*msg)->GetInterface(), org::freedesktop::DBus::Properties::InterfaceName) == 0) {
+            QCC_DbgTrace(("Properties message", __FUNCTION__));
+            status = PermissionManager::ParsePropertiesMessageHeaders(*msg, interfaceName, memberName);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Could not ParsePropertiesMessageHeaders"));
+                return status;
+            }
+        } else {
+            interfaceName.assign((*msg)->GetInterface());
+            memberName.assign((*msg)->GetMemberName());
+        }
+
+        /* objectPath and interfaceName should never be empty. memberName sometimes can be. */
+        QCC_ASSERT(!objectPath.empty());
+        QCC_ASSERT(!interfaceName.empty());
+
+        QCC_DbgTrace(("Searching for manifests for message objPath %s, interface %s, member %s",
+                      objectPath.c_str(), interfaceName.c_str(), memberName.c_str()));
+
+        /* Send manifests that have rules matching the object path, interface, and member name. */
+        for (const Manifest manifest : manifests) {
+            if (peerState->IsManifestSent(manifest)) {
+                QCC_DbgTrace(("Skipping already-sent manifest"));
+                continue;
+            }
+            for (const PermissionPolicy::Rule rule : manifest->GetRules()) {
+                if ((rule.GetMembersSize() == 0) ||
+                    rule.GetObjPath().empty() ||
+                    rule.GetInterfaceName().empty()) {
+                    /* Can't match. */
+                    QCC_DbgTrace(("Skipping unmatchable manifest rule"));
+                    continue;
+                }
+
+                QCC_DbgTrace(("Considering manifest rule with object path %s, interface name %s",
+                              rule.GetObjPath().c_str(), rule.GetInterfaceName().c_str()));
+
+                if (((rule.GetObjPath() == objectPath) || MatchesPrefix(objectPath, rule.GetObjPath())) &&
+                    ((rule.GetInterfaceName() == interfaceName) || MatchesPrefix(interfaceName, rule.GetInterfaceName()))) {
+                    QCC_DbgTrace(("Sending manifest"));
+                    manifestsToSend.push_back(manifest);
+                    break;
+                } else {
+                    QCC_DbgTrace(("Skipping manifest"));
+                }
+            }
+        }
+    } else {
+        QCC_DbgTrace(("No message provided; sending no manifests"));
+    }
+
+    QCC_DbgTrace(("Manifest selection done; sending %" PRIuSIZET, manifestsToSend.size()));
+
+    /* If we haven't exchanged any manifests yet, even if we have none to send, give the peer the chance
+     * to send some to us.
+     */
+    if (manifestsToSend.empty() && peerState->GetHaveExchangedManifests()) {
+        /* Nothing to do. */
+        QCC_DbgTrace(("No manifests to send and we've exchanged once before; exiting"));
+        return ER_OK;
+    }
+
+    MsgArg sendManifestsArg;
+    status = _Manifest::GetArrayMsgArg(manifestsToSend, sendManifestsArg);
+    if (ER_OK != status) {
+        return status;
+    }
+    Message replyMsg(bus);
+    const InterfaceDescription::Member* sendManifests = ifc->GetMember("SendManifests");
+    if ((nullptr != remotePeerObj) && remotePeerObj->ImplementsInterface(org::alljoyn::Bus::Peer::Authentication::InterfaceName)) {
+        status = remotePeerObj->MethodCall(*sendManifests, &sendManifestsArg, 1, replyMsg, 10000);
+    } else {
+        /* The ProxyBusObject we're using doesn't yet have the Authentication interface on it. Since
+         * remotePeerObj is const, we have to create our own separate ProxyBusObject to which we can
+         * add the interface and call SendManifests.
+         */
+        ProxyBusObject myProxy(bus, destination, org::alljoyn::Bus::Peer::ObjectPath, 0);
+        status = myProxy.AddInterface(*ifc);
+        if (ER_OK == status) {
+            status = myProxy.MethodCall(*sendManifests, &sendManifestsArg, 1, replyMsg, 10000);
+        }
+    }
+
+    if (status != ER_OK) {
+        return status;
+    }
+    for (Manifest manifest : manifestsToSend) {
+        status = peerState->StoreSentManifest(manifest);
+        if (status != ER_OK) {
+            return status;
+        }
+    }
+    /* process the reply */
+    return ParseSendManifests(replyMsg, peerState);
 }
 
 } /* namespace ajn */

@@ -313,12 +313,12 @@ static bool IsAuthorizedByPeerManifest(const Request& request, const Right& righ
                   request.objPath, request.iName, request.mbrName));
     QCC_DbgTrace(("right.authByPolicy %u, peer GUID %s", right.authByPolicy, peerState->GetGuid().ToString().c_str()));
     bool allowed = false;
-    for (PeerManifestState it : peerState->GetManifests()) {
+    for (Manifest peerManifest : peerState->GetManifests()) {
         bool strictGetAllProperties = request.outgoing;
-        for (size_t cnt = 0; cnt < it->m_manifest->GetRules().size(); cnt++) {
+        for (size_t cnt = 0; cnt < peerManifest->GetRules().size(); cnt++) {
             /* validate the peer manifest to make sure it was granted the same thing */
             bool denied = false;
-            if (IsRuleMatched(it->m_manifest->GetRules()[cnt], request, right.authByPolicy, false, denied, strictGetAllProperties)) {
+            if (IsRuleMatched(peerManifest->GetRules()[cnt], request, right.authByPolicy, false, denied, strictGetAllProperties)) {
                 /* One manifest allows it. Note this for now, but keep looking for any manifests with explicit denials. */
                 QCC_DbgTrace(("Request allowed by manifest"));
                 allowed = true;
@@ -619,7 +619,17 @@ static QStatus ParsePropertiesMessage(Request& request, Message& msg)
         request.isSetProperty = (strncmp(mbrName, "Set", 3) == 0);
         QCC_DbgPrintf(("PermissionManager::ParsePropertiesMessage %s %s.%s", mbrName, propIName, propName));
     } else if (strncmp(mbrName, "PropertiesChanged", 17) == 0) {
-        status = msg->GetArg(0)->Get("s", &propIName);
+        const MsgArg* args;
+        size_t numArgs;
+        if (request.outgoing) {
+            msg->GetRefArgs(numArgs, args);
+        } else {
+            msg->GetArgs(numArgs, args);
+        }
+        if (numArgs < 1) {
+            return ER_INVALID_DATA;
+        }
+        status = args[0].Get("s", &propIName);
         if (status != ER_OK) {
             return status;
         }
@@ -633,6 +643,33 @@ static QStatus ParsePropertiesMessage(Request& request, Message& msg)
     request.mbrName = propName;
     return ER_OK;
 }
+
+QStatus PermissionManager::ParsePropertiesMessageHeaders(Message& msg, String& interfaceName, String& memberName)
+{
+    Request request(msg, true);
+
+    QStatus status = ParsePropertiesMessage(request, msg);
+    if (ER_OK != status) {
+        return status;
+    }
+    QCC_ASSERT(request.propertyRequest);
+
+    if (nullptr == request.iName) {
+        interfaceName.clear();
+    } else {
+        interfaceName.assign(request.iName);
+    }
+
+    if (nullptr == request.mbrName) {
+        memberName.clear();
+    } else {
+        memberName.assign(request.mbrName);
+    }
+
+    return ER_OK;
+}
+
+
 
 bool PermissionManager::AuthorizePermissionMgmt(bool outgoing, const char* iName, const char* mbrName, bool& authorized, PeerState& peerState)
 {
