@@ -90,24 +90,25 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
 
     if (mode == CCM) {
         if (!cngCache.ccmHandle) {
-            if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&cngCache.ccmHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0))) {
-                status = ER_CRYPTO_ERROR;
-                QCC_LogError(status, ("Failed to open AES algorithm provider"));
+            status = cngCache.OpenCcmHandle();
+            if (ER_OK != status) {
+                QCC_ASSERT(!"Failed to open AES-CCM handle");
                 abort();
             }
             // Enable CCM
             if (!BCRYPT_SUCCESS(BCryptSetProperty(cngCache.ccmHandle, BCRYPT_CHAINING_MODE, (PUCHAR)BCRYPT_CHAIN_MODE_CCM, sizeof(BCRYPT_CHAIN_MODE_CCM), 0))) {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Failed to enable CCM mode on AES algorithm provider"));
+                QCC_ASSERT(!"Failed to enable CCM on AES-CCM handle");
                 abort();
             }
         }
         aesHandle = cngCache.ccmHandle;
     } else {
         if (!cngCache.ecbHandle) {
-            if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&cngCache.ecbHandle, BCRYPT_AES_ALGORITHM, MS_PRIMITIVE_PROVIDER, 0))) {
-                status = ER_CRYPTO_ERROR;
-                QCC_LogError(status, ("Failed to open AES algorithm provider"));
+            status = cngCache.OpenEcbHandle();
+            if (ER_OK != status) {
+                QCC_ASSERT(!"Failed to open AES-ECB handle");
                 abort();
             }
         }
