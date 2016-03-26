@@ -1374,7 +1374,7 @@ QStatus _Manifest::VerifyByThumbprint(const std::vector<uint8_t>& subjectThumbpr
 {
     /* Only SHA-256 is supported as the thumbprint algorithm. */
     if (m_thumbprintAlgorithmOid != std::string(qcc::OID_DIG_SHA256.c_str())) {
-        QCC_LogError(ER_NOT_IMPLEMENTED, ("Unsupported thumbprint algorithm %s", m_thumbprintAlgorithmOid.c_str()));
+        QCC_LogError(ER_NOT_IMPLEMENTED, ("Unsupported thumbprint algorithm \'%s\'", m_thumbprintAlgorithmOid.c_str()));
         return ER_NOT_IMPLEMENTED;
     }
 

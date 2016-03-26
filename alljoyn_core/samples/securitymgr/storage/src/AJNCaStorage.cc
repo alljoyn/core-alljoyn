@@ -54,7 +54,8 @@ QStatus AJNCaStorage::StartApplicationClaiming(const Application& app,
                                                const IdentityInfo& idInfo,
                                                const Manifest& mf,
                                                GroupInfo& adminGroup,
-                                               IdentityCertificateChain& idCertChain)
+                                               IdentityCertificateChain& idCertChain,
+                                               ajn::Manifest& signedManifest)
 {
     QStatus status;
 
@@ -78,7 +79,6 @@ QStatus AJNCaStorage::StartApplicationClaiming(const Application& app,
     }
     idCertChain.push_back(idCert);
 
-    ajn::Manifest signedManifest;
     status = GenerateSignedManifest(idCert, mf, signedManifest);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to generate signed manifest"));

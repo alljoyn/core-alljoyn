@@ -94,7 +94,8 @@ class AJNCaStorage :
                                              const IdentityInfo& idInfo,
                                              const Manifest& mf,
                                              GroupInfo& adminGroup,
-                                             IdentityCertificateChain& idCert);
+                                             IdentityCertificateChain& idCert,
+                                             ajn::Manifest& signedManifest);
 
     virtual QStatus GetCaPublicKeyInfo(KeyInfoNISTP256& CAKeyInfo) const;
 

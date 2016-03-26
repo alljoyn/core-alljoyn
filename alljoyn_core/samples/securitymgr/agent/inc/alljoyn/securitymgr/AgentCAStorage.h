@@ -154,7 +154,8 @@ class AgentCAStorage {
                                              const IdentityInfo& idInfo,
                                              const Manifest& manifest,
                                              GroupInfo& adminGroup,
-                                             IdentityCertificateChain& identityCertificate) = 0;
+                                             IdentityCertificateChain& identityCertificate,
+                                             ajn::Manifest& signedManifest) = 0;
 
     /**
      * @brief Inform storage that a new application was claimed with a given success/failure

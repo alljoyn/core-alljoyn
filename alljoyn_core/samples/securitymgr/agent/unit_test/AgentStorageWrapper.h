@@ -47,9 +47,10 @@ class AgentStorageWrapper :
                                              const IdentityInfo& idInfo,
                                              const ajn::securitymgr::Manifest& manifest,
                                              GroupInfo& adminGroup,
-                                             IdentityCertificateChain& idCert)
+                                             IdentityCertificateChain& idCert,
+                                             ajn::Manifest& signedManifest)
     {
-        return ca->StartApplicationClaiming(app, idInfo, manifest, adminGroup, idCert);
+        return ca->StartApplicationClaiming(app, idInfo, manifest, adminGroup, idCert, signedManifest);
     }
 
     virtual QStatus FinishApplicationClaiming(const Application& app,
