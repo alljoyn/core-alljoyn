@@ -12,23 +12,21 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-Import('secenv')
+Import('env')
 
-app_env = secenv.Clone()
-app_env.Append(CPPPATH = ['#agent/inc/'])
-app_env.Append(CPPPATH = ['#storage/inc/'])
-app_env.Append(LIBPATH =  '$SEC_DISTDIR/lib')
+app_env = env.Clone()
+
+app_env.Append(CPPPATH = ['../agent/inc/'])
+app_env.Append(CPPPATH = ['../storage/inc/'])
+
+app_env.Append(LIBPATH = '../external/sqlite3')
+app_env.Append(LIBPATH = '../agent/src')
+app_env.Append(LIBPATH = '../storage/src')
+
+app_env.Prepend(LIBS = ['sqlite3'])
 app_env.Prepend(LIBS = ['ajsecstorage'])
 app_env.Prepend(LIBS = ['ajsecmgr'])
 
-
-#Bundled router
-if app_env['BR'] == 'on':
-    app_env.Append(LIBPATH = ['$DISTDIR' + '/cpp/lib'])
-    app_env.Prepend(LIBS = [app_env['ajrlib']])
-
-# build app
-secmgrapp = app_env.Program(target='secmgr',
-                            source=['secmanager.cc'])
+secmgrapp = app_env.Program(target='secmgr', source=['secmanager.cc'])
 
 Return('secmgrapp')
