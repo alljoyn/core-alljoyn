@@ -36,6 +36,12 @@ samples_env.SConscript('simple/SConscript', exports = {'env': samples_env})
 # Security Sample programs
 samples_env.SConscript('secure/SConscript', exports = {'env': samples_env})
 
+# Security Manager Sample program
+if not env.has_key('SQLITE_DIR'):
+    print('SQLITE_DIR not specified: skipping Security Manager sample program build')
+else:
+    samples_env.SConscript('securitymgr/SConscript', exports = {'env': samples_env})
+
 # Chat Sample program
 samples_env.SConscript('chat/SConscript', exports = {'env': samples_env})
 

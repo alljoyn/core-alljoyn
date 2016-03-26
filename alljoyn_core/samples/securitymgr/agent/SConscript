@@ -14,17 +14,4 @@
 
 Import('env')
 
-# External libs
-env.SConscript('external/SConscript', exports = {'env': env})
-
-# Security Manager Agent lib
-env.SConscript('agent/SConscript', exports = {'env': env})
-
-# Security Manager Storage lib
-env.SConscript('storage/SConscript', exports = {'env': env})
-
-# Secmgr app
-env.SConscript('cli/SConscript', exports = {'env': env})
-
-# Secmgr test app
-env.SConscript('agent/unit_test/SConscript', exports = {'env': env})
+env.SConscript('src/SConscript', exports = {'env': env})
