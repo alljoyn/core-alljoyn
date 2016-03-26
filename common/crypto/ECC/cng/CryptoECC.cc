@@ -33,6 +33,8 @@
 
 #include <qcc/CryptoECCMath.h>
 
+#include "Crypto.h"
+
 #include <Status.h>
 #include <bcrypt.h>
 
@@ -698,37 +700,24 @@ static QStatus InitializeBCryptProviderHandles(uint8_t curveType)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
-    QStatus status = ER_OK;
-    NTSTATUS ntStatus;
-    LPCWSTR ecdsaAlgId = nullptr;
-    LPCWSTR ecdhAlgId = nullptr;
-
-    switch (curveType) {
-    case Crypto_ECC::ECC_NIST_P256:
-        ecdsaAlgId = BCRYPT_ECDSA_P256_ALGORITHM;
-        ecdhAlgId = BCRYPT_ECDH_P256_ALGORITHM;
-        break;
-
-    default:
-        status = ER_CRYPTO_ILLEGAL_PARAMETERS;
-        QCC_LogError(status, ("Unrecognized curve type %d", curveType));
+    /* Make sure the crypto subsystem has been initialized; some common library-only code
+     * might invoke ECC functionality without spinning up the whole AllJoyn subsystem first.
+     */
+    QStatus status = Crypto::Init();
+    if (ER_OK != status) {
         return status;
     }
 
     if (NULL == cngCache.ecdsaHandles[curveType]) {
-        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdsaHandles[curveType], ecdsaAlgId, NULL, 0);
-        if (!BCRYPT_SUCCESS(ntStatus)) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("Failed to open ECDSA algorithm provider, ntStatus=%X", ntStatus));
+        status = cngCache.OpenEcdsaHandle(curveType);
+        if (ER_OK != status) {
             return status;
         }
     }
 
     if (NULL == cngCache.ecdhHandles[curveType]) {
-        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdhHandles[curveType], ecdhAlgId, NULL, 0);
-        if (!BCRYPT_SUCCESS(ntStatus)) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("Failed to open ECDH algorithm provider, ntStatus=%X", ntStatus));
+        status = cngCache.OpenEcdhHandle(curveType);
+        if (ER_OK != status) {
             return status;
         }
     }

@@ -1183,6 +1183,8 @@ QStatus KeyStore::AcquireExclusiveLock(const char* file, uint32_t line)
     /* Acquire the file lock. */
     QStatus status = listener->AcquireExclusiveLock(file, line);
     if (status != ER_OK) {
+        /* Using MUTEX_CONTEXT here since this unlock isn't called directly by the caller. */
+        QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
         return status;
     }
 

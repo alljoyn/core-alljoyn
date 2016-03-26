@@ -61,3 +61,8 @@ void Mutex::AssertOwnedByCurrentThread() const
 {
     m_mutexInternal->AssertOwnedByCurrentThread();
 }
+
+bool Mutex::TryLock()
+{
+    return m_mutexInternal->TryLock();
+}
