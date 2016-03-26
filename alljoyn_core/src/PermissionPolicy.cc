@@ -1812,8 +1812,9 @@ std::string _Manifest::ToString() const
     std::string output;
     char versionBuf[20];
 
-    /* Unfortunately Android doesn't have std::to_string, so we have to stringify the version
-     * number this way.
+    /*
+     * Not all platforms support std::to_string, so we stringfy the version number
+     * with snprintf.
      */
     snprintf(versionBuf, sizeof(versionBuf), "%u", m_version);
 
@@ -1839,6 +1840,33 @@ std::string _Manifest::ToString() const
     output += "=====================\n";
 
     return output;
+}
+
+bool _Manifest::HasSignature() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    if (m_thumbprintAlgorithmOid.empty()) {
+        QCC_DbgTrace(("Manifest has empty thumbprint algorithm OID"));
+        return false;
+    }
+
+    if (m_thumbprint.empty()) {
+        QCC_DbgTrace(("Manifest has empty thumbprint"));
+        return false;
+    }
+
+    if (m_signatureAlgorithmOid.empty()) {
+        QCC_DbgTrace(("Manifest has empty signature algorithm OID"));
+        return false;
+    }
+
+    if (m_signature.empty()) {
+        QCC_DbgTrace(("Manifest has empty signature"));
+        return false;
+    }
+
+    return true;
 }
 
 } /* namespace ajn */
