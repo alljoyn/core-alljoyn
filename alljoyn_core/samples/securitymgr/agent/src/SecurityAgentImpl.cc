@@ -520,7 +520,8 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
     IdentityCertificateChain idCertificate;
 
     GroupInfo adminGroup;
-    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifest, adminGroup, idCertificate);
+    ajn::Manifest signedManifest;
+    status = caStorage->StartApplicationClaiming(_app, identityInfo, manifest, adminGroup, idCertificate, signedManifest);
     if (status != ER_OK) {
         return status;
     }
@@ -532,7 +533,7 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
             return status;
         }
 
-        status = mngdProxy.Claim(CAKeyInfo, adminGroup, idCertificate, manifest);
+        status = mngdProxy.Claim(CAKeyInfo, adminGroup, idCertificate, signedManifest);
         if (ER_OK != status) {
             QCC_LogError(status, ("Could not claim application"));
         }

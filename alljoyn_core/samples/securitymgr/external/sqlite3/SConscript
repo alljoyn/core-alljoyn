@@ -11,16 +11,17 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-Import('secenv')
+Import('env')
 
-sqlite_env = secenv.Clone()
+sqlite_env = env.Clone()
 
-srcs = Glob('*.c')
+sqlite_dir = sqlite_env['SQLITE_DIR']
 
-# Header files
-sqlite_env.Append(CPPPATH = ['.'])
+static_objs = sqlite_env.StaticObject(target = 'sqlite3', source = [ '%s/sqlite3.c' % sqlite_dir ])
+libs = sqlite_env.StaticLibrary('sqlite3', static_objs)
 
-objs = sqlite_env.Object(srcs)
-shobjs = sqlite_env.SharedObject(srcs)
+if sqlite_env['LIBTYPE'] != 'static':
+   shared_objs = sqlite_env.SharedObject(target = 'sqlite3', source = [ '%s/sqlite3.c' % sqlite_dir ])
+   libs.append(sqlite_env.SharedLibrary('sqlite3', shared_objs))
 
-Return ('objs', 'shobjs')
+Return ('libs')
