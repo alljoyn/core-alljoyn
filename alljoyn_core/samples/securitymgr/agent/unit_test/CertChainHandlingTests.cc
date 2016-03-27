@@ -90,9 +90,10 @@ class CertChainAgentStorageWrapper :
                                              const IdentityInfo& idInfo,
                                              const ajn::securitymgr::Manifest& manifest,
                                              GroupInfo& adminGroup,
-                                             IdentityCertificateChain& identityCertificates)
+                                             IdentityCertificateChain& identityCertificates,
+                                             ajn::Manifest& signedManifest)
     {
-        QStatus status = ca->StartApplicationClaiming(app, idInfo, manifest, adminGroup, identityCertificates);
+        QStatus status = ca->StartApplicationClaiming(app, idInfo, manifest, adminGroup, identityCertificates, signedManifest);
         if ((ER_OK == status) && addIdRootCert) {
             identityCertificates.push_back(rootIdCert);
         }
