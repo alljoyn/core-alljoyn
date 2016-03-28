@@ -919,7 +919,7 @@ class _Manifest {
      * - #ER_OK if successful
      * - other error indicating failure
      */
-    QStatus Sign(const qcc::CertificateX509& subjectCertificate, const qcc::ECCPrivateKey* issuerPrivateKey);
+    QStatus ComputeThumbprintAndSign(const qcc::CertificateX509& subjectCertificate, const qcc::ECCPrivateKey* issuerPrivateKey);
 
     /**
      * Cryptographically sign this manifest for the use of a particular subject certificate using
@@ -951,7 +951,26 @@ class _Manifest {
      * - #ER_NOT_IMPLEMENTED if the manifest uses an unsupported thumbprint or signature algorithm
      * - other error indicating failure
      */
-    QStatus VerifyByCertificate(const qcc::CertificateX509& subjectCertificate, const qcc::ECCPublicKey* issuerPublicKey) const;
+    QStatus ComputeThumbprintAndVerify(const qcc::CertificateX509& subjectCertificate, const qcc::ECCPublicKey* issuerPublicKey) const;
+
+    /**
+     * @internal
+     *
+     * Cryptographically verify this manifest for the use of a particular subject certificate thumbprint using
+     * the provided issuer public key. issuerPublicKey must be the public key corresponding to the private key
+     * which signed subjectCertificate.
+     *
+     * @param[in] subjectThumbprint SHA-256 thumbprint of the signed certificate of the app using this manifest
+     * @param[in] issuerPublicKey Public key of the issuer to verify the signature of this manifest
+     *
+     * @return
+     * - #ER_OK if the manifest is cryptographically verified for use by subjectThumbprint
+     * - #ER_UNKNOWN_CERTIFICATE if the manifest is not for the use of subjectThumbprint
+     * - #ER_DIGEST_MISMATCH if the cryptographic signature is invalid
+     * - #ER_NOT_IMPLEMENTED if the manifest uses an unsupported thumbprint or signature algorithm
+     * - other error indicating failure
+     */
+    QStatus Verify(const std::vector<uint8_t>& subjectThumbprint, const qcc::ECCPublicKey* issuerPublicKey) const;
 
     /**
      * Get version number of this manifest.
@@ -1108,25 +1127,6 @@ class _Manifest {
      * - other error indicating failure
      */
     static QStatus DeserializeArray(const uint8_t* serializedForm, size_t serializedSize, std::vector<Manifest>& manifests);
-
-    /**
-     * @internal
-     *
-     * Cryptographically verify this manifest for the use of a particular subject certificate thumbprint using
-     * the provided issuer public key. issuerPublicKey must be the public key corresponding to the private key
-     * which signed subjectCertificate.
-     *
-     * @param[in] subjectThumbprint SHA-256 thumbprint of the signed certificate of the app using this manifest
-     * @param[in] issuerPublicKey Public key of the issuer to verify the signature of this manifest
-     *
-     * @return
-     * - #ER_OK if the manifest is cryptographically verified for use by subjectThumbprint
-     * - #ER_UNKNOWN_CERTIFICATE if the manifest is not for the use of subjectThumbprint
-     * - #ER_DIGEST_MISMATCH if the cryptographic signature is invalid
-     * - #ER_NOT_IMPLEMENTED if the manifest uses an unsupported thumbprint or signature algorithm
-     * - other error indicating failure
-     */
-    QStatus VerifyByThumbprint(const std::vector<uint8_t>& subjectThumbprint, const qcc::ECCPublicKey* issuerPublicKey) const;
 
     /**
      * @internal

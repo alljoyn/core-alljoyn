@@ -1306,7 +1306,7 @@ QStatus _Manifest::GetMsgArg(ManifestPurpose manifestPurpose, MsgArg& outputArg)
     return ER_OK;
 }
 
-QStatus _Manifest::Sign(const CertificateX509& subjectCertificate, const ECCPrivateKey* issuerPrivateKey)
+QStatus _Manifest::ComputeThumbprintAndSign(const CertificateX509& subjectCertificate, const ECCPrivateKey* issuerPrivateKey)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -1322,10 +1322,6 @@ QStatus _Manifest::Sign(const CertificateX509& subjectCertificate, const ECCPriv
 
 QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECCPrivateKey* issuerPrivateKey)
 {
-    /* Internally we call this method from the overload that takes a Certificate. In that case, that
-     * overload sets m_thumbprint and then passes it as the parameter, and if so, we don't need to
-     * set the thumbprint again.
-     */
     if (&subjectThumbprint != &m_thumbprint) {
         m_thumbprint = subjectThumbprint;
     }
@@ -1356,7 +1352,7 @@ QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECC
     return status;
 }
 
-QStatus _Manifest::VerifyByCertificate(const CertificateX509& subjectCertificate, const ECCPublicKey* issuerPublicKey) const
+QStatus _Manifest::ComputeThumbprintAndVerify(const CertificateX509& subjectCertificate, const ECCPublicKey* issuerPublicKey) const
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -1367,10 +1363,10 @@ QStatus _Manifest::VerifyByCertificate(const CertificateX509& subjectCertificate
         return status;
     }
 
-    return VerifyByThumbprint(thumbprint, issuerPublicKey);
+    return Verify(thumbprint, issuerPublicKey);
 }
 
-QStatus _Manifest::VerifyByThumbprint(const std::vector<uint8_t>& subjectThumbprint, const ECCPublicKey* issuerPublicKey) const
+QStatus _Manifest::Verify(const std::vector<uint8_t>& subjectThumbprint, const ECCPublicKey* issuerPublicKey) const
 {
     /* Only SHA-256 is supported as the thumbprint algorithm. */
     if (m_thumbprintAlgorithmOid != std::string(qcc::OID_DIG_SHA256.c_str())) {
