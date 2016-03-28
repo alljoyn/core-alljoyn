@@ -126,8 +126,8 @@ else:
     unittest_env.Prepend(LIBS = ['ajsecstorage'])
     unittest_env.Prepend(LIBS = ['ajsecmgr'])
 
-    secmgrctest_src = unittest_env.Glob('*.cc')
+    secmgrtest_src = unittest_env.Glob('*.cc')
 
-    secmgrctest_obj = unittest_env.Object(secmgrctest_src);
-    secmgrctest_prog = unittest_env.Program('secmgrctest', secmgrctest_obj)
-    unittest_env.Install('$TESTDIR/cpp/bin', secmgrctest_prog)
+    secmgrtest_obj = unittest_env.Object(secmgrtest_src);
+    secmgrtest_prog = unittest_env.Program('secmgrtest', secmgrtest_obj)
+    unittest_env.Install('$TESTDIR/cpp/bin', secmgrtest_prog)
