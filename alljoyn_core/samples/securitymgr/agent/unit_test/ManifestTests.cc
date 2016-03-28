@@ -93,8 +93,10 @@ class ManifestTests :
  *       -# Check that no additional ManifestUpdate events are triggered.
  *       -# Set the manifest of the application to manifest1.
  *       -# Make sure no additional ManifestUpdate events are triggered.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ManifestTests, UpdateManifest) {
+TEST_F(ManifestTests, DISABLED_UpdateManifest) {
     ajn::securitymgr::Manifest manifest;
     GetManifest(manifest);
     TestApplication testApp;

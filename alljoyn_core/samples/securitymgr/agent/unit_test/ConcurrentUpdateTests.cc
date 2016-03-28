@@ -169,9 +169,10 @@ class ConcurrentUpdateTests :
  *       -# While updating the policy, reset the application using the security
  *          agent.
  *       -# Check whether the application is CLAIMABLE.
+ *
+ * Disabled for ASACORE-2822.
  **/
-
-TEST_F(ConcurrentUpdateTests, ResetAfterPolicy) {
+TEST_F(ConcurrentUpdateTests, DISABLED_ResetAfterPolicy) {
     //Schedule reset.
     wrappedCa->SetAction(testAppInfo, RESET);
     wrappedCa->BlockNothingAction();
@@ -196,8 +197,10 @@ TEST_F(ConcurrentUpdateTests, ResetAfterPolicy) {
  *       -# Wait for the updates to complete.
  *       -# Check whether the policy was updated correctly.
  *       -# Check whether the membership was installed correctly.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ConcurrentUpdateTests, InstallMembershipAfterPolicy) {
+TEST_F(ConcurrentUpdateTests, DISABLED_InstallMembershipAfterPolicy) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     wrappedCa->SetAction(testAppInfo, groupInfo);
     vector<GroupInfo> groups;
@@ -222,8 +225,10 @@ TEST_F(ConcurrentUpdateTests, InstallMembershipAfterPolicy) {
  *       -# While updating the policy, store another policy for the application.
  *       -# Wait for the updates to complete.
  *       -# Check whether the last policy is installed correctly.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ConcurrentUpdateTests, UpdatePolicyAfterPolicy) {
+TEST_F(ConcurrentUpdateTests, DISABLED_UpdatePolicyAfterPolicy) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     vector<GroupInfo> groups;
     PermissionPolicy p;
@@ -253,8 +258,10 @@ TEST_F(ConcurrentUpdateTests, UpdatePolicyAfterPolicy) {
  *       -# Wait for the updates to complete.
  *       -# Check whether the last policy is installed correctly.
  *       -# Check whether the membership certificate was installed correctly.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ConcurrentUpdateTests, UpdateMultiple) {
+TEST_F(ConcurrentUpdateTests, DISABLED_UpdateMultiple) {
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     vector<GroupInfo> groups;
     PermissionPolicy p;

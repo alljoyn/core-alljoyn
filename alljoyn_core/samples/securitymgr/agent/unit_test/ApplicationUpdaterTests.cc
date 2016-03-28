@@ -161,9 +161,11 @@ class ApplicationUpdaterTests :
  *       -# Restart the remote application.
  *       -# Wait for the updates to complete.
  *       -# Check whether the remote application is CLAIMABLE.
+ *
+ * Disabled for ASACORE-2822.
  **/
 
-TEST_F(ApplicationUpdaterTests, Reset) {
+TEST_F(ApplicationUpdaterTests, DISABLED_Reset) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 
@@ -184,8 +186,10 @@ TEST_F(ApplicationUpdaterTests, Reset) {
  *       -# Restart the remote application.
  *       -# Wait for the updates to complete.
  *       -# Ensure the membership certificate is correctly installed.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, InstallMembership) {
+TEST_F(ApplicationUpdaterTests, DISABLED_InstallMembership) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 
@@ -212,8 +216,10 @@ TEST_F(ApplicationUpdaterTests, InstallMembership) {
  *       -# Restart the remote application.
  *       -# Wait for the updates to complete.
  *       -# Ensure the policy is correctly installed.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, UpdatePolicy) {
+TEST_F(ApplicationUpdaterTests, DISABLED_UpdatePolicy) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 
@@ -242,8 +248,10 @@ TEST_F(ApplicationUpdaterTests, UpdatePolicy) {
  *       -# Restart the remote application.
  *       -# Wait for the updates to complete.
  *       -# Ensure the policy is correctly reset.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, ResetPolicy) {
+TEST_F(ApplicationUpdaterTests, DISABLED_ResetPolicy) {
     // generate and install a policy
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     vector<GroupInfo> groups;
@@ -276,8 +284,10 @@ TEST_F(ApplicationUpdaterTests, ResetPolicy) {
  *       -# Restart the remote application.
  *       -# Wait for the updates to complete.
  *       -# Ensure the identity certificate is correctly installed.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, InstallIdentity) {
+TEST_F(ApplicationUpdaterTests, DISABLED_InstallIdentity) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());;
 
@@ -312,8 +322,10 @@ TEST_F(ApplicationUpdaterTests, InstallIdentity) {
  *       -# Reset the remote application from storage.
  *       -# Restart the remote application.
  *       -# Check whether the remote application is CLAIMABLE again.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, UpdateAll) {
+TEST_F(ApplicationUpdaterTests, DISABLED_UpdateAll) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 
@@ -361,8 +373,10 @@ TEST_F(ApplicationUpdaterTests, UpdateAll) {
  *       -# Remove the application from the CA.
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_RESET is triggered.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, SyncErReset) {
+TEST_F(ApplicationUpdaterTests, DISABLED_SyncErReset) {
     // install invalid policy
     GroupInfo invalidAdminGroup;
     PolicyGenerator invalidPolicyGenerator(invalidAdminGroup);
@@ -395,8 +409,10 @@ TEST_F(ApplicationUpdaterTests, SyncErReset) {
  *       -# Update the policy of the application to a previous version.
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_POLICY is triggered.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
+TEST_F(ApplicationUpdaterTests, DISABLED_SyncErPolicy) {
     // install a policy
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo));
     vector<GroupInfo> groups;
@@ -433,8 +449,10 @@ TEST_F(ApplicationUpdaterTests, SyncErPolicy) {
  *          digest mismatching the associated manifest).
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_IDENTITY is triggered.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
+TEST_F(ApplicationUpdaterTests, DISABLED_SyncErIdentity) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 
@@ -481,8 +499,10 @@ TEST_F(ApplicationUpdaterTests, SyncErIdentity) {
  *          empty guid).
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_MEMBERSHIP is triggered.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, SyncErMembership) {
+TEST_F(ApplicationUpdaterTests, DISABLED_SyncErMembership) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 
@@ -514,8 +534,10 @@ TEST_F(ApplicationUpdaterTests, SyncErMembership) {
  *          like GetManagedApplication start returning errors).
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_STORAGE is triggered.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ApplicationUpdaterTests, SyncErStorage) {
+TEST_F(ApplicationUpdaterTests, DISABLED_SyncErStorage) {
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 

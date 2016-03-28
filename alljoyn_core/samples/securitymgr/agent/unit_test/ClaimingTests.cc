@@ -97,8 +97,10 @@ class ClaimingTests :
  *       -# Claim the application.
  *       -# Accept the manifest of the application.
  *       -# Check whether the application becomes CLAIMED.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ClaimingTests, SuccessfulClaim) {
+TEST_F(ClaimingTests, DISABLED_SuccessfulClaim) {
     /* Start the application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
@@ -312,8 +314,9 @@ class PSKClaimListener :
  *       -# Verify that claiming was successful and that the application is in
  *          CLAIMED state and online.
  *
- */
-TEST_F(ClaimingTests, OOBSuccessfulClaiming) {
+ * Disabled for ASACORE-2822.
+ **/
+TEST_F(ClaimingTests, DISABLED_OOBSuccessfulClaiming) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
     OnlineApplication app;

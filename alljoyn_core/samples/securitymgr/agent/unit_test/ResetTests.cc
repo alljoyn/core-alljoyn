@@ -49,8 +49,10 @@ class ResetTests :
  *       -# Check whether it becomes CLAIMABLE again.
  *       -# Claim the application again.
  *       -# Check whether it becomes CLAIMED again.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ResetTests, SuccessfulReset) {
+TEST_F(ResetTests, DISABLED_SuccessfulReset) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
     OnlineApplication app;

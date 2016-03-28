@@ -50,8 +50,10 @@ class IdentityTests :
  *       -# Remove the original identity and verify that the applications
  *          are removed and they are claimable again.
  *       -# Get all managed applications and verify that none exists.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(IdentityTests, SuccessfulInstallIdentity) {
+TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {
     /* Start the application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
@@ -121,8 +123,10 @@ TEST_F(IdentityTests, SuccessfulInstallIdentity) {
  *       -# Verify that updateIdentity is succesful.
  *       -# Make sure updates have been completed.
  *       -# Check that the policy version increased.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
+TEST_F(IdentityTests, DISABLED_UpdateIdentityPolicyUpdate) {
     /* Start the test application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());

@@ -170,8 +170,10 @@ class ManifestUtilTests :
  *          manifestFromByteArray and manifestFromRules hold.
  *       -# Get the digests from  manifestAssignee, manifestFromByteArray and
  *          copyManifest and make sure they are all identical.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ManifestUtilTests, ManifestConstruction) {
+TEST_F(ManifestUtilTests, DISABLED_ManifestConstruction) {
     ajn::securitymgr::Manifest emptyManifest;
     uint8_t* byteArray = nullptr;
     size_t sizeOfByteArray;

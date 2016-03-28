@@ -71,8 +71,10 @@ class PolicyTests :
  *       -# Try to install a default policy of (version 0) and verify this
  *          was successful.
  *       -# Get the persisted policy and make sure its version is (version 100 +1)
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
+TEST_F(PolicyTests, DISABLED_SuccessfulInstallPolicyAndUpdatePolicy) {
     vector<GroupInfo> policyGroups;
     GroupInfo group;
     group.guid = groupGUID;
@@ -199,8 +201,10 @@ TEST_F(PolicyTests, SuccessfulResetPolicy) {
  *       -# Install a policy that does NOT contain the admin group rule.
  *       -# Check whether the application is in SYNC_PENDING state.
  *       -# Make sure that at least one sync error is triggered.
- */
-TEST_F(PolicyTests, PermissionDenied) {
+ *
+ * Disabled for ASACORE-2822.
+ **/
+TEST_F(PolicyTests, DISABLED_PermissionDenied) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
     OnlineApplication app;
