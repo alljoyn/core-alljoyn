@@ -27,7 +27,7 @@ namespace ajn {
 namespace securitymgr {
 struct MemberCompare {
     bool operator()(const PermissionPolicy::Rule::Member& lhs,
-                    const PermissionPolicy::Rule::Member& rhs)
+                    const PermissionPolicy::Rule::Member& rhs) const
     {
         int comp = lhs.GetMemberName() < rhs.GetMemberName();
 
@@ -37,7 +37,7 @@ struct MemberCompare {
 
 struct RuleCompare {
     bool operator()(const PermissionPolicy::Rule& lhs,
-                    const PermissionPolicy::Rule& rhs)
+                    const PermissionPolicy::Rule& rhs) const
     {
         int comp = lhs.GetInterfaceName() < rhs.GetInterfaceName();
 
