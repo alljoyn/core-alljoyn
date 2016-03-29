@@ -24,6 +24,8 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#define QCC_MODULE "SECURITY_TEST"
+
 using namespace std;
 using namespace ajn;
 using namespace qcc;
@@ -32,18 +34,20 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
 {
     QStatus status = bus.Start();
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
     status = bus.Connect();
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
+    QCC_DbgHLPrintf(("%s: app name: '%s' bus name = '%s'", __FUNCTION__, appName.c_str(), bus.GetUniqueName().c_str()));
+
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", &authListener, NULL, true);
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
@@ -60,9 +64,19 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
 
     rules.SetMembers(1, &member);
     mnf.SetRules(1, &rules);
+
+    qcc::Event provAuthComplete;
+    qcc::Event tsmAuthComplete;
+    AddAuthenticationEvent(tsm.GetUniqueName(), &provAuthComplete);
+    tsm.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &tsmAuthComplete);
     status = tsm.Claim(bus, mnf);
+    WaitAllAuthenticationEvents(10000);
+    tsm.WaitAllAuthenticationEvents(10000);
+    DeleteAllAuthenticationEvents();
+    tsm.DeleteAllAuthenticationEvents();
+
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
@@ -77,7 +91,7 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
         testIntf->AddPropertyAnnotation(TEST_PROP_NAME2, org::freedesktop::DBus::AnnotateEmitsChanged, "true");
         testIntf->Activate();
     } else {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
     return status;
@@ -172,6 +186,18 @@ void TestSecureApplication::SessionJoined(SessionPort sessionPort, SessionId id,
     sessionLock.Lock();
     hostedSessions.push_back(id);
     sessionLock.Unlock();
+
+    cout << __FUNCTION__ << " name: '" << appName.c_str() << "' bus name = " << bus.GetUniqueName().c_str() << " this = " << this << " joiner = " << joiner << endl;
+
+    if (!joinSessionEvents.empty()) {
+        std::map<qcc::String, qcc::Event*>::iterator it = joinSessionEvents.find(joiner);
+        EXPECT_NE(it, joinSessionEvents.end());
+
+        if (it != joinSessionEvents.end()) {
+            QCC_DbgHLPrintf(("%s: Setting event @ %p", __FUNCTION__, it->second));
+            EXPECT_EQ(ER_OK, it->second->SetEvent());
+        }
+    }
 }
 
 ProxyBusObject* TestSecureApplication::GetProxyObject(TestSecureApplication& host, SessionId sessionid, const char* objPath)
@@ -258,7 +284,7 @@ QStatus TestSecureApplication::SendSignal(bool value)
 
     MsgArg outArg;
     outArg.Set("b", value);
-    cout << "Sending signal(" << value << ") from '" << bus.GetUniqueName() << "' to 'SESSION_ID_ALL_HOSTED' on session " << endl;
+    cout << "Sending signal value = " << value << " from '" << bus.GetUniqueName() << "' to SESSION_ID_ALL_HOSTED" << endl;
     return testObj->Signal(NULL, SESSION_ID_ALL_HOSTED, *bus.GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME), &outArg, 1, 0, 0,  NULL);
 }
 
@@ -279,6 +305,78 @@ QStatus TestSecureApplication::SendSignal(bool value, TestSecureApplication& des
 
     MsgArg outArg;
     outArg.Set("b", value);
-    cout << "Sending signal(" << value << ") from '" << bus.GetUniqueName() << "' to '" << destination.bus.GetUniqueName().c_str() << "' on session " << sid << endl;
+    cout << "Sending signal value = " << value << " from '" << bus.GetUniqueName() << "' to '" << destination.bus.GetUniqueName().c_str() << "' on session " << sid << endl;
     return testObj->Signal(destination.bus.GetUniqueName().c_str(), sid, *bus.GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME), &outArg, 1, 0, 0,  NULL);
+}
+
+void TestSecureApplication::DeleteAllAuthenticationEvents()
+{
+    authEvents.clear();
+}
+
+void TestSecureApplication::AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent)
+{
+    EXPECT_EQ(ER_OK, authEvent->ResetEvent());
+    authEvents.insert(std::pair<qcc::String, qcc::Event*>(peerName, authEvent));
+}
+
+QStatus TestSecureApplication::WaitAllAuthenticationEvents(uint32_t timeout)
+{
+    QStatus status = ER_OK;
+
+    for (std::map<qcc::String, qcc::Event*>::iterator it = authEvents.begin(); it != authEvents.end(); it++) {
+        QStatus localStatus;
+        QCC_DbgHLPrintf(("%s: Waiting for event @ %p", __FUNCTION__, it->second));
+        EXPECT_EQ(ER_OK, (localStatus = Event::Wait(*(it->second), timeout)));
+
+        if (localStatus != ER_OK) {
+            status = localStatus;
+        }
+    }
+
+    return status;
+}
+
+void TestSecureApplication::AuthenticationCompleteCallback(qcc::String peerName)
+{
+    QCC_DbgHLPrintf(("%s: app name = '%s', bus name = '%s', peer bus name = '%s'",
+                     __FUNCTION__, appName.c_str(), bus.GetUniqueName().c_str(), peerName.c_str()));
+
+    if (!authEvents.empty()) {
+        std::map<qcc::String, qcc::Event*>::iterator it = authEvents.find(peerName);
+        EXPECT_NE(it, authEvents.end());
+
+        if (it != authEvents.end()) {
+            cout << __FUNCTION__ << " Setting event @ " << it->second << endl;
+            EXPECT_EQ(ER_OK, it->second->SetEvent());
+        }
+    }
+}
+
+void TestSecureApplication::DeleteAllJoinSessionEvents()
+{
+    joinSessionEvents.clear();
+}
+
+void TestSecureApplication::AddJoinSessionEvent(const qcc::String& peerName, Event* joinSessionEvent)
+{
+    EXPECT_EQ(ER_OK, joinSessionEvent->ResetEvent());
+    joinSessionEvents.insert(std::pair<qcc::String, qcc::Event*>(peerName, joinSessionEvent));
+}
+
+QStatus TestSecureApplication::WaitAllJoinSessionEvents(uint32_t timeout)
+{
+    QStatus status = ER_OK;
+
+    for (std::map<qcc::String, qcc::Event*>::iterator it = joinSessionEvents.begin(); it != joinSessionEvents.end(); it++) {
+        QStatus localStatus;
+        QCC_DbgHLPrintf(("%s: Waiting for event @ %p", __FUNCTION__, it->second));
+        EXPECT_EQ(ER_OK, (localStatus = Event::Wait(*(it->second), timeout)));
+
+        if (localStatus != ER_OK) {
+            status = localStatus;
+        }
+    }
+
+    return status;
 }
