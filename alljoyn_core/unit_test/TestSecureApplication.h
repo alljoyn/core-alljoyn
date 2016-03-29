@@ -43,7 +43,7 @@ class TestSecureApplication :
     private SessionPortListener,
     private SessionListener {
   public:
-    TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener()
+    TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener(this), appName(name)
     {
         bus.RegisterKeyStoreListener(keyStoreListener);
     }
@@ -79,6 +79,12 @@ class TestSecureApplication :
     int GetCurrentGetPropertyCount() {
         return testObj ? testObj->getCount : -1;
     }
+
+    /* Support for waiting for authentication complete */
+    void DeleteAllAuthenticationEvents();
+    void AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent);
+    QStatus WaitAllAuthenticationEvents(uint32_t timeout);
+    void AuthCompleteCallback(qcc::String peerName);
 
   private:
     class TestObject : public BusObject {
@@ -152,6 +158,29 @@ class TestSecureApplication :
         int getCount;
     };
 
+    class MyAuthListener : public DefaultECDHEAuthListener {
+      public:
+        MyAuthListener(TestSecureApplication* app) : m_app(app) { };
+
+        virtual ~MyAuthListener() { };
+
+        virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
+        {
+            DefaultECDHEAuthListener::AuthenticationComplete(authMechanism, peerName, success);
+
+            if (!success) {
+                cerr << __FUNCTION__ << " auth failed" << endl;
+            }
+
+            if (m_app != nullptr) {
+                m_app->AuthCompleteCallback(peerName);
+            }
+        }
+
+      private:
+        TestSecureApplication* m_app;
+    };
+
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason);
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts);
@@ -163,8 +192,10 @@ class TestSecureApplication :
     TestObject* testObj;
     Mutex sessionLock;
     BusAttachment bus;
-    DefaultECDHEAuthListener authListener;
+    MyAuthListener authListener;
     InMemoryKeyStoreListener keyStoreListener;
+    qcc::String appName;
+    std::map<qcc::String, qcc::Event*> authEvents;
 };
 
 #endif /* _ALLJOYN_TESTSECUREAPPLICATION_H */

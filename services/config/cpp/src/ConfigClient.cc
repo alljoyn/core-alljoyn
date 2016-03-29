@@ -174,10 +174,10 @@ QStatus ConfigClient::GetConfigurations(const char* busName, const char* languag
                 status = ER_BUS_BAD_VALUE;
             }
         } else if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
-#if !defined(NDEBUG)
+// #if !defined(NDEBUG)
             qcc::String errorMessage;
             const char* errorName = replyMsg->GetErrorName(&errorMessage);
-#endif
+// #endif
             QCC_LogError(status, ("GetConfigurations errorName:%s errorMessage: %s", errorName ? errorName : "", errorMessage.c_str() ? errorMessage.c_str() : ""));
         }
     } while (0);
@@ -225,10 +225,10 @@ QStatus ConfigClient::UpdateConfigurations(const char* busName, const char* lang
         CHECK_BREAK(args[1].Set("a{sv}", i, tempconfigMapDictEntries.data()))
         status = proxyBusObj->MethodCall(CONFIG_INTERFACE_NAME, "UpdateConfigurations", args, 2, replyMsg);
         if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
-#if !defined(NDEBUG)
+// #if !defined(NDEBUG)
             qcc::String errorMessage;
             const char* errorName = replyMsg->GetErrorName(&errorMessage);
-#endif
+// #endif
             QCC_LogError(status, ("UpdateConfigurations errorName:%s errorMessage: %s", errorName ? errorName : "", errorMessage.c_str() ? errorMessage.c_str() : ""));
         }
     } while (0);
@@ -268,10 +268,10 @@ QStatus ConfigClient::ResetConfigurations(const char* busName, const char* langu
             CHECK_BREAK(args[1].Set("as", i, tempKeys.data()))
             status = proxyBusObj->MethodCall(CONFIG_INTERFACE_NAME, "ResetConfigurations", args, 2, replyMsg);
             if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
-#if !defined(NDEBUG)
+// #if !defined(NDEBUG)
                 qcc::String errorMessage;
                 const char* errorName = replyMsg->GetErrorName(&errorMessage);
-#endif
+// #endif
                 QCC_LogError(status, ("ResetConfigurations errorName:%s errorMessage: %s", errorName ? errorName : "", errorMessage.c_str() ? errorMessage.c_str() : ""));
             }
         } else {
