@@ -24,9 +24,9 @@
 #include <qcc/Debug.h>
 #include <qcc/Logger.h>
 #include <qcc/Util.h>
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+// #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/StringUtil.h>
-#endif
+// #endif
 
 #include "PolicyDB.h"
 
@@ -74,7 +74,7 @@ using namespace std;
 #define RULE_RECEIVE    (0x1 << 2)
 #define RULE_CONNECT    (0x1 << 3)
 
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+// #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 static String IDSet2String(const _PolicyDB::IDSet& idset)
 {
     String ids;
@@ -88,8 +88,7 @@ static String IDSet2String(const _PolicyDB::IDSet& idset)
     }
     return ids;
 }
-
-#endif
+// #endif
 
 static bool MsgTypeStrToEnum(const String& str, AllJoynMessageType& type)
 {
@@ -383,11 +382,11 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
         }
     }
 
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+// #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
     if (!success && (policyGroup != RULE_UNKNOWN)) {
         Log(LOG_ERR, "Invalid attribute \"%s\" in \"%s\".\n", attr->first.c_str(), rule.ruleString.c_str());
     }
-#endif
+// #endif
 
     return success;
 }
@@ -534,7 +533,7 @@ void _PolicyDB::Finalize(Bus* bus)
         router.UnlockNameTable();
     }
 
-#ifndef NDEBUG
+// #ifndef NDEBUG
     QCC_DbgPrintf(("Dictionary:"));
     for (StringIDMap::const_iterator it = dictionary.begin(); it != dictionary.end(); ++it) {
         QCC_DbgPrintf(("    \"%s\" = %u", it->first.c_str(), it->second));
@@ -543,7 +542,7 @@ void _PolicyDB::Finalize(Bus* bus)
     for (unordered_map<std::string, IDSet>::const_iterator it = busNameIDMap.begin(); it != busNameIDMap.end(); ++it) {
         QCC_DbgPrintf(("    \"%s\" = {%s}", it->first.c_str(), IDSet2String(it->second).c_str()));
     }
-#endif
+// #endif
 #if defined(QCC_OS_GROUP_WINDOWS)
     // hack to work around windows build error C4505 in release mode.
     _PolicyDB::IDSet dummy;
@@ -646,8 +645,9 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
  * @param _checks       The checks to perform
  *                      (e.g. "(it->CheckUser(uid) && it->CheckGroup(gid))")
  */
-#ifndef NDEBUG
-#define RULE_CHECKS(_allow, _rl, _it, _checks)                          \
+/*
+   #ifndef NDEBUG
+   #define RULE_CHECKS(_allow, _rl, _it, _checks)                          \
     PolicyRuleList::const_reverse_iterator _it;                         \
     bool ruleMatch = false;                                             \
     policydb::PolicyPermission permission = policydb::POLICY_DENY;      \
@@ -665,7 +665,8 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
         _allow = (permission == policydb::POLICY_ALLOW);                \
     }                                                                   \
     return ruleMatch
-#else
+   #else
+ */
 #define RULE_CHECKS(_allow, _rl, _it, _checks)                          \
     PolicyRuleList::const_reverse_iterator _it;                         \
     bool ruleMatch = false;                                             \
@@ -678,7 +679,7 @@ void _PolicyDB::NameOwnerChanged(const String& alias,
         _allow = (permission == policydb::POLICY_ALLOW);                \
     }                                                                   \
     return ruleMatch
-#endif
+// #endif
 
 bool _PolicyDB::CheckConnect(bool& allow, const PolicyRuleList& ruleList, uint32_t uid, uint32_t gid)
 {

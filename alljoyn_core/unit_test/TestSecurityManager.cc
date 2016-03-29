@@ -29,6 +29,8 @@ using namespace std;
 using namespace ajn;
 using namespace qcc;
 
+#define QCC_MODULE "SECURITY_TEST"
+
 static QStatus GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
 {
     KeyInfoNISTP256 keyInfo;
@@ -43,7 +45,7 @@ static QStatus GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
 TestSecurityManager::TestSecurityManager(string appName) :
     bus(appName.c_str()),
     opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
-    authListener(), caKeyPair(), caPublicKeyInfo(), adminGroup(), identityGuid(),
+    authListener(this), caKeyPair(), caPublicKeyInfo(), adminGroup(), identityGuid(),
     identityName("testIdentity"), certSerialNumber(0), policyVersion(0)
 {
     QCC_VERIFY(ER_OK == caKeyPair.GenerateDSAKeyPair());
@@ -68,6 +70,8 @@ QStatus TestSecurityManager::Init() {
         return status;
     }
 
+    QCC_DbgHLPrintf(("%s: bus name = %s", __FUNCTION__, GetUniqueName().c_str()));
+
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
                                     &authListener);
     if (ER_OK != status) {
@@ -80,7 +84,6 @@ QStatus TestSecurityManager::Init() {
     }
 
     return InstallMembership(bus, adminGroup);
-
 }
 
 TestSecurityManager::~TestSecurityManager()
@@ -420,4 +423,48 @@ QStatus TestSecurityManager::Reset(const BusAttachment& peerBus)
     }
 
     return bus.LeaveSession(sessionId);
+}
+
+void TestSecurityManager::DeleteAllAuthenticationEvents()
+{
+    authEvents.clear();
+}
+
+void TestSecurityManager::AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent)
+{
+    EXPECT_FALSE(peerName.empty());
+    EXPECT_EQ(ER_OK, authEvent->ResetEvent());
+    authEvents.insert(std::pair<qcc::String, qcc::Event*>(peerName, authEvent));
+}
+
+QStatus TestSecurityManager::WaitAllAuthenticationEvents(uint32_t timeout)
+{
+    QStatus status = ER_OK;
+
+    for (std::map<qcc::String, qcc::Event*>::iterator it = authEvents.begin(); it != authEvents.end(); it++) {
+        QStatus localStatus;
+        cout << __FUNCTION__ << " Waiting for event @ " << it->second << endl;
+        EXPECT_EQ(ER_OK, (localStatus = Event::Wait(*(it->second), timeout)));
+
+        if (localStatus != ER_OK) {
+            status = localStatus;
+        }
+    }
+
+    return status;
+}
+
+void TestSecurityManager::AuthCompleteCallback(qcc::String peerName)
+{
+    cout << __FUNCTION__ << " bus name = " << bus.GetUniqueName().c_str() << " this = " << this << " peerName = " << peerName.c_str() << endl;
+
+    if (!authEvents.empty()) {
+        std::map<qcc::String, qcc::Event*>::iterator it = authEvents.find(peerName);
+        EXPECT_NE(it, authEvents.end());
+
+        if (it != authEvents.end()) {
+            cout << __FUNCTION__ << " Setting event @ " << it->second << endl;
+            EXPECT_EQ(ER_OK, it->second->SetEvent());
+        }
+    }
 }

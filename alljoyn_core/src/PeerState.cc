@@ -539,6 +539,7 @@ QStatus _PeerState::SetAuthSuite(const String& authSuite)
 
 QStatus _PeerState::StoreManifest(const Manifest& manifest)
 {
+    // cout << __FUNCTION__ << ": this = " << this << " manifest = " << manifest->ToString().c_str() << endl;
     m_manifests.push_back(PeerManifestState(manifest));
 
     return ER_OK;
@@ -546,6 +547,7 @@ QStatus _PeerState::StoreManifest(const Manifest& manifest)
 
 QStatus _PeerState::ClearManifests()
 {
+    // cout << __FUNCTION__ << ": this = " << this << endl;
     m_manifests.clear();
 
     return ER_OK;
@@ -555,6 +557,7 @@ const std::vector<Manifest> _PeerState::GetManifests() const
 {
     std::vector<Manifest> output(m_manifests.size());
     for (PeerManifestState manifestState : m_manifests) {
+        // cout << __FUNCTION__ << ": this = " << this << " manifest = " << manifestState->m_manifest->ToString().c_str() << endl;
         output.push_back(manifestState->m_manifest);
     }
 
