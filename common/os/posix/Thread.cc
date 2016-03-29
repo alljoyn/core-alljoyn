@@ -46,11 +46,11 @@ using namespace std;
 
 namespace qcc {
 
-#ifndef NDEBUG
+// #ifndef NDEBUG
 static volatile int32_t started = 0;
 static volatile int32_t running = 0;
 static volatile int32_t joined = 0;
-#endif
+// #endif
 
 /** Global thread list */
 Mutex* Thread::threadListLock = NULL;
