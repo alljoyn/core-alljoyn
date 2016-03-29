@@ -331,6 +331,7 @@ static bool IsAuthorizedByPeerManifest(const Request& request, const Right& righ
 
     if (!allowed) {
         QCC_DbgTrace(("Request was not authorized by any manifest rules"));
+        cout << __FUNCTION__ << ": Request was not authorized by any manifest rules" << endl;
     }
 
     return allowed;

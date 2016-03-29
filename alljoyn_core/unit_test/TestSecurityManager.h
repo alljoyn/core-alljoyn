@@ -51,10 +51,45 @@ class TestSecurityManager :
         return caPublicKeyInfo;
     }
 
+    qcc::String GetUniqueName()
+    {
+        return bus.GetUniqueName();
+    }
+
+    /* Support for waiting to complete authentication */
+    void DeleteAllAuthenticationEvents();
+    void AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent);
+    QStatus WaitAllAuthenticationEvents(uint32_t timeout);
+    void AuthCompleteCallback(qcc::String peerName);
+
   private:
+
+    class MyAuthListener : public DefaultECDHEAuthListener {
+      public:
+        MyAuthListener(TestSecurityManager* sm) : m_sm(sm) { };
+
+        virtual ~MyAuthListener() { };
+
+        virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
+        {
+            DefaultECDHEAuthListener::AuthenticationComplete(authMechanism, peerName, success);
+
+            if (!success) {
+                cerr << __FUNCTION__ << " auth failed" << endl;
+            }
+
+            if (m_sm != nullptr) {
+                m_sm->AuthCompleteCallback(peerName);
+            }
+        }
+
+      private:
+        TestSecurityManager* m_sm;
+    };
+
     BusAttachment bus;
     SessionOpts opts;
-    DefaultECDHEAuthListener authListener;
+    MyAuthListener authListener;
     Crypto_ECC caKeyPair;
     KeyInfoNISTP256 caPublicKeyInfo;
     CertificateX509 caCertificate;
@@ -64,6 +99,7 @@ class TestSecurityManager :
     int certSerialNumber;
     int policyVersion;
     InMemoryKeyStoreListener keyStoreListener;
+    std::map<qcc::String, qcc::Event*> authEvents;
 
     /* SessionListener */
     virtual void SessionLost(SessionId sessionId,
