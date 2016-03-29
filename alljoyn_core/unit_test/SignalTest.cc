@@ -42,6 +42,16 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#define QCC_MODULE "SIGNAL_TEST"
+
+/**
+ * Set AllJoyn debug levels.
+ *
+ * @param module    name of the module to generate debug output
+ * @param level     debug level to set for the module
+ */
+void AJ_CALL QCC_SetDebugLevel(const char* module, uint32_t level);
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -907,12 +917,21 @@ class SecSignalTest :
     public::testing::Test,
     public MessageReceiver {
   public:
-    SecSignalTest() : prov("provider"), cons("consumer"), proxy(NULL), eventCount(0), eventsNeeded(0), lastValue(false) { }
+    SecSignalTest() : prov("provider"), cons("consumer"), proxy(nullptr), eventCount(0), eventsNeeded(0), lastValue(false)
+    {
+    }
+
     ~SecSignalTest() { }
+
+    Event tsmAuthComplete;      // tsm completed the authentication of either prov or cons
+    Event provAuthComplete;     // prov completed the authentication of either cons or tsm
+    Event prov2AuthComplete;    // prov completed the authentication of cons2 - local consumer/variable in one of the tests
+    Event consAuthComplete;     // cons completed the authentication of either prov or tsm
 
     TestSecurityManager tsm;
     TestSecureApplication prov;
     TestSecureApplication cons;
+
     shared_ptr<ProxyBusObject> proxy;
     Mutex lock;
     Condition condition;
@@ -922,19 +941,28 @@ class SecSignalTest :
 
     virtual void SetUp() {
         ASSERT_EQ(ER_OK, tsm.Init());
+
+        // cout << "SecTest: 200" << endl;
         ASSERT_EQ(ER_OK, prov.Init(tsm));
+
+        // cout << "SecTest: 201" << endl;
         ASSERT_EQ(ER_OK, cons.Init(tsm));
 
+        // cout << "SecTest: 201" << endl;
         ASSERT_EQ(ER_OK, prov.HostSession());
+
+        // cout << "SecTest: 202" << endl;
         SessionId sid = 0;
         ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
 
+        // cout << "SecTest: 203" << endl;
         proxy = shared_ptr<ProxyBusObject>(cons.GetProxyObject(prov, sid));
         ASSERT_TRUE(proxy != NULL);
         cons.GetBusAttachement().RegisterSignalHandlerWithRule(this,
                                                                static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
                                                                cons.GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
                                                                TEST_SIGNAL_MATCH_RULE);
+        // cout << "SecTest: 204" << endl;
     }
 
     void EventHandler(const InterfaceDescription::Member* member, const char* srcPath, Message& msg)
@@ -943,16 +971,17 @@ class SecSignalTest :
         QCC_UNUSED(member);
 
         lock.Lock();
+
         eventCount++;
+        bool value = lastValue;
+        EXPECT_EQ(ER_OK, msg->GetArgs("b", &value));
+        // cout << "received message value = " << value << " on " << msg->GetRcvEndpointName() <<  " from " << msg->GetSender() << endl;
+        lastValue = value;
+
         if (eventCount == eventsNeeded) {
             condition.Signal();
         }
-        bool value = lastValue;
-        QStatus status = msg->GetArgs("b", &value);
-        EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
-        cout << "received message " << value << " on " << msg->GetRcvEndpointName() <<  endl;
 
-        lastValue = value;
         lock.Unlock();
     }
 
@@ -963,15 +992,17 @@ class SecSignalTest :
         eventCount = 0;
         eventsNeeded = requiredEvents;
         lastValue = !newValue;
-        cout << "SendAndWaitForEvent (" << newValue << ") need " << requiredEvents << " events." << endl;
+        // cout << "SendAndWaitForEvent (newValue = " << newValue << ")" << endl;
         QStatus status = destination ? prov.SendSignal(newValue, *destination) : prov.SendSignal(newValue);
         if (ER_OK != status) {
-            cout << "Failed to send event " << __FILE__ << "@" << __LINE__ << endl;
+            // cout << "Failed to send event " << __FILE__ << " @ " << __LINE__ << " status = " << status << endl;
         } else {
-            condition.TimedWait(lock, 5000);
-            EXPECT_TRUE(eventCount) << " No event received";
+            // cout << "Expecting " << requiredEvents << " events." << endl;
+            status = condition.TimedWait(lock, 10000);
+            EXPECT_EQ(ER_OK, status);
+            EXPECT_EQ(requiredEvents, eventCount);
             EXPECT_EQ(newValue, lastValue) << "Signal value";
-            status = (eventCount == requiredEvents) && (newValue == lastValue) ? ER_OK : ER_FAIL;
+            status = ((eventCount == requiredEvents) && (newValue == lastValue)) ? ER_OK : ER_FAIL;
             eventCount = 0;
             eventsNeeded = 0;
         }
@@ -1245,78 +1276,227 @@ TEST_F(SecSignalTest, DISABLED_SendSignalToMultiPointSession) // Awaits fix for 
  */
 TEST_F(SecSignalTest, SecureConnection)
 {
+    // QCC_SetDebugLevel("SECURITY_TEST", 127);
+
     // Provide a valid policy both on consumer and provider.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
-    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    // cout << "SecTest: 100" << endl;
+    // prov.SetEndManagementEvent(&provAuthComplete);
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    // prov.WaitEndManagementEvent(10000);
+    // prov.RemoveEndManagementEvent();
+
+    // cout << "SecTest: 101" << endl;
+    // cons.SetEndManagementEvent(&consAuthComplete);
+    EXPECT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    // cons.WaitEndManagementEvent(10000);
+    // cons.RemoveEndManagementEvent();
 
     // Sending signals not allowed as the connection is not yet secured.
-    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
+    // cout << "SecTest: 102" << endl;
+    EXPECT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
 
     // Securing connection;  Signals are now allowed.
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+    // cout << "SecTest: 103" << endl;
+    prov.AddAuthenticationEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    cons.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &consAuthComplete);
+    EXPECT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons.DeleteAllAuthenticationEvents();
 
+    // cout << "SecTest: 104" << endl;
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+
+    // Join a second session from the same consumer. The connection for this new session is already secured --> event allowed
+    // cout << "SecTest: 105" << endl;
     SessionId sid = 0;
-    // Join a second session. The connection for this new session is already secured; event allowed
-    ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
-    qcc::Sleep(250);
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    prov.AddJoinSessionEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    EXPECT_EQ(ER_OK, cons.JoinSession(prov, sid));
+    prov.WaitAllJoinSessionEvents(10000);
+    prov.DeleteAllJoinSessionEvents();
+
+    // cout << "SecTest: 106" << endl;
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
 
     // Update the policy. Session key is dropped by the provider --> permission denied again.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    // cout << "SecTest: 107" << endl;
+    // prov.SetEndManagementEvent(&provAuthComplete);
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    // prov.WaitEndManagementEvent(10000);
+    // prov.RemoveEndManagementEvent();
 
-    // Secure the connection again. All events are allowed again.
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    // cout << "SecTest: 108" << endl;
+    EXPECT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true)); // DMFIX
+
+    // Secure the connection again --> all events are allowed again.
+    // cout << "SecTest: 109" << endl;
+    prov.AddAuthenticationEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    cons.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &consAuthComplete);
+    EXPECT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons.DeleteAllAuthenticationEvents();
+
+    // cout << "SecTest: 110" << endl;
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
 
     // Update the policy. Session key is dropped by the provider --> permission denied again.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    // cout << "SecTest: 111" << endl;
+    // prov.SetEndManagementEvent(&provAuthComplete);
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    // prov.WaitEndManagementEvent(10000);
+    // prov.RemoveEndManagementEvent();
 
-    // Secure session on the consumer side: consumer still thinks that the session is secured.
-    // The override causes to re-secure the connection, events will be sent.
-    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str(), true));
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    // cout << "SecTest: 112" << endl;
+    EXPECT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true)); // DMFIX
+
+    // Secure session from the consumer side --> events will be sent.
+    // cout << "SecTest: 113" << endl;
+    prov.AddAuthenticationEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    cons.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &consAuthComplete);
+    EXPECT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str(), true));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons.DeleteAllAuthenticationEvents();
+
+    // cout << "SecTest: 114" << endl;
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
 
     // Add extra consumer.
+    // cout << "SecTest: 115" << endl;
     TestSecureApplication cons2("consumer2");
-    ASSERT_EQ(ER_OK, cons2.Init(tsm));
+    qcc::Event cons2AuthComplete;
+    EXPECT_EQ(ER_OK, cons2.Init(tsm));
+
+    // cout << "SecTest: 116" << endl;
     cons2.GetBusAttachement().RegisterSignalHandlerWithRule(this,
                                                             static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
                                                             cons2.GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
                                                             TEST_SIGNAL_MATCH_RULE);
-    ASSERT_EQ(ER_OK, cons2.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    // cons2.SetEndManagementEvent(&cons2AuthComplete);
+    EXPECT_EQ(ER_OK, cons2.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    // cons2.WaitEndManagementEvent(10000);
+    // cons2.RemoveEndManagementEvent();
+
     // Securing a session between peers does not require an active session.
-    ASSERT_EQ(ER_OK, cons2.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str()));
+    // cout << "SecTest: 1" << endl;
+    prov.AddAuthenticationEvent(cons2.GetBusAttachement().GetUniqueName(), &prov2AuthComplete);
+    cons2.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &cons2AuthComplete);
+    EXPECT_EQ(ER_OK, cons2.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str()));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons2.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons2.DeleteAllAuthenticationEvents();
 
-    // Receiving events does require a session. The third event is only received
-    // after joining a session with the host.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    // Receiving events does require a session.
+    // cout << "SecTest: 2" << endl;
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    // The third event is only received after joining a session with the host.
+    // cons2 and prov already authenticated each other.
+    // cout << "SecTest: 3" << endl;
     SessionId sid2 = 0;
-    ASSERT_EQ(ER_OK, cons2.JoinSession(prov, sid2));
-    qcc::Sleep(500);
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+    prov.AddJoinSessionEvent(cons2.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    EXPECT_EQ(ER_OK, cons2.JoinSession(prov, sid2));
+    prov.WaitAllJoinSessionEvents(10000);
+    prov.DeleteAllJoinSessionEvents();
 
-    // Secure connection using NULL destination.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    // cout << "SecTest: 4" << endl;
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
 
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(NULL)); // Should restore all sessions.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
-    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
-    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(NULL)); // Restore connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+    // Update the policy. Session key is dropped by the provider --> permission denied again.
+    // cout << "SecTest: 5" << endl;
+    // prov.SetEndManagementEvent(&provAuthComplete);
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    // prov.WaitEndManagementEvent(10000);
+    // prov.RemoveEndManagementEvent();
 
-    // Secure connection using NULL destination and async variant.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    // cout << "SecTest: 5.5" << endl;
+    EXPECT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true)); // DMFIX
 
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnectionAsync(NULL)); // Should restore all sessions asynchronously.
-    qcc::Sleep(1500);// Give some time to restore the connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
-    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
-    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnectionAsync(NULL)); // Restore connections.
-    qcc::Sleep(750);// Give some time to restore the connection.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+    // Secure connection using NULL destination --> all sessions get re-authenticated
+    // cout << "SecTest: 6" << endl;
+    prov.AddAuthenticationEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    prov.AddAuthenticationEvent(cons2.GetBusAttachement().GetUniqueName(), &prov2AuthComplete);
+    cons.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &consAuthComplete);
+    cons2.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &cons2AuthComplete);
+    EXPECT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(NULL));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons.WaitAllAuthenticationEvents(10000);
+    cons2.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons.DeleteAllAuthenticationEvents();
+    cons2.DeleteAllAuthenticationEvents();
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    // Update the policy. Session key is dropped by the consumer.
+    // cout << "SecTest: 7" << endl;
+    // cons.SetEndManagementEvent(&consAuthComplete);
+    EXPECT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
+    // cons.WaitEndManagementEvent(10000);
+    // cons.RemoveEndManagementEvent();
+
+    // Secure connections from the consumer side --> events will be sent.
+    // cout << "SecTest: 8" << endl;
+    prov.AddAuthenticationEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    cons.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &consAuthComplete);
+    EXPECT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(NULL));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons.DeleteAllAuthenticationEvents();
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+
+    // Update the policy. Session key is dropped by the provider --> permission denied again.
+    // cout << "SecTest: 9" << endl;
+    // prov.SetEndManagementEvent(&provAuthComplete);
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    // prov.WaitEndManagementEvent(10000);
+    // prov.RemoveEndManagementEvent();
+
+    // cout << "SecTest: 9.5" << endl;
+    EXPECT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true)); // DMFIX
+
+    // Re-authenticate all peers using NULL destination and async variant.
+    // cout << "SecTest: 10" << endl;
+    prov.AddAuthenticationEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    prov.AddAuthenticationEvent(cons2.GetBusAttachement().GetUniqueName(), &prov2AuthComplete);
+    cons.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &consAuthComplete);
+    cons2.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &cons2AuthComplete);
+    EXPECT_EQ(ER_OK, prov.GetBusAttachement().SecureConnectionAsync(NULL));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons.WaitAllAuthenticationEvents(10000);
+    cons2.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons.DeleteAllAuthenticationEvents();
+    cons2.DeleteAllAuthenticationEvents();
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    // Update the policy. Session key is dropped by the consumer.
+    // cout << "SecTest: 11" << endl;
+    // cons.SetEndManagementEvent(&consAuthComplete);
+    EXPECT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
+    // cons.WaitEndManagementEvent(10000);
+    // cons.RemoveEndManagementEvent();
+
+    // cout << "SecTest: 11.5" << endl;
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
+
+    // Secure connections from the consumer side --> events will be sent.
+    // cout << "SecTest: 12" << endl;
+    prov.AddAuthenticationEvent(cons.GetBusAttachement().GetUniqueName(), &provAuthComplete);
+    cons.AddAuthenticationEvent(prov.GetBusAttachement().GetUniqueName(), &consAuthComplete);
+    EXPECT_EQ(ER_OK, cons.GetBusAttachement().SecureConnectionAsync(NULL));
+    prov.WaitAllAuthenticationEvents(10000);
+    cons.WaitAllAuthenticationEvents(10000);
+    prov.DeleteAllAuthenticationEvents();
+    cons.DeleteAllAuthenticationEvents();
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+
+    // cout << "SecTest: 13" << endl;
 }
 
 TEST_F(SecSignalTest, DISABLED_SendSignalToSelf)

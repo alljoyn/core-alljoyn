@@ -219,9 +219,9 @@ class _PolicyDB {
         bool groupAny;                  /**< indicates if group has been set to "*" */
         uint32_t group;                 /**< numeric group id */
 
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+// #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
         qcc::String ruleString;         /**< regenerated xml rule string for debugging purposes */
-#endif
+// #endif
 
         /**
          * Constructor.
@@ -489,9 +489,9 @@ class NormalizedMsgHdr {
      * @param policy    Pointer to the PolicyDB
      */
     NormalizedMsgHdr(const Message& msg, const PolicyDB& policy, BusEndpoint& sender) :
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+// #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
         msg(msg),
-#endif
+// #endif
         ifcID(policy->LookupStringID(msg->GetInterface())),
         memberID(policy->LookupStringID(msg->GetMemberName())),
         errorID(policy->LookupStringID(msg->GetErrorName())),
@@ -530,9 +530,9 @@ class NormalizedMsgHdr {
     /* private assignment operator */
     NormalizedMsgHdr operator=(const NormalizedMsgHdr&);
 
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+// #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
     const Message msg;                      /**< Reference to original message for debug purposes */
-#endif
+// #endif
     StringID ifcID;                         /**< normalized interface name */
     StringID memberID;                      /**< normalized member name */
     StringID errorID;                       /**< normalized error name */
