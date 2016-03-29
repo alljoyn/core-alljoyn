@@ -29,6 +29,8 @@ using namespace std;
 using namespace ajn;
 using namespace qcc;
 
+#define QCC_MODULE "SECURITY_TEST"
+
 static QStatus GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
 {
     KeyInfoNISTP256 keyInfo;
@@ -43,7 +45,7 @@ static QStatus GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
 TestSecurityManager::TestSecurityManager(string appName) :
     bus(appName.c_str()),
     opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY),
-    authListener(), caKeyPair(), caPublicKeyInfo(), adminGroup(), identityGuid(),
+    authListener(this), caKeyPair(), caPublicKeyInfo(), adminGroup(), identityGuid(),
     identityName("testIdentity"), certSerialNumber(0), policyVersion(0)
 {
     QCC_VERIFY(ER_OK == caKeyPair.GenerateDSAKeyPair());
@@ -68,6 +70,8 @@ QStatus TestSecurityManager::Init() {
         return status;
     }
 
+    QCC_DbgHLPrintf(("%s: bus name = %s", __FUNCTION__, GetUniqueName().c_str()));
+
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
                                     &authListener);
     if (ER_OK != status) {
@@ -80,7 +84,6 @@ QStatus TestSecurityManager::Init() {
     }
 
     return InstallMembership(bus, adminGroup);
-
 }
 
 TestSecurityManager::~TestSecurityManager()
@@ -199,15 +202,14 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     SessionId sessionId;
     qcc::String peerBusName = peerBus.GetUniqueName();
 
-    status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener);
+    EXPECT_EQ(ER_OK, (status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener)));
     if (ER_OK != status) {
         return status;
     }
 
-    /* set claimable */
-    peerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
-                             this, sessionId, opts);
+    EXPECT_EQ(ER_OK, (status = peerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE)));
+
+    EXPECT_EQ(ER_OK, (status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT, this, sessionId, opts)));
     if (ER_OK != status) {
         return status;
     }
@@ -215,7 +217,7 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
 
     ECCPublicKey appPublicKey;
-    status = GetAppPublicKey(peerBus, appPublicKey);
+    EXPECT_EQ(ER_OK, (status = GetAppPublicKey(peerBus, appPublicKey)));
     if (ER_OK != status) {
         return status;
     }
@@ -231,23 +233,23 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     size_t manifestSize = manifest.GetRulesSize();
 
     Manifest manifests[1];
-    status = manifests[0]->SetRules(manifestRules, manifestSize);
+    EXPECT_EQ(ER_OK, (status = manifests[0]->SetRules(manifestRules, manifestSize)));
     if (ER_OK != status) {
         return status;
     }
-    status = manifests[0]->Sign(identityCert, caKeyPair.GetDSAPrivateKey());
-    if (ER_OK != status) {
-        return status;
-    }
-
-    status = peerProxy.Claim(caPublicKeyInfo, adminGroup, caPublicKeyInfo, identityCertChain,
-                             ArraySize(identityCertChain), manifests, ArraySize(manifests));
+    EXPECT_EQ(ER_OK, (status = manifests[0]->Sign(identityCert, caKeyPair.GetDSAPrivateKey())));
     if (ER_OK != status) {
         return status;
     }
 
-    status = bus.LeaveSession(sessionId);
+    EXPECT_EQ(ER_OK, (status = peerProxy.Claim(caPublicKeyInfo, adminGroup, caPublicKeyInfo, identityCertChain, ArraySize(identityCertChain), manifests, ArraySize(manifests))));
+    if (ER_OK != status) {
+        return status;
+    }
+
     // returns ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION during ClaimSelf
+    status = bus.LeaveSession(sessionId);
+    EXPECT_TRUE((ER_OK == status) || (ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION == status));
     if (ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION == status) {
         status = ER_OK;
     }
@@ -365,13 +367,12 @@ QStatus TestSecurityManager::UpdatePolicy(const BusAttachment& peerBus, const Pe
     SessionId sessionId;
     qcc::String peerBusName = peerBus.GetUniqueName();
 
-    status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener);
+    EXPECT_EQ(ER_OK, (status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener)));
     if (ER_OK != status) {
         return status;
     }
 
-    status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT,
-                             this, sessionId, opts);
+    EXPECT_EQ(ER_OK, (status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT, this, sessionId, opts)));
     if (ER_OK != status) {
         return status;
     }
@@ -382,16 +383,28 @@ QStatus TestSecurityManager::UpdatePolicy(const BusAttachment& peerBus, const Pe
     copy.SetVersion(++policyVersion);
     AddAdminAcl(policy, copy);
 
-    status = peerProxy.UpdatePolicy(copy);
-    if (ER_OK != status) {
-        return status;
-    }
-    status = peerProxy.SecureConnection(true);
+    EXPECT_EQ(ER_OK, (status = peerProxy.StartManagement()));
     if (ER_OK != status) {
         return status;
     }
 
-    return bus.LeaveSession(sessionId);
+    EXPECT_EQ(ER_OK, (status = peerProxy.UpdatePolicy(copy)));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    EXPECT_EQ(ER_OK, (status = peerProxy.SecureConnection(true)));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    EXPECT_EQ(ER_OK, (status = peerProxy.EndManagement()));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    EXPECT_EQ(ER_OK, (status = bus.LeaveSession(sessionId)));
+    return status;
 }
 
 QStatus TestSecurityManager::Reset(const BusAttachment& peerBus)
@@ -420,4 +433,48 @@ QStatus TestSecurityManager::Reset(const BusAttachment& peerBus)
     }
 
     return bus.LeaveSession(sessionId);
+}
+
+void TestSecurityManager::DeleteAllAuthenticationEvents()
+{
+    authEvents.clear();
+}
+
+void TestSecurityManager::AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent)
+{
+    EXPECT_FALSE(peerName.empty());
+    EXPECT_EQ(ER_OK, authEvent->ResetEvent());
+    authEvents.insert(std::pair<qcc::String, qcc::Event*>(peerName, authEvent));
+}
+
+QStatus TestSecurityManager::WaitAllAuthenticationEvents(uint32_t timeout)
+{
+    QStatus status = ER_OK;
+
+    for (std::map<qcc::String, qcc::Event*>::iterator it = authEvents.begin(); it != authEvents.end(); it++) {
+        QStatus localStatus;
+        QCC_DbgHLPrintf(("%s: Waiting for event @ %p", __FUNCTION__, it->second));
+        EXPECT_EQ(ER_OK, (localStatus = Event::Wait(*(it->second), timeout)));
+
+        if (localStatus != ER_OK) {
+            status = localStatus;
+        }
+    }
+
+    return status;
+}
+
+void TestSecurityManager::AuthCompleteCallback(qcc::String peerName)
+{
+    QCC_DbgHLPrintf(("%s: bus name = '%s', peer bus name = '%s'", __FUNCTION__, GetUniqueName().c_str(), peerName.c_str()));
+
+    if (!authEvents.empty()) {
+        std::map<qcc::String, qcc::Event*>::iterator it = authEvents.find(peerName);
+        EXPECT_NE(it, authEvents.end());
+
+        if (it != authEvents.end()) {
+            QCC_DbgHLPrintf(("%s: Setting event @ %p", __FUNCTION__, it->second));
+            EXPECT_EQ(ER_OK, it->second->SetEvent());
+        }
+    }
 }
