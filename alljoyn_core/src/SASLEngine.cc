@@ -78,7 +78,7 @@ static const AuthCmd AllJoynAuthCmdList[] = {
     { CMD_INVALID,  "invalid",  0 }
 };
 
-#if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
+// #if !defined(NDEBUG) || defined(QCC_OS_GROUP_WINDOWS)
 static const char* StateText[] = {
     "SEND_AUTH_REQ",
     "WAIT_FOR_AUTH",
@@ -90,7 +90,7 @@ static const char* StateText[] = {
     "AUTH_SUCCESS",
     "AUTH_FAILED"
 };
-#endif
+// #endif
 
 #define SetState(s) \
     do { \
