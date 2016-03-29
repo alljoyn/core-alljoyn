@@ -42,6 +42,17 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#define QCC_MODULE "SIGNAL_TEST"
+
+/**
+ * Set AllJoyn debug levels.
+ *
+ * @param module    name of the module to generate debug output
+ * @param level     debug level to set for the module
+ */
+void AJ_CALL QCC_SetDebugLevel(const char* module, uint32_t level);
+
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -907,12 +918,20 @@ class SecSignalTest :
     public::testing::Test,
     public MessageReceiver {
   public:
-    SecSignalTest() : prov("provider"), cons("consumer"), proxy(NULL), eventCount(0), eventsNeeded(0), lastValue(false) { }
+    SecSignalTest() : tsm(), provAuthComplete(), consAuthComplete(), prov("provider", &provAuthComplete), cons("consumer", &consAuthComplete),
+        proxy(nullptr), eventCount(0), eventsNeeded(0), lastValue(false)
+    {
+    }
+
     ~SecSignalTest() { }
 
     TestSecurityManager tsm;
+
+    Event provAuthComplete;
+    Event consAuthComplete;
     TestSecureApplication prov;
     TestSecureApplication cons;
+
     shared_ptr<ProxyBusObject> proxy;
     Mutex lock;
     Condition condition;
@@ -922,6 +941,8 @@ class SecSignalTest :
 
     virtual void SetUp() {
         ASSERT_EQ(ER_OK, tsm.Init());
+        cout << __FUNCTION__ << ": Security Manager bus name = " << tsm.GetUniqueName().c_str() << endl;
+
         ASSERT_EQ(ER_OK, prov.Init(tsm));
         ASSERT_EQ(ER_OK, cons.Init(tsm));
 
@@ -943,16 +964,17 @@ class SecSignalTest :
         QCC_UNUSED(member);
 
         lock.Lock();
+
         eventCount++;
+        bool value = lastValue;
+        EXPECT_EQ(ER_OK, msg->GetArgs("b", &value));
+        cout << "received message value = " << value << " on " << msg->GetRcvEndpointName() <<  " from " << msg->GetSender() << endl;
+        lastValue = value;
+
         if (eventCount == eventsNeeded) {
             condition.Signal();
         }
-        bool value = lastValue;
-        QStatus status = msg->GetArgs("b", &value);
-        EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
-        cout << "received message " << value << " on " << msg->GetRcvEndpointName() <<  endl;
 
-        lastValue = value;
         lock.Unlock();
     }
 
@@ -963,15 +985,17 @@ class SecSignalTest :
         eventCount = 0;
         eventsNeeded = requiredEvents;
         lastValue = !newValue;
-        cout << "SendAndWaitForEvent (" << newValue << ") need " << requiredEvents << " events." << endl;
+        cout << "SendAndWaitForEvent (newValue = " << newValue << ")" << endl;
         QStatus status = destination ? prov.SendSignal(newValue, *destination) : prov.SendSignal(newValue);
         if (ER_OK != status) {
-            cout << "Failed to send event " << __FILE__ << "@" << __LINE__ << endl;
+            cout << "Failed to send event " << __FILE__ << " @ " << __LINE__ << " status = " << status << endl;
         } else {
-            condition.TimedWait(lock, 5000);
-            EXPECT_TRUE(eventCount) << " No event received";
+            cout << "Expecting " << requiredEvents << " events." << endl;
+            status = condition.TimedWait(lock, 10000);
+            EXPECT_EQ(ER_OK, status);
+            EXPECT_EQ(requiredEvents, eventCount);
             EXPECT_EQ(newValue, lastValue) << "Signal value";
-            status = (eventCount == requiredEvents) && (newValue == lastValue) ? ER_OK : ER_FAIL;
+            status = ((eventCount == requiredEvents) && (newValue == lastValue)) ? ER_OK : ER_FAIL;
             eventCount = 0;
             eventsNeeded = 0;
         }
@@ -1277,46 +1301,91 @@ TEST_F(SecSignalTest, SecureConnection)
     ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str(), true));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
 
+    // QCC_SetDebugLevel("ALLJOYN_AUTH", 127);
+    QCC_SetDebugLevel("DEFAULT_AUTH_LISTENER", 127);
+    QCC_SetDebugLevel(QCC_MODULE, 127);
+
     // Add extra consumer.
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 50"));
     TestSecureApplication cons2("consumer2");
     ASSERT_EQ(ER_OK, cons2.Init(tsm));
     cons2.GetBusAttachement().RegisterSignalHandlerWithRule(this,
                                                             static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
                                                             cons2.GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
                                                             TEST_SIGNAL_MATCH_RULE);
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 51"));
     ASSERT_EQ(ER_OK, cons2.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
     // Securing a session between peers does not require an active session.
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 52"));
     ASSERT_EQ(ER_OK, cons2.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str()));
 
     // Receiving events does require a session. The third event is only received
     // after joining a session with the host.
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 53"));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 54"));
     SessionId sid2 = 0;
     ASSERT_EQ(ER_OK, cons2.JoinSession(prov, sid2));
     qcc::Sleep(500);
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 55"));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 56"));
 
     // Secure connection using NULL destination.
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
-
     ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(NULL)); // Should restore all sessions.
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
     ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
     ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(NULL)); // Restore connections.
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
 
     // Secure connection using NULL destination and async variant.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    EXPECT_EQ(ER_OK, provAuthComplete.ResetEvent());
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    EXPECT_EQ(ER_OK, Event::Wait(provAuthComplete, 10000));
 
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnectionAsync(NULL)); // Should restore all sessions asynchronously.
-    qcc::Sleep(1500);// Give some time to restore the connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
-    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
-    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnectionAsync(NULL)); // Restore connections.
-    qcc::Sleep(750);// Give some time to restore the connection.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 1"));
+    EXPECT_EQ(ER_OK, provAuthComplete.ResetEvent());
+    EXPECT_EQ(ER_OK, prov.GetBusAttachement().SecureConnectionAsync(NULL)); // Should restore all sessions asynchronously.
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 2"));
+    EXPECT_EQ(ER_OK, Event::Wait(provAuthComplete, 10000));
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 3"));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 4"));
+    EXPECT_EQ(ER_OK, consAuthComplete.ResetEvent());
+    EXPECT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 5"));
+    EXPECT_EQ(ER_OK, Event::Wait(consAuthComplete, 10000));
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 6"));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 7"));
+    EXPECT_EQ(ER_OK, consAuthComplete.ResetEvent());
+    EXPECT_EQ(ER_OK, cons.GetBusAttachement().SecureConnectionAsync(NULL)); // Restore connections.
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 8"));
+    EXPECT_EQ(ER_OK, Event::Wait(consAuthComplete, 10000));
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 9"));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+
+    QCC_LogError(ER_FAIL, ("SecureConnTest: 10"));
+
+    // QCC_SetDebugLevel("ALLJOYN_AUTH", 0);
+    QCC_SetDebugLevel("DEFAULT_AUTH_LISTENER", 0);
+    QCC_SetDebugLevel(QCC_MODULE, 0);
 }
 
 TEST_F(SecSignalTest, DISABLED_SendSignalToSelf)
