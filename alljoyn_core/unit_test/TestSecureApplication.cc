@@ -24,26 +24,37 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#define QCC_MODULE "SECURITY_TEST"
+
 using namespace std;
 using namespace ajn;
 using namespace qcc;
+
+/*
+ * Wait up to 10 seconds, to be lenient toward slow tests running on VMs, built in
+ * Debug mode, with App Verifier enabled, using an out-of-proc router node, while
+ * the VM host machine is busy compiling from multiple threads, etc.
+ */
+static const uint32_t s_slowTestResponseTimeout = 10000;
 
 QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
 {
     QStatus status = bus.Start();
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
     status = bus.Connect();
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
-    status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", &authListener, NULL, true);
+    QCC_DbgHLPrintf(("%s: app name: '%s' bus name = '%s'", __FUNCTION__, appName.c_str(), bus.GetUniqueName().c_str()));
+
+    status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", &authListener, NULL, true, &pcl);
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
@@ -60,9 +71,10 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
 
     rules.SetMembers(1, &member);
     mnf.SetRules(1, &rules);
+
     status = tsm.Claim(bus, mnf);
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
@@ -77,7 +89,7 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
         testIntf->AddPropertyAnnotation(TEST_PROP_NAME2, org::freedesktop::DBus::AnnotateEmitsChanged, "true");
         testIntf->Activate();
     } else {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
     return status;
@@ -101,8 +113,15 @@ QStatus TestSecureApplication::HostSession(SessionPort port, bool multipoint)
 QStatus TestSecureApplication::JoinSession(TestSecureApplication& sessionHost, SessionId& sessionId, SessionPort port, bool multipoint)
 {
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, multipoint, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
+
+    /* sessionHost sends the JoinSession reply message BEFORE it updates its sessions map! Wait until sessionHost finished these updates */
+    qcc::Event sessionHostReady;
+    sessionHost.SetJoinSessionEvent(&sessionHostReady);
     QStatus status = bus.JoinSession(sessionHost.bus.GetUniqueName().c_str(), port, this, sessionId, opts);
     if (ER_OK == status) {
+        sessionHost.WaitJoinSessionEvent(s_slowTestResponseTimeout);
+        sessionHost.RemoveJoinSessionEvent();
+
         sessionLock.Lock();
         joinedSessions.push_back(sessionId);
         sessionLock.Unlock();
@@ -172,6 +191,13 @@ void TestSecureApplication::SessionJoined(SessionPort sessionPort, SessionId id,
     sessionLock.Lock();
     hostedSessions.push_back(id);
     sessionLock.Unlock();
+
+    QCC_DbgHLPrintf(("%s: app name = %s, bus name = %s, joiner = %s", __FUNCTION__, appName.c_str(), bus.GetUniqueName().c_str(), joiner));
+
+    if (joinSessionEvent != nullptr) {
+        QCC_DbgHLPrintf(("%s: Setting event @ %p", __FUNCTION__, joinSessionEvent));
+        EXPECT_EQ(ER_OK, joinSessionEvent->SetEvent());
+    }
 }
 
 ProxyBusObject* TestSecureApplication::GetProxyObject(TestSecureApplication& host, SessionId sessionid, const char* objPath)
@@ -206,7 +232,16 @@ QStatus TestSecureApplication::SetAnyTrustedUserPolicy(TestSecurityManager& tsm,
     peer.SetType(PermissionPolicy::Peer::PEER_ANY_TRUSTED);
     acl.SetPeers(1, &peer);
     policy.SetAcls(1, &acl);
-    return tsm.UpdatePolicy(bus, policy);
+
+    /* Wait for EndManagement after receiving a new policy, to make sure all settings are consistent before continuing */
+    qcc::Event endManagement;
+    SetEndManagementEvent(&endManagement);
+    QStatus status = tsm.UpdatePolicy(bus, policy);
+    if (status == ER_OK) {
+        WaitEndManagementEvent(s_slowTestResponseTimeout);
+    }
+    RemoveEndManagementEvent();
+    return status;
 }
 
 QStatus TestSecureApplication::SetPolicy(TestSecurityManager& tsm, PermissionPolicy& newPolicy)
@@ -258,7 +293,14 @@ QStatus TestSecureApplication::SendSignal(bool value)
 
     MsgArg outArg;
     outArg.Set("b", value);
-    cout << "Sending signal(" << value << ") from '" << bus.GetUniqueName() << "' to 'SESSION_ID_ALL_HOSTED' on session " << endl;
+
+    /*
+     * Keep displaying these messages until SecSignalTest proves to be reliable.
+     * When/if SecSignalTest hangs, the source code line of the SecSignalTest
+     * hang can be deducted by counting the previous "Sending signal..." messages.
+     * Also, the unique name displayed here can be helpful for investigating the hang.
+     */
+    cout << "Sending signal value = " << value << " from '" << bus.GetUniqueName() << "' to SESSION_ID_ALL_HOSTED" << endl;
     return testObj->Signal(NULL, SESSION_ID_ALL_HOSTED, *bus.GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME), &outArg, 1, 0, 0,  NULL);
 }
 
@@ -279,6 +321,214 @@ QStatus TestSecureApplication::SendSignal(bool value, TestSecureApplication& des
 
     MsgArg outArg;
     outArg.Set("b", value);
-    cout << "Sending signal(" << value << ") from '" << bus.GetUniqueName() << "' to '" << destination.bus.GetUniqueName().c_str() << "' on session " << sid << endl;
+
+    /*
+     * Keep displaying these messages until SecSignalTest proves to be reliable.
+     * When/if SecSignalTest hangs, the source code line of the SecSignalTest
+     * hang can be deducted by counting the previous "Sending signal..." messages.
+     * Also, the unique name displayed here can be helpful for investigating the hang.
+     */
+    cout << "Sending signal value = " << value << " from '" << bus.GetUniqueName() << "' to '" << destination.bus.GetUniqueName().c_str() << "' on session " << sid << endl;
     return testObj->Signal(destination.bus.GetUniqueName().c_str(), sid, *bus.GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME), &outArg, 1, 0, 0,  NULL);
+}
+
+void TestSecureApplication::DeleteAllAuthenticationEvents()
+{
+    authEvents.clear();
+}
+
+void TestSecureApplication::AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent)
+{
+    EXPECT_EQ(ER_OK, authEvent->ResetEvent());
+    authEvents.insert(std::pair<qcc::String, qcc::Event*>(peerName, authEvent));
+}
+
+QStatus TestSecureApplication::WaitAllAuthenticationEvents(uint32_t timeout)
+{
+    QStatus status = ER_OK;
+
+    for (std::map<qcc::String, qcc::Event*>::iterator it = authEvents.begin(); it != authEvents.end(); it++) {
+        QStatus localStatus;
+        QCC_DbgHLPrintf(("%s: Waiting for event @ %p", __FUNCTION__, it->second));
+        EXPECT_EQ(ER_OK, (localStatus = Event::Wait(*(it->second), timeout)));
+
+        if (localStatus != ER_OK) {
+            status = localStatus;
+        }
+    }
+
+    return status;
+}
+
+void TestSecureApplication::AuthenticationCompleteCallback(qcc::String peerName)
+{
+    QCC_DbgHLPrintf(("%s: app name = '%s', bus name = '%s', peer bus name = '%s'",
+                     __FUNCTION__, appName.c_str(), bus.GetUniqueName().c_str(), peerName.c_str()));
+
+    if (!authEvents.empty()) {
+        std::map<qcc::String, qcc::Event*>::iterator it = authEvents.find(peerName);
+        EXPECT_NE(it, authEvents.end());
+
+        if (it != authEvents.end()) {
+            QCC_DbgHLPrintf(("%s: Setting event @ %p", __FUNCTION__, it->second));
+            EXPECT_EQ(ER_OK, it->second->SetEvent());
+        }
+    }
+}
+
+void TestSecureApplication::RemoveJoinSessionEvent()
+{
+    joinSessionEvent = nullptr;
+}
+
+void TestSecureApplication::SetJoinSessionEvent(qcc::Event* event)
+{
+    joinSessionEvent = event;
+    EXPECT_EQ(ER_OK, joinSessionEvent->ResetEvent());
+}
+
+QStatus TestSecureApplication::WaitJoinSessionEvent(uint32_t timeout)
+{
+    QStatus status;
+    QCC_DbgHLPrintf(("%s: Waiting for event @ %p", __FUNCTION__, joinSessionEvent));
+    EXPECT_EQ(ER_OK, (status = Event::Wait(*joinSessionEvent, timeout)));
+    return status;
+}
+
+void TestSecureApplication::RemoveEndManagementEvent()
+{
+    endManagementEvent = nullptr;
+}
+
+void TestSecureApplication::SetEndManagementEvent(qcc::Event* event)
+{
+    endManagementEvent = event;
+    EXPECT_EQ(ER_OK, endManagementEvent->ResetEvent());
+}
+
+QStatus TestSecureApplication::WaitEndManagementEvent(uint32_t timeout)
+{
+    QStatus status = ER_OK;
+
+    QCC_DbgHLPrintf(("%s: Waiting for event @ %p", __FUNCTION__, endManagementEvent));
+    EXPECT_EQ(ER_OK, (status = Event::Wait(*endManagementEvent, timeout)));
+    return status;
+}
+
+void TestSecureApplication::EndManagementCompleteCallback()
+{
+    QCC_DbgHLPrintf(("%s: app name = '%s', bus name = '%s'", __FUNCTION__, appName.c_str(), bus.GetUniqueName().c_str()));
+
+    if (endManagementEvent != nullptr) {
+        QCC_DbgHLPrintf(("%s: Setting event @ %p", __FUNCTION__, endManagementEvent));
+        EXPECT_EQ(ER_OK, endManagementEvent->SetEvent());
+    }
+}
+
+QStatus TestSecureApplication::SecureConnection(TestSecureApplication& peer, bool forceAuth)
+{
+    QStatus status = ER_OK;
+    Event myAuthComplete;
+    Event peerAuthComplete;
+
+    /* Wait until authentication finished on both sides */
+    AddAuthenticationEvent(peer.GetBusAttachement().GetUniqueName(), &myAuthComplete);
+    peer.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &peerAuthComplete);
+
+    EXPECT_EQ(ER_OK, (status = bus.SecureConnection(peer.GetBusAttachement().GetUniqueName().c_str(), forceAuth)));
+
+    if (status == ER_OK) {
+        WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+        peer.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+    }
+
+    DeleteAllAuthenticationEvents();
+    peer.DeleteAllAuthenticationEvents();
+    return status;
+}
+
+QStatus TestSecureApplication::SecureConnectionAllSessionsCommon(TestSecureApplication& peer, bool async)
+{
+    QStatus status = ER_OK;
+    Event myAuthComplete;
+    Event peerAuthComplete;
+
+    /*
+     * The caller specified that "peer" has one or more active sessions with this
+     * application/bus attachment.  Initiate authentication for all sessions, then
+     * wait until authentication finished on both sides.
+     */
+    AddAuthenticationEvent(peer.GetBusAttachement().GetUniqueName(), &myAuthComplete);
+    peer.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &peerAuthComplete);
+
+    if (async) {
+        EXPECT_EQ(ER_OK, (status = bus.SecureConnectionAsync(nullptr)));
+    } else {
+        EXPECT_EQ(ER_OK, (status = bus.SecureConnection(nullptr)));
+    }
+
+    if (status == ER_OK) {
+        WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+        peer.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+    }
+
+    DeleteAllAuthenticationEvents();
+    peer.DeleteAllAuthenticationEvents();
+    return status;
+}
+
+QStatus TestSecureApplication::SecureConnectionAllSessions(TestSecureApplication& peer)
+{
+    return SecureConnectionAllSessionsCommon(peer, false);
+}
+
+QStatus TestSecureApplication::SecureConnectionAllSessionsAsync(TestSecureApplication& peer)
+{
+    return SecureConnectionAllSessionsCommon(peer, true);
+}
+
+QStatus TestSecureApplication::SecureConnectionAllSessionsCommon(TestSecureApplication& peer1, TestSecureApplication& peer2, bool async)
+{
+    QStatus status = ER_OK;
+    Event myAuthComplete1;
+    Event myAuthComplete2;
+    Event peer1AuthComplete;
+    Event peer2AuthComplete;
+
+    /*
+     * The caller specified that peer1 and peer2 are currently connected to sessions
+     * hosted by this application/bus attachment.  Initiate authentication for all
+     * sessions, then wait until authentication finished on all sides of the sessions.
+     */
+    AddAuthenticationEvent(peer1.GetBusAttachement().GetUniqueName(), &myAuthComplete1);
+    AddAuthenticationEvent(peer2.GetBusAttachement().GetUniqueName(), &myAuthComplete2);
+    peer1.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &peer1AuthComplete);
+    peer2.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &peer1AuthComplete);
+
+    if (async) {
+        EXPECT_EQ(ER_OK, (status = bus.SecureConnectionAsync(nullptr)));
+    } else {
+        EXPECT_EQ(ER_OK, (status = bus.SecureConnection(nullptr)));
+    }
+
+    if (status == ER_OK) {
+        WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+        peer1.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+        peer2.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+    }
+
+    DeleteAllAuthenticationEvents();
+    peer1.DeleteAllAuthenticationEvents();
+    peer2.DeleteAllAuthenticationEvents();
+    return status;
+}
+
+QStatus TestSecureApplication::SecureConnectionAllSessions(TestSecureApplication& peer1, TestSecureApplication& peer2)
+{
+    return SecureConnectionAllSessionsCommon(peer1, peer2, false);
+}
+
+QStatus TestSecureApplication::SecureConnectionAllSessionsAsync(TestSecureApplication& peer1, TestSecureApplication& peer2)
+{
+    return SecureConnectionAllSessionsCommon(peer1, peer2, true);
 }
