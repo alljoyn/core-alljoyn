@@ -907,12 +907,20 @@ class SecSignalTest :
     public::testing::Test,
     public MessageReceiver {
   public:
-    SecSignalTest() : prov("provider"), cons("consumer"), proxy(NULL), eventCount(0), eventsNeeded(0), lastValue(false) { }
+    SecSignalTest() : tsm(), provAuthComplete(), consAuthComplete(), prov("provider", &provAuthComplete), cons("consumer", &consAuthComplete),
+        proxy(nullptr), eventCount(0), eventsNeeded(0), lastValue(false)
+    {
+    }
+
     ~SecSignalTest() { }
 
     TestSecurityManager tsm;
+
+    Event provAuthComplete;
+    Event consAuthComplete;
     TestSecureApplication prov;
     TestSecureApplication cons;
+
     shared_ptr<ProxyBusObject> proxy;
     Mutex lock;
     Condition condition;
@@ -966,7 +974,7 @@ class SecSignalTest :
         cout << "SendAndWaitForEvent (" << newValue << ") need " << requiredEvents << " events." << endl;
         QStatus status = destination ? prov.SendSignal(newValue, *destination) : prov.SendSignal(newValue);
         if (ER_OK != status) {
-            cout << "Failed to send event " << __FILE__ << "@" << __LINE__ << endl;
+            cout << "Failed to send event " << __FILE__ << " @ " << __LINE__ << " status = " << status << endl;
         } else {
             condition.TimedWait(lock, 5000);
             EXPECT_TRUE(eventCount) << " No event received";
@@ -1298,9 +1306,9 @@ TEST_F(SecSignalTest, SecureConnection)
 
     // Secure connection using NULL destination.
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
-
     ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(NULL)); // Should restore all sessions.
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
     ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
     ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(NULL)); // Restore connections.
@@ -1308,14 +1316,16 @@ TEST_F(SecSignalTest, SecureConnection)
 
     // Secure connection using NULL destination and async variant.
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
-
+    ASSERT_EQ(ER_OK, provAuthComplete.ResetEvent());
     ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnectionAsync(NULL)); // Should restore all sessions asynchronously.
-    qcc::Sleep(1500);// Give some time to restore the connections.
+    ASSERT_EQ(ER_OK, Event::Wait(provAuthComplete, 10000));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
     ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
+    ASSERT_EQ(ER_OK, consAuthComplete.ResetEvent());
     ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnectionAsync(NULL)); // Restore connections.
-    qcc::Sleep(750);// Give some time to restore the connection.
+    ASSERT_EQ(ER_OK, Event::Wait(consAuthComplete, 10000));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
 }
 

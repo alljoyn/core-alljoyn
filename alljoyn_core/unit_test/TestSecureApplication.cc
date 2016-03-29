@@ -32,18 +32,18 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
 {
     QStatus status = bus.Start();
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
     status = bus.Connect();
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
     status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_NULL", &authListener, NULL, true);
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
@@ -62,7 +62,7 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
     mnf.SetRules(1, &rules);
     status = tsm.Claim(bus, mnf);
     if (ER_OK != status) {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
 
@@ -77,7 +77,7 @@ QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
         testIntf->AddPropertyAnnotation(TEST_PROP_NAME2, org::freedesktop::DBus::AnnotateEmitsChanged, "true");
         testIntf->Activate();
     } else {
-        cerr << "SecureApplication::Init failed " << __LINE__ << endl;
+        cerr << "SecureApplication::Init failed, line = " << __LINE__ << ", status = " << status << endl;
         return status;
     }
     return status;
