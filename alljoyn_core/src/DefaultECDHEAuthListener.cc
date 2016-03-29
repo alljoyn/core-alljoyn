@@ -26,7 +26,8 @@
 
 #include <alljoyn/AuthListener.h>
 
-#define QCC_MODULE "ALLJOYN_AUTH"
+// #define QCC_MODULE "ALLJOYN_AUTH"
+#define QCC_MODULE "DEFAULT_AUTH_LISTENER"
 
 using namespace std;
 using namespace qcc;
@@ -102,7 +103,7 @@ QStatus DefaultECDHEAuthListener::SetPassword(const uint8_t* password, size_t pa
 }
 
 bool DefaultECDHEAuthListener::RequestCredentials(const char* authMechanism, const char* peerName, uint16_t authCount, const char* userName, uint16_t credMask, Credentials& credentials) {
-    QCC_DbgTrace(("DefaultECDHEAuthListener::%s", __FUNCTION__));
+    QCC_DbgTrace(("%s", __FUNCTION__));
     QCC_UNUSED(peerName);
     QCC_UNUSED(userName);
     QCC_UNUSED(credMask);
@@ -142,7 +143,7 @@ bool DefaultECDHEAuthListener::RequestCredentials(const char* authMechanism, con
 
 void DefaultECDHEAuthListener::AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
 {
-    QCC_DbgTrace(("DefaultECDHEAuthListener::%s", __FUNCTION__));
+    QCC_DbgTrace(("%s: peerName = %s, success = %u", __FUNCTION__, peerName, (uint32_t)success));
     QCC_UNUSED(authMechanism);
     QCC_UNUSED(peerName);
     QCC_UNUSED(success);
