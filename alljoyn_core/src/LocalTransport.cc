@@ -54,10 +54,22 @@ namespace ajn {
 
 static const uint32_t LOCAL_ENDPOINT_CONCURRENCY = 4;
 
+#if defined(QCC_OS_GROUP_WINDOWS)
+/**
+ * Set the dispatcher's 'maxAlarms' to unlimited on Windows to prevent a possible deadlock in apps.
+ * See ASACORE-2810 for details pertaining to the deadlock.
+ *
+ * Note that this is a temporary solution as 'maxAlarms' is expected to be removed by ASACORE-2650.
+ */
+static const uint32_t LOCAL_ENDPOINT_MAXALARMS = 0;
+#else
+static const uint32_t LOCAL_ENDPOINT_MAXALARMS = 10;
+#endif
+
 class _LocalEndpoint::Dispatcher : public qcc::Timer, public qcc::AlarmListener {
   public:
     Dispatcher(_LocalEndpoint* endpoint, uint32_t concurrency = LOCAL_ENDPOINT_CONCURRENCY) :
-        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, 10),
+        Timer("lepDisp" + U32ToString(qcc::IncrementAndFetch(&dispatcherCnt)), true, concurrency, true, LOCAL_ENDPOINT_MAXALARMS),
         AlarmListener(), endpoint(endpoint), pendingWork(),
         needDeferredCallbacks(false), needObserverWork(false),
         needCachedPropertyReplyWork(false),
