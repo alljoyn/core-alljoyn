@@ -762,7 +762,10 @@ TEST_F(SignalTest, Rules) {
 /* This is a blocking test. The idea is to send out 12 signals, the first signal handler
    will sleep for SLEEP_TIME, as a result of which the SendSignal should block for approx
    SLEEP_TIME ms until that signal handler returns.
+
+   Note: this test is removed if the LOCAL_ENDPOINT_MAXALARMS override is defined.
  */
+#if !defined(LOCAL_ENDPOINT_MAXALARMS)
 TEST_F(SignalTest, BackPressure) {
     Participant A("null:");
     Participant B("null:");
@@ -784,6 +787,7 @@ TEST_F(SignalTest, BackPressure) {
         recvBy.verify_recv(BACKPRESSURE_TEST_NUM_SIGNALS);
     }
 }
+#endif
 
 QStatus SetMemberDescription(InterfaceDescription* intf)
 {
