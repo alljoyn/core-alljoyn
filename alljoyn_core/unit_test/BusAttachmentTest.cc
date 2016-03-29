@@ -62,7 +62,9 @@ class BusAttachmentTest : public testing::Test {
     BusAttachmentTest() :
         bus("BusAttachmentTest", false),
         nullListener(nullptr)
-    { };
+    {
+        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("BusAttachmentTest"));
+    };
 
     virtual void SetUp() {
         ASSERT_EQ(ER_OK, bus.Start());
@@ -732,6 +734,7 @@ TEST_F(BusAttachmentTest, BasicSecureConnection)
 {
     DefaultECDHEAuthListener al;
     BusAttachment otherBus("BusAttachmentOtherBus", false);
+    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("BusAttachmentOtherBus"));
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, otherBus.SecureConnection(bus.GetUniqueName().c_str()));
     otherBus.Start();
     // Use expect from now onward to make sure we reached the end of the function and do all clean-up

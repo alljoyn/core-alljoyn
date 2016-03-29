@@ -609,7 +609,7 @@ QStatus SecurityApplicationProxy::GetManagedApplicationVersion(uint16_t& version
     return status;
 }
 
-QStatus SecurityApplicationProxy::MsgArgToIdentityCertChain(const MsgArg& arg, qcc::IdentityCertificate* certs, size_t expectedSize)
+QStatus SecurityApplicationProxy::MsgArgToIdentityCertChain(const MsgArg& arg, qcc::CertificateX509* certs, size_t expectedSize)
 {
     size_t certChainSize = 0;
     MsgArg* certArgs;

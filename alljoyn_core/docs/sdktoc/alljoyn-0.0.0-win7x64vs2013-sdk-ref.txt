@@ -361,6 +361,7 @@ $DIST_rel/c/inc/alljoyn_c/PasswordManager.h
 $DIST_rel/c/inc/alljoyn_c/PermissionConfigurator.h
 $DIST_rel/c/inc/alljoyn_c/PermissionConfigurationListener.h
 $DIST_rel/c/inc/alljoyn_c/ProxyBusObject.h
+$DIST_rel/c/inc/alljoyn_c/SecurityApplicationProxy.h
 $DIST_rel/c/inc/alljoyn_c/Session.h
 $DIST_rel/c/inc/alljoyn_c/SessionListener.h
 $DIST_rel/c/inc/alljoyn_c/SessionPortListener.h

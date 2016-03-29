@@ -1807,5 +1807,67 @@ bool _Manifest::operator!=(const _Manifest& other) const
     return !(*this == other);
 }
 
+std::string _Manifest::ToString() const
+{
+    std::string output;
+    char versionBuf[20];
+
+    /*
+     * Not all platforms support std::to_string, so we stringfy the version number
+     * with snprintf.
+     */
+    snprintf(versionBuf, sizeof(versionBuf), "%u", m_version);
+
+    output += "Manifest:\n";
+    output += "=====================\n";
+    output += "Version: ";
+    output += versionBuf;
+    output += "Thumbprint algorithm OID: " + m_thumbprintAlgorithmOid + "\n";
+    output += "Thumbprint: ";
+    output += BytesToHexString(m_thumbprint.data(), m_thumbprint.size()).c_str();
+    output += "\n";
+    output += "Signature algorithm OID: " + m_signatureAlgorithmOid + "\n";
+    output += "Signature: ";
+    output += BytesToHexString(m_signature.data(), m_signature.size()).c_str();
+    output += "\n";
+    output += "Rules:\n";
+
+    for (const PermissionPolicy::Rule& rule : GetRules()) {
+        output += rule.ToString().c_str();
+        output += "\n";
+    }
+
+    output += "=====================\n";
+
+    return output;
+}
+
+bool _Manifest::HasSignature() const
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    if (m_thumbprintAlgorithmOid.empty()) {
+        QCC_DbgTrace(("Manifest has empty thumbprint algorithm OID"));
+        return false;
+    }
+
+    if (m_thumbprint.empty()) {
+        QCC_DbgTrace(("Manifest has empty thumbprint"));
+        return false;
+    }
+
+    if (m_signatureAlgorithmOid.empty()) {
+        QCC_DbgTrace(("Manifest has empty signature algorithm OID"));
+        return false;
+    }
+
+    if (m_signature.empty()) {
+        QCC_DbgTrace(("Manifest has empty signature"));
+        return false;
+    }
+
+    return true;
+}
+
 } /* namespace ajn */
 

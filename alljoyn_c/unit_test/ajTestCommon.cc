@@ -20,6 +20,8 @@
 
 #include <qcc/Environ.h>
 #include <qcc/StringUtil.h>
+#include <qcc/FileStream.h>
+
 #if defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/NamedPipeWrapper.h>
 #endif
@@ -40,4 +42,41 @@ qcc::String ajn::getConnectArg() {
 qcc::String ajn::genUniqueName(alljoyn_busattachment bus) {
     static uint32_t uniquifier = 0;
     return qcc::String("test.x") + alljoyn_busattachment_getglobalguidstring(bus) + ".x" + qcc::U32ToString(uniquifier++);
+}
+
+static qcc::String GetDefaultKeyStoreFileName(AJ_PCSTR application, AJ_PCSTR fname)
+{
+    qcc::String path = qcc::GetHomeDir();
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+    path += "/.alljoyn_secure_keystore/";
+
+    if (fname != nullptr) {
+        path += fname;
+    } else {
+        path += application;
+    }
+#else
+    if (fname != nullptr) {
+        path += "/";
+        path += fname;
+    } else {
+        path += "/.alljoyn_keystore/";
+        path += application;
+    }
+#endif
+
+    return path;
+}
+
+QStatus DeleteDefaultKeyStoreFileCTest(AJ_PCSTR application, AJ_PCSTR fname)
+{
+    QStatus status = ER_OK;
+    qcc::String path = GetDefaultKeyStoreFileName(application, fname);
+
+    if (qcc::FileExists(path) == ER_OK) {
+        status = qcc::DeleteFile(path);
+    }
+
+    return status;
 }

@@ -33,6 +33,8 @@
 
 #include <qcc/CryptoECCMath.h>
 
+#include "Crypto.h"
+
 #include <Status.h>
 #include <bcrypt.h>
 
@@ -698,37 +700,24 @@ static QStatus InitializeBCryptProviderHandles(uint8_t curveType)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
-    QStatus status = ER_OK;
-    NTSTATUS ntStatus;
-    LPCWSTR ecdsaAlgId = nullptr;
-    LPCWSTR ecdhAlgId = nullptr;
-
-    switch (curveType) {
-    case Crypto_ECC::ECC_NIST_P256:
-        ecdsaAlgId = BCRYPT_ECDSA_P256_ALGORITHM;
-        ecdhAlgId = BCRYPT_ECDH_P256_ALGORITHM;
-        break;
-
-    default:
-        status = ER_CRYPTO_ILLEGAL_PARAMETERS;
-        QCC_LogError(status, ("Unrecognized curve type %d", curveType));
+    /* Make sure the crypto subsystem has been initialized; some common library-only code
+     * might invoke ECC functionality without spinning up the whole AllJoyn subsystem first.
+     */
+    QStatus status = Crypto::Init();
+    if (ER_OK != status) {
         return status;
     }
 
     if (NULL == cngCache.ecdsaHandles[curveType]) {
-        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdsaHandles[curveType], ecdsaAlgId, NULL, 0);
-        if (!BCRYPT_SUCCESS(ntStatus)) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("Failed to open ECDSA algorithm provider, ntStatus=%X", ntStatus));
+        status = cngCache.OpenEcdsaHandle(curveType);
+        if (ER_OK != status) {
             return status;
         }
     }
 
     if (NULL == cngCache.ecdhHandles[curveType]) {
-        ntStatus = BCryptOpenAlgorithmProvider(&cngCache.ecdhHandles[curveType], ecdhAlgId, NULL, 0);
-        if (!BCRYPT_SUCCESS(ntStatus)) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("Failed to open ECDH algorithm provider, ntStatus=%X", ntStatus));
+        status = cngCache.OpenEcdhHandle(curveType);
+        if (ER_OK != status) {
             return status;
         }
     }
@@ -746,6 +735,8 @@ Crypto_ECC::Crypto_ECC()
 
         memset(eccState, 0, sizeof(*eccState));
     } else {
+        QCC_ASSERT(!"InitializeBCryptProviderHandles failed");
+
         /*
          *  Don't clean up any of the BCrypt Algorithm provider handles.
          *  If they have been created on the CNG Cache they'll be freed when that is cleaned up.
@@ -795,9 +786,9 @@ void Crypto_ECC::SetDHPublicKey(const ECCPublicKey* pubKey)
 
     QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
+        QCC_ASSERT(!"Crypto_ECC_SetPublicKey failed");
         abort();
     }
-
 }
 
 const ECCPrivateKey* Crypto_ECC::GetDHPrivateKey() const
@@ -834,6 +825,7 @@ void Crypto_ECC::SetDHPrivateKey(const ECCPrivateKey* privateKey)
 
     QCC_ASSERT(ER_OK == status);
     if (ER_OK != status) {
+        QCC_ASSERT(!"Crypto_ECC_SetPrivateKey failed");
         abort();
     }
 }
@@ -968,6 +960,7 @@ void Crypto_ECC::SetDSAPublicKey(const ECCPublicKey* pubKey)
 
     if (ER_OK != status) {
         QCC_LogError(status, ("Crypto_ECC_SetPublicKey failed and aborting."));
+        QCC_ASSERT(!"Crypto_ECC_SetPublicKey failed");
         abort();
     }
 
@@ -1006,6 +999,7 @@ void Crypto_ECC::SetDSAPrivateKey(const ECCPrivateKey* privateKey)
                                       &eccState->ecdsaPrivateKey);
 
     if (ER_OK != status) {
+        QCC_ASSERT(!"Crypto_ECC_SetPrivateKey failed");
         abort();
     }
 

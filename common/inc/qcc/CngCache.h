@@ -26,6 +26,8 @@
 #include <bcrypt.h>
 
 #include <qcc/platform.h>
+#include <qcc/Mutex.h>
+#include <qcc/Crypto.h>
 
 namespace qcc {
 
@@ -42,9 +44,57 @@ struct CngCache {
     void Cleanup();
 
     /**
+     * Open the AES-CCM provider handle.
+     *
+     * @return #ER_OK if the handle was successfully opened
+     *         other error indicating failure
+     */
+    QStatus OpenCcmHandle();
+
+    /**
+     * Open the AES-ECB provider handle.
+     *
+     * @return #ER_OK if the handle was successfully opened
+     *         other error indicating failure
+     */
+    QStatus OpenEcbHandle();
+
+    /**
+     * Open a hash algorithm provider handle.
+     *
+     * @param algorithm Hash algorithm
+     * @param usingMac  true if using MAC, false otherwise
+     *
+     * @return #ER_OK if the handle was successfully opened
+     *         other error indicating failure
+     */
+    QStatus OpenHashHandle(qcc::Crypto_Hash::Algorithm algorithm, bool usingMac);
+
+    /**
+     * Open an elliptic curve Digital Signature Algorithm (ECDSA) provider handle.
+     *
+     * @param curveType Curve type
+     *
+     * @return #ER_OK if the handle was successfully opened
+     *         other error indicating failure
+     */
+    QStatus OpenEcdsaHandle(uint8_t curveType);
+
+    /**
+     * Open an elliptic curve Diffie-Hellman key exchange provider handle.
+     *
+     * @param curveType Curve type
+     *
+     * @return #ER_OK if the handle was successfully opened
+     *         other error indicating failure
+     */
+    QStatus OpenEcdhHandle(uint8_t curveType);
+
+
+    /**
      * Number of supported algorithms as defined by Crypto_Hash::Algorithm enum
      */
-    static const int ALGORITHM_COUNT = 3;
+    static const int ALGORITHM_COUNT = 2;
 
     /**
      * Number of supported curves for ECDSA or ECDH.
@@ -61,6 +111,10 @@ struct CngCache {
     BCRYPT_ALG_HANDLE ecbHandle;
     BCRYPT_ALG_HANDLE ecdsaHandles[ECDSA_ALGORITHM_COUNT];
     BCRYPT_ALG_HANDLE ecdhHandles[ECDH_ALGORITHM_COUNT];
+
+  private:
+
+    Mutex* m_mutex;
 };
 
 extern CngCache& cngCache;

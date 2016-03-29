@@ -27,6 +27,7 @@
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/DBusStd.h>
 #include <qcc/Thread.h>
+#include "KeyStore.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -112,7 +113,10 @@ class ProxyBusObjectTest : public testing::Test {
         servicebus("ProxyBusObjectTestservice", false),
         proxyBusObjectTestAuthListenerOne(NULL),
         proxyBusObjectTestAuthListenerTwo(NULL)
-    { }
+    {
+        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("ProxyBusObjectTest"));
+        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("ProxyBusObjectTestservice"));
+    }
 
     virtual void SetUp() {
         QStatus status = bus.Start();

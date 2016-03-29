@@ -3882,3 +3882,76 @@ TEST_F(PermissionMgmtUseCaseTest, InstallOneAdditionalManifestNewManifestCorrect
     ASSERT_EQ(ER_OK, saProxy.GetManifests(manifestsAfterUpdate));
     EXPECT_EQ(newManifests[0], manifestsAfterUpdate[manifestsAfterUpdate.size() - 1]);
 }
+
+/*
+ * This test tries to claim with a single unsigned manifest, and it should fail.
+ */
+TEST_F(PermissionMgmtUseCaseTest, ClaimWithUnsignedManifestFails)
+{
+    EnableSecurity("ALLJOYN_ECDHE_NULL");
+    GenerateCAKeys();
+    std::vector<Manifest> manifests;
+
+    ASSERT_EQ(ER_OK, GenerateAllowAllManifest(manifests, generateExtraManifests));
+    SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    /* Retrieve public key from to-be-claimed app to create identity cert */
+    ECCPublicKey claimedPubKey;
+    GetAppPublicKey(serviceBus, claimedPubKey);
+    IdentityCertificate identityCertChain[2];
+    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCertChain(adminBus, adminBus, "1010", "subject", &claimedPubKey, "service alias", 3600, identityCertChain, 2)) << "  CreateIdentityCertChain failed.";
+    /* No SignManifests call here. */
+
+    ASSERT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE)) << "  SetApplicationState failed.";
+    EXPECT_EQ(ER_DIGEST_MISMATCH, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, 2, manifests.data(), manifests.size())) << "Claim did not fail.";
+}
+
+/*
+ * This test tries to UpdateIdentity with a single unsigned manifest, and it should fail.
+ */
+TEST_F(PermissionMgmtUseCaseTest, UpdateIdentityWithUnsignedManifestFails)
+{
+    Claims(false);
+
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+
+    /* Retrieve the consumer's identity chain and just re-use it. */
+    MsgArg identityArg;
+    ASSERT_EQ(ER_OK, saProxy.GetIdentity(identityArg));
+
+    size_t certChainCount = identityArg.v_array.GetNumElements();
+
+    std::unique_ptr<qcc::CertificateX509[]> identityCertificateChain(new (std::nothrow) qcc::CertificateX509[certChainCount]);
+    ASSERT_NE(nullptr, identityCertificateChain.get());
+
+    ASSERT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(identityArg, identityCertificateChain.get(), certChainCount));
+
+    Manifest newManifests[1];
+    ASSERT_EQ(ER_OK, GenerateAllowAllManifest(newManifests[0]));
+    /* No SignManifests call here. */
+
+    EXPECT_EQ(ER_DIGEST_MISMATCH, saProxy.UpdateIdentity(identityCertificateChain.get(),
+                                                         certChainCount,
+                                                         newManifests,
+                                                         ArraySize(newManifests)));
+}
+
+/*
+ * This test tries to install a single unsigned manifest, and verifies that it fails to do so.
+ */
+TEST_F(PermissionMgmtUseCaseTest, InstallUnsignedManifestFails)
+{
+    Claims(false);
+
+    SecurityApplicationProxy saProxy(adminBus, consumerBus.GetUniqueName().c_str());
+
+    std::vector<Manifest> manifests;
+    ASSERT_FALSE(generateExtraManifests);
+    ASSERT_FALSE(generateBogusManifests);
+    ASSERT_EQ(ER_OK, saProxy.GetManifests(manifests));
+    ASSERT_EQ(1U, manifests.size());
+
+    Manifest newManifests[1];
+    ASSERT_EQ(ER_OK, GenerateAllowAllManifest(newManifests[0]));
+    /* Note that we don't call SignManifests on newManifests[0]. */
+    EXPECT_EQ(ER_DIGEST_MISMATCH, saProxy.InstallManifests(newManifests, ArraySize(newManifests)));
+}

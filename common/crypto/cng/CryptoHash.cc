@@ -90,17 +90,13 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
         return status;
     }
 
-    LPCWSTR algId;
-
     switch (alg) {
     case qcc::Crypto_Hash::SHA1:
         ctx = new Context(SHA1_SIZE);
-        algId = BCRYPT_SHA1_ALGORITHM;
         break;
 
     case qcc::Crypto_Hash::SHA256:
         ctx = new Context(SHA256_SIZE);
-        algId = BCRYPT_SHA256_ALGORITHM;
         break;
 
     default:
@@ -109,9 +105,8 @@ QStatus Crypto_Hash::Init(Algorithm alg, const uint8_t* hmacKey, size_t keyLen)
 
     // Open algorithm provider if required
     if (!cngCache.algHandles[alg][MAC]) {
-        if (!BCRYPT_SUCCESS(BCryptOpenAlgorithmProvider(&cngCache.algHandles[alg][MAC], algId, MS_PRIMITIVE_PROVIDER, MAC ? BCRYPT_ALG_HANDLE_HMAC_FLAG : 0))) {
-            status = ER_CRYPTO_ERROR;
-            QCC_LogError(status, ("Failed to open algorithm provider"));
+        status = cngCache.OpenHashHandle(alg, MAC);
+        if (ER_OK != status) {
             delete ctx;
             ctx = NULL;
             return status;
