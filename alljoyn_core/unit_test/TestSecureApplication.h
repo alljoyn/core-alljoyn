@@ -43,7 +43,7 @@ class TestSecureApplication :
     private SessionPortListener,
     private SessionListener {
   public:
-    TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener()
+    TestSecureApplication(const char* name, Event* authComplete = nullptr) : testObj(NULL), bus(name), authListener(authComplete)
     {
         bus.RegisterKeyStoreListener(keyStoreListener);
     }
@@ -152,6 +152,34 @@ class TestSecureApplication :
         int getCount;
     };
 
+    class MyAuthListener : public DefaultECDHEAuthListener {
+      public:
+        MyAuthListener(Event* authComplete = nullptr) : m_authComplete(authComplete)
+        {
+            if (m_authComplete != nullptr) {
+                QCC_ASSERT(m_authComplete->ResetEvent() == ER_OK);
+            }
+        };
+
+        virtual ~MyAuthListener() { };
+
+        virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
+        {
+            DefaultECDHEAuthListener::AuthenticationComplete(authMechanism, peerName, success);
+
+            if (!success) {
+                cout << __FUNCTION__ << " auth failed" << endl;
+            }
+
+            if (m_authComplete != nullptr) {
+                QCC_VERIFY(m_authComplete->SetEvent() == ER_OK);
+            }
+        }
+
+      private:
+        Event* m_authComplete;
+    };
+
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason);
 
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts);
@@ -163,7 +191,7 @@ class TestSecureApplication :
     TestObject* testObj;
     Mutex sessionLock;
     BusAttachment bus;
-    DefaultECDHEAuthListener authListener;
+    MyAuthListener authListener;
     InMemoryKeyStoreListener keyStoreListener;
 };
 

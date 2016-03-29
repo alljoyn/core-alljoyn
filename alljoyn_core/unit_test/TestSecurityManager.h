@@ -51,6 +51,11 @@ class TestSecurityManager :
         return caPublicKeyInfo;
     }
 
+    qcc::String GetUniqueName()
+    {
+        return bus.GetUniqueName();
+    }
+
   private:
     BusAttachment bus;
     SessionOpts opts;
