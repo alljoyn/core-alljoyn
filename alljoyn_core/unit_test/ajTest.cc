@@ -34,13 +34,17 @@ static void DebugOut(DbgMsgType type, const char* module, const char* msg, void*
 
 static bool IsDebugOn(char** env)
 {
+/*
     while (env && *env) {
         if (strncmp(*env, "ER_DEBUG_", 9) == 0) {
             return true;
         }
-        ++env;
+   ++env;
     }
     return false;
+ */
+    QCC_UNUSED(env);
+    return true;
 }
 
 
