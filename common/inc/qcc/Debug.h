@@ -46,13 +46,15 @@
  *                  [e.g. ("Disconnecting from %s", nodename)].
  *                  String should not end with a new line.
  */
-#if defined(NDEBUG)
-#define QCC_LogError(_status, _msg)                                     \
+/*
+   #if defined(NDEBUG)
+   #define QCC_LogError(_status, _msg)                                     \
     do {                                                                \
         void* _ctx = _QCC_DbgPrintContext(" 0x%04x", _status);          \
         _QCC_DbgPrintProcess(_ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
     } while (0)
-#else
+   #else
+ */
 #define QCC_LogError(_status, _msg)                                     \
     do {                                                                \
         void* _ctx = _QCC_DbgPrintContext _msg;                         \
@@ -60,7 +62,7 @@
         _QCC_DbgPrintProcess(_ctx, DBG_LOCAL_ERROR, QCC_MODULE, __FILE__, __LINE__); \
     } while (0)
 #endif
-#endif
+// #endif
 
 /**
  * Some products using AllJoyn source code(e.g.Microsoft Windows) can override
@@ -179,9 +181,11 @@
  * @param _msg      "printf" parameters in parentheses.
  *                  Example: ("value: %d", variable)
  */
-#if defined(NDEBUG)
-#define _QCC_DbgPrint(_msgType, _msg) do { } while (0)
-#else
+/*
+   #if defined(NDEBUG)
+   #define _QCC_DbgPrint(_msgType, _msg) do { } while (0)
+   #else
+ */
 #define _QCC_DbgPrint(_msgType, _msg)                                  \
     do {                                                               \
         if (_QCC_DbgPrintCheck((_msgType), QCC_MODULE)) {              \
@@ -190,7 +194,7 @@
         }                                                               \
     } while (0)
 #endif
-#endif
+// #endif
 /** @endcond */
 
 
@@ -203,12 +207,14 @@
  * @param _data     Pointer to data to dump.
  * @param _len      Length of data to dump.
  */
-#if defined(NDEBUG)
-#define _QCC_DbgDumpData(_msgType, _data, _len) do { } while (0)
-#else
+/*
+   #if defined(NDEBUG)
+   #define _QCC_DbgDumpData(_msgType, _data, _len) do { } while (0)
+   #else
+ */
 #define _QCC_DbgDumpData(_msgType, _data, _len)                         \
     _QCC_DbgDumpHex((_msgType), QCC_MODULE, __FILE__, __LINE__, # _data, (_data), (_len))
-#endif
+// #endif
 /** @endcond */
 
 

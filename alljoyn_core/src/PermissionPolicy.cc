@@ -1817,11 +1817,14 @@ std::string _Manifest::ToString() const
     output += "=====================\n";
     output += "Version: ";
     output += versionBuf;
-    output += "Thumbprint algorithm OID: " + m_thumbprintAlgorithmOid + "\n";
+    output += "\n";
+    output += "Thumbprint algorithm OID: " + m_thumbprintAlgorithmOid;
+    output += "\n";
     output += "Thumbprint: ";
     output += BytesToHexString(m_thumbprint.data(), m_thumbprint.size()).c_str();
     output += "\n";
-    output += "Signature algorithm OID: " + m_signatureAlgorithmOid + "\n";
+    output += "Signature algorithm OID: " + m_signatureAlgorithmOid;
+    output += "\n";
     output += "Signature: ";
     output += BytesToHexString(m_signature.data(), m_signature.size()).c_str();
     output += "\n";
