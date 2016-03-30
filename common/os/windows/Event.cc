@@ -893,6 +893,11 @@ Event::Event(HANDLE busHandle, EventType eventType) :
 
 Event::~Event()
 {
+    /* Cancel network change notification */
+    if (networkIfaceHandle != nullptr) {
+        CancelMibChangeNotify2(networkIfaceHandle);
+    }
+
     /* Threads should not be waiting on this event */
     if ((handle != nullptr) && !::SetEvent(handle)) {
         QCC_LogError(ER_FAIL, ("SetEvent failed with %d", GetLastError()));
@@ -907,11 +912,6 @@ Event::~Event()
     /* Close the handles */
     if (handle != nullptr) {
         CloseHandle(handle);
-    }
-
-    /* Cancel network change notification */
-    if (networkIfaceHandle != nullptr) {
-        CancelMibChangeNotify2(networkIfaceHandle);
     }
 
     if (timerHandle != nullptr) {
