@@ -50,7 +50,7 @@ int OptParser::GetPort() const {
 
 void OptParser::PrintUsage() {
     qcc::String cmd = argv[0];
-    cmd = cmd.substr(cmd.find_last_of('/') + 1);
+    cmd = cmd.substr(cmd.find_last_of_std('/') + 1);
 
     std::cerr << cmd.c_str()
               << " [--port=PORT  | --language=LANG |  --deviceId=DEVICEID | --appId=APPID"
