@@ -41,7 +41,7 @@ void Translator::GetBestLanguage(const char* requested, const qcc::String& defau
             }
 
             // Drop the last subtag and try again.
-            size_t pos = languageToCheck.find_last_of('-');
+            size_t pos = languageToCheck.find_last_of_std('-');
             if (pos == qcc::String::npos) {
                 break;
             }

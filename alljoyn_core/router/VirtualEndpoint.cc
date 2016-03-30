@@ -87,14 +87,14 @@ QStatus _VirtualEndpoint::PushMessage(Message& msg, SessionId id)
         String thisShortGuid = GetRemoteGUIDShortString();
         for (multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.begin(); (it != m_b2bEndpoints.end()) && (id == it->first); ++it) {
             RemoteEndpoint ep = it->second;
-            String epShortGuid = ep->GetRemoteName().substr(1, ep->GetRemoteName().find_last_of('.') - 1);
+            String epShortGuid = ep->GetRemoteName().substr(1, ep->GetRemoteName().find_last_of_std('.') - 1);
             if (thisShortGuid == epShortGuid) {
                 tryEndpoints.push_back(ep);
             }
         }
         for (multimap<SessionId, RemoteEndpoint>::iterator it = m_b2bEndpoints.begin(); (it != m_b2bEndpoints.end()) && (id == it->first); ++it) {
             RemoteEndpoint ep = it->second;
-            String epShortGuid = ep->GetRemoteName().substr(1, ep->GetRemoteName().find_last_of('.') - 1);
+            String epShortGuid = ep->GetRemoteName().substr(1, ep->GetRemoteName().find_last_of_std('.') - 1);
             if (thisShortGuid != epShortGuid) {
                 tryEndpoints.push_back(ep);
             }

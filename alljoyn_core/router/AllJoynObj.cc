@@ -3836,7 +3836,7 @@ void AllJoynObj::ProcFindAdvertisement(QStatus status, Message& msg, const qcc::
     /* Send FoundAdvertisedName signals if there are existing matches for matching */
     if ((ALLJOYN_FINDADVERTISEDNAME_REPLY_SUCCESS == replyCode) && (namePrefix != matching.end())) {
         AcquireLocks();
-        String prefix = namePrefix->second.substr(0, namePrefix->second.find_last_of('*'));
+        String prefix = namePrefix->second.substr(0, namePrefix->second.find_last_of_std('*'));
         multimap<String, NameMapEntry>::iterator it = nameMap.lower_bound(prefix);
         set<SentSetEntry> sentSet;
         while ((it != nameMap.end()) && !WildcardMatch(it->first, namePrefix->second)) {
@@ -5295,7 +5295,7 @@ QStatus AllJoynObj::SendFoundAdvertisedName(const String& dest,
     MsgArg args[3];
     args[0].Set("s", name.c_str());
     args[1].Set("q", transport);
-    String prefix = namePrefix.substr(0, namePrefix.find_last_of('*'));
+    String prefix = namePrefix.substr(0, namePrefix.find_last_of_std('*'));
     args[2].Set("s", prefix.c_str());
     return Signal(dest.c_str(), 0, *foundNameSignal, args, ArraySize(args));
 }
@@ -5328,7 +5328,7 @@ QStatus AllJoynObj::SendLostAdvertisedName(const String& name, TransportMask tra
         MsgArg args[3];
         args[0].Set("s", name.c_str());
         args[1].Set("q", transport);
-        String prefix = it->first.substr(0, it->first.find_last_of('*'));
+        String prefix = it->first.substr(0, it->first.find_last_of_std('*'));
         args[2].Set("s", prefix.c_str());
         QCC_DbgPrintf(("Sending LostAdvertisedName(%s, 0x%x, %s) to %s", name.c_str(), transport, prefix.c_str(), it->second.c_str()));
         QStatus tStatus = Signal(it->second.c_str(), 0, *lostAdvNameSignal, args, ArraySize(args));
