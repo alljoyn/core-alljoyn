@@ -186,5 +186,9 @@ def archive_expand_emitter(target, source, env):
       modTargets.append(File(outdir+os.path.sep+os.path.basename(str(archive))))
    return modTargets, source
 
+# Override _LocalEndpoint::Dispatcher's 'maxAlarms' values (setting it to unlimited).
+# See ASACORE-2810 (reason) and ASACORE-2650 (future improvement).
+env.Append(CPPDEFINES=[('LOCAL_ENDPOINT_MAXALARMS',  '0')])
+
 expand_bld = Builder(action=archive_expand, emitter=archive_expand_emitter)
 env.Append(BUILDERS={'ArchiveExpand' : expand_bld})
