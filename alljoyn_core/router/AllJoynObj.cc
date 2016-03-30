@@ -953,11 +953,15 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     }
                     /* Re-acquire locks */
                     ajObj.AcquireLocks();
-                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): FindEndpoint(\"%s\")", sessionHost));
-                    ajObj.FindEndpoint(sessionHost, vSessionEp);
-                    if (!vSessionEp->IsValid()) {
-                        replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
-                        QCC_LogError(ER_BUS_NO_ENDPOINT, ("SessionHost endpoint (%s) not found", sessionHost));
+                    if (replyCode == ALLJOYN_JOINSESSION_REPLY_REJECTED) {
+                        QCC_LogError(ER_ALLJOYN_JOINSESSION_REPLY_REJECTED, ("SessionHost (%s) rejected the session joiner", sessionHost));
+                    } else {
+                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): FindEndpoint(\"%s\")", sessionHost));
+                        ajObj.FindEndpoint(sessionHost, vSessionEp);
+                        if (!vSessionEp->IsValid()) {
+                            replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
+                            QCC_LogError(ER_BUS_NO_ENDPOINT, ("SessionHost endpoint (%s) not found", sessionHost));
+                        }
                     }
                 }
 
