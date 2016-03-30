@@ -431,7 +431,18 @@ class String {
      * @param pos  Optional starting position for search (one past end of substring to search).
      * @return     Position of last occurrence of c within string or npos if not found.
      */
-    size_type find_last_of(const char c, size_type pos = npos) const {
+    QCC_DEPRECATED(size_t find_last_of(const char c, size_t pos = npos) const) {
+        return (pos == static_cast<size_t>(0)) ? npos : s.find_last_of(c, pos-1);
+    }
+
+    /**
+     * Find last occurrence of character within string in range [0, pos]. std::string compliant version.
+     *
+     * @param c    Character to find.
+     * @param pos  Optional starting position for search (one past end of substring to search).
+     * @return     Position of last occurrence of c within string or npos if not found.
+     */
+    size_type find_last_of_std(const char c, size_type pos = npos) const {
         return s.find_last_of(c, pos);
     }
 
@@ -447,13 +458,24 @@ class String {
     }
 
     /**
-     * Find last occurence of any of a set of characters within string.
+     * Find last occurence of any of a set of characters within string in range [0, pos).
      *
      * @param inChars    Array of characters to look for in this string.
      * @param pos        Optional starting position within this string for search.
      * @return           Position of last occurrence of one of inChars within string or npos if not found.
      */
-    size_type find_last_of(const char* inChars, size_type pos = npos) const {
+    QCC_DEPRECATED(size_t find_last_of(const char* inChars, size_t pos = npos) const) {
+        return (pos == static_cast<size_t>(0)) ? npos : s.find_last_of(inChars, pos-1);
+    }
+
+    /**
+     * Find last occurence of any of a set of characters within string in range [0, pos]. std::string compliant version.
+     *
+     * @param inChars    Array of characters to look for in this string.
+     * @param pos        Optional starting position within this string for search.
+     * @return           Position of last occurrence of one of inChars within string or npos if not found.
+     */
+    size_type find_last_of_std(const char* inChars, size_type pos = npos) const {
         return s.find_last_of(inChars, pos);
     }
 
