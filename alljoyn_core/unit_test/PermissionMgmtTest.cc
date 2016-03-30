@@ -185,7 +185,7 @@ QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const q
         return status;
     }
 
-    return manifest->Sign(subjectCertificate, &privateKey);
+    return manifest->ComputeThumbprintAndSign(subjectCertificate, &privateKey);
 }
 
 QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const std::vector<uint8_t>& subjectThumbprint, Manifest& manifest)
