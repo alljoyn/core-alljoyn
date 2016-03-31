@@ -54,7 +54,7 @@ static const uint32_t MAX_SELECT_WAIT_MS = 10000;
 Mutex* Thread::threadListLock = NULL;
 map<ThreadId, Thread*>* Thread::threadList = NULL;
 
-static DWORD cleanExternalThreadKey;
+static DWORD cleanExternalThreadKey = FLS_OUT_OF_INDEXES;
 bool Thread::initialized = false;
 
 void Thread::CleanExternalThread(void* t)
@@ -75,7 +75,7 @@ void Thread::CleanExternalThread(void* t)
     threadListLock->Unlock();
 }
 
-QStatus Thread::Init()
+QStatus Thread::StaticInit()
 {
     if (!initialized) {
         /* Disable LockChecker for the threadListLock, thus allowing LockChecker to call GetThread() */
@@ -93,14 +93,25 @@ QStatus Thread::Init()
     return ER_OK;
 }
 
-QStatus Thread::Shutdown()
+QStatus Thread::StaticShutdown()
 {
     if (initialized) {
-        // Note that FlsFree will call the callback function for all
-        // fibers with a valid key in the Fls slot.
-        FlsFree(cleanExternalThreadKey);
+        if (cleanExternalThreadKey != FLS_OUT_OF_INDEXES) {
+            /*
+             * Free all External Thread objects, by triggering their FLS callbacks.
+             * Note that the Thread object corresponding to the current thread gets
+             * freed here too!
+             */
+            QCC_VERIFY(FlsFree(cleanExternalThreadKey));
+            cleanExternalThreadKey = FLS_OUT_OF_INDEXES;
+        }
+
+        /* A common root cause of a failed assertion here is the app forgetting to call BusAttachment::Join() */
+        QCC_ASSERT(Thread::threadList->size() == 0);
         delete Thread::threadList;
+        Thread::threadList = nullptr;
         delete Thread::threadListLock;
+        Thread::threadListLock = nullptr;
         initialized = false;
     }
     return ER_OK;

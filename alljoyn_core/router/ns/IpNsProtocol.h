@@ -2187,8 +2187,8 @@ class MDNSTextRData : public MDNSRData {
   public:
     struct Compare {
         inline bool operator()(const qcc::String& s1, const qcc::String& s2) const {
-            size_t u1Pos = s1.find_last_of('_');
-            size_t u2Pos = s2.find_last_of('_');
+            size_t u1Pos = s1.find_last_of_std('_');
+            size_t u2Pos = s2.find_last_of_std('_');
             if (u1Pos == qcc::String::npos || u2Pos == qcc::String::npos) {
                 return s1 < s2;
             } else {
