@@ -292,7 +292,7 @@ class OptParse {
 
 void OptParse::PrintUsage() {
     String cmd = argv[0];
-    cmd = cmd.substr(cmd.find_last_of('/') + 1);
+    cmd = cmd.substr(cmd.find_last_of_std('/') + 1);
 
     fprintf(
         stderr,

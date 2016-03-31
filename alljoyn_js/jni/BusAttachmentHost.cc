@@ -4360,7 +4360,7 @@ exit:
 
 QStatus _BusAttachmentHost::GetSignal(const qcc::String& name, const ajn::InterfaceDescription::Member*& signal)
 {
-    size_t dot = name.find_last_of('.');
+    size_t dot = name.find_last_of_std('.');
     if (qcc::String::npos == dot) {
         QCC_LogError(ER_BUS_BAD_MEMBER_NAME, ("Can't find '.' in '%s'", name.c_str()));
         return ER_BUS_BAD_MEMBER_NAME;
@@ -4522,7 +4522,7 @@ exit:
 void _BusAttachmentHost::ParseName(const qcc::String& name, qcc::String& serviceName, qcc::String& path, std::map<qcc::String, qcc::String>& argMap)
 {
     size_t slash = name.find_first_of('/');
-    size_t colon = name.find_last_of(':');
+    size_t colon = name.find_last_of_std(':');
     serviceName = name.substr(0, slash);
     path = name.substr(slash, colon - slash);
     qcc::String args = name.substr(colon);

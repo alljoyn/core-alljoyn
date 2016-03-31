@@ -56,7 +56,7 @@ bool OptParser::GetInternal() const {
 
 void OptParser::PrintUsage() {
     qcc::String cmd = argv[0];
-    cmd = cmd.substr(cmd.find_last_of('/') + 1);
+    cmd = cmd.substr(cmd.find_last_of_std('/') + 1);
 
     fprintf(stderr, "%s [--port|  | --config-file=FILE |  --daemonspec | --appid"
             "]\n"
