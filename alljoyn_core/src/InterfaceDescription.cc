@@ -93,7 +93,7 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
     arg += " type=\"" + argType + "\" direction=\"";
     arg += inOut ? "in\"" : "out\"";
 
-    qcc::String argAnnotations;
+    qcc::String childNodesXml;
     const char* myDesc = NULL;
     ArgumentDescriptions::const_iterator search = member.argumentDescriptions->find(argName);
     if (member.argumentDescriptions->end() != search) {
@@ -102,7 +102,9 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
     if (myDesc || member.argumentAnnotations->size() > 0) {
         if (myDesc) {
             if (withDescriptions) {
-                AppendDescriptionXml(arg, langTag, myDesc, translator, in);
+                qcc::String value;
+                member.GetArgAnnotation(argName.c_str(), qcc::String("org.alljoyn.Bus.DocString.") + langTag, value);
+                AppendDescriptionXml(childNodesXml, langTag, myDesc, translator, value.c_str(), in);
             }
             if (langTag == NULL) {
                 AppendDescriptionToArgAnnotations(*member.argumentAnnotations, argName.c_str(), myDesc, translator);
@@ -113,12 +115,12 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
         ArgumentAnnotations::const_iterator ait = member.argumentAnnotations->begin();
         for (; ait != member.argumentAnnotations->end(); ++ait) {
             if (ait->first.first == argName) {
-                argAnnotations += in + "  <annotation name=\"" + ait->first.second.c_str() + "\" value=\"" + ait->second + "\"/>\n";
+                childNodesXml += in + "  <annotation name=\"" + ait->first.second.c_str() + "\" value=\"" + ait->second + "\"/>\n";
             }
         }
     }
-    if (!argAnnotations.empty()) {
-        arg += ">\n" + argAnnotations + in + "</arg>\n";
+    if (!childNodesXml.empty()) {
+        arg += ">\n" + childNodesXml + in + "</arg>\n";
     } else {
         arg += "/>\n";
     }
@@ -127,12 +129,21 @@ qcc::String InterfaceDescription::NextArg(const char*& signature, qcc::String& a
 }
 
 void InterfaceDescription::AppendDescriptionXml(qcc::String& xml, const char* language,
-                                                const char* localDescription, Translator* translator, qcc::String const& indent) const
+                                                const char* localDescription, Translator* translator,
+                                                const char* languageDescription,
+                                                qcc::String const& indent) const
 {
     qcc::String buffer;
-    const char* d = Translate(language, localDescription, buffer, translator);
-    if (!d || d[0] == '\0') {
-        return;
+    const char* d;
+    if ((languageDescription != nullptr) && (languageDescription[0] != '\0') && ((translator == nullptr) || (localDescription == nullptr))) {
+        // Language description is from DocString annotation.
+        // Use it only when the local description cannot be translated
+        d = languageDescription;
+    } else {
+        d = Translate(language, localDescription, buffer, translator);
+        if (!d || d[0] == '\0') {
+            return;
+        }
     }
     xml += indent + "  <description>" + XmlElement::EscapeXml(d) + "</description>\n";
 }
@@ -487,7 +498,9 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
     xml += name + close;
 
     if (withDescriptions) {
-        AppendDescriptionXml(xml, languageTag, defs->description.c_str(), myTranslator, in);
+        qcc::String value;
+        GetAnnotation(qcc::String("org.alljoyn.Bus.DocString.") + languageTag, value);
+        AppendDescriptionXml(xml, languageTag, defs->description.c_str(), myTranslator, value.c_str(), in);
     }
     if (unifiedFormat && defs->hasDescription) {
         AppendDescriptionToAnnotations(defs->annotations, defs->description.c_str(), myTranslator);
@@ -538,7 +551,9 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
         }
 
         if (withDescriptions) {
-            AppendDescriptionXml(xml, languageTag, member.description.c_str(), myTranslator, in + "  ");
+            qcc::String value;
+            member.GetAnnotation(qcc::String("org.alljoyn.Bus.DocString.") + languageTag, value);
+            AppendDescriptionXml(xml, languageTag, member.description.c_str(), myTranslator, value.c_str(), in + "  ");
         }
         if (unifiedFormat) {
             AppendDescriptionToAnnotations(*member.annotations, member.description.c_str(), myTranslator);
@@ -600,7 +615,9 @@ qcc::String InterfaceDescription::Introspect(size_t indent, const char* language
             xml += ">\n";
 
             if (withDescriptions) {
-                AppendDescriptionXml(xml, languageTag, property.description.c_str(), myTranslator, in + "  ");
+                qcc::String value;
+                property.GetAnnotation(qcc::String("org.alljoyn.Bus.DocString.") + languageTag, value);
+                AppendDescriptionXml(xml, languageTag, property.description.c_str(), myTranslator, value.c_str(), in + "  ");
             }
             if (unifiedFormat) {
                 AppendDescriptionToAnnotations(*property.annotations, property.description.c_str(), myTranslator);
