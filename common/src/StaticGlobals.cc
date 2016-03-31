@@ -63,7 +63,7 @@ class StaticGlobals {
         String::Init();
         DebugControl::Init();
         LoggerSetting::Init();
-        QStatus status = Thread::Init();
+        QStatus status = Thread::StaticInit();
         if (status != ER_OK) {
             Shutdown();
             return status;
@@ -85,7 +85,7 @@ class StaticGlobals {
         WindowsUtilShutdown();
 #endif
         Crypto::Shutdown();
-        Thread::Shutdown();
+        Thread::StaticShutdown();
         LoggerSetting::Shutdown();
         DebugControl::Shutdown();
         String::Shutdown();

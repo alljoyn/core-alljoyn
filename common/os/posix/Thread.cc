@@ -78,7 +78,7 @@ void Thread::CleanExternalThread(void* t)
     threadListLock->Unlock(MUTEX_CONTEXT);
 }
 
-QStatus Thread::Init()
+QStatus Thread::StaticInit()
 {
     if (!initialized) {
         /* Disable LockChecker for the threadListLock, thus allowing LockChecker to call GetThread() */
@@ -96,7 +96,7 @@ QStatus Thread::Init()
     return ER_OK;
 }
 
-QStatus Thread::Shutdown()
+QStatus Thread::StaticShutdown()
 {
     if (initialized) {
         void* thread = pthread_getspecific(cleanExternalThreadKey);
@@ -107,8 +107,13 @@ QStatus Thread::Shutdown()
         if (ret != 0) {
             QCC_LogError(ER_OS_ERROR, ("Deleting TLS key: %s", strerror(ret)));
         }
+
+        /* A common root cause of a failed assertion here is the app forgetting to call BusAttachment::Join() */
+        QCC_ASSERT(Thread::threadList->size() == 0);
         delete Thread::threadList;
+        Thread::threadList = nullptr;
         delete Thread::threadListLock;
+        Thread::threadListLock = nullptr;
         initialized = false;
     }
     return ER_OK;
