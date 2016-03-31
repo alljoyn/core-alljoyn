@@ -2046,7 +2046,7 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
 
             for (PermissionMgmtObj::TrustAnchorList::const_iterator it = trustAnchors.begin(); it != trustAnchors.end(); it++) {
                 if ((*it)->use == TRUST_ANCHOR_CA) {
-                    status = signedManifest->VerifyByThumbprint(thumbprintVector, (*it)->keyInfo.GetPublicKey());
+                    status = signedManifest->Verify(thumbprintVector, (*it)->keyInfo.GetPublicKey());
                     if (ER_OK == status) {
                         break;
                     }
@@ -2059,7 +2059,7 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
              * signed the manifest.
              */
             for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
-                status = signedManifest->VerifyByThumbprint(thumbprintVector, &(issuerPublicKeys[i]));
+                status = signedManifest->Verify(thumbprintVector, &(issuerPublicKeys[i]));
                 if (ER_OK == status) {
                     break;
                 }
