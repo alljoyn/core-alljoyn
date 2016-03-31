@@ -99,11 +99,11 @@ OptParser::ParseResultCode OptParser::ParseResult() {
             printf(versionPreamble, "1");
             result = PR_EXIT_NO_ERROR;
             goto exit;
-        } else if (arg.compare(0, sizeof("--port") - 1, "--port") == 0) {
+        } else if (arg.compare_std(0, sizeof("--port") - 1, "--port") == 0) {
             port = atoi(arg.substr(sizeof("--port")).c_str());
-        } else if (arg.compare(0, sizeof("--daemonspec") - 1, "--daemonspec") == 0) {
+        } else if (arg.compare_std(0, sizeof("--daemonspec") - 1, "--daemonspec") == 0) {
             daemonSpec = arg.substr(sizeof("--daemonspec"));
-        } else if (arg.compare(0, sizeof("--appid") - 1, "--appid") == 0) {
+        } else if (arg.compare_std(0, sizeof("--appid") - 1, "--appid") == 0) {
             appGUID = arg.substr(sizeof("--appid"));
             if ((appGUID.length() != 32) || (!IsAllHex(appGUID.c_str()))) {
                 result = PR_INVALID_APPID;
@@ -120,7 +120,7 @@ OptParser::ParseResultCode OptParser::ParseResult() {
                 goto exit;
             }
             configFile = argv[i];
-        } else if (arg.compare(0, sizeof("--config-file") - 1, "--config-file") == 0) {
+        } else if (arg.compare_std(0, sizeof("--config-file") - 1, "--config-file") == 0) {
             if (!configFile.empty() || internal) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;

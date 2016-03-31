@@ -419,7 +419,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
                 goto exit;
             }
             configFile = argv[i];
-        } else if (arg.compare(0, sizeof("--config-file") - 1, "--config-file") == 0) {
+        } else if (arg.compare_std(0, sizeof("--config-file") - 1, "--config-file") == 0) {
             if (!configFile.empty() || internal) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
@@ -433,7 +433,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
             }
             configService = true;
 #endif
-        } else if (arg.compare(0, sizeof("--print-address") - 1, "--print-address") == 0) {
+        } else if (arg.compare_std(0, sizeof("--print-address") - 1, "--print-address") == 0) {
             if ((arg.size() > sizeof("--print-address") - 1) && (arg[sizeof("--print-address") - 1] == '=')) {
                 printAddressFd = StringToI32(arg.substr(sizeof("--print-address")), 10, -2);
             } else {
@@ -448,7 +448,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
                 result = PR_INVALID_OPTION;
                 goto exit;
             }
-        } else if (arg.compare(0, sizeof("--print-pid") - 1, "--print-pid") == 0) {
+        } else if (arg.compare_std(0, sizeof("--print-pid") - 1, "--print-pid") == 0) {
             if ((arg.size() > sizeof("--print-pid") - 1) &&
                 (arg[sizeof("--print-pid") - 1] == '=')) {
                 printPidFd = StringToI32(arg.substr(sizeof("--print-pid")), 10, -2);
@@ -556,8 +556,8 @@ int daemon(OptParse& opts) {
     for (ConfigDB::_ListenList::const_iterator it = listenList->begin(); it != listenList->end(); ++it) {
         String addrStr = *it;
         bool skip = false;
-        if (addrStr.compare(0, sizeof("unix:") - 1, "unix:") == 0) {
-            if (addrStr.compare(sizeof("unix:") - 1, sizeof("tmpdir=") - 1, "tmpdir=") == 0) {
+        if (addrStr.compare_std(0, sizeof("unix:") - 1, "unix:") == 0) {
+            if (addrStr.compare_std(sizeof("unix:") - 1, sizeof("tmpdir=") - 1, "tmpdir=") == 0) {
                 // Process tmpdir specially.
                 String randStr = addrStr.substr(sizeof("unix:tmpdir=") - 1) + "/alljoyn-";
                 addrStr = ("unix:abstract=" + RandomString(randStr.c_str()));
@@ -570,16 +570,16 @@ int daemon(OptParse& opts) {
             }
 
 #if defined(QCC_OS_DARWIN)
-        } else if (addrStr.compare(0, sizeof("launchd:") - 1, "launchd:") == 0) {
+        } else if (addrStr.compare_std(0, sizeof("launchd:") - 1, "launchd:") == 0) {
             skip = opts.GetNoLaunchd();
 #endif
 
-        } else if (addrStr.compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
+        } else if (addrStr.compare_std(0, sizeof("tcp:") - 1, "tcp:") == 0) {
             skip = opts.GetNoTCP();
-        } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
+        } else if (addrStr.compare_std(0, sizeof("udp:") - 1, "udp:") == 0) {
             skip = opts.GetNoUDP();
 
-        } else if (addrStr.compare(0, sizeof("slap:") - 1, "slap:") == 0) {
+        } else if (addrStr.compare_std(0, sizeof("slap:") - 1, "slap:") == 0) {
             skip = opts.GetNoSLAP();
 
         } else {

@@ -214,7 +214,7 @@ OptParse::ParseResultCode OptParse::ParseResult()
             }
             configFile = argv[i];
             useInternalConfig = false;
-        } else if (arg.compare(0, sizeof("--config-file") - 1, "--config-file") == 0) {
+        } else if (arg.compare_std(0, sizeof("--config-file") - 1, "--config-file") == 0) {
             if (!configFile.empty()) {
                 result = PR_OPTION_CONFLICT;
                 goto exit;
@@ -273,9 +273,9 @@ int daemon(OptParse& opts)
     for (ConfigDB::_ListenList::const_iterator it = listenList->begin(); it != listenList->end(); ++it) {
         String addrStr = *it;
         bool skip = false;
-        if (addrStr.compare(0, sizeof("tcp:") - 1, "tcp:") == 0) {
+        if (addrStr.compare_std(0, sizeof("tcp:") - 1, "tcp:") == 0) {
             // No special processing needed for TCP.
-        } else if (addrStr.compare(0, sizeof("udp:") - 1, "udp:") == 0) {
+        } else if (addrStr.compare_std(0, sizeof("udp:") - 1, "udp:") == 0) {
             // No special processing needed for UDP.
         } else {
             Log(LOG_ERR, "Unsupported listen address: %s (ignoring)\n", it->c_str());

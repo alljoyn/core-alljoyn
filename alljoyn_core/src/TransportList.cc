@@ -95,7 +95,7 @@ Transport* TransportList::GetTransport(const qcc::String& transportSpec)
         } else {
             for (size_t i = 0; i < transportList.size(); ++i) {
                 Transport*& trans = transportList[i];
-                if (0 == transportSpec.compare(0, colonOff, trans->GetTransportName())) {
+                if (0 == transportSpec.compare_std(0, colonOff, trans->GetTransportName())) {
                     transport = trans;
                     break;
                 }
