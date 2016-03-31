@@ -43,14 +43,14 @@ TEST(StringTest, find_last_of) {
     qcc::String s(testStr);
 
     /* Test find_last_of */
-    ASSERT_EQ(static_cast<size_t>(7), s.find_last_of('d'));
-    ASSERT_EQ(static_cast<size_t>(7), s.find_last_of('d', 7));  // Old qcc::String difference
-    ASSERT_EQ(static_cast<size_t>(3), s.find_last_of('d', 6));
+    ASSERT_EQ(static_cast<size_t>(7), s.find_last_of_std('d'));
+    ASSERT_EQ(static_cast<size_t>(7), s.find_last_of_std('d', 7));  // Old qcc::String difference
+    ASSERT_EQ(static_cast<size_t>(3), s.find_last_of_std('d', 6));
     /*
      * unusual use of the unary operator '+' makes gcc compiler see qcc::String::npos as a rvalue
      * this prevents an 'undefined reference' compiler error when building with gcc.
      */
-    ASSERT_EQ(+qcc::String::npos, s.find_last_of('d', 2));
+    ASSERT_EQ(+qcc::String::npos, s.find_last_of_std('d', 2));
 }
 
 TEST(StringTest, find_first_not_of) {

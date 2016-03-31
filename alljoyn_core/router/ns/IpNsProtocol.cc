@@ -2789,7 +2789,7 @@ std::pair<qcc::String, qcc::String> MDNSAdvertiseRData::GetFieldAt(int i)
         return pair<String, String>("", "");
     }
     String key = it->first;
-    key = key.substr(0, key.find_last_of('_'));
+    key = key.substr(0, key.find_last_of_std('_'));
     if (key == "n") {
         key = "name";
     } else if (key == "i") {
@@ -2847,7 +2847,7 @@ String MDNSSearchRData::GetSearchCriterion(int index)
     String ret = "";
     while (it != m_fields.end()) {
         String key = it->first;
-        key = key.substr(0, key.find_last_of('_'));
+        key = key.substr(0, key.find_last_of_std('_'));
         if (key == ";") {
             if (index-- == 0) {
                 break;
@@ -2876,7 +2876,7 @@ void MDNSSearchRData::RemoveSearchCriterion(int index)
     String ret = "";
     while (it != m_fields.end() && index > 0) {
         String key = it->first;
-        key = key.substr(0, key.find_last_of('_'));
+        key = key.substr(0, key.find_last_of_std('_'));
         if (key == ";") {
             if (--index == 0) {
                 it++;
@@ -2899,7 +2899,7 @@ void MDNSSearchRData::RemoveSearchCriterion(int index)
     if (it != m_fields.end()) {
         while (it != m_fields.end()) {
             String key = it->first;
-            key = key.substr(0, key.find_last_of('_'));
+            key = key.substr(0, key.find_last_of_std('_'));
             if (key == ";") {
                 m_fields.erase(it);
                 break;
@@ -2923,7 +2923,7 @@ std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
     }
 
     String key = it->first;
-    key = key.substr(0, key.find_last_of('_'));
+    key = key.substr(0, key.find_last_of_std('_'));
     if (key == "n") {
         key = "name";
     } else if (key == "i") {
@@ -3374,7 +3374,7 @@ void _MDNSPacket::RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RR
 
 bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** additional)
 {
-    size_t starPos = str.find_last_of('*');
+    size_t starPos = str.find_last_of_std('*');
     String name = str.substr(0, starPos);
     std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
     while (it1 != m_additional.end()) {
@@ -3394,7 +3394,7 @@ bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRTyp
     if (type != MDNSResourceRecord::TXT) {
         return false;
     }
-    size_t starPos = str.find_last_of('*');
+    size_t starPos = str.find_last_of_std('*');
     String name = str.substr(0, starPos);
     std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
     while (it1 != m_additional.end()) {
@@ -3416,7 +3416,7 @@ uint32_t _MDNSPacket::GetNumMatches(qcc::String str, MDNSResourceRecord::RRType 
         return false;
     }
     uint32_t numMatches =  0;
-    size_t starPos = str.find_last_of('*');
+    size_t starPos = str.find_last_of_std('*');
     String name = str.substr(0, starPos);
     std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
     while (it1 != m_additional.end()) {
@@ -3436,7 +3436,7 @@ bool _MDNSPacket::GetAdditionalRecordAt(qcc::String str, MDNSResourceRecord::RRT
     if (type != MDNSResourceRecord::TXT) {
         return false;
     }
-    size_t starPos = str.find_last_of('*');
+    size_t starPos = str.find_last_of_std('*');
     String name = str.substr(0, starPos);
     uint32_t i = 0;
     std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
