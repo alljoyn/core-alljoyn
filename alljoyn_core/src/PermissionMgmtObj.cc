@@ -2037,6 +2037,7 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
         }
 
         status = ER_CRYPTO_ERROR;
+<<<<<<< HEAD
         if (0 == issuerPublicKeys.size()) {
             /* Sometimes we don't get a full cert chain if the chain is just the leaf and then
              * a trust anchor. In this case, try to validate the manifest with all the CA trust
@@ -2063,6 +2064,12 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
                 if (ER_OK == status) {
                     break;
                 }
+=======
+        for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
+            status = signedManifest->Verify(thumbprintVector, &(issuerPublicKeys[i]));
+            if (ER_OK == status) {
+                break;
+>>>>>>> RB16.04
             }
         }
 
