@@ -137,7 +137,7 @@ DebugControl::DebugControl(void)
             printThread = ((iter->second.compare("0") != 0) &&
                            (iter->second.compare("off") != 0) &&
                            (iter->second.compare("OFF") != 0));
-        } else if (var.compare(0, varPrefixLen, varPrefix) == 0) {
+        } else if (var.compare_std(0, varPrefixLen, varPrefix) == 0) {
             uint32_t level = StringToU32(iter->second, 0, 0);
             if (var.compare("ER_DEBUG_ALL") == 0) {
                 allLevel = level;

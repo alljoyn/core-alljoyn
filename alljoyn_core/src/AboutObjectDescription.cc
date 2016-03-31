@@ -198,7 +198,7 @@ bool AboutObjectDescription::HasInterface(const char* path, const char* interfac
     for (ifac_it = it->second.begin(); ifac_it != it->second.end(); ++ifac_it) {
         if (n == qcc::String::npos && interfaceNameStr == *ifac_it) {
             return true;
-        } else if (n != qcc::String::npos && interfaceNameStr.compare(0, n, ifac_it->substr(0, n)) == 0) {
+        } else if (n != qcc::String::npos && interfaceNameStr.compare_std(0, n, ifac_it->substr(0, n)) == 0) {
             return true;
         }
     }

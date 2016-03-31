@@ -255,9 +255,9 @@ bool _PolicyDB::AddRule(PolicyRuleList& ownList,
 
         QCC_DEBUG_ONLY(rule.ruleString += " " + attrStr + "=\"" + attrVal);
 
-        if (attrStr.compare(0, sizeof("send_") - 1, "send_") == 0) {
+        if (attrStr.compare_std(0, sizeof("send_") - 1, "send_") == 0) {
             policyGroup = RULE_SEND;
-        } else if (attrStr.compare(0, sizeof("receive_") - 1, "receive_") == 0) {
+        } else if (attrStr.compare_std(0, sizeof("receive_") - 1, "receive_") == 0) {
             policyGroup = RULE_RECEIVE;
         }
 
