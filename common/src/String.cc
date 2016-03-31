@@ -216,8 +216,6 @@ std::string String::insert(std::string::size_type pos, const char* str)
     return s;
 }
 
-
-
 std::string String::revsubstr(std::string::size_type pos, std::string::size_type n) const
 {
     String r;
@@ -227,6 +225,38 @@ std::string String::revsubstr(std::string::size_type pos, std::string::size_type
         r.push_back(s[pos + i - 1]);
     }
     return r;
+}
+
+int String::compare(size_type pos, size_type n, const String& other, size_type otherPos, size_type otherN) const
+{
+    int ret = 0;
+    if ((s.c_str() != other.c_str()) || (pos != otherPos)) {
+        size_t subStrLen = std::min(s.length() - pos, n);
+        size_t sLen = std::min(other.length() - otherPos, otherN);
+        ret = ::memcmp(s.c_str() + pos, other.c_str() + otherPos, std::min(subStrLen, sLen));
+        if ((0 == ret) && (subStrLen < sLen)) {
+            ret = -1;
+        } else if ((0 == ret) && (subStrLen > sLen)) {
+            ret = 1;
+        }
+    }
+    return ret;
+}
+
+int String::compare(size_type pos, size_type n, const String& other) const
+{
+    int ret = 0;
+    if (s.length() || other.length()) {
+        size_t subStrLen = std::min(s.length() - pos, n);
+        size_t sLen = other.length();
+        ret = ::memcmp(s.c_str() + pos, other.c_str(), std::min(subStrLen, sLen));
+        if ((0 == ret) && (subStrLen < sLen)) {
+            ret = -1;
+        } else if ((0 == ret) && (subStrLen > sLen)) {
+            ret = 1;
+        }
+    }
+    return ret;
 }
 
 }

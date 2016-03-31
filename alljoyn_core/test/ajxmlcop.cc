@@ -242,7 +242,7 @@ int CDECL_CALL main(int argc, char** argv)
 
             // RULE-6: Official AllSeen Alliance names must start with "org.alljoyn", not
             // "org.allseen" or "org.allseenalliance".
-            if (interfaceName.compare(0, 11, "org.allseen") == 0) {
+            if (interfaceName.compare_std(0, 11, "org.allseen") == 0) {
                 g_warnings++;
                 printf("WARNING-6: interface name '%s' does not start with org.alljoyn\n", interfaceName.c_str());
             }
@@ -502,7 +502,7 @@ int CDECL_CALL main(int argc, char** argv)
             }
 
             // RULE-12: The name of a signal should be phrased in terms of past tense.
-            if (signalName.compare(signalName.length() - 2, 2, "ed") != 0) {
+            if (signalName.compare_std(signalName.length() - 2, 2, "ed") != 0) {
                 g_info++;
                 printf("INFO-12: signal name '%s' in interface '%s' should end in a past tense verb\n",
                        signalName.c_str(), interfaceName.c_str());
@@ -630,7 +630,7 @@ int CDECL_CALL main(int argc, char** argv)
             }
 
             // RULE-15: Property names should be nouns or predicates.
-            if (propertyName.compare(0, 3, "Get") == 0) {
+            if (propertyName.compare_std(0, 3, "Get") == 0) {
                 g_warnings++;
                 printf("WARNING-15: property name '%s' in interface '%s' should be a noun or predicate\n",
                        propertyName.c_str(), interfaceName.c_str());
@@ -712,8 +712,8 @@ int CDECL_CALL main(int argc, char** argv)
             }
         }
 
-        if ((interfaceName.compare(0, 12, "org.alljoyn.") == 0) &&
-            (interfaceName.compare(0, 20, "org.alljoyn.example.") != 0)) {
+        if ((interfaceName.compare_std(0, 12, "org.alljoyn.") == 0) &&
+            (interfaceName.compare_std(0, 20, "org.alljoyn.example.") != 0)) {
             if (versionElement == nullptr) {
                 // RULE-42: Every standardized Interface must include a uint16 (signature ''q'') property
                 // ''Version'' that indicates the implemented version of the Interface.

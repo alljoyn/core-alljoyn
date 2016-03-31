@@ -538,7 +538,24 @@ class String {
      *
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    int compare(size_type pos,
+    QCC_DEPRECATED(int compare(size_type pos,
+                size_type n,
+                const String& other,
+                size_type otherPos,
+                size_type otherN) const);
+
+    /**
+     * Compare a substring of this string with a substring of other. std::string compliant version.
+     *
+     * @param pos       Start position of this string.
+     * @param n         Number of characters of this string to use for compare.
+     * @param other     String to compare with.
+     * @param otherPos  Start position of other string.
+     * @param otherN    Number of characters of other string to use for compare.
+     *
+     * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
+     */
+    int compare_std(size_type pos,
                 size_type n,
                 const String& other,
                 size_type otherPos,
@@ -552,9 +569,19 @@ class String {
      * @param pos    Start position of this string.
      * @param n      Number of characters of this string to use for compare.
      * @param other  String to compare with.
-     * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
+     * @return  &lt;0 if this string is less than other or when n == 0 and other String is not empty, &gt;0 if this string is greater than other, 0 if equal.
      */
-    int compare(size_type pos, size_type n, const String& other) const {
+    QCC_DEPRECATED(int compare(size_type pos, size_type n, const String& other) const);
+
+    /**
+     * Compare a substring of this string with other. std::string compliant version.
+     *
+     * @param pos    Start position of this string.
+     * @param n      Number of characters of this string to use for compare.
+     * @param other  String to compare with.
+     * @return  &lt;0 if this string is less than other or when n == 0 and other String is not empty, &gt;0 if this string is greater than other, 0 if equal.
+     */
+    int compare_std(size_type pos, size_type n, const String& other) const {
         return s.compare(pos, n, other.s);
     }
 
@@ -562,21 +589,24 @@ class String {
      * @overload
      * Compare a substring of this string with other.
      *
-     * @remark The behavior of this method has changed between AllJoyn 15.09 and 16.04.
+     * @param pos    Start position of this string.
+     * @param n      Number of characters of this string to use for compare.
+     * @param other  String to compare with.
+     * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
+     */
+    QCC_DEPRECATED(int compare(size_type pos, size_type n, const char* other) const) {
+        return ::strncmp(s.c_str() + pos, other, n < s.length() ? n : s.length());
+    }
+
+    /**
+     * Compare a substring of this string with other. std::string compliant version.
      *
      * @param pos    Start position of this string.
      * @param n      Number of characters of this string to use for compare.
      * @param other  String to compare with.
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    int compare(size_type pos, size_type n, const char* other) const {
-        /*
-         * In 15.09, calling this method with n = 0 returned 0 as the compare result.
-         * In 16.04, calling this method with n = 0 returns -1 as the compare result.
-         * Therefore trigger a failed assertion (at least temporarily) when calling this
-         * method with n = 0, thus warning the caller about this behavior change.
-         */
-        QCC_ASSERT(n != 0);
+    int compare_std(size_type pos, size_type n, const char* other) const {
         return s.compare(pos, n, other);
     }
 

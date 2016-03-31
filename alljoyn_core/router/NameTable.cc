@@ -627,7 +627,7 @@ bool NameTable::SetVirtualAlias(const qcc::String& alias,
         const String& reqOwnerName = requestingEndpoint->GetUniqueName();
         size_t oldPeriodOff = oldName.find_first_of('.');
         size_t reqPeriodOff = reqOwnerName.find_first_of('.');
-        if ((oldPeriodOff == String::npos) || (0 != oldName.compare(0, oldPeriodOff, reqOwnerName, 0, reqPeriodOff))) {
+        if ((oldPeriodOff == String::npos) || (0 != oldName.compare_std(0, oldPeriodOff, reqOwnerName, 0, reqPeriodOff))) {
             lock.Unlock(MUTEX_CONTEXT);
             return false;
         }

@@ -68,7 +68,7 @@ bool GetDescription(const XmlElement* elem, qcc::String& description)
         if ((*it)->GetName().compare("description") == 0) {
             description = (*it)->GetContent();
             return true;
-        } else if (((*it)->GetName() == "annotation") && ((*it)->GetAttribute("name").compare(0, 25, "org.alljoyn.Bus.DocString") == 0)) {
+        } else if (((*it)->GetName() == "annotation") && ((*it)->GetAttribute("name").compare_std(0, 25, "org.alljoyn.Bus.DocString") == 0)) {
             description = (*it)->GetAttribute("value");
             return true;
         }
@@ -208,7 +208,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                         const qcc::String& valueAtt = argElem->GetAttribute("value");
 
                         /* Treat annotation DocString as description */
-                        if (nameAtt.compare(0, 25, "org.alljoyn.Bus.DocString") == 0) {
+                        if (nameAtt.compare_std(0, 25, "org.alljoyn.Bus.DocString") == 0) {
                             memberDescription = valueAtt;
                         }
                         annotations[nameAtt] = valueAtt;
@@ -312,7 +312,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
             const qcc::String& valueAtt = ifChildElem->GetAttribute("value");
 
             /* Treat annotation DocString as description (for example, "org.alljoyn.Bus.DocString.En") */
-            if (nameAtt.compare(0, 25, "org.alljoyn.Bus.DocString") == 0) {
+            if (nameAtt.compare_std(0, 25, "org.alljoyn.Bus.DocString") == 0) {
                 if ((nameAtt.length() > 26) && (nameAtt[25] == '.')) {
                     qcc::String const& language = nameAtt.substr(26);
                     intf.SetDescriptionLanguage(language.c_str());
