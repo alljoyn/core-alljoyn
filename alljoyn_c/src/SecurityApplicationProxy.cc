@@ -356,7 +356,7 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
     }
 
     if (ER_OK == status) {
-        status = manifest->Sign(identityCertificate, &privateKey);
+        status = manifest->ComputeThumbprintAndSign(identityCertificate, &privateKey);
     }
 
     return status;

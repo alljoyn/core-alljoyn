@@ -399,7 +399,7 @@ void _HttpServer::RevokeObjectUrl(const qcc::String& url)
 
     qcc::SocketFd sessionFd = qcc::INVALID_SOCKET_FD;
     HttpListenerNative* httpListener = NULL;
-    qcc::String requestUri = url.substr(url.find_last_of('/'));
+    qcc::String requestUri = url.substr(url.find_last_of_std('/'));
 
     lock.Lock();
     std::map<qcc::String, ObjectUrl>::iterator it = objectUrls.find(requestUri);

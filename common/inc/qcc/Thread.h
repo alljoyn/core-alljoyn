@@ -293,8 +293,8 @@ class Thread {
 
   private:
 
-    static QStatus Init();
-    static QStatus Shutdown();
+    static QStatus StaticInit();
+    static QStatus StaticShutdown();
     friend class StaticGlobals;
 
     /**
