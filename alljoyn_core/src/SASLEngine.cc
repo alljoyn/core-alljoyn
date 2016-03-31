@@ -163,7 +163,7 @@ static AuthCmdType ParseAuth(qcc::String& str)
     }
     size_t i;
     for (i = 0; i < (ArraySize(AllJoynAuthCmdList) - 1); ++i) {
-        if (str.compare(0, AllJoynAuthCmdList[i].len, AllJoynAuthCmdList[i].cmdStr) == 0) {
+        if (str.compare_std(0, AllJoynAuthCmdList[i].len, AllJoynAuthCmdList[i].cmdStr) == 0) {
             str.erase(0, AllJoynAuthCmdList[i].len);
             break;
         }

@@ -3455,7 +3455,7 @@ void AllJoynObj::AdvertiseName(const InterfaceDescription::Member* member, Messa
         qcc::String adNameStr = advertiseName;
         // If this is a quiet advertisement, the name has a prefix of "quiet@".
         size_t pos = adNameStr.find_first_of('@');
-        if (pos != qcc::String::npos && (0 == adNameStr.compare(0, pos, "quiet"))) {
+        if (pos != qcc::String::npos && (0 == adNameStr.compare_std(0, pos, "quiet"))) {
             quietly = true;
             advertiseName += (pos + 1);
         }
@@ -3571,7 +3571,7 @@ void AllJoynObj::CancelAdvertiseName(const InterfaceDescription::Member* member,
     // Strip off name prefix "quiet@" if exists
     qcc::String adNameStr = advertiseName;
     size_t pos = adNameStr.find_first_of('@');
-    if (pos != qcc::String::npos && (0 == adNameStr.compare(0, pos, "quiet"))) {
+    if (pos != qcc::String::npos && (0 == adNameStr.compare_std(0, pos, "quiet"))) {
         advertiseName += (pos + 1);
     }
 
