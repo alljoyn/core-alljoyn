@@ -175,7 +175,7 @@ qcc::String BusObject::GetName()
 {
     if (!path.empty()) {
         qcc::String name = path;
-        size_t pos = name.find_last_of('/');
+        size_t pos = name.find_last_of_std('/');
         if (pos == 0) {
             if (name.length() > 1) {
                 name.erase(0, 1);

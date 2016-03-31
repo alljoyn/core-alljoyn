@@ -105,7 +105,7 @@ static String ExpandPath(const String& path, const String& srcFileName = String:
         return path;
     } else {
         // A path relative to the currently processed file
-        return srcFileName.substr(0, srcFileName.find_last_of(PATH_SEP) + 1) + path;
+        return srcFileName.substr(0, srcFileName.find_last_of_std(PATH_SEP) + 1) + path;
     }
 
 #undef PATH_SEP

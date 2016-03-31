@@ -1102,7 +1102,7 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
                 }
                 for (ImplicitRuleIterator irit = implicitRules.begin(); irit != implicitRules.end(); ++irit) {
                     qcc::String sender = irit->sender;
-                    if (sender.substr(1, sender.find_last_of('.') - 1) == cache.guid) {
+                    if (sender.substr(1, sender.find_last_of_std('.') - 1) == cache.guid) {
                         matchRules.push_back(irit->ToString());
                     }
                 }
@@ -1178,13 +1178,13 @@ void SessionlessObj::JoinSessionCB(QStatus status, SessionId sid, const SessionO
 QStatus SessionlessObj::ParseAdvertisedName(const qcc::String& name, uint32_t* versionNumber, qcc::String* guid, qcc::String* iface, uint32_t* changeId)
 {
     size_t guidPos = String::npos;
-    size_t changePos = name.find_last_of('.');
+    size_t changePos = name.find_last_of_std('.');
     if (changePos != String::npos) {
         if (changeId) {
             *changeId = StringToU32(name.substr(changePos + 2), 16);
         }
         if (changePos > 0) {
-            guidPos = name.find_last_of('.', changePos - 1);
+            guidPos = name.find_last_of_std('.', changePos - 1);
         }
     }
     if (guidPos == String::npos) {
@@ -1840,7 +1840,7 @@ void SessionlessObj::RemoveImplicitRules(const RemoteCacheWork& cache)
     ImplicitRuleIterator irit = implicitRules.begin();
     while (irit != implicitRules.end()) {
         String sender = irit->sender;
-        if (sender.substr(1, sender.find_last_of('.') - 1) == guid) {
+        if (sender.substr(1, sender.find_last_of_std('.') - 1) == guid) {
             implicitRules.erase(irit);
             irit = implicitRules.begin();
         } else {
