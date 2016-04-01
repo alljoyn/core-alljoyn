@@ -43,7 +43,7 @@ class TestSecureApplication :
     private SessionPortListener,
     private SessionListener {
   public:
-    TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener()
+    TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener(this), appName(name), pcl(this), joinSessionEvent(nullptr), endManagementEvent(nullptr)
     {
         bus.RegisterKeyStoreListener(keyStoreListener);
     }
@@ -79,6 +79,15 @@ class TestSecureApplication :
     int GetCurrentGetPropertyCount() {
         return testObj ? testObj->getCount : -1;
     }
+
+    /* Methods used to secure one or all connections, then wait for all the involved peers to finish authentication */
+    QStatus SecureConnection(TestSecureApplication& peer, bool forceAuth = false);
+    QStatus SecureConnectionAllSessions(TestSecureApplication& peer);
+    QStatus SecureConnectionAllSessionsAsync(TestSecureApplication& peer);
+    QStatus SecureConnectionAllSessionsCommon(TestSecureApplication& peer, bool async);
+    QStatus SecureConnectionAllSessions(TestSecureApplication& peer1, TestSecureApplication& peer2);
+    QStatus SecureConnectionAllSessionsAsync(TestSecureApplication& peer1, TestSecureApplication& peer2);
+    QStatus SecureConnectionAllSessionsCommon(TestSecureApplication& peer1, TestSecureApplication& peer2, bool async);
 
   private:
     class TestObject : public BusObject {
@@ -152,19 +161,80 @@ class TestSecureApplication :
         int getCount;
     };
 
+    class MyAuthListener : public DefaultECDHEAuthListener {
+      public:
+        MyAuthListener(TestSecureApplication* app) : m_app(app) { };
+        virtual ~MyAuthListener() { };
+
+        virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
+        {
+            DefaultECDHEAuthListener::AuthenticationComplete(authMechanism, peerName, success);
+
+            if (!success) {
+                cerr << __FUNCTION__ << " auth failed" << endl;
+            }
+
+            if (m_app != nullptr) {
+                m_app->AuthenticationCompleteCallback(peerName);
+            }
+        }
+
+      private:
+        TestSecureApplication* m_app;
+    };
+
+    class MyPermissionConfigurationListener : public PermissionConfigurationListener {
+      public:
+        MyPermissionConfigurationListener(TestSecureApplication* app) : m_app(app) { };
+        virtual ~MyPermissionConfigurationListener() { };
+
+        virtual void EndManagement()
+        {
+            PermissionConfigurationListener::EndManagement();
+
+            if (m_app != nullptr) {
+                m_app->EndManagementCompleteCallback();
+            }
+        }
+
+      private:
+        TestSecureApplication* m_app;
+    };
+
     virtual void SessionLost(SessionId sessionId, SessionLostReason reason);
-
     bool AcceptSessionJoiner(SessionPort sessionPort, const char* joiner, const SessionOpts& opts);
-
     void SessionJoined(SessionPort sessionPort, SessionId id, const char* joiner);
+
+    /* Support for waiting to complete authentication */
+    void DeleteAllAuthenticationEvents();
+    void AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent);
+    QStatus WaitAllAuthenticationEvents(uint32_t timeout);
+    void AuthenticationCompleteCallback(qcc::String peerName);
+
+    /* Support for waiting to complete JoinSession */
+    void RemoveJoinSessionEvent();
+    void SetJoinSessionEvent(qcc::Event* authEvent);
+    QStatus WaitJoinSessionEvent(uint32_t timeout);
+    void JoinSessionCompleteCallback();
+
+    /* Support for waiting for EndManagement */
+    void RemoveEndManagementEvent();
+    void SetEndManagementEvent(qcc::Event* event);
+    QStatus WaitEndManagementEvent(uint32_t timeout);
+    void EndManagementCompleteCallback();
 
     vector<SessionId> joinedSessions;
     vector<SessionId> hostedSessions;
     TestObject* testObj;
     Mutex sessionLock;
     BusAttachment bus;
-    DefaultECDHEAuthListener authListener;
+    MyAuthListener authListener;
     InMemoryKeyStoreListener keyStoreListener;
+    qcc::String appName;
+    MyPermissionConfigurationListener pcl;
+    std::map<qcc::String, qcc::Event*> authEvents;
+    qcc::Event* joinSessionEvent;
+    qcc::Event* endManagementEvent;
 };
 
 #endif /* _ALLJOYN_TESTSECUREAPPLICATION_H */
