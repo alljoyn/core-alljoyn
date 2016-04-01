@@ -770,6 +770,7 @@ class InterfaceDescription {
                               const char* language,
                               const char* localDescription,
                               Translator* translator,
+                              const char* languageDescription,
                               qcc::String const& indent) const;
 
     qcc::String NextArg(const char*& signature,
