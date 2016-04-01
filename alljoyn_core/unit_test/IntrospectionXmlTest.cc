@@ -544,9 +544,9 @@ TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithDescript
     const InterfaceDescription* testIntf = m_remoteObj->GetInterface(INTERFACE_NAME);
     ASSERT_TRUE(testIntf != 0);
     const InterfaceDescription::Member* member = testIntf->GetSignal("LightOn");
-    EXPECT_STREQ(member->description.c_str(), "Licht is aangestoken");
+    EXPECT_STREQ("Licht is aangestoken", member->description.c_str());
     const InterfaceDescription::Property* property = testIntf->GetProperty("SupplySource");
-    EXPECT_STREQ(property->description.c_str(), "The supply source of water");
+    EXPECT_STREQ("Het aanbod bron van water", property->description.c_str());
 }
 
 TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithSignalEmissionBehaviors) {
