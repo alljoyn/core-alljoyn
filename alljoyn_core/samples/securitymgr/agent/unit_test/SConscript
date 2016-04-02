@@ -1,4 +1,4 @@
-# Copyright AllSeen Alliance. All rights reserved.
+#Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -38,6 +38,10 @@ else:
         gtest_src_base = '%s/src/gtest' % gtest_dir
     else:
         gtest_src_base = gtest_dir
+
+    if gtest_env['OS_CONF'] == 'linux':
+        gtest_env.Append(CFLAGS = ['-ldl'])
+        gtest_env.Append(CFLAGS = ['-lpthread'])
 
     if gtest_env['OS_CONF'] == 'windows':
         # gTest does not require the same CPPDEFINES as AllJoyn core.
