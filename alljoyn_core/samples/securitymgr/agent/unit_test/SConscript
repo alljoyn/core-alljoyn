@@ -39,6 +39,9 @@ else:
     else:
         gtest_src_base = gtest_dir
 
+    if gtest_env['OS_CONF'] == 'linux':
+        gtest_env.Append(CXXFLAGS = ['-ldl'])
+
     if gtest_env['OS_CONF'] == 'windows':
         # gTest does not require the same CPPDEFINES as AllJoyn core.
         gtest_env.Append(CPPDEFINES = ['WIN32', '_LIB'])
