@@ -1370,7 +1370,7 @@ QStatus _Manifest::Verify(const std::vector<uint8_t>& subjectThumbprint, const E
 {
     /* Only SHA-256 is supported as the thumbprint algorithm. */
     if (m_thumbprintAlgorithmOid != std::string(qcc::OID_DIG_SHA256.c_str())) {
-        QCC_LogError(ER_NOT_IMPLEMENTED, ("Unsupported thumbprint algorithm %s", m_thumbprintAlgorithmOid.c_str()));
+        QCC_LogError(ER_NOT_IMPLEMENTED, ("Unsupported thumbprint algorithm \'%s\'", m_thumbprintAlgorithmOid.c_str()));
         return ER_NOT_IMPLEMENTED;
     }
 
@@ -1515,6 +1515,11 @@ QStatus _Manifest::SetRules(const PermissionPolicy::Rule* rules, size_t rulesCou
     }
 
     return ER_OK;
+}
+
+QStatus _Manifest::Serialize(std::vector<uint8_t>& serializedForm) const
+{
+    return this->Serialize(MANIFEST_FULL, serializedForm);
 }
 
 QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_t>& serializedForm) const
