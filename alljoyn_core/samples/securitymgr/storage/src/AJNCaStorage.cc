@@ -242,7 +242,7 @@ QStatus AJNCaStorage::GenerateSignedManifest(const qcc::CertificateX509& idCert,
         return status;
     }
 
-    status = signedManifest->Sign(idCert, &epk);
+    status = signedManifest->ComputeThumbprintAndSign(idCert, &epk);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to sign manifest"));
         return status;

@@ -515,7 +515,7 @@ class DaemonRouterTest : public TestParamTuple {
 
     static String ToDot1(const String& name)
     {
-        return name.substr(0, name.find_last_of('.')) + ".1";
+        return name.substr(0, name.find_last_of_std('.')) + ".1";
     }
 
     virtual void SetUp()
@@ -635,7 +635,7 @@ class DaemonRouterTest : public TestParamTuple {
                 String b2bname = GenUniqueName(ENDPOINT_TYPE_BUS2BUS, epInfo->id, epInfo->allow, epInfo->slsMatchRule);
                 TestEndpointInfo dot1Info(epInfo, true);
                 dot1Info->name = ToDot1(epInfo->name);
-                String b2bName = String(":bus2bus_") + epInfo->name.substr(9, epInfo->name.find_last_of('.') - 9);
+                String b2bName = String(":bus2bus_") + epInfo->name.substr(9, epInfo->name.find_last_of_std('.') - 9);
                 map<std::string, TestRemoteEndpoint>::iterator it = b2bEps.find(b2bName);
                 assert(it != b2bEps.end());
                 TestRemoteEndpoint& trep = it->second;
@@ -651,7 +651,7 @@ class DaemonRouterTest : public TestParamTuple {
 
         case ENDPOINT_TYPE_BUS2BUS: {
                 TestRemoteEndpoint ep(epInfo);
-                b2bEps[epInfo->name.substr(0, epInfo->name.find_last_of('.'))] = ep;
+                b2bEps[epInfo->name.substr(0, epInfo->name.find_last_of_std('.'))] = ep;
                 bep = BusEndpoint::cast(ep);
                 break;
             }

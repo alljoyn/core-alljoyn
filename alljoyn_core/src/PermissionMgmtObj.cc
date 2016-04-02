@@ -2041,7 +2041,7 @@ QStatus PermissionMgmtObj::ParseSendManifests(Message& msg, PeerState& peerState
 
         status = ER_CRYPTO_ERROR;
         for (size_t i = 0; i < issuerPublicKeys.size(); i++) {
-            status = signedManifest->VerifyByThumbprint(thumbprintVector, &(issuerPublicKeys[i]));
+            status = signedManifest->Verify(thumbprintVector, &(issuerPublicKeys[i]));
             if (ER_OK == status) {
                 break;
             }

@@ -235,7 +235,7 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
     if (ER_OK != status) {
         return status;
     }
-    status = manifests[0]->Sign(identityCert, caKeyPair.GetDSAPrivateKey());
+    status = manifests[0]->ComputeThumbprintAndSign(identityCert, caKeyPair.GetDSAPrivateKey());
     if (ER_OK != status) {
         return status;
     }
@@ -296,7 +296,7 @@ QStatus TestSecurityManager::UpdateIdentity(BusAttachment& peerBus,
     if (ER_OK != status) {
         return status;
     }
-    status = manifests[0]->Sign(identityCert, caKeyPair.GetDSAPrivateKey());
+    status = manifests[0]->ComputeThumbprintAndSign(identityCert, caKeyPair.GetDSAPrivateKey());
     if (ER_OK != status) {
         return status;
     }
