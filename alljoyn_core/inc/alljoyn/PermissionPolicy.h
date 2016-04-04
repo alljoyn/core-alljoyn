@@ -1014,6 +1014,28 @@ class _Manifest {
     std::vector<uint8_t> GetSignature() const;
 
     /**
+     * Get a serialized form of this signed manifest.
+     *
+     * @param[out] serializedForm Vector containing the bytes of the serialized manifest.
+     *
+     * @return
+     * - #ER_OK if serialization was successful
+     * - other error code indicating failure
+     */
+    QStatus Serialize(std::vector<uint8_t>& seralizedForm) const;
+
+    /**
+     * Deserialize a manifest from a vector of bytes.
+     *
+     * @param[in] serializedForm Vector of bytes containing the serialized manifest
+     *
+     * @return
+     * - #ER_OK if the manifest was successfully deserialized
+     * - other error indicating failure
+     */
+    QStatus Deserialize(const std::vector<uint8_t>& serializedForm);
+
+    /*
      * Get a string representation of this manifest.
      *
      * @return String containing the representation.
@@ -1069,21 +1091,6 @@ class _Manifest {
      * - other error indicating failure
      */
     QStatus Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_t>& serializedForm) const;
-
-    /**
-     * @internal
-     *
-     * Deserialize a manifest from a vector of bytes. This method only accepts manifests
-     * that were serialized with all fields, such as by providing MANIFEST_FULL as the manifestPurpose
-     * parameter when calling Serialize.
-     *
-     * @param[in] serializedForm Vector of bytes containing the serialized manifest
-     *
-     * @return
-     * - #ER_OK if the manifest was successfully deserialized
-     * - other error indicating failure
-     */
-    QStatus Deserialize(const std::vector<uint8_t>& serializedForm);
 
     /**
      * @internal
