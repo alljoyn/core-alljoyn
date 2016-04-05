@@ -123,6 +123,8 @@ $DIST_dbg/cpp/bin/samples/basic_service.pdb
 $DIST_dbg/cpp/bin/samples/chat.exe
 $DIST_dbg/cpp/bin/samples/nameChange_client.exe
 $DIST_dbg/cpp/bin/samples/nameChange_client.pdb
+$DIST_dbg/cpp/bin/samples/secmgr.exe
+$DIST_dbg/cpp/bin/samples/secmgr.pdb
 $DIST_dbg/cpp/bin/samples/signalConsumer_client.exe
 $DIST_dbg/cpp/bin/samples/signalConsumer_client.pdb
 $DIST_dbg/cpp/bin/samples/signal_service.exe
@@ -239,6 +241,7 @@ $DIST_dbg/cpp/samples/secure/door/secure_door_common.cc
 $DIST_dbg/cpp/samples/secure/door/secure_door_common.h
 $DIST_dbg/cpp/samples/secure/door/secure_door_consumer.cc
 $DIST_dbg/cpp/samples/secure/door/secure_door_provider.cc
+$DIST_dbg/cpp/samples/securitymgr/secmanager.cc
 $DIST_dbg/java/docs/html/index.html
 $DIST_dbg/java/jar/JavaSDKDocAboutClient.jar
 $DIST_dbg/java/jar/JavaSDKDocAboutService.jar
@@ -449,6 +452,8 @@ $DIST_rel/cpp/bin/samples/basic_service.pdb
 $DIST_rel/cpp/bin/samples/chat.exe
 $DIST_rel/cpp/bin/samples/nameChange_client.exe
 $DIST_rel/cpp/bin/samples/nameChange_client.pdb
+$DIST_rel/cpp/bin/samples/secmgr.exe
+$DIST_rel/cpp/bin/samples/secmgr.pdb
 $DIST_rel/cpp/bin/samples/signalConsumer_client.exe
 $DIST_rel/cpp/bin/samples/signalConsumer_client.pdb
 $DIST_rel/cpp/bin/samples/signal_service.exe
@@ -565,6 +570,7 @@ $DIST_rel/cpp/samples/secure/door/secure_door_common.cc
 $DIST_rel/cpp/samples/secure/door/secure_door_common.h
 $DIST_rel/cpp/samples/secure/door/secure_door_consumer.cc
 $DIST_rel/cpp/samples/secure/door/secure_door_provider.cc
+$DIST_rel/cpp/samples/securitymgr/secmanager.cc
 $DIST_rel/java/docs/html/index.html
 $DIST_rel/java/jar/JavaSDKDocAboutClient.jar
 $DIST_rel/java/jar/JavaSDKDocAboutService.jar
