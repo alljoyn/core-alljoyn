@@ -261,6 +261,9 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
     const MsgArg* iface = msg->GetArg(0);
     const MsgArg* property = msg->GetArg(1);
     MsgArg val = MsgArg();
+    String errorMessage;
+    const char* temp = msg->GetErrorName(&errorMessage);
+    String errorName = temp ? temp : "";    //to avoid str != nullptr assertion failure in String
 
     /* Check property exists on this interface and is readable */
     const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
@@ -275,7 +278,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
             const InterfaceDescription::Property* prop = ifc->GetProperty(property->v_string.str);
             if (prop) {
                 if (prop->access & PROP_ACCESS_READ) {
-                    status = Get(iface->v_string.str, property->v_string.str, val);
+                    status = Get(iface->v_string.str, property->v_string.str, val, errorName, errorMessage);
                 } else {
                     QCC_DbgPrintf(("No read access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -296,7 +299,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
         /* Prevent destructor from attempting to free val */
         arg.v_variant.val = NULL;
     } else {
-        MethodReply(msg, status);
+        MethodReply(msg, status, errorName.c_str(), errorMessage.c_str());
     }
 }
 
@@ -430,6 +433,9 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
     const MsgArg* iface = msg->GetArg(0);
     const MsgArg* property = msg->GetArg(1);
     const MsgArg* val = msg->GetArg(2);
+    String errorMessage;
+    const char* temp = msg->GetErrorName(&errorMessage);
+    String errorName = temp ? temp : "";    //to avoid str != nullptr assertion failure in String
 
     /* Check property exists on this interface has correct signature and is writeable */
     const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
@@ -447,7 +453,7 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
                     QCC_DbgPrintf(("Property value for %s has wrong type %s", property->v_string.str, prop->signature.c_str()));
                     status = ER_BUS_SET_WRONG_SIGNATURE;
                 } else if (prop->access & PROP_ACCESS_WRITE) {
-                    status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val));
+                    status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val), errorName, errorMessage);
                 } else {
                     QCC_DbgPrintf(("No write access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -460,10 +466,22 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
         status = ER_BUS_UNKNOWN_INTERFACE;
     }
     QCC_DbgPrintf(("Properties.Set %s", QCC_StatusText(status)));
-    MethodReply(msg, status);
+    if (status == ER_OK) {
+        MethodReply(msg, status);
+    } else {
+        MethodReply(msg, status, errorName.c_str(), errorMessage.c_str());
+    }
 }
 
 void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message& msg)
+{
+    String errorName;
+    String errorMessage;
+
+    GetAllProps(member, msg, errorName, errorMessage);
+}
+
+void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message& msg, qcc::String& errorName, qcc::String& errorMessage)
 {
     QCC_UNUSED(member);
 
@@ -519,7 +537,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
                 for (size_t i = 0; i < numProps; i++) {
                     if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
                         MsgArg* val = new MsgArg();
-                        status = Get(iface->v_string.str, props[i]->name.c_str(), *val);
+                        status = Get(iface->v_string.str, props[i]->name.c_str(), *val, errorName, errorMessage);
                         if (status != ER_OK) {
                             delete val;
                             break;
@@ -541,7 +559,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
     if (status == ER_OK) {
         MethodReply(msg, &vals, 1);
     } else {
-        MethodReply(msg, status);
+        MethodReply(msg, status, errorName.c_str(), errorMessage.c_str());
     }
     delete [] props;
 }
@@ -1049,6 +1067,38 @@ QStatus BusObject::MethodReply(const Message& msg, QStatus status, Message* repl
         } else {
             Message error(*bus);
             QStatus result = error->ErrorMsg(msg, status);
+            QCC_ASSERT(ER_OK == result);
+            QCC_UNUSED(result);
+            if (NULL != replyMsg) {
+                *replyMsg = error;
+            }
+            BusEndpoint bep = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
+            return bus->GetInternal().GetRouter().PushMessage(error, bep);
+        }
+    }
+}
+
+QStatus BusObject::MethodReply(const Message& msg, QStatus status, const char* errorName, const char* errorMessage, Message* replyMsg)
+{
+    /* Protect against calling before object is registered */
+    if (!bus) {
+        return ER_BUS_OBJECT_NOT_REGISTERED;
+    }
+
+    if (msg->GetFlags() & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
+        /* no reply expected, so we don't send any either */
+        return ER_OK;
+    }
+
+    if (status == ER_OK) {
+        /* Casts needed to unambiguously call the correct overload of MethodReply. */
+        return MethodReply(msg, (const MsgArg*)NULL, (size_t)0, replyMsg);
+    } else {
+        if (msg->GetType() != MESSAGE_METHOD_CALL) {
+            return ER_BUS_NO_CALL_FOR_REPLY;
+        } else {
+            Message error(*bus);
+            QStatus result = error->ErrorMsg(msg, status, errorName, errorMessage);
             QCC_ASSERT(ER_OK == result);
             QCC_UNUSED(result);
             if (NULL != replyMsg) {
