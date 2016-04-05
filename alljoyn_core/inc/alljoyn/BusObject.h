@@ -34,6 +34,7 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/Translator.h>
 
+
 namespace ajn {
 
 /// @cond ALLJOYN_DEV
@@ -334,6 +335,21 @@ class BusObject : public MessageReceiver {
     /**
      * Reply to a method call with an error message.
      *
+     * @param msg              The method call message
+     * @param status           The status code for this error
+     * @param errorName        The name of the error
+     * @param errorMessage     An error message string
+     * @param replyMsg         Pointer to a Message object to receive a copy of the sent reply message (can be NULL if not needed)
+     * @return
+     *      - #ER_OK if successful
+     *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
+     *      - An error status otherwise
+     */
+    QStatus MethodReply(const Message& msg, QStatus status, const char* errorName, const char* errorMessage = NULL, Message* replyMsg = NULL);
+
+    /**
+     * Reply to a method call with an error message.
+     *
      * @param msg        The method call message
      * @param status     The status code for the error
      * @param replyMsg   Pointer to a Message object to receive a copy of the sent reply message (can be NULL if not needed)
@@ -402,13 +418,52 @@ class BusObject : public MessageReceiver {
      * BusObjects that implement properties should override this method.
      * The default version simply returns ER_BUS_NO_SUCH_PROPERTY.
      *
-     * @param ifcName    Identifies the interface that the property is defined on
-     * @param propName  Identifies the property to get
-     * @param[out] val        Returns the property value. The type of this value is the actual value
-     *                   type.
+     * @param ifcName      Identifies the interface that the property is defined on
+     * @param propName     Identifies the property to get
+     * @param[out] val     Returns the property value. The type of this value is the actual value
+     *                     type.
      * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
      */
     virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val) {
+        QCC_UNUSED(ifcName);
+        QCC_UNUSED(propName);
+        QCC_UNUSED(val);
+        return ER_BUS_NO_SUCH_PROPERTY;
+    }
+
+    /**
+     * Handle a bus request to read a property from this object.
+     * BusObjects that implement properties should override this method.
+     * The default version simply returns ER_BUS_NO_SUCH_PROPERTY.
+     *
+     * @param ifcName      Identifies the interface that the property is defined on
+     * @param propName     Identifies the property to get
+     * @param[out] val     Returns the property value. The type of this value is the actual value
+     *                     type.
+     * @param errorName    Error string to set in the object's XML representation
+     * @param errorMessage Error description
+     * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
+     */
+    virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val, const char* errorName, const char* errorMessage) {
+        QCC_UNUSED(errorName);
+        QCC_UNUSED(errorMessage);
+        // For backwards compatibility, we are calling the old version of Get()
+        // User-defined implementation should override this
+        return Get(ifcName, propName, val);
+    }
+
+    /**
+     * Handle a bus attempt to write a property value to this object.
+     * BusObjects that implement properties should override this method.
+     * This default version just replies with ER_BUS_NO_SUCH_PROPERTY
+     *
+     * @param ifcName      Identifies the interface that the property is defined on
+     * @param propName     Identifies the property to set
+     * @param val          The property value to set. The type of this value is the actual value
+     *                     type.
+     * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
+     */
+    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val) {
         QCC_UNUSED(ifcName);
         QCC_UNUSED(propName);
         QCC_UNUSED(val);
@@ -420,17 +475,21 @@ class BusObject : public MessageReceiver {
      * BusObjects that implement properties should override this method.
      * This default version just replies with ER_BUS_NO_SUCH_PROPERTY
      *
-     * @param ifcName    Identifies the interface that the property is defined on
-     * @param propName  Identifies the property to set
-     * @param val        The property value to set. The type of this value is the actual value
-     *                   type.
+     * @param ifcName      Identifies the interface that the property is defined on
+     * @param propName     Identifies the property to set
+     * @param val          The property value to set. The type of this value is the actual value
+     *                     type.
+     * @param errorName    Error string to set in the object's XML representation
+     * @param errorMessage Error description
      * @return #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
      */
-    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val) {
-        QCC_UNUSED(ifcName);
-        QCC_UNUSED(propName);
-        QCC_UNUSED(val);
-        return ER_BUS_NO_SUCH_PROPERTY;
+    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val, const char* errorName, const char* errorMessage) {
+        QCC_UNUSED(errorName);
+        QCC_UNUSED(errorMessage);
+        // For backwards compatibility, we are calling the old version of Set()
+        // User-defined implementation should override this
+        return Set(ifcName, propName, val);
+
     }
 
     /**
