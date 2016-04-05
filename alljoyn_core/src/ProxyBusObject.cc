@@ -408,6 +408,21 @@ static void GetReplyErrorStatus(Message& reply, QStatus& status)
 }
 
 /**
+ * Figure out the new status code based on the the reply message's error.
+ * If the status code is ER_BUS_REPLY_IS_ERROR_MESSAGE then the error
+ * message is searched to compute the status code.
+ * @param reply the reply message
+ * @param[in,out] status the status code
+ * @param[out] errorName the error name
+ * @param[out] errorDescription the error message
+ */
+static void GetReplyErrorStatusMessage(Message& reply, QStatus& status, qcc::String& errorName, qcc::String& errorDescription)
+{
+    GetReplyErrorStatus(reply, status);
+    errorName = reply->GetErrorName(&errorDescription);
+}
+
+/**
  * Figure out whether the reply message is a permission denied error message.
  * If so, the status code will be replaced with ER_PERMISSION_DENIED.
  * @param reply the reply message
@@ -439,7 +454,14 @@ static inline bool SecurityApplies(const ProxyBusObject* obj, const InterfaceDes
     }
 }
 
-QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint32_t timeout) const
+QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& values, uint32_t timeout) const
+{
+    String errorName;
+    String errorDescription;
+    return GetAllProperties(iface, values, errorName, errorDescription, timeout);
+}
+
+QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -489,16 +511,34 @@ QStatus ProxyBusObject::GetAllProperties(const char* iface, MsgArg& value, uint3
                     }
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
+            } else {
+                GetReplyErrorStatusMessage(reply, status, errorName, errorDescription);
             }
         }
     }
     return status;
 }
 
-void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
+
+void ProxyBusObject::GetAllPropsMethodCBCommon(Message& message, void* context, bool isCustomErrorSet)
 {
-    CBContext<Listener::GetAllPropertiesCB>* ctx = reinterpret_cast<CBContext<Listener::GetAllPropertiesCB>*>(context);
-    std::pair<void*, qcc::String>* wrappedContext = reinterpret_cast<std::pair<void*, qcc::String>*>(ctx->context);
+    CBContext<Listener::GetPropertyAsyncCB>* ctxWithCustomError = nullptr;
+    CBContext<Listener::GetPropertyCB>* ctx = nullptr;
+    if (isCustomErrorSet) {
+        ctxWithCustomError = reinterpret_cast<CBContext<Listener::GetAllPropertiesAsyncCB>*>(context);
+    } else {
+        ctx = reinterpret_cast<CBContext<Listener::GetAllPropertiesCB>*>(context);
+    }
+
+    QCC_ASSERT((ctx != nullptr) || (ctxWithCustomError != nullptr));
+
+    std::pair<void*, qcc::String>* wrappedContext;
+    if (isCustomErrorSet) {
+        wrappedContext = reinterpret_cast<std::pair<void*, qcc::String>*>(ctxWithCustomError->context);
+    } else {
+        wrappedContext = reinterpret_cast<std::pair<void*, qcc::String>*>(ctx->context);
+    }
+
     void* unwrappedContext = wrappedContext->first;
     const char* iface = wrappedContext->second.c_str();
 
@@ -513,11 +553,19 @@ void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
         }
         internal->lock.Unlock(MUTEX_CONTEXT);
         /* alert the application */
-        (ctx->listener->*ctx->callback)(ER_OK, this, *message->GetArg(0), unwrappedContext);
+        if (isCustomErrorSet) {
+            // TODO: Should error strings be allowed on messages that are of type MESSAGE_METHOD_RET?
+            String errorDescription;
+            String errorName = message->GetErrorName(&errorDescription);
+            (ctxWithCustomError->listener->*ctxWithCustomError->callback)(ER_OK, this, *message->GetArg(0), errorName, errorDescription, unwrappedContext);
+        } else {
+            (ctx->listener->*ctx->callback)(ER_OK, this, *message->GetArg(0), unwrappedContext);
+        }
+
     } else {
         const MsgArg noVal;
         QStatus status = ER_BUS_NO_SUCH_PROPERTY;
-        if (message->GetErrorName() != NULL && ::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
+        if (message->GetErrorName()) {
             const char* err;
             uint16_t rawStatus;
             if (message->GetArgs("sq", &err, &rawStatus) == ER_OK) {
@@ -525,18 +573,37 @@ void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
                 QCC_DbgPrintf(("Asynch GetAllProperties call returned %s", err));
             }
         }
-        (ctx->listener->*ctx->callback)(status, this, noVal, unwrappedContext);
+        if (isCustomErrorSet) {
+            String errorDescription;
+            String errorName = message->GetErrorName(&errorDescription);
+            (ctxWithCustomError->listener->*ctxWithCustomError->callback)(status, this, noVal, errorName, errorDescription, unwrappedContext);
+            delete ctxWithCustomError;
+        } else {
+            (ctx->listener->*ctx->callback)(status, this, noVal, unwrappedContext);
+            delete ctx;
+        }
     }
     delete wrappedContext;
-    delete ctx;
 }
 
-QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
-                                              ProxyBusObject::Listener* listener,
-                                              ProxyBusObject::Listener::GetPropertyCB callback,
-                                              void* context,
-                                              uint32_t timeout)
+void ProxyBusObject::GetAllPropsMethodCB(Message& message, void* context)
 {
+    GetAllPropsMethodCBCommon(message, context, false);
+}
+
+void ProxyBusObject::GetAllPropsMethodAsyncCB(Message& message, void* context)
+{
+    GetAllPropsMethodCBCommon(message, context, true);
+}
+
+QStatus ProxyBusObject::GetAllPropertiesAsyncCommon(const char* iface,
+                                                    ProxyBusObject::Listener* listener,
+                                                    ProxyBusObject::Listener::GetPropertyCB callback,
+                                                    ProxyBusObject::Listener::GetPropertyAsyncCB callbackWithCustomError,
+                                                    void* context,
+                                                    uint32_t timeout)
+{
+    QCC_ASSERT((callback != nullptr) || (callbackWithCustomError != nullptr));
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
     if (!valueIface) {
@@ -555,7 +622,11 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
         internal->lock.Unlock(MUTEX_CONTEXT);
         if (cached) {
             QCC_DbgPrintf(("GetAllPropertiesAsync(%s) -> cache hit", iface));
-            internal->bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callback, context, value);
+            if (callback != nullptr) {
+                internal->bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callback, context, value);
+            } else {
+                internal->bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callbackWithCustomError, context, value);
+            }
             return ER_OK;
         }
 
@@ -573,27 +644,69 @@ QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
             std::pair<void*, qcc::String>* wrappedContext = new std::pair<void*, qcc::String>(context, iface);
-            CBContext<Listener::GetAllPropertiesCB>* ctx = new CBContext<Listener::GetAllPropertiesCB>(listener, callback, wrappedContext);
             const InterfaceDescription::Member* getAllProperties = propIface->GetMember("GetAll");
             QCC_ASSERT(getAllProperties);
-            status = MethodCallAsync(*getAllProperties,
-                                     this,
-                                     static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetAllPropsMethodCB),
-                                     &arg,
-                                     1,
-                                     reinterpret_cast<void*>(ctx),
-                                     timeout,
-                                     flags);
-            if (status != ER_OK) {
-                delete wrappedContext;
-                delete ctx;
+
+            if (callback != nullptr) {
+                CBContext<Listener::GetAllPropertiesCB>* ctx = new CBContext<Listener::GetAllPropertiesCB>(listener, callback, wrappedContext);
+                status = MethodCallAsync(*getAllProperties,
+                                         this,
+                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetAllPropsMethodCB),
+                                         &arg,
+                                         1,
+                                         reinterpret_cast<void*>(ctx),
+                                         timeout,
+                                         flags);
+                if (status != ER_OK) {
+                    delete wrappedContext;
+                    delete ctx;
+                }
+            } else {
+                CBContext<Listener::GetAllPropertiesAsyncCB>* ctx = new CBContext<Listener::GetAllPropertiesAsyncCB>(listener, callbackWithCustomError, wrappedContext);
+                status = MethodCallAsync(*getAllProperties,
+                                         this,
+                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetAllPropsMethodAsyncCB),
+                                         &arg,
+                                         1,
+                                         reinterpret_cast<void*>(ctx),
+                                         timeout,
+                                         flags);
+                if (status != ER_OK) {
+                    delete wrappedContext;
+                    delete ctx;
+                }
             }
         }
     }
     return status;
 }
 
+QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
+                                              ProxyBusObject::Listener* listener,
+                                              ProxyBusObject::Listener::GetPropertyCB callback,
+                                              void* context,
+                                              uint32_t timeout)
+{
+    return GetAllPropertiesAsyncCommon(iface, listener, callback, nullptr, context, timeout);
+}
+
+QStatus ProxyBusObject::GetAllPropertiesAsync(const char* iface,
+                                              ProxyBusObject::Listener* listener,
+                                              ProxyBusObject::Listener::GetPropertyAsyncCB callback,
+                                              void* context,
+                                              uint32_t timeout)
+{
+    return GetAllPropertiesAsyncCommon(iface, listener, nullptr, callback, context, timeout);
+}
+
 QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+{
+    String errorName;
+    String errorDescription;
+    return GetProperty(iface, property, value, errorName, errorDescription, timeout);
+}
+
+QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, MsgArg& value, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -646,17 +759,30 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
             } else {
-                GetReplyErrorStatus(reply, status);
+                GetReplyErrorStatusMessage(reply, status, errorName, errorDescription);
             }
         }
     }
     return status;
 }
 
-void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
+void ProxyBusObject::GetPropMethodCBCommon(Message& message, void* context, bool isCustomErrorSet)
 {
-    CBContext<Listener::GetPropertyCB>* ctx = reinterpret_cast<CBContext<Listener::GetPropertyCB>*>(context);
-    std::pair<void*, std::pair<qcc::String, qcc::String> >* wrappedContext = reinterpret_cast<std::pair<void*, std::pair<qcc::String, qcc::String> >*>(ctx->context);
+    CBContext<Listener::GetPropertyAsyncCB>* ctxWithCustomError = nullptr;
+    CBContext<Listener::GetPropertyCB>* ctx = nullptr;
+    if (isCustomErrorSet) {
+        ctxWithCustomError = reinterpret_cast<CBContext<Listener::GetPropertyAsyncCB>*>(context);
+    } else {
+        ctx = reinterpret_cast<CBContext<Listener::GetPropertyCB>*>(context);
+    }
+    QCC_ASSERT((ctx != nullptr) || (ctxWithCustomError != nullptr));
+
+    std::pair<void*, std::pair<qcc::String, qcc::String> >* wrappedContext;
+    if (isCustomErrorSet) {
+        wrappedContext = reinterpret_cast<std::pair<void*, std::pair<qcc::String, qcc::String> >*>(ctxWithCustomError->context);
+    } else {
+        wrappedContext = reinterpret_cast<std::pair<void*, std::pair<qcc::String, qcc::String> >*>(ctx->context);
+    }
     void* unwrappedContext = wrappedContext->first;
     const char* iface = wrappedContext->second.first.c_str();
     const char* property = wrappedContext->second.second.c_str();
@@ -672,31 +798,59 @@ void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
         }
         internal->lock.Unlock(MUTEX_CONTEXT);
         /* let the application know we've got a result */
-        (ctx->listener->*ctx->callback)(ER_OK, this, *message->GetArg(0), unwrappedContext);
+        if (isCustomErrorSet) {
+            // TODO: Should error strings be allowed on messages that are of type MESSAGE_METHOD_RET?
+            String errorDescription;
+            String errorName = message->GetErrorName(&errorDescription);
+            (ctxWithCustomError->listener->*ctxWithCustomError->callback)(ER_OK, this, *message->GetArg(0), errorName, errorDescription, unwrappedContext);
+        } else {
+            (ctx->listener->*ctx->callback)(ER_OK, this, *message->GetArg(0), unwrappedContext);
+        }
     } else {
         const MsgArg noVal;
         QStatus status = ER_BUS_NO_SUCH_PROPERTY;
-        if (message->GetErrorName() != NULL && ::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
-            const char* err;
+        const char* err = NULL;
+        if (message->GetErrorName() != NULL) {
             uint16_t rawStatus;
             if (message->GetArgs("sq", &err, &rawStatus) == ER_OK) {
                 status = static_cast<QStatus>(rawStatus);
                 QCC_DbgPrintf(("Asynch GetProperty call returned %s", err));
             }
         }
-        (ctx->listener->*ctx->callback)(status, this, noVal, unwrappedContext);
+
+        if (isCustomErrorSet) {
+            String errorDescription;
+            String errorName = message->GetErrorName(&errorDescription);
+            (ctxWithCustomError->listener->*ctxWithCustomError->callback)(status, this, noVal, errorName, errorDescription, unwrappedContext);
+            delete ctxWithCustomError;
+        } else {
+            (ctx->listener->*ctx->callback)(status, this, noVal, unwrappedContext);
+            delete ctx;
+        }
     }
-    delete ctx;
+
     delete wrappedContext;
 }
 
-QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
-                                         const char* property,
-                                         ProxyBusObject::Listener* listener,
-                                         ProxyBusObject::Listener::GetPropertyCB callback,
-                                         void* context,
-                                         uint32_t timeout)
+void ProxyBusObject::GetPropMethodCB(Message& message, void* context)
 {
+    GetPropMethodCBCommon(message, context, false);
+}
+
+void ProxyBusObject::GetPropMethodAsyncCB(Message& message, void* context)
+{
+    GetPropMethodCBCommon(message, context, true);
+}
+
+QStatus ProxyBusObject::GetPropertyAsyncCommon(const char* iface,
+                                               const char* property,
+                                               ProxyBusObject::Listener* listener,
+                                               ProxyBusObject::Listener::GetPropertyCB callback,
+                                               ProxyBusObject::Listener::GetPropertyAsyncCB callbackWithCustomError,
+                                               void* context,
+                                               uint32_t timeout)
+{
+    QCC_ASSERT((callback != nullptr) || (callbackWithCustomError != nullptr));
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
     if (!valueIface) {
@@ -715,7 +869,11 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
         internal->lock.Unlock(MUTEX_CONTEXT);
         if (cached) {
             QCC_DbgPrintf(("GetPropertyAsync(%s, %s) -> cache hit", iface, property));
-            internal->bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callback, context, value);
+            if (callback != nullptr) {
+                internal->bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callback, context, value);
+            } else {
+                internal->bus->GetInternal().GetLocalEndpoint()->ScheduleCachedGetPropertyReply(this, listener, callbackWithCustomError, context, value);
+            }
             return ER_OK;
         }
 
@@ -733,27 +891,71 @@ QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
         } else {
             /* we need to keep track of interface and property name to cache the GetProperty reply */
             std::pair<void*, std::pair<qcc::String, qcc::String> >* wrappedContext = new std::pair<void*, std::pair<qcc::String, qcc::String> >(context, std::make_pair(qcc::String(iface), qcc::String(property)));
-            CBContext<Listener::GetPropertyCB>* ctx = new CBContext<Listener::GetPropertyCB>(listener, callback, wrappedContext);
             const InterfaceDescription::Member* getProperty = propIface->GetMember("Get");
             QCC_ASSERT(getProperty);
-            status = MethodCallAsync(*getProperty,
-                                     this,
-                                     static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetPropMethodCB),
-                                     inArgs,
-                                     numArgs,
-                                     reinterpret_cast<void*>(ctx),
-                                     timeout,
-                                     flags);
-            if (status != ER_OK) {
-                delete ctx;
-                delete wrappedContext;
+
+            if (callback != nullptr) {
+                CBContext<Listener::GetPropertyCB>* ctx = new CBContext<Listener::GetPropertyCB>(listener, callback, wrappedContext);
+                status = MethodCallAsync(*getProperty,
+                                         this,
+                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetPropMethodCB),
+                                         inArgs,
+                                         numArgs,
+                                         reinterpret_cast<void*>(ctx),
+                                         timeout,
+                                         flags);
+                if (status != ER_OK) {
+                    delete ctx;
+                    delete wrappedContext;
+                }
+            } else {
+                CBContext<Listener::GetPropertyAsyncCB>* ctx = new CBContext<Listener::GetPropertyAsyncCB>(listener, callbackWithCustomError, wrappedContext);
+                status = MethodCallAsync(*getProperty,
+                                         this,
+                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::GetPropMethodAsyncCB),
+                                         inArgs,
+                                         numArgs,
+                                         reinterpret_cast<void*>(ctx),
+                                         timeout,
+                                         flags);
+                if (status != ER_OK) {
+                    delete ctx;
+                    delete wrappedContext;
+                }
             }
         }
     }
     return status;
 }
 
+QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
+                                         const char* property,
+                                         ProxyBusObject::Listener* listener,
+                                         ProxyBusObject::Listener::GetPropertyCB callback,
+                                         void* context,
+                                         uint32_t timeout)
+{
+    return GetPropertyAsyncCommon(iface, property, listener, callback, nullptr, context, timeout);
+}
+
+QStatus ProxyBusObject::GetPropertyAsync(const char* iface,
+                                         const char* property,
+                                         ProxyBusObject::Listener* listener,
+                                         ProxyBusObject::Listener::GetPropertyAsyncCB callback,
+                                         void* context,
+                                         uint32_t timeout)
+{
+    return GetPropertyAsyncCommon(iface, property, listener, nullptr, callback, context, timeout);
+}
+
 QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout) const
+{
+    String errorName;
+    String errorDescription;
+    return SetProperty(iface, property, value, errorName, errorDescription, timeout);
+}
+
+QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, MsgArg& value, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout) const
 {
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
@@ -770,6 +972,7 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
         Message reply(*internal->bus);
         MsgArg inArgs[3];
         size_t numArgs = ArraySize(inArgs);
+
         MsgArg::Set(inArgs, numArgs, "ssv", iface, property, &value);
         const InterfaceDescription* propIface = internal->bus->GetInterface(org::freedesktop::DBus::Properties::InterfaceName);
         if (propIface == NULL) {
@@ -784,21 +987,28 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
                                 timeout,
                                 flags);
             if (ER_OK != status) {
-                GetReplyErrorStatus(reply, status);
+                GetReplyErrorStatusMessage(reply, status, errorName, errorDescription);
             }
         }
     }
     return status;
 }
 
-void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
+void ProxyBusObject::SetPropMethodCBCommon(Message& message, void* context, bool isCustomErrorSet)
 {
     QStatus status = ER_OK;
-    CBContext<Listener::SetPropertyCB>* ctx = reinterpret_cast<CBContext<Listener::SetPropertyCB>*>(context);
+    CBContext<Listener::SetPropertyAsyncCB>* ctxWithCustomError = nullptr;
+    CBContext<Listener::SetPropertyCB>* ctx = nullptr;
+    if (isCustomErrorSet) {
+        ctxWithCustomError = reinterpret_cast<CBContext<Listener::SetPropertyAsyncCB>*>(context);
+    } else {
+        ctx = reinterpret_cast<CBContext<Listener::SetPropertyCB>*>(context);
+    }
+    QCC_ASSERT((ctx != nullptr) || (ctxWithCustomError != nullptr));
 
     if (message->GetType() != MESSAGE_METHOD_RET) {
         status = ER_BUS_NO_SUCH_PROPERTY;
-        if (message->GetErrorName() != NULL && ::strcmp(message->GetErrorName(), org::alljoyn::Bus::ErrorName) == 0) {
+        if (message->GetErrorName() != NULL) {
             const char* err;
             uint16_t rawStatus;
             if (message->GetArgs("sq", &err, &rawStatus) == ER_OK) {
@@ -807,10 +1017,27 @@ void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
             }
         }
     }
-    (ctx->listener->*ctx->callback)(status, this, ctx->context);
-    delete ctx;
+
+    if (isCustomErrorSet) {
+        String errorDescription;
+        String errorName = message->GetErrorName(&errorDescription);
+        (ctxWithCustomError->listener->*ctxWithCustomError->callback)(status, this, errorName, errorDescription, ctxWithCustomError->context);
+        delete ctxWithCustomError;
+    } else {
+        (ctx->listener->*ctx->callback)(status, this, ctx->context);
+        delete ctx;
+    }
 }
 
+void ProxyBusObject::SetPropMethodCB(Message& message, void* context)
+{
+    SetPropMethodCBCommon(message, context, false);
+}
+
+void ProxyBusObject::SetPropMethodAsyncCB(Message& message, void* context)
+{
+    SetPropMethodCBCommon(message, context, true);
+}
 
 QStatus ProxyBusObject::RegisterPropertiesChangedListener(const char* iface,
                                                           const char** properties,
@@ -1046,14 +1273,16 @@ void ProxyBusObject::Internal::PropertiesChangedHandler(const InterfaceDescripti
     lock.Unlock(MUTEX_CONTEXT);
 }
 
-QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
-                                         const char* property,
-                                         MsgArg& value,
-                                         ProxyBusObject::Listener* listener,
-                                         ProxyBusObject::Listener::SetPropertyCB callback,
-                                         void* context,
-                                         uint32_t timeout)
+QStatus ProxyBusObject::SetPropertyAsyncCommon(const char* iface,
+                                               const char* property,
+                                               MsgArg& value,
+                                               ProxyBusObject::Listener* listener,
+                                               ProxyBusObject::Listener::SetPropertyCB callback,
+                                               ProxyBusObject::Listener::SetPropertyAsyncCB callbackWithCustomError,
+                                               void* context,
+                                               uint32_t timeout)
 {
+    QCC_ASSERT((callback != nullptr) || (callbackWithCustomError != nullptr));
     QStatus status;
     const InterfaceDescription* valueIface = internal->bus->GetInterface(iface);
     if (!valueIface) {
@@ -1070,23 +1299,61 @@ QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
         if (propIface == NULL) {
             status = ER_BUS_NO_SUCH_INTERFACE;
         } else {
-            CBContext<Listener::SetPropertyCB>* ctx = new CBContext<Listener::SetPropertyCB>(listener, callback, context);
             const InterfaceDescription::Member* setProperty = propIface->GetMember("Set");
             QCC_ASSERT(setProperty);
-            status = MethodCallAsync(*setProperty,
-                                     this,
-                                     static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SetPropMethodCB),
-                                     inArgs,
-                                     numArgs,
-                                     reinterpret_cast<void*>(ctx),
-                                     timeout,
-                                     flags);
-            if (status != ER_OK) {
-                delete ctx;
+
+            if (callback != nullptr) {
+                CBContext<Listener::SetPropertyCB>* ctx = new CBContext<Listener::SetPropertyCB>(listener, callback, context);
+                status = MethodCallAsync(*setProperty,
+                                         this,
+                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SetPropMethodCB),
+                                         inArgs,
+                                         numArgs,
+                                         reinterpret_cast<void*>(ctx),
+                                         timeout,
+                                         flags);
+                if (status != ER_OK) {
+                    delete ctx;
+                }
+            } else {
+                CBContext<Listener::SetPropertyAsyncCB>* ctx = new CBContext<Listener::SetPropertyAsyncCB>(listener, callbackWithCustomError, context);
+                status = MethodCallAsync(*setProperty,
+                                         this,
+                                         static_cast<MessageReceiver::ReplyHandler>(&ProxyBusObject::SetPropMethodAsyncCB),
+                                         inArgs,
+                                         numArgs,
+                                         reinterpret_cast<void*>(ctx),
+                                         timeout,
+                                         flags);
+                if (status != ER_OK) {
+                    delete ctx;
+                }
             }
         }
     }
     return status;
+}
+
+QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
+                                         const char* property,
+                                         MsgArg& value,
+                                         ProxyBusObject::Listener* listener,
+                                         ProxyBusObject::Listener::SetPropertyCB callback,
+                                         void* context,
+                                         uint32_t timeout)
+{
+    return SetPropertyAsyncCommon(iface, property, value, listener, callback, nullptr, context, timeout);
+}
+
+QStatus ProxyBusObject::SetPropertyAsync(const char* iface,
+                                         const char* property,
+                                         MsgArg& value,
+                                         ProxyBusObject::Listener* listener,
+                                         ProxyBusObject::Listener::SetPropertyAsyncCB callback,
+                                         void* context,
+                                         uint32_t timeout)
+{
+    return SetPropertyAsyncCommon(iface, property, value, listener, nullptr, callback, context, timeout);
 }
 
 size_t ProxyBusObject::GetInterfaces(const InterfaceDescription** ifaces, size_t numIfaces) const
@@ -1749,6 +2016,7 @@ MethodCallExit:
         if (internal->bus->IsStarted()) {
             sender = internal->bus->GetInternal().GetLocalEndpoint()->GetUniqueName();
         }
+
         replyMsg->ErrorMsg(sender, status, 0);
     }
 
