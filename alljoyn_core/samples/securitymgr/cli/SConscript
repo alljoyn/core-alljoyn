@@ -29,4 +29,8 @@ app_env.Prepend(LIBS = ['ajsecmgr'])
 
 secmgrapp = app_env.Program(target='secmgr', source=['secmanager.cc'])
 
+if app_env['OS_GROUP'] in ['windows']:
+    app_env.Install('$CPP_DISTDIR/bin/samples', secmgrapp )
+    app_env.Install(clientDistDir, env.Glob('secmanager.cc'))
+
 Return('secmgrapp')
