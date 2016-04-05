@@ -1395,6 +1395,14 @@ QStatus _Message::ErrorMsg(const Message& call, const char* errorName, const cha
     return ErrorMsg(call, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), errorName, description);
 }
 
+QStatus _Message::ErrorMsg(const Message& call, QStatus status, const char* errorName, const char* description)
+{
+    if (!bus->IsStarted()) {
+        return ER_BUS_BUS_NOT_STARTED;
+    }
+    return ErrorMsg(call, bus->GetInternal().GetLocalEndpoint()->GetUniqueName(), status, errorName, description);
+}
+
 QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, const char* errorName, const char* description)
 {
     QStatus status;
@@ -1471,6 +1479,51 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStat
     MsgArg::Set(args, numArgs, "sq", msg.c_str(), msgStatus);
     return MarshalMessage("sq", sender, destination, MESSAGE_ERROR, args, numArgs,
                           call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, GetSessionId());
+}
+
+QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStatus status, const char* errorName, const char* description)
+{
+    qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
+    qcc::String msg = QCC_StatusText(status);
+    uint16_t msgStatus = status;
+
+    QCC_ASSERT(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
+
+    if ((errorName == NULL) || (errorName[0] == '\0')) {
+        errorName = org::alljoyn::Bus::ErrorName;
+    }
+    if (description == NULL) {
+        description = "";
+    }
+
+    /*
+     * Clear any stale header fields
+     */
+    ClearHeader();
+    /*
+     * Error name is required
+     */
+    hdrFields.field[ALLJOYN_HDR_FIELD_ERROR_NAME].Set("s", errorName);
+    /*
+     * Set the reply serial number
+     */
+    hdrFields.field[ALLJOYN_HDR_FIELD_REPLY_SERIAL].Set("u", call->msgHeader.serialNum);
+    /*
+     * Build error message
+     */
+    if (description[0] == '\0') {
+        MsgArg args[2];
+        size_t numArgs = 2;
+        MsgArg::Set(args, numArgs, "sq", msg.c_str(), msgStatus);
+        return MarshalMessage("sq", sender, destination, MESSAGE_ERROR, args, numArgs,
+                              call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, GetSessionId());
+    } else {
+        MsgArg args[3];
+        size_t numArgs = 3;
+        MsgArg::Set(args, numArgs, "sqs", msg.c_str(), msgStatus, description);
+        return MarshalMessage("sqs", sender, destination, MESSAGE_ERROR, args, numArgs,
+                              call->msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED, GetSessionId());
+    }
 }
 
 void _Message::ErrorMsg(const char* errorName, uint32_t replySerial)
