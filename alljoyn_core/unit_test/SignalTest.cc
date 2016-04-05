@@ -911,7 +911,8 @@ class SecSignalTest :
     public::testing::Test,
     public MessageReceiver {
   public:
-    SecSignalTest() : prov("provider"), cons("consumer"), proxy(NULL), eventCount(0), eventsNeeded(0), lastValue(false) { }
+    SecSignalTest() : prov("provider"), cons("consumer"), proxy(nullptr), eventCount(0), eventsNeeded(0), lastValue(false) { }
+
     ~SecSignalTest() { }
 
     TestSecurityManager tsm;
@@ -947,16 +948,16 @@ class SecSignalTest :
         QCC_UNUSED(member);
 
         lock.Lock();
+
         eventCount++;
+        bool value = lastValue;
+        EXPECT_EQ(ER_OK, msg->GetArgs("b", &value));
+        lastValue = value;
+
         if (eventCount == eventsNeeded) {
             condition.Signal();
         }
-        bool value = lastValue;
-        QStatus status = msg->GetArgs("b", &value);
-        EXPECT_EQ(ER_OK, status) << "Failed to Get bool value out of MsgArg";
-        cout << "received message " << value << " on " << msg->GetRcvEndpointName() <<  endl;
 
-        lastValue = value;
         lock.Unlock();
     }
 
@@ -964,21 +965,21 @@ class SecSignalTest :
     QStatus SendAndWaitForEvent(TestSecureApplication& prov, bool newValue = true, TestSecureApplication* destination = NULL, int requiredEvents = 1)
     {
         lock.Lock();
+
         eventCount = 0;
         eventsNeeded = requiredEvents;
         lastValue = !newValue;
-        cout << "SendAndWaitForEvent (" << newValue << ") need " << requiredEvents << " events." << endl;
         QStatus status = destination ? prov.SendSignal(newValue, *destination) : prov.SendSignal(newValue);
-        if (ER_OK != status) {
-            cout << "Failed to send event " << __FILE__ << "@" << __LINE__ << endl;
-        } else {
-            condition.TimedWait(lock, 5000);
-            EXPECT_TRUE(eventCount) << " No event received";
+
+        if (status == ER_OK) {
+            EXPECT_EQ(ER_OK, (status = condition.TimedWait(lock, 10000)));
+            EXPECT_EQ(requiredEvents, eventCount);
             EXPECT_EQ(newValue, lastValue) << "Signal value";
-            status = (eventCount == requiredEvents) && (newValue == lastValue) ? ER_OK : ER_FAIL;
+            status = ((eventCount == requiredEvents) && (newValue == lastValue)) ? ER_OK : ER_FAIL;
             eventCount = 0;
             eventsNeeded = 0;
         }
+
         lock.Unlock();
         return status;
     }
@@ -1251,77 +1252,83 @@ TEST_F(SecSignalTest, DISABLED_SendSignalToMultiPointSession) // Awaits fix for 
 TEST_F(SecSignalTest, SecureConnection)
 {
     // Provide a valid policy both on consumer and provider.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
-    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    EXPECT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
 
     // Sending signals not allowed as the connection is not yet secured.
-    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
+    EXPECT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
 
     // Securing connection;  Signals are now allowed.
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
+    EXPECT_EQ(ER_OK, prov.SecureConnection(cons, true));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true));
 
+    // Join a second session from the same consumer. The connection for this new session is already secured --> event allowed
     SessionId sid = 0;
-    // Join a second session. The connection for this new session is already secured; event allowed
-    ASSERT_EQ(ER_OK, cons.JoinSession(prov, sid));
-    qcc::Sleep(250);
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    EXPECT_EQ(ER_OK, cons.JoinSession(prov, sid));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
 
-    // Update the policy. Session key is dropped by the provider --> permission denied again.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    // Update the policy. Session key is dropped by the provider.
+    // ASACORE-2432 explains that the active sessions must be secured again - otherwise the result of SendSignal is unreliable.
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    EXPECT_EQ(ER_OK, prov.SecureConnection(cons, true));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
 
-    // Secure the connection again. All events are allowed again.
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
-
-    // Update the policy. Session key is dropped by the provider --> permission denied again.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
-
-    // Secure session on the consumer side: consumer still thinks that the session is secured.
-    // The override causes to re-secure the connection, events will be sent.
-    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str(), true));
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    // Update the policy. Session key is dropped by the provider.
+    // ASACORE-2432 explains that the active sessions must be secured again, otherwise the result of SendSignal is unreliable.
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    EXPECT_EQ(ER_OK, cons.SecureConnection(prov, true));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
 
     // Add extra consumer.
     TestSecureApplication cons2("consumer2");
-    ASSERT_EQ(ER_OK, cons2.Init(tsm));
+    EXPECT_EQ(ER_OK, cons2.Init(tsm));
     cons2.GetBusAttachement().RegisterSignalHandlerWithRule(this,
                                                             static_cast<MessageReceiver::SignalHandler>(&SecSignalTest::EventHandler),
                                                             cons2.GetBusAttachement().GetInterface(TEST_INTERFACE)->GetMember(TEST_SIGNAL_NAME),
                                                             TEST_SIGNAL_MATCH_RULE);
-    ASSERT_EQ(ER_OK, cons2.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+    EXPECT_EQ(ER_OK, cons2.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
+
     // Securing a session between peers does not require an active session.
-    ASSERT_EQ(ER_OK, cons2.GetBusAttachement().SecureConnection(prov.GetBusAttachement().GetUniqueName().c_str()));
+    EXPECT_EQ(ER_OK, cons2.SecureConnection(prov, true));
 
-    // Receiving events does require a session. The third event is only received
-    // after joining a session with the host.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+    // Receiving events does require a session.
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 2));
+
+    // The third event is only received after joining a session with the host.
+    // cons2 and prov already authenticated each other.
     SessionId sid2 = 0;
-    ASSERT_EQ(ER_OK, cons2.JoinSession(prov, sid2));
-    qcc::Sleep(500);
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+    EXPECT_EQ(ER_OK, cons2.JoinSession(prov, sid2));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
 
-    // Secure connection using NULL destination.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    // Update the policy. Session key is dropped by the provider.
+    // ASACORE-2432 explains that the active sessions must be secured again, otherwise the result of SendSignal is unreliable.
+    // Secure connection using NULL destination --> all sessions get re-authenticated
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
+    EXPECT_EQ(ER_OK, prov.SecureConnectionAllSessions(cons, cons2, true));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
 
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnection(NULL)); // Should restore all sessions.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
-    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
-    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(NULL)); // Restore connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+    // Update the policy. Session key is dropped by the consumer.
+    EXPECT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
 
-    // Secure connection using NULL destination and async variant.
-    ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    // Secure connections from the consumer side --> events will be received.
+    EXPECT_EQ(ER_OK, cons.SecureConnectionAllSessions(prov, true));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
 
-    ASSERT_EQ(ER_OK, prov.GetBusAttachement().SecureConnectionAsync(NULL)); // Should restore all sessions asynchronously.
-    qcc::Sleep(1500);// Give some time to restore the connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
-    ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
-    ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnectionAsync(NULL)); // Restore connections.
-    qcc::Sleep(750);// Give some time to restore the connection.
-    ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
+    // Update the policy. Session key is dropped by the provider.
+    // ASACORE-2432 explains that the active sessions must be secured again, otherwise the result of SendSignal is unreliable.
+    // Re-authenticate all peers using NULL destination and async variant.
+    EXPECT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE));
+    EXPECT_EQ(ER_OK, prov.SecureConnectionAllSessionsAsync(cons, cons2, true));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3));
+
+    // Update the policy. Session key is dropped by the consumer.
+    EXPECT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE)); // Invalidated connections.
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 1)); // Events to cons are dropped.
+
+    // Secure connections from the consumer side --> events will be received.
+    EXPECT_EQ(ER_OK, cons.SecureConnectionAllSessionsAsync(prov, true));
+    EXPECT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, 3)); // All events should be received.
 }
 
 TEST_F(SecSignalTest, DISABLED_SendSignalToSelf)
