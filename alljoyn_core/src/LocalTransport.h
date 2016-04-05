@@ -399,6 +399,13 @@ class _LocalEndpoint : public _BusEndpoint, public qcc::AlarmListener, public Me
                                         void* context,
                                         const MsgArg& value);
 
+    void ScheduleCachedGetPropertyReply(
+        ProxyBusObject* proxy,
+        ProxyBusObject::Listener* listener,
+        ProxyBusObject::Listener::GetPropertyAsyncCB callback,
+        void* context,
+        const MsgArg& value);
+
   private:
 
     /**

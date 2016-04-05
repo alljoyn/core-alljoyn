@@ -96,6 +96,21 @@ class ProxyBusObject : public MessageReceiver {
         typedef void (ProxyBusObject::Listener::* GetPropertyCB)(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context);
 
         /**
+         * Callback registered with GetPropertyAsync()
+         *
+         * @param status       - ER_OK if the property get request was successful or:
+         *                     - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+         *                     - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+         *                     - Other error status codes indicating the reason the get request failed.
+         * @param obj          Remote bus object that was introspected
+         * @param value        If status is ER_OK a MsgArg containing the returned property value
+         * @param context      Caller provided context passed in to GetPropertyAsync()
+         * @param errorName    Error name
+         * @param errorDescription Error message
+         */
+        typedef void (ProxyBusObject::Listener::* GetPropertyAsyncCB)(QStatus status, ProxyBusObject* obj, const MsgArg& value, const qcc::String& errorName, const qcc::String& errorDescription, void* context);
+
+        /**
          * Callback registered with GetAllPropertiesAsync()
          *
          * @param status    - ER_OK if the get all properties request was successfull or:
@@ -108,6 +123,20 @@ class ProxyBusObject : public MessageReceiver {
         typedef void (ProxyBusObject::Listener::* GetAllPropertiesCB)(QStatus status, ProxyBusObject* obj, const MsgArg& values, void* context);
 
         /**
+         * Callback registered with GetAllPropertiesAsync()
+         *
+         * @param status    - ER_OK if the get all properties request was successfull or:
+         *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+         *                  - Other error status codes indicating the reason the get request failed.
+         * @param obj         Remote bus object that was introspected
+         * @param[out] values If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties.
+         * @param context     Caller provided context passed in to GetPropertyAsync()
+         * @param errorName   Error name
+         * @paramerrorDescription Error message
+         */
+        typedef void (ProxyBusObject::Listener::* GetAllPropertiesAsyncCB)(QStatus status, ProxyBusObject* obj, const MsgArg& values, const qcc::String& errorName, const qcc::String& errorDescription, void* context);
+
+        /**
          * Callback registered with SetPropertyAsync()
          *
          * @param status    - ER_OK if the property was successfully set or:
@@ -118,6 +147,20 @@ class ProxyBusObject : public MessageReceiver {
          * @param context   Caller provided context passed in to SetPropertyAsync()
          */
         typedef void (ProxyBusObject::Listener::* SetPropertyCB)(QStatus status, ProxyBusObject* obj, void* context);
+
+        /**
+         * Callback registered with SetPropertyAsync()
+         *
+         * @param status       - ER_OK if the property was successfully set or:
+         *                     - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+         *                     - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+         *                     - Other error status codes indicating the reason the set request failed.
+         * @param obj          Remote bus object that was introspected
+         * @param context      Caller provided context passed in to SetPropertyAsync()
+         * @param errorName    Error name
+         * @param errorDescription Error message
+         */
+        typedef void (ProxyBusObject::Listener::* SetPropertyAsyncCB)(QStatus status, ProxyBusObject* obj, const qcc::String& errorName, const qcc::String& errorDescription, void* context);
     };
 
     /**
@@ -274,10 +317,27 @@ class ProxyBusObject : public MessageReceiver {
     /**
      * Get a property from an interface on the remote object.
      *
-     * @param iface       Name of interface to retrieve property from.
-     * @param property    The name of the property to get.
-     * @param[out] value  Property value.
-     * @param timeout     Timeout specified in milliseconds to wait for a reply
+     * @param iface             Name of interface to retrieve property from.
+     * @param property          The name of the property to get.
+     * @param[out] value        Property value.
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
+     * @param[out] errorName    Error name
+     * @param[out] errorDescription Error description
+     *
+     * @return
+     *      - #ER_OK if the property was obtained.
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if there is no such interface on this remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus GetProperty(const char* iface, const char* property, MsgArg& value, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout = DefaultCallTimeout) const;
+
+    /**
+     * Get a property from an interface on the remote object.
+     *
+     * @param iface             Name of interface to retrieve property from.
+     * @param property          The name of the property to get.
+     * @param[out] value        Property value.
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
      *
      * @return
      *      - #ER_OK if the property was obtained.
@@ -298,7 +358,7 @@ class ProxyBusObject : public MessageReceiver {
      * @param timeout   Timeout specified in milliseconds to wait for a reply
      * @return
      *      - #ER_OK if the request to get the property was successfully issued .
-     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if there is no such interface on this remote object.
      *      - An error status otherwise
      */
     QStatus GetPropertyAsync(const char* iface,
@@ -309,11 +369,33 @@ class ProxyBusObject : public MessageReceiver {
                              uint32_t timeout = DefaultCallTimeout);
 
     /**
+     * Make an asynchronous request to get a property from an interface on the remote object.
+     * The property value is passed to the callback function.
+     *
+     * @param iface     Name of interface to retrieve property from.
+     * @param property  The name of the property to get.
+     * @param listener  Pointer to the object that will receive the callback.
+     * @param callback  Method on listener that will be called.
+     * @param context   User defined context which will be passed as-is to callback.
+     * @param timeout   Timeout specified in milliseconds to wait for a reply
+     * @return
+     *      - #ER_OK if the request to get the property was successfully issued .
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if there is no such interface on this remote object.
+     *      - An error status otherwise
+     */
+    QStatus GetPropertyAsync(const char* iface,
+                             const char* property,
+                             ProxyBusObject::Listener* listener,
+                             ProxyBusObject::Listener::GetPropertyAsyncCB callback,
+                             void* context,
+                             uint32_t timeout = DefaultCallTimeout);
+
+    /**
      * Get all properties from an interface on the remote object.
      *
-     * @param iface       Name of interface to retrieve all properties from.
-     * @param[out] values Property values returned as an array of dictionary entries, signature "a{sv}".
-     * @param timeout     Timeout specified in milliseconds to wait for a reply
+     * @param iface             Name of interface to retrieve all properties from.
+     * @param[out] values       Property values returned as an array of dictionary entries, signature "a{sv}".
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
      *
      * @return
      *      - #ER_OK if the property was obtained.
@@ -321,6 +403,22 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
     QStatus GetAllProperties(const char* iface, MsgArg& values, uint32_t timeout = DefaultCallTimeout) const;
+
+    /**
+     * Get all properties from an interface on the remote object.
+     *
+     * @param iface             Name of interface to retrieve all properties from.
+     * @param[out] values       Property values returned as an array of dictionary entries, signature "a{sv}".
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
+     * @param[out] errorName    Error name
+     * @param[out] errorDescription Error description
+     *
+     * @return
+     *      - #ER_OK if the property was obtained.
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus GetAllProperties(const char* iface, MsgArg& values, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout = DefaultCallTimeout) const;
 
     /**
      * Make an asynchronous request to get all properties from an interface on the remote object.
@@ -342,19 +440,53 @@ class ProxyBusObject : public MessageReceiver {
                                   uint32_t timeout = DefaultCallTimeout);
 
     /**
+     * Make an asynchronous request to get all properties from an interface on the remote object.
+     *
+     * @param iface     Name of interface to retrieve property from.
+     * @param listener  Pointer to the object that will receive the callback.
+     * @param callback  Method on listener that will be called.
+     * @param context   User defined context which will be passed as-is to callback.
+     * @param timeout   Timeout specified in milliseconds to wait for a reply
+     * @return
+     *      - #ER_OK if the request to get all properties was successfully issued .
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+     *      - An error status otherwise
+     */
+    QStatus GetAllPropertiesAsync(const char* iface,
+                                  ProxyBusObject::Listener* listener,
+                                  ProxyBusObject::Listener::GetPropertyAsyncCB callback,
+                                  void* context,
+                                  uint32_t timeout = DefaultCallTimeout);
+
+    /**
      * Set a property on an interface on the remote object.
      *
-     * @param iface     Remote object's interface on which the property is defined.
-     * @param property  The name of the property to set
-     * @param value     The value to set
-     * @param timeout   Timeout specified in milliseconds to wait for a reply
-     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param value             The value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
      * @return
      *      - #ER_OK if the property was set
      *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
     QStatus SetProperty(const char* iface, const char* property, MsgArg& value, uint32_t timeout = DefaultCallTimeout) const;
+
+    /**
+     * Set a property on an interface on the remote object.
+     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param value             The value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
+     * @param[out] errorName    Error name
+     * @param[out] errorDescription Error description
+     * @return
+     *      - #ER_OK if the property was set
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus SetProperty(const char* iface, const char* property, MsgArg& value, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout = DefaultCallTimeout) const;
 
     /**
      * Make an asynchronous request to set a property on an interface on the remote object.
@@ -381,12 +513,113 @@ class ProxyBusObject : public MessageReceiver {
                              uint32_t timeout = DefaultCallTimeout);
 
     /**
+     * Make an asynchronous request to set a property on an interface on the remote object.
+     * A callback function reports the success or failure of ther operation.
+     *
+     * @param iface     Remote object's interface on which the property is defined.
+     * @param property  The name of the property to set.
+     * @param value     The value to set
+     * @param listener  Pointer to the object that will receive the callback.
+     * @param callback  Method on listener that will be called.
+     * @param context   User defined context which will be passed as-is to callback.
+     * @param timeout   Timeout specified in milliseconds to wait for a reply
+     * @return
+     *      - #ER_OK if the request to set the property was successfully issued .
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - An error status otherwise
+     */
+    QStatus SetPropertyAsync(const char* iface,
+                             const char* property,
+                             MsgArg& value,
+                             ProxyBusObject::Listener* listener,
+                             ProxyBusObject::Listener::SetPropertyAsyncCB callback,
+                             void* context,
+                             uint32_t timeout = DefaultCallTimeout);
+
+    /**
      * Helper function to sychronously set a uint32 property on the remote object.
+     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param u                 The uint32 value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
+     * @param[out] errorName    Error name
+     * @param[out] errorDescription Error description
+     *
+     * @return
+     *      - #ER_OK if the property was set
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus SetProperty(const char* iface, const char* property, uint32_t u, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout = DefaultCallTimeout) const {
+        MsgArg arg("u", u); return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
+    }
+
+    /**
+     * Helper function to sychronously set an int32 property on the remote object.
      *
      * @param iface     Remote object's interface on which the property is defined.
      * @param property  The name of the property to set
-     * @param u         The uint32 value to set
+     * @param i         The int32 value to set
      * @param timeout   Timeout specified in milliseconds to wait for a reply
+     * @param[out] errorName    Error name
+     * @param[out] errorDescription Error description
+     *
+     * @return
+     *      - #ER_OK if the property was set
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus SetProperty(const char* iface, const char* property, int32_t i, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout = DefaultCallTimeout) const {
+        MsgArg arg("i", i); return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
+    }
+
+    /**
+     * Helper function to sychronously set string property on the remote object from a C string.
+     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param s                 The string value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
+     * @param[out] errorName    Error name
+     * @param[out] errorDescription Error description
+     *
+     * @return
+     *      - #ER_OK if the property was set
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus SetProperty(const char* iface, const char* property, const char* s, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout = DefaultCallTimeout) const {
+        MsgArg arg("s", s); return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
+    }
+
+    /**
+     * Helper function to sychronously set string property on the remote object from a qcc::String.
+     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param s                 The string value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
+     * @param[out] errorName    Error name
+     * @param[out] errorDescription Error description
+     *
+     * @return
+     *      - #ER_OK if the property was set
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     */
+    QStatus SetProperty(const char* iface, const char* property, const qcc::String& s, qcc::String& errorName, qcc::String& errorDescription, uint32_t timeout = DefaultCallTimeout) const {
+        MsgArg arg("s", s.c_str()); return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
+    }
+
+    //old functions call new
+    /**
+     * Helper function to sychronously set a uint32 property on the remote object.
+     *
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param u                 The uint32 value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
      *
      * @return
      *      - #ER_OK if the property was set
@@ -394,7 +627,10 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
     QStatus SetProperty(const char* iface, const char* property, uint32_t u, uint32_t timeout = DefaultCallTimeout) const {
-        MsgArg arg("u", u); return SetProperty(iface, property, arg, timeout);
+        qcc::String errorName;
+        qcc::String errorDescription;
+        MsgArg arg("u", u);
+        return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
     }
 
     /**
@@ -411,16 +647,19 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
     QStatus SetProperty(const char* iface, const char* property, int32_t i, uint32_t timeout = DefaultCallTimeout) const {
-        MsgArg arg("i", i); return SetProperty(iface, property, arg, timeout);
+        qcc::String errorName;
+        qcc::String errorDescription;
+        MsgArg arg("i", i);
+        return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
     }
 
     /**
      * Helper function to sychronously set string property on the remote object from a C string.
      *
-     * @param iface     Remote object's interface on which the property is defined.
-     * @param property  The name of the property to set
-     * @param s         The string value to set
-     * @param timeout   Timeout specified in milliseconds to wait for a reply
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param s                 The string value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
      *
      * @return
      *      - #ER_OK if the property was set
@@ -428,16 +667,19 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
     QStatus SetProperty(const char* iface, const char* property, const char* s, uint32_t timeout = DefaultCallTimeout) const {
-        MsgArg arg("s", s); return SetProperty(iface, property, arg, timeout);
+        qcc::String errorName;
+        qcc::String errorDescription;
+        MsgArg arg("s", s);
+        return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
     }
 
     /**
      * Helper function to sychronously set string property on the remote object from a qcc::String.
      *
-     * @param iface     Remote object's interface on which the property is defined.
-     * @param property  The name of the property to set
-     * @param s         The string value to set
-     * @param timeout   Timeout specified in milliseconds to wait for a reply
+     * @param iface             Remote object's interface on which the property is defined.
+     * @param property          The name of the property to set
+     * @param s                 The string value to set
+     * @param timeout           Timeout specified in milliseconds to wait for a reply
      *
      * @return
      *      - #ER_OK if the property was set
@@ -445,8 +687,12 @@ class ProxyBusObject : public MessageReceiver {
      *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      */
     QStatus SetProperty(const char* iface, const char* property, const qcc::String& s, uint32_t timeout = DefaultCallTimeout) const {
-        MsgArg arg("s", s.c_str()); return SetProperty(iface, property, arg, timeout);
+        qcc::String errorName;
+        qcc::String errorDescription;
+        MsgArg arg("s", s.c_str());
+        return SetProperty(iface, property, arg, errorName, errorDescription, timeout);
     }
+
 
     /**
      * Function to register a handler for property change events.
@@ -963,12 +1209,49 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
+     * Helper function to make an asynchronous request to get a property from an interface on the remote object.
+     * The property value is passed to the callback function.
+     * The callback function may of type that accepts a custom error name and message
+     * (one callback or the other, but not both, must be set).
+     *
+     * @param iface                    Name of interface to retrieve property from
+     * @param property                 The name of the property to get
+     * @param listener                 Pointer to the object that will receive the callback
+     * @param callback                 Method on listener that will be called
+     * @param callbackWithCustomError  Method (returning custom error) on listener that will be called
+     * @param context                  User defined context which will be passed as-is to callback
+     * @param timeout                  Timeout specified in milliseconds to wait for a reply
+     * @return
+     *      - #ER_OK if the request to get the property was successfully issued .
+     *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+     *      - An error status otherwise
+     */
+    QStatus GetPropertyAsyncCommon(const char* iface,
+                                   const char* property,
+                                   ProxyBusObject::Listener* listener,
+                                   ProxyBusObject::Listener::GetPropertyCB callback,
+                                   ProxyBusObject::Listener::GetPropertyAsyncCB callbackWithCustomError,
+                                   void* context,
+                                   uint32_t timeout);
+    /**
+     * @internal
      * Introspection method_reply handler. (Internal use only)
      *
      * @param message Method return Message
      * @param context Opaque context passed from method_call to method_return
      */
     void IntrospectMethodCB(Message& message, void* context);
+
+    /**
+     * @internal
+     * Helper function for GetProperty method_reply handler. (Internal use only)
+     *
+     * @param message           Method return Message
+     * @param context           Opaque context passed from method_call to method_return
+     * @param isCustomErrorSet  A boolean variable indicating whether the callback function will
+     *                          return a custom error name and message as two additional parameters
+     */
+    void GetPropMethodCBCommon(Message& message, void* context, bool isCustomErrorSet);
 
     /**
      * @internal
@@ -981,6 +1264,26 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
+     * GetProperty method_reply handler. (Internal use only)
+     *
+     * @param message Method return Message
+     * @param context Opaque context passed from method_call to method_return
+     */
+    void GetPropMethodAsyncCB(Message& message, void* context);
+
+    /**
+     * @internal
+     * Helper function for GetAllProperties method_reply handler. (Internal use only)
+     *
+     * @param message           Method return Message
+     * @param context           Opaque context passed from method_call to method_return
+     * @param isCustomErrorSet  A boolean variable indicating whether the callback function will
+     *                          return a custom error name and message as two additional parameters
+     */
+    void GetAllPropsMethodCBCommon(Message& message, void* context, bool isCustomErrorSet);
+
+    /**
+     * @internal
      * GetAllProperties method_reply handler. (Internal use only)
      *
      * @param message Method return Message
@@ -990,12 +1293,92 @@ class ProxyBusObject : public MessageReceiver {
 
     /**
      * @internal
+     * GetAllProperties method_reply handler. (Internal use only)
+     *
+     * @param message Method return Message
+     * @param context Opaque context passed from method_call to method_return
+     */
+    void GetAllPropsMethodAsyncCB(Message& message, void* context);
+
+    /**
+     * @internal
+     * Helper function to make an asynchronous request to set a property on an interface on the remote object.
+     * A callback function reports the success or failure of the operation.
+     * The callback function may of type that accepts a custom error name and message
+     * (one callback or the other, but not both, must be set).
+     *
+     * @param iface                    Remote object's interface on which the property is defined.
+     * @param property                 The name of the property to set
+     * @param value                    The value to set
+     * @param listener                 Pointer to the object that will receive the callback
+     * @param callback                 Method on listener that will be called.
+     * @param callbackWithCustomError  Method (returning custom error) on listener that will be called
+     * @param context                  User defined context which will be passed as-is to callback
+     * @param timeout                  Timeout specified in milliseconds to wait for a reply
+     * @return
+     *                                 - #ER_OK if the request to set the property was successfully issued .
+     *                                 - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *                                 - An error status otherwise
+     */
+    QStatus SetPropertyAsyncCommon(const char* iface,
+                                   const char* property,
+                                   MsgArg& value,
+                                   ProxyBusObject::Listener* listener,
+                                   ProxyBusObject::Listener::SetPropertyCB callback,
+                                   ProxyBusObject::Listener::SetPropertyAsyncCB callbackWithCustomError,
+                                   void* context,
+                                   uint32_t timeout);
+
+    /**
+     * Make an asynchronous request to get all properties from an interface on the remote object.
+     *
+     * @param iface                    Name of interface to retrieve property from.
+     * @param listener                 Pointer to the object that will receive the callback.
+     * @param callback                 Method on listener that will be called.
+     * @param callbackWithCustomError  Method (returning custom error) on listener that will be called
+     * @param context                  User defined context which will be passed as-is to callback.
+     * @param timeout                  Timeout specified in milliseconds to wait for a reply
+     * @return
+     *                                 - #ER_OK if the request to get all properties was successfully issued .
+     *                                 - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+     *                                 - An error status otherwise
+     */
+    QStatus GetAllPropertiesAsyncCommon(const char* iface,
+                                        ProxyBusObject::Listener* listener,
+                                        ProxyBusObject::Listener::GetPropertyCB callback,
+                                        ProxyBusObject::Listener::GetPropertyAsyncCB callbackWithCustomError,
+                                        void* context,
+                                        uint32_t timeout = DefaultCallTimeout);
+
+    /**
+     * @internal
+     * Helper function for SetProperty method_reply handler. (Internal use only)
+     *
+     * @param message           Method return Message
+     * @param context           Opaque context passed from method_call to method_return
+     * @param isCustomErrorSet  A boolean variable indicating whether the callback function will
+     *                          return a custom error name and message as two additional parameters
+     */
+    void SetPropMethodCBCommon(Message& message, void* context, bool isCustomErrorSet);
+
+    /**
+     * @internal
      * SetProperty method_reply handler. (Internal use only)
      *
      * @param message Method return Message
      * @param context Opaque context passed from method_call to method_return
      */
+
     void SetPropMethodCB(Message& message, void* context);
+
+    /**
+     * @internal
+     * SetProperty method_reply handler. (Internal use only)
+     *
+     * @param message Method return Message
+     * @param context Opaque context passed from method_call to method_return
+     */
+    void SetPropMethodAsyncCB(Message& message, void* context);
 
     /**
      * @internal
