@@ -740,7 +740,8 @@ TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenDestroyingSignedManif
     signedManifestXml = nullptr;
 }
 
-TEST_F(SecurityApplicationProxySelfClaimTest, shouldReturnErrorWhenClaimingWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxySelfClaimTest, DISABLED_shouldReturnErrorWhenClaimingWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_claim(invalidProxy,
                                                                    securityManagerPublicKey,
@@ -846,7 +847,8 @@ TEST_F(SecurityApplicationProxySelfClaimTest, shouldPassWhenClaimingWithValidInp
                                                             1U));
 }
 
-TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingApplicationStateWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPreClaimTest, DISABLED_shouldReturnErrorWhileGettingApplicationStateWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_getapplicationstate(invalidProxy, &retrievedManagedAppApplicationState));
 }
@@ -863,7 +865,8 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldGetClaimableApplicationState)
     EXPECT_EQ(CLAIMABLE, retrievedManagedAppApplicationState);
 }
 
-TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingClaimCapabilitiesWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPreClaimTest, DISABLED_shouldReturnErrorWhileGettingClaimCapabilitiesWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_getclaimcapabilities(invalidProxy, &retrievedManagedAppClaimCapabilities));
 }
@@ -880,7 +883,8 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldGetDefaultClaimCapabilities)
     EXPECT_EQ(CLAIM_CAPABILITIES_DEFAULT, retrievedManagedAppClaimCapabilities);
 }
 
-TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingClaimCapabilitiesAdditionalInfoWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPreClaimTest, DISABLED_shouldReturnErrorWhileGettingClaimCapabilitiesAdditionalInfoWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_getclaimcapabilitiesadditionalinfo(invalidProxy, &retrievedManagedAppClaimCapabilitiesAdditionalInfo));
 }
@@ -897,7 +901,8 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldGetDefaultClaimCapabilitiesAd
     EXPECT_EQ(0, retrievedManagedAppClaimCapabilitiesAdditionalInfo);
 }
 
-TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingManifestTemplateWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPreClaimTest, DISABLED_shouldReturnErrorWhileGettingManifestTemplateWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_getmanifesttemplate(invalidProxy, &retrievedManagedAppManifestTemplate));
 }
@@ -927,7 +932,8 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldDestroyRetrievedManifestTempl
     retrievedManagedAppManifestTemplate = nullptr;
 }
 
-TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingEccPublicKeyWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPreClaimTest, DISABLED_shouldReturnErrorWhileGettingEccPublicKeyWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_geteccpublickey(invalidProxy, &retrievedManagedAppEccPublicKey));
 }
@@ -1028,7 +1034,8 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhenInstallingSame
     EXPECT_EQ(ER_DUPLICATE_CERTIFICATE, alljoyn_securityapplicationproxy_installmembership(securityManagerSecurityApplicationProxy, adminGroupMembershipCertificate));
 }
 
-TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForStartManagementWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPostClaimTest, DISABLED_shouldReturnErrorForStartManagementWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_startmanagement(invalidProxy));
 }
@@ -1038,7 +1045,8 @@ TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForStartManagemen
     EXPECT_EQ(ER_PERMISSION_DENIED, alljoyn_securityapplicationproxy_startmanagement(managedAppSecurityApplicationProxy));
 }
 
-TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForEndManagementWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPostClaimTest, DISABLED_shouldReturnErrorForEndManagementWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_endmanagement(invalidProxy));
 }
@@ -1048,7 +1056,8 @@ TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForEndManagementC
     EXPECT_EQ(ER_PERMISSION_DENIED, alljoyn_securityapplicationproxy_endmanagement(managedAppSecurityApplicationProxy));
 }
 
-TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForResetWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPostClaimTest, DISABLED_shouldReturnErrorForResetWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_reset(invalidProxy));
 }
@@ -1058,7 +1067,8 @@ TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForResetForValidP
     EXPECT_EQ(ER_PERMISSION_DENIED, alljoyn_securityapplicationproxy_reset(managedAppSecurityApplicationProxy));
 }
 
-TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnPolicyErrorForResetWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPostClaimTest, DISABLED_shouldReturnPolicyErrorForResetWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_resetpolicy(invalidProxy));
 }
@@ -1068,7 +1078,8 @@ TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForResetPolicyFor
     EXPECT_EQ(ER_PERMISSION_DENIED, alljoyn_securityapplicationproxy_resetpolicy(managedAppSecurityApplicationProxy));
 }
 
-TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForUpdatePolicyWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPostClaimTest, DISABLED_shouldReturnErrorForUpdatePolicyWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_updatepolicy(invalidProxy, VALID_NEWER_POLICY));
 }
@@ -1078,7 +1089,8 @@ TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForUpdatePolicyFo
     EXPECT_EQ(ER_PERMISSION_DENIED, alljoyn_securityapplicationproxy_updatepolicy(managedAppSecurityApplicationProxy, VALID_NEWER_POLICY));
 }
 
-TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForUpdateIdentityWithInvalidProxy)
+/* Disabled due to ASACORE-2820 */
+TEST_F(SecurityApplicationProxyPostClaimTest, DISABLED_shouldReturnErrorForUpdateIdentityWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_updateidentity(invalidProxy,
                                                                             managedAppIdentityCertificateChain,
