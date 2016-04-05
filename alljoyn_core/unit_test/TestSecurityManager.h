@@ -26,6 +26,8 @@ using namespace std;
 using namespace ajn;
 using namespace qcc;
 
+class TestSecureApplication;
+
 class TestSecurityManager :
     public SessionListener {
 
@@ -43,6 +45,8 @@ class TestSecurityManager :
     QStatus InstallMembership(BusAttachment& peerBus, const GUID128& group);
 
     QStatus UpdatePolicy(const BusAttachment& peerBus, const PermissionPolicy& policy);
+    QStatus UpdatePolicyForApp(TestSecureApplication& peerBus, const PermissionPolicy& policy);
+    QStatus UpdatePolicyCommon(const qcc::String& peerBusName, const PermissionPolicy& policy, SessionId sessionId);
 
     QStatus Reset(const BusAttachment& peerBus);
 
@@ -69,6 +73,8 @@ class TestSecurityManager :
     int certSerialNumber;
     int policyVersion;
     InMemoryKeyStoreListener keyStoreListener;
+    qcc::String appName;
+    std::map<qcc::String, qcc::Event*> authEvents;
 
     /* SessionListener */
     virtual void SessionLost(SessionId sessionId,
@@ -90,6 +96,15 @@ class TestSecurityManager :
 
     void AddAdminAcl(const PermissionPolicy& in,
                      PermissionPolicy& out);
+
+    /* Support for waiting to complete authentication */
+    void DeleteAllAuthenticationEvents();
+    void AddAuthenticationEvent(const qcc::String& peerName, Event* authEvent);
+    QStatus WaitAllAuthenticationEvents(uint32_t timeout);
+    void AuthenticationCompleteCallback(qcc::String peerName, bool success);
+
+    /* Method used to secure a connection, then wait for both peers to finish authentication */
+    QStatus SecureConnection(TestSecureApplication& peer, bool forceAuth = false);
 };
 
 #endif /* _ALLJOYN_TESTSECURITYMANAGER_H */

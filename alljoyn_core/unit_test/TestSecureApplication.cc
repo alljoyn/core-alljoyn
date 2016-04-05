@@ -35,7 +35,7 @@ using namespace qcc;
  * Debug mode, with App Verifier enabled, using an out-of-proc router node, while
  * the VM host machine is busy compiling from multiple threads, etc.
  */
-static const uint32_t s_slowTestResponseTimeout = 10000;
+const uint32_t s_slowTestResponseTimeout = 10000;
 
 QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
 {

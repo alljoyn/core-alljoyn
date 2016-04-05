@@ -39,9 +39,14 @@ using namespace qcc;
 #define DEFAULT_TEST_OBJ_PATH "/default/test/object/path"
 #define TEST_SIGNAL_MATCH_RULE  "type='signal',interface='" TEST_INTERFACE "',member='" TEST_SIGNAL_NAME "'"
 
+extern const uint32_t s_slowTestResponseTimeout;
+
 class TestSecureApplication :
     private SessionPortListener,
     private SessionListener {
+
+    friend class TestSecurityManager;
+
   public:
     TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener(this), appName(name), pcl(this), joinSessionEvent(nullptr), endManagementEvent(nullptr)
     {
@@ -78,6 +83,10 @@ class TestSecureApplication :
 
     int GetCurrentGetPropertyCount() {
         return testObj ? testObj->getCount : -1;
+    }
+
+    const qcc::String GetUniqueName() {
+        return bus.GetUniqueName();
     }
 
     /* Methods used to secure one or all connections, then wait for all the involved peers to finish authentication */
