@@ -206,7 +206,7 @@ static bool GetPermsAssignedByAndroid(uint32_t uid, std::set<qcc::String>& permi
                     for (attrIt = attrs.begin(); attrIt != attrs.end(); ++attrIt) {
                         if (attrIt->first.compare("codePath") == 0) {
                             uint32_t cmpLen = attrIt->second.size() < strlen("/system/app") ? attrIt->second.size() : strlen("/system/app");
-                            if (attrIt->second.compare(0, cmpLen, "/system/app") == 0) {
+                            if (attrIt->second.compare_std(0, cmpLen, "/system/app") == 0) {
                                 QCC_DbgPrintf(("Xml Tag %s = %s", "codePath", attrIt->second.c_str()));
                                 isSystemApp = true;
                             }

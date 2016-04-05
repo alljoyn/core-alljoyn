@@ -148,7 +148,7 @@ class TestAllJoynObj : public AllJoynObj {
     }
     virtual Transport* GetTransport(const String& transportSpec) {
         for (vector<TestTransport*>::iterator it = transportList.begin(); it != transportList.end(); ++it) {
-            if (transportSpec.compare(0, 3, (*it)->GetTransportName()) == 0) {
+            if (transportSpec.compare_std(0, 3, (*it)->GetTransportName()) == 0) {
                 return (*it);
             }
         }

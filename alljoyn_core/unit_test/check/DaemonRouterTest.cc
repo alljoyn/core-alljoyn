@@ -601,7 +601,7 @@ class DaemonRouterTest : public TestParamTuple {
             policyDb->NameOwnerChanged(epInfo->name,
                                        &epInfo->name, SessionOpts::ALL_NAMES,
                                        NULL, SessionOpts::ALL_NAMES);
-            if (epInfo->name.compare(1, 7, "virtual") == 0) {
+            if (epInfo->name.compare_std(1, 7, "virtual") == 0) {
                 String name1 = ToDot1(epInfo->name);
                 policyDb->NameOwnerChanged(name1,
                                            &name1, SessionOpts::ALL_NAMES,
