@@ -50,7 +50,7 @@ typedef void* ThreadReturn;
  *
  * @param ms    Number of milliseconds to sleep.
  */
-QStatus Sleep(uint32_t ms);
+QStatus AJ_CALL Sleep(uint32_t ms);
 
 /** @internal */
 class Thread;
