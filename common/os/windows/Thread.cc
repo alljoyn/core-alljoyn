@@ -117,7 +117,7 @@ QStatus Thread::StaticShutdown()
     return ER_OK;
 }
 
-QStatus Sleep(uint32_t ms) {
+QStatus AJ_CALL Sleep(uint32_t ms) {
     ::sleep(ms);
     return ER_OK;
 }

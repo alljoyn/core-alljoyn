@@ -1694,7 +1694,7 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     appStateListener.stateChanged = false;
 
     peer2KeyListener = new DefaultECDHEAuthListener();
-    peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer1KeyListener);
+    peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", peer2KeyListener);
 
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer2Bus);

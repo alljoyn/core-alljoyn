@@ -53,7 +53,7 @@ static DebugControl* dbgControl = NULL;
 static bool initialized = false;
 static bool dbgUseEpoch = false;
 
-int QCC_SyncPrintf(const char* fmt, ...)
+int AJ_CALL QCC_SyncPrintf(const char* fmt, ...)
 {
     int ret = 0;
     va_list ap;
@@ -137,7 +137,7 @@ DebugControl::DebugControl(void)
             printThread = ((iter->second.compare("0") != 0) &&
                            (iter->second.compare("off") != 0) &&
                            (iter->second.compare("OFF") != 0));
-        } else if (var.compare(0, varPrefixLen, varPrefix) == 0) {
+        } else if (var.compare_std(0, varPrefixLen, varPrefix) == 0) {
             uint32_t level = StringToU32(iter->second, 0, 0);
             if (var.compare("ER_DEBUG_ALL") == 0) {
                 allLevel = level;
@@ -410,7 +410,7 @@ void QCC_InitializeDebugControl(void)
     // Initialized in static data
 }
 
-void* _QCC_DbgPrintContext(const char* fmt, ...)
+void* AJ_CALL _QCC_DbgPrintContext(const char* fmt, ...)
 {
     DebugContext* context = new DebugContext();
     va_list ap;
@@ -422,7 +422,7 @@ void* _QCC_DbgPrintContext(const char* fmt, ...)
 }
 
 
-void _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...)
+void AJ_CALL _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...)
 {
     DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
     va_list ap;
@@ -433,32 +433,32 @@ void _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...)
 }
 
 
-void _QCC_DbgPrintProcess(void* ctx, DbgMsgType type, const char* module, const char* filename, int lineno)
+void AJ_CALL _QCC_DbgPrintProcess(void* ctx, DbgMsgType type, const char* module, const char* filename, int lineno)
 {
     DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
     context->Process(type, module, filename, lineno);
     delete context;
 }
 
-void QCC_RegisterOutputCallback(QCC_DbgMsgCallback cb, void* context)
+void AJ_CALL QCC_RegisterOutputCallback(QCC_DbgMsgCallback cb, void* context)
 {
     dbgControl->Register(cb, context);
 }
 
-void QCC_RegisterOutputFile(FILE* file)
+void AJ_CALL QCC_RegisterOutputFile(FILE* file)
 {
     dbgControl->Register(WriteMsg, reinterpret_cast<void*>(file));
 }
 
 
-int _QCC_DbgPrintCheck(DbgMsgType type, const char* module)
+int AJ_CALL _QCC_DbgPrintCheck(DbgMsgType type, const char* module)
 {
     return static_cast<int>(dbgControl->Check(type, module));
 }
 
 
-void _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, int lineno,
-                     const char* dataStr, const void* data, size_t dataLen)
+void AJ_CALL _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, int lineno,
+                             const char* dataStr, const void* data, size_t dataLen)
 {
     if (_QCC_DbgPrintCheck(type, module)) {
         if (data == NULL) {
@@ -568,13 +568,13 @@ void AJ_CALL QCC_UseOSLogging(bool useOSLog)
     QCC_RegisterOutputCallback(cb, context);
 }
 
-const char* _QCC_DbgGetMsg(void* ctx)
+const char* AJ_CALL _QCC_DbgGetMsg(void* ctx)
 {
     DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
     return context->GetMsg();
 }
 
-void _QCC_DbgDeleteCtx(void* ctx)
+void AJ_CALL _QCC_DbgDeleteCtx(void* ctx)
 {
     DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
     delete context;

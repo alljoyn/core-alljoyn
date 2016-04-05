@@ -580,28 +580,42 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
     bool added;
     QStatus status = aboutDataInternal->translator->AddTargetLanguage(language, &added);
 
-    if ((status == ER_OK) && added) {
-        // A new language has been added. Rebuild the MsgArg and update the field.
+    if (status == ER_OK) {
         size_t supportedLangsNum = aboutDataInternal->translator->NumTargetLanguages();
-        char** supportedLangs = new char*[supportedLangsNum];
-
-        for (size_t count = 0; count < supportedLangsNum; count++) {
-            qcc::String lang;
-            aboutDataInternal->translator->GetTargetLanguage(count, lang);
-            supportedLangs[count] = new char[lang.length() + 1];
-            strcpy(supportedLangs[count], lang.c_str());
+        if (!added) {
+            // Verify the language numbers in translator and about field are the same
+            size_t size = 0;
+            MsgArg* arg;
+            QStatus status = GetField(SUPPORTED_LANGUAGES, arg);
+            if (ER_OK == status) {
+                MsgArg* langs;
+                status = arg->Get(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), &size, &langs);
+                added = (size != supportedLangsNum);    // Numbers don't match. Need to update the field
+            }
         }
 
-        MsgArg arg;
-        status = arg.Set(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
-        if (status == ER_OK) {
-            status = SetField(SUPPORTED_LANGUAGES, arg);
-        }
+        if (added) {
+            // A new language has been added. Rebuild the MsgArg and update the field.
+            char** supportedLangs = new char*[supportedLangsNum];
 
-        for (size_t count = 0; count < supportedLangsNum; count++) {
-            delete [] (supportedLangs[count]);
+            for (size_t count = 0; count < supportedLangsNum; count++) {
+                qcc::String lang;
+                aboutDataInternal->translator->GetTargetLanguage(count, lang);
+                supportedLangs[count] = new char[lang.length() + 1];
+                strcpy(supportedLangs[count], lang.c_str());
+            }
+
+            MsgArg arg;
+            status = arg.Set(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), supportedLangsNum, supportedLangs);
+            if (status == ER_OK) {
+                status = SetField(SUPPORTED_LANGUAGES, arg);
+            }
+
+            for (size_t count = 0; count < supportedLangsNum; count++) {
+                delete[](supportedLangs[count]);
+            }
+            delete[] supportedLangs;
         }
-        delete [] supportedLangs;
     }
 
     return status;
@@ -609,21 +623,25 @@ QStatus AboutData::SetSupportedLanguage(const char* language)
 
 size_t AboutData::GetSupportedLanguages(const char** languageTags, size_t num)
 {
-    return aboutDataInternal->GetSupportedLanguages(languageTags, num);
-}
+    size_t size = 0;
+    MsgArg* arg = nullptr;
+    MsgArg* args = nullptr;
+    QStatus status = GetField(SUPPORTED_LANGUAGES, arg);
+    if (ER_OK == status) {
+        status = arg->Get(aboutDataInternal->aboutFields[SUPPORTED_LANGUAGES].signature.c_str(), &size, &args);
+    }
 
-size_t AboutData::Internal::GetSupportedLanguages(const char** languageTags, size_t num)
-{
-    size_t numTargetLanguages = translator->NumTargetLanguages();
-    if (!languageTags) {
-        return numTargetLanguages;
+    if (languageTags == nullptr) {
+        return size;
     }
-    supportedLanguages.resize(numTargetLanguages);
-    size_t count;
-    for (count = 0; (count < numTargetLanguages) && (count < num); count++) {
-        translator->GetTargetLanguage(count, supportedLanguages[count]);
-        languageTags[count] = supportedLanguages[count].c_str();
+
+    size_t count = 0;
+    if ((ER_OK == status) && (args != nullptr)) {
+        for (count = 0; (count < size) && (count < num); count++) {
+            args[count].Get("s", &(languageTags[count]));
+        }
     }
+
     return count;
 }
 

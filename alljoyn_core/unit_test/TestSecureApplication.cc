@@ -508,7 +508,7 @@ QStatus TestSecureApplication::SecureConnectionAllSessionsCommon(bool async, Tes
     AddAuthenticationEvent(peer1.GetBusAttachement().GetUniqueName(), &myAuthComplete1);
     AddAuthenticationEvent(peer2.GetBusAttachement().GetUniqueName(), &myAuthComplete2);
     peer1.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &peer1AuthComplete);
-    peer2.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &peer1AuthComplete);
+    peer2.AddAuthenticationEvent(GetBusAttachement().GetUniqueName(), &peer2AuthComplete);
 
     if (async) {
         EXPECT_EQ(ER_OK, (status = bus.SecureConnectionAsync(nullptr, forceAuth)));
