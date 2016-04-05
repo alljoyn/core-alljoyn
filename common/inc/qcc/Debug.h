@@ -227,7 +227,7 @@ extern "C" {
  *
  * @return  Number of characters printed.  Negative value indicates an error.
  */
-int QCC_SyncPrintf(const char* fmt, ...);
+int AJ_CALL QCC_SyncPrintf(const char* fmt, ...);
 
 
 /**
@@ -277,7 +277,7 @@ typedef void (*QCC_DbgMsgCallback)(DbgMsgType type,
  * @param cb        Callback to a function for handling debug messages.
  * @param context   Pointer to application data.
  */
-void QCC_RegisterOutputCallback(QCC_DbgMsgCallback cb, void* context);
+void AJ_CALL QCC_RegisterOutputCallback(QCC_DbgMsgCallback cb, void* context);
 
 /**
  * Set the FILE stream where debug and error output should go.  If not called then
@@ -286,7 +286,7 @@ void QCC_RegisterOutputCallback(QCC_DbgMsgCallback cb, void* context);
  *
  * @param file  Opened FILE pointer.
  */
-void QCC_RegisterOutputFile(FILE* file);
+void AJ_CALL QCC_RegisterOutputFile(FILE* file);
 
 /**
  * @cond ALLJOYN_DEV
@@ -295,7 +295,7 @@ void QCC_RegisterOutputFile(FILE* file);
  *
  * @param fmt  A printf() style format specification.
  */
-void* _QCC_DbgPrintContext(const char* fmt, ...);
+void* AJ_CALL _QCC_DbgPrintContext(const char* fmt, ...);
 
 /**
  * @internal
@@ -304,7 +304,7 @@ void* _QCC_DbgPrintContext(const char* fmt, ...);
  * @param ctx  Debug context created by _QCC_DbgPrintContext.
  * @param fmt  A printf() style format specification.
  */
-void _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...);
+void AJ_CALL _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...);
 
 /**
  * @internal
@@ -316,7 +316,7 @@ void _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...);
  * @param filename  Filename where the debug message is.
  * @param lineno    Line number where the debug message is.
  */
-void _QCC_DbgPrintProcess(void* ctx, DbgMsgType type, const char* module, const char* filename, int lineno);
+void AJ_CALL _QCC_DbgPrintProcess(void* ctx, DbgMsgType type, const char* module, const char* filename, int lineno);
 
 /**
  * @internal
@@ -327,7 +327,7 @@ void _QCC_DbgPrintProcess(void* ctx, DbgMsgType type, const char* module, const 
  *
  * @return  1 = print, 0 = don't print
  */
-int _QCC_DbgPrintCheck(DbgMsgType type, const char* module);
+int AJ_CALL _QCC_DbgPrintCheck(DbgMsgType type, const char* module);
 
 /**
  * @internal
@@ -341,8 +341,8 @@ int _QCC_DbgPrintCheck(DbgMsgType type, const char* module);
  * @param data      Pointer to the data to be dumped.
  * @param dataLen   Length of the data to be dumped.
  */
-void _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, int lineno,
-                     const char* dataStr, const void* data, size_t dataLen);
+void AJ_CALL _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, int lineno,
+                             const char* dataStr, const void* data, size_t dataLen);
 
 /**
  * @internal
@@ -350,7 +350,7 @@ void _QCC_DbgDumpHex(DbgMsgType type, const char* module, const char* filename, 
  *
  * @param ctx       Debug context created by _QCC_DbgPrintContext.
  */
-const char* _QCC_DbgGetMsg(void* ctx);
+const char* AJ_CALL _QCC_DbgGetMsg(void* ctx);
 
 /**
  * @internal
@@ -358,7 +358,7 @@ const char* _QCC_DbgGetMsg(void* ctx);
  *
  * @param ctx       Debug context created by _QCC_DbgPrintContext.
  */
-void _QCC_DbgDeleteCtx(void* ctx);
+void AJ_CALL _QCC_DbgDeleteCtx(void* ctx);
 
 /**
  * @internal
