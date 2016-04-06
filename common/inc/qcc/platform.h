@@ -72,22 +72,30 @@
 
 #if (__GNUC__ >= 4) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1))
 #define QCC_DEPRECATED(func) func __attribute__((deprecated)) /**< mark a function as deprecated in gcc. */
+#define QCC_DEPRECATED_ON(func, date) func __attribute__((deprecated)) /**< same as above but with date of applying this macro, date format is yy.mm. */
 #define QCC_DEPRECATED_CLASS __attribute__((deprecated)) /**< mark a class as deprecated in qcc. */
+#define QCC_DEPRECATED_CLASS_ON(date) __attribute__((deprecated)) /**< same as above but with date of applying this macro, date format is yy.mm. */
 #else
 #define QCC_DEPRECATED(func) func /**< not all gcc versions support the deprecated attribute. */
+#define QCC_DEPRECATED_ON(func, date) func /**< not all gcc versions support the deprecated attribute. */
 #define QCC_DEPRECATED_CLASS /**< not all gcc versions support the deprecated attribute. */
+#define QCC_DEPRECATED_CLASS_ON(date) /**< not all gcc versions support the deprecated attribute. */
 #endif
 
 
 #elif defined(_MSC_VER)
 
 #define QCC_DEPRECATED(func) __declspec(deprecated) func /**< mark a function as deprecated in msvc. */
+#define QCC_DEPRECATED_ON(func, date) __declspec(deprecated) func /**< same as above but with date of applying this macro, date format is yy.mm. */
 #define QCC_DEPRECATED_CLASS __declspec(deprecated) /**< mark a class as deprecated in msvc. */
+#define QCC_DEPRECATED_CLASS_ON(date) __declspec(deprecated) /**< same as above but with date of applying this macro, date format is yy.mm. */
 
 #else /* Some unknown compiler */
 
-#define QCC_DEPRECATED(func); /**< mark a function as deprecated. */
-#define QCC_DEPRECATED_CLASS /**< mark a class as deprecated. */
+#define QCC_DEPRECATED(func) func
+#define QCC_DEPRECATED_ON(func, date) func
+#define QCC_DEPRECATED_CLASS
+#define QCC_DEPRECATED_CLASS_ON(date)
 
 #endif /* Compiler type */
 
