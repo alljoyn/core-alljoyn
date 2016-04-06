@@ -192,6 +192,17 @@ class Manifest {
      */
     const size_t GetRulesSize() const;
 
+    /**
+     * @brief   Checks if the manifest's rules and version equals
+     *          the other but skips the signatures.
+     *
+     * @param[in]  other   The other manifest.
+     *
+     * @return True if version and rules are equal.
+     *         False otherwise.
+     */
+    bool TemplateEquals(const Manifest& other) const;
+
   private:
 
     /**

@@ -50,10 +50,8 @@ class IdentityTests :
  *       -# Remove the original identity and verify that the applications
  *          are removed and they are claimable again.
  *       -# Get all managed applications and verify that none exists.
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {
+TEST_F(IdentityTests, SuccessfulInstallIdentity) {
     /* Start the application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
@@ -69,15 +67,15 @@ TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {
     /* Claim! */
     ASSERT_EQ(ER_OK, secMgr->Claim(app, info));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifestTemplate));
 
     /* Try to install another identity */
     IdentityInfo info2;
     info2.name = "AnotherName";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(info2));
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifest));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifestTemplate));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
-    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifestTemplate));
 
     /* Remove the identity info and make sure the app is claimable again*/
     ASSERT_EQ(ER_OK, storage->RemoveIdentity(info2));
@@ -90,7 +88,7 @@ TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {
      * */
     ASSERT_EQ(ER_OK, secMgr->Claim(app, info));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifestTemplate));
 
     TestApplication testApp1("NewApp");
     ASSERT_EQ(ER_OK, testApp1.Start());
@@ -99,7 +97,7 @@ TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {
     ASSERT_TRUE(WaitForState(app1, PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, secMgr->Claim(app1, info));
     ASSERT_TRUE(WaitForState(app1, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app1, info, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app1, info, aa.lastManifestTemplate));
 
     ASSERT_EQ(ER_OK, storage->RemoveIdentity(info)); // Should remove testApp and testApp1
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE)); //First app is claimable again
@@ -123,10 +121,8 @@ TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {
  *       -# Verify that updateIdentity is succesful.
  *       -# Make sure updates have been completed.
  *       -# Check that the policy version increased.
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(IdentityTests, DISABLED_UpdateIdentityPolicyUpdate) {
+TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
     /* Start the test application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
@@ -146,7 +142,7 @@ TEST_F(IdentityTests, DISABLED_UpdateIdentityPolicyUpdate) {
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifestTemplate));
 
     vector<GroupInfo> policyGroups;
     PermissionPolicy policy;
@@ -160,9 +156,9 @@ TEST_F(IdentityTests, DISABLED_UpdateIdentityPolicyUpdate) {
     IdentityInfo info2;
     info2.name = "AnotherName";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(info2));
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifest));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifestTemplate));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
-    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifestTemplate));
     uint32_t remoteVersion;
     ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
     ASSERT_EQ(1 + currentVersion, remoteVersion);

@@ -261,10 +261,8 @@ class CertChainHandlingTests :
  *       -# Claim an application and provide the agent an identity certificate chain
  *       -# Check whether the application is CLAIMED.
  *       -# Check if the application returns the full identity certificate chain
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(CertChainHandlingTests, DISABLED_ClaimChain) {
+TEST_F(CertChainHandlingTests, ClaimChain) {
     IdentityCertificateChain singleIdCertChain;
     ASSERT_EQ(ER_OK, GetIdentity(testAppInfo, singleIdCertChain));
     CHECK_IDENTITY_CHAIN(singleIdCertChain);
@@ -289,10 +287,8 @@ TEST_F(CertChainHandlingTests, DISABLED_ClaimChain) {
  *       -# Check if the application returns the full membership certificate chain
  *       -# Install 2 more chains and verify they are found as well
  *       -# Check if these chains can be removed and the application presents an empty list of membership certificates
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(CertChainHandlingTests, DISABLED_InstallMembershipChain) {
+TEST_F(CertChainHandlingTests, InstallMembershipChain) {
     wrappedCa->addMembershipRootCert = true;
     storage->StoreGroup(groupInfo);
     ASSERT_EQ(ER_OK, storage->InstallMembership(testAppInfo, groupInfo));
@@ -331,16 +327,14 @@ TEST_F(CertChainHandlingTests, DISABLED_InstallMembershipChain) {
  *       -# update the identity of an application and provide the agent an identity certificate chain
  *       -# Check whether the application is updated successfully.
  *       -# Check if the application returns the full identity certificate chain
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(CertChainHandlingTests, DISABLED_UpdateIdentityChains) {
+TEST_F(CertChainHandlingTests, UpdateIdentityChains) {
     IdentityCertificateChain singleIdCertChain;
     ASSERT_EQ(ER_OK, GetIdentity(testAppInfo, singleIdCertChain));
     CHECK_IDENTITY_CHAIN(singleIdCertChain);
     wrappedCa->addIdRootCert = true;
 
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(testAppInfo, idInfo, aa.lastManifest));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(testAppInfo, idInfo, aa.lastManifestTemplate));
     ASSERT_TRUE(WaitForUpdatesCompleted());
     IdentityCertificateChain idCertChain;
     ASSERT_EQ(ER_OK, GetIdentity(testAppInfo, idCertChain));
@@ -354,10 +348,8 @@ TEST_F(CertChainHandlingTests, DISABLED_UpdateIdentityChains) {
  *       -# update the identity of an application and provide the agent an identity certificate chain
  *       -# Check if the agent returns a correct membership list
  *       -# Check if the agent returns the full identity certificate chain
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(CertChainHandlingTests, DISABLED_RegisterAgent) {
+TEST_F(CertChainHandlingTests, RegisterAgent) {
     OnlineApplication agent;
     agent.busName = ba->GetUniqueName().c_str();
 
