@@ -56,12 +56,17 @@ QStatus CredentialAccessor::GetPeerGuid(qcc::String& peerName, qcc::GUID128& gui
     return ER_BUS_NO_PEER_GUID;
 }
 
-QStatus CredentialAccessor::GetDSAPublicKey(qcc::ECCPublicKey& publicKey)
+QStatus CredentialAccessor::GetDSAPublicKey(qcc::ECCPublicKey& publicKey, bool validate)
 {
     KeyStore::Key key;
     qcc::KeyBlob kb;
     GetLocalKey(qcc::KeyBlob::DSA_PUBLIC, key);
-    QStatus status = GetKey(key, kb);
+    QStatus status;
+    if (validate) {
+        status = GetKey(key, kb, &key);
+    } else {
+        status = GetKey(key, kb);
+    }
     if (status != ER_OK) {
         return status;
     }
@@ -121,9 +126,9 @@ QStatus CredentialAccessor::GetLocalKey(qcc::KeyBlob::Type keyType, KeyStore::Ke
     return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
 }
 
-QStatus CredentialAccessor::GetKey(const KeyStore::Key& key, qcc::KeyBlob& keyBlob)
+QStatus CredentialAccessor::GetKey(const KeyStore::Key& key, qcc::KeyBlob& keyBlob, KeyStore::Key* validate)
 {
-    return bus.GetInternal().GetKeyStore().GetKey(key, keyBlob);
+    return bus.GetInternal().GetKeyStore().GetKey(key, keyBlob, validate);
 }
 
 QStatus CredentialAccessor::DeleteKey(const KeyStore::Key& key)

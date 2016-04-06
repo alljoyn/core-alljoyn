@@ -1624,7 +1624,7 @@ class ClaimThread2 : public Thread {
         ECCPublicKey peer1PublicKey;
         KeyInfoNISTP256 keyInfo;
         PermissionConfigurator& pc1 = thiz->peer1Bus.GetPermissionConfigurator();
-        EXPECT_EQ(ER_OK, pc1.GetSigningPublicKey(keyInfo));
+        EXPECT_EQ(ER_OK, pc1.GetSigningPublicKey(keyInfo, true));
         peer1PublicKey = *keyInfo.GetPublicKey();
 
         Manifest manifests[1];

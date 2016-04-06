@@ -129,14 +129,14 @@ QStatus PermissionConfigurator::Reset()
     return permissionMgmtObj->Reset();
 }
 
-QStatus PermissionConfigurator::GetSigningPublicKey(KeyInfoECC& keyInfo)
+QStatus PermissionConfigurator::GetSigningPublicKey(KeyInfoECC& keyInfo, bool validate)
 {
     if (keyInfo.GetCurve() != Crypto_ECC::ECC_NIST_P256) {
         return ER_NOT_IMPLEMENTED;  /* currently only support NIST P256 curve */
     }
     CredentialAccessor ca(m_internal->m_bus);
     ECCPublicKey publicKey;
-    QStatus status = ca.GetDSAPublicKey(publicKey);
+    QStatus status = ca.GetDSAPublicKey(publicKey, validate);
     if (status != ER_OK) {
         return status;
     }

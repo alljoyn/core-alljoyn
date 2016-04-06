@@ -216,7 +216,7 @@ class KeyStore {
      *      - ER_BUS_KEY_UNAVAILABLE if key is unavailable
      *      - ER_BUS_KEY_EXPIRED if the requested key has expired
      */
-    QStatus GetKey(const Key &key, qcc::KeyBlob & keyBlob, uint8_t accessRights[4]);
+    QStatus GetKey(const Key &key, qcc::KeyBlob & keyBlob, uint8_t accessRights[4], KeyStore::Key* validate = NULL);
 
     /**
      * Get a key blob from the key store
@@ -228,10 +228,10 @@ class KeyStore {
      *      - ER_BUS_KEY_UNAVAILABLE if key is unavailable
      *      - ER_BUS_KEY_EXPIRED if the requested key has expired
      */
-    QStatus GetKey(const Key& key, qcc::KeyBlob& keyBlob)
+    QStatus GetKey(const Key& key, qcc::KeyBlob& keyBlob, KeyStore::Key* validate = NULL)
     {
         uint8_t accessRights[4];
-        return GetKey(key, keyBlob, accessRights);
+        return GetKey(key, keyBlob, accessRights, validate);
     }
 
     /**
@@ -433,7 +433,7 @@ class KeyStore {
      */
     QStatus SearchAssociatedKeys(const Key& key, Key** list, size_t* numItems);
 
-  private:
+  public:
 
     class KeyStoreEncryptionKey : public qcc::KeyBlob {
       public:
@@ -505,7 +505,7 @@ class KeyStore {
     /**
      * Internal Load function
      */
-    QStatus Load();
+    QStatus Load(KeyStore::Key* validate = NULL);
 
     /**
      * wait for the guid to set

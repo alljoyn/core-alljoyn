@@ -409,11 +409,17 @@ QStatus KeyStore::LoadPersistentKeys()
  *          persistent storage revision.  The entry be merged only if its
  *          revision is not older than the persistent storage revision.
  */
-QStatus KeyStore::Load()
+QStatus KeyStore::Load(KeyStore::Key* validate)
 {
     QCC_DbgHLPrintf(("KeyStore::Load"));
 
+    size_t hist[55] = {0};
+
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
+
+    QCC_ASSERT(!validate || (keys->find(*validate) != keys->end()));
+    hist[0] = keys->size();
+    
     ExclusiveLockRefreshState refreshState = exclusiveLockRefreshState;
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
 
@@ -425,15 +431,24 @@ QStatus KeyStore::Load()
     }
 
     /*
+     * We need to hold the read lock during the 'merge' operation, but since there's no read
+     * lock implemented yet in this file, we're just holding the write lock for now.
+     */
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
+    hist[2] = keys->size();
+
+    /*
      * Load the keys so we can check for changes and merge if needed
      */
     QStatus status = LoadPersistentKeys();
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
     if (ER_OK != status) {
         return status;
     }
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     storeState = UNAVAILABLE;
+    hist[4] = keys->size();
 
     /*
      * Check if key store has been changed since we last touched it.
@@ -497,11 +512,18 @@ QStatus KeyStore::Load()
             storeState = LOADED;
         }
     } else {
+        hist[6] = keys->size();
+        hist[20] = persistentKeys->size();
         /*
          * nothing changes
          */
         persistentKeys->clear();
         storeState = LOADED;
+    }
+
+    if (status == ER_OK) {
+        hist[8] = keys->size();
+        QCC_ASSERT(!validate || (keys->find(*validate) != keys->end()));
     }
 
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
@@ -626,7 +648,8 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
                             }
                         }
                     }
-                    QCC_DbgPrintf(("KeyStore::Pull rev:%d GUID %s %s", rev, QCC_StatusText(status), guid.ToString().c_str()));
+                    qcc::String guidStr = guid.ToString();
+                    QCC_DbgPrintf(("KeyStore::Pull rev:%d GUID %s %s", rev, QCC_StatusText(status), guidStr.c_str()));
                 }
             }
             if (status == ER_EOF) {
@@ -667,7 +690,7 @@ ExitPull:
 
 void KeyStore::LoadFromEmptyFile(const qcc::String& password)
 {
-    QCC_DbgPrintf(("KeyStore::PullEmptyKeyStore"));
+    QCC_DbgPrintf(("KeyStore::LoadFromEmptyFile"));
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
 
@@ -857,12 +880,13 @@ ExitPush:
     return status;
 }
 
-QStatus KeyStore::GetKey(const Key& key, KeyBlob& keyBlob, uint8_t accessRights[4])
+QStatus KeyStore::GetKey(const Key& key, KeyBlob& keyBlob, uint8_t accessRights[4], KeyStore::Key* validate)
 {
-    QCC_DbgPrintf(("KeyStore::GetKey %s", key.ToString().c_str()));
+    qcc::String guid = key.ToString();
+    QCC_DbgPrintf(("KeyStore::GetKey %s", guid.c_str()));
 
     /* Refresh the keystore. */
-    (void)Load();
+    (void)Load(validate);
 
     KeyRecord* keyRec = nullptr;
     KeyBlob* kb = nullptr;

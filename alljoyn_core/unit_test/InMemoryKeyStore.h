@@ -49,10 +49,17 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
     }
 
     QStatus LoadRequest(KeyStore& keyStore) {
-        lock.Lock(MUTEX_CONTEXT);
+        QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
+        memset(hist, 0, sizeof(hist));
+        hist[0] = keyStore.keys->size();
+        hist[1] = keyStore.persistentKeys->size();
         qcc::StringSource source(sink.GetString());
+        hist[2] = keyStore.keys->size();
+        hist[3] = keyStore.persistentKeys->size();
         QStatus status = keyStore.Pull(source, pwd);
-        lock.Unlock(MUTEX_CONTEXT);
+        hist[4] = keyStore.keys->size();
+        hist[5] = keyStore.persistentKeys->size();
+        QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         return status;
     }
 
@@ -62,10 +69,10 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         if (ER_OK != status) {
             return status;
         }
-        lock.Lock(MUTEX_CONTEXT);
+        QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
         sink.Clear();
         status = CopySink(newSink.GetString());
-        lock.Unlock(MUTEX_CONTEXT);
+        QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         return status;
     }
 
@@ -88,23 +95,42 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         }
         return *this;
     }
+#if 0
+    QStatus AcquireExclusiveLock(const char* file, uint32_t line)
+    {
+        QCC_VERIFY(ER_OK == lock.Lock(file, line));
+        return ER_OK;
+    }
 
+    void ReleaseExclusiveLock(const char* file, uint32_t line)
+    {
+        QCC_VERIFY(ER_OK == lock.Unlock(file, line));
+    }
+#endif
   private:
 
     QStatus CopySink(qcc::String& other)
     {
         size_t numSent = 0;
-        return sink.PushBytes(other.data(), other.length(), numSent);
+        QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
+        QStatus status = sink.PushBytes(other.data(), other.length(), numSent);
+        QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
+        return status;
     }
 
     QStatus CopySink(const qcc::StringSink& other)
     {
-        return CopySink(((qcc::StringSink&) other).GetString());
+        QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
+        QStatus status = CopySink(((qcc::StringSink&) other).GetString());
+        QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
+        return status;
     }
 
     qcc::Mutex lock;
     qcc::StringSink sink;
     qcc::String pwd;
+    size_t hist[11];
+    
 };
 
 }

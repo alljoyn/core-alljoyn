@@ -95,7 +95,7 @@ class CredentialAccessor {
      *      - ER_OK if successful
      *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
      */
-    QStatus GetKey(const KeyStore::Key& key, qcc::KeyBlob& keyBlob);
+    QStatus GetKey(const KeyStore::Key& key, qcc::KeyBlob& keyBlob, KeyStore::Key* validate = NULL);
 
     /**
      * Get DSA Public key linked with the CredentialAccessor
@@ -105,7 +105,7 @@ class CredentialAccessor {
      *      - ER_OK if successful
      *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
      */
-    QStatus GetDSAPublicKey(qcc::ECCPublicKey& publicKey);
+    QStatus GetDSAPublicKey(qcc::ECCPublicKey& publicKey, bool validate = false);
 
     /**
      * Get DSA Private key linked with the CredentialAccessor

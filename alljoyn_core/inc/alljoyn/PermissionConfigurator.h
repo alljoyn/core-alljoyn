@@ -151,7 +151,7 @@ class PermissionConfigurator {
      * @param[out] keyInfo the public key info
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus GetSigningPublicKey(qcc::KeyInfoECC& keyInfo);
+    QStatus GetSigningPublicKey(qcc::KeyInfoECC& keyInfo, bool validate = false);
 
     /**
      * Sign the X509 certificate using the signing key
