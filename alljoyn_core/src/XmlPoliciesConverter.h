@@ -54,6 +54,16 @@ class XmlPoliciesConverter {
   public:
 
     /**
+     * Mapping between the PermissionPolicy::Peer::PeerType enum and the string format.
+     */
+    static std::map<PermissionPolicy::Peer::PeerType, std::string> s_inversePeerTypeMap;
+
+    /*
+     * Initializes the static members.
+     */
+    static void Init();
+
+    /**
      * Extract policy from an XML. The policy XML schema
      * is available under alljoyn_core/docs/policy.xsd.
      *
@@ -65,6 +75,17 @@ class XmlPoliciesConverter {
      *           #ER_XML_MALFORMED if the XML does not follow the policy XML schema.
      */
     static QStatus FromXml(AJ_PCSTR policyXml, PermissionPolicy& policy);
+
+    /**
+     * Extract policy XML from PermissionPolicy object.
+     *
+     * @param[in]    policy      Policy to be converted.
+     * @param[out]   policyXml   Policy in XML format.
+     *
+     * @return   #ER_OK      If extracted correctly.
+     *           #ER_FAIL    If the policy contains invalid data.
+     */
+    static QStatus ToXml(const PermissionPolicy& policy, AJ_PSTR* policyXml);
 
   private:
 
@@ -191,6 +212,96 @@ class XmlPoliciesConverter {
      *           False otherwise.
      */
     static bool PeerContainsSgId(const qcc::XmlElement* peerXml);
+
+    /**
+     * Sets all of the XML PermissionPolicy values according to the input object.
+     *
+     * @param[in]   policy           Reference to the input policy.
+     * @param[out]  policyXmlElement Root element of the policy XML.
+     */
+    static void BuildPolicy(const PermissionPolicy& policy, qcc::XmlElement* policyXmlElement);
+
+    /**
+     * Set the XML PermissionPolicy version according to the input object.
+     *
+     * @param[in]   policy           Reference to the input policy.
+     * @param[out]  policyXmlElement Root element of the policy XML.
+     */
+    static void SetPolicyVersion(const PermissionPolicy& policy, qcc::XmlElement* policyXmlElement);
+
+    /**
+     * Set the XML PermissionPolicy serial number according to the input object.
+     *
+     * @param[in]   policy           Reference to the input policy.
+     * @param[out]  policyXmlElement Root element of the policy XML.
+     */
+    static void SetPolicySerialNumber(const PermissionPolicy& policy, qcc::XmlElement* policyXmlElement);
+
+    /**
+     * Set the XML PermissionPolicy ACLs according to the input object.
+     *
+     * @param[in]   policy           Reference to the input policy.
+     * @param[out]  policyXmlElement Root element of the policy XML.
+     */
+    static void SetPolicyAcls(const PermissionPolicy& policy, qcc::XmlElement* policyXmlElement);
+
+    /**
+     * Add the XML PermissionPolicy ACL according to the input object.
+     *
+     * @param[in]   acl      Reference to the input ACL.
+     * @param[out]  aclsXml  XML "acls" element.
+     */
+    static void AddAcl(const PermissionPolicy::Acl& acl, qcc::XmlElement* aclsXml);
+
+    /**
+     * Add the XML PermissionPolicy peers according to the input object.
+     *
+     * @param[in]   peers        An array of input Peer objects.
+     * @param[in]   peersSize    Elements count in the "peers" array.
+     * @param[out]  aclXml       XML "acl" element.
+     */
+    static void SetAclPeers(const PermissionPolicy::Peer* peers, size_t peersSize, qcc::XmlElement* aclXml);
+
+    /**
+     * Converts a PermissionPolicy::Peer object to the XML "acl" element.
+     *
+     * @param[in]   peer     Single Peer object.
+     * @param[out]  peersXml XML "peers" element.
+     */
+    static void AddPeer(const PermissionPolicy::Peer& peer, qcc::XmlElement* peersXml);
+
+    /**
+     * Adds a "type" element to the XML "peer" element.
+     *
+     * @param[in]    peer    Single Peer object.
+     * @param[out]   peerXMl XML "peer" element.
+     */
+    static void SetPeerType(const PermissionPolicy::Peer& peer, qcc::XmlElement* peerXml);
+
+    /**
+     * Adds a "publicKey" element to the XML "peer" element.
+     *
+     * @param[in]    peer    Single Peer object.
+     * @param[out]   peerXMl XML "peer" element.
+     */
+    static void SetPeerPublicKey(const PermissionPolicy::Peer& peer, qcc::XmlElement* peerXml);
+
+    /**
+     * Adds a "sgID" element to the XML "peer" element.
+     *
+     * @param[in]    peer    Single Peer object.
+     * @param[out]   peerXMl XML "peer" element.
+     */
+    static void SetPeerSgId(const PermissionPolicy::Peer& peer, qcc::XmlElement* peerXml);
+
+    /**
+     * Add the XML PermissionPolicy rules according to the input object.
+     *
+     * @param[in]   rules        An array of input Rule objects.
+     * @param[in]   rulesSize    Elements count in the "rules" array.
+     * @param[out]  aclXml       XML "acl" element.
+     */
+    static void SetAclRules(const PermissionPolicy::Rule* rules, size_t rulesSize, qcc::XmlElement* aclXml);
 };
 } /* namespace ajn */
 #endif
