@@ -266,7 +266,7 @@ class XmlRulesConverterToXmlCountTest : public testing::TestWithParam<SizeParams
 
     virtual void SetUp()
     {
-        ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(GetParam().rulesXml, rulesVector));
+        ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(GetParam().xml, rulesVector));
         rules = rulesVector.data();
         rulesCount = rulesVector.size();
     }
@@ -433,6 +433,7 @@ TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetSameXmlAfterTwoConversio
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(retrievedRules.data(), retrievedRules.size(), &secondRetrievedManifestTemplateXml));
 
     EXPECT_STREQ(retrievedManifestTemplateXml, secondRetrievedManifestTemplateXml);
+    delete[] secondRetrievedManifestTemplateXml;
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetValidMethodForValidAllCasesManifestTemplate)

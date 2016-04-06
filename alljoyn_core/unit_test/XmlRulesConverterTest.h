@@ -16,17 +16,7 @@
 
 #include <string>
 #include <vector>
-
-struct SizeParams {
-  public:
-    AJ_PCSTR rulesXml;
-    size_t integer;
-
-    SizeParams(AJ_PCSTR _rulesXml, size_t _integer) :
-        rulesXml(_rulesXml),
-        integer(_integer)
-    { }
-};
+#include "XmlConverterTest.h"
 
 struct TwoStringsParams {
   public:
