@@ -28,6 +28,7 @@
 #include "BusInternal.h"
 #include "KeyStoreListener.h"
 #include "NamedPipeClientTransport.h"
+#include "XmlPoliciesConverter.h"
 #include "XmlPoliciesValidator.h"
 #include "XmlRulesConverter.h"
 #include "XmlRulesValidator.h"
@@ -47,6 +48,7 @@ class StaticGlobals {
         AutoPingerInternal::Init();
         PasswordManager::Init();
         BusAttachment::Internal::Init();
+        XmlPoliciesConverter::Init();
         XmlPoliciesValidator::Init();
         XmlRulesConverter::Init();
         XmlRulesValidator::Init();
