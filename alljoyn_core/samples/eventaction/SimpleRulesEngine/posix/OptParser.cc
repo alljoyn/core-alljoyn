@@ -16,6 +16,7 @@
 #include "OptParser.h"
 #include <alljoyn/version.h>
 #include <fstream>
+#include <stdlib.h>
 
 
 static const char versionPreamble[] = "AboutService version: %s\n"
