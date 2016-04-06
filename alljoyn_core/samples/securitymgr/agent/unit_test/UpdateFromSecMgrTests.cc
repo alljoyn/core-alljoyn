@@ -159,10 +159,8 @@ class UpdateFromSecmgrTest :
  *          containing the claimed app.
  *       -# Ensure that the number of times update started and completed
  *          have been incremented.
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(UpdateFromSecmgrTest, DISABLED_BasicUpdateFromSecMgr) {
+TEST_F(UpdateFromSecmgrTest, BasicUpdateFromSecMgr) {
     secMgr->UpdateApplications();
 
     ASSERT_TRUE(wrappedCa->WaitForStageUpdates(UPDATE_STARTED, testAppInfo, 2)); // once by the auto-updater
