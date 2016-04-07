@@ -62,8 +62,8 @@ class String {
      * @param c         Initial value for string
      * @param sizeHint  Optional size hint for initial allocation.
      */
-    QCC_DEPRECATED(String(char c, size_t sizeHint)) { s.reserve(sizeHint); s.assign(1, c); }
-    QCC_DEPRECATED(String(char c)) : s(1, c) { }
+    QCC_DEPRECATED_ON(String(char c, size_t sizeHint), 16.04) { s.reserve(sizeHint); s.assign(1, c); }
+    QCC_DEPRECATED_ON(String(char c), 16.04) : s(1, c) { }
 
     /**
      * Construct a String with n copies of char.
@@ -72,7 +72,7 @@ class String {
      * @param c         Character used to fill string.
      * @param sizeHint  Optional size hint for initial allocation.
      */
-    QCC_DEPRECATED(String(size_type n, char c, size_t sizeHint)) {
+    QCC_DEPRECATED_ON(String(size_type n, char c, size_t sizeHint), 16.04) {
         s.reserve(sizeHint);
         s.assign(n, c);
     }
@@ -85,7 +85,7 @@ class String {
      * @param strLen     Length of string or 0 if str is null terminated
      * @param sizeHint   Optional size hint used for initial malloc if larger than str length.
      */
-    QCC_DEPRECATED(String(const char* str, size_type strLen, size_t sizeHint));
+    QCC_DEPRECATED_ON(String(const char* str, size_type strLen, size_t sizeHint), 16.04);
     String(const char* str, size_type strLen);
     String(const char* str);
 
@@ -166,7 +166,7 @@ class String {
      *
      * @param sizeHint   Allocation size hint used if string must be reallocated.
      */
-    QCC_DEPRECATED(void clear(size_t sizeHint)) { s.clear(); s.resize(sizeHint); }
+    QCC_DEPRECATED_ON(void clear(size_t sizeHint), 16.04) { s.clear(); s.resize(sizeHint); }
     void clear() { s.clear(); }
 
     /**
@@ -187,7 +187,7 @@ class String {
      * @return  The number of other string instances that were cleared as a side-effect of clearing
      *          this string.
      */
-    QCC_DEPRECATED(size_type secure_clear());
+    QCC_DEPRECATED_ON(size_type secure_clear(), 16.04);
 
     /**
      * Append a string or substring to string. This function will append all characters up to the
@@ -223,7 +223,7 @@ class String {
      * @param c Character to append to string.
      * @return  Reference to this string.
      */
-    QCC_DEPRECATED(String append(const char c)) { return s.append(1, c); }
+    QCC_DEPRECATED_ON(String append(const char c), 16.04) { return s.append(1, c); }
 
     /**
      * Erase a range of chars from string.
@@ -431,7 +431,7 @@ class String {
      * @param pos  Optional starting position for search (one past end of substring to search).
      * @return     Position of last occurrence of c within string or npos if not found.
      */
-    QCC_DEPRECATED(size_t find_last_of(const char c, size_t pos = npos) const) {
+    QCC_DEPRECATED_ON(size_t find_last_of(const char c, size_t pos = npos) const, 16.04) {
         return (pos == static_cast<size_t>(0)) ? npos : s.find_last_of(c, pos - 1);
     }
 
@@ -464,7 +464,7 @@ class String {
      * @param pos        Optional starting position within this string for search (one past end of substring to search).
      * @return           Position of last occurrence of one of inChars within string or npos if not found.
      */
-    QCC_DEPRECATED(size_t find_last_of(const char* inChars, size_t pos = npos) const) {
+    QCC_DEPRECATED_ON(size_t find_last_of(const char* inChars, size_t pos = npos) const, 16.04) {
         return (pos == static_cast<size_t>(0)) ? npos : s.find_last_of(inChars, pos - 1);
     }
 
@@ -517,7 +517,7 @@ class String {
      * @param  n    Number of bytes in substring.
      * @return  The reversed substring of this string.
      */
-    QCC_DEPRECATED(std::string revsubstr(size_type pos = 0, size_type n = npos) const);
+    QCC_DEPRECATED_ON(std::string revsubstr(size_type pos = 0, size_type n = npos) const, 16.04);
 
     /**
      * Compare this string with other.
@@ -538,7 +538,7 @@ class String {
      *
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    QCC_DEPRECATED(int compare(size_type pos, size_type n, const String& other, size_type otherPos, size_type otherN) const);
+    QCC_DEPRECATED_ON(int compare(size_type pos, size_type n, const String& other, size_type otherPos, size_type otherN) const, 16.04);
 
     /**
      * Compare a substring of this string with a substring of other. std::string compliant version.
@@ -563,7 +563,7 @@ class String {
      * @param other  String to compare with.
      * @return  &lt;0 if this string is less than other or when n == 0 and other String is not empty, &gt;0 if this string is greater than other, 0 if equal.
      */
-    QCC_DEPRECATED(int compare(size_type pos, size_type n, const String& other) const);
+    QCC_DEPRECATED_ON(int compare(size_type pos, size_type n, const String& other) const, 16.04);
 
     /**
      * Compare a substring of this string with other. std::string compliant version.
@@ -586,7 +586,7 @@ class String {
      * @param other  String to compare with.
      * @return  &lt;0 if this string is less than other, &gt;0 if this string is greater than other, 0 if equal.
      */
-    QCC_DEPRECATED(int compare(size_type pos, size_type n, const char* other) const) {
+    QCC_DEPRECATED_ON(int compare(size_type pos, size_type n, const char* other) const, 16.04) {
         return ::strncmp(s.c_str() + pos, other, n < s.length() ? n : s.length());
     }
 
