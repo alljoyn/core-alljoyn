@@ -94,6 +94,7 @@ FileSource FileSource::operator=(const FileSource& other)
 
 FileSource::~FileSource()
 {
+    Unlock();
     if (ownsFd && (0 <= fd)) {
         close(fd);
     }
@@ -148,6 +149,21 @@ bool FileSource::Lock(bool block)
         int ret = flock(fd, block ? LOCK_EX : LOCK_EX | LOCK_NB);
         if (ret && errno != EWOULDBLOCK) {
             QCC_LogError(ER_OS_ERROR, ("Lock fd %d failed with '%s'", fd, strerror(errno)));
+        }
+        locked = (ret == 0);
+    }
+    return locked;
+}
+
+bool FileSource::LockShared(bool block)
+{
+    if (fd < 0) {
+        return false;
+    }
+    if (!locked) {
+        int ret = flock(fd, block ? LOCK_SH : LOCK_SH | LOCK_NB);
+        if (ret && errno != EWOULDBLOCK) {
+            QCC_LogError(ER_OS_ERROR, ("Shared lock fd %d failed with '%s'", fd, strerror(errno)));
         }
         locked = (ret == 0);
     }
@@ -222,6 +238,11 @@ FileSink::FileSink(qcc::String fileName, Mode mode)
     }
 }
 
+FileSink::FileSink(qcc::String fileName, bool own) :
+    fd(open(fileName.c_str(), O_WRONLY)), event(new Event(fd, Event::IO_WRITE)), ownsFd(own), locked(false)
+{
+}
+
 FileSink::FileSink()
     : fd(1), event(new Event(fd, Event::IO_WRITE)), ownsFd(false), locked(false)
 {
@@ -249,6 +270,7 @@ FileSink FileSink::operator=(const FileSink& other)
 
 FileSink::~FileSink()
 {
+    Unlock();
     if (ownsFd && (0 <= fd)) {
         close(fd);
     }

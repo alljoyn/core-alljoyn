@@ -134,6 +134,16 @@ class FileSource : public Source {
     bool Lock(bool block = false);
 
     /**
+     * Lock the underlying file for shared access
+     *
+     * @param block  If block is true the function will block until file access if permitted.
+     *
+     * @return Returns true if the file was locked, false if the file was not locked or if the file
+     *         was not valid, i.e. if IsValid() would returnf false;
+     */
+    bool LockShared(bool block = false);
+
+    /**
      * Unlock the file if previously locked
      */
     void Unlock();
@@ -168,6 +178,14 @@ class FileSink : public Sink {
      * @param fileName     Name of file to use as sink.
      */
     FileSink(qcc::String fileName, Mode mode = WORLD_READABLE);
+
+    /**
+     * Opens a FileSink. Does not create if file not exists, if file exists then not truncate.
+     *
+     * @param fileName     Name of file to use as sink.
+     * @param own          Set this to false to prevent this class from closing the handle.
+     */
+    FileSink(qcc::String fileName, bool own);
 
     /**
      * Create an FileSink for stdout
@@ -222,7 +240,7 @@ class FileSink : public Sink {
      * @param block  If block is true the function will block until file access if permitted.
      *
      * @return Returns true if the file was locked, false if the file was not locked or if the file
-     *         was not valid, i.e. if IsValid() would returnf false;
+     *         was not valid, i.e. if IsValid() would return false.
      */
     bool Lock(bool block = false);
 
