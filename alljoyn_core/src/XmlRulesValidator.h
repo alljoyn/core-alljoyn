@@ -56,6 +56,7 @@ namespace ajn {
 #define METHOD_MEMBER_TYPE "method"
 #define PROPERTY_MEMBER_TYPE "property"
 #define SIGNAL_MEMBER_TYPE "signal"
+#define NOT_SPECIFIED_MEMBER_TYPE "any"
 #define DENY_MEMBER_MASK "Deny"
 #define OBSERVE_MEMBER_MASK "Observe"
 #define PROVIDE_MEMBER_MASK "Provide"
@@ -549,6 +550,7 @@ class XmlRulesValidator : public XmlValidator {
             m_validators[PermissionPolicy::Rule::Member::MemberType::METHOD_CALL] = new MethodsValidator();
             m_validators[PermissionPolicy::Rule::Member::MemberType::PROPERTY] = new PropertiesValidator();
             m_validators[PermissionPolicy::Rule::Member::MemberType::SIGNAL] = new SignalsValidator();
+            m_validators[PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED] = new PropertiesValidator();
         }
 
         ~MemberValidatorFactory()

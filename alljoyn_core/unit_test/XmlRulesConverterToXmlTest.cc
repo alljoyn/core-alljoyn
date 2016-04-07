@@ -35,6 +35,7 @@ using namespace ajn;
 #define METHOD_MEMBER_INDEX 0
 #define PROPERTY_MEMBER_INDEX 1
 #define SIGNAL_MEMBER_INDEX 2
+#define ANY_MEMBER_INDEX 3
 
 static AJ_PCSTR s_validAllCasesManifestTemplate =
     "<manifest>"
@@ -53,6 +54,11 @@ static AJ_PCSTR s_validAllCasesManifestTemplate =
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
     "</signal>"
+    "<any name = \"Any0\">"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</any>"
     "<method name = \"Method1\">"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
@@ -66,6 +72,11 @@ static AJ_PCSTR s_validAllCasesManifestTemplate =
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
     "</signal>"
+    "<any name = \"Any1\">"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</any>"
     "</interface>"
     "<interface name = \"org.interface1\">"
     "<method>"
@@ -77,6 +88,9 @@ static AJ_PCSTR s_validAllCasesManifestTemplate =
     "<signal>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
     "</signal>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
     "</interface>"
     "</node>"
     "<node name = \"/Node1\">"
@@ -90,6 +104,9 @@ static AJ_PCSTR s_validAllCasesManifestTemplate =
     "<signal>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
     "</signal>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
     "</interface>"
     "</node>"
     "</manifest>";
@@ -367,6 +384,13 @@ TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameSi
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::RulesToXml(m_validRules, m_rulesCount, m_retrievedManifestTemplateXml));
 }
 
+TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameAnyMemberType)
+{
+    MembersOverwriteUtils::ChangeMemberName(m_validRules[0], ANY_MEMBER_INDEX, "Any1");
+
+    EXPECT_EQ(ER_FAIL, XmlRulesConverter::RulesToXml(m_validRules, m_rulesCount, m_retrievedManifestTemplateXml));
+}
+
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMethodWithObserve)
 {
     MembersOverwriteUtils::ChangeMemberActionMask(m_validRules[0], METHOD_MEMBER_INDEX, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
@@ -415,9 +439,9 @@ TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetValidMethodForValidAllCa
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_validRules, m_rulesCount, m_retrievedManifestTemplateXml));
     ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_retrievedManifestTemplateXml.c_str(), m_retrievedRules));
     ASSERT_EQ((size_t)3, m_retrievedRules.size());
-    ASSERT_EQ((size_t)6, m_retrievedRules[0].GetMembersSize());
+    ASSERT_EQ((size_t)8, m_retrievedRules[0].GetMembersSize());
 
-    PermissionPolicy::Rule::Member methodMember = m_retrievedRules[0].GetMembers()[0];
+    PermissionPolicy::Rule::Member methodMember = m_retrievedRules[0].GetMembers()[METHOD_MEMBER_INDEX];
 
     EXPECT_STREQ("Method0", methodMember.GetMemberName().c_str());
     EXPECT_EQ(PermissionPolicy::Rule::Member::MemberType::METHOD_CALL, methodMember.GetMemberType());
@@ -430,9 +454,9 @@ TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetValidPropertyForValidNee
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_validRules, m_rulesCount, m_retrievedManifestTemplateXml));
     ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_retrievedManifestTemplateXml.c_str(), m_retrievedRules));
     ASSERT_EQ((size_t)3, m_retrievedRules.size());
-    ASSERT_EQ((size_t)6, m_retrievedRules[0].GetMembersSize());
+    ASSERT_EQ((size_t)8, m_retrievedRules[0].GetMembersSize());
 
-    PermissionPolicy::Rule::Member propertyMember = m_retrievedRules[0].GetMembers()[1];
+    PermissionPolicy::Rule::Member propertyMember = m_retrievedRules[0].GetMembers()[PROPERTY_MEMBER_INDEX];
 
     EXPECT_STREQ("Property0", propertyMember.GetMemberName().c_str());
     EXPECT_EQ(PermissionPolicy::Rule::Member::MemberType::PROPERTY, propertyMember.GetMemberType());
@@ -446,14 +470,30 @@ TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetValidSignalForValidNeedA
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_validRules, m_rulesCount, m_retrievedManifestTemplateXml));
     ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_retrievedManifestTemplateXml.c_str(), m_retrievedRules));
     ASSERT_EQ((size_t)3, m_retrievedRules.size());
-    ASSERT_EQ((size_t)6, m_retrievedRules[0].GetMembersSize());
+    ASSERT_EQ((size_t)8, m_retrievedRules[0].GetMembersSize());
 
-    PermissionPolicy::Rule::Member signalMember = m_retrievedRules[0].GetMembers()[2];
+    PermissionPolicy::Rule::Member signalMember = m_retrievedRules[0].GetMembers()[SIGNAL_MEMBER_INDEX];
 
     EXPECT_STREQ("Signal0", signalMember.GetMemberName().c_str());
     EXPECT_EQ(PermissionPolicy::Rule::Member::MemberType::SIGNAL, signalMember.GetMemberType());
     EXPECT_EQ(PermissionPolicy::Rule::Member::ACTION_PROVIDE
               | PermissionPolicy::Rule::Member::ACTION_OBSERVE, signalMember.GetActionMask());
+}
+
+TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetValidAnyMemberTypeForValidNeedAllManifestTemplate)
+{
+    ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_validRules, m_rulesCount, m_retrievedManifestTemplateXml));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_retrievedManifestTemplateXml.c_str(), m_retrievedRules));
+    ASSERT_EQ((size_t)3, m_retrievedRules.size());
+    ASSERT_EQ((size_t)8, m_retrievedRules[0].GetMembersSize());
+
+    PermissionPolicy::Rule::Member anyMember = m_retrievedRules[0].GetMembers()[ANY_MEMBER_INDEX];
+
+    EXPECT_STREQ("Any0", anyMember.GetMemberName().c_str());
+    EXPECT_EQ(PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED, anyMember.GetMemberType());
+    EXPECT_EQ(PermissionPolicy::Rule::Member::ACTION_MODIFY
+              | PermissionPolicy::Rule::Member::ACTION_PROVIDE
+              | PermissionPolicy::Rule::Member::ACTION_OBSERVE, anyMember.GetActionMask());
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetValidSpecificNodeName)
@@ -482,7 +522,6 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlInvalidObjectPaths,
                                           "/Node//Node",
                                           "Node",
                                           "/Node!",
-                                          "/Node*",
                                           "/Node/*/Node",
                                           "/Node**"));
 TEST_P(XmlRulesConverterToXmlInvalidObjectPathsTest, shouldReturnErrorForInvalidObjectPath)
@@ -500,7 +539,6 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlInvalidNames,
                                           LONG_INTERFACE_NAME,
                                           "org.interf@ce",
                                           "org.interface.*.moreInterface",
-                                          "org.interface*",
                                           "org.interface.**"));
 TEST_P(XmlRulesConverterToXmlInvalidInterfaceNamesTest, shouldReturnErrorForInvalidInterfaceName)
 {
@@ -533,18 +571,19 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlPass,
                                           s_validDifferentNamePropertiesInOneInterface,
                                           s_validSameNamePropertiesInSeparateInterfaces,
                                           s_validNamelessPropertiesInSeparateInterfaces,
-                                          s_validNodeWildcardOnly,
-                                          s_validNodeWithDigit,
-                                          s_validNodeWithName,
-                                          s_validNodeWithUnderscore,
-                                          s_validNodeWithWildcard,
-                                          s_validInterfaceWithName,
+                                          s_validDifferentNameSignalsInOneInterface,
+                                          s_validSameNameSignalsInSeparateInterfaces,
+                                          s_validNamelessSignalsInSeparateInterfaces,
+                                          s_validDifferentNameAnyMembersInOneInterface,
+                                          s_sameNameAnyMembersInSeparateInterfaces,
+                                          s_validNamelessAnyMembersInSeparateInterfaces,
+                                          s_validInterfaceNameWithWildcardNotAfterDot,
                                           s_validInterfaceWithDigit,
                                           s_validInterfaceWithUnderscore,
                                           s_validInterfaceWithWildcard,
                                           s_validMemberWithDigit,
                                           s_validMemberWithName,
-                                          s_validMemberWithUnderscore,
+                                          s_validNodeNameWithWildcardNotAfterSlash,
                                           s_validMemberWithWildcard,
                                           s_validMethodWithDeny));
 TEST_P(XmlRulesConverterToXmlPassTest, shouldPassForValidInput)
@@ -562,12 +601,14 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlRulesCount,
                                           SizeParams(s_validDifferentNameMethodsInOneInterface, 1),
                                           SizeParams(s_validDifferentNamePropertiesInOneInterface, 1),
                                           SizeParams(s_validDifferentNameSignalsInOneInterface, 1),
-                                          SizeParams(s_validSameNameMethodsInSeparateInterfaces, 2),
+                                          SizeParams(s_validDifferentNameAnyMembersInOneInterface, 1),
                                           SizeParams(s_validSameNamePropertiesInSeparateInterfaces, 2),
                                           SizeParams(s_validSameNameSignalsInSeparateInterfaces, 2),
                                           SizeParams(s_validNamelessMethodsInSeparateInterfaces, 2),
-                                          SizeParams(s_validNamelessPropertiesInSeparateInterfaces, 2),
-                                          SizeParams(s_validNamelessSignalsInSeparateInterfaces, 2)));
+                                          SizeParams(s_sameNameAnyMembersInSeparateInterfaces, 2),
+                                          SizeParams(s_validNamelessSignalsInSeparateInterfaces, 2),
+                                          SizeParams(s_validNamelessSignalsInSeparateInterfaces, 2),
+                                          SizeParams(s_validNamelessAnyMembersInSeparateInterfaces, 2)));
 TEST_P(XmlRulesConverterToXmlRulesCountTest, shouldGetCorrectRulesCount)
 {
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_rules, m_rulesCount, m_retrievedManifestTemplateXml));
@@ -581,7 +622,8 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlSameInerfaceMembersCount,
                         ::testing::Values(SizeParams(s_validDifferentNameMethodsInOneInterface, 2),
                                           SizeParams(s_validDifferentNamePropertiesInOneInterface, 2),
                                           SizeParams(s_validDifferentNameSignalsInOneInterface, 2),
-                                          SizeParams(s_validNeedAllManifestTemplate, 3)));
+                                          SizeParams(s_validDifferentNameAnyMembersInOneInterface, 2),
+                                          SizeParams(s_validNeedAllManifestTemplate, 4)));
 TEST_P(XmlRulesConverterToXmlMembersCountTest, shouldGetCorrectMembersCount)
 {
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_rules, m_rulesCount, m_retrievedManifestTemplateXml));
@@ -595,7 +637,8 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlSameInerfaceMemberNames,
                         XmlRulesConverterToXmlSameInterfaceMemberNamesTest,
                         ::testing::Values(TwoStringsParams(s_validDifferentNameMethodsInOneInterface, "Method0", "Method1"),
                                           TwoStringsParams(s_validDifferentNamePropertiesInOneInterface, "Property0", "Property1"),
-                                          TwoStringsParams(s_validDifferentNameSignalsInOneInterface, "Signal0", "Signal1")));
+                                          TwoStringsParams(s_validDifferentNameSignalsInOneInterface, "Signal0", "Signal1"),
+                                          TwoStringsParams(s_validDifferentNameAnyMembersInOneInterface, "Any0", "Any1")));
 TEST_P(XmlRulesConverterToXmlSameInterfaceMemberNamesTest, shouldGetCorrectSameInterfaceMemberNames)
 {
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_rules, m_rulesCount, m_retrievedManifestTemplateXml));
@@ -613,9 +656,11 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlSeparateInerfaceMemberNames,
                         ::testing::Values(TwoStringsParams(s_validSameNameMethodsInSeparateInterfaces, "Method", "Method"),
                                           TwoStringsParams(s_validSameNamePropertiesInSeparateInterfaces, "Property", "Property"),
                                           TwoStringsParams(s_validSameNameSignalsInSeparateInterfaces, "Signal", "Signal"),
-                                          TwoStringsParams(s_validNamelessMethodsInSeparateInterfaces, "*", "*"),
+                                          TwoStringsParams(s_sameNameAnyMembersInSeparateInterfaces, "Any", "Any"),
                                           TwoStringsParams(s_validNamelessPropertiesInSeparateInterfaces, "*", "*"),
-                                          TwoStringsParams(s_validNamelessSignalsInSeparateInterfaces, "*", "*")));
+                                          TwoStringsParams(s_validNamelessSignalsInSeparateInterfaces, "*", "*"),
+                                          TwoStringsParams(s_validNamelessSignalsInSeparateInterfaces, "*", "*"),
+                                          TwoStringsParams(s_validNamelessAnyMembersInSeparateInterfaces, "*", "*")));
 TEST_P(XmlRulesConverterToXmlSeparateInterfaceMemberNamesTest, shouldGetCorrectSeparateInterfacesMemberNames)
 {
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(m_rules, m_rulesCount, m_retrievedManifestTemplateXml));
