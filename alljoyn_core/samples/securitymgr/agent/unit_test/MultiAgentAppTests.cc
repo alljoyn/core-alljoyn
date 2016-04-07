@@ -179,7 +179,7 @@ class MultiAgentAppTests :
  *          applications.
  *       -# Verify that all applications have changed state to CLAIMABLE
  **/
-TEST_F(MultiAgentAppTests, DISABLED_SuccessfulClaimAndUnclaimManyApps) { //See ASACORE-2576
+TEST_F(MultiAgentAppTests, SuccessfulClaimAndUnclaimManyApps) {
     vector<OnlineApplication> agent2Apps;
     ASSERT_EQ(ER_OK, agent2->GetApplications(agent2Apps));
     ASSERT_EQ(apps.size(), agent2Apps.size());
@@ -214,7 +214,7 @@ TEST_F(MultiAgentAppTests, DISABLED_SuccessfulClaimAndUnclaimManyApps) { //See A
  *          that no sync errors have been encountered.
  *       -# Verify all applications are in the CLAIMED state.
  **/
-TEST_F(MultiAgentAppTests, DISABLED_SuccessfulUpdateManyApps) { //See ASACORE-2576
+TEST_F(MultiAgentAppTests, SuccessfulUpdateManyApps) {
     ASSERT_TRUE(ClaimApplications());
 
     // Stop all applications.
@@ -268,7 +268,7 @@ TEST_F(MultiAgentAppTests, DISABLED_SuccessfulUpdateManyApps) { //See ASACORE-25
  *          claimed applications are in a consistent online state and
  *          no sync errors will have occurred.
  **/
-TEST_F(MultiAgentAppTests, DISABLED_SuccessfulRestartSecAgentWithManyApps) { //See ASACORE-2576
+TEST_F(MultiAgentAppTests, SuccessfulRestartSecAgentWithManyApps) {
     ASSERT_TRUE(ClaimApplications());
     agent2 = nullptr;
     RemoveSecAgent();
