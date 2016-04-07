@@ -124,6 +124,13 @@ class FileSource : public Source {
     bool IsValid() { return 0 <= fd; }
 
     /**
+     * Check validity of a lock.
+     *
+     * @return false if file is invalid, lock is not held or lock is held on already deleted file, true otherwise
+     */
+    bool IsLockValid(qcc::String fileName);
+
+    /**
      * Lock the underlying file for exclusive access
      *
      * @param block  If block is true the function will block until file access if permitted.
@@ -132,6 +139,16 @@ class FileSource : public Source {
      *         was not valid, i.e. if IsValid() would returnf false;
      */
     bool Lock(bool block = false);
+
+    /**
+     * Lock the underlying file for shared access
+     *
+     * @param block  If block is true the function will block until file access if permitted.
+     *
+     * @return Returns true if the file was locked, false if the file was not locked or if the file
+     *         was not valid, i.e. if IsValid() would returnf false;
+     */
+    bool LockShared(bool block = false);
 
     /**
      * Unlock the file if previously locked
@@ -168,6 +185,14 @@ class FileSink : public Sink {
      * @param fileName     Name of file to use as sink.
      */
     FileSink(qcc::String fileName, Mode mode = WORLD_READABLE);
+
+    /**
+     * Opens a FileSink. Does not create if file not exists, if file exists then not truncate
+     *
+     * @param fileName     Name of file to use as sink.
+     * @param own          Set this to false to prevent this class from closing the handle.
+     */
+    FileSink(qcc::String fileName, bool own);
 
     /**
      * Create an FileSink for stdout
@@ -215,6 +240,13 @@ class FileSink : public Sink {
      * @return  true iff stream was successfully initialized.
      */
     bool IsValid() { return 0 <= fd; }
+
+    /**
+     * Check validity of a lock.
+     *
+     * @return false if file is invalid, lock is not held or lock is held on already deleted file, true otherwise
+     */
+    bool IsLockValid(qcc::String fileName);
 
     /**
      * Lock the underlying file for exclusive access
