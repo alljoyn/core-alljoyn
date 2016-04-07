@@ -39,8 +39,6 @@
 #include <qcc/Crypto.h>
 #include <qcc/Debug.h>
 
-
-
 #define QCC_MODULE  "UTIL"
 
 static uint32_t s_uid = 0;
@@ -239,22 +237,25 @@ QStatus qcc::ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSi
 
 void WindowsUtilInit()
 {
-    char buf[UNLEN + 1];
+    static const char nobody[] = "nobody";
+    static const char nogroup[] = "nogroup";
+
+    char buf[UNLEN + 1] = { 0 };
 
     /*
-     * UID: Windows has no equivalent of getuid so fake one by creating a hash of the user name.
+     * UID and GID: Windows can use GetTokenInformation instead of getuid and getgid but for simplicity here we use
+     * hashes of the user name (as UID) and user's domain name (as GID) respectively.
      */
+
     ULONG len = UNLEN;
     if (GetUserNameExA(NameUniqueId, buf, &len)) {
         s_uid = ComputeId(buf, len);
     } else {
-        s_uid = ComputeId("nobody", sizeof("nobody") - 1);
+        QCC_ASSERT(false);
+        s_uid = ComputeId(nobody, strlen(nobody));
     }
     QCC_ASSERT(s_uid != 0);
 
-    /*
-     * GID: Windows has no equivalent of getgid so fake one by creating a hash of the user's domain name.
-     */
     len = UNLEN;
     if (GetUserNameExA(NameDnsDomain, buf, &len)) {
         qcc::String gp((char*)buf, len);
@@ -264,7 +265,8 @@ void WindowsUtilInit()
         }
         s_gid = ComputeId(gp.c_str(), gp.size());
     } else {
-        s_gid = ComputeId("nogroup", sizeof("nogroup") - 1);
+        QCC_ASSERT(false);
+        s_gid = ComputeId(nogroup, strlen(nogroup));
     }
     QCC_ASSERT(s_gid != 0);
 }

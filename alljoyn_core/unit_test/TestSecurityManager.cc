@@ -19,6 +19,7 @@
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/SecurityApplicationProxy.h>
 #include <qcc/Util.h>
+#include <qcc/Thread.h>
 
 #include "TestSecurityManager.h"
 
@@ -403,6 +404,21 @@ QStatus TestSecurityManager::UpdatePolicy(const BusAttachment& peerBus, const Pe
     }
 
     EXPECT_EQ(ER_OK, (status = bus.LeaveSession(sessionId)));
+    /*
+     * The peer app doesn't have a session listener for this security management session.
+     * Therefore there is no good way to wait here for the peer app to finish processing
+     * LeaveSession.
+     *
+     * However, it is important to finish that work on the peer app's side because
+     * otherwise the peer app might have not updated yet its ConnectedPeers information.
+     * The peer app can then call SecureConnection(nullptr) and that will try to secure
+     * the session that is going away here, with unpredictable results.
+     *
+     * In an attempt to mitigate the problems described above, sleep for a little while,
+     * hoping that the peer app gets a chance to finish updating its ConnectedPeers.
+     */
+    qcc::Sleep(1000);
+
     return status;
 }
 
