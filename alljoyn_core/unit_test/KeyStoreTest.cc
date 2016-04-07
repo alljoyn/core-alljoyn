@@ -239,7 +239,9 @@ class KeyStoreThread : public Thread {
         kb.Set((const uint8_t*)testData, sizeof(testData), KeyBlob::GENERIC);
         size_t cnt = 0;
         for (vector<KeyStore::Key>::iterator it = workList.begin(); it != workList.end(); it++, cnt++) {
+            EXPECT_FALSE(keyStore->HasKey(*it));
             EXPECT_EQ(ER_OK, keyStore->AddKey(*it, kb));
+            EXPECT_TRUE(keyStore->HasKey(*it));
         }
         for (vector<KeyStore::Key>::iterator it = deleteList.begin(); it != deleteList.end(); it++) {
             EXPECT_EQ(ER_OK, keyStore->DelKey(*it));
@@ -280,9 +282,8 @@ static bool VerifyExistence(KeyStore& keyStore, vector<KeyStore::Key>& workList,
 
 TEST(KeyStoreTest, concurrent_access_single_keystore)
 {
-    InMemoryKeyStoreListener keyStoreListener;
+    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile(keyStoreName));
     KeyStore keyStore(keyStoreName);
-    keyStore.SetListener(keyStoreListener);
     keyStore.Init(NULL, true);
 
     vector<KeyStore::Key> workList1;
