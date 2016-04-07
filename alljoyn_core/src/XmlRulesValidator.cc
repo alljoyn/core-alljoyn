@@ -36,8 +36,8 @@ std::unordered_map<std::string, uint8_t> XmlRulesValidator::PropertiesValidator:
 std::unordered_map<std::string, uint8_t> XmlRulesValidator::SignalsValidator::s_actionsMap;
 
 #ifdef REGEX_SUPPORTED
-const std::regex XmlRulesValidator::s_objectPathRegex = std::regex("(\\*|/(\\*)?|(/[a-zA-Z0-9_]+)+(/\\*)?)");
-const std::regex XmlRulesValidator::s_interfaceNameRegex = std::regex("(\\*|[a-zA-Z_][a-zA-Z0-9_]*((\\.[a-zA-Z_][a-zA-Z0-9_]*)*(\\.\\*)|(\\.[a-zA-Z_][a-zA-Z0-9_]*)+))");
+const std::regex XmlRulesValidator::s_objectPathRegex = std::regex("(\\*|/(\\*)?|(/[a-zA-Z0-9_]+)+(/?\\*)?)");
+const std::regex XmlRulesValidator::s_interfaceNameRegex = std::regex("(\\*|[a-zA-Z_][a-zA-Z0-9_]*((\\.[a-zA-Z_][a-zA-Z0-9_]*)*(\\.?\\*)|(\\.[a-zA-Z_][a-zA-Z0-9_]*)+))");
 const std::regex XmlRulesValidator::s_memberNameRegex = std::regex("(\\*|([a-zA-Z_][a-zA-Z0-9_]*)(\\*)?)");
 #endif /* REGEX_SUPPORTED */
 
@@ -60,6 +60,7 @@ void XmlRulesValidator::MemberTypeMapInit()
     s_memberTypeMap[METHOD_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::METHOD_CALL;
     s_memberTypeMap[PROPERTY_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::PROPERTY;
     s_memberTypeMap[SIGNAL_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::SIGNAL;
+    s_memberTypeMap[NOT_SPECIFIED_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED;
 }
 
 void XmlRulesValidator::MethodsValidator::Init()

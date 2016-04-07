@@ -52,6 +52,7 @@ void XmlRulesConverter::InitInverseMemberTypeMap()
     s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::METHOD_CALL] = METHOD_MEMBER_TYPE;
     s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::PROPERTY] = PROPERTY_MEMBER_TYPE;
     s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::SIGNAL] = SIGNAL_MEMBER_TYPE;
+    s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED] = NOT_SPECIFIED_MEMBER_TYPE;
 }
 
 void XmlRulesConverter::InitMemberMasksMap()
