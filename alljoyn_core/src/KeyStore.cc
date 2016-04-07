@@ -767,7 +767,10 @@ QStatus KeyStore::Reload()
      * KeyStore "isShared" feature is removed in 16.04.
      * All instances of KeyStore that point to the same file are now always shared.
      */
-    return Load();
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
+    QStatus status = Load();
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
+    return status;
 }
 
 QStatus KeyStore::Push(Sink& sink)
@@ -862,7 +865,9 @@ QStatus KeyStore::GetKey(const Key& key, KeyBlob& keyBlob, uint8_t accessRights[
     QCC_DbgPrintf(("KeyStore::GetKey %s", key.ToString().c_str()));
 
     /* Refresh the keystore. */
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     (void)Load();
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
 
     KeyRecord* keyRec = nullptr;
     KeyBlob* kb = nullptr;
@@ -910,7 +915,9 @@ Exit:
 bool KeyStore::HasKey(const Key& key)
 {
     /* Refresh the keystore. */
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     (void)Load();
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     bool hasKey = false;
@@ -1082,7 +1089,9 @@ QStatus KeyStore::GetKeyExpiration(const Key& key, Timespec<EpochTime>& expirati
     }
 
     /* Refresh the keystore. */
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     (void)Load();
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     if (keys->count(key) != 0) {
@@ -1098,7 +1107,9 @@ QStatus KeyStore::GetKeyExpiration(const Key& key, Timespec<EpochTime>& expirati
 QStatus KeyStore::SearchAssociatedKeys(const Key& key, Key** list, size_t* numItems)
 {
     /* Refresh the keystore. */
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     (void)Load();
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
 
     size_t count = 0;
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));

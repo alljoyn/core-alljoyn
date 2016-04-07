@@ -30,6 +30,8 @@
 #include <errno.h>
 #include <string>
 
+#include <memory>
+
 #include <qcc/String.h>
 #include <qcc/Stream.h>
 #include <Status.h>
@@ -61,14 +63,21 @@ class FileSource : public Source {
   public:
 
     /**
-     * Create an FileSource
+     * Create an FileSource.
      *
      * @param fileName   Name of file to read/write
      */
     FileSource(qcc::String fileName);
 
     /**
-     * Create an FileSource from stdin
+     * Create an FileSource from existing file descriptor.
+     *
+     * @param fdesc   File descriptor.
+     */
+    FileSource(int fdesc);
+
+    /**
+     * Create an FileSource from stdin.
      */
     FileSource();
 
@@ -124,7 +133,14 @@ class FileSource : public Source {
     bool IsValid() { return 0 <= fd; }
 
     /**
-     * Lock the underlying file for exclusive access
+     * Reset file pointer to the beginning of a file.
+     *
+     * @return  true on success.
+     */
+    bool Reset();
+
+    /**
+     * Lock the underlying file for shared access.
      *
      * @param block  If block is true the function will block until file access if permitted.
      *
@@ -168,6 +184,14 @@ class FileSink : public Sink {
      * @param fileName     Name of file to use as sink.
      */
     FileSink(qcc::String fileName, Mode mode = WORLD_READABLE);
+
+    /**
+     * Create an read-write FileSink.
+     *
+     * @param fileName     Name of file to use as sink.
+     * @param truncate     Set this to false to prevent from truncating the file.
+     */
+    FileSink(qcc::String fileName, bool truncate, Mode mode = WORLD_READABLE);
 
     /**
      * Create an FileSink for stdout
@@ -217,12 +241,24 @@ class FileSink : public Sink {
     bool IsValid() { return 0 <= fd; }
 
     /**
+     * Return internal file descriptor.
+     */
+    int GetOsHandle() { return fd; }
+
+    /**
+     * Truncate file.
+     *
+     * @return  true on success.
+     */
+    bool Truncate();
+
+    /**
      * Lock the underlying file for exclusive access
      *
      * @param block  If block is true the function will block until file access if permitted.
      *
      * @return Returns true if the file was locked, false if the file was not locked or if the file
-     *         was not valid, i.e. if IsValid() would returnf false;
+     *         was not valid, i.e. if IsValid() would return false.
      */
     bool Lock(bool block = false);
 
@@ -237,6 +273,48 @@ class FileSink : public Sink {
     Event* event;  /**< I/O event */
     bool ownsFd;   /**< true if sink is responsible for closing fd */
     bool locked;   /**< true if the sink has been locked for exclusive access */
+};
+
+class FileLocker;
+
+class FileLock {
+    friend class FileLocker;
+  public:
+    /* This call resets file source offset. */
+    FileSource* GetSource();
+    /* This call truncates file sink. */
+    FileSink* GetSink();
+    void Release();
+
+  private:
+    QStatus InitReadOnly(const char* fullFileName);
+    QStatus InitReadWrite(std::shared_ptr<FileSink> sink);
+
+    std::unique_ptr<FileSource> m_source;
+    std::shared_ptr<FileSink> m_sink;
+};
+
+class FileLocker {
+  public:
+    FileLocker(const char* fullFileName);
+    ~FileLocker();
+
+    const char* GetFileName() const;
+
+    bool HasWriteLock() const;
+
+    /* Request read lock on the shared file. Once the caller's FileLock goes out of scope, the read lock is released. */
+    QStatus GetFileLockForRead(FileLock* fileLock);
+    QStatus GetFileLockForWrite(FileLock* fileLock);
+
+    /* Request write lock on the shared file. Caller must call ReleaseWriteLock. */
+    QStatus AcquireWriteLock();
+    void ReleaseWriteLock();
+
+  private:
+    qcc::String m_fileName;
+    std::shared_ptr<FileSink> m_sink;
+    mutable qcc::Mutex m_sinkLock;
 };
 
 }   /* namespace */
