@@ -239,7 +239,9 @@ class KeyStoreThread : public Thread {
         kb.Set((const uint8_t*)testData, sizeof(testData), KeyBlob::GENERIC);
         size_t cnt = 0;
         for (vector<KeyStore::Key>::iterator it = workList.begin(); it != workList.end(); it++, cnt++) {
+            EXPECT_FALSE(keyStore->HasKey(*it));
             EXPECT_EQ(ER_OK, keyStore->AddKey(*it, kb));
+            EXPECT_TRUE(keyStore->HasKey(*it));
         }
         for (vector<KeyStore::Key>::iterator it = deleteList.begin(); it != deleteList.end(); it++) {
             EXPECT_EQ(ER_OK, keyStore->DelKey(*it));
@@ -278,11 +280,60 @@ static bool VerifyExistence(KeyStore& keyStore, vector<KeyStore::Key>& workList,
     return passed;
 }
 
-TEST(KeyStoreTest, concurrent_access_single_keystore)
+TEST(KeyStoreTest, concurrent_access_single_keystore_inmemory)
 {
     InMemoryKeyStoreListener keyStoreListener;
     KeyStore keyStore(keyStoreName);
     keyStore.SetListener(keyStoreListener);
+    keyStore.Init(NULL, true);
+
+    vector<KeyStore::Key> workList1;
+    vector<KeyStore::Key> deleteList1;
+    for (int cnt = 0; cnt < 100; cnt++) {
+        qcc::GUID128 guid;
+        KeyStore::Key key(KeyStore::Key::LOCAL, guid);
+        workList1.push_back(key);
+        if (cnt % 13 == 0) {
+            deleteList1.push_back(key);
+        }
+    }
+    vector<KeyStore::Key> workList2;
+    vector<KeyStore::Key> deleteList2;
+    for (int cnt = 0; cnt < 158; cnt++) {
+        qcc::GUID128 guid;
+        KeyStore::Key key(KeyStore::Key::LOCAL, guid);
+        workList2.push_back(key);
+        if (cnt % 37 == 0) {
+            deleteList2.push_back(key);
+        }
+    }
+    KeyStoreThread thread1("thread1", &keyStore, workList1, deleteList1);
+    KeyStoreThread thread2("thread2", &keyStore, workList2, deleteList2);
+    thread1.Start();
+    thread2.Start();
+    thread1.Join();
+    thread2.Join();
+
+    keyStore.Reload();
+
+    size_t existenceCount = 0;
+    size_t deletedCount = 0;
+    /* check to make sure the expected keys are in the keystore */
+    EXPECT_TRUE(VerifyExistence(keyStore, workList1, deleteList1, existenceCount, deletedCount));
+    EXPECT_EQ(existenceCount, (workList1.size() - deleteList1.size()));
+    EXPECT_EQ(deletedCount, deleteList1.size());
+
+    existenceCount = 0;
+    deletedCount = 0;
+    EXPECT_TRUE(VerifyExistence(keyStore, workList2, deleteList2, existenceCount, deletedCount));
+    EXPECT_EQ(existenceCount, (workList2.size() - deleteList2.size()));
+    EXPECT_EQ(deletedCount, deleteList2.size());
+}
+
+TEST(KeyStoreTest, concurrent_access_single_keystore)
+{
+    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile(keyStoreName));
+    KeyStore keyStore(keyStoreName);
     keyStore.Init(NULL, true);
 
     vector<KeyStore::Key> workList1;
