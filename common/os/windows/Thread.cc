@@ -413,25 +413,27 @@ QStatus Thread::Join(void)
                    self ? threadId : GetThread()->threadId,
                    self ? "Closing" : "Joining",
                    threadId, funcName, threadId));
-    /*
-     * make local copy of handle so it is not deleted if two threads are in
-     * Join at the same time.
-     */
-    HANDLE goner = handle;
-    if (goner) {
+
+    if (handle != 0) {
         DWORD ret;
-        handle = 0;
         if (self) {
             ret = WAIT_OBJECT_0;
         } else {
-            ret = WaitForSingleObject(goner, INFINITE);
+            ret = WaitForSingleObject(handle, INFINITE);
         }
         if (ret != WAIT_OBJECT_0) {
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Joining thread: %d", ret));
         }
-        CloseHandle(goner);
-        QCC_DEBUG_ONLY(IncrementAndFetch(&stopped));
+        /*
+         * make local copy of handle so it is not closed multiple times if two threads are in
+         * Join at the same time.
+         */
+        HANDLE goner = (HANDLE)InterlockedExchangePointer(&handle, 0);
+        if (goner != 0) {
+            CloseHandle(goner);
+            QCC_DEBUG_ONLY(IncrementAndFetch(&stopped));
+        }
     }
     QCC_DbgPrintf(("%s thread %s", self ? "Closed" : "Joined", funcName));
     isStopping = false;
