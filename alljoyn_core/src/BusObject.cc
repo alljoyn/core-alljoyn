@@ -750,6 +750,11 @@ QStatus BusObject::DoRegistration(BusAttachment& busAttachment)
     return status;
 }
 
+static bool IsBroadcastSignal(AJ_PCSTR destination, SessionId sessionId)
+{
+    return (((destination == nullptr) || (strlen(destination) == 0)) && (sessionId == 0));
+}
+
 QStatus BusObject::SignalInternal(const char* destination,
                                   SessionId sessionId,
                                   const InterfaceDescription::Member& signalMember,
@@ -855,6 +860,23 @@ QStatus BusObject::SignalInternal(const char* destination,
                                          numArgs,
                                          flags,
                                          timeToLive);
+
+        if ((aStatus == ER_OK) && !IsBroadcastSignal(destination, sessionId)) {
+            /* If not a broadcast signal, exchange manifests before doing authorization check. */
+            aStatus = bus->GetInternal().GetPermissionManager().GetPermissionMgmtObj()->SendManifests(nullptr, &msg);
+            if (ER_BUS_BLOCKING_CALL_NOT_ALLOWED == aStatus) {
+                /* We're sending a signal from inside a callback handler. We need to enable
+                 * concurrent callbacks to send needed manifests.
+                 */
+                bus->EnableConcurrentCallbacks();
+                aStatus = bus->GetInternal().GetPermissionManager().GetPermissionMgmtObj()->SendManifests(nullptr, &msg);
+            }
+            if (aStatus != ER_OK) {
+                QCC_LogError(aStatus, ("Failed to SendManifests"));
+            }
+            QCC_ASSERT(ER_OK == aStatus);
+        }
+
         if (aStatus == ER_OK) {
             if (msg->IsEncrypted()) {
                 if (authorizationCallback != NULL) {
@@ -863,7 +885,7 @@ QStatus BusObject::SignalInternal(const char* destination,
                      * not need to authorize the message again.
                      */
                     msg->authorizationChecked = true;
-                } else if (((destination == NULL) || (strlen(destination) == 0)) && (sessionId == 0)) {
+                } else if (IsBroadcastSignal(destination, sessionId)) {
                     /* broadcast signal */
                     msg->authorizationChecked = true; /* skip authorization check */
                 } else if (!bus->GetInternal().GetRouter().IsDaemon()) {

@@ -113,7 +113,7 @@ class UIStorageImpl :
 
     virtual QStatus UpdateIdentity(Application& app,
                                    const IdentityInfo& identityInfo,
-                                   const Manifest& manifest);
+                                   const Manifest& manifestTemplate);
 
     virtual QStatus GetManifest(const Application& app,
                                 Manifest& manifest) const;

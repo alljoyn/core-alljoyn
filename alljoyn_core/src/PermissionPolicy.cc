@@ -1241,6 +1241,11 @@ QStatus _Manifest::GetArrayMsgArg(const std::vector<Manifest>& manifests, MsgArg
 QStatus _Manifest::GetArrayMsgArg(const Manifest* manifests, size_t manifestCount, MsgArg& outputArg)
 {
     QStatus status = ER_OK;
+
+    if (0 == manifestCount) {
+        return outputArg.Set(_Manifest::s_MsgArgArraySignature, 0, nullptr);
+    }
+
     std::vector<MsgArg> msgArgs(manifestCount);
 
     for (size_t i = 0; i < manifestCount; i++) {

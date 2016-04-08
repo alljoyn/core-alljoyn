@@ -1640,6 +1640,15 @@ QStatus ProxyBusObject::MethodCall(const InterfaceDescription::Member& method,
     if (NULL != callMsg) {
         *callMsg = msg;
     }
+    /*
+     * See if we need to send any manifests in advance of this message.
+     */
+    status = internal->bus->GetInternal().GetPermissionManager().GetPermissionMgmtObj()->SendManifests(this, &msg);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to SendManifests"));
+        goto MethodCallExit;
+    }
+
     if (flags & ALLJOYN_FLAG_NO_REPLY_EXPECTED) {
         /*
          * Push the message to the router and we are done
