@@ -129,7 +129,11 @@ QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyIn
         return ER_INVALID_DATA;
     }
     ECCPublicKey publicKey;
-    publicKey.Import(xCoord, xLen, yCoord, yLen);
+    status = publicKey.Import(xCoord, xLen, yCoord, yLen);
+    if (status != ER_OK) {
+        return status;
+    }
+
     keyInfo.SetPublicKey(&publicKey);
     if (retrieveKeyId) {
         keyInfo.SetKeyId(id, idLen);
