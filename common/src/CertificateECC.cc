@@ -41,6 +41,19 @@ namespace qcc {
  */
 #define X509_VERSION_3  2
 
+/*
+ * This is the largest supported PEM input. 100KB will easily accomodate
+ * cert chains of length 100 with the current ECC parameters, since each
+ * certificate is < 1KB in PEM format.
+ */
+#define MAX_PEM_INPUT_LEN_BYTES (100 * 1024)
+
+/*
+ * This is the smallest supported PEM input. 51 is the number of
+ * bytes required to have an empty public key.
+ */
+#define MIN_PEM_INPUT_LEN_BYTES 51
+
 /**
  * The X.509 OIDs
  */
@@ -1021,6 +1034,55 @@ QStatus CertificateX509::EncodeCertificateDER(qcc::String& der) const
     return status;
 }
 
+QStatus static ValidatePEMInput(const char* pemData, size_t pemLength)
+{
+    /*
+     * PEM Format Input Validation
+     * 1.  Character validation
+     *   - base64 valid characters 0-9 A-Z, a-z, +, /, =
+     *   - Valid PEM headers also include - and ' '
+     *   - Newline characters are valid as well
+     * 2. Length validation
+     *   - Min length must be at least as large as the smallest PEM
+     *     header/footer pair (begin/end public key).
+     *   - Max length is set to 100KB: we support up to 10 certificates at
+     *     most 1KB each.
+     *   - Each line should be <= 64 bytes by the PEM standard, but AJ has been
+     *     allowing large lines so we can't enforce this without the
+     *     possibility of breaking existing apps.
+     */
+
+    /* Validate length */
+    if (pemLength < MIN_PEM_INPUT_LEN_BYTES) {
+        QCC_LogError(ER_INVALID_DATA, ("PEM input validation failed; input too small."));
+        return ER_INVALID_DATA;
+    }
+
+    if (pemLength > MAX_PEM_INPUT_LEN_BYTES) {
+        QCC_LogError(ER_INVALID_DATA, ("PEM input validation failed; input too large."));
+        return ER_INVALID_DATA;
+    }
+
+    /* Check that all characters are valid. */
+    for (size_t i = 0; i < pemLength; i++) {
+        unsigned char c = pemData[i];
+        if (((c < 'A') || (c > 'Z'))  &&
+            ((c < 'a') || (c > 'z')) &&
+            ((c < 47)  || (c > 57))  &&      /* 47-57 is [/,0-9] */
+            (c != '-')  &&
+            (c != '+')  &&
+            (c != '=')  &&
+            (c != ' ')  &&
+            (c != 0x0D) &&      /* CR */
+            (c != 0x0A)) {      /* LF */
+            QCC_LogError(ER_INVALID_DATA, ("PEM input validation failed; invalid character('%#X') in input.", c));
+            return ER_INVALID_DATA;
+        }
+    }
+
+    return ER_OK;
+}
+
 QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
 {
     QStatus status;
@@ -1029,6 +1091,11 @@ QStatus CertificateX509::DecodeCertificatePEM(const qcc::String& pem)
     qcc::String der;
     qcc::String tag1 = CERTIFICATE_PEM_BEGIN_TAG;
     qcc::String tag2 = CERTIFICATE_PEM_END_TAG;
+
+    status = ValidatePEMInput(pem.data(), pem.size());
+    if (status != ER_OK) {
+        return status;
+    }
 
     pos = pem.find(tag1);
     if (pos == qcc::String::npos) {

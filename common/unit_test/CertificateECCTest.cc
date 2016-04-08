@@ -1580,3 +1580,45 @@ TEST_F(CertificateECCTest, TestGetSetAKI)
     ASSERT_EQ(sizeof(charWithNull), cert2.GetAuthorityKeyId().size()) << " AKI mismatch.";
     ASSERT_EQ(akiWithNull, cert2.GetAuthorityKeyId()) << " AKI mismatch.";
 }
+
+TEST_F(CertificateECCTest, InvalidPemTests)
+{
+    IdentityCertificate cert;
+
+    /* Test that very short PEM inputs are rejected. */
+    static const char shortPem[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBxjC\n"
+    };
+
+    String pemStr(shortPem);
+    EXPECT_EQ(ER_INVALID_DATA, cert.LoadPEM(pemStr)) << " invalid length (too short) PEM was accepted.";
+
+    /* Test that very long cert chains with valid syntax are rejected. */
+    static char validPem[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBsDCCAVagAwIBAgIJAJVJ9/7bbQcWMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+        "IDZkODVjMjkyMjYxM2IzNmUyZWVlZjUyNzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1\n"
+        "YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQyY2M1NjAeFw0xNTAyMjYxODAzNDlaFw0x\n"
+        "NjAyMjYxODAzNDlaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
+        "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
+        "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABPY4jHsVP+2eeWUEFOu0Z/zK\n"
+        "V8wJGMeZup0LdpVllL1l2Gzji1AcdE3cPxstyGtVpi0mOXnMsNQlLR7GcY4a5XKj\n"
+        "DTALMAkGA1UdEwQCMAAwCgYIKoZIzj0EAwIDSAAwRQIhAKrCirrUWNNAO2gFiNTl\n"
+        "/ncnbELhDiDq/N43LIpfAfX8AiAKX7h/9nXEerJlthl5gUOa4xV6UjqbZLM6+KH/\n"
+        "Hk/Yvw==\n"
+        "-----END CERTIFICATE-----\n\n"
+    };
+
+    pemStr.clear();
+    for (size_t i = 0; i < 30; i++) {
+        pemStr.append(validPem, sizeof(validPem));
+    }
+    EXPECT_EQ(ER_INVALID_DATA, cert.LoadPEM(pemStr)) << " invalid length (too long) PEM was accepted.";
+
+    /* Test that inputs with invalid characters are rejected */
+    validPem[30] = 0x01;
+    pemStr.assign(validPem, sizeof(validPem));
+    EXPECT_EQ(ER_INVALID_DATA, cert.LoadPEM(pemStr)) << " PEM with invalid characters was accepted.";
+
+}
