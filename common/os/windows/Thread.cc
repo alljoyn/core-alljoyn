@@ -417,10 +417,9 @@ QStatus Thread::Join(void)
      * make local copy of handle so it is not deleted if two threads are in
      * Join at the same time.
      */
-    HANDLE goner = handle;
+    HANDLE goner = (HANDLE)InterlockedExchangePointer(&handle, 0);
     if (goner) {
         DWORD ret;
-        handle = 0;
         if (self) {
             ret = WAIT_OBJECT_0;
         } else {
