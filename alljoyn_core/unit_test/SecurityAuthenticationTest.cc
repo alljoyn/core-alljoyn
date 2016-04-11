@@ -306,9 +306,9 @@ class SecurityAuthenticationTest : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
@@ -945,9 +945,9 @@ class SecurityAuthenticationTest2 : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
@@ -959,10 +959,10 @@ class SecurityAuthenticationTest2 : public testing::Test {
         busUsedAsLivingRoom.Start();
         busUsedAsPeerC.Start();
 
-        EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(listener1));
-        EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(listener2));
-        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(listener3));
-        EXPECT_EQ(ER_OK, busUsedAsPeerC.RegisterKeyStoreListener(listener4));
+        EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(&listener1));
+        EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(&listener2));
+        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(&listener3));
+        EXPECT_EQ(ER_OK, busUsedAsPeerC.RegisterKeyStoreListener(&listener4));
 
         EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
         EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
@@ -2021,9 +2021,9 @@ class SecurityAuthenticationTest3 : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
@@ -2033,8 +2033,8 @@ class SecurityAuthenticationTest3 : public testing::Test {
         busUsedAsCA.Connect();
         busUsedAsLivingRoom.Start();
 
-        EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(listener1));
-        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(listener2));
+        EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(&listener1));
+        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(&listener2));
 
         EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
         EXPECT_EQ(ER_OK, busUsedAsLivingRoom.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
@@ -2576,9 +2576,9 @@ class SecurityAuthenticationTest4 : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
         EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &managerAuthListener));
         EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &peer1AuthListener));
@@ -2590,10 +2590,10 @@ class SecurityAuthenticationTest4 : public testing::Test {
         busUsedAsLivingRoom.Start();
         busUsedAsPeerC.Start();
 
-        EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(listener1));
-        EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(listener2));
-        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(listener3));
-        EXPECT_EQ(ER_OK, busUsedAsPeerC.RegisterKeyStoreListener(listener4));
+        EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(&listener1));
+        EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(&listener2));
+        EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(&listener3));
+        EXPECT_EQ(ER_OK, busUsedAsPeerC.RegisterKeyStoreListener(&listener4));
 
         EXPECT_EQ(ER_OK, busUsedAsCA.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));
         EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &managerAuthListener));

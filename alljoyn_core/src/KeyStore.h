@@ -38,7 +38,7 @@
 #include <qcc/Event.h>
 #include <qcc/time.h>
 
-#include <alljoyn/KeyStoreListener.h>
+#include "KeyStoreListener.h"
 
 #include <alljoyn/Status.h>
 

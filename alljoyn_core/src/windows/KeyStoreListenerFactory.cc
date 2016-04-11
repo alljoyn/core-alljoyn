@@ -29,7 +29,7 @@
 #include <qcc/Util.h>
 #include <qcc/SecureAllocator.h>
 
-#include <alljoyn/KeyStoreListener.h>
+#include "KeyStoreListener.h"
 
 #include "KeyStore.h"
 

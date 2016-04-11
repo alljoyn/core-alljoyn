@@ -27,7 +27,7 @@
 
 #include <qcc/platform.h>
 #include <qcc/Mutex.h>
-#include <alljoyn/KeyStoreListener.h>
+#include "KeyStoreListener.h"
 #include <alljoyn/Status.h>
 
 namespace ajn {

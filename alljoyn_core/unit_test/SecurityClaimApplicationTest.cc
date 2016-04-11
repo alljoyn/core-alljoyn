@@ -62,9 +62,9 @@ class SecurityClaimApplicationTest : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, securityManagerBus.RegisterKeyStoreListener(securityManagerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, securityManagerBus.RegisterKeyStoreListener(&securityManagerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
     }
 

@@ -181,9 +181,9 @@ class SecurityDefaultPolicyTest : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
         managerAuthListener = new DefaultECDHEAuthListener();
         peer1AuthListener = new DefaultECDHEAuthListener();
@@ -1748,7 +1748,7 @@ TEST(SecurityDefaultPolicy2Test, DefaultPolicy_self_install_membership_certifica
     // Register in memory keystore listeners
     InMemoryKeyStoreListener keyStoreListener;
     DefaultECDHEAuthListener authListener;
-    EXPECT_EQ(ER_OK, unclaimedBus.RegisterKeyStoreListener(keyStoreListener));
+    EXPECT_EQ(ER_OK, unclaimedBus.RegisterKeyStoreListener(&keyStoreListener));
     EXPECT_EQ(ER_OK, unclaimedBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &authListener));
 
     KeyInfoNISTP256 key;

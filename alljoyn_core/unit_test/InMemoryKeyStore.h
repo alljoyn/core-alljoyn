@@ -27,7 +27,7 @@
 #include <qcc/StringSource.h>
 #include <qcc/StringUtil.h>
 
-#include <alljoyn/KeyStoreListener.h>
+#include "KeyStoreListener.h"
 #include <alljoyn/Status.h>
 #include "KeyStore.h"
 

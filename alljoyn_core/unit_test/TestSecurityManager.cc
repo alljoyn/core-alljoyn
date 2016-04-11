@@ -55,7 +55,7 @@ TestSecurityManager::TestSecurityManager(string appName) :
     String aki;
     QCC_VERIFY(ER_OK == CertificateX509::GenerateAuthorityKeyId(caKeyPair.GetDSAPublicKey(), aki));
     caPublicKeyInfo.SetKeyId((uint8_t*)aki.data(), aki.size());
-    bus.RegisterKeyStoreListener(keyStoreListener);
+    bus.RegisterKeyStoreListener(&keyStoreListener);
     IssueCertificate(*caKeyPair.GetDSAPublicKey(), caCertificate, true);
 }
 

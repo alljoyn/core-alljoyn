@@ -3099,7 +3099,7 @@ TEST_F(PermissionMgmtUseCaseTest, DisconnectAndReenableSecurity)
     BusAttachment cpAdminBus("CopyPermissionMgmtTestAdmin", false);
     InMemoryKeyStoreListener cpAdminKSListener = adminKeyStoreListener;
     SetupBus(cpAdminBus);
-    EXPECT_EQ(ER_OK, cpAdminBus.RegisterKeyStoreListener(cpAdminKSListener)) << " RegisterKeyStoreListener failed";
+    EXPECT_EQ(ER_OK, cpAdminBus.RegisterKeyStoreListener(&cpAdminKSListener)) << " RegisterKeyStoreListener failed";
     DefaultECDHEAuthListener cpAdminAuthListener;
     EXPECT_EQ(ER_OK, cpAdminBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpAdminAuthListener, NULL, false)) << "cpAdminBus.EnablePeerSecurity failed.";
 
@@ -3429,7 +3429,7 @@ TEST_F(PermissionMgmtUseCaseTest, ResetAndCopyKeyStore)
     InMemoryKeyStoreListener cpConsumerListener = consumerKeyStoreListener;
 
     SetupBus(cpConsumerBus);
-    EXPECT_EQ(ER_OK, cpConsumerBus.RegisterKeyStoreListener(cpConsumerListener)) << " RegisterKeyStoreListener failed.";
+    EXPECT_EQ(ER_OK, cpConsumerBus.RegisterKeyStoreListener(&cpConsumerListener)) << " RegisterKeyStoreListener failed.";
     DefaultECDHEAuthListener cpConsumerAuthListener;
     EXPECT_EQ(ER_OK, cpConsumerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &cpConsumerAuthListener, NULL, false)) << "cpConsumerBus.EnablePeerSecurity failed.";
 

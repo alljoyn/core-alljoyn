@@ -36,7 +36,7 @@
 #include <qcc/StringSink.h>
 #include <qcc/Thread.h>
 
-#include <alljoyn/KeyStoreListener.h>
+#include "KeyStoreListener.h"
 
 #include "PeerState.h"
 #include "KeyStore.h"

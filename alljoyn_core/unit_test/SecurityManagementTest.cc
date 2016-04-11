@@ -227,10 +227,10 @@ class SecurityManagementPolicyTest : public testing::Test {
         EXPECT_EQ(ER_OK, peer3Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer3Bus.RegisterKeyStoreListener(peer3KeyStoreListener));
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer3Bus.RegisterKeyStoreListener(&peer3KeyStoreListener));
 
         managerAuthListener = new DefaultECDHEAuthListener();
         peer1AuthListener = new DefaultECDHEAuthListener();
@@ -3045,7 +3045,7 @@ TEST_F(SecurityManagementPolicyTest, non_members_can_call_managedapplication_met
     EXPECT_EQ(ER_OK, nonASGBus.Connect());
 
     InMemoryKeyStoreListener keyStoreListener;
-    EXPECT_EQ(ER_OK, nonASGBus.RegisterKeyStoreListener(keyStoreListener));
+    EXPECT_EQ(ER_OK, nonASGBus.RegisterKeyStoreListener(&keyStoreListener));
 
     DefaultECDHEAuthListener authListener;
     EXPECT_EQ(ER_OK, nonASGBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &authListener, nullptr, false, &managerConfigurationListener));
@@ -3272,8 +3272,8 @@ TEST(SecurityManagementPolicy2Test, ManagedApplication_method_calls_should_fail_
     InMemoryKeyStoreListener bus2KeyStoreListener;
 
     // Register in memory keystore listeners
-    EXPECT_EQ(ER_OK, peer1.RegisterKeyStoreListener(bus1KeyStoreListener));
-    EXPECT_EQ(ER_OK, peer2.RegisterKeyStoreListener(bus2KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer1.RegisterKeyStoreListener(&bus1KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer2.RegisterKeyStoreListener(&bus2KeyStoreListener));
 
     SecurityManagementPolicy2AuthListener bus1AuthListener;
     SecurityManagementPolicy2AuthListener bus2AuthListener;

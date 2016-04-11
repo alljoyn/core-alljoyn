@@ -262,12 +262,12 @@ TEST(SecurityACLTest, multiple_acls_and_different_peer_types) {
     InMemoryKeyStoreListener caKeyStoreListener;
     InMemoryKeyStoreListener livingRoomKeyStoreListener;
 
-    EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
-    EXPECT_EQ(ER_OK, peer3Bus.RegisterKeyStoreListener(peer3KeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(caKeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(livingRoomKeyStoreListener));
+    EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer3Bus.RegisterKeyStoreListener(&peer3KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(&caKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsLivingRoom.RegisterKeyStoreListener(&livingRoomKeyStoreListener));
 
     DefaultECDHEAuthListener managerAuthListener;
     DefaultECDHEAuthListener peer1AuthListener;
@@ -962,22 +962,22 @@ TEST(SecurityACLTest, acl_verify_peers_using_different_membershipchain_can_make_
     InMemoryKeyStoreListener int2KeyStoreListener;
 
 
-    EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(caKeyStoreListener));
+    EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA.RegisterKeyStoreListener(&caKeyStoreListener));
 
-    EXPECT_EQ(ER_OK, busUsedAsAlpha.RegisterKeyStoreListener(alphaKeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsBeta.RegisterKeyStoreListener(betaKeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsGamma.RegisterKeyStoreListener(gammaKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsAlpha.RegisterKeyStoreListener(&alphaKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsBeta.RegisterKeyStoreListener(&betaKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsGamma.RegisterKeyStoreListener(&gammaKeyStoreListener));
 
-    EXPECT_EQ(ER_OK, busUsedAsPhi.RegisterKeyStoreListener(phiKeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsSi.RegisterKeyStoreListener(siKeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsOmega.RegisterKeyStoreListener(omegaKeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsTau.RegisterKeyStoreListener(tauKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsPhi.RegisterKeyStoreListener(&phiKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSi.RegisterKeyStoreListener(&siKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsOmega.RegisterKeyStoreListener(&omegaKeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsTau.RegisterKeyStoreListener(&tauKeyStoreListener));
 
-    EXPECT_EQ(ER_OK, busUsedAsInt1.RegisterKeyStoreListener(int1KeyStoreListener));
-    EXPECT_EQ(ER_OK, busUsedAsInt2.RegisterKeyStoreListener(int2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsInt1.RegisterKeyStoreListener(&int1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsInt2.RegisterKeyStoreListener(&int2KeyStoreListener));
 
 
     DefaultECDHEAuthListener managerAuthListener;

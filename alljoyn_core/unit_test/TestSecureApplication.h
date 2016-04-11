@@ -45,7 +45,7 @@ class TestSecureApplication :
   public:
     TestSecureApplication(const char* name) : testObj(NULL), bus(name), authListener(this), appName(name), pcl(this), joinSessionEvent(nullptr), endManagementEvent(nullptr)
     {
-        bus.RegisterKeyStoreListener(keyStoreListener);
+        bus.RegisterKeyStoreListener(&keyStoreListener);
     }
 
     ~TestSecureApplication();

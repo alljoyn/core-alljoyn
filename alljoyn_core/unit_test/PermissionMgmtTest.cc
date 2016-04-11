@@ -328,13 +328,13 @@ QStatus BasePermissionMgmtTest::InterestInChannelChangedSignal(BusAttachment* bu
 
 void BasePermissionMgmtTest::RegisterKeyStoreListeners()
 {
-    status = adminBus.RegisterKeyStoreListener(adminKeyStoreListener);
+    status = adminBus.RegisterKeyStoreListener(&adminKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = serviceBus.RegisterKeyStoreListener(serviceKeyStoreListener);
+    status = serviceBus.RegisterKeyStoreListener(&serviceKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = consumerBus.RegisterKeyStoreListener(consumerKeyStoreListener);
+    status = consumerBus.RegisterKeyStoreListener(&consumerKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = remoteControlBus.RegisterKeyStoreListener(remoteControlKeyStoreListener);
+    status = remoteControlBus.RegisterKeyStoreListener(&remoteControlKeyStoreListener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 

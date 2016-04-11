@@ -30,7 +30,6 @@
 #include <qcc/platform.h>
 
 #include <qcc/String.h>
-#include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/AboutListener.h>
 #include <alljoyn/AboutObjectDescription.h>
@@ -50,6 +49,7 @@
 
 namespace ajn {
 
+class KeyStoreListener;
 
 /**
  * %BusAttachment is the top-level object responsible for connecting to and optionally managing a message bus.
@@ -792,9 +792,7 @@ class BusAttachment : public MessageReceiver {
     /**
      * Enable peer-to-peer security. This function must be called by applications that want to use
      * authentication and encryption. The bus must have been started by calling
-     * BusAttachment::Start() before this function is called. If the application is providing its
-     * own key store implementation it must have already called RegisterKeyStoreListener() before
-     * calling this function.
+     * BusAttachment::Start() before this function is called.
      *
      * This method can be called multiple times with different auth mechanisms.
      *
@@ -848,7 +846,8 @@ class BusAttachment : public MessageReceiver {
 
     /**
      * Set a key store listener to listen for key store load and store requests.
-     * This overrides the internal key store listener.
+     * This overrides the internal key store listener. This function is used only in automated
+     * and unit tests and is not available as a public API.
      *
      * @param listener  The key store listener to set.
      *
@@ -856,8 +855,9 @@ class BusAttachment : public MessageReceiver {
      *      - #ER_OK if the key store listener was set
      *      - #ER_BUS_LISTENER_ALREADY_SET if a listener has been set by this function or because
      *         EnablePeerSecurity has been called.
+     *      - #ER_BAD_ARG_1 if listener is null
      */
-    QStatus RegisterKeyStoreListener(KeyStoreListener& listener);
+    QStatus RegisterKeyStoreListener(KeyStoreListener* listener);
 
     /**
      * Unregister a previously registered KeyStore. This will return control for

@@ -29,7 +29,7 @@
 #include <qcc/StringSource.h>
 #include <qcc/StringUtil.h>
 
-#include <alljoyn/KeyStoreListener.h>
+#include "KeyStoreListener.h"
 #include <alljoyn/Status.h>
 #include <alljoyn/Message.h>
 #include <alljoyn/BusAttachment.h>

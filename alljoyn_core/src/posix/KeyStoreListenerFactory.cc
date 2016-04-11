@@ -25,7 +25,7 @@
 #include <qcc/FileStream.h>
 #include <qcc/Util.h>
 
-#include <alljoyn/KeyStoreListener.h>
+#include "KeyStoreListener.h"
 
 #include "KeyStore.h"
 

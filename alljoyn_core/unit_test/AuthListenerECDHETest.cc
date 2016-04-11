@@ -20,7 +20,6 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Thread.h>
 
-#include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/Message.h>
 #include <alljoyn/BusAttachment.h>
@@ -29,6 +28,7 @@
 #include <alljoyn/InterfaceDescription.h>
 #include <qcc/Log.h>
 #include "KeyStore.h"
+#include "KeyStoreListener.h"
 #include "InMemoryKeyStore.h"
 
 using namespace ajn;
@@ -486,17 +486,17 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
     {
         EXPECT_EQ(ER_OK, clientBus.Start());
         EXPECT_EQ(ER_OK, clientBus.Connect());
-        EXPECT_EQ(ER_OK, clientBus.RegisterKeyStoreListener(clientKeyStoreListener));
+        EXPECT_EQ(ER_OK, clientBus.RegisterKeyStoreListener(&clientKeyStoreListener));
         CreateOnOffAppInterface(clientBus, false);
         /* Although secondClientBus is currently used in only one test, it's simpler to handle
          * setup and teardown of it here rather than duplicate code in the test itself. */
         EXPECT_EQ(ER_OK, secondClientBus.Start());
         EXPECT_EQ(ER_OK, secondClientBus.Connect());
-        EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(clientKeyStoreListener));
+        EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(&clientKeyStoreListener));
         CreateOnOffAppInterface(secondClientBus, false);
         EXPECT_EQ(ER_OK, serverBus.Start());
         EXPECT_EQ(ER_OK, serverBus.Connect());
-        EXPECT_EQ(ER_OK, serverBus.RegisterKeyStoreListener(serverKeyStoreListener));
+        EXPECT_EQ(ER_OK, serverBus.RegisterKeyStoreListener(&serverKeyStoreListener));
         CreateOnOffAppInterface(serverBus, true);
     }
 
@@ -1233,7 +1233,7 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
     InMemoryKeyStoreListener secondClientKeyStoreListener;
     ECDHEKeyXListener secondClientAuthListener(false);
     EXPECT_EQ(ER_OK, secondClientBus.UnregisterKeyStoreListener());
-    EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(secondClientKeyStoreListener));
+    EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(&secondClientKeyStoreListener));
     EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity(mechanism, &secondClientAuthListener, NULL, false));
 
     String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();

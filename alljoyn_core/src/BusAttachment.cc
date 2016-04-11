@@ -66,6 +66,7 @@
 #include "NullTransport.h"
 #include "NamedPipeClientTransport.h"
 #include "KeyInfoHelper.h"
+#include "KeyStoreListener.h"
 
 #define QCC_MODULE "ALLJOYN"
 
@@ -951,9 +952,12 @@ const InterfaceDescription* BusAttachment::GetInterface(const char* name) const
     }
 }
 
-QStatus BusAttachment::RegisterKeyStoreListener(KeyStoreListener& listener)
+QStatus BusAttachment::RegisterKeyStoreListener(KeyStoreListener* listener)
 {
-    return busInternal->keyStore.SetListener(listener);
+    if(!listener) {
+        return ER_BAD_ARG_1;
+    }
+    return busInternal->keyStore.SetListener(*listener);
 }
 
 QStatus BusAttachment::UnregisterKeyStoreListener()

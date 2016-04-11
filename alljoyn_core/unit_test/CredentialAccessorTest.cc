@@ -80,7 +80,7 @@ class CredentialAccessorTest : public testing::Test {
             EXPECT_EQ(ER_OK, Crypto_ASN1::DecodeBase64(keyStorePwd, decodedPwd)) << " Error base64 decoding of the key store source password";
             ksListener = new InMemoryKeyStoreListener(decodedSource, decodedPwd);
         }
-        EXPECT_EQ(ER_OK, g_msgBus->RegisterKeyStoreListener(*ksListener)) << " Fail to register key store listener";
+        EXPECT_EQ(ER_OK, g_msgBus->RegisterKeyStoreListener(ksListener)) << " Fail to register key store listener";
         status = g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_NULL", &myListener, "CredentialAccessorTest");
         ASSERT_EQ(ER_OK, status);
     }

@@ -283,7 +283,7 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     void EnableSecurity(string authMechanisms) {
-        bus.RegisterKeyStoreListener(keyStoreListener);
+        bus.RegisterKeyStoreListener(&keyStoreListener);
         bus.EnablePeerSecurity(authMechanisms.c_str(), &authListener);
     }
 

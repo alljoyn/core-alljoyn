@@ -200,9 +200,9 @@ class SecurityPolicyRulesTest : public testing::Test {
         EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
         managerAuthListener = new DefaultECDHEAuthListener();
         peer1AuthListener = new DefaultECDHEAuthListener();
@@ -7052,9 +7052,9 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     EXPECT_EQ(ER_OK, busUsedAsCA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -7243,9 +7243,9 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     EXPECT_EQ(ER_OK, busUsedAsCA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -7433,9 +7433,9 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     EXPECT_EQ(ER_OK, busUsedAsCA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsCA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsCA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -8006,9 +8006,9 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_successfull)
     EXPECT_EQ(ER_OK, busUsedAsSGA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -8218,9 +8218,9 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     EXPECT_EQ(ER_OK, busUsedAsSGA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -8425,7 +8425,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA1.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -8436,7 +8436,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA2AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA2.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA2AuthListener));
@@ -8446,7 +8446,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA3.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA3KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA3.RegisterKeyStoreListener(busUsedAsCA3KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA3.RegisterKeyStoreListener(&busUsedAsCA3KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA3AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA3.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA3AuthListener));
@@ -8651,9 +8651,9 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     EXPECT_EQ(ER_OK, busUsedAsSGA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -8860,7 +8860,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA1.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));
@@ -8871,7 +8871,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA2AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA2.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA2AuthListener));
@@ -8881,7 +8881,7 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA3.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA3KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA3.RegisterKeyStoreListener(busUsedAsCA3KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA3.RegisterKeyStoreListener(&busUsedAsCA3KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA3AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA3.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA3AuthListener));
@@ -9083,9 +9083,9 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_membership_not_presen
     EXPECT_EQ(ER_OK, busUsedAsSGA2.Connect());
 
     InMemoryKeyStoreListener busUsedAsCA1KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(busUsedAsCA1KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA1.RegisterKeyStoreListener(&busUsedAsCA1KeyStoreListener));
     InMemoryKeyStoreListener busUsedAsCA2KeyStoreListener;
-    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(busUsedAsCA2KeyStoreListener));
+    EXPECT_EQ(ER_OK, busUsedAsSGA2.RegisterKeyStoreListener(&busUsedAsCA2KeyStoreListener));
 
     DefaultECDHEAuthListener busUsedAsCA1AuthListener;
     EXPECT_EQ(ER_OK, busUsedAsSGA1.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", &busUsedAsCA1AuthListener));

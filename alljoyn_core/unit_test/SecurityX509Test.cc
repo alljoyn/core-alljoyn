@@ -93,13 +93,13 @@ class SecurityX509Test : public testing::Test {
         ASSERT_EQ(ER_OK, status);
         status = clientbus.Connect();
         ASSERT_EQ(ER_OK, status);
-        ASSERT_EQ(ER_OK, clientbus.RegisterKeyStoreListener(clientKeyStoreListener));
+        ASSERT_EQ(ER_OK, clientbus.RegisterKeyStoreListener(&clientKeyStoreListener));
 
         status = servicebus.Start();
         ASSERT_EQ(ER_OK, status);
         status = servicebus.Connect();
         ASSERT_EQ(ER_OK, status);
-        ASSERT_EQ(ER_OK, servicebus.RegisterKeyStoreListener(serviceKeyStoreListener));
+        ASSERT_EQ(ER_OK, servicebus.RegisterKeyStoreListener(&serviceKeyStoreListener));
 
         //Create interface and add a method to the service and client bus attachments.
         InterfaceDescription* Intf1 = NULL;

@@ -410,9 +410,9 @@ void SecurityWildCardPolicyRulesTest::SetUp()
     EXPECT_EQ(ER_OK, peer2Bus.Connect());
 
     // Register in memory keystore listeners
-    EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+    EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(&managerKeyStoreListener));
+    EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(&peer1KeyStoreListener));
+    EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(&peer2KeyStoreListener));
 
     managerAuthListener = new DefaultECDHEAuthListener();
     peer1AuthListener = new DefaultECDHEAuthListener();
