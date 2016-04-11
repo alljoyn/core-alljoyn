@@ -97,10 +97,8 @@ class ClaimingTests :
  *       -# Claim the application.
  *       -# Accept the manifest of the application.
  *       -# Check whether the application becomes CLAIMED.
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(ClaimingTests, DISABLED_SuccessfulClaim) {
+TEST_F(ClaimingTests, SuccessfulClaim) {
     /* Start the application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
@@ -121,7 +119,7 @@ TEST_F(ClaimingTests, DISABLED_SuccessfulClaim) {
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifestTemplate));
 
     ASSERT_EQ(ER_OK, storage->GetManagedApplication(app));
 
@@ -313,10 +311,8 @@ class PSKClaimListener :
  *          repeat the scenario.
  *       -# Verify that claiming was successful and that the application is in
  *          CLAIMED state and online.
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(ClaimingTests, DISABLED_OOBSuccessfulClaiming) {
+TEST_F(ClaimingTests, OOBSuccessfulClaiming) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
     OnlineApplication app;
@@ -327,7 +323,7 @@ TEST_F(ClaimingTests, DISABLED_OOBSuccessfulClaiming) {
     PermissionConfigurator::ClaimCapabilities claimCaps;
     PermissionConfigurator::ClaimCapabilityAdditionalInfo claimCapInfo;
     ASSERT_EQ(ER_OK, GetClaimCapabilities(app, claimCaps, claimCapInfo));
-    ASSERT_EQ(PermissionConfigurator::CAPABLE_ECDHE_NULL, claimCaps);
+    ASSERT_EQ(PermissionConfigurator::CLAIM_CAPABILITIES_DEFAULT, claimCaps);
     ASSERT_EQ((size_t)0, claimCapInfo);
 
     ASSERT_EQ(ER_OK, testApp.SetClaimByPSK());

@@ -71,10 +71,8 @@ class PolicyTests :
  *       -# Try to install a default policy of (version 0) and verify this
  *          was successful.
  *       -# Get the persisted policy and make sure its version is (version 100 +1)
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(PolicyTests, DISABLED_SuccessfulInstallPolicyAndUpdatePolicy) {
+TEST_F(PolicyTests, SuccessfulInstallPolicyAndUpdatePolicy) {
     vector<GroupInfo> policyGroups;
     GroupInfo group;
     group.guid = groupGUID;
@@ -112,7 +110,7 @@ TEST_F(PolicyTests, DISABLED_SuccessfulInstallPolicyAndUpdatePolicy) {
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifestTemplate));
 
     /* Check default policy */
     ASSERT_TRUE(CheckDefaultPolicy(app));
@@ -201,10 +199,8 @@ TEST_F(PolicyTests, SuccessfulResetPolicy) {
  *       -# Install a policy that does NOT contain the admin group rule.
  *       -# Check whether the application is in SYNC_PENDING state.
  *       -# Make sure that at least one sync error is triggered.
- *
- * Disabled for ASACORE-2822.
  **/
-TEST_F(PolicyTests, DISABLED_PermissionDenied) {
+TEST_F(PolicyTests, PermissionDenied) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
     OnlineApplication app;
@@ -220,7 +216,7 @@ TEST_F(PolicyTests, DISABLED_PermissionDenied) {
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifestTemplate));
 
     /* Check default policy */
     ASSERT_TRUE(CheckDefaultPolicy(app));
