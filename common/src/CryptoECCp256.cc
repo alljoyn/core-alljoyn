@@ -17,6 +17,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <stdlib.h>
 #include <qcc/Util.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECCp256.h>
