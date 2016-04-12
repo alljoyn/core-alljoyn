@@ -17,7 +17,7 @@ import os
 import string
 import subprocess
 import re
-
+import platform
 
 # JellyBean is API level 16
 min_api_level = 16
@@ -98,7 +98,7 @@ else:
          Exit(1)
 
 # Override MSVC build settings when building on windows.
-if 'win32' == env.subst('$HOST_OS'):
+if 'win32' == env.subst('$HOST_OS') or 'Darwin' == platform.system():
    env['OBJPREFIX']      = ''
    env['OBJSUFFIX']      = '.o'
    env['SHOBJPREFIX']    = '$OBJPREFIX'
