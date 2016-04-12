@@ -194,14 +194,14 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
     ajn::securitymgr::Manifest manifestFromRules(otherRules, count);
     EXPECT_EQ(ER_OK, manifestFromRules.GetByteArray(&byteArray, &sizeOfByteArray));
     EXPECT_EQ(ER_OK, manifestFromRules.GetRules(&rules, &count));
-    EXPECT_TRUE(byteArray != nullptr);
+    EXPECT_NE(nullptr, byteArray);
     EXPECT_NE((size_t)0, sizeOfByteArray);
 
     EXPECT_EQ((size_t)2, count);
     EXPECT_EQ((size_t)2, rules->GetMembersSize());
     EXPECT_EQ((size_t)2, otherRules->GetMembersSize());
     EXPECT_TRUE(*otherRules == *rules);
-    EXPECT_TRUE(otherRules != rules);
+    EXPECT_NE(otherRules, rules);
 
     // Test construction by byteString
     ajn::securitymgr::Manifest manifestFromByteArray(byteArray, sizeOfByteArray);
@@ -210,21 +210,20 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
 
     EXPECT_EQ(ER_OK, manifestFromByteArray.GetByteArray(&byteArray2, &sizeOfByteArray2));
     EXPECT_EQ(ER_OK, manifestFromByteArray.GetRules(&rules, &count));
-    EXPECT_TRUE(byteArray2 != nullptr);
-    EXPECT_NE((size_t)0, sizeOfByteArray2);
+    EXPECT_NE(nullptr, byteArray2);
+    ASSERT_EQ(sizeOfByteArray, sizeOfByteArray2);
 
     EXPECT_EQ((size_t)2, count);
     EXPECT_EQ((size_t)2, rules->GetMembersSize());
 
     EXPECT_TRUE(*otherRules == *rules);
-    EXPECT_FALSE(otherRules == rules);
-    EXPECT_TRUE(memcmp(byteArray, byteArray2, sizeOfByteArray2) == 0);
+    EXPECT_NE(otherRules, rules);
+    EXPECT_EQ(0, memcmp(byteArray, byteArray2, sizeOfByteArray2));
 
     delete[]byteArray2;
     byteArray2 = nullptr;
     delete[]byteArray;
     byteArray = nullptr;
-
 
     // Test copy constructor and comparison
     ajn::securitymgr::Manifest copyManifest(manifestFromByteArray);
