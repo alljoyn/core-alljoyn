@@ -127,6 +127,47 @@ TEST(KeyStoreTest, basic_store_load) {
     ASSERT_EQ(ER_OK, qcc::DeleteFile(fileName));
 }
 
+TEST(KeyStoreTest, keystore_clear) {
+    InMemoryKeyStoreListener listener;
+
+    KeyStore keyStore1(keyStoreName);
+    keyStore1.SetListener(listener);
+    keyStore1.Init(NULL, true);
+
+    KeyStore keyStore2(keyStoreName);
+    keyStore2.SetListener(listener);
+    keyStore2.Init(NULL, true);
+
+    /* Add Key1 to keyStore1 */
+    qcc::GUID128 guid1;
+    KeyBlob keyBlob1;
+    KeyStore::Key key1(KeyStore::Key::LOCAL, guid1);
+    keyBlob1.Rand(620, KeyBlob::GENERIC);
+    ASSERT_EQ(ER_OK, keyStore1.AddKey(key1, keyBlob1));
+
+    /* Add Key2 to keyStore2 */
+    qcc::GUID128 guid2;
+    KeyBlob keyBlob2;
+    KeyStore::Key key2(KeyStore::Key::LOCAL, guid2);
+    keyBlob2.Rand(620, KeyBlob::GENERIC);
+    ASSERT_EQ(ER_OK, keyStore2.AddKey(key2, keyBlob2));
+
+    /* Expect keys to be present in both stores */
+    ASSERT_TRUE(keyStore1.HasKey(key1));
+    ASSERT_TRUE(keyStore1.HasKey(key2));
+    ASSERT_TRUE(keyStore2.HasKey(key1));
+    ASSERT_TRUE(keyStore2.HasKey(key2));
+
+    /* Call Clear() on one of the KeyStores */
+    ASSERT_EQ(ER_OK, keyStore2.Clear());
+
+    /* Don't expect keys to be present in either store because both stores share the same listener */
+    ASSERT_FALSE(keyStore1.HasKey(key1));
+    ASSERT_FALSE(keyStore1.HasKey(key2));
+    ASSERT_FALSE(keyStore2.HasKey(key1));
+    ASSERT_FALSE(keyStore2.HasKey(key2));
+}
+
 TEST(KeyStoreTest, keystore_store_load_merge) {
     qcc::GUID128 guid1;
     qcc::GUID128 guid2;
