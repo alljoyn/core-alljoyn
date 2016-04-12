@@ -26,6 +26,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
+#include <qcc/atomic.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/BusAttachment.h>
 #include "KeyInfoHelper.h"
@@ -1144,7 +1145,39 @@ AJ_PCSTR _Manifest::s_MsgArgSignature = "(ua(ssa(syy))saysay)";
 AJ_PCSTR _Manifest::s_MsgArgDigestSignature = "(ua(ssa(syy))says)";
 AJ_PCSTR _Manifest::s_TemplateMsgArgSignature = "a(ssa(syy))";
 const uint32_t _Manifest::DefaultVersion = 1;
-static AJ_PCSTR TEMPORARY_BUS_ATTACHMENT_NAME = "TemporaryBusAttachment";
+
+/* Bus attachment used just to serialize messages */
+static BusAttachment* s_serializeBus = nullptr;
+
+void PermissionPolicyInit()
+{
+    /* s_serializeBus cannot be started yet, because BusAttachment::Start() requires an already-initialized Router Node */
+}
+
+void PermissionPolicyShutdown()
+{
+    if (s_serializeBus != nullptr) {
+        QCC_VERIFY(s_serializeBus->Stop() == ER_OK);
+        QCC_VERIFY(s_serializeBus->Join() == ER_OK);
+        delete s_serializeBus;
+    }
+}
+
+static BusAttachment& GetStaticBusAttachment()
+{
+    if (s_serializeBus == nullptr) {
+        BusAttachment* newBus = new BusAttachment("PermissionPolicyStaticBusAttachment");
+        QCC_VERIFY(newBus->Start() == ER_OK);
+
+        if (!CompareAndExchangePointer((volatile void**)&s_serializeBus, nullptr, newBus)) {
+            QCC_VERIFY(newBus->Stop() == ER_OK);
+            QCC_VERIFY(newBus->Join() == ER_OK);
+            delete newBus;
+        }
+    }
+
+    return *s_serializeBus;
+}
 
 _Manifest::_Manifest() : m_version(DefaultVersion), m_rules(), m_thumbprintAlgorithmOid(), m_thumbprint(), m_signatureAlgorithmOid(), m_signature()
 {
@@ -1416,28 +1449,6 @@ QStatus _Manifest::Verify(const std::vector<uint8_t>& subjectThumbprint, const E
     return status;
 }
 
-/**
- * Helper function for GetDigest which requires a BusAttachment to compute the manifest digest.
- * Try to stop and clean up the BusAttachment, which should never fail, but just in case, don't let
- * it get in the way of what we're doing. This BusAttachment shouldn't ever actually be connected
- * to anything, and is just needed to create a Message from which to serialize and hash a set of manifest
- * rules.
- */
-static void StopBusAttachment(BusAttachment& bus)
-{
-    QCC_DbgTrace(("%s", __FUNCTION__));
-    QStatus status = bus.Stop();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not stop temporary bus attachment"));
-    } else {
-        /* Only Join if we succeeded in Stopping; otherwise we'll sit forever. */
-        status = bus.Join();
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Could not join temporary bus attachment"));
-        }
-    }
-}
-
 QStatus _Manifest::GetDigest(std::vector<uint8_t>& digest) const
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
@@ -1554,22 +1565,14 @@ QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_
         return status;
     }
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-
     char savedEndian = _Message::outEndian;
     _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
-    Message tmpMsg(bus);
+    Message tmpMsg(GetStaticBusAttachment());
     tmpMsg->ErrorMsg("/", 0);
     status = tmpMsg->MarshalMessage(messageSignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not marshal message"));
         _Message::SetEndianess(savedEndian);
-        StopBusAttachment(bus);
         return status;
     }
 
@@ -1590,9 +1593,7 @@ QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_
         break;
     }
 
-    StopBusAttachment(bus);
     _Message::SetEndianess(savedEndian);
-
     return status;
 }
 
@@ -1601,37 +1602,27 @@ QStatus _Manifest::Deserialize(const std::vector<uint8_t>& serializedForm)
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String endpointName("local");
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    QStatus status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-    Message tmpMsg(bus);
+    Message tmpMsg(GetStaticBusAttachment());
     std::vector<uint8_t> serializedFormCopy(serializedForm); /* LoadBytes doesn't take const. */
-    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
+    QStatus status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not populate Message object with serialized form"));
-        StopBusAttachment(bus);
         return status;
     }
 
     status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not Unmarshal"));
-        StopBusAttachment(bus);
         return status;
     }
 
     status = tmpMsg->UnmarshalArgs("*");
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not UnmarshalArgs"));
-        StopBusAttachment(bus);
         return status;
     }
 
     status = SetFromMsgArg(*tmpMsg->GetArg(0));
-    StopBusAttachment(bus);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not SetFromMsgArg"));
         return status;
@@ -1650,16 +1641,9 @@ QStatus _Manifest::SerializeArray(const std::vector<Manifest>& manifests, std::v
         return status;
     }
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-
     char savedEndian = _Message::outEndian;
     _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
-    Message tmpMsg(bus);
+    Message tmpMsg(GetStaticBusAttachment());
     tmpMsg->ErrorMsg("/", 0);
     status = tmpMsg->MarshalMessage(_Manifest::s_MsgArgArraySignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
     if (ER_OK != status) {
@@ -1668,9 +1652,7 @@ QStatus _Manifest::SerializeArray(const std::vector<Manifest>& manifests, std::v
         serializedForm.assign(tmpMsg->GetBuffer(), tmpMsg->GetBuffer() + tmpMsg->GetBufferSize());
     }
 
-    StopBusAttachment(bus);
     _Message::SetEndianess(savedEndian);
-
     return status;
 }
 
@@ -1685,34 +1667,25 @@ QStatus _Manifest::DeserializeArray(const uint8_t* serializedForm, size_t serial
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String endpointName("local");
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    QStatus status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-    Message tmpMsg(bus);
+    Message tmpMsg(GetStaticBusAttachment());
     std::vector<uint8_t> serializedFormCopy(serializedSize); /* LoadBytes doesn't take const. */
     serializedFormCopy.assign(serializedForm, serializedForm + serializedSize);
 
-    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
+    QStatus status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not populate Message object with serialized form"));
-        StopBusAttachment(bus);
         return status;
     }
 
     status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not Unmarshal"));
-        StopBusAttachment(bus);
         return status;
     }
 
     status = tmpMsg->UnmarshalArgs("*");
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not UnmarshalArgs"));
-        StopBusAttachment(bus);
         return status;
     }
 
@@ -1720,7 +1693,6 @@ QStatus _Manifest::DeserializeArray(const uint8_t* serializedForm, size_t serial
     size_t signedManifestCount;
 
     status = tmpMsg->GetArg(0)->Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgs);
-    StopBusAttachment(bus);
     if (ER_OK != status) {
         return status;
     }
