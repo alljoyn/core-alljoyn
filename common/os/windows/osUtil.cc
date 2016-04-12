@@ -251,7 +251,7 @@ void WindowsUtilInit()
     if (GetUserNameExA(NameUniqueId, buf, &len)) {
         s_uid = ComputeId(buf, len);
     } else {
-        QCC_ASSERT(false);
+        // QCC_ASSERT(false);
         s_uid = ComputeId(nobody, strlen(nobody));
     }
     QCC_ASSERT(s_uid != 0);
@@ -265,7 +265,7 @@ void WindowsUtilInit()
         }
         s_gid = ComputeId(gp.c_str(), gp.size());
     } else {
-        QCC_ASSERT(false);
+        // QCC_ASSERT(false);
         s_gid = ComputeId(nogroup, strlen(nogroup));
     }
     QCC_ASSERT(s_gid != 0);

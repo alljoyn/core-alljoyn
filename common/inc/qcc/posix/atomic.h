@@ -88,6 +88,12 @@ inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int
     return __atomic_compare_exchange_n(mem, &expectedValue, newValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
+inline bool CompareAndExchangePointer(volatile void** mem, void* expectedValue, void* newValue)
+{
+    /* Use strong memory ordering model */
+    return __atomic_compare_exchange_n(mem, &expectedValue, newValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
 #elif defined(QCC_OS_LINUX)
 
 /**
