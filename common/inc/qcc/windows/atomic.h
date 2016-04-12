@@ -62,6 +62,10 @@ inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int
     return (InterlockedCompareExchange(reinterpret_cast<volatile long*>(mem), newValue, expectedValue) == expectedValue);
 }
 
+inline bool CompareAndExchangePointer(volatile void** mem, void* expectedValue, void* newValue) {
+    return (InterlockedCompareExchangePointer((volatile PVOID*)(mem), newValue, expectedValue) == expectedValue);
+}
+
 }
 
 #endif

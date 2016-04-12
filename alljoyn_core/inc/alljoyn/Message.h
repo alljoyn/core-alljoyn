@@ -973,6 +973,12 @@ class _Message {
      */
     void SetSerialNumber();
 
+    /**
+     * @internal
+     * Sets the serial number for this message.
+     */
+    void SetSerialNumber(uint32_t serialNumber);
+
     /// @endcond
 
   private:

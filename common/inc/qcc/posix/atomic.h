@@ -88,6 +88,12 @@ inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int
     return __atomic_compare_exchange_n(mem, &expectedValue, newValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
+inline bool CompareAndExchangePointer(volatile void** mem, void* expectedValue, void* newValue)
+{
+    /* Use strong memory ordering model */
+    return __atomic_compare_exchange_n(mem, &expectedValue, newValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
+}
+
 #elif defined(QCC_OS_LINUX)
 
 /**
@@ -121,6 +127,10 @@ inline int32_t DecrementAndFetch(volatile int32_t* mem) {
  * @return  true if the initial value of *mem was expectedValue, false otherwise
  */
 inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int32_t newValue) {
+    return __sync_bool_compare_and_swap(mem, expectedValue, newValue);
+}
+
+inline bool CompareAndExchangePointer(volatile void** mem, void* expectedValue, void* newValue) {
     return __sync_bool_compare_and_swap(mem, expectedValue, newValue);
 }
 
@@ -160,6 +170,10 @@ inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int
     return OSAtomicCompareAndSwapIntBarrier(expectedValue, newValue, mem);
 }
 
+inline bool CompareAndExchangePointer(volatile void** mem, void* expectedValue, void* newValue) {
+    return OSAtomicCompareAndSwapPtrBarrier(expectedValue, newValue, mem);
+}
+
 #else
 
 /**
@@ -189,6 +203,8 @@ int32_t DecrementAndFetch(volatile int32_t* mem);
  * @return  true if the initial value of *mem was expectedValue, false otherwise
  */
 bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int32_t newValue);
+
+bool CompareAndExchangePointer(volatile void** mem, void* expectedValue, void* newValue);
 
 #endif
 
