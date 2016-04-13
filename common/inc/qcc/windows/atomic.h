@@ -62,6 +62,20 @@ inline bool CompareAndExchange(volatile int32_t* mem, int32_t expectedValue, int
     return (InterlockedCompareExchange(reinterpret_cast<volatile long*>(mem), newValue, expectedValue) == expectedValue);
 }
 
+/**
+ * Performs an atomic compare-and-exchange operation on the specified pointer values.
+ * It compares two specified pointer values and exchanges with another pointer
+ * value based on the outcome of the comparison.
+ *
+ * @param mem   Pointer to the pointer value to be compared and modified.
+ * @param expectedValue Expected value of *mem.
+ * @param newValue New value of *mem after calling this function, if returning true.
+ * @return  true if the initial value of *mem was expectedValue, false otherwise
+ */
+inline bool CompareAndExchangePointer(void* volatile* mem, void* expectedValue, void* newValue) {
+    return (InterlockedCompareExchangePointer(mem, newValue, expectedValue) == expectedValue);
+}
+
 }
 
 #endif
