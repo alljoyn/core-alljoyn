@@ -26,15 +26,15 @@
 #include <qcc/Util.h>
 
 #include <alljoyn/KeyStoreListener.h>
+#include <alljoyn/Status.h>
 
 #include "KeyStore.h"
-
-#include <alljoyn/Status.h>
 
 #define QCC_MODULE "ALLJOYN_AUTH"
 
 using namespace std;
 using namespace qcc;
+
 
 namespace ajn {
 
@@ -60,6 +60,8 @@ QStatus DeleteDefaultKeyStoreFile(const qcc::String& application, const char* fn
     qcc::String path = GetDefaultKeyStoreFileName(application.c_str(), fname);
 
     if (qcc::FileExists(path) == ER_OK) {
+        FileSink s(path, false, FileSink::PRIVATE);
+        s.Lock(true);
         status = qcc::DeleteFile(path);
         if (status != ER_OK) {
             QCC_LogError(status, ("DeleteFile(%s) failed", path.c_str()));
@@ -73,66 +75,82 @@ class DefaultKeyStoreListener : public KeyStoreListener {
 
   public:
 
-    DefaultKeyStoreListener(const qcc::String& application, const char* fname) {
-        fileName = GetDefaultKeyStoreFileName(application.c_str(), fname);
+    DefaultKeyStoreListener(const qcc::String& application, const char* fname) : fileName(GetDefaultKeyStoreFileName(application.c_str(), fname)), fileLocker(fileName.c_str())
+    {
+        FileLock readLock;
+        /* 'readLock' is released when goes out of scope. */
+        QStatus status = fileLocker.GetFileLockForRead(&readLock);
+        if (status == ER_EOF) {
+            /* The file does not exist. Create one here by simply acquiring Write lock. */
+            status = fileLocker.AcquireWriteLock();
+            if (status == ER_OK) {
+                fileLocker.ReleaseWriteLock();
+            } else {
+                QCC_LogError(status, ("FileLocker::AcquireWriteLock() failed, status=(%#x) - cannot write file (%s).", status, fileName.c_str()));
+            }
+        }
     }
 
-    QStatus LoadRequest(KeyStore& keyStore) {
-        QStatus status;
-        /* Try to load the keystore */
-        {
-            FileSource source(fileName);
-            if (source.IsValid()) {
-                source.Lock(true);
-                status = keyStore.Pull(source, fileName);
-                if (status == ER_OK) {
-                    QCC_DbgHLPrintf(("Read key store from %s", fileName.c_str()));
-                }
-                source.Unlock();
-                return status;
-            }
-        }
-        /* Create an empty keystore */
-        {
-            FileSink sink(fileName, FileSink::PRIVATE);
-            if (!sink.IsValid()) {
-                status = ER_BUS_WRITE_ERROR;
-                QCC_LogError(status, ("Cannot initialize key store %s", fileName.c_str()));
-                return status;
-            }
-        }
-        /* Load the empty keystore */
-        {
-            FileSource source(fileName);
-            if (source.IsValid()) {
-                source.Lock(true);
-                status = keyStore.Pull(source, fileName);
-                if (status == ER_OK) {
-                    QCC_DbgHLPrintf(("Initialized key store %s", fileName.c_str()));
-                } else {
-                    QCC_LogError(status, ("Failed to initialize key store %s", fileName.c_str()));
-                }
-                source.Unlock();
-            } else {
-                status = ER_BUS_READ_ERROR;
-            }
+    QStatus AcquireExclusiveLock(const char* file, uint32_t line)
+    {
+        QStatus status = KeyStoreListener::AcquireExclusiveLock(file, line);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("KeyStoreListener::AcquireExclusiveLock failed"));
             return status;
         }
+        status = fileLocker.AcquireWriteLock();
+        if (status != ER_OK) {
+            QCC_LogError(status, ("fileLocker.AcquireWriteLock() failed"));
+        }
+        return status;
     }
 
-    QStatus StoreRequest(KeyStore& keyStore) {
-        QStatus status;
-        FileSink sink(fileName, FileSink::PRIVATE);
-        if (sink.IsValid()) {
-            sink.Lock(true);
-            status = keyStore.Push(sink);
-            if (status == ER_OK) {
-                QCC_DbgHLPrintf(("Wrote key store to %s", fileName.c_str()));
+    void ReleaseExclusiveLock(const char* file, uint32_t line)
+    {
+        QCC_ASSERT(fileLocker.HasWriteLock());
+        fileLocker.ReleaseWriteLock();
+        KeyStoreListener::ReleaseExclusiveLock(file, line);
+    }
+
+    QStatus LoadRequest(KeyStore& keyStore)
+    {
+        FileLock readLock;
+        QStatus status = fileLocker.GetFileLockForRead(&readLock);
+        if (status == ER_OK) {
+            FileSource* source = readLock.GetSource();
+            QCC_ASSERT(source != nullptr);
+            if (source != nullptr) {
+                status = keyStore.Pull(*source, fileLocker.GetFileName());
+                if (status == ER_OK) {
+                    QCC_DbgHLPrintf(("Read key store from %s", fileLocker.GetFileName()));
+                }
+            } else {
+                status = ER_OS_ERROR;
             }
-            sink.Unlock();
+        }
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to read key store %s", fileLocker.GetFileName()));
+        }
+        return status;
+    }
+
+    QStatus StoreRequest(KeyStore& keyStore)
+    {
+        FileLock writeLock;
+        QStatus status = fileLocker.GetFileLockForWrite(&writeLock);
+        if (status == ER_OK) {
+            FileSink* sink = writeLock.GetSink();
+            QCC_ASSERT(sink != nullptr);
+            if (sink != nullptr) {
+                status = keyStore.Push(*sink);
+                if (status == ER_OK) {
+                    QCC_DbgHLPrintf(("Wrote key store to %s", fileLocker.GetFileName()));
+                }
+            } else {
+                status = ER_OS_ERROR;
+            }
         } else {
-            status = ER_BUS_WRITE_ERROR;
-            QCC_LogError(status, ("Cannot write key store to %s", fileName.c_str()));
+            QCC_LogError(status, ("Failed to write key store to %s", fileLocker.GetFileName()));
         }
         return status;
     }
@@ -140,7 +158,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
   private:
 
     qcc::String fileName;
-
+    FileLocker fileLocker;
 };
 
 KeyStoreListener* KeyStoreListenerFactory::CreateInstance(const qcc::String& application, const char* fname)

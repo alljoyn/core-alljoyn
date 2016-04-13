@@ -425,10 +425,14 @@ QStatus KeyStore::Load()
     }
 
     /*
-     * Load the keys so we can check for changes and merge if needed
+     * Load the keys so we can check for changes and merge if needed.
+     * This should really be guarded by a shared lock instead of exclusive lock,
+     * but we're just using exclusive lock for now since shared lock is not available.
      */
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     QStatus status = LoadPersistentKeys();
     if (ER_OK != status) {
+        QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
         return status;
     }
 
@@ -505,6 +509,7 @@ QStatus KeyStore::Load()
     }
 
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
     return status;
 }
 

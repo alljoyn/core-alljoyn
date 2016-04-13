@@ -17,6 +17,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <stdlib.h>
 #include <qcc/Util.h>
 #include <qcc/CryptoECC.h>
 #include <qcc/CryptoECCp256.h>
@@ -705,9 +706,11 @@ void fixed_window_recode(digit256_t scalar, unsigned int nbit, unsigned int w, i
     digit_t temp, res, borrow;
 
     cwords = NBITS_TO_NDIGITS(nbit);            /* Number of computer words to represent scalar */
+    QCC_ASSERT(w >= 2);
     t = (nbit + (w - 2)) / (w - 1);             /* Fixed length of the fixed window representation */
     mask = (1 << w) - 1;                        /* w-bit mask */
-    val = (digit_t)(1 << (w - 1));              /* 2^(w-1)  */
+    QCC_ASSERT(w <= 32);                        /* Safe to convert to 64 bit digit_t value before shifting */
+    val = ((digit_t)1) << (w - 1);              /* 2^(w-1)  */
 
     for (i = 0; i <= (t - 1); i++) {
         temp = (scalar[0] & mask) - val;        /* ki = (k mod 2^w) - 2^(w-1)  */
