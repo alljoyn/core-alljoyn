@@ -937,6 +937,22 @@ class _Message {
 
     /**
      * @internal
+     * Unmarshals a message. Only the message header is unmarshaled at this
+     * time.
+     *
+     * @param endpointName   The uinique name of the endpoint that this message came from.
+     * @param handlePassing  True if handle passing is allowed.
+     * @param checkSender    True if message's sender field should be validated against the endpoint's unique name.
+     * @param pedantic       Perform detailed checks on the header fields.
+     * @param peerStateTable The peer state table used when unmarshalling encrypted arguments.
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus Unmarshal(PeerStateTable* peerStateTable, qcc::String& endpointName, bool handlePassing, bool checkSender, bool pedantic);
+
+    /**
+     * @internal
      * Deliver a marshaled message to a remote endpoint.
      *
      * @param endpoint   Endpoint to receive marshaled message.
@@ -972,6 +988,14 @@ class _Message {
      * Sets the serial number to the next available value for the bus attachment for this message.
      */
     void SetSerialNumber();
+
+    /**
+     * @internal
+     * Sets the serial number for this message.
+     *
+     * @param serialNumber  New serial number for this message.
+     */
+    void SetSerialNumber(uint32_t serialNumber);
 
     /// @endcond
 
