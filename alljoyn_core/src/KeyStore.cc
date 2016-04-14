@@ -711,8 +711,6 @@ QStatus KeyStore::Clear()
 
     keys->clear();
     storeState = MODIFIED;
-    revision = 0;
-    persistentRevision = 0;
     deletions.clear();
 
     ReleaseExclusiveLock(MUTEX_CONTEXT);
