@@ -130,9 +130,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 bool isGlobalBroadcastSignal = false;
                 const vector<XmlElement*>& argChildren = ifChildElem->GetChildren();
                 vector<XmlElement*>::const_iterator argIt = argChildren.begin();
-                map<qcc::String, qcc::String> argDescriptions;
                 map<pair<qcc::String, qcc::String>, qcc::String> argAnnotations;
-                qcc::String memberDescription;
 
                 if (isSignal) {
                     const qcc::String& sessioncastStr = ifChildElem->GetAttribute("sessioncast");
@@ -174,13 +172,10 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                                     const qcc::String& argValueAtt = (*it)->GetAttribute("value");
                                     pair<qcc::String, qcc::String> item(nameAtt, argNameAtt);
                                     argAnnotations[item] = argValueAtt;
-                                    if ((*it)->GetAttribute("name").compare_std(0, docString.length(), docString) == 0) {
-                                        argDescriptions.insert(pair<qcc::String, qcc::String>(nameAtt, (*it)->GetAttribute("value")));
-                                    }
                                 } else if ((*it)->GetName() == "description") {
                                     const qcc::String& desc = (*it)->GetContent();
-                                    argDescriptions.insert(pair<qcc::String, qcc::String>(nameAtt, desc));
                                     const qcc::String& lang = (*it)->GetAttribute("language");
+                                    /* Add argument description as annotation. */
                                     if (!lang.empty()) {
                                         const pair<qcc::String, qcc::String> item(nameAtt, docString + "." + lang);
                                         argAnnotations[item] = desc;
@@ -197,11 +192,6 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                     } else if (argElem->GetName() == "annotation") {
                         const qcc::String& nameAtt = argElem->GetAttribute("name");
                         const qcc::String& valueAtt = argElem->GetAttribute("value");
-
-                        /* Treat annotation DocString as description */
-                        if (nameAtt.compare_std(0, docString.length(), docString) == 0) {
-                            memberDescription = valueAtt;
-                        }
                         annotations[nameAtt] = valueAtt;
 
                         /* Unified XML signal emission behaviors */
@@ -217,8 +207,8 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                             }
                         }
                     } else if (argElem->GetName() == "description") {
-                        memberDescription = argElem->GetContent();
-                        /* Add description to annotation */
+                        const qcc::String& memberDescription = argElem->GetContent();
+                        /* Add description as annotation */
                         const qcc::String& lang = argElem->GetAttribute("language");
                         if (!lang.empty()) {
                             const qcc::String nameAtt = docString + "." + lang;
@@ -251,14 +241,6 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
 
                     for (std::map<String, String>::const_iterator it = annotations.begin(); it != annotations.end(); ++it) {
                         intf.AddMemberAnnotation(memberName.c_str(), it->first, it->second);
-                    }
-
-                    if (!memberDescription.empty()) {
-                        intf.SetMemberDescription(memberName.c_str(), memberDescription.c_str());
-                    }
-
-                    for (std::map<String, String>::const_iterator it = argDescriptions.begin(); it != argDescriptions.end(); it++) {
-                        intf.SetArgDescription(memberName.c_str(), it->first.c_str(), it->second.c_str());
                     }
 
                     for (std::map<std::pair<qcc::String, qcc::String>, qcc::String>::const_iterator it = argAnnotations.begin(); it != argAnnotations.end(); it++) {
@@ -297,9 +279,6 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 while ((ER_OK == status) && (argIt != argChildren.end())) {
                     const XmlElement* argElem = *argIt++;
                     if (argElem->GetName() == "annotation") {
-                        if (argElem->GetAttribute("name").compare_std(0, docString.length(), docString) == 0) {
-                            intf.SetPropertyDescription(memberName.c_str(), argElem->GetAttribute("value").c_str());
-                        }
                         status = intf.AddPropertyAnnotation(memberName, argElem->GetAttribute("name"), argElem->GetAttribute("value"));
                     } else if (argElem->GetName() == "description") {
                         const qcc::String& content = argElem->GetContent();
@@ -307,29 +286,18 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                         if (!lang.empty()) {
                             intf.AddPropertyAnnotation(memberName, docString + "." + lang, content);
                         }
-                        status = intf.SetPropertyDescription(memberName.c_str(), content.c_str());
                     }
                 }
             }
         } else if (ifChildName == "annotation") {
             const qcc::String& nameAtt = ifChildElem->GetAttribute("name");
             const qcc::String& valueAtt = ifChildElem->GetAttribute("value");
-
-            /* Treat annotation DocString as description (for example, "org.alljoyn.Bus.DocString.En") */
-            if (nameAtt.compare_std(0, docString.length(), docString) == 0) {
-                if ((nameAtt.length() > 26) && (nameAtt[25] == '.')) {
-                    qcc::String const& language = nameAtt.substr(26);
-                    intf.SetDescriptionLanguage(language.c_str());
-                }
-                intf.SetDescription(valueAtt.c_str());
-            }
             status = intf.AddAnnotation(nameAtt, valueAtt);
         } else if (ifChildName == "description") {
             qcc::String const& description = ifChildElem->GetContent();
             qcc::String const& language = ifChildElem->GetAttribute("language");
-            intf.SetDescriptionLanguage(language.c_str());
-            intf.SetDescription(description.c_str());
             if (!language.empty()) {
+                /* Add description as annotation */
                 const qcc::String nameAtt = docString + "." + language;
                 intf.AddAnnotation(nameAtt, description);
             }

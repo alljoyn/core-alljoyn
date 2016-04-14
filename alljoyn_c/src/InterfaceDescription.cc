@@ -686,16 +686,89 @@ size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoy
     return count;
 }
 
+size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages2(
+    const alljoyn_interfacedescription iface, char** languages, size_t numLanguages, size_t maxLanguageLength)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    std::set<qcc::String> foundLanguages = ((ajn::InterfaceDescription*)iface)->GetDescriptionLanguages();
+    size_t languageCount = 0;
+    for (std::set<qcc::String>::const_iterator itL = foundLanguages.begin();
+         (itL != foundLanguages.end() && languageCount < numLanguages); itL++, languageCount++) {
+        strncpy(languages[languageCount], itL->c_str(), maxLanguageLength);
+    }
+    return languageCount;
+}
+
+size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguagescount(
+    const alljoyn_interfacedescription iface)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    std::set<qcc::String> foundLanguages = ((ajn::InterfaceDescription*)iface)->GetDescriptionLanguages();
+    return foundLanguages.size();
+}
+
 void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ((ajn::InterfaceDescription*)iface)->SetDescription(description);
 }
 
+QStatus AJ_CALL alljoyn_interfacedescription_setdescriptionforlanguage(alljoyn_interfacedescription iface, const char* description, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QStatus status = ((ajn::InterfaceDescription*)iface)->SetDescriptionForLanguage(description, languageTag);
+    return status;
+}
+
+size_t AJ_CALL alljoyn_interfacedescription_getdescriptionforlanguage(alljoyn_interfacedescription iface, char* description, size_t maxLanguageLength, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    qcc::String out_val;
+    const bool found = ((ajn::InterfaceDescription*)iface)->GetDescriptionForLanguage(out_val, languageTag);
+
+    if ((description != nullptr) && (maxLanguageLength >= 1)) {
+        if (found) {
+            strncpy(description, out_val.c_str(), maxLanguageLength);
+            description[maxLanguageLength - 1] = '\0';
+        } else {
+            //return empty string
+            *description = '\0';
+        }
+    }
+    return out_val.size();
+}
+
+
 QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->SetMemberDescription(member, description);
+}
+
+QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+    alljoyn_interfacedescription iface, const char* member, const char* description, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription*)iface)->SetMemberDescriptionForLanguage(qcc::String(member), description, languageTag);
+}
+
+size_t AJ_CALL alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+    alljoyn_interfacedescription iface, const char* member, char* description, size_t maxLanguageLength, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    qcc::String out_val;
+    const bool found = ((ajn::InterfaceDescription*)iface)->GetMemberDescriptionForLanguage(member, out_val, languageTag);
+
+    if ((description != nullptr) && (maxLanguageLength >= 1)) {
+        if (found) {
+            strncpy(description, out_val.c_str(), maxLanguageLength);
+            description[maxLanguageLength - 1] = '\0';
+        } else {
+            //return empty string
+            *description = '\0';
+        }
+    }
+    return out_val.size();
 }
 
 QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description)
@@ -704,11 +777,64 @@ QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interface
     return ((ajn::InterfaceDescription*)iface)->SetArgDescription(member, argName, description);
 }
 
+QStatus AJ_CALL alljoyn_interfacedescription_setargdescriptionforlanguage(
+    alljoyn_interfacedescription iface, const char* member, const char* arg, const char* description, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription*)iface)->SetArgDescriptionForLanguage(member, arg, description, languageTag);
+}
+
+size_t AJ_CALL alljoyn_interfacedescription_getargdescriptionforlanguage(
+    alljoyn_interfacedescription iface, const char* member, const char* arg, char* description, size_t maxLanguageLength, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    qcc::String out_val;
+    const bool found = ((ajn::InterfaceDescription*)iface)->GetArgDescriptionForLanguage(member, arg, out_val, languageTag);
+
+    if ((description != nullptr) && (maxLanguageLength >= 1)) {
+        if (found) {
+            strncpy(description, out_val.c_str(), maxLanguageLength);
+            description[maxLanguageLength - 1] = '\0';
+        } else {
+            //return empty string
+            *description = '\0';
+        }
+    }
+    return out_val.size();
+}
+
 QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::InterfaceDescription*)iface)->SetPropertyDescription(name, description);
 }
+
+QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+    alljoyn_interfacedescription iface, const char* name, const char* description, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::InterfaceDescription*)iface)->SetPropertyDescriptionForLanguage(name, description, languageTag);
+}
+
+size_t AJ_CALL alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+    alljoyn_interfacedescription iface, const char* property, char* description, size_t maxLanguageLength, const char* languageTag)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    qcc::String out_val;
+    const bool found = ((ajn::InterfaceDescription*)iface)->GetPropertyDescriptionForLanguage(property, out_val, languageTag);
+
+    if ((description != nullptr) && (maxLanguageLength >= 1)) {
+        if (found) {
+            strncpy(description, out_val.c_str(), maxLanguageLength);
+            description[maxLanguageLength - 1] = '\0';
+        } else {
+            //return empty string
+            *description = '\0';
+        }
+    }
+    return out_val.size();
+}
+
 
 void AJ_CALL alljoyn_interfacedescription_setdescriptiontranslationcallback(alljoyn_interfacedescription iface, alljoyn_interfacedescription_translation_callback_ptr translation_callback)
 {
