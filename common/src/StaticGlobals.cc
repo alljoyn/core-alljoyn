@@ -31,7 +31,6 @@
 #ifdef QCC_OS_GROUP_WINDOWS
 #include <qcc/windows/utility.h>
 #include <qcc/windows/NamedPipeWrapper.h>
-#include <qcc/windows/util.h>
 #endif
 #include "Crypto.h"
 #include "DebugControl.h"
@@ -73,17 +72,11 @@ class StaticGlobals {
             Shutdown();
             return status;
         }
-#if defined(QCC_OS_GROUP_WINDOWS)
-        WindowsUtilInit();
-#endif
         return ER_OK;
     }
 
     static QStatus Shutdown()
     {
-#if defined(QCC_OS_GROUP_WINDOWS)
-        WindowsUtilShutdown();
-#endif
         Crypto::Shutdown();
         Thread::StaticShutdown();
         LoggerSetting::Shutdown();
