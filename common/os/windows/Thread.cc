@@ -196,6 +196,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     alertCode(0),
     auxListeners(),
     auxListenersLock(LOCK_LEVEL_THREAD_AUXLISTENERSLOCK),
+    waitCount(0),
     threadId(isExternal ? GetCurrentThreadId() : 0)
 {
     IncrementPerfCounter(PERF_COUNTER_THREAD_CREATED);
@@ -226,17 +227,14 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
 Thread::~Thread(void)
 {
     if (!isExternal) {
-        if (IsRunning()) {
-            Stop();
-            Join();
-        } else if (handle) {
-            CloseHandle(handle);
-            handle = 0;
-            QCC_DEBUG_ONLY(IncrementAndFetch(&stopped));
-        }
+        Stop();
+        Join();
     }
     QCC_DbgHLPrintf(("Thread::~Thread() [%s,%x] started:%d running:%d stopped:%d", GetName(), this, started, running, stopped));
     IncrementPerfCounter(PERF_COUNTER_THREAD_DESTROYED);
+
+    /* To avoid the waitCount assertion, don't call Join() while deleting the thread object */
+    QCC_ASSERT(waitCount == 0);
 }
 
 
@@ -391,7 +389,6 @@ QStatus Thread::Alert(uint32_t threadAlertCode)
 
 QStatus Thread::Join(void)
 {
-
     QCC_ASSERT(!isExternal);
 
     QStatus status = ER_OK;
@@ -399,44 +396,40 @@ QStatus Thread::Join(void)
 
     QCC_DbgTrace(("Thread::Join() [%s run: %s]", funcName, IsRunning() ? "true" : "false"));
 
-    /*
-     * Nothing to join if the thread is dead
-     */
+    IncrementAndFetch(&waitCount);
+
     if (state == DEAD) {
+        /*
+         * Nothing to join if the thread is dead
+         */
         QCC_DbgPrintf(("Thread::Join() thread is dead [%s]", funcName));
-        isStopping = false;
-        return ER_OK;
+    } else {
+        QCC_DbgPrintf(("[%s - %x] %s thread %x [%s - %x]",
+                       self ? funcName : GetThread()->funcName,
+                       self ? threadId : GetThread()->threadId,
+                       self ? "Closing" : "Joining",
+                       threadId, funcName, threadId));
+
+        if (!self) {
+            QCC_VERIFY(WaitForSingleObject(handle, INFINITE) == WAIT_OBJECT_0);
+        }
+        state = DEAD;
     }
 
-    QCC_DbgPrintf(("[%s - %x] %s thread %x [%s - %x]",
-                   self ? funcName : GetThread()->funcName,
-                   self ? threadId : GetThread()->threadId,
-                   self ? "Closing" : "Joining",
-                   threadId, funcName, threadId));
-    /*
-     * make local copy of handle so it is not deleted if two threads are in
-     * Join at the same time.
-     */
-    HANDLE goner = handle;
-    if (goner) {
-        DWORD ret;
-        handle = 0;
-        if (self) {
-            ret = WAIT_OBJECT_0;
-        } else {
-            ret = WaitForSingleObject(goner, INFINITE);
+    if (DecrementAndFetch(&waitCount) == 0) {
+        /*
+         * make local copy of handle so it is not closed multiple times if two threads are in
+         * Join at the same time.
+         */
+        HANDLE goner = InterlockedExchangePointer(&handle, nullptr);
+        if (goner != nullptr) {
+            QCC_VERIFY(CloseHandle(goner));
+            QCC_DEBUG_ONLY(IncrementAndFetch(&stopped));
         }
-        if (ret != WAIT_OBJECT_0) {
-            status = ER_OS_ERROR;
-            QCC_LogError(status, ("Joining thread: %d", ret));
-        }
-        CloseHandle(goner);
-        QCC_DEBUG_ONLY(IncrementAndFetch(&stopped));
     }
+
     QCC_DbgPrintf(("%s thread %s", self ? "Closed" : "Joined", funcName));
     isStopping = false;
-    /* once the state is changed to DEAD, we must not touch any member of this class anymore */
-    state = DEAD;
     return status;
 }
 
