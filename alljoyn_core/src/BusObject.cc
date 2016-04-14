@@ -1273,17 +1273,11 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
             continue;
         }
 
-        hasDescription = true;
-
-        const char* lang = (itIf->first)->GetDescriptionLanguage();
-        if (lang && lang[0]) {
-            langs.insert(qcc::String(lang));
-        }
-
-        Translator* ifTranslator = (itIf->first)->GetDescriptionTranslator();
-        if (ifTranslator) {
-            mergeTranslationLanguages(ifTranslator, langs);
-        } else if (!someoneHasNoTranslator) {
+        std::set<qcc::String> ifLangs = itIf->first->GetDescriptionLanguages();
+        if (ifLangs.size() > 0) {
+            hasDescription = true;
+            std::copy(ifLangs.begin(), ifLangs.end(), inserter(langs, langs.begin()));
+        } else {
             someoneHasNoTranslator = true;
         }
     }
