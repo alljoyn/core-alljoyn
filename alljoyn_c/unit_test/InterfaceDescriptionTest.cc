@@ -1891,3 +1891,634 @@ TEST(InterfaceDescriptionTest, description_translator_en_de) {
 
     alljoyn_busattachment_destroy(bus);
 }
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlanguage__NoDescriptionSet__Returns0)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    EXPECT_EQ(0u, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlanguage__NoDescriptionInRequestedLanguage__Returns0)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, "German Description", "de");
+
+    EXPECT_EQ(0u, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlanguage_DescriptionsInMultipleLanguages_ReturnsRequested)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char GERMAN_DESCRIPTION[] = "German Description";
+    const char FRENCH_DESCRIPTION[] = "French Description";
+    const char SPANISH_DESCRIPTION[] = "Spanish Description";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, GERMAN_DESCRIPTION, "de");
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, FRENCH_DESCRIPTION, "fr");
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, SPANISH_DESCRIPTION, "es");
+
+    EXPECT_EQ(sizeof(GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "de"));
+    EXPECT_STREQ(GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "fr"));
+    EXPECT_STREQ(FRENCH_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "es"));
+    EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionforlanguage_ExtendedLanguagesRequested_ReturnsMatchingDescriptions)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char GERMAN_DESCRIPTION[] = "German Description";
+    const char GERMAN_DESCRIPTION_TAG[] = "de";
+    const char GERMAN_LATIN_DESCRIPTION[] = "German Latin Description";
+    const char GERMAN_LATIN_DESCRIPTION_TAG[] = "de-Latn-DE";
+    const char GERMAN_LATIN_DESCRIPTION_1996[] = "German Latin Description 1996";
+    const char GERMAN_LATIN_DESCRIPTION_1996_TAG[] = "de-Latn-DE-1996";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, GERMAN_DESCRIPTION, GERMAN_DESCRIPTION_TAG);
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, GERMAN_LATIN_DESCRIPTION, GERMAN_LATIN_DESCRIPTION_TAG);
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, GERMAN_LATIN_DESCRIPTION_1996, GERMAN_LATIN_DESCRIPTION_1996_TAG);
+
+    EXPECT_EQ(sizeof(GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, GERMAN_DESCRIPTION_TAG));
+    EXPECT_STREQ(GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(GERMAN_LATIN_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, GERMAN_LATIN_DESCRIPTION_TAG));
+    EXPECT_STREQ(GERMAN_LATIN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(GERMAN_LATIN_DESCRIPTION_1996) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, GERMAN_LATIN_DESCRIPTION_1996_TAG));
+    EXPECT_STREQ(GERMAN_LATIN_DESCRIPTION_1996, description);
+    EXPECT_EQ(sizeof(GERMAN_LATIN_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "de-Latn-DE-1997"));
+    EXPECT_STREQ(GERMAN_LATIN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getdescriptionforlanguage(testIntf, description, SIZE, "de-Deva-DE"));
+    EXPECT_STREQ(GERMAN_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescriptionforlanguage__NoDescriptionSet__Returns0)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char PROPERTY_NAME[] = "Property";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(testIntf, PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
+
+    EXPECT_EQ(0u, alljoyn_interfacedescription_getpropertydescriptionforlanguage(testIntf, PROPERTY_NAME, description, SIZE, "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setpropertydescriptionforlanguage__NoPropertySet__ReturnsNoSuchProperty)
+{
+    const char PROPERTY_NAME[] = "Property";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    EXPECT_EQ(ER_BUS_NO_SUCH_PROPERTY, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, "Description", "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescriptionforlanguage__DescriptionsInMultipleLanguages__ReturnsRequested)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char PROPERTY_NAME[] = "Property";
+    const char GERMAN_DESCRIPTION[] = "German Description";
+    const char FRENCH_DESCRIPTION[] = "French Description";
+    const char SPANISH_DESCRIPTION[] = "Spanish Description";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(testIntf, PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, GERMAN_DESCRIPTION, "de"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, SPANISH_DESCRIPTION, "es"));
+
+    EXPECT_EQ(sizeof(GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(FRENCH_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, description, SIZE, "es"));
+    EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getpropertydescriptionforlanguage__MultipleProperties__ReturnsRequested)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char FIRST_PROPERTY_NAME[] = "First Property";
+    const char FIRST_GERMAN_DESCRIPTION[] = "First German Description";
+    const char FIRST_FRENCH_DESCRIPTION[] = "First French Description";
+    const char SECOND_PROPERTY_NAME[] = "Second Property";
+    const char SECOND_GERMAN_DESCRIPTION[] = "Second German Description";
+    const char SECOND_FRENCH_DESCRIPTION[] = "Second French Description";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(
+                  testIntf, FIRST_PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(
+                  testIntf, SECOND_PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, FIRST_PROPERTY_NAME, FIRST_GERMAN_DESCRIPTION, "de"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, SECOND_PROPERTY_NAME, SECOND_FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, FIRST_PROPERTY_NAME, FIRST_FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, SECOND_PROPERTY_NAME, SECOND_GERMAN_DESCRIPTION, "de"));
+
+    EXPECT_EQ(sizeof(FIRST_GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+                  testIntf, FIRST_PROPERTY_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(FIRST_GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(FIRST_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+                  testIntf, FIRST_PROPERTY_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(FIRST_FRENCH_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SECOND_GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+                  testIntf, SECOND_PROPERTY_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(SECOND_GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SECOND_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getpropertydescriptionforlanguage(
+                  testIntf, SECOND_PROPERTY_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(SECOND_FRENCH_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__NoDescriptionSet__Returns0)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char MEMBER_NAME[] = "MyMethod";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, MEMBER_NAME, "s", "s", "inStr,outStr", 0, 0));
+
+    EXPECT_EQ(0u, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, description, SIZE, "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setmemberdescriptionforlanguage__NoMemberAdded__ReturnsNoSuchMember)
+{
+    const char MEMBER_NAME[] = "MyMethod";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    EXPECT_EQ(ER_BUS_INTERFACE_NO_SUCH_MEMBER, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, "Description", "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__DescriptionsInMultipleLanguages_ReturnsRequested)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char MEMBER_NAME[] = "MyMethod";
+    const char GERMAN_DESCRIPTION[] = "German Description";
+    const char FRENCH_DESCRIPTION[] = "French Description";
+    const char SPANISH_DESCRIPTION[] = "Spanish Description";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, MEMBER_NAME, "s", "s", "inStr,outStr", 0, 0));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, GERMAN_DESCRIPTION, "de"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, SPANISH_DESCRIPTION, "es"));
+
+    EXPECT_EQ(sizeof(GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(FRENCH_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, description, SIZE, "es"));
+    EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__MultipleMembers__ReturnsRequested)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char FIRST_MEMBER_NAME[] = "MyMethod";
+    const char FIRST_GERMAN_DESCRIPTION[] = "First German Description";
+    const char FIRST_FRENCH_DESCRIPTION[] = "First French Description";
+    const char SECOND_MEMBER_NAME[] = "MySignal";
+    const char SECOND_GERMAN_DESCRIPTION[] = "Second German Description";
+    const char SECOND_FRENCH_DESCRIPTION[] = "Second French Description";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, FIRST_MEMBER_NAME, "s", "s", "inStr,outStr", 0, 0));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addsignal(testIntf, SECOND_MEMBER_NAME, "s", NULL, 0, 0));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, FIRST_MEMBER_NAME, FIRST_GERMAN_DESCRIPTION, "de"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, SECOND_MEMBER_NAME, SECOND_FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, FIRST_MEMBER_NAME, FIRST_FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, SECOND_MEMBER_NAME, SECOND_GERMAN_DESCRIPTION, "de"));
+
+    EXPECT_EQ(sizeof(FIRST_GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, FIRST_MEMBER_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(FIRST_GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(FIRST_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, FIRST_MEMBER_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(FIRST_FRENCH_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SECOND_GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, SECOND_MEMBER_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(SECOND_GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SECOND_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getmemberdescriptionforlanguage(
+                  testIntf, SECOND_MEMBER_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(SECOND_FRENCH_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getargdescriptionforlanguage__NoDescriptionSet__Returns0)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char MEMBER_NAME[] = "MyMethod";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, MEMBER_NAME, "s", "s", "inStr,outStr", 0, 0));
+
+    EXPECT_EQ(0u, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, "inStr", description, SIZE, "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_setargdescriptionforlanguage__NoMemberAdded__ReturnsNoSuchMember)
+{
+    const char MEMBER_NAME[] = "MyMethod";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    EXPECT_EQ(ER_BUS_INTERFACE_NO_SUCH_MEMBER, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, "arg", "Description", "en"));
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getargdescriptionforlanguage__DescriptionsInMultipleLanguages__ReturnsRequested)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char MEMBER_NAME[] = "MyMethod";
+    const char ARG_NAME[] = "MyArg";
+    const char GERMAN_DESCRIPTION[] = "German Description";
+    const char FRENCH_DESCRIPTION[] = "French Description";
+    const char SPANISH_DESCRIPTION[] = "Spanish Description";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, MEMBER_NAME, "s", "s", "inStr,outStr", 0, 0));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, ARG_NAME, GERMAN_DESCRIPTION, "de"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, ARG_NAME, FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, ARG_NAME, SPANISH_DESCRIPTION, "es"));
+
+    EXPECT_EQ(sizeof(GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, ARG_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, ARG_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(FRENCH_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SPANISH_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, ARG_NAME, description, SIZE, "es"));
+    EXPECT_STREQ(SPANISH_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getmemberdescriptionforlanguage__MultipleArgs__ReturnsRequested)
+{
+    const size_t SIZE = 32;
+    char description[SIZE];
+    const char MEMBER_NAME[] = "MyMethod";
+    const char FIRST_ARG_NAME[] = "FirstArg";
+    const char FIRST_GERMAN_DESCRIPTION[] = "First German Description";
+    const char FIRST_FRENCH_DESCRIPTION[] = "First French Description";
+    const char SECOND_ARG_NAME[] = "SecondArg";
+    const char SECOND_GERMAN_DESCRIPTION[] = "Second German Description";
+    const char SECOND_FRENCH_DESCRIPTION[] = "Second French Description";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, MEMBER_NAME, "s", "s", "FirstArg,SecondArg", 0, 0));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, FIRST_ARG_NAME, FIRST_GERMAN_DESCRIPTION, "de"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, FIRST_ARG_NAME, FIRST_FRENCH_DESCRIPTION, "fr"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, SECOND_ARG_NAME, SECOND_GERMAN_DESCRIPTION, "de"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, SECOND_ARG_NAME, SECOND_FRENCH_DESCRIPTION, "fr"));
+
+    EXPECT_EQ(sizeof(FIRST_GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, FIRST_ARG_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(FIRST_GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(FIRST_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, FIRST_ARG_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(FIRST_FRENCH_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SECOND_GERMAN_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, SECOND_ARG_NAME, description, SIZE, "de"));
+    EXPECT_STREQ(SECOND_GERMAN_DESCRIPTION, description);
+    EXPECT_EQ(sizeof(SECOND_FRENCH_DESCRIPTION) - 1, alljoyn_interfacedescription_getargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, SECOND_ARG_NAME, description, SIZE, "fr"));
+    EXPECT_STREQ(SECOND_FRENCH_DESCRIPTION, description);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__NoDescriptionSet__ReturnsEmptyArray)
+{
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    size_t LANGUAGES_SIZE = 10, LANGUAGE_LENGTH = 10;
+    char** actualLanguages = (char**)calloc(LANGUAGE_LENGTH, sizeof(char*));
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        actualLanguages[i] = (char*)calloc(LANGUAGE_LENGTH, sizeof(char));
+    }
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguages2(
+        testIntf, actualLanguages, LANGUAGES_SIZE, LANGUAGE_LENGTH);
+    EXPECT_EQ(0u, languageCount);
+
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        free(actualLanguages[i]);
+    }
+    free(actualLanguages);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__InterfaceDescriptionSet__ReturnsItsLanguage)
+{
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, "German Description", "de");
+
+    size_t LANGUAGES_SIZE = 10, LANGUAGE_LENGTH = 10;
+    char** actualLanguages = (char**)calloc(LANGUAGE_LENGTH, sizeof(char*));
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        actualLanguages[i] = (char*)calloc(LANGUAGE_LENGTH, sizeof(char));
+    }
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguages2(
+        testIntf, actualLanguages, LANGUAGES_SIZE, LANGUAGE_LENGTH);
+    EXPECT_EQ(1u, languageCount);
+    EXPECT_STREQ("de", actualLanguages[0]);
+
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        free(actualLanguages[i]);
+    }
+    free(actualLanguages);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__PropertyDescriptionSet__ReturnsItsLanguage)
+{
+    const char PROPERTY_NAME[] = "MyProperty";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(
+                  testIntf, PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, "German Description", "de"));
+
+    size_t LANGUAGES_SIZE = 10, LANGUAGE_LENGTH = 10;
+    char** actualLanguages = (char**)calloc(LANGUAGE_LENGTH, sizeof(char*));
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        actualLanguages[i] = (char*)calloc(LANGUAGE_LENGTH, sizeof(char));
+    }
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguages2(
+        testIntf, actualLanguages, LANGUAGES_SIZE, LANGUAGE_LENGTH);
+    EXPECT_EQ(1u, languageCount);
+    EXPECT_STREQ("de", actualLanguages[0]);
+
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        free(actualLanguages[i]);
+    }
+    free(actualLanguages);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__MemberDescriptionSet__ReturnsItsLanguage)
+{
+    const char MEMBER_NAME[] = "MyMethod";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(
+                  testIntf, MEMBER_NAME, "s", "s", "FirstArg,SecondArg", 0, 0));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, "German Description", "de"));
+
+    size_t LANGUAGES_SIZE = 10, LANGUAGE_LENGTH = 10;
+    char** actualLanguages = (char**)calloc(LANGUAGE_LENGTH, sizeof(char*));
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        actualLanguages[i] = (char*)calloc(LANGUAGE_LENGTH, sizeof(char));
+    }
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguages2(
+        testIntf, actualLanguages, LANGUAGES_SIZE, LANGUAGE_LENGTH);
+    EXPECT_EQ(1u, languageCount);
+    EXPECT_STREQ("de", actualLanguages[0]);
+
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        free(actualLanguages[i]);
+    }
+    free(actualLanguages);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__ArgumentDescriptionSet__ReturnsItsLanguage)
+{
+    const char MEMBER_NAME[] = "MyMethod";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(
+                  testIntf, MEMBER_NAME, "s", "s", "FirstArg,SecondArg", 0, 0));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setargdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, "SecondArg", "German Description", "de"));
+
+    size_t LANGUAGES_SIZE = 10, LANGUAGE_LENGTH = 10;
+    char** actualLanguages = (char**)calloc(LANGUAGE_LENGTH, sizeof(char*));
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        actualLanguages[i] = (char*)calloc(LANGUAGE_LENGTH, sizeof(char));
+    }
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguages2(
+        testIntf, actualLanguages, LANGUAGES_SIZE, LANGUAGE_LENGTH);
+    EXPECT_EQ(1u, languageCount);
+    EXPECT_STREQ("de", actualLanguages[0]);
+
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        free(actualLanguages[i]);
+    }
+    free(actualLanguages);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguages2__DescriptionsInDifferentLanguages__ReturnsAllLanguages)
+{
+    const char MEMBER_NAME[] = "MyMethod";
+    const char PROPERTY_NAME[] = "MyProperty";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, MEMBER_NAME, "s", "s", "FirstArg,SecondArg", 0, 0));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(
+                  testIntf, PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, "Member Description", "en-US"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, "Property Description", "en"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, "Beschreibung", "de"));
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, "Beschreibung", "de");
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, "Description", "fr");
+
+    size_t LANGUAGES_SIZE = 10, LANGUAGE_LENGTH = 10;
+    char** actualLanguages = (char**)calloc(LANGUAGE_LENGTH, sizeof(char*));
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        actualLanguages[i] = (char*)calloc(LANGUAGE_LENGTH, sizeof(char));
+    }
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguages2(
+        testIntf, actualLanguages, LANGUAGES_SIZE, LANGUAGE_LENGTH);
+    EXPECT_EQ(4u, languageCount);
+    EXPECT_STREQ("de", actualLanguages[0]);
+    EXPECT_STREQ("en", actualLanguages[1]);
+    EXPECT_STREQ("en-US", actualLanguages[2]);
+    EXPECT_STREQ("fr", actualLanguages[3]);
+
+    for (size_t i = 0; i < LANGUAGES_SIZE; ++i) {
+        free(actualLanguages[i]);
+    }
+    free(actualLanguages);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguagescount__NoDescriptionSet__ReturnsEmptyArray)
+{
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguagescount(testIntf);
+    EXPECT_EQ(0u, languageCount);
+}
+
+TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_getdescriptionlanguagescount__DescriptionsInDifferentLanguages__ReturnsAllLanguages)
+{
+    const char MEMBER_NAME[] = "MyMethod";
+    const char PROPERTY_NAME[] = "MyProperty";
+    alljoyn_busattachment bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
+    ASSERT_NE(nullptr, bus);
+    alljoyn_interfacedescription testIntf = NULL;
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf));
+    ASSERT_NE(nullptr, testIntf);
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addmethod(testIntf, MEMBER_NAME, "s", "s", "FirstArg,SecondArg", 0, 0));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_addproperty(
+                  testIntf, PROPERTY_NAME, "s", ALLJOYN_PROP_ACCESS_READ));
+
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setmemberdescriptionforlanguage(
+                  testIntf, MEMBER_NAME, "Member Description", "en-US"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, "Property Description", "en"));
+    ASSERT_EQ(ER_OK, alljoyn_interfacedescription_setpropertydescriptionforlanguage(
+                  testIntf, PROPERTY_NAME, "Beschreibung", "de"));
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, "Beschreibung", "de");
+    alljoyn_interfacedescription_setdescriptionforlanguage(testIntf, "Description", "fr");
+
+    size_t languageCount = alljoyn_interfacedescription_getdescriptionlanguagescount(testIntf);
+    EXPECT_EQ(4u, languageCount);
+}
