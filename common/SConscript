@@ -38,21 +38,8 @@ else:
 commonenv.Append(CPPPATH = ['crypto'])
 
 # Setup dependent include directories
-hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
-                                'inc/qcc/Debug.h',
-                                'inc/qcc/ManagedObj.h',
-                                'inc/qcc/Mutex.h',
-                                'inc/qcc/String.h',
-                                'inc/qcc/StringUtil.h',
-                                'inc/qcc/atomic.h',
-                                'inc/qcc/GUID.h',
-                                'inc/qcc/CryptoECC.h',
-                                'inc/qcc/KeyInfo.h',
-                                'inc/qcc/KeyInfoECC.h',
-                                'inc/qcc/CertificateECC.h',
-                                'inc/qcc/platform.h']),
-         'qcc/${OS_GROUP}': commonenv.File(['inc/qcc/${OS_GROUP}/atomic.h',
-                                            'inc/qcc/${OS_GROUP}/platform_types.h']) }
+﻿hdrs = { 'qcc' : commonenv.Glob('inc/qcc/*.h'),
+         'qcc/${OS_GROUP}': commonenv.Glob('inc/qcc/${OS_GROUP}/*.h')}
 
 if commonenv['OS_GROUP'] == 'windows':
     hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
