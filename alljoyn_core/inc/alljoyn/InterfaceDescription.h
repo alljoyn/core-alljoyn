@@ -620,6 +620,16 @@ class InterfaceDescription {
     const char* GetDescriptionLanguage() const;
 
     /**
+     * Get the set of all available description languages.
+     *
+     * The set will contain the sum of the language tags for the interface description,
+     * interface property, interface member and member argument descriptions.
+     *
+     * @return All available description languages.
+     */
+    std::set<qcc::String> GetDescriptionLanguages() const;
+
+    /**
      * Set the introspection description for this InterfaceDescription
      *
      * Note that when SetDescriptionTranslator is used the text in this method may
@@ -632,6 +642,36 @@ class InterfaceDescription {
     void SetDescription(const char* description);
 
     /**
+     * Set the introspection description for this InterfaceDescription in the given language.
+     *
+     * The description will be stored as an annotation, so calling this method is equivalent
+     * to adding an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g. "org.alljoyn.Bus.DocString.en") by calling AddAnnotation().
+     *
+     * @param description The introspection description.
+     * @param languageTag The language of the description.
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+     */
+    QStatus SetDescription(const qcc::String& description, const qcc::String& languageTag);
+
+    /**
+     * Get the introspection description for this InterfaceDescription in the given language.
+     *
+     * The description is stored as an annotation, so calling this method is equivalent to calling
+     * GetAnnotation() for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g. "org.alljoyn.Bus.DocString.en").
+     *
+     * @param languageTag The language of the description.
+     * @param description The description.
+     * @return
+     *      - True if the interface has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetDescription(const qcc::String& languageTag, qcc::String& description) const;
+
+    /**
      * Set the introspection description for "member" of this InterfaceDescription
      *
      * @param member The name of the member
@@ -642,6 +682,25 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
     QStatus SetMemberDescription(const char* member, const char* description);
+
+    /**
+     * Set the introspection description for member "memberName" of this InterfaceDescription
+     * in the given language.
+     *
+     * The description will be stored as an annotation, so calling this method is equivalent
+     * to adding an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g. "org.alljoyn.Bus.DocString.en") by calling AddMemberAnnotation().
+     * If the description was already set, it will be overwritten by the new value.
+     *
+     * @param memberName The name of the member.
+     * @param description The introspection description.
+     * @param languageTag The language of the description.
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
+     *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
+     */
+    QStatus SetMemberDescription(const qcc::String& memberName, const qcc::String& description, const qcc::String& languageTag);
 
     /**
      * Set the introspection description for "member" of this InterfaceDescription
@@ -662,6 +721,22 @@ class InterfaceDescription {
                                                 bool isSessionlessSignal));
 
     /**
+     * Get the introspection description for the interface member "memberName" in the given language.
+     *
+     * The description is stored as an annotation, so calling this method is equivalent
+     * to calling GetMemberAnnotation() for an "org.alljoyn.Bus.DocString" annotation
+     * with the desired language tag (e.g. "org.alljoyn.Bus.DocString.en").
+     *
+     * @param memberName The name of the member.
+     * @param languageTag The language of the description.
+     * @param description The description.
+     * @return
+     *      - True if the member has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetMemberDescription(const qcc::String& memberName, const qcc::String& languageTag, qcc::String& description) const;
+
+    /**
      * Set the introspection description for the argument "arg of "member" of this InterfaceDescription
      *
      * @param member The name of the member
@@ -675,6 +750,44 @@ class InterfaceDescription {
     QStatus SetArgDescription(const char* member, const char* arg, const char* description);
 
     /**
+     * Set the introspection description for the argument "argName" of the member "memberName"
+     * of this InterfaceDescription in the given language.
+     *
+     * The description will be stored as an annotation, so calling this method is equivalent
+     * to adding an org.alljoyn.Bus.DocString annotation with the desired language tag
+     * (e.g. "org.alljoyn.Bus.DocString.en") by calling AddArgAnnotation().
+     *
+     * @param memberName The name of the member.
+     * @param argName The name of the argument.
+     * @param description The introspection description.
+     * @param languageTag The language of the description.
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
+     *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
+     */
+    QStatus SetArgDescription(const qcc::String& memberName, const qcc::String& argName, const qcc::String& description,
+                              const qcc::String& languageTag);
+
+    /**
+     * Get the introspection description for the argument "argName" of the member "memberName"
+     * of this InterfaceDescription in the given language.
+     *
+     * The description is stored as an annotation, so calling this method is equivalent to
+     * calling GetArgAnnotation() for an "org.alljoyn.Bus.DocString" annotation
+     * with the desired language tag (e.g. "org.alljoyn.Bus.DocString.en").
+     *
+     * @param memberName The name of the member.
+     * @param argName The name of the argument.
+     * @param languageTag The language of the description.
+     * @param description The description.
+     * @return
+     *      - True if the argument has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetArgDescription(const qcc::String& memberName, const qcc::String& argName, const qcc::String& languageTag, qcc::String& description) const;
+
+    /**
      * Set the introspection description for "property" of this InterfaceDescription
      *
      * @param name The name of the property
@@ -685,6 +798,40 @@ class InterfaceDescription {
      *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found
      */
     QStatus SetPropertyDescription(const char* name, const char* description);
+
+    /**
+     * Set the introspection description for the interface property "propertyName"
+     * of this InterfaceDescription in the given language.
+     *
+     * The description will be stored as an annotation, so calling this method is equivalent
+     * to adding an org.alljoyn.Bus.DocString annotation with the desired language tag
+     * (e.g. "org.alljoyn.Bus.DocString.en") by calling AddPropertyAnnotation().
+     *
+     * @param propertyName The name of the property.
+     * @param description The introspection description.
+     * @param languageTag The language of the description.
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
+     *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found
+     */
+    QStatus SetPropertyDescription(const qcc::String& propertyName, const qcc::String& description, const qcc::String& languageTag);
+
+    /**
+     * Get the introspection description for the interface property "propertyName" in the given language.
+     *
+     * The description is stored as an annotation, so calling this method is equivalent to calling
+     * GetPropertyAnnotation() for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g. "org.alljoyn.Bus.DocString.en").
+     *
+     * @param propertyName The name of the property.
+     * @param languageTag The language of the description.
+     * @param description The description.
+     * @return
+     *      - True if the property has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetPropertyDescription(const qcc::String& propertyName, const qcc::String& languageTag, qcc::String& description) const;
 
     /**
      * Set the Translator that provides this InterfaceDescription's
@@ -768,9 +915,9 @@ class InterfaceDescription {
 
     void AppendDescriptionXml(qcc::String& xml,
                               const char* language,
-                              const char* localDescription,
+                              const char* legacyDescription,
                               Translator* translator,
-                              const char* languageDescription,
+                              const char* annotationDescription,
                               qcc::String const& indent) const;
 
     qcc::String NextArg(const char*& signature,
@@ -783,6 +930,25 @@ class InterfaceDescription {
                         Translator* translator) const;
 
     const char* Translate(const char* toLanguage, const char* text, qcc::String& buffer, Translator* translator) const;
+
+    qcc::String GenerateDocString(const qcc::String& languageTag) const;
+
+    bool GetMoreGeneralLanguageTag(const qcc::String& languageTag, qcc::String& moreGeneralLanguageTag) const;
+
+    bool GetDescriptionAnnotation(const qcc::String& languageTag, qcc::String& value) const;
+    bool GetMemberDescriptionAnnotation(const qcc::String& memberName, const qcc::String& languageTag, qcc::String& value) const;
+    bool GetPropertyDescriptionAnnotation(const qcc::String& propertyName, const qcc::String& languageTag, qcc::String& value) const;
+    bool GetArgDescriptionAnnotation(const qcc::String& memberName, const qcc::String& argName, const qcc::String& languageTag, qcc::String& value) const;
+
+    size_t GetAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    size_t GetLegacyDescriptionLanguages(std::set<qcc::String>& languages) const;
+
+    size_t GetInterfaceAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    size_t GetMemberAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    size_t GetPropertyAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    bool GetDescriptionAnnotationLanguage(const qcc::String& annotationName, qcc::String& language) const;
+
+    bool IsDescriptionAnnotation(const qcc::String& annotationName) const;
 
     struct Definitions;
     Definitions* defs;   /**< The definitions for this interface */
