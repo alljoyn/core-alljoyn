@@ -633,6 +633,13 @@ extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(a
 /**
  * Get the description language of this interface.
  *
+ * @note This function returns languages for descriptions set by the the single-language accessors
+ * (e.g. alljoyn_interfacedescription_setdescription()) and translated using the translation callback.
+ * multilingual accessors. If you need a language array for the new descriptions,
+ * set by the multilingual accessors (e.g. alljoyn_interfacedescription_setdescriptionmultilingual())
+ * or annotation setters (e.g. alljoyn_interfacedescription_addannotation()), please use
+ * alljoyn_interfacedescription_getdescriptionlanguagesmultilingual().
+ *
  * @param[in] iface Interface to query.
  * @param[out] languages A pointer to a language array to receive the
  *                       languages. Can be NULL in which case no
@@ -646,12 +653,80 @@ extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(a
 extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoyn_interfacedescription iface, const char** languages, size_t size);
 
 /**
+ * Get all the description languages for this interface.
+ *
+ * The returned array will contain the language tags for the interface description,
+ * interface property descriptions, interface member and member argument descriptions.
+ *
+ * @note This function returns languages for descriptions set by the multilingual accessors
+ * (e.g. alljoyn_interfacedescription_setdescriptionmultilingual()) or annotation setters
+ * (e.g. alljoyn_interfacedescription_addannotation()). If you need a language array for the legacy
+ * descriptions, set by the single-language accessors (e.g. alljoyn_interfacedescription_setdescription())
+ * and translated using the translation callback, please use alljoyn_interfacedescription_getdescriptionlanguages().
+ *
+ * @param[in] iface Interface to query.
+ * @param[out] languages A pointer to a language array to receive the
+ *                       languages.
+ * @param[in] languagesSize The maximum number of languages that can be added to the array
+ * (the array must be allocated by the user of the function).
+ * @param[in] languageLength The maximum length of a language entry in the array.
+ *
+ * @return The number of languages returned.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguagesmultilingual(const alljoyn_interfacedescription iface, char** languages, size_t languagesSize, size_t languageLength);
+
+/**
+ * Get the number of description languages for this interface.
+ *
+ * Returns the total sum of description languages for the interface, taking into account:
+ * the interface description, interface property descriptions, interface member and member argument descriptions.
+ *
+ * @param[in] iface Interface to query.
+ * @return The number of all available description languages.
+ */
+extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguagescountmultilingual(const alljoyn_interfacedescription iface);
+
+/**
  * Set the description to this interface.
  *
  * @param[in] iface Interface on which to set the description.
  * @param[in] description The interface description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
  */
 extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description);
+
+/**
+ * Set the description to this interface in the given language.
+ *
+ * The description will be stored as an annotation, so calling this method is equivalent
+ * to adding an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g. "org.alljoyn.Bus.DocString.en") by calling alljoyn_interfacedescription_addannotation().
+ *
+ * @param[in] iface Interface on which to set the description.
+ * @param[in] language The language of the description.
+ * @param[in] description The interface description.
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setdescriptionmultilingual(alljoyn_interfacedescription iface, const char* description, const char* language);
+
+/**
+ * Get the introspection description for the interface in the given language.
+ *
+ * The description is stored as an annotation, so calling this method is equivalent to calling
+ * alljoyn_interfacedescription_getannotation() for an "org.alljoyn.Bus.DocString" annotation
+ * with the desired language tag (e.g. "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] iface Interface to query.
+ * @param[in] language The language of the description.
+ * @param[out] value The description.
+ * @param[in,out] value_size Size of the value string (maximum number of characters to be written to value,
+ * after executing - the number of characters written).
+ * @return
+ *      - QCC_TRUE if the interface has a description - available in the value argument.
+ *      - QCC_FALSE otherwise.
+ */
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getdescriptionmultilingual(alljoyn_interfacedescription iface, const char* language, char* value, size_t* value_size);
 
 /**
  * Set the description for member of this interface.
@@ -668,7 +743,51 @@ extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_i
 extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description);
 
 /**
+ * Set the description for the member "member" of this interface in the given language.
+ *
+ * The description will be stored as an annotation, so calling this method is equivalent
+ * to adding an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g. "org.alljoyn.Bus.DocString.en") by calling alljoyn_interfacedescription_addmemberannotation().
+ *
+ * @param[in] iface Interface on which to set member description.
+ * @param[in] member The name of the member.
+ * @param[in] description The member description.
+ * @param[in] language The language of the description.
+ *
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescriptionmultilingual(
+    alljoyn_interfacedescription iface, const char* member, const char* description, const char* language);
+
+/**
+ * Get the introspection description for the interface member "member" in the given language.
+ *
+ * The description is stored as an annotation, so calling this method is equivalent
+ * to alljoyn_interfacedescription_getmemberannotation() for an "org.alljoyn.Bus.DocString" annotation
+ * with the desired language tag (e.g. "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] iface Interface to query.
+ * @param[in] member The name of the member.
+ * @param[in] language The language of the description.
+ * @param[out] value The description.
+ * @param[in,out] value_size Size of the value string (maximum number of characters to be written to value,
+ * after executing - the number of characters written).
+ * @return
+ *      - QCC_TRUE if the member has a description - available in the value argument.
+ *      - QCC_FALSE otherwise.
+ */
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getmemberdescriptionmultilingual(
+    alljoyn_interfacedescription iface, const char* member, const char* language, char* value, size_t* value_size);
+
+/**
  * Set the description for the argument of the member of this interface.
+ *
+ * The description will be stored as an annotation, so calling this method is equivalent
+ * to adding an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g. "org.alljoyn.Bus.DocString.en") by calling alljoyn_interfacedescription_addargannotation().
  *
  * @param[in] iface Interface on which to set argument description.
  * @param[in] member The name of the member.
@@ -683,6 +802,47 @@ extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(
 extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description);
 
 /**
+ * Set the description for the argument "argName" of the member "member" of this interface.
+ *
+ * The description is stored as an annotation, so calling this method is equivalent
+ * to alljoyn_interfacedescription_addargannotation() for an "org.alljoyn.Bus.DocString" annotation
+ * with the desired language tag (e.g. "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] iface Interface on which to set argument description.
+ * @param[in] member The name of the member.
+ * @param[in] argName The name of the argument.
+ * @param[in] description The argument description.
+ *
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setargdescriptionmultilingual(
+    alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description, const char* language);
+
+/**
+ * Get the introspection description for the argument "argname" of the interface member "member" in the given language.
+ *
+ * The description is stored as an annotation, so calling this method is equivalent
+ * to calling alljoyn_interfacedescription_getargannotation() for an "org.alljoyn.Bus.DocString" annotation
+ * with the desired language tag (e.g. "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] iface Interface to query.
+ * @param[in] member The name of the member.
+ * @param[in] argName The name of the argument.
+ * @param[in] language The language of the description.
+ * @param[out] value The description.
+ * @param[in,out] value_size Size of the value string (maximum number of characters to be written to value,
+ * after executing - the number of characters written).
+ * @return
+ *      - QCC_TRUE if the argument has a description - available in the value argument.
+ *      - QCC_FALSE otherwise.
+ */
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getargdescriptionmultilingual(
+    alljoyn_interfacedescription iface, const char* member, const char* arg, const char* language, char* value, size_t* value_size);
+
+/**
  * Set the description for the property of this interface.
  *
  * @param[in] iface Interface on which to set property description.
@@ -695,6 +855,45 @@ extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(all
  *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found.
  */
 extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description);
+
+/**
+ * Set the description for the property of this interface in the given language.
+ *
+ * The description will be stored as an annotation, so calling this method is equivalent
+ * to adding an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g. "org.alljoyn.Bus.DocString.en") by calling alljoyn_interfacedescription_addpropertyannotation().
+ *
+ * @param[in] iface Interface on which to set property description.
+ * @param[in] name The name of the property.
+ * @param[in] description The introspection description.
+ * @param[in] language The language of the description.
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescriptionmultilingual(
+    alljoyn_interfacedescription iface, const char* name, const char* description, const char* language);
+
+/**
+ * Get the introspection description for the property "property" in the given language.
+ *
+ * The description is stored as an annotation, so calling this method is equivalent
+ * to calling alljoyn_interfacedescription_getpropertyannotation() for an "org.alljoyn.Bus.DocString"
+ * annotation with the desired language tag (e.g. "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] iface Interface to query.
+ * @param[in] property The name of the property.
+ * @param[in] language The language of the description.
+ * @param[out] value The description.
+ * @param[in,out] value_size Size of the value string (maximum number of characters to be written to value,
+ * after executing - the number of characters written).
+ * @return
+ *      - QCC_TRUE if the property has a description - available in the value argument.
+ *      - QCC_FALSE otherwise.
+ */
+extern AJ_API QCC_BOOL AJ_CALL alljoyn_interfacedescription_getpropertydescriptionmultilingual(
+    alljoyn_interfacedescription iface, const char* property, const char* language, char* value, size_t* value_size);
 
 /**
  * Set the translation callback that provides this interface's description in multiple languages.
