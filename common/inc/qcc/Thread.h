@@ -322,9 +322,9 @@ class Thread {
     typedef std::set<ThreadListener*> ThreadListeners;
     ThreadListeners auxListeners;
     Mutex auxListenersLock;
+    volatile int32_t waitCount;
 
 #if defined(QCC_OS_GROUP_POSIX)
-    volatile int32_t waitCount;
     Mutex waitLock;
     bool hasBeenJoined;
     Mutex hbjMutex;
