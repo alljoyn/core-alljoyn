@@ -37,7 +37,7 @@ env.Append(CPPDEFINES=['QCC_OS_IPHONE'])
 
 s = os.environ.get('CONFIGURATION')
 s = s.lower()
-env['OBJDIR'] = 'build/${OS}/${CPU}/' + os.environ.get('PLATFORM_NAME') + '/' + s + '/obj'
+env['OBJDIR'] = '#build/${OS}/${CPU}/' + os.environ.get('PLATFORM_NAME') + '/' + s + '/obj'
 env['DISTDIR'] = '#build/${OS}/${CPU}/' + os.environ.get('PLATFORM_NAME') + '/' + s + '/dist'
 env['TESTDIR'] = '#build/${OS}/${CPU}/' + os.environ.get('PLATFORM_NAME') + '/' + s + '/test'
 
