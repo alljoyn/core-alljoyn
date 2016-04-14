@@ -296,6 +296,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
     EXPECT_TRUE(appStateListener.stateChanged);
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_PSK)
@@ -399,6 +401,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_PS
 
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_NE(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_SPEKE)
@@ -501,6 +505,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_SP
 
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_NE(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -585,6 +591,8 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_caPublicKeyIdentifi
 
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -671,6 +679,8 @@ TEST_F(SecurityClaimApplicationTest, claim_fails_using_empty_adminGroupSecurityP
 
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -805,6 +815,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     EXPECT_TRUE(appStateListener.stateChanged);
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -927,6 +939,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     EXPECT_TRUE(appStateListener.stateChanged);
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -1049,6 +1063,8 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_SPEKE_session_successful)
     EXPECT_TRUE(appStateListener.stateChanged);
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -1165,6 +1181,8 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
                                                        securityManagerKey,
                                                        identityCertChain, ArraySize(identityCertChain),
                                                        manifests, ArraySize(manifests)));
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -1294,6 +1312,8 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
                                                        securityManagerKey,
                                                        identityCertChain2, ArraySize(identityCertChain2),
                                                        manifests, ArraySize(manifests)));
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -1393,6 +1413,8 @@ TEST_F(SecurityClaimApplicationTest, fail_when_claiming_non_claimable)
                                                        securityManagerKey,
                                                        identityCertChain, ArraySize(identityCertChain),
                                                        manifests, ArraySize(manifests)));
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -1474,6 +1496,8 @@ TEST_F(SecurityClaimApplicationTest, fail_claimer_security_not_enabled)
                                                               caKey,
                                                               identityCertChain, ArraySize(identityCertChain),
                                                               manifests, ArraySize(manifests)));
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 
@@ -1551,6 +1575,8 @@ TEST_F(SecurityClaimApplicationTest, fail_when_peer_being_claimed_is_not_securit
                                                securityManagerKey,
                                                identityCertChain, ArraySize(identityCertChain),
                                                manifests, ArraySize(manifests)));
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 class ClaimThread1 : public Thread {
@@ -1743,6 +1769,8 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     EXPECT_TRUE(appStateListener.stateChanged);
     EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
     EXPECT_EQ(PermissionConfigurator::CLAIMED, applicationStatePeer1);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -1828,6 +1856,8 @@ TEST_F(SecurityClaimApplicationTest, fail_when_admin_and_peer_use_different_secu
                                                securityManagerKey,
                                                identityCertChain, ArraySize(identityCertChain),
                                                manifests, ArraySize(manifests)));
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -1922,6 +1952,8 @@ TEST_F(SecurityClaimApplicationTest, fail_if_incorrect_publickey_used_in_identit
                                                          securityManagerKey,
                                                          identityCertChain, ArraySize(identityCertChain),
                                                          manifests, ArraySize(manifests)));
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 class StateNotification_ApplicationStateListener : public ApplicationStateListener {
@@ -2001,6 +2033,8 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal)
     EXPECT_TRUE(NULL != appStateListener.publicKeys.front().GetPublicKey()->GetX());
     EXPECT_TRUE(NULL != appStateListener.publicKeys.front().GetPublicKey()->GetY());
     EXPECT_EQ(PermissionConfigurator::CLAIMABLE, appStateListener.states.front());
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 /*
@@ -2160,6 +2194,9 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
 
     //verify we read all the signals
     EXPECT_TRUE(peer1AppStateListener.busNames.size() == 0 && peer1AppStateListener.publicKeys.size() == 0 && peer1AppStateListener.states.size() == 0) << "The Notification State signal was sent more times than expected.";
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(peer1AppStateListener));
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
 
 
@@ -2267,4 +2304,6 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
+
+    EXPECT_EQ(ER_OK, securityManagerBus.UnregisterApplicationStateListener(appStateListener));
 }
