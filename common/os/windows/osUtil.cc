@@ -41,8 +41,14 @@
 
 #define QCC_MODULE  "UTIL"
 
-static uint32_t s_uid = 0;
-static uint32_t s_gid = 0;
+/**
+ * These are dummy number with no specific meaning.
+ * They should not be used for security-related decissions
+ * inside PolicyDb (and anywhere else), since these numbers
+ * are returned by the app itself and can be manipulated.
+ */
+static const uint32_t s_dummyWindowsUid = 0xABCD1234;
+static const uint32_t s_dummyWindowsGid = 0x4321DCBA;
 
 void qcc::ClearMemory(void* s, size_t n)
 {
@@ -67,14 +73,12 @@ static uint32_t ComputeId(const char* buf, size_t len)
 
 uint32_t qcc::GetUid()
 {
-    QCC_ASSERT(s_uid != 0);
-    return s_uid;
+    return s_dummyWindowsUid;
 }
 
 uint32_t qcc::GetGid()
 {
-    QCC_ASSERT(s_gid != 0);
-    return s_gid;
+    return s_dummyWindowsGid;
 }
 
 uint32_t qcc::GetUsersUid(const char* name)
@@ -233,44 +237,4 @@ QStatus qcc::ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSi
         return ER_BAD_HOSTNAME;
     }
     return (new ResolverThread(hostname, addr, &addrLen))->Get(timeoutMs);
-}
-
-void WindowsUtilInit()
-{
-    static const char nobody[] = "nobody";
-    static const char nogroup[] = "nogroup";
-
-    char buf[UNLEN + 1] = { 0 };
-
-    /*
-     * UID and GID: Windows can use GetTokenInformation instead of getuid and getgid but for simplicity here we use
-     * hashes of the user name (as UID) and user's domain name (as GID) respectively.
-     */
-
-    ULONG len = UNLEN;
-    if (GetUserNameExA(NameUniqueId, buf, &len)) {
-        s_uid = ComputeId(buf, len);
-    } else {
-        QCC_ASSERT(false);
-        s_uid = ComputeId(nobody, strlen(nobody));
-    }
-    QCC_ASSERT(s_uid != 0);
-
-    len = UNLEN;
-    if (GetUserNameExA(NameDnsDomain, buf, &len)) {
-        qcc::String gp((char*)buf, len);
-        size_t pos = gp.find_first_of('\\');
-        if (pos != qcc::String::npos) {
-            gp.erase(pos);
-        }
-        s_gid = ComputeId(gp.c_str(), gp.size());
-    } else {
-        QCC_ASSERT(false);
-        s_gid = ComputeId(nogroup, strlen(nogroup));
-    }
-    QCC_ASSERT(s_gid != 0);
-}
-
-void WindowsUtilShutdown()
-{
 }
