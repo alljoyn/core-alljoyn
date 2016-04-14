@@ -352,11 +352,11 @@ static const char* IntrospectionXmlLegacy[] = {
     "      <arg type=\"s\" direction=\"out\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacyNonSessionlessSignal\" sessionless=\"false\">\n"
-    "      <description>legacy non-sessionless signal</description>\n"
+    "      <description language=\"en\">legacy non-sessionless signal</description>\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacySessionlessSignal\" sessionless=\"true\">\n"
-    "      <description>legacy sessionless signal</description>\n"
+    "      <description language=\"en\">legacy sessionless signal</description>\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacySignal\" sessionless=\"false\">\n"
@@ -401,11 +401,11 @@ static const char* IntrospectionXmlLegacy[] = {
     "    </signal>\n"
     "    <signal name=\"legacyNonSessionlessSignal\">\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
-    "      <annotation name=\"org.alljoyn.Bus.DocString\" value=\"legacy non-sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"legacy non-sessionless signal\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacySessionlessSignal\">\n"
     "      <arg type=\"s\" direction=\"out\"/>\n"
-    "      <annotation name=\"org.alljoyn.Bus.DocString\" value=\"legacy sessionless signal\"/>\n"
+    "      <annotation name=\"org.alljoyn.Bus.DocString.en\" value=\"legacy sessionless signal\"/>\n"
     "      <annotation name=\"org.alljoyn.Bus.Signal.Sessionless\" value=\"true\"/>\n"
     "    </signal>\n"
     "    <signal name=\"legacySignal\">\n"
@@ -542,11 +542,13 @@ TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithDescript
 
     ASSERT_TRUE(m_remoteObj != nullptr);
     const InterfaceDescription* testIntf = m_remoteObj->GetInterface(INTERFACE_NAME);
+
     ASSERT_TRUE(testIntf != 0);
-    const InterfaceDescription::Member* member = testIntf->GetSignal("LightOn");
-    EXPECT_STREQ("Licht is aangestoken", member->description.c_str());
-    const InterfaceDescription::Property* property = testIntf->GetProperty("SupplySource");
-    EXPECT_STREQ("Het aanbod bron van water", property->description.c_str());
+    qcc::String description;
+    EXPECT_TRUE(testIntf->GetMemberDescription("LightOn", "Nl", description));
+    EXPECT_STREQ("Licht is aangestoken", description.c_str());
+    EXPECT_TRUE(testIntf->GetPropertyDescription("SupplySource", "Nl", description));
+    EXPECT_STREQ("Het aanbod bron van water", description.c_str());
 }
 
 TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithSignalEmissionBehaviors) {
@@ -617,6 +619,7 @@ TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlWithCustomAn
 }
 
 TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlLegacy) {
+    qcc::String description;
 
     CreateFromXmlAndIntrospect(IntrospectionXmlLegacy[0], IntrospectionXmlLegacy[1]);
 
@@ -633,12 +636,14 @@ TEST_F(IntrospectionXmlTest, IntrospectionXmlCreateInterfacesFromXmlLegacy) {
     member = testIntf->GetSignal("legacyNonSessionlessSignal");
     ASSERT_TRUE(member != 0);
     EXPECT_FALSE(member->isSessionlessSignal);
-    EXPECT_STREQ("legacy non-sessionless signal", member->description.c_str());
+    EXPECT_TRUE(testIntf->GetMemberDescription("legacyNonSessionlessSignal", "en", description));
+    EXPECT_STREQ("legacy non-sessionless signal", description.c_str());
 
     member = testIntf->GetSignal("legacySessionlessSignal");
     ASSERT_TRUE(member != 0);
     EXPECT_TRUE(member->isSessionlessSignal);
-    EXPECT_STREQ("legacy sessionless signal", member->description.c_str());
+    EXPECT_TRUE(testIntf->GetMemberDescription("legacySessionlessSignal", "en", description));
+    EXPECT_STREQ("legacy sessionless signal", description.c_str());
 
     member = testIntf->GetSignal("legacySignal");
     ASSERT_TRUE(member != 0);
