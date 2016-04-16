@@ -1622,3 +1622,31 @@ TEST_F(CertificateECCTest, InvalidPemTests)
     EXPECT_EQ(ER_INVALID_DATA, cert.LoadPEM(pemStr)) << " PEM with invalid characters was accepted.";
 
 }
+
+TEST_F(CertificateECCTest, InvalidASN1Tests)
+{
+    /*
+     * See ASACORE-2860.  Without stopping parsing after the fisrt c(.) syntax,
+     * this input will cause the ASN.1 decoding to crash.  With the change to
+     * Crypto_ASN1::DecodeV when parsing c(.), LoadPEM should fail, but not crash.
+     */
+
+    IdentityCertificate cert;
+
+    /* Test that certificates with invalid ASN.1 are rejected. */
+    static const char invalidASN1_1[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBRjCB7sADAgECAhA4NHiS/771skQq7enlPEsyMAoGCCqGSM49BAMCMB4xHDAa\n"
+        "BgNVBAMME0FsbEpveW5UZXN0Um9vdE5hbWUwHhcNMTUwMzMxMjI0NjE1WhcNMTYw\n"
+        "MzMwMjI0NjE1WjAcMRowGAYDVQQDDBFDZXJ0U2lnbkxpYkNsaWVudDBZMBMGByqG\n"
+        "SM49AgEGCCqGSM49AwEHA0IABALDpAM6f0USoGm2vEaBBKr3dJdO9dIRukEUnTUV\n"
+        "0fKWN7N0hyIx/ZdANrtVJn8ZrzWnHuEkECEnYZy6hz1QC4ejEDAOMAwGA1UdEwQF\n"
+        "MAMBAf8wCgYIKoZIzj0EAwIDRwAwRAIgZT+K9SH5KnZEqvXUf/mOnJ8y0cvCaxzQ\n"
+        "9L+/V/1L/o0CIFGqG58zW7QealLNE7Z4dUjZgu0brTvRJDTJKAz7QreR\n"
+        "-----END CERTIFICATE-----\n"
+    };
+
+    String pemStr(invalidASN1_1);
+    EXPECT_EQ(ER_FAIL, cert.LoadPEM(pemStr)) << " invalid certificate (invalid ASN.1) accepted.";
+
+}

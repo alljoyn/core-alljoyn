@@ -178,7 +178,7 @@ QStatus AJ_CALL CertificateX509::DecodePrivateKeyPEM(const String& encoded, ECCP
     if (ER_OK != status) {
         return status;
     }
-    uint32_t ver;
+    uint32_t ver = 0;
     qcc::String prv;
     qcc::String oid;
     qcc::String rem;
@@ -264,7 +264,7 @@ QStatus AJ_CALL CertificateX509::DecodePublicKeyPEM(const String& encoded, ECCPu
     qcc::String oid1;
     qcc::String oid2;
     qcc::String key;
-    size_t keylen;
+    size_t keylen = 0;
     status = Crypto_ASN1::Decode(der, "((oo)b)", &oid1, &oid2, &key, &keylen);
     if (ER_OK != status) {
         return status;
@@ -558,7 +558,7 @@ QStatus CertificateX509::DecodeCertificatePub(const qcc::String& pub)
     qcc::String oid1;
     qcc::String oid2;
     qcc::String key;
-    size_t keylen;
+    size_t keylen = 0;
 
     status = Crypto_ASN1::Decode(pub, "(oo)b", &oid1, &oid2, &key, &keylen);
     if (ER_OK != status) {
@@ -847,7 +847,7 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
 QStatus CertificateX509::DecodeCertificateTBS()
 {
     QStatus status = ER_OK;
-    uint32_t x509Version;
+    uint32_t x509Version = 0;
     qcc::String oid;
     qcc::String iss;
     qcc::String sub;
@@ -989,7 +989,7 @@ QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
     qcc::String oid;
     qcc::String sig;
     qcc::String tmp;
-    size_t siglen;
+    size_t siglen = 0;
 
     status = Crypto_ASN1::Decode(der, "((.)(o)b)", &tmp, &oid, &sig, &siglen);
     if (ER_OK != status) {
