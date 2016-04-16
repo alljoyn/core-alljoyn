@@ -190,6 +190,8 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     void Fini() {
+        ASSERT_EQ(ER_OK, aboutObj.Unannounce());
+
         ObjectMap::iterator it;
         for (it = objects.begin(); it != objects.end(); ++it) {
             if (it->second.second) {
