@@ -28,7 +28,7 @@
 #include <cstddef>
 #include <memory>
 
-#include <qcc/Util.h>
+#include <qcc/ClearMemory.h>
 
 namespace qcc {
 
