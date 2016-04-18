@@ -25,6 +25,7 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <qcc/Environ.h>
+#include <qcc/ClearMemory.h>
 #include <list>
 #include <Status.h>
 
