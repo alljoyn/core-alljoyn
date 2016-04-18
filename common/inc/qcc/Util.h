@@ -25,6 +25,7 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <qcc/Environ.h>
+#include <qcc/ClearMemory.h>
 #include <list>
 #include <Status.h>
 
@@ -142,11 +143,6 @@ uint32_t Rand32();
  * @return A 64 bit random number
  */
 uint64_t Rand64();
-
-/**
- * Clear memory even with compiler optimizations
- */
-void ClearMemory(void* s, size_t n);
 
 /**
  * Return the Process ID as an unsigned 32 bit integer.
