@@ -189,10 +189,8 @@ QStatus XmlRulesValidator::ValidateMembers(const PermissionPolicy::Rule& rule)
     if (ER_OK == status) {
         for (size_t index = 0; index < membersSize; index++) {
             const PermissionPolicy::Rule::Member& member = members[index];
-            MemberValidator* validator = memberValidatorFactory.ForType(member.GetMemberType());
+            status = memberValidatorFactory.ForType(member.GetMemberType())->Validate(member);
 
-            status = validator->Validate(member);
-            delete validator;
             if (ER_OK != status) {
                 break;
             }
@@ -290,10 +288,7 @@ QStatus XmlRulesValidator::ValidateMember(const qcc::XmlElement* member, MemberV
 
     QStatus status = MemberValidator::GetValidMemberType(member, &type);
     if (ER_OK == status) {
-        MemberValidator* validator = memberValidatorFactory.ForType(type);
-
-        status = validator->Validate(member);
-        delete validator;
+        status = memberValidatorFactory.ForType(type)->Validate(member);
     }
 
     return status;
@@ -301,7 +296,7 @@ QStatus XmlRulesValidator::ValidateMember(const qcc::XmlElement* member, MemberV
 
 QStatus XmlRulesValidator::MemberValidator::Validate(const qcc::XmlElement* member)
 {
-    QStatus status = ValidateAttributeValueUnique(member, *memberNames);
+    QStatus status = ValidateAttributeValueUnique(member, memberNames);
 
 #ifdef REGEX_SUPPORTED
     if (ER_OK == status) {
@@ -336,7 +331,7 @@ QStatus XmlRulesValidator::MemberValidator::ValidateMemberName(AJ_PCSTR name)
 #endif /* REGEX_SUPPORTED */
 
     if (ER_OK == status) {
-        status = InsertUniqueOrFail(name, *memberNames);
+        status = InsertUniqueOrFail(name, memberNames);
     }
 
     return status;
@@ -494,5 +489,11 @@ uint8_t XmlRulesValidator::SignalsValidator::GetValidActions()
 {
     return PermissionPolicy::Rule::Member::ACTION_OBSERVE |
            PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+}
+
+XmlRulesValidator::MemberValidator* XmlRulesValidator::MemberValidatorFactory::ForType(PermissionPolicy::Rule::Member::MemberType type)
+{
+    QCC_ASSERT(m_validators.find(type) != m_validators.end());
+    return m_validators[type];
 }
 }
