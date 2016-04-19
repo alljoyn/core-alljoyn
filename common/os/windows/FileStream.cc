@@ -362,6 +362,10 @@ QStatus FileSink::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
     }
 }
 
+bool FileSink::Truncate() {
+    return ::SetEndOfFile(handle);
+}
+
 bool FileSink::Lock(bool block)
 {
     if (INVALID_HANDLE_VALUE == handle) {
