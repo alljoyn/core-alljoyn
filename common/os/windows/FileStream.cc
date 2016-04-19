@@ -362,6 +362,15 @@ QStatus FileSink::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
     }
 }
 
+bool FileSink::Truncate()
+{
+    if (!::SetEndOfFile(handle)) {
+        QCC_LogError(ER_OS_ERROR, ("SetEndOfFile failed. error=%d", ::GetLastError()));
+        return false;
+    }
+    return true;
+}
+
 bool FileSink::Lock(bool block)
 {
     if (INVALID_HANDLE_VALUE == handle) {

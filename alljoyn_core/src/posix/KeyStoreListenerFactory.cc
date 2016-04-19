@@ -24,6 +24,7 @@
 #include <qcc/String.h>
 #include <qcc/FileStream.h>
 #include <qcc/Util.h>
+#include <qcc/SecureAllocator.h>
 
 #include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/Status.h>
@@ -136,21 +137,53 @@ class DefaultKeyStoreListener : public KeyStoreListener {
 
     QStatus StoreRequest(KeyStore& keyStore)
     {
+        class BufferSink : public Sink {
+          public:
+            virtual ~BufferSink() { }
+
+            QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent)
+            {
+                const uint8_t* start = static_cast<const uint8_t*>(buf);
+                const uint8_t* end = start + numBytes;
+                sbuf.reserve(sbuf.size() + numBytes);
+                sbuf.insert(sbuf.end(), start, end);
+                numSent = numBytes;
+                return ER_OK;
+            }
+
+            const std::vector<uint8_t, SecureAllocator<uint8_t> >& GetBuffer() const { return sbuf; }
+
+          private:
+            std::vector<uint8_t, SecureAllocator<uint8_t> > sbuf;        /**< storage for byte stream */
+        };
+
         FileLock writeLock;
         QStatus status = fileLocker.GetFileLockForWrite(&writeLock);
         if (status == ER_OK) {
-            FileSink* sink = writeLock.GetSink();
-            QCC_ASSERT(sink != nullptr);
-            if (sink != nullptr) {
-                status = keyStore.Push(*sink);
-                if (status == ER_OK) {
-                    QCC_DbgHLPrintf(("Wrote key store to %s", fileLocker.GetFileName()));
-                }
-            } else {
-                status = ER_OS_ERROR;
+            BufferSink buffer;
+            status = keyStore.Push(buffer);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("StoreRequest error during data buffering"));
+                return status;
             }
+            size_t pushed = 0;
+            status = writeLock.GetSink()->PushBytes(buffer.GetBuffer().data(), buffer.GetBuffer().size(), pushed);
+            if (status != ER_OK) {
+                QCC_LogError(status, ("StoreRequest error during data saving"));
+                return status;
+            }
+            if (pushed != buffer.GetBuffer().size()) {
+                status = ER_BUS_CORRUPT_KEYSTORE;
+                QCC_LogError(status, ("StoreRequest failed to save data correctly"));
+                return status;
+            }
+            if (!writeLock.GetSink()->Truncate()) {
+                QCC_LogError(ER_WARNING, ("FileSink::Truncate failed"));
+            }
+            QCC_DbgHLPrintf(("Wrote key store to %s", fileLocker.GetFileName()));
         } else {
-            QCC_LogError(status, ("Failed to write key store to %s", fileLocker.GetFileName()));
+            QCC_LogError(status, ("Failed to store request - write lock has not been taken, status=(%#x)", status));
+            QCC_ASSERT(!"write lock has not been taken");
         }
         return status;
     }
