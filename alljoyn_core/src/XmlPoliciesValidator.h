@@ -199,13 +199,17 @@ class XmlPoliciesValidator : public XmlValidator {
 
         /**
          * Constructor.
-         *
-         * @param[in]    allAbsent   Flag indicating of an "ALL" type peer has appeared in previous peers.
-         * @param[in]    first      Flag indicating if this is the first validated peer.
          */
-        PeerValidator(bool allAbsent, bool first) :
-            allTypeAbsent(allAbsent),
-            firstPeer(first)
+        PeerValidator() :
+            m_allTypeAbsent(true),
+            m_firstPeer(true),
+            m_anyTrustedTypePresent(false)
+        { }
+
+        /**
+         * Default destructor.
+         */
+        virtual ~PeerValidator()
         { }
 
         /**
@@ -219,10 +223,15 @@ class XmlPoliciesValidator : public XmlValidator {
         virtual QStatus Validate(const qcc::XmlElement* peer);
 
         /**
-         * Default destructor.
+         * Updates information about already analyzed peers.
+         *
+         * @param[in]    allTypeAbsent          Flag indicating that the "ALL" peer
+         *                                      has already been validated.
+         * @param[in]    firstPeer              Flag indicating this is the first validated peer.
+         * @param[in]    anyTrustedTypePresent  Flag indicating that the "ANY_TRUSTED"
+         *                                      peer has already been validated.
          */
-        virtual ~PeerValidator()
-        { }
+        void UpdatePeersFlags(bool allTypeAbsent, bool firstPeer, bool anyTrustedTypePresent);
 
         /**
          * Returns a peer type from the qcc::XmlElement or an error if
@@ -241,12 +250,17 @@ class XmlPoliciesValidator : public XmlValidator {
         /**
          * Flag indicating that previously checked peer was not an "ALL" type.
          */
-        bool allTypeAbsent;
+        bool m_allTypeAbsent;
 
         /**
          * Flag indicating that this is the first checked peer element.
          */
-        bool firstPeer;
+        bool m_firstPeer;
+
+        /**
+         * Flag indicating that an "ANY_TRUSTED" peer has already been validated.
+         */
+        bool m_anyTrustedTypePresent;
 
         /**
          * Validates peer details specific to a given type.
@@ -302,14 +316,6 @@ class XmlPoliciesValidator : public XmlValidator {
 
 
     class AllValidator : public PeerValidator {
-      public:
-        AllValidator(bool allAbsent, bool first) :
-            PeerValidator(allAbsent, first)
-        { }
-
-        virtual ~AllValidator()
-        { }
-
       private:
 
         virtual size_t GetPeerChildrenCount();
@@ -317,26 +323,7 @@ class XmlPoliciesValidator : public XmlValidator {
 
 
     class AnyTrustedValidator : public PeerValidator {
-      public:
-
-        /**
-         * Constructor.
-         *
-         * @param[in]    allAbsent          Flag indicating of an "ALL" type peer has appeared in previous peers.
-         * @param[in]    first             Flag indicating if this is the first validated peer.
-         * @param[in]    anyTrustedPresent Flag indicating if an "ANY_TRUSTED" type peer has appeared in previous peers.
-         */
-        AnyTrustedValidator(bool allAbsent, bool first, bool anyTrustedPresent) :
-            PeerValidator(allAbsent, first),
-            anyTrustedTypePresent(anyTrustedPresent)
-        { }
-
-        virtual ~AnyTrustedValidator()
-        { }
-
       private:
-
-        bool anyTrustedTypePresent;
 
         virtual size_t GetPeerChildrenCount();
 
@@ -348,23 +335,6 @@ class XmlPoliciesValidator : public XmlValidator {
      * Class for validating peers conataining a "publicKey" XML element.
      */
     class PeerWithPublicKeyValidator : public PeerValidator {
-      public:
-
-        /**
-         * Constructor.
-         *
-         * @param[in]    allAbsent  Flag indicating of an "ALL" type peer has appeared in previous peers.
-         * @param[in]    first     Flag indicating if this is the first validated peer.
-         * @param[in]    ids       Set of IDs of all previously checked peers.
-         */
-        PeerWithPublicKeyValidator(bool allAbsent, bool first, std::unordered_set<std::string>* ids) :
-            PeerValidator(allAbsent, first),
-            peersIds(ids)
-        { }
-
-        virtual ~PeerWithPublicKeyValidator()
-        { }
-
       protected:
 
         virtual QStatus ValidateTypeSpecific(const qcc::XmlElement* peer);
@@ -385,7 +355,7 @@ class XmlPoliciesValidator : public XmlValidator {
          * Set of IDs of all previously checked peers of a given type. An ID is either the peer's public key
          * or public key and sgID - type dependent. "ALL" and "ANY_TRUSTED" type peers do not have IDs.
          */
-        std::unordered_set<std::string>* peersIds;
+        std::unordered_set<std::string> m_peersIds;
 
         /**
          * Validates the peer is unique in terms of it's type and ID.
@@ -412,22 +382,6 @@ class XmlPoliciesValidator : public XmlValidator {
 
 
     class WithMembershipValidator : public PeerWithPublicKeyValidator {
-      public:
-
-        /**
-         * Constructor.
-         *
-         * @param[in]    allAbsent  Flag indicating of an "ALL" type peer has appeared in previous peers.
-         * @param[in]    first     Flag indicating if this is the first validated peer.
-         * @param[in]    ids       Set of IDs of all previously checked peers.
-         */
-        WithMembershipValidator(bool allAbsent, bool first, std::unordered_set<std::string>* ids) :
-            PeerWithPublicKeyValidator(allAbsent, first, ids)
-        { }
-
-        virtual ~WithMembershipValidator()
-        { }
-
       private:
 
         QStatus ValidateSgId(const qcc::XmlElement* peer);
@@ -446,10 +400,23 @@ class XmlPoliciesValidator : public XmlValidator {
       public:
 
         PeerValidatorFactory() :
-            allTypeAbsent(true),
-            firstPeer(true),
-            anyTrustedTypePresent(false)
-        { }
+            m_allTypeAbsent(true),
+            m_firstPeer(true),
+            m_anyTrustedTypePresent(false)
+        {
+            m_validators[PermissionPolicy::Peer::PeerType::PEER_ALL] = new AllValidator();
+            m_validators[PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED] = new AnyTrustedValidator();
+            m_validators[PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY] = new PeerWithPublicKeyValidator();
+            m_validators[PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP] = new WithMembershipValidator();
+            m_validators[PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY] = new PeerWithPublicKeyValidator();
+        }
+
+        ~PeerValidatorFactory()
+        {
+            for (auto validatorsElement : m_validators) {
+                delete validatorsElement.second;
+            }
+        }
 
         /**
          * Constructs a validator for given peer type.
@@ -458,73 +425,34 @@ class XmlPoliciesValidator : public XmlValidator {
          *
          * @return A validator for given peer type.
          */
-        PeerValidator* ForType(PermissionPolicy::Peer::PeerType type)
-        {
-            PeerValidator* output;
-
-            switch (type) {
-            case PermissionPolicy::Peer::PeerType::PEER_ALL:
-                output = new AllValidator(allTypeAbsent, firstPeer);
-                allTypeAbsent = false;
-                break;
-
-            case PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED:
-                output = new AnyTrustedValidator(allTypeAbsent, firstPeer, anyTrustedTypePresent);
-                anyTrustedTypePresent = true;
-                break;
-
-            case PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY:
-                output = new PeerWithPublicKeyValidator(allTypeAbsent, firstPeer, &fromCertificateAuthorityIds);
-                break;
-
-            case PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP:
-                output = new WithMembershipValidator(allTypeAbsent, firstPeer, &withMembershipIds);
-                break;
-
-            case PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY:
-                output = new PeerWithPublicKeyValidator(allTypeAbsent, firstPeer, &withPublicKeyIds);
-                break;
-
-            default:
-                QCC_ASSERT(false);
-                return nullptr;
-            }
-
-            firstPeer = false;
-            return output;
-        }
+        PeerValidator* ForType(PermissionPolicy::Peer::PeerType type);
 
       private:
 
         /**
          * Flag indicating that previously checked peer was not an "ALL" type.
          */
-        bool allTypeAbsent;
+        bool m_allTypeAbsent;
 
         /**
          * Flag indicating that this is the first checked peer element.
          */
-        bool firstPeer;
+        bool m_firstPeer;
 
         /**
          * Flag indicating that an "ANY_TRUSTED" type peer was already present.
          */
-        bool anyTrustedTypePresent;
+        bool m_anyTrustedTypePresent;
 
         /**
-         * Collection of IDs (public key) for already validated WITH_PUBLIC_KEY peers.
+         * Peer validators returned by the factory.
          */
-        std::unordered_set<std::string> withPublicKeyIds;
+        std::map<PermissionPolicy::Peer::PeerType, PeerValidator*> m_validators;
 
         /**
-         * Collection of IDs (public key + sgID) for already validated WITH_MEMBERSHIP peers.
+         * Updates information about already analyzed peers.
          */
-        std::unordered_set<std::string> withMembershipIds;
-
-        /**
-         * Collection of IDs (public key) for already validated FROM_CERTIFICATE_AUTHORITY peers.
-         */
-        std::unordered_set<std::string> fromCertificateAuthorityIds;
+        void UpdatePeersFlags(PermissionPolicy::Peer::PeerType type);
     };
 };
 } /* namespace ajn */
