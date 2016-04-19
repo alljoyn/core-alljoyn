@@ -145,14 +145,6 @@ QStatus FileSource::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, u
     }
 }
 
-bool FileSource::Reset() {
-    int lseekRet = lseek(fd, 0, SEEK_SET);
-    if (lseekRet < 0) {
-        QCC_LogError(ER_OS_ERROR, ("Lseek fd %d failed with '%s'", fd, strerror(errno)));
-    }
-    return (lseekRet >= 0);
-}
-
 bool FileSource::Lock(bool block)
 {
     if (fd < 0) {
@@ -352,21 +344,6 @@ QStatus FileSink::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
     }
 }
 
-bool FileSink::Truncate() {
-    int ftrunRet = -1;
-    int lseekRet = -1;
-    ftrunRet = ftruncate(fd, 0);
-    if (ftrunRet < 0) {
-        QCC_LogError(ER_OS_ERROR, ("Truncate fd %d failed with '%s'", fd, strerror(errno)));
-    } else {
-        lseekRet = lseek(fd, 0, SEEK_SET);
-        if (lseekRet < 0) {
-            QCC_LogError(ER_OS_ERROR, ("Lseek fd %d failed with '%s'", fd, strerror(errno)));
-        }
-    }
-    return ((ftrunRet >= 0) && (lseekRet >= 0));
-}
-
 bool FileSink::Lock(bool block)
 {
     if (fd < 0) {
@@ -392,16 +369,12 @@ void FileSink::Unlock()
 
 FileSource* FileLock::GetSource()
 {
-    bool ret = m_source->Reset();
-    QCC_ASSERT(ret);
-    return ret ? m_source.get() : nullptr;
+    return m_source.get();
 }
 
 FileSink* FileLock::GetSink()
 {
-    bool ret = m_sink->Truncate();
-    QCC_ASSERT(ret);
-    return ret ? m_sink.get() : nullptr;
+    return m_sink.get();
 }
 
 void FileLock::Release()
@@ -435,6 +408,12 @@ QStatus FileLock::InitReadWrite(std::shared_ptr<FileSink> sink)
         m_source.reset();
         m_sink.reset();
         return ER_EOF;
+    }
+
+    int lseekRet = lseek(sink->fd, 0, SEEK_SET);
+    if (lseekRet < 0) {
+        QCC_LogError(ER_OS_ERROR, ("Lseek fd %d failed with '%s'", sink->fd, strerror(errno)));
+        return ER_OS_ERROR;
     }
 
     /* Initialize both Source and Sink (for R/W) */

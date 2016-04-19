@@ -133,13 +133,6 @@ class FileSource : public Source {
     bool IsValid() { return 0 <= fd; }
 
     /**
-     * Reset file pointer to the beginning of a file.
-     *
-     * @return  true on success.
-     */
-    bool Reset();
-
-    /**
      * Lock the underlying file for shared access.
      *
      * @param block  If block is true the function will block until file access if permitted.
@@ -167,7 +160,7 @@ class FileLock;
  * FileSink is an implementation of Sink used to write to files.
  */
 class FileSink : public Sink {
-    /* Required to access fd to create a FileSource from FileSink. */
+    /* Required to access fd. */
     friend class FileLock;
   public:
 
@@ -241,13 +234,6 @@ class FileSink : public Sink {
      * @return  true iff stream was successfully initialized.
      */
     bool IsValid() { return 0 <= fd; }
-
-    /**
-     * Truncate file.
-     *
-     * @return  true on success.
-     */
-    bool Truncate();
 
     /**
      * Lock the underlying file for exclusive access
