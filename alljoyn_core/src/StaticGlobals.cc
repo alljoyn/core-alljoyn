@@ -34,6 +34,10 @@
 
 namespace ajn {
 
+/* Avoid including these internal methods in public header PermissionPolicy.h */
+void PermissionPolicyInit();
+void PermissionPolicyShutdown();
+
 class StaticGlobals {
   public:
     static void Init()
@@ -46,10 +50,12 @@ class StaticGlobals {
         XmlPoliciesValidator::Init();
         XmlRulesConverter::Init();
         XmlRulesValidator::Init();
+        PermissionPolicyInit();
     }
 
     static void Shutdown()
     {
+        PermissionPolicyShutdown();
         BusAttachment::Internal::Shutdown();
         PasswordManager::Shutdown();
         AutoPingerInternal::Shutdown();

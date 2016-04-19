@@ -1533,7 +1533,12 @@ QStatus _Message::ErrorMsg(const qcc::String& sender, QStatus status, uint32_t r
 
 void _Message::SetSerialNumber()
 {
-    msgHeader.serialNum = bus->GetInternal().NextSerial();
+    SetSerialNumber(bus->GetInternal().NextSerial());
+}
+
+void _Message::SetSerialNumber(uint32_t serialNumber)
+{
+    msgHeader.serialNum = serialNumber;
     if (msgBuf) {
         ((MessageHeader*)msgBuf)->serialNum = endianSwap ? EndianSwap32(msgHeader.serialNum) : msgHeader.serialNum;
     }
