@@ -231,6 +231,13 @@ class FileSink : public Sink {
     bool IsValid() { return INVALID_HANDLE_VALUE != handle; }
 
     /**
+     * Truncate file to current offset.
+     *
+     * @return true on success.
+     */
+    bool Truncate();
+
+    /**
      * Lock the underlying file for exclusive access
      *
      * @param block  If block is true the function will block until file access if permitted.
