@@ -187,10 +187,7 @@ QStatus XmlPoliciesValidator::ValidatePeer(const XmlElement* peer, PeerValidator
     }
 
     if (ER_OK == status) {
-        PeerValidator* validator = peerValidatorFactory.ForType(peerType);
-
-        status = validator->Validate(peer);
-        delete validator;
+        status = peerValidatorFactory.ForType(peerType)->Validate(peer);
     }
 
     return status;
@@ -224,7 +221,7 @@ QStatus XmlPoliciesValidator::PeerValidator::GetValidPeerType(const qcc::XmlElem
 
 QStatus XmlPoliciesValidator::PeerValidator::ValidateNoAllTypeWithOther()
 {
-    return (allTypeAbsent || firstPeer) ? ER_OK : ER_XML_MALFORMED;
+    return (m_allTypeAbsent || m_firstPeer) ? ER_OK : ER_XML_MALFORMED;
 }
 
 QStatus XmlPoliciesValidator::PeerValidator::ValidateCommon(const qcc::XmlElement* peer)
@@ -254,6 +251,13 @@ QStatus XmlPoliciesValidator::PeerValidator::ValidateTypeSpecific(const qcc::Xml
      */
     QCC_UNUSED(peer);
     return ER_OK;
+}
+
+void XmlPoliciesValidator::PeerValidator::UpdatePeersFlags(bool allTypeAbsent, bool firstPeer, bool anyTrustedTypePresent)
+{
+    m_allTypeAbsent = allTypeAbsent;
+    m_firstPeer = firstPeer;
+    m_anyTrustedTypePresent = anyTrustedTypePresent;
 }
 
 QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidatePublicKey(const qcc::XmlElement* peer)
@@ -286,7 +290,7 @@ QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidateTypeSpecific(c
 QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidatePeerUnique(const qcc::XmlElement* peer)
 {
     std::string id = GetPeerId(peer);
-    return InsertUniqueOrFail(id, *peersIds);
+    return InsertUniqueOrFail(id, m_peersIds);
 }
 
 size_t XmlPoliciesValidator::PeerWithPublicKeyValidator::GetPeerChildrenCount()
@@ -307,7 +311,7 @@ size_t XmlPoliciesValidator::AnyTrustedValidator::GetPeerChildrenCount()
 QStatus XmlPoliciesValidator::AnyTrustedValidator::ValidateTypeSpecific(const qcc::XmlElement* peer)
 {
     QCC_UNUSED(peer);
-    return anyTrustedTypePresent ? ER_XML_MALFORMED : ER_OK;
+    return m_anyTrustedTypePresent ? ER_XML_MALFORMED : ER_OK;
 }
 
 QStatus XmlPoliciesValidator::WithMembershipValidator::ValidateTypeSpecific(const qcc::XmlElement* peer)
@@ -339,5 +343,32 @@ size_t XmlPoliciesValidator::WithMembershipValidator::GetPeerChildrenCount()
 std::string XmlPoliciesValidator::WithMembershipValidator::GetPeerId(const qcc::XmlElement* peer)
 {
     return PeerWithPublicKeyValidator::GetPeerId(peer) + peer->GetChildren()[PEER_SGID_INDEX]->GetContent().c_str();
+}
+
+XmlPoliciesValidator::PeerValidator* XmlPoliciesValidator::PeerValidatorFactory::ForType(PermissionPolicy::Peer::PeerType type)
+{
+    QCC_ASSERT(m_validators.find(type) != m_validators.end());
+
+    PeerValidator* validator = m_validators[type];
+    validator->UpdatePeersFlags(m_allTypeAbsent, m_firstPeer, m_anyTrustedTypePresent);
+
+    UpdatePeersFlags(type);
+    return validator;
+}
+
+void XmlPoliciesValidator::PeerValidatorFactory::UpdatePeersFlags(PermissionPolicy::Peer::PeerType type)
+{
+    switch (type) {
+    case PermissionPolicy::Peer::PeerType::PEER_ALL:
+        m_allTypeAbsent = false;
+        break;
+
+    case PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED:
+        m_anyTrustedTypePresent = true;
+        break;
+    default:
+        break;
+    }
+    m_firstPeer = false;
 }
 } /* namespace ajn */

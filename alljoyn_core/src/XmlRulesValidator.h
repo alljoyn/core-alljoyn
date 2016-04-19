@@ -338,20 +338,11 @@ class XmlRulesValidator : public XmlValidator {
     class MemberValidator {
       public:
 
-        /**
-         * Constructor.
-         *
-         * @param[in]    names   Collection of names for already validated members.
-         */
-        MemberValidator(std::unordered_set<std::string>* names) :
-            memberNames(names)
-        { }
-
-        /**
-         * Default destructor.
-         */
-        virtual ~MemberValidator()
-        { }
+          /**
+           * Default destructor.
+           */
+          virtual ~MemberValidator()
+          { }
 
         /**
          * Validates the member given as qcc::XmlElement object.
@@ -393,7 +384,7 @@ class XmlRulesValidator : public XmlValidator {
         /**
          * Collection of names for already validated memebers.
          */
-        std::unordered_set<std::string>* memberNames;
+        std::unordered_set<std::string> memberNames;
 
         /**
          * @return A string -> action mask map of actions valid for the current member type.
@@ -495,13 +486,6 @@ class XmlRulesValidator : public XmlValidator {
          */
         static void Init();
 
-        MethodsValidator(std::unordered_set<std::string>* names) :
-            MemberValidator(names)
-        { }
-
-        virtual ~MethodsValidator()
-        { }
-
       private:
 
         /**
@@ -521,13 +505,6 @@ class XmlRulesValidator : public XmlValidator {
          * Initializes the static members.
          */
         static void Init();
-
-        PropertiesValidator(std::unordered_set<std::string>* names) :
-            MemberValidator(names)
-        { }
-
-        virtual ~PropertiesValidator()
-        { }
 
       private:
 
@@ -549,13 +526,6 @@ class XmlRulesValidator : public XmlValidator {
          */
         static void Init();
 
-        SignalsValidator(std::unordered_set<std::string>* names) :
-            MemberValidator(names)
-        { }
-
-        virtual ~SignalsValidator()
-        { }
-
       private:
 
         /**
@@ -574,6 +544,20 @@ class XmlRulesValidator : public XmlValidator {
     class MemberValidatorFactory {
       public:
 
+        MemberValidatorFactory()
+        {
+            m_validators[PermissionPolicy::Rule::Member::MemberType::METHOD_CALL] = new MethodsValidator();
+            m_validators[PermissionPolicy::Rule::Member::MemberType::PROPERTY] = new PropertiesValidator();
+            m_validators[PermissionPolicy::Rule::Member::MemberType::SIGNAL] = new SignalsValidator();
+        }
+
+        ~MemberValidatorFactory()
+        {
+            for (auto validatorsElement : m_validators) {
+                delete validatorsElement.second;
+            }
+        }
+
         /**
          * Constructs a validator for given member type.
          *
@@ -581,40 +565,14 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return A validator for given member type.
          */
-        MemberValidator* ForType(PermissionPolicy::Rule::Member::MemberType type)
-        {
-            switch (type) {
-            case PermissionPolicy::Rule::Member::METHOD_CALL:
-                return new MethodsValidator(&methodsNames);
-
-            case PermissionPolicy::Rule::Member::PROPERTY:
-                return new PropertiesValidator(&propertiesNames);
-
-            case PermissionPolicy::Rule::Member::SIGNAL:
-                return new SignalsValidator(&signalsNames);
-
-            default:
-                QCC_ASSERT(false);
-                return nullptr;
-            }
-        }
+        MemberValidator* ForType(PermissionPolicy::Rule::Member::MemberType type);
 
       private:
 
         /**
-         * Collection of methods' names for already validated methods.
+         * Member validators returned by the factory.
          */
-        std::unordered_set<std::string> methodsNames;
-
-        /**
-         * Collection of properties' names for already validated properties.
-         */
-        std::unordered_set<std::string> propertiesNames;
-
-        /**
-         * Collection of signals' names for already validated signals.
-         */
-        std::unordered_set<std::string> signalsNames;
+        std::map<PermissionPolicy::Rule::Member::MemberType, MemberValidator*> m_validators;
     };
 };
 } /* namespace ajn */
