@@ -18,6 +18,7 @@
 #include <alljoyn/AboutListener.h>
 #include <alljoyn/AboutObjectDescription.h>
 #include <alljoyn/AboutProxy.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/Init.h>
 #include <alljoyn/Session.h>
@@ -324,7 +325,7 @@ int CDECL_CALL main(int argc, char** argv)
     MyAboutListener aboutListener;
     g_bus->RegisterAboutListener(aboutListener);
 
-    const char* interfaces[] = { "org.alljoyn.About", "org.alljoyn.Icon" };
+    const char* interfaces[] = { org::alljoyn::About::InterfaceName };
     status = g_bus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
     if (ER_OK == status) {
         printf("WhoImplements called.\n");
@@ -332,6 +333,7 @@ int CDECL_CALL main(int argc, char** argv)
         printf("WhoImplements call FAILED with status %s\n", QCC_StatusText(status));
         exit(1);
     }
+
     /* Perform the service asynchronously until the user signals for an exit. */
     if (ER_OK == status) {
         while (s_interrupt == false) {

@@ -554,10 +554,10 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     continue;
                 }
                 if ((ASN_CONTEXT_SPECIFIC != (tag & ASN_CONTEXT_SPECIFIC)) ||
-                    ((uint8_t) (tag & 0x1F) != v) || !DecodeLen(asn, eod, len)) {
+                    ((uint8_t) (tag & 0x1F) != v) ||
+                    !DecodeLen(asn, eod, len)) {
                     status = ER_FAIL;
                 } else if (ASN_CONSTRUCTED_ENCODING == (tag & ASN_CONSTRUCTED_ENCODING)) {
-                    qcc::String seq;
                     status = DecodeV(syntax, asn, len, &argp);
                     if (*syntax++ != ')') {
                         status = ER_FAIL;
@@ -566,17 +566,17 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     }
                 } else {
                     /* primitive content */
-                    while (*syntax && (*syntax != ')')) {
-                        syntax++;
+                    if ((*syntax++ == '.') && (*syntax++ == ')')) {
+                        /*
+                         * Output len bytes as a String, by jumping to the common code path
+                         * at the end of the switch/case statement.
+                         */
+                        break;
                     }
-                    if (*syntax == ')') {
-                        /* skip to the end of the c(...) block */
-                        status = ER_OK;
-                        syntax++;
-                        break; /* no more parsing */
-                    } else {
-                        status = ER_FAIL;
-                    }
+
+                    QCC_LogError(status, ("Mismatched tag %#x and syntax character '%c'", (uint32_t)tag, *(syntax - 1)));
+                    status = ER_FAIL;
+                    continue;
                 }
             }
             continue;
@@ -627,7 +627,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 if (val) {
                     val->assign((char*)start, len);
                 }
-                asn = eod; /* every thing is consumed */
+                asn = eod; /* everything has been consumed */
                 continue;
             }
 
