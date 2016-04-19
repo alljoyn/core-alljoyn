@@ -721,6 +721,8 @@ static void TestValidityPeriod(CertificateX509::ValidPeriod& validity)
     String pem = cert.GetPEM();
     CertificateX509 cert2;
     EXPECT_EQ(ER_OK, cert2.LoadPEM(pem)) << " load PEM failed";
+    status = cert2.Verify(&dsaPublicKey);
+    EXPECT_EQ(ER_OK, status) << " verify cert2 failed with actual status: " << QCC_StatusText(status);
     EXPECT_EQ(validity.validFrom, cert2.GetValidity()->validFrom) << "validFrom not the same";
     EXPECT_EQ(validity.validTo, cert2.GetValidity()->validTo) << "validTo not the same";
 }
@@ -1534,6 +1536,7 @@ TEST_F(CertificateECCTest, CreateIdentityCertificateChain)
 
     IdentityCertificate cert5;
     EXPECT_EQ(ER_OK, cert5.LoadPEM(cert1.GetPEM()));
+    EXPECT_EQ(ER_OK, cert5.Verify(key1.GetDSAPublicKey())) << " verify cert5 failed with status not ER_OK";
     EXPECT_EQ(cert1.GetValidity()->validFrom, cert5.GetValidity()->validFrom);
     EXPECT_EQ(cert1.GetValidity()->validTo, cert5.GetValidity()->validTo);
 }
