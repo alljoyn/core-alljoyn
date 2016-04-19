@@ -1211,6 +1211,7 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassResetForValidProxyAndIns
 
 TEST_F(SecurityApplicationProxyFullSetupTest, shouldCallResetCallbackAfterReset)
 {
+    throw 1;
     factoryResetHappened = false;
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_reset(managedAppSecurityApplicationProxy));
 
