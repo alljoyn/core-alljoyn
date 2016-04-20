@@ -1056,7 +1056,7 @@ bool _LocalEndpoint::OkToUnregisterHandlerObj(MessageReceiver* receiver)
     }
     unregisteringObjects.insert(receiver);
     while (ahit != activeHandlers.end()) {
-        handlerThreadsDone.Wait(handlerThreadsLock);
+        QCC_VERIFY(handlerThreadsDone.Wait(handlerThreadsLock) == ER_OK);
         ahit = activeHandlers.find(receiver);
     }
     handlerThreadsLock.Unlock(MUTEX_CONTEXT);
@@ -1160,7 +1160,6 @@ void _LocalEndpoint::AlarmTriggered(const Alarm& alarm, QStatus reason)
     }
     uint32_t serial = rc->serial;
     Message msg(*bus);
-    QStatus status = ER_OK;
 
     /*
      * Clear the encrypted flag so the error response doesn't get rejected.
@@ -1168,7 +1167,10 @@ void _LocalEndpoint::AlarmTriggered(const Alarm& alarm, QStatus reason)
     rc->callFlags &= ~ALLJOYN_FLAG_ENCRYPTED;
     replyMapLock.Unlock(MUTEX_CONTEXT);
 
-    if (running) {
+    QStatus status = ER_OK;
+    bool attemptDispatch = running;
+
+    if (attemptDispatch) {
         QCC_DbgPrintf(("Timed out waiting for METHOD_REPLY with serial %d", serial));
         if (reason == ER_TIMER_EXITING) {
             msg->ErrorMsg("org.alljoyn.Bus.Exiting", serial);
@@ -1179,17 +1181,17 @@ void _LocalEndpoint::AlarmTriggered(const Alarm& alarm, QStatus reason)
          * Forward the message via the dispatcher so we conform to our concurrency model.
          */
         status = dispatcher->DispatchMessage(msg);
-
-    } else {
-        msg->ErrorMsg("org.alljoyn.Bus.Exiting", serial);
-        HandleMethodReply(msg);
     }
+
     /*
-     * If the dispatch failed or we are no longer running handle the reply on this thread.
+     * If the dispatch failed or we are no longer running, handle the reply on this thread.
      */
-    if (status != ER_OK) {
+    if ((status != ER_OK) || !attemptDispatch) {
         msg->ErrorMsg("org.alljoyn.Bus.Exiting", serial);
         HandleMethodReply(msg);
+        handlerThreadsLock.Lock(MUTEX_CONTEXT);
+        handlerThreadsDone.Broadcast();
+        handlerThreadsLock.Unlock(MUTEX_CONTEXT);
     }
 }
 
