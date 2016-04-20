@@ -1079,8 +1079,8 @@ QStatus KeyExchangerECDHE_PSK::GenerateLocalVerifier(uint8_t* verifier, size_t v
         vector<uint8_t, SecureAllocator<uint8_t> > seed;
         seed.reserve(sizeof(digest) + pskName.size() + pskValue.size());
         seed.insert(seed.end(), digest, digest + sizeof(digest));
-        AppendStringToVector(pskName, seed);
-        AppendStringToVector(pskValue, seed);
+        AppendStringToSecureVector(pskName, seed);
+        AppendStringToSecureVector(pskValue, seed);
         QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
         return status;
     } else {
@@ -1111,7 +1111,7 @@ QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* peerPskName, size
         seed.reserve(sizeof(digest) + peerPskNameLength + pskValue.size());
         seed.insert(seed.end(), digest, digest + sizeof(digest));
         seed.insert(seed.end(), peerPskName, peerPskName + peerPskNameLength);
-        AppendStringToVector(pskValue, seed);
+        AppendStringToSecureVector(pskValue, seed);
         QStatus status = Crypto_PseudorandomFunction(masterSecret, label.c_str(), seed, verifier, verifierLen);
         return status;
     } else {

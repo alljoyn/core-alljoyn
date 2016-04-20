@@ -78,6 +78,14 @@ class SecureAllocator : public std::allocator<T> {
     }
 };
 
+/**
+ * Append the contents of a string to a vector<uint8_t, SecureAllocator<uint8_t> >.
+ *
+ * @param str   String to be added.
+ * @param v     Vector to be added to.
+ */
+void AJ_CALL AppendStringToSecureVector(const qcc::String& str, std::vector<uint8_t, SecureAllocator<uint8_t> >& v);
+
 }
 
 #endif // _QCC_SECUREALLOCATOR_H

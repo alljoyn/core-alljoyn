@@ -21,6 +21,7 @@
 #include <qcc/Environ.h>
 #include <qcc/StringUtil.h>
 #include <qcc/FileStream.h>
+#include <qcc/Util.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
 #include <qcc/windows/NamedPipeWrapper.h>
