@@ -50,6 +50,7 @@ ASACORE-2367 [Security 2.0] Unable to send sessioncast signals
 ASACORE-2426 Simultaneous authentication of two peers doesn't work
 ASACORE-2444 Crash on BusAttachment destructor if application bus object
              registered at object path '/'
+ASACORE-2516 LocalEndpoint hang while shutting down the endpoint
 ASACORE-2520 AuthenticationComplete not called when ALLJOYN_SRP_KEYX
              authentication fails
 ASACORE-2542 Auth fails between TCL "SecureClientECDHE.exe -e ECDHE_ECDSA" and
@@ -93,7 +94,6 @@ ASACORE-2481 DefaultKeyStoreListener implementation uses faulty algorithm to
              derive keystore filename
 ASACORE-2512 [Security2.0] authentication should try all auth mechanisms before
              falling back on ECDHE_NULL
-ASACORE-2516 aping tool hangs with apparent deadlock
 ASACORE-2741 Sharing a Key Store file between 64 bit and 32 apps is not supported
 
 For a complete list of open issues:
