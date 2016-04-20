@@ -74,8 +74,10 @@ class UIStorageTests :
  *       -# Set some meta data.
  *       -# Retrieve the application from the security agent.
  *       -# Check whether the retrieved meta data matches the data that was set.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(UIStorageTests, SetMetaData) {
+TEST_F(UIStorageTests, DISABLED_SetMetaData) {
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
     OnlineApplication app;
@@ -94,7 +96,7 @@ TEST_F(UIStorageTests, SetMetaData) {
 
     ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED));
-    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     string userDefinedName = "User-defined test name";
     string deviceName = "Device test name";

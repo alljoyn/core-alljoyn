@@ -151,8 +151,9 @@ class ManifestUtilTests :
 /**
  * @test Verify the construction of valid Manifest objects using the Manifest
  *       class. Also verify the provided operators and the digest matching.
- *       -# Create an empty manifest object and make sure that its rules are empty
- *          but the byte-array is not. Size of rules should be zero.
+ *       -# Create an empty manifest object and make sure that its rules and
+ *          byte-array are empty. Both sizes of rules and the byte-array
+ *          should be zero.
  *       -# Create a manifest from some two generated rules (manifestFromRules)
  *          and verify that it has those exact generated rules. Also, make sure
  *          that the corresponding byte-array is not empty.
@@ -169,8 +170,10 @@ class ManifestUtilTests :
  *          manifestFromByteArray and manifestFromRules hold.
  *       -# Get the digests from  manifestAssignee, manifestFromByteArray and
  *          copyManifest and make sure they are all identical.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(ManifestUtilTests, ManifestConstruction) {
+TEST_F(ManifestUtilTests, DISABLED_ManifestConstruction) {
     ajn::securitymgr::Manifest emptyManifest;
     uint8_t* byteArray = nullptr;
     size_t sizeOfByteArray;
@@ -180,14 +183,12 @@ TEST_F(ManifestUtilTests, ManifestConstruction) {
 
     ASSERT_EQ(ER_OK, Util::Init(ba));
 
-    ASSERT_EQ(ER_OK, emptyManifest.GetByteArray(&byteArray, &sizeOfByteArray));
+    ASSERT_EQ(ER_END_OF_DATA, emptyManifest.GetByteArray(&byteArray, &sizeOfByteArray));
     ASSERT_EQ(ER_END_OF_DATA, emptyManifest.GetRules(&rules, &count));
-    ASSERT_TRUE(byteArray != nullptr);
-    ASSERT_GT(sizeOfByteArray, (size_t)0);
+    ASSERT_TRUE(byteArray == nullptr);
+    ASSERT_EQ((size_t)0, sizeOfByteArray);
     ASSERT_EQ((size_t)0, count);
     ASSERT_TRUE(nullptr == rules);
-    delete[] byteArray;
-    byteArray = nullptr;
 
     // Test construction by rules
     EXPECT_EQ(ER_OK, GenerateManifest(&otherRules, &count));

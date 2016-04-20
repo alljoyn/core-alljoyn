@@ -50,8 +50,10 @@ class IdentityTests :
  *       -# Remove the original identity and verify that the applications
  *          are removed and they are claimable again.
  *       -# Get all managed applications and verify that none exists.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(IdentityTests, SuccessfulInstallIdentity) {
+TEST_F(IdentityTests, DISABLED_SuccessfulInstallIdentity) {
     /* Start the application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
@@ -67,15 +69,15 @@ TEST_F(IdentityTests, SuccessfulInstallIdentity) {
     /* Claim! */
     ASSERT_EQ(ER_OK, secMgr->Claim(app, info));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifest));
 
     /* Try to install another identity */
     IdentityInfo info2;
     info2.name = "AnotherName";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(info2));
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifestTemplate));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifest));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
-    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifest));
 
     /* Remove the identity info and make sure the app is claimable again*/
     ASSERT_EQ(ER_OK, storage->RemoveIdentity(info2));
@@ -88,7 +90,7 @@ TEST_F(IdentityTests, SuccessfulInstallIdentity) {
      * */
     ASSERT_EQ(ER_OK, secMgr->Claim(app, info));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifest));
 
     TestApplication testApp1("NewApp");
     ASSERT_EQ(ER_OK, testApp1.Start());
@@ -97,7 +99,7 @@ TEST_F(IdentityTests, SuccessfulInstallIdentity) {
     ASSERT_TRUE(WaitForState(app1, PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, secMgr->Claim(app1, info));
     ASSERT_TRUE(WaitForState(app1, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app1, info, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app1, info, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->RemoveIdentity(info)); // Should remove testApp and testApp1
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE)); //First app is claimable again
@@ -121,8 +123,10 @@ TEST_F(IdentityTests, SuccessfulInstallIdentity) {
  *       -# Verify that updateIdentity is succesful.
  *       -# Make sure updates have been completed.
  *       -# Check that the policy version increased.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
+TEST_F(IdentityTests, DISABLED_UpdateIdentityPolicyUpdate) {
     /* Start the test application */
     TestApplication testApp;
     ASSERT_EQ(ER_OK, testApp.Start());
@@ -142,7 +146,7 @@ TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, info, aa.lastManifest));
 
     vector<GroupInfo> policyGroups;
     PermissionPolicy policy;
@@ -156,9 +160,9 @@ TEST_F(IdentityTests, UpdateIdentityPolicyUpdate) {
     IdentityInfo info2;
     info2.name = "AnotherName";
     ASSERT_EQ(ER_OK, storage->StoreIdentity(info2));
-    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifestTemplate));
+    ASSERT_EQ(ER_OK, storage->UpdateIdentity(app, info2, aa.lastManifest));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
-    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, info2, aa.lastManifest));
     uint32_t remoteVersion;
     ASSERT_EQ(ER_OK, GetPolicyVersion(app, remoteVersion));
     ASSERT_EQ(1 + currentVersion, remoteVersion);

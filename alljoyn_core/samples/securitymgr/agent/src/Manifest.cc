@@ -271,13 +271,6 @@ QStatus Manifest::Difference(const Manifest& rhs,
     return status;
 }
 
-bool Manifest::TemplateEquals(const Manifest& other) const {
-    ajn::Manifest otherManifest = other.manifest;
-
-    return ((manifest->GetVersion() == otherManifest->GetVersion()) &&
-            (manifest->GetRules() == otherManifest->GetRules()));
-}
-
 ajn::Manifest Manifest::GetManifest() const
 {
     return manifest;

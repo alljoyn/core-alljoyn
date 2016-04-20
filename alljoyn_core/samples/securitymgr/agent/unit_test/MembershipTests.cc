@@ -74,8 +74,10 @@ class MembershipTests :
  *          again and in removing the memberships associated.
  *       -# Repeat the previous step but verify the removal of memberships associated
  *          immediately after the deletion of each group.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(MembershipTests, SuccessfulInstallMembership) {
+TEST_F(MembershipTests, DISABLED_SuccessfulInstallMembership) {
     /* Create groups */
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo1));
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo2));
@@ -101,7 +103,7 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     ASSERT_EQ(ER_OK, storage->InstallMembership(app, groupInfo1));
     ASSERT_TRUE(WaitForUpdatesCompleted(app));
@@ -195,8 +197,10 @@ TEST_F(MembershipTests, SuccessfulInstallMembership) {
  *       -# Verify that removing of membership using groupInfo1 is successful.
  *       -# Make sure updates have been completed.
  *       -# Check that the policy version increased again.
+ *
+ * Disabled for ASACORE-2822.
  **/
-TEST_F(MembershipTests, InstallRemoveMembershipPolicyUpdate) {
+TEST_F(MembershipTests, DISABLED_InstallRemoveMembershipPolicyUpdate) {
     /* Create groups */
     ASSERT_EQ(ER_OK, storage->StoreGroup(groupInfo1));
 
@@ -216,7 +220,7 @@ TEST_F(MembershipTests, InstallRemoveMembershipPolicyUpdate) {
 
     /* Check security signal */
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifestTemplate));
+    ASSERT_TRUE(CheckIdentity(app, idInfo, aa.lastManifest));
 
     vector<GroupInfo> policyGroups;
     PermissionPolicy policy;

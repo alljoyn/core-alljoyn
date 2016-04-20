@@ -107,13 +107,13 @@ class AutoAccepter :
     {
         ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_NULL);
         ctx.ApproveManifest();
-        lastManifestTemplate = ctx.GetManifest();
+        lastManifest = ctx.GetManifest();
 
         return ER_OK;
     }
 
   public:
-    ajn::securitymgr::Manifest lastManifestTemplate;
+    ajn::securitymgr::Manifest lastManifest;
 };
 
 class BasicTest :
@@ -262,7 +262,7 @@ class ClaimedTest :
         ASSERT_EQ(ER_OK, secMgr->Claim(testAppInfo, idInfo));
         ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED));
         ASSERT_EQ(ER_OK, secMgr->GetApplication(testAppInfo));
-        ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifestTemplate));
+        ASSERT_TRUE(CheckIdentity(idInfo, aa.lastManifest));
     }
 
     bool CheckRemotePolicy(PermissionPolicy& expectedPolicy)

@@ -412,9 +412,8 @@ QStatus UIStorageImpl::RemovePolicy(Application& app)
 
 QStatus UIStorageImpl::UpdateIdentity(Application& app,
                                       const IdentityInfo& identityInfo,
-                                      const Manifest& manifestTemplate)
+                                      const Manifest& manifest)
 {
-    ajn::Manifest signedManifest;
     QStatus status = storage->GetManagedApplication(app);
     if (ER_OK != status) {
         return status;
@@ -430,18 +429,12 @@ QStatus UIStorageImpl::UpdateIdentity(Application& app,
     if (ER_OK != status) {
         QCC_LogError(status, ("StoreCertificate failed"));
         return status;
-    }
-
-    status = ca->GenerateSignedManifest(cert, manifestTemplate, signedManifest);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Signing the manifest template failed"));
-        return status;
-    }
-
-    status = storage->StoreManifest(app, Manifest(signedManifest));
-    if (ER_OK != status) {
-        QCC_LogError(status, ("StoreManifest failed"));
-        return status;
+    } else {
+        status = storage->StoreManifest(app, manifest);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("StoreManifest failed"));
+            return status;
+        }
     }
 
     return ApplicationUpdated(app);

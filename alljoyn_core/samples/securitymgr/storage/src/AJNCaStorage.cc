@@ -98,8 +98,6 @@ QStatus AJNCaStorage::StartApplicationClaiming(const Application& app,
 QStatus AJNCaStorage::FinishApplicationClaiming(const Application& app, QStatus status)
 {
     CachedData data;
-    Manifest signedManifest;
-
     pendingLock.Lock();
     auto search = claimPendingApps.find(app);
     if (search != claimPendingApps.end()) {
@@ -118,8 +116,7 @@ QStatus AJNCaStorage::FinishApplicationClaiming(const Application& app, QStatus 
 
     _app.syncState = SYNC_OK;
 
-    signedManifest = Manifest(data.signedMnf);
-    return handler->ApplicationClaimed(_app, data.cert, signedManifest);
+    return handler->ApplicationClaimed(_app, data.cert, data.mnf);
 }
 
 QStatus AJNCaStorage::GetManagedApplication(Application& app) const
