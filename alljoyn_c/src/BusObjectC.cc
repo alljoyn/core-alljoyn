@@ -33,6 +33,10 @@ using namespace std;
 
 namespace ajn {
 
+#include <qcc/String.h>
+#define ERROR_NAME_BUF_SIZE 256
+#define ERROR_DESC_BUF_SIZE 256
+
 class BusObjectC : public BusObject {
   public:
     BusObjectC(const char* path, QCC_BOOL isPlaceholder, \
@@ -47,6 +51,8 @@ class BusObjectC : public BusObject {
             callbacks.property_set = NULL;
             callbacks.object_registered = NULL;
             callbacks.object_unregistered = NULL;
+            callbacks.property_get_with_error = NULL;
+            callbacks.property_set_with_error = NULL;
         } else {
             memcpy(&callbacks, callbacks_in, sizeof(alljoyn_busobject_callbacks));
         }
@@ -137,35 +143,48 @@ class BusObjectC : public BusObject {
     }
 
   protected:
-    virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val)
+
+    virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
     {
-        QCC_DbgTrace(("%s", __FUNCTION__));
+        char errorNameCStr[ERROR_NAME_BUF_SIZE] = { '\0' };
+        char errorMessageCStr[ERROR_DESC_BUF_SIZE] = { '\0' };
+
         QStatus ret = ER_BUS_NO_SUCH_PROPERTY;
-        if (callbacks.property_get != NULL) {
-            if (!DeferredCallback::sMainThreadCallbacksOnly) {
-                ret = callbacks.property_get(context, ifcName, propName, (alljoyn_msgarg)(&val));
+        if (callbacks.property_get_with_error != NULL) {
+            if (!ajn::DeferredCallback::sMainThreadCallbacksOnly) {
+                ret = callbacks.property_get_with_error(context, ifcName, propName, (alljoyn_msgarg)(&val), errorNameCStr, ERROR_NAME_BUF_SIZE, errorMessageCStr, ERROR_DESC_BUF_SIZE);
             } else {
-                DeferredCallback_4<QStatus, const void*, const char*, const char*, alljoyn_msgarg>* dcb =
-                    new DeferredCallback_4<QStatus, const void*, const char*, const char*, alljoyn_msgarg>(callbacks.property_get, context, ifcName, propName, (alljoyn_msgarg)(&val));
+                DeferredCallback_8<QStatus, const void*, const char*, const char*, alljoyn_msgarg, char*, size_t, char*, size_t>* dcb =
+                    new DeferredCallback_8<QStatus, const void*, const char*, const char*, alljoyn_msgarg, char*, size_t, char*, size_t>(callbacks.property_get_with_error, context, ifcName, propName, (alljoyn_msgarg)(&val), errorNameCStr, ERROR_NAME_BUF_SIZE, errorMessageCStr, ERROR_DESC_BUF_SIZE);
                 ret = DEFERRED_CALLBACK_EXECUTE(dcb);
             }
+
+            errorName = errorNameCStr;
+            errorMessage = errorMessageCStr;
         }
+
         return ret;
     }
 
-    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val)
+    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
     {
-        QCC_DbgTrace(("%s", __FUNCTION__));
+        char errorNameCStr[ERROR_NAME_BUF_SIZE] = { '\0' };
+        char errorMessageCStr[ERROR_DESC_BUF_SIZE] = { '\0' };
+
         QStatus ret = ER_BUS_NO_SUCH_PROPERTY;
-        if (callbacks.property_set != NULL) {
+        if (callbacks.property_set_with_error != NULL) {
             if (!DeferredCallback::sMainThreadCallbacksOnly) {
-                ret = callbacks.property_set(context, ifcName, propName, (alljoyn_msgarg)(&val));
+                ret = callbacks.property_set_with_error(context, ifcName, propName, (alljoyn_msgarg)(&val), errorNameCStr, ERROR_NAME_BUF_SIZE, errorMessageCStr, ERROR_DESC_BUF_SIZE);
             } else {
-                DeferredCallback_4<QStatus, const void*, const char*, const char*, alljoyn_msgarg>* dcb =
-                    new DeferredCallback_4<QStatus, const void*, const char*, const char*, alljoyn_msgarg>(callbacks.property_set, context, ifcName, propName, (alljoyn_msgarg)(&val));
+                DeferredCallback_8<QStatus, const void*, const char*, const char*, alljoyn_msgarg, char*, size_t, char*, size_t>* dcb =
+                    new DeferredCallback_8<QStatus, const void*, const char*, const char*, alljoyn_msgarg, char*, size_t, char*, size_t>(callbacks.property_set_with_error, context, ifcName, propName, (alljoyn_msgarg)(&val), errorNameCStr, ERROR_NAME_BUF_SIZE, errorMessageCStr, ERROR_DESC_BUF_SIZE);
                 ret = DEFERRED_CALLBACK_EXECUTE(dcb);
             }
+
+            errorName = errorNameCStr;
+            errorMessage = errorMessageCStr;
         }
+
         return ret;
     }
 
@@ -233,7 +252,9 @@ class BusObjectC : public BusObject {
     }
 
     map<const ajn::InterfaceDescription::Member*, alljoyn_messagereceiver_methodhandler_ptr> callbackMap;
+
     alljoyn_busobject_callbacks callbacks;
+
     const void* context;
 };
 }

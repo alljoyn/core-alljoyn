@@ -385,9 +385,12 @@ QStatus BusObject::EmitPropChanged(const char* ifcName, const char** propNames, 
                 if (emitsChanged == "true") {
                     /* also emit the value */
                     MsgArg* val = new MsgArg();
-                    status = Get(ifcName, propName, *val);
+                    String errorName;
+                    String errorMessage;
+                    status = Get(ifcName, propName, *val, errorName, errorMessage);
                     if (status != ER_OK) {
                         delete val;
+                        QCC_DbgPrintf(("Reading property %s returned error %s: %s", propName, errorName.c_str(), errorMessage.c_str()));
                         status = ER_BUS_NO_SUCH_PROPERTY;
                         break;
                     }
