@@ -16,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include <qcc/Thread.h>
+#include <qcc/String.h>
 
 #include <string.h>
 #include <alljoyn_c/DBusStdDefines.h>
@@ -24,6 +25,8 @@
 #include <alljoyn_c/MsgArg.h>
 
 #include "ajTestCommon.h"
+
+using namespace qcc;
 
 /*constants*/
 static const char* INTERFACE_NAME = "org.alljoyn.test.BusObjectTest";
@@ -39,6 +42,14 @@ static QCC_BOOL prop_changed_flag = QCC_FALSE;
 static const char* prop1 = "AllJoyn BusObject Test"; //read only property
 static int32_t prop2; //write only property
 static uint32_t prop3; //RW property
+
+static const char* getPropertyErrorName = "ErrorGetProperty";
+static const char* getPropertyErrorMessage = ": Error while reading this property";
+static const char* setPropertyErrorName = "ErrorSetProperty";
+static const char* setPropertyErrorMessage = ": Error while writing this property";
+
+#define MAX_ERROR_STRING_LENGTH 256
+
 static QStatus AJ_CALL get_property(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val)
 {
     QCC_UNUSED(context);
@@ -56,6 +67,26 @@ static QStatus AJ_CALL get_property(const void* context, const char* ifcName, co
     return status;
 }
 
+static QStatus AJ_CALL get_property_with_error(const void* context,
+                                               const char* ifcName,
+                                               const char* propName,
+                                               alljoyn_msgarg val,
+                                               char* errorName,
+                                               size_t errorNameBufSize,
+                                               char* errorMessage,
+                                               size_t errorMessageBufSize)
+{
+    QCC_UNUSED(context);
+    QCC_UNUSED(ifcName);
+    QCC_UNUSED(propName);
+    QCC_UNUSED(val);
+
+    strncpy(errorName, getPropertyErrorName, errorNameBufSize);
+    strncpy(errorMessage, getPropertyErrorMessage, errorMessageBufSize);
+
+    return ER_BUS_REPLY_IS_ERROR_MESSAGE;
+}
+
 static QStatus AJ_CALL set_property(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val)
 {
     QCC_UNUSED(context);
@@ -71,6 +102,26 @@ static QStatus AJ_CALL set_property(const void* context, const char* ifcName, co
         status = ER_BUS_NO_SUCH_PROPERTY;
     }
     return status;
+}
+
+static QStatus AJ_CALL set_property_with_error(const void* context,
+                                               const char* ifcName,
+                                               const char* propName,
+                                               alljoyn_msgarg val,
+                                               char* errorName,
+                                               size_t errorNameBufSize,
+                                               char* errorMessage,
+                                               size_t errorMessageBufSize)
+{
+    QCC_UNUSED(context);
+    QCC_UNUSED(ifcName);
+    QCC_UNUSED(propName);
+    QCC_UNUSED(val);
+
+    strncpy(errorName, setPropertyErrorName, errorNameBufSize - 1);
+    strncpy(errorMessage, setPropertyErrorMessage, errorMessageBufSize - 1);
+
+    return ER_BUS_REPLY_IS_ERROR_MESSAGE;
 }
 
 static void AJ_CALL busobject_registered(const void* context)
@@ -240,8 +291,11 @@ class BusObjectTest : public testing::Test {
             &get_property,
             &set_property,
             &busobject_registered,
-            &busobject_unregistered
+            &busobject_unregistered,
+            &get_property_with_error,
+            &set_property_with_error
         };
+
         testObj = alljoyn_busobject_create(OBJECT_PATH, QCC_FALSE, &busObjCbs, NULL);
 
         status = alljoyn_busobject_addinterface(testObj, testIntf);
@@ -421,6 +475,95 @@ TEST_F(BusObjectTest, getall_properties)
     EXPECT_EQ((uint32_t)42, num);
     alljoyn_msgarg_destroy(value);
     alljoyn_proxybusobject_destroy(proxyObj);
+    TearDownBusObjectTestService();
+}
+
+TEST_F(BusObjectTest, get_property_handler_with_error)
+{
+    SetUpBusObjectTestService();
+
+    alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, OBJECT_NAME, OBJECT_PATH, 0);
+
+    EXPECT_TRUE(proxyObj);
+    status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg value = alljoyn_msgarg_create();
+
+    char errorName[MAX_ERROR_STRING_LENGTH] = { '\0' };
+    char errorDescription[MAX_ERROR_STRING_LENGTH] = { '\0' };
+
+    status = alljoyn_proxybusobject_getproperty_with_error(proxyObj, INTERFACE_NAME, "prop1", value, errorName, MAX_ERROR_STRING_LENGTH, errorDescription, MAX_ERROR_STRING_LENGTH);
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(getPropertyErrorMessage);
+
+    EXPECT_STREQ(errorName, getPropertyErrorName);
+    EXPECT_STREQ(errorDescription, expectedErrorDescription.c_str());
+
+    //EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg_destroy(value);
+    alljoyn_proxybusobject_destroy(proxyObj);
+
+    TearDownBusObjectTestService();
+}
+
+TEST_F(BusObjectTest, set_property_handler_with_error)
+{
+    SetUpBusObjectTestService();
+
+    alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, OBJECT_NAME, OBJECT_PATH, 0);
+
+    EXPECT_TRUE(proxyObj);
+    status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg value = alljoyn_msgarg_create_and_set("i", -888);
+
+    char errorName[MAX_ERROR_STRING_LENGTH] = { '\0' };
+    char errorDescription[MAX_ERROR_STRING_LENGTH] = { '\0' };
+
+    status = alljoyn_proxybusobject_setproperty_with_error(proxyObj, INTERFACE_NAME, "prop2", value, errorName, MAX_ERROR_STRING_LENGTH, errorDescription, MAX_ERROR_STRING_LENGTH);
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(setPropertyErrorMessage);
+
+    EXPECT_STREQ(errorName, setPropertyErrorName);
+    EXPECT_STREQ(errorDescription, expectedErrorDescription.c_str());
+
+    alljoyn_msgarg_destroy(value);
+    alljoyn_proxybusobject_destroy(proxyObj);
+
+    TearDownBusObjectTestService();
+}
+
+TEST_F(BusObjectTest, get_all_properties_handler_with_error)
+{
+    SetUpBusObjectTestService();
+
+    alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, OBJECT_NAME, OBJECT_PATH, 0);
+
+    EXPECT_TRUE(proxyObj);
+    status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    alljoyn_msgarg value = alljoyn_msgarg_create();
+
+    char errorName[MAX_ERROR_STRING_LENGTH] = { '\0' };
+    char errorDescription[MAX_ERROR_STRING_LENGTH] = { '\0' };
+
+    status = alljoyn_proxybusobject_getallproperties_with_error(proxyObj, INTERFACE_NAME, value, errorName, MAX_ERROR_STRING_LENGTH, errorDescription, MAX_ERROR_STRING_LENGTH);
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(getPropertyErrorMessage);
+
+    EXPECT_STREQ(errorName, getPropertyErrorName);
+    EXPECT_STREQ(errorDescription, expectedErrorDescription.c_str());
+
+    alljoyn_msgarg_destroy(value);
+    alljoyn_proxybusobject_destroy(proxyObj);
+
     TearDownBusObjectTestService();
 }
 
@@ -1002,6 +1145,50 @@ TEST_F(BusObjectTest, get_propertyasync_handler)
     TearDownBusObjectTestService();
 }
 
+static void AJ_CALL getproperty_with_error_cb(QStatus status, alljoyn_proxybusobject obj, const alljoyn_msgarg value, const char* errorName, const char* errorDescription, void* context) {
+    QCC_UNUSED(obj);
+
+    QCC_UNUSED(value);
+    QCC_UNUSED(context);
+    QCC_UNUSED(status);
+    getpropertycb_flag = QCC_TRUE;
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(getPropertyErrorMessage);
+
+    EXPECT_STREQ(errorName, getPropertyErrorName);
+    EXPECT_STREQ(errorDescription, expectedErrorDescription.c_str());
+}
+
+TEST_F(BusObjectTest, get_property_handler_with_error_async)
+{
+    SetUpBusObjectTestService();
+
+    alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, OBJECT_NAME, OBJECT_PATH, 0);
+
+    EXPECT_TRUE(proxyObj);
+    status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    getpropertycb_flag = QCC_FALSE; //make sure the flag is in a known state.
+    status = alljoyn_proxybusobject_getpropertyasync_with_error(proxyObj, INTERFACE_NAME, "prop1", &getproperty_with_error_cb, ALLJOYN_MESSAGE_DEFAULT_TIMEOUT, (void*)"AllJoyn Test String.");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait up to 2 seconds for the getproperty call to complete.
+    for (int i = 0; i < 200; ++i) {
+
+        if (getpropertycb_flag) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+
+    EXPECT_TRUE(getpropertycb_flag);
+
+    alljoyn_proxybusobject_destroy(proxyObj);
+    TearDownBusObjectTestService();
+}
+
 static QCC_BOOL setpropertycb_flag = QCC_FALSE;
 
 static void AJ_CALL setpropertycb_prop1(QStatus status, alljoyn_proxybusobject obj, void* context)
@@ -1091,6 +1278,52 @@ TEST_F(BusObjectTest, set_propertyasync_handler)
     alljoyn_proxybusobject_destroy(proxyObj);
     TearDownBusObjectTestService();
 }
+
+
+static void AJ_CALL setproperty_with_error_cb(QStatus status, alljoyn_proxybusobject obj, const char* errorName, const char* errorDescription, void* context) {
+    QCC_UNUSED(obj);
+    QCC_UNUSED(context);
+    QCC_UNUSED(status);
+    setpropertycb_flag = QCC_TRUE;
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(setPropertyErrorMessage);
+
+    EXPECT_STREQ(errorName, setPropertyErrorName);
+    EXPECT_STREQ(errorDescription, expectedErrorDescription.c_str());
+}
+
+TEST_F(BusObjectTest, set_property_handler_with_error_async)
+{
+    SetUpBusObjectTestService();
+
+    alljoyn_proxybusobject proxyObj = alljoyn_proxybusobject_create(bus, OBJECT_NAME, OBJECT_PATH, 0);
+
+    EXPECT_TRUE(proxyObj);
+    status = alljoyn_proxybusobject_introspectremoteobject(proxyObj);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //alljoyn_msgarg value = alljoyn_msgarg_create_and_set("u", 98);
+    alljoyn_msgarg value = alljoyn_msgarg_create_and_set("i", -888);
+    setpropertycb_flag = QCC_FALSE; //make sure the flag is in a known state.
+    status = alljoyn_proxybusobject_setpropertyasync_with_error(proxyObj, INTERFACE_NAME, "prop2", value, &setproperty_with_error_cb, ALLJOYN_MESSAGE_DEFAULT_TIMEOUT, (void*)"AllJoyn Test String.");
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+
+    //Wait up to 2 seconds for the setproperty call to complete.
+    for (int i = 0; i < 200; ++i) {
+
+        if (setpropertycb_flag) {
+            break;
+        }
+        qcc::Sleep(10);
+    }
+
+    EXPECT_TRUE(setpropertycb_flag);
+
+    alljoyn_proxybusobject_destroy(proxyObj);
+    TearDownBusObjectTestService();
+}
+
 
 static QCC_BOOL getallpropertiescb_flag = QCC_FALSE;
 
