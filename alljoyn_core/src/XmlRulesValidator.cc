@@ -189,8 +189,10 @@ QStatus XmlRulesValidator::ValidateMembers(const PermissionPolicy::Rule& rule)
     if (ER_OK == status) {
         for (size_t index = 0; index < membersSize; index++) {
             const PermissionPolicy::Rule::Member& member = members[index];
-            status = memberValidatorFactory.ForType(member.GetMemberType())->Validate(member);
+            MemberValidator* validator = memberValidatorFactory.ForType(member.GetMemberType());
 
+            status = validator->Validate(member);
+            delete validator;
             if (ER_OK != status) {
                 break;
             }

@@ -187,7 +187,10 @@ QStatus XmlPoliciesValidator::ValidatePeer(const XmlElement* peer, PeerValidator
     }
 
     if (ER_OK == status) {
-        status = peerValidatorFactory.ForType(peerType)->Validate(peer);
+        PeerValidator* validator = peerValidatorFactory.ForType(peerType);
+
+        status = validator->Validate(peer);
+        delete validator;
     }
 
     return status;
