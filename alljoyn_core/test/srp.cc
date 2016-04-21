@@ -200,8 +200,8 @@ int CDECL_CALL main(int argc, char** argv)
 
             vector<uint8_t, SecureAllocator<uint8_t> > seed;
             seed.reserve(clientRand.size() + serverRand.size());
-            AppendStringToVector(serverRand, seed);
-            AppendStringToVector(clientRand, seed);
+            AppendStringToSecureVector(serverRand, seed);
+            AppendStringToSecureVector(clientRand, seed);
             status = Crypto_PseudorandomFunction(serverPMS, "foobar", seed, masterSecret, sizeof(masterSecret));
             if (status != ER_OK) {
                 QCC_LogError(status, ("Crypto_PseudoRandomFunction failed"));

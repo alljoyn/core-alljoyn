@@ -1008,6 +1008,7 @@ QStatus KeyStore::DelKey(const Key& key, bool includeAssociatedKeys, bool exclus
                     }
                 }
             }
+            delete [] list;
         }
         status = savedStatus;
     }
