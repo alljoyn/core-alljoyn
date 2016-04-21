@@ -528,6 +528,89 @@ class DeferredCallback_6<void, T, U, V, W, X, Y> : public DeferredCallback {
     Y _param6;
 };
 
+template <typename R, typename T, typename U, typename V, typename W, typename X, typename Y, typename Z, typename A>
+class DeferredCallback_8 : public DeferredCallback {
+  public:
+    typedef R (AJ_CALL * DeferredCallback_8_Callback)(T arg1, U arg2, V arg3, W arg4, X arg5, Y arg6, Z arg7, A arg8);
+
+    DeferredCallback_8(DeferredCallback_8_Callback callback, T param1, U param2, V param3, W param4, X param5, Y param6, Z param7, A param8) :
+        _callback(callback), _param1(param1), _param2(param2), _param3(param3), _param4(param4), _param5(param5), _param6(param6), _param7(param7), _param8(param8) {
+    }
+
+    virtual void runCallbackNow() {
+        retVal = _callback(_param1, _param2, _param3, _param4, _param5, _param6, _param7, _param8);
+        executeNow = true;
+    }
+
+    virtual R Execute() {
+        ScopeFinishedMarker finisher(&finished);
+        if (!sMainThreadCallbacksOnly) {
+            runCallbackNow();
+        } else {
+            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sPendingCallbacks.push_back(this);
+            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            if (!IsMainThread()) {
+                Wait();
+            }
+        }
+        R ret = retVal;
+        return ret;
+    }
+
+  protected:
+    DeferredCallback_8_Callback _callback;
+    T _param1;
+    U _param2;
+    V _param3;
+    W _param4;
+    X _param5;
+    Y _param6;
+    Z _param7;
+    A _param8;
+    R retVal;
+};
+
+template <typename T, typename U, typename V, typename W, typename X, typename Y, typename Z, typename A>
+class DeferredCallback_8<void, T, U, V, W, X, Y, Z, A> : public DeferredCallback {
+  public:
+    typedef void (AJ_CALL * DeferredCallback_8_Callback)(T arg1, U arg2, V arg3, W arg4, X arg5, Y arg6, Z arg7, A arg8);
+
+    DeferredCallback_8(DeferredCallback_8_Callback callback, T param1, U param2, V param3, W param4, X param5, Y param6, Z param7, A param8) :
+        _callback(callback), _param1(param1), _param2(param2), _param3(param3), _param4(param4), _param5(param5), _param6(param6), _param7(param7), _param8(param8) {
+    }
+
+    virtual void runCallbackNow() {
+        _callback(_param1, _param2, _param3, _param4, _param5, _param6, _param7, _param8);
+        executeNow = true;
+    }
+
+    virtual void Execute() {
+        ScopeFinishedMarker finisher(&finished);
+        if (!sMainThreadCallbacksOnly) {
+            runCallbackNow();
+        } else {
+            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sPendingCallbacks.push_back(this);
+            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            if (!IsMainThread()) {
+                Wait();
+            }
+        }
+    }
+
+  protected:
+    DeferredCallback_8_Callback _callback;
+    T _param1;
+    U _param2;
+    V _param3;
+    W _param4;
+    X _param5;
+    Y _param6;
+    Z _param7;
+    A _param8;
+};
+
 }
 
 #endif

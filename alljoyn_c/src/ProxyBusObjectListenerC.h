@@ -16,6 +16,7 @@
 #ifndef _ALLJOYN_C_PROXYBUSOBJECTLISTENERC_H
 #define _ALLJOYN_C_PROXYBUSOBJECTLISTENERC_H
 #include <alljoyn/ProxyBusObject.h>
+#include <qcc/String.h>
 namespace ajn {
 /*
  * When setting up a asynchronous Introspection call a callback handler for C
@@ -45,6 +46,15 @@ class GetPropertyCallbackContext {
     void* context;
 };
 
+class GetPropertyWithErrorCallbackContext {
+  public:
+    GetPropertyWithErrorCallbackContext(alljoyn_proxybusobject_listener_getproperty_with_error_cb_ptr replyhandler_ptr, void* context) :
+        replyhandler_ptr(replyhandler_ptr), context(context) { }
+
+    alljoyn_proxybusobject_listener_getproperty_with_error_cb_ptr replyhandler_ptr;
+    void* context;
+};
+
 class GetAllPropertiesCallbackContext {
   public:
     GetAllPropertiesCallbackContext(alljoyn_proxybusobject_listener_getallpropertiescb_ptr replyhandler_ptr, void* context) :
@@ -60,6 +70,15 @@ class SetPropertyCallbackContext {
         replyhandler_ptr(replyhandler_ptr), context(context) { }
 
     alljoyn_proxybusobject_listener_setpropertycb_ptr replyhandler_ptr;
+    void* context;
+};
+
+class SetPropertyWithErrorCallbackContext {
+  public:
+    SetPropertyWithErrorCallbackContext(alljoyn_proxybusobject_listener_setproperty_with_error_cb_ptr replyhandler_ptr, void* context) :
+        replyhandler_ptr(replyhandler_ptr), context(context) { }
+
+    alljoyn_proxybusobject_listener_setproperty_with_error_cb_ptr replyhandler_ptr;
     void* context;
 };
 
@@ -97,6 +116,15 @@ class ProxyBusObjectListenerC : public ajn::ProxyBusObject::Listener {
         delete in;
     }
 
+    void GetPropertyWithErrorCB(QStatus status, ProxyBusObject* obj, const MsgArg& value, const qcc::String& errorName, const qcc::String& errorDescription, void* context)
+    {
+        GetPropertyWithErrorCallbackContext* in = (GetPropertyWithErrorCallbackContext*)context;
+        in->replyhandler_ptr(status, (alljoyn_proxybusobject)obj, (alljoyn_msgarg)(&value), errorName.c_str(), errorDescription.c_str(), in->context);
+        in->replyhandler_ptr = NULL;
+
+        delete in;
+    }
+
     void GetAllPropertiesCB(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context)
     {
         GetAllPropertiesCallbackContext* in = (GetAllPropertiesCallbackContext*)context;
@@ -109,6 +137,14 @@ class ProxyBusObjectListenerC : public ajn::ProxyBusObject::Listener {
     {
         SetPropertyCallbackContext* in = (SetPropertyCallbackContext*)context;
         in->replyhandler_ptr(status, (alljoyn_proxybusobject)obj, in->context);
+        in->replyhandler_ptr = NULL;
+        delete in;
+    }
+
+    void SetPropertyWithErrorCB(QStatus status, ProxyBusObject* obj, const qcc::String& errorName, const qcc::String& errorDescription, void* context)
+    {
+        SetPropertyWithErrorCallbackContext* in = (SetPropertyWithErrorCallbackContext*)context;
+        in->replyhandler_ptr(status, (alljoyn_proxybusobject)obj, errorName.c_str(), errorDescription.c_str(), in->context);
         in->replyhandler_ptr = NULL;
         delete in;
     }
