@@ -279,6 +279,8 @@ QStatus AllJoynObj::Stop()
         ++it;
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
+
+    timer.Stop();
     return ER_OK;
 }
 
@@ -292,6 +294,8 @@ QStatus AllJoynObj::Join()
         joinSessionThreadsLock.Lock(MUTEX_CONTEXT);
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
+
+    timer.Join();
     return ER_OK;
 }
 
