@@ -63,6 +63,28 @@ typedef struct _alljoyn_busobject_handle*                   alljoyn_busobject;
 typedef QStatus (AJ_CALL * alljoyn_busobject_prop_get_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
 
 /**
+ * Callback for property get method.
+ *
+ * Handle a bus request to read a property from this object.
+ * alljoyn_busobjects that implement properties should provide an implementation
+ * of this function.
+ * The default version simply returns ER_BUS_NO_SUCH_PROPERTY.
+ *
+ * @param context                  context pointer passed in when creating a new alljoyn_busobject
+ * @param ifcName                  Identifies the interface that the property is defined on
+ * @param propName                 Identifies the property to set
+ * @param val                      The property value to set. The type of this value is the actual value
+ *                                 type
+ * @param errorName                Name of the error returned by the callback function
+ * @param errorNameBufSize         Size of the buffer allocated for the errorName string
+ * @param errorMessage             A detailed description of the error
+ * @param errorMessageBufSize      Size of the buffer allocated for the errorMessage string
+ * @return                         #ER_BUS_NO_SUCH_PROPERTY (Should be changed to #ER_OK by user implementation of alljoyn_busobject_prop_get_with_error_ptr
+ *                                 if the set request results in successfully changing the property.)
+ */
+typedef QStatus (AJ_CALL * alljoyn_busobject_prop_get_with_error_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val, char* errorName, size_t errorNameBufSize, char* errorMessage, size_t errorMessageBufSize);
+
+/**
  * Callback for property set method.
  *
  * Handle a bus attempt to write a property value to this object.
@@ -79,6 +101,28 @@ typedef QStatus (AJ_CALL * alljoyn_busobject_prop_get_ptr)(const void* context, 
  *                                   is the set request results in successfully changing the property.)
  */
 typedef QStatus (AJ_CALL * alljoyn_busobject_prop_set_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val);
+
+/**
+ * Callback for property set method.
+ *
+ * Handle a bus attempt to write a property value to this object.
+ * alljoyn_busobjects that implement properties should provide an implementation
+ * of this function.
+ * This default version just replies with ER_BUS_NO_SUCH_PROPERTY
+ *
+ * @param context                  context pointer passed in when creating a new alljoyn_busobject
+ * @param ifcName                  Identifies the interface that the property is defined on
+ * @param propName                 Identifies the property to set
+ * @param val                      The property value to set. The type of this value is the actual value
+ *                                 type
+ * @param errorName                Name of the error returned by the callback function
+ * @param errorNameBufSize         Size of the buffer allocated for the errorName string
+ * @param errorMessage             A detailed description of the error
+ * @param errorMessageBufSize      Size of the buffer allocated for the errorMessage string
+ * @return                         #ER_BUS_NO_SUCH_PROPERTY
+ *                                 (Should be changed by user implementation of alljoyn_busobject_prop_set_with_error_ptr)
+ */
+typedef QStatus (AJ_CALL * alljoyn_busobject_prop_set_with_error_ptr)(const void* context, const char* ifcName, const char* propName, alljoyn_msgarg val, char* errorName, size_t errorNameBufSize, char* errorMessage, size_t errorMessageBufSize);
 
 /**
  * Callback for ObjectRegistered and ObjectUnregistered
@@ -99,6 +143,7 @@ typedef struct {
      * Handle a bus request to read a property from the alljoyn_busobject
      */
     alljoyn_busobject_prop_get_ptr property_get;
+
     /**
      * Handle a bus request to write a property value to the alljoyn_busobject
      */
@@ -113,7 +158,18 @@ typedef struct {
      * Called by the message bus when the object has been successfully unregistered.
      */
     alljoyn_busobject_object_registration_ptr object_unregistered;
+
+    /**
+     * Handle a bus request to read a property from the alljoyn_busobject, with an error message
+     */
+    alljoyn_busobject_prop_get_with_error_ptr property_get_with_error;
+
+    /**
+     * Handle a bus request to write a property value to the alljoyn_busobject, with an error message
+     */
+    alljoyn_busobject_prop_set_with_error_ptr property_set_with_error;
 } alljoyn_busobject_callbacks;
+
 
 /**
  * Type used to add mulitple methods at one time.

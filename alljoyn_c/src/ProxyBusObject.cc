@@ -27,6 +27,7 @@
 #include "ProxyBusObjectListenerC.h"
 #include <qcc/Debug.h>
 #include <qcc/Mutex.h>
+#include <qcc/String.h>
 
 #define QCC_MODULE "ALLJOYN_C"
 
@@ -204,6 +205,36 @@ QStatus AJ_CALL alljoyn_proxybusobject_getproperty(alljoyn_proxybusobject proxyO
     return ((ProxyBusObjectC*)proxyObj)->GetProperty(iface, property, *reply);
 }
 
+QStatus AJ_CALL alljoyn_proxybusobject_getproperty_with_error(alljoyn_proxybusobject proxyObj,
+                                                              const char* iface,
+                                                              const char* property,
+                                                              alljoyn_msgarg value,
+                                                              char* errorName,
+                                                              size_t errorNameBufSize,
+                                                              char* errorDescription,
+                                                              size_t errorDescriptionBufSize)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_ASSERT(errorName != nullptr);
+    QCC_ASSERT(errorDescription != nullptr);
+    ajn::MsgArg* reply = (ajn::MsgArg*)&(*value);
+    qcc::String errorNameString;
+    qcc::String errorDescriptionString;
+    QStatus status = ((ProxyBusObjectC*)proxyObj)->GetProperty(iface, property, *reply, errorNameString, errorDescriptionString);
+
+    if ((errorName != NULL) && (errorNameBufSize > 0)) {
+        strncpy(errorName, errorNameString.c_str(), errorNameBufSize - 1);
+        errorName[errorNameBufSize - 1] = '\0';
+    }
+
+    if ((errorDescription != NULL) && (errorDescriptionBufSize > 0)) {
+        strncpy(errorDescription, errorDescriptionString.c_str(), errorDescriptionBufSize - 1);
+        errorDescription[errorDescriptionBufSize - 1] = '\0';
+    }
+
+    return status;
+}
+
 QStatus AJ_CALL alljoyn_proxybusobject_getpropertyasync(alljoyn_proxybusobject proxyObj,
                                                         const char* iface,
                                                         const char* property,
@@ -223,11 +254,59 @@ QStatus AJ_CALL alljoyn_proxybusobject_getpropertyasync(alljoyn_proxybusobject p
                                                           timeout);
 
 }
+
+QStatus AJ_CALL alljoyn_proxybusobject_getpropertyasync_with_error(alljoyn_proxybusobject proxyObj,
+                                                                   const char* iface,
+                                                                   const char* property,
+                                                                   alljoyn_proxybusobject_listener_getproperty_with_error_cb_ptr callback,
+                                                                   uint32_t timeout,
+                                                                   void* context)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    /*
+     * The new ajn::GetPropertyCallbackContext must be freed in inside the
+     * ajn::ProxyBusObjectListenerC::GetPropertyCB.
+     */
+    return ((ProxyBusObjectC*)proxyObj)->GetPropertyAsync(iface, property,
+                                                          &proxyObjListener,
+                                                          static_cast<ajn::ProxyBusObject::Listener::GetPropertyAsyncCB>(&ajn::ProxyBusObjectListenerC::GetPropertyWithErrorCB),
+                                                          (void*) new ajn::GetPropertyWithErrorCallbackContext(callback, context),
+                                                          timeout);
+
+}
+
 QStatus AJ_CALL alljoyn_proxybusobject_getallproperties(alljoyn_proxybusobject proxyObj, const char* iface, alljoyn_msgarg values)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::MsgArg* reply = (ajn::MsgArg*)&(*values);
     return ((ProxyBusObjectC*)proxyObj)->GetAllProperties(iface, *reply);
+}
+
+QStatus AJ_CALL alljoyn_proxybusobject_getallproperties_with_error(alljoyn_proxybusobject proxyObj,
+                                                                   const char* iface,
+                                                                   alljoyn_msgarg values,
+                                                                   char* errorName,
+                                                                   size_t errorNameBufSize,
+                                                                   char* errorDescription,
+                                                                   size_t errorDescriptionBufSize)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    ajn::MsgArg* reply = (ajn::MsgArg*)&(*values);
+    qcc::String errorNameString;
+    qcc::String errorDescriptionString;
+    QStatus status = ((ProxyBusObjectC*)proxyObj)->GetAllProperties(iface, *reply, errorNameString, errorDescriptionString);
+
+    if ((errorName != NULL) && (errorNameBufSize > 0)) {
+        strncpy(errorName, errorNameString.c_str(), errorNameBufSize - 1);
+        errorName[errorNameBufSize - 1] = '\0';
+    }
+
+    if ((errorDescription != NULL) && (errorDescriptionBufSize > 0)) {
+        strncpy(errorDescription, errorDescriptionString.c_str(), errorDescriptionBufSize - 1);
+        errorDescription[errorDescriptionBufSize - 1] = '\0';
+    }
+
+    return status;
 }
 
 QStatus AJ_CALL alljoyn_proxybusobject_getallpropertiesasync(alljoyn_proxybusobject proxyObj,
@@ -255,6 +334,31 @@ QStatus AJ_CALL alljoyn_proxybusobject_setproperty(alljoyn_proxybusobject proxyO
     return ((ProxyBusObjectC*)proxyObj)->SetProperty(iface, property, *reply);
 }
 
+QStatus AJ_CALL alljoyn_proxybusobject_setproperty_with_error(alljoyn_proxybusobject proxyObj,
+                                                              const char* iface,
+                                                              const char* property,
+                                                              alljoyn_msgarg value,
+                                                              char* errorName,
+                                                              size_t errorNameBufSize,
+                                                              char* errorDescription,
+                                                              size_t errorDescriptionBufSize)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_ASSERT(errorName != nullptr);
+    QCC_ASSERT(errorDescription != nullptr);
+    ajn::MsgArg* reply = (ajn::MsgArg*)&(*value);
+    qcc::String errorNameString;
+    qcc::String errorDescriptionString;
+    QStatus status = ((ProxyBusObjectC*)proxyObj)->SetProperty(iface, property, *reply, errorNameString, errorDescriptionString);
+
+    strncpy(errorName, errorNameString.c_str(), errorNameBufSize - 1);
+    errorName[errorNameBufSize - 1] = '\0';
+    strncpy(errorDescription, errorDescriptionString.c_str(), errorDescriptionBufSize - 1);
+    errorDescription[errorDescriptionBufSize - 1] = '\0';
+
+    return status;
+}
+
 QStatus AJ_CALL alljoyn_proxybusobject_setpropertyasync(alljoyn_proxybusobject proxyObj,
                                                         const char* iface,
                                                         const char* property,
@@ -275,6 +379,29 @@ QStatus AJ_CALL alljoyn_proxybusobject_setpropertyasync(alljoyn_proxybusobject p
                                                           (void*) new ajn::SetPropertyCallbackContext(callback, context),
                                                           timeout);
 }
+
+
+QStatus AJ_CALL alljoyn_proxybusobject_setpropertyasync_with_error(alljoyn_proxybusobject proxyObj,
+                                                                   const char* iface,
+                                                                   const char* property,
+                                                                   alljoyn_msgarg value,
+                                                                   alljoyn_proxybusobject_listener_setproperty_with_error_cb_ptr callback,
+                                                                   uint32_t timeout,
+                                                                   void* context)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    /*
+     * The new ajn::SetPropertyCallbackContext must be freed in inside the
+     * ajn::ProxyBusObjectListenerC::GetPropertyCB.
+     */
+    return ((ProxyBusObjectC*)proxyObj)->SetPropertyAsync(iface, property,
+                                                          *(ajn::MsgArg*)value,
+                                                          &proxyObjListener,
+                                                          static_cast<ajn::ProxyBusObject::Listener::SetPropertyAsyncCB>(&ajn::ProxyBusObjectListenerC::SetPropertyWithErrorCB),
+                                                          (void*) new ajn::SetPropertyWithErrorCallbackContext(callback, context),
+                                                          timeout);
+}
+
 
 QStatus AJ_CALL alljoyn_proxybusobject_registerpropertieschangedlistener(alljoyn_proxybusobject proxyObj,
                                                                          const char* iface,
