@@ -285,6 +285,10 @@ QStatus DefaultKeyStoreListener::StoreRequest(KeyStore& keyStore)
         goto Exit;
     }
 
+    if (!writeLock.GetSink()->Truncate()) {
+        QCC_LogError(ER_WARNING, ("FileSink::Truncate failed"));
+    }
+
     QCC_DbgHLPrintf(("Wrote key store to %s", m_fileLocker.GetFileName()));
 
 Exit:
