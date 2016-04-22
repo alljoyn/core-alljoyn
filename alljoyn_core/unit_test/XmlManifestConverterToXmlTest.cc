@@ -47,13 +47,14 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldFailForManifestWithNoRules)
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldPassForValidManifest)
 {
     EXPECT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
+    delete [] retrievedManifestXml;
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameRulesSizeAfterTwoConversions)
 {
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
     ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
-
+    delete [] retrievedManifestXml;
     EXPECT_EQ(1U, retrievedManifest->GetRules().size());
 }
 
@@ -61,6 +62,7 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameRulesAfterTwoConversi
 {
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
     ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
+    delete [] retrievedManifestXml;
     ASSERT_EQ(1U, retrievedManifest->GetRules().size());
 
     EXPECT_EQ(validManifest->GetRules()[0], retrievedManifest->GetRules()[0]);
@@ -70,7 +72,7 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameThumbprintAfterTwoCon
 {
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
     ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
-
+    delete [] retrievedManifestXml;
     EXPECT_EQ(validManifest->GetThumbprint(), retrievedManifest->GetThumbprint());
 }
 
@@ -78,7 +80,7 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameSignatureAfterTwoConv
 {
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
     ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
-
+    delete [] retrievedManifestXml;
     EXPECT_EQ(validManifest->GetSignature(), retrievedManifest->GetSignature());
 }
 
@@ -90,4 +92,6 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameXmlAfterTwoConversion
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(retrievedManifest, &secondRetrievedManifestXml));
 
     EXPECT_STREQ(retrievedManifestXml, secondRetrievedManifestXml);
+    delete [] retrievedManifestXml;
+    delete [] secondRetrievedManifestXml;
 }

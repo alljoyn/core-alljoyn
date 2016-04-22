@@ -494,7 +494,9 @@ class ObserverListener : public Observer::Listener {
     virtual void ObjectLost(ProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
         EXPECT_NE(it, proxies.end()) << "Lost a not-discovered object";
-        proxies.erase(it);
+        if (it != proxies.end()) {
+            proxies.erase(it);
+        }
         if (--counter == 0) {
             event.SetEvent();
         }

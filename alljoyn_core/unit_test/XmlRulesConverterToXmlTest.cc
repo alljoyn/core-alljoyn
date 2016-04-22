@@ -103,6 +103,7 @@ class MembersOverwriteUtils {
 
         mutableMembers[memberIndex].SetMemberName(newName);
         rule.SetMembers(rule.GetMembersSize(), mutableMembers);
+        delete [] mutableMembers;
     }
     static void ChangeMemberActionMask(PermissionPolicy::Rule& rule, size_t memberIndex, uint8_t newActionMask)
     {
@@ -111,6 +112,7 @@ class MembersOverwriteUtils {
 
         mutableMembers[memberIndex].SetActionMask(newActionMask);
         rule.SetMembers(rule.GetMembersSize(), mutableMembers);
+        delete [] mutableMembers;
     }
 
   private:
@@ -433,6 +435,7 @@ TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetSameXmlAfterTwoConversio
     ASSERT_EQ(ER_OK, XmlRulesConverter::RulesToXml(retrievedRules.data(), retrievedRules.size(), &secondRetrievedManifestTemplateXml));
 
     EXPECT_STREQ(retrievedManifestTemplateXml, secondRetrievedManifestTemplateXml);
+    delete [] secondRetrievedManifestTemplateXml;
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetValidMethodForValidAllCasesManifestTemplate)
