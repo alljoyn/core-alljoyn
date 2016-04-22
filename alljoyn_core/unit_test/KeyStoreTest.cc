@@ -256,9 +256,10 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
 class KeyStoreThread : public Thread {
   public:
     KeyStoreThread(String name, KeyStore* keyStore, vector<KeyStore::Key> workList, vector<KeyStore::Key> deleteList) :
-        Thread(name), keyStore(keyStore), workList(workList), deleteList(deleteList)
+        Thread(name), keyStore(keyStore), owns(false), workList(workList), deleteList(deleteList)
     {
         if (keyStore == NULL) {
+            owns = true;
             this->keyStore = new KeyStore(keyStoreName);
             QStatus status = this->keyStore->Init(NULL, true);
             EXPECT_EQ(ER_OK, status);
@@ -268,6 +269,10 @@ class KeyStoreThread : public Thread {
     {
         workList.clear();
         deleteList.clear();
+        if (owns) {
+            delete keyStore;
+            keyStore = nullptr;
+        }
     }
     KeyStore* GetKeyStore() const
     {
@@ -291,6 +296,7 @@ class KeyStoreThread : public Thread {
     }
   private:
     KeyStore* keyStore;
+    bool owns;
     vector<KeyStore::Key> workList;
     vector<KeyStore::Key> deleteList;
 };

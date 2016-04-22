@@ -27,9 +27,16 @@ using namespace ajn;
 class XmlManifestConverterToXmlDetailedTest : public testing::Test {
   public:
 
+    XmlManifestConverterToXmlDetailedTest() : retrievedManifestXml(nullptr) { }
+
     virtual void SetUp()
     {
         ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(VALID_MANIFEST, validManifest));
+    }
+
+    virtual void TearDown()
+    {
+        delete[] retrievedManifestXml;
     }
 
   protected:
@@ -61,6 +68,7 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameRulesAfterTwoConversi
 {
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
     ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
+
     ASSERT_EQ(1U, retrievedManifest->GetRules().size());
 
     EXPECT_EQ(validManifest->GetRules()[0], retrievedManifest->GetRules()[0]);
@@ -90,4 +98,5 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameXmlAfterTwoConversion
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(retrievedManifest, &secondRetrievedManifestXml));
 
     EXPECT_STREQ(retrievedManifestXml, secondRetrievedManifestXml);
+    delete [] secondRetrievedManifestXml;
 }
