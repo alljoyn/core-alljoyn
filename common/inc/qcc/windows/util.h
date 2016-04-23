@@ -75,4 +75,25 @@
 
 #define ER_DIR_SEPARATOR  "\\"
 
+/**
+ * Non-compliant snprintf implementation, based on _vsnprintf.
+ *
+ * @remark This function returns a negative value when the output
+ *         buffer is too small, rather than returning the required
+ *         length of the output buffer as C99 demands.
+ *
+ * @param buffer    Storage location for the output.
+ * @param count     Maximum number of characters to store.
+ * @param format    Format-control string.
+ *
+ * @return
+ *      - The length of the output buffer, not including the zero terminator, on success
+ *      - A negative value if the output was not entirely stored into buffer
+ */
+int32_t AJ_snprintf(char* buffer, size_t count, const char* format, ...);
+
+#if ((_MSC_VER <= 1800) || defined(DO_SNPRINTF_MAPPING))
+#define snprintf AJ_snprintf
+#endif
+
 #endif
