@@ -31,6 +31,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/**
+ * Returns the size of a statically allocated array
+ */
+#define ArraySize(a)  (sizeof(a) / sizeof(a[0]))
+
 using namespace ajn;
 
 static volatile sig_atomic_t s_interrupt = QCC_FALSE;
@@ -228,14 +233,21 @@ int CDECL_CALL main(void)
     }
 
     char interface[256] = { 0 };
-    snprintf(interface, 256, "<node>"                                           \
-             "<interface name='%s'>"                                  \
-             "  <method name='Echo'>"                                 \
-             "    <arg name='out_arg' type='s' direction='in' />"     \
-             "    <arg name='return_arg' type='s' direction='out' />" \
-             "  </method>"                                            \
-             "</interface>"                                           \
-             "</node>", INTERFACE_NAME);
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+    _snprintf(
+#else
+    snprintf(
+#endif
+        interface, ArraySize(interface), "<node>"                \
+        "<interface name='%s'>"                                  \
+        "  <method name='Echo'>"                                 \
+        "    <arg name='out_arg' type='s' direction='in' />"     \
+        "    <arg name='return_arg' type='s' direction='out' />" \
+        "  </method>"                                            \
+        "</interface>"                                           \
+        "</node>", INTERFACE_NAME);
+    interface[ArraySize(interface) - 1] = '\0';
 
     printf("Interface = %s\n", interface);
     status = alljoyn_busattachment_createinterfacesfromxml(bus, interface);
@@ -296,5 +308,5 @@ int CDECL_CALL main(void)
     alljoyn_routershutdown();
 #endif
     alljoyn_shutdown();
-    return 0;
+                     return 0;
 }

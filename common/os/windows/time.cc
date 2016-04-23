@@ -28,6 +28,7 @@
 #include <time.h>
 
 #include <qcc/time.h>
+#include <qcc/Util.h>
 
 uint32_t qcc::GetTimestamp(void)
 {

@@ -19,6 +19,7 @@
 #include <alljoyn_c/MsgArg.h>
 #include <Status.h>
 #include <qcc/Thread.h>
+#include <qcc/Util.h>
 #include "ajTestCommon.h"
 
 TEST(MsgArgTest, Basic) {
