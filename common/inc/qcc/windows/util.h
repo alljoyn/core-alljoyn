@@ -75,4 +75,28 @@
 
 #define ER_DIR_SEPARATOR  "\\"
 
+/**
+ * Non-standard/non-compliant snprintf implementation, based on _vsnprintf.
+ *
+ * @remark This function always adds a zero character string terminator,
+ *         even when the output is truncated due to the output buffer
+ *         being too small. However, it is non-compliant - mainly because
+ *         it returns -1 when the output buffer is too small, rather than
+ *         returning the required length of the output buffer as required
+ *         by the C99 standard.
+ *
+ * @param[out] buffer    Storage location for the output.
+ * @param[in]  count     Maximum number of characters to store.
+ * @param[in]  format    Format-control string.
+ *
+ * @return
+ *      - The length of the output buffer, not including the zero terminator, on success
+ *      - Value -1 if the output has been truncated
+ */
+int32_t AJ_snprintf(char* buffer, size_t count, const char* format, ...);
+
+#if ((_MSC_VER <= 1800) || defined(DO_SNPRINTF_MAPPING))
+#define snprintf AJ_snprintf
+#endif
+
 #endif

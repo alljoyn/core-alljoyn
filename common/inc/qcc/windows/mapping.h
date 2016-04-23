@@ -24,21 +24,6 @@
 
 #include <windows.h>
 #include <float.h>
-/// @cond ALLJOYN_DEV
-
-#if ((_MSC_VER <= 1800) || defined(DO_SNPRINTF_MAPPING))
-
-/**
- * Map snprintf to _snprintf
- *
- * snprintf does not properly map in Windows; this is needed to ensure calls to
- * snprintf(char *str, size_t size, const char *format, ...) will compile in
- * Windows.
- */
-#define snprintf _snprintf
-
-#endif
-/// @endcond
 
 /**
  * Map stroll to _strtoi64
