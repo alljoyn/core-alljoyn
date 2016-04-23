@@ -238,3 +238,34 @@ QStatus qcc::ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSi
     }
     return (new ResolverThread(hostname, addr, &addrLen))->Get(timeoutMs);
 }
+
+/**
+ * Non-standard/non-compliant snprintf implementation, based on _vsnprintf.
+ *
+ * @remark This function always adds a zero character string terminator,
+ *         even when the output is truncated due to the output buffer
+ *         being too small. However, it is non-compliant because it returns
+ *         a negative value when the output buffer is too small - rather
+ *         than returning the required length of the output buffer as the
+ *         C99 standard demands.
+ *
+ * @param[out] buffer    Storage location for the output.
+ * @param[in]  count     Maximum number of characters to store.
+ * @param[in]  format    Format-control string.
+ *
+ * @return
+ *      - The length of the output buffer, not including the zero terminator, on success
+ *      - A negative value if the output was not entirely stored into buffer
+ */
+int32_t AJ_snprintf(char* buffer, size_t count, const char* format, ...)
+{
+    va_list argp;
+    va_start(argp, format);
+    int32_t length = _vsnprintf(buffer, count, format, argp);
+
+    if ((length < 0) && (count != 0)) {
+        buffer[count - 1] = '\0';
+    }
+
+    return length;
+}
