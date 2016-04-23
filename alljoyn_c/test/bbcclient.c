@@ -32,6 +32,11 @@
 #include <alljoyn_c/version.h>
 #include <alljoyn_c/Status.h>
 
+/**
+ * Returns the size of a statically allocated array
+ */
+#define ArraySize(a)  (sizeof(a) / sizeof(a[0]))
+
 /*constants*/
 static const char* INTERFACE_NAME = "org.alljoyn.alljoyn_test";
 static const char* INTERFACE_VALUE_NAME = "org.alljoyn.alljoyn_test.values";
@@ -634,7 +639,13 @@ int CDECL_CALL main(int argc, char** argv)
             if (roundtrip) {
                 //TODO - Implement later. Get time of day.
             } else {
-                snprintf(buf, 80, "Ping String %u", (unsigned int)(++cnt));
+#if defined(QCC_OS_GROUP_WINDOWS)
+                _snprintf(buf, ArraySize(buf), "Ping String %u", (unsigned int)(++cnt));
+                buf[ArraySize(buf) - 1] = '\0';
+#else
+                snprintf(buf, ArraySize(buf), "Ping String %u", (unsigned int)(++cnt));
+#endif
+
                 status = alljoyn_msgarg_array_set(pingArgs, &numArgs, "su", buf, pingDelay);
                 if (status != ER_OK) {
                     printf("Could not set arguments because of %s. \n", QCC_StatusText(status));

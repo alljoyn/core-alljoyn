@@ -27,10 +27,6 @@
 #ifndef _WIN32
 #define _BSD_SOURCE /* usleep */
 #endif
-#ifdef _WIN32
-/* To avoid compilation error in VS generated due to use of snprintf */
-#define _CRT_SECURE_NO_WARNINGS 1
-#endif
 
 #include <alljoyn_c/AjAPI.h>
 
@@ -122,7 +118,14 @@ void AJ_CALL cat_method(alljoyn_busobject bus, const alljoyn_interfacedescriptio
     if (ER_OK != status) {
         printf("Ping: Error reading alljoyn_message\n");
     }
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+    _snprintf(result, sizeof(result), "%s%s", str1, str2);
+    result[sizeof(result) - 1] = '\0';
+#else
     snprintf(result, sizeof(result), "%s%s", str1, str2);
+#endif
+
     outArg = alljoyn_msgarg_create_and_set("s", result);
     status = alljoyn_busobject_methodreply_args(bus, msg, outArg, 1);
     if (ER_OK != status) {
