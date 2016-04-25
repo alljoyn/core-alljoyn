@@ -112,6 +112,11 @@ Version 16.04:
   BusAttachment::Join() to wait for threads to finish execution (ASACORE-2811)
 * Security 2.0 methods BusAttachment::AddApplicationStateRule and BusAttachment::
   RemoveApplicationStateRule were not needed so they have been removed (ASACORE-2683)
+* The incorrect definition of snprintf for Windows has been removed (ASACORE-2891). 
+  Applications should either:
+  - Use the Visual Studio 2015 CRT, that provides a correct snprintf implementation, or
+  - When using an older version of the Visual Studio CRT, call _snprintf then add
+    a zero character string terminator if _snprintf returns a negative value
 
 More details on these changes can be found on the release plan page:
 https://wiki.allseenalliance.org/core/core_15.09_release_plan#compatibility_with_previous_releases
