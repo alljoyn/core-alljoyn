@@ -321,3 +321,13 @@ TEST(StringUtilTest, string_to_double_conversion) {
             double_string.c_str() << "\".";
     }
 }
+
+TEST(StringUtilTest, shouldCopyStringToCString)
+{
+    std::string someString = "someString";
+
+    AJ_PSTR copiedString = String2CString(someString);
+
+    EXPECT_STREQ(someString.c_str(), copiedString);
+    delete[] copiedString;
+}

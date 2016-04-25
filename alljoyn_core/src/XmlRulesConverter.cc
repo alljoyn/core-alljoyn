@@ -27,12 +27,13 @@
 #include "XmlRulesConverter.h"
 
 using namespace qcc;
+using namespace std;
 
 namespace ajn {
 
-std::map<PermissionPolicy::Rule::Member::MemberType, std::string> XmlRulesConverter::s_inverseMemberTypeMap;
+map<PermissionPolicy::Rule::Member::MemberType, string> XmlRulesConverter::s_inverseMemberTypeMap;
 
-std::unordered_map<std::string, uint8_t> XmlRulesConverter::s_memberMasksMap;
+unordered_map<string, uint8_t> XmlRulesConverter::s_memberMasksMap;
 
 void XmlRulesConverter::Init()
 {
@@ -61,7 +62,7 @@ void XmlRulesConverter::InitMemberMasksMap()
     s_memberMasksMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
 }
 
-QStatus XmlRulesConverter::XmlToRules(AJ_PCSTR rulesXml, std::vector<PermissionPolicy::Rule>& rules)
+QStatus XmlRulesConverter::XmlToRules(AJ_PCSTR rulesXml, vector<PermissionPolicy::Rule>& rules)
 {
     QCC_ASSERT(nullptr != rulesXml);
 
@@ -82,10 +83,9 @@ QStatus XmlRulesConverter::XmlToRules(AJ_PCSTR rulesXml, std::vector<PermissionP
 
 QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules,
                                       const size_t rulesCount,
-                                      AJ_PSTR* rulesXml,
+                                      string& rulesXml,
                                       AJ_PCSTR rootElement)
 {
-    QCC_ASSERT(nullptr != rulesXml);
     QCC_ASSERT(nullptr != rules);
 
     qcc::XmlElement* rulesXmlElement = nullptr;
@@ -95,7 +95,7 @@ QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules,
                                 rootElement);
 
     if (ER_OK == status) {
-        *rulesXml = rulesXmlElement->ToString();
+        rulesXml = rulesXmlElement->Generate();
     }
 
     delete rulesXmlElement;
@@ -122,16 +122,16 @@ QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules,
     return status;
 }
 
-void XmlRulesConverter::BuildRules(const qcc::XmlElement* root, std::vector<ajn::PermissionPolicy::Rule>& rules)
+void XmlRulesConverter::BuildRules(const qcc::XmlElement* root, vector<ajn::PermissionPolicy::Rule>& rules)
 {
     for (auto node : root->GetChildren()) {
         AddRules(node, rules);
     }
 }
 
-void XmlRulesConverter::AddRules(const qcc::XmlElement* node, std::vector<ajn::PermissionPolicy::Rule>& rules)
+void XmlRulesConverter::AddRules(const qcc::XmlElement* node, vector<ajn::PermissionPolicy::Rule>& rules)
 {
-    std::string objectPath;
+    string objectPath;
     XmlRulesValidator::ExtractAttributeOrWildcard(node, NAME_XML_ATTRIBUTE, &objectPath);
 
     for (auto singleInterface : node->GetChildren()) {
@@ -139,14 +139,14 @@ void XmlRulesConverter::AddRules(const qcc::XmlElement* node, std::vector<ajn::P
     }
 }
 
-void XmlRulesConverter::AddRule(const qcc::XmlElement* singleInterface, std::string& objectPath, std::vector<ajn::PermissionPolicy::Rule>& rules)
+void XmlRulesConverter::AddRule(const qcc::XmlElement* singleInterface, string& objectPath, vector<ajn::PermissionPolicy::Rule>& rules)
 {
     PermissionPolicy::Rule rule;
     BuildRule(singleInterface, objectPath, rule);
     rules.push_back(rule);
 }
 
-void XmlRulesConverter::BuildRule(const qcc::XmlElement* singleInterface, std::string& objectPath, ajn::PermissionPolicy::Rule& rule)
+void XmlRulesConverter::BuildRule(const qcc::XmlElement* singleInterface, string& objectPath, ajn::PermissionPolicy::Rule& rule)
 {
     rule.SetObjPath(objectPath.c_str());
     SetInterfaceName(singleInterface, rule);
@@ -155,14 +155,14 @@ void XmlRulesConverter::BuildRule(const qcc::XmlElement* singleInterface, std::s
 
 void XmlRulesConverter::SetInterfaceName(const qcc::XmlElement* singleInterface, PermissionPolicy::Rule& rule)
 {
-    std::string interfaceName;
+    string interfaceName;
     XmlRulesValidator::ExtractAttributeOrWildcard(singleInterface, NAME_XML_ATTRIBUTE, &interfaceName);
     rule.SetInterfaceName(interfaceName.c_str());
 }
 
 void XmlRulesConverter::AddMembers(const qcc::XmlElement* singleInterface, ajn::PermissionPolicy::Rule& rule)
 {
-    std::vector<PermissionPolicy::Rule::Member> members;
+    vector<PermissionPolicy::Rule::Member> members;
 
     for (auto xmlMember : singleInterface->GetChildren()) {
         AddMember(xmlMember, members);
@@ -171,7 +171,7 @@ void XmlRulesConverter::AddMembers(const qcc::XmlElement* singleInterface, ajn::
     rule.SetMembers(members.size(), members.data());
 }
 
-void XmlRulesConverter::AddMember(const qcc::XmlElement* xmlMember, std::vector<PermissionPolicy::Rule::Member>& members)
+void XmlRulesConverter::AddMember(const qcc::XmlElement* xmlMember, vector<PermissionPolicy::Rule::Member>& members)
 {
     PermissionPolicy::Rule::Member member;
     BuildMember(xmlMember, member);
@@ -187,7 +187,7 @@ void XmlRulesConverter::BuildMember(const qcc::XmlElement* xmlMember, Permission
 
 void XmlRulesConverter::SetMemberName(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member)
 {
-    std::string name;
+    string name;
     XmlRulesValidator::ExtractAttributeOrWildcard(xmlMember, NAME_XML_ATTRIBUTE, &name);
     member.SetMemberName(name.c_str());
 }
@@ -215,7 +215,7 @@ void XmlRulesConverter::BuildActionMask(const qcc::XmlElement* xmlMember, uint8_
 
 void XmlRulesConverter::BuildRulesContents(const PermissionPolicy::Rule* rules, const size_t rulesCount, qcc::XmlElement* rulesXml)
 {
-    std::map<std::string, std::vector<PermissionPolicy::Rule> > objectToRulesMap;
+    map<string, vector<PermissionPolicy::Rule> > objectToRulesMap;
     XmlRulesValidator::AssignRulesToObjects(rules, rulesCount, objectToRulesMap);
 
     for (auto objectAndRulesPair : objectToRulesMap) {
@@ -223,7 +223,7 @@ void XmlRulesConverter::BuildRulesContents(const PermissionPolicy::Rule* rules, 
     }
 }
 
-void XmlRulesConverter::BuildXmlNode(const std::vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* rulesElement)
+void XmlRulesConverter::BuildXmlNode(const vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* rulesElement)
 {
     qcc::XmlElement* nodeElement = nullptr;
     CreateChildWithNameAttribute(rulesElement, NODE_XML_ELEMENT, rules[0].GetObjPath().c_str(), &nodeElement);
@@ -246,7 +246,7 @@ void XmlRulesConverter::BuildXmlInterface(const PermissionPolicy::Rule& rule, qc
 void XmlRulesConverter::BuildXmlMember(const PermissionPolicy::Rule::Member& member, qcc::XmlElement* interfaceElement)
 {
     qcc::XmlElement* memberElement = nullptr;
-    std::string xmlType = s_inverseMemberTypeMap.find(member.GetMemberType())->second;
+    string xmlType = s_inverseMemberTypeMap.find(member.GetMemberType())->second;
     CreateChildWithNameAttribute(interfaceElement, xmlType.c_str(), member.GetMemberName().c_str(), &memberElement);
 
     BuilXmlAnnotations(member.GetActionMask(), memberElement);
@@ -283,7 +283,7 @@ void XmlRulesConverter::AddChildActionAnnotation(qcc::XmlElement* parent, AJ_PCS
     annotation->AddAttribute(VALUE_XML_ATTRIBUTE, annotationValue);
 }
 
-void XmlRulesConverter::CopyRules(std::vector<ajn::PermissionPolicy::Rule>& rulesVector, PermissionPolicy::Rule** rules, size_t* rulesCount)
+void XmlRulesConverter::CopyRules(vector<ajn::PermissionPolicy::Rule>& rulesVector, PermissionPolicy::Rule** rules, size_t* rulesCount)
 {
     *rulesCount = rulesVector.size();
     *rules = new PermissionPolicy::Rule[*rulesCount];

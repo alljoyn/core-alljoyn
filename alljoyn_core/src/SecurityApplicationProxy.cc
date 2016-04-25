@@ -18,8 +18,10 @@
 #include <alljoyn/SecurityApplicationProxy.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <qcc/KeyInfoECC.h>
 #include <qcc/Util.h>
+#include <string>
 #include "PermissionMgmtObj.h"
 #include "KeyInfoHelper.h"
 #include "XmlManifestConverter.h"
@@ -770,6 +772,7 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateX
     MsgArg argManifestTemplate;
     PermissionPolicy::Rule* rules = nullptr;
     size_t rulesCount = 0;
+    std::string manifestTemplate;
 
     *manifestTemplateXml = nullptr;
     status = GetManifestTemplate(argManifestTemplate);
@@ -779,7 +782,11 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateX
     }
 
     if (ER_OK == status) {
-        status = XmlRulesConverter::RulesToXml(rules, rulesCount, manifestTemplateXml);
+        status = XmlRulesConverter::RulesToXml(rules, rulesCount, manifestTemplate);
+    }
+
+    if (ER_OK == status) {
+        *manifestTemplateXml = qcc::String2CString(manifestTemplate);
     }
 
     delete[] rules;

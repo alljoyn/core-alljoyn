@@ -269,6 +269,15 @@ bool AJ_CALL IsOctalDigit(char c);
  */
 bool AJ_CALL IsHexDigit(char c);
 
+/**
+ * Copies the contents of the std::string object into a C string.
+ *
+ * @param[in]    input   String to copy.
+
+ * @return Copied C string. Caller must free it using "delete[]".
+ */
+AJ_PSTR String2CString(const std::string& input);
+
 }   /* End namespace */
 
 #endif

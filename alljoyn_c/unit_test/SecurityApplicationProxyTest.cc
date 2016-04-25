@@ -23,6 +23,7 @@
 #include <alljoyn_c/SecurityApplicationProxy.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
+#include <qcc/StringUtil.h>
 #include <qcc/XmlElement.h>
 #include "ajTestCommon.h"
 #include "InMemoryKeyStore.h"
@@ -594,7 +595,7 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
 
         fixedPolicyXml->GetChildren()[ACLS_INDEX]->AddChild(fixXml);
 
-        SecurityApplicationProxyTestHelper::String2CString(fixedPolicyXml->Generate(), fixedPolicy);
+        *fixedPolicy = String2CString(fixedPolicyXml->Generate());
         delete fixedPolicyXml;
     }
 
