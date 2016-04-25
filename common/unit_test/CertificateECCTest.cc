@@ -1622,12 +1622,12 @@ TEST_F(CertificateECCTest, InvalidPemTests)
     EXPECT_EQ(ER_INVALID_DATA, cert.LoadPEM(pemStr)) << " PEM with invalid characters was accepted.";
 }
 
-TEST_F(CertificateECCTest, InvalidASN1Tests)
+TEST_F(CertificateECCTest, InvalidASN1Test1)
 {
     IdentityCertificate cert;
 
     /* Test missing ASN_CONSTRUCTED_ENCODING bit from ASN.1 input corresponding to "c(i)" syntax */
-    static const char invalidASN1_1[] = {
+    static const char invalidASN1[] = {
         "-----BEGIN CERTIFICATE-----\n"
         "MIIBRjCB7sADAgECAhA4NHiS/771skQq7enlPEsyMAoGCCqGSM49BAMCMB4xHDAa\n"
         "BgNVBAMME0FsbEpveW5UZXN0Um9vdE5hbWUwHhcNMTUwMzMxMjI0NjE1WhcNMTYw\n"
@@ -1638,6 +1638,79 @@ TEST_F(CertificateECCTest, InvalidASN1Tests)
         "9L+/V/1L/o0CIFGqG58zW7QealLNE7Z4dUjZgu0brTvRJDTJKAz7QreR\n"
         "-----END CERTIFICATE-----\n"
     };
-    String pemStr(invalidASN1_1);
+    String pemStr(invalidASN1);
+    EXPECT_EQ(ER_FAIL, cert.LoadPEM(pemStr)) << " invalid certificate (invalid ASN.1) accepted.";
+}
+
+TEST_F(CertificateECCTest, InvalidASN1Test2)
+{
+    IdentityCertificate cert;
+
+    /* Invalid certificate that caused an invalid read of the syntax string. */
+    static const char invalidASN1[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBkzCCATq00000000000000000000000000000000000000000000000000000\n"
+        "0000000000000000000000000000000000000000000000000000000000000000\n"
+        "0000000000000000000000000000000000000000000000000000000000000000\n"
+        "0000000000000000000000000000000000000000000000000000000000000000\n"
+        "0000000000000000000000000000000000000000000000000000000000000000\n"
+        "0000000000000000000000000000000000000000000000000000000000000000\n"
+        "000000000000000000000000000000000000000000000DAKBgg00000000000NH\n"
+        "A000000000000000000000000000000000000000000000000000000000000000\n"
+        "00000000000000000000000000000000\n"
+        "-----END CERTIFICATE-----\n"
+    };
+    String pemStr(invalidASN1);
+    EXPECT_EQ(ER_BAD_ARG_1, cert.LoadPEM(pemStr)) << " invalid certificate (invalid ASN.1) accepted.";
+}
+
+TEST_F(CertificateECCTest, InvalidASN1Test3)
+{
+    IdentityCertificate cert;
+
+    /*
+     * Invalid certificate that triggers an assertion in qcc::String::assign
+     * when called with a string of zero length.
+     * (in the default case of Crypto_ASN1::DecodeV)
+     */
+    static const char invalidASN1[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBRjCB7qADAgECAhA000000000000000000000MAoGCCqGSM49BAMCMB4xHDAa\n"
+        "Bg000000000000000000000000000000000wHhcN00000000000000000hcA0000\n"
+        "0000000000000jAc0000000000000000000000000000000000000DBZ00000000\n"
+        "0000000000000000000000000000000000000000000000000000000000000000\n"
+        "0000000000000000000000000000000000000000000000000000000000000000\n"
+        "0000000wCgYIKoZIzj0EAwIDRwA0000000000000000000000000000000000000\n"
+        "00000000000000000000000000000000000000000000000000000000\n"
+        "-----END CERTIFICATE-----\n"
+    };
+    String pemStr(invalidASN1);
+    EXPECT_EQ(ER_FAIL, cert.LoadPEM(pemStr)) << " invalid certificate (invalid ASN.1) accepted.";
+}
+
+TEST_F(CertificateECCTest, InvalidASN1Test4)
+{
+    IdentityCertificate cert;
+
+    /*
+    * Invalid certificate that triggers an assertion in qcc::String::assign
+    * when called with a string of zero length.
+    * (in case 'b' of Crypto_ASN1::DecodeV)
+    */
+    static const char invalidASN1[] = {
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBtDCCAVmgAwIBAgIJAMlyFqk69v+OMAoGCCqGSM49BAMCMFYxKTAnBgNVBAsM\n"
+        "IDdhNDhhYTI2YmM0MzQyZjZhNjYyMDBmNzdhODlkZDAyMSkwJwYDVQQDDCA3YTQ4\n"
+        "YWEyNmJjNDM0MmY2YTY2MjAwZjc3YTg5ZGQwMjAeFw0xNTAyMjYyMTUxMjVaFw0x\n"
+        "NjAyMjYyMTUxMjVaMFYxKTAnBgNVBAsMIDZkODVjMjkyMjYxM2IzNmUyZWVlZjUy\n"
+        "NzgwNDJjYzU2MSkwJwYDVQQDDCA2ZDg1YzI5MjI2MTNiMzZlMmVlZWY1Mjc4MDQy\n"
+        "Y2M1NjBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABL50XeH1/aKcIF1+BJtlIgjL\n"
+        "AW32qoQdVOTyQg2WnM/R7pgxM2Ha0jMpksUd+JS9BiVYBBArwU76Whz9m6UyJeqj\n"
+        "EDAOMAwGA1UdEwQFMAMBAf8wCgYIKoZIzj0EAwIDAQAwRgIhAKfmglMgl67L5ALF\n"
+        "Z63haubkItTMACY1k4ROC2q7cnVmAiEArvAmcVInOq/U5C1y2XrvJQnAdwSl/Ogr\n"
+        "IizUeK0oI5c=\n"
+        "-----END CERTIFICATE-----\n"
+    };
+    String pemStr(invalidASN1);
     EXPECT_EQ(ER_FAIL, cert.LoadPEM(pemStr)) << " invalid certificate (invalid ASN.1) accepted.";
 }
