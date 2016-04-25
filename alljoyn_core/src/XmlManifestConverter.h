@@ -29,6 +29,7 @@
 #include <alljoyn/Status.h>
 #include <qcc/platform.h>
 #include <qcc/XmlElement.h>
+#include <string>
 
 namespace ajn {
 
@@ -56,7 +57,7 @@ class XmlManifestConverter {
      * @return   #ER_OK if extracted correctly.
      *           #ER_FAIL if the manifest contains incorrect data.
      */
-    static QStatus ManifestToXml(const Manifest& manifest, AJ_PSTR* manifestXml);
+    static QStatus ManifestToXml(const Manifest& manifest, std::string& manifestXml);
 
   private:
 
@@ -130,7 +131,7 @@ class XmlManifestConverter {
      * @param[in]    manifest    Reference to the input Manifest object.
      * @param[out]   manifestXml The built signed manifest XML.
      */
-    static void BuildManifest(const Manifest& manifest, AJ_PSTR* manifestXml);
+    static void BuildManifest(const Manifest& manifest, std::string& manifestXml);
 
     /**
      * Build the contents of a signed manifest in XML format from a Manifest object.

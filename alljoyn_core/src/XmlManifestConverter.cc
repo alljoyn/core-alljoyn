@@ -29,6 +29,7 @@
 #include "XmlRulesValidator.h"
 
 using namespace qcc;
+using namespace std;
 
 namespace ajn {
 
@@ -52,10 +53,8 @@ QStatus XmlManifestConverter::XmlToManifest(AJ_PCSTR manifestXml, Manifest& mani
     return status;
 }
 
-QStatus XmlManifestConverter::ManifestToXml(const Manifest& manifest, AJ_PSTR* manifestXml)
+QStatus XmlManifestConverter::ManifestToXml(const Manifest& manifest, string& manifestXml)
 {
-    QCC_ASSERT(nullptr != manifestXml);
-
     QStatus status = XmlRulesValidator::ValidateRules(manifest->GetRules().data(), manifest->GetRules().size());
 
     if (ER_OK == status) {
@@ -74,7 +73,7 @@ void XmlManifestConverter::BuildManifest(const XmlElement* root, Manifest& manif
 
 void XmlManifestConverter::SetRules(const XmlElement* rulesXml, Manifest& manifest)
 {
-    std::vector<PermissionPolicy::Rule> rules;
+    vector<PermissionPolicy::Rule> rules;
 
     QCC_VERIFY(ER_OK == XmlRulesConverter::XmlToRules(rulesXml->Generate().c_str(), rules));
 
@@ -117,12 +116,12 @@ void XmlManifestConverter::SetSignatureValue(const XmlElement* signatureXml, Man
     QCC_VERIFY(ER_OK == Crypto_ASN1::DecodeBase64(signatureValue, manifest->m_signature));
 }
 
-void XmlManifestConverter::BuildManifest(const Manifest& manifest, AJ_PSTR* manifestXml)
+void XmlManifestConverter::BuildManifest(const Manifest& manifest, string& manifestXml)
 {
     XmlElement* root = new XmlElement(MANIFEST_XML_ELEMENT);
 
     BuildXmlManifestContents(manifest, root);
-    *manifestXml = root->ToString();
+    manifestXml = root->Generate();
 
     delete root;
 }
@@ -176,7 +175,7 @@ void XmlManifestConverter::BuildSignatureContent(const Manifest& manifest, XmlEl
     BuildValue(manifest->GetSignature(), signatureElement);
 }
 
-void XmlManifestConverter::BuildValue(const std::vector<uint8_t>& binaryValue, XmlElement* xmlElement)
+void XmlManifestConverter::BuildValue(const vector<uint8_t>& binaryValue, XmlElement* xmlElement)
 {
     String base64Value;
 

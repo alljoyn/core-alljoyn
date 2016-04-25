@@ -31,6 +31,7 @@
 #include <alljoyn/PermissionPolicy.h>
 #include <map>
 #include <unordered_map>
+#include <string>
 #include <regex>
 #include "XmlRulesValidator.h"
 
@@ -62,7 +63,6 @@ class XmlRulesConverter {
      * @param[in]    rules      Array containing the rules.
      * @param[in]    rulesCount Number of rules in the array.
      * @param[out]   rulesXml   Rules in XML format.
-     *                          Must be freed by calling "delete[]".
      * @param[in]    rootName   Name of the root element.
      *
      * @return   #ER_OK if extracted correctly.
@@ -70,8 +70,8 @@ class XmlRulesConverter {
      */
     static QStatus RulesToXml(const PermissionPolicy::Rule* rules,
                               const size_t rulesCount,
-                              AJ_PSTR* rulesXml,
-                              AJ_PCSTR rootElement = MANIFEST_XML_ELEMENT);
+                              std::string& rulesXml,
+                              AJ_PCSTR rootName = MANIFEST_XML_ELEMENT);
 
     /**
      * Extract rules XML from an array of PermissionPolicy::Rules.
@@ -88,7 +88,7 @@ class XmlRulesConverter {
     static QStatus RulesToXml(const PermissionPolicy::Rule* rules,
                               const size_t rulesCount,
                               qcc::XmlElement** rulesXml,
-                              AJ_PCSTR rootElement = MANIFEST_XML_ELEMENT);
+                              AJ_PCSTR rootName = MANIFEST_XML_ELEMENT);
 
   private:
 

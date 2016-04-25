@@ -33,6 +33,7 @@
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/StringUtil.h>
 #include "KeyInfoHelper.h"
 #include "XmlRulesConverter.h"
 #include "XmlManifestConverter.h"
@@ -41,18 +42,27 @@
 
 using namespace qcc;
 using namespace ajn;
+using namespace std;
 
+/*
+ * The "certs" variable must be freed by the caller using "delete[]".
+ */
 static QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, CertificateX509** certs);
+
+/*
+ * The "signedManifestXml" variable must be freed by the caller using delete[].
+ */
 static QStatus SignManifest(const IdentityCertificate& identityCertificate,
                             const ECCPrivateKey& privateKey,
                             AJ_PCSTR unsignedManifestXml,
                             AJ_PSTR* signedManifestXml);
+
 static QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
                                    const ECCPrivateKey& privateKey,
                                    AJ_PCSTR unsignedManifestXml,
                                    Manifest& manifest);
+
 static QStatus GetGroupId(const uint8_t* groupId, size_t groupSize, GUID128& extractedId);
-static void String2CString(const String& stdString, AJ_PSTR* resultString);
 
 const alljoyn_sessionport PERMISSION_MANAGEMENT_SESSION_PORT = ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
 
@@ -125,7 +135,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplate(alljoyn_sec
 
 AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestXml)
 {
-    delete[] manifestXml;
+    SecurityApplicationProxy::DestroyManifestTemplate(manifestXml);
 }
 
 QStatus AJ_CALL alljoyn_securityapplicationproxy_getapplicationstate(alljoyn_securityapplicationproxy proxy, alljoyn_applicationstate* applicationState)
@@ -264,7 +274,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_geteccpublickey(alljoyn_securit
     }
 
     if (ER_OK == status) {
-        String2CString(publicKeyString, eccPublicKey);
+        *eccPublicKey = CreateStringCopy(publicKeyString);
     }
 
     return status;
@@ -272,7 +282,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_geteccpublickey(alljoyn_securit
 
 AJ_API void AJ_CALL alljoyn_securityapplicationproxy_eccpublickey_destroy(AJ_PSTR eccPublicKey)
 {
-    delete[] eccPublicKey;
+    DestroyStringCopy(eccPublicKey);
 }
 
 QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedManifestXml,
@@ -299,9 +309,12 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedM
 
 AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml)
 {
-    delete[] signedManifestXml;
+    DestroyStringCopy(signedManifestXml);
 }
 
+/*
+ * The "certs" variable must be freed by the caller using "delete[]".
+ */
 QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, CertificateX509** certs)
 {
     QStatus status = CertificateHelper::GetCertCount(identCertChain, certCount);
@@ -325,11 +338,15 @@ QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, Certific
     return status;
 }
 
+/*
+ * The "signedManifestXml" variable must be freed by the caller using delete[].
+ */
 QStatus SignManifest(const IdentityCertificate& identityCertificate,
                      const ECCPrivateKey& privateKey,
                      AJ_PCSTR unsignedManifestXml,
                      AJ_PSTR* signedManifestXml)
 {
+    string signedManifest;
     Manifest manifest;
     QStatus status = BuildSignedManifest(identityCertificate,
                                          privateKey,
@@ -337,7 +354,11 @@ QStatus SignManifest(const IdentityCertificate& identityCertificate,
                                          manifest);
 
     if (ER_OK == status) {
-        status = XmlManifestConverter::ManifestToXml(manifest, signedManifestXml);
+        status = XmlManifestConverter::ManifestToXml(manifest, signedManifest);
+    }
+
+    if (ER_OK == status) {
+        *signedManifestXml = CreateStringCopy(signedManifest);
     }
 
     return status;
@@ -348,7 +369,7 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
                             AJ_PCSTR unsignedManifestXml,
                             Manifest& manifest)
 {
-    std::vector<PermissionPolicy::Rule> rules;
+    vector<PermissionPolicy::Rule> rules;
     QStatus status = XmlRulesConverter::XmlToRules(unsignedManifestXml, rules);
 
     if (ER_OK == status) {
@@ -371,11 +392,4 @@ QStatus GetGroupId(const uint8_t* groupId, size_t groupSize, GUID128& extractedI
     }
 
     return ER_OK;
-}
-
-void String2CString(const String& qccString, AJ_PSTR* resultString)
-{
-    size_t stringSize = qccString.size() + 1;
-    *resultString = new char[stringSize];
-    strcpy(*resultString, qccString.c_str());
 }

@@ -40,7 +40,7 @@ const uint32_t SecurityApplicationProxyTestHelper::oneHourInSeconds = 3600;
 
 void SecurityApplicationProxyTestHelper::CreateIdentityCert(alljoyn_busattachment issuerBus, alljoyn_busattachment receiverBus, AJ_PSTR* receiverCertificate, bool delegate)
 {
-    String certificate;
+    string certificate;
     GUID128 receiverGuid;
     ECCPublicKey receiverPublicKey;
     BusAttachment* issuer = (BusAttachment*)issuerBus;
@@ -55,12 +55,12 @@ void SecurityApplicationProxyTestHelper::CreateIdentityCert(alljoyn_busattachmen
                                         delegate ? "delegate" : "non-delegate",
                                         certificate,
                                         delegate));
-    String2CString(certificate, receiverCertificate);
+    *receiverCertificate = CreateStringCopy(certificate);
 }
 
 void SecurityApplicationProxyTestHelper::CreateIdentityCertChain(AJ_PCSTR issuerIdentityCert, AJ_PCSTR receiverIdentityCert, AJ_PSTR* certificateChainPem)
 {
-    String2CString(String(receiverIdentityCert) + issuerIdentityCert, certificateChainPem);
+    *certificateChainPem = CreateStringCopy(string(receiverIdentityCert) + issuerIdentityCert);
 }
 
 void SecurityApplicationProxyTestHelper::RetrieveDSAPrivateKeyFromKeyStore(alljoyn_busattachment bus, AJ_PSTR* privateKey)
@@ -72,7 +72,7 @@ void SecurityApplicationProxyTestHelper::RetrieveDSAPrivateKeyFromKeyStore(alljo
 
     ASSERT_EQ(ER_OK, ca.GetDSAPrivateKey(outputPrivateKey));
     ASSERT_EQ(ER_OK, CertificateX509::EncodePrivateKeyPEM(&outputPrivateKey, privateKeyString));
-    String2CString(privateKeyString, privateKey);
+    *privateKey = CreateStringCopy(static_cast<std::string>(privateKeyString));
 }
 
 void SecurityApplicationProxyTestHelper::RetrieveDSAPublicKeyFromKeyStore(alljoyn_busattachment bus, AJ_PSTR* publicKey)
@@ -82,7 +82,7 @@ void SecurityApplicationProxyTestHelper::RetrieveDSAPublicKeyFromKeyStore(alljoy
 
     ASSERT_EQ(ER_OK, RetrieveDSAPublicKeyFromKeyStore((BusAttachment*)bus, outputPublicKey));
     ASSERT_EQ(ER_OK, CertificateX509::EncodePublicKeyPEM(&outputPublicKey, publicKeyString));
-    String2CString(publicKeyString, publicKey);
+    *publicKey = CreateStringCopy(static_cast<std::string>(publicKeyString));
 }
 
 void SecurityApplicationProxyTestHelper::ReplaceString(string& original, AJ_PCSTR from, AJ_PCSTR to)
@@ -93,7 +93,7 @@ void SecurityApplicationProxyTestHelper::ReplaceString(string& original, AJ_PCST
 
 void SecurityApplicationProxyTestHelper::CreateMembershipCert(alljoyn_busattachment signingBus, alljoyn_busattachment memberBus, const uint8_t* groupId, bool delegate, AJ_PSTR* membershipCertificatePem)
 {
-    String certificate;
+    string certificate;
     GUID128 certificateGuid;
     ECCPublicKey memberPublicKey;
     BusAttachment* signer = (BusAttachment*)signingBus;
@@ -108,27 +108,30 @@ void SecurityApplicationProxyTestHelper::CreateMembershipCert(alljoyn_busattachm
                                           certificateGuid,
                                           delegate,
                                           certificate));
-    String2CString(certificate, membershipCertificatePem);
+    *membershipCertificatePem = CreateStringCopy(certificate);
 }
 
-void SecurityApplicationProxyTestHelper::String2CString(const String& qccString, AJ_PSTR* resultString)
+void ajn::SecurityApplicationProxyTestHelper::DestroyCertificate(AJ_PSTR cert)
 {
-    size_t stringSize = qccString.size() + 1;
-    *resultString = new char[stringSize];
-    strcpy(*resultString, qccString.c_str());
+    DestroyStringCopy(cert);
+}
+
+void ajn::SecurityApplicationProxyTestHelper::DestroyKey(AJ_PSTR key)
+{
+    DestroyStringCopy(key);
 }
 
 QStatus SecurityApplicationProxyTestHelper::CreateIdentityCert(BusAttachment& issuerBus,
-                                                               const String& serial,
-                                                               const String& subject,
+                                                               const string& serial,
+                                                               const string& subject,
                                                                const ECCPublicKey* subjectPubKey,
-                                                               const String& alias,
+                                                               const string& alias,
                                                                IdentityCertificate& cert,
                                                                bool delegate)
 {
     QStatus status;
     CertificateX509::ValidPeriod validity;
-    String issuerStr;
+    string issuerStr;
     GUID128 issuer(0);
     PermissionConfigurator& pc = issuerBus.GetPermissionConfigurator();
 
@@ -158,18 +161,20 @@ QStatus SecurityApplicationProxyTestHelper::CreateIdentityCert(BusAttachment& is
 }
 
 QStatus SecurityApplicationProxyTestHelper::CreateIdentityCert(BusAttachment& issuerBus,
-                                                               const String& serial,
-                                                               const String& subject,
+                                                               const string& serial,
+                                                               const string& subject,
                                                                const ECCPublicKey* subjectPubKey,
-                                                               const String& alias,
-                                                               String& pem,
+                                                               const string& alias,
+                                                               string& pem,
                                                                bool delegate)
 {
     IdentityCertificate cert;
+    String qccPem;
     QStatus status = CreateIdentityCert(issuerBus, serial, subject, subjectPubKey, alias, cert, delegate);
 
     if (ER_OK == status) {
-        status = cert.EncodeCertificatePEM(pem);
+        status = cert.EncodeCertificatePEM(qccPem);
+        pem = qccPem.c_str();
     }
 
     return status;
@@ -181,11 +186,11 @@ QStatus ajn::SecurityApplicationProxyTestHelper::RetrieveDSAPublicKeyFromKeyStor
     return ca.GetDSAPublicKey(publicKey);
 }
 
-QStatus SecurityApplicationProxyTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const String& subject, const ECCPublicKey* subjectPubKey, const GUID128& guild, bool delegate, MembershipCertificate& cert, bool setEmptyAKI)
+QStatus SecurityApplicationProxyTestHelper::CreateMembershipCert(const string& serial, BusAttachment& signingBus, const string& subject, const ECCPublicKey* subjectPubKey, const GUID128& guild, bool delegate, MembershipCertificate& cert, bool setEmptyAKI)
 {
     QStatus status;
     CertificateX509::ValidPeriod validity;
-    String issuerStr;
+    string issuerStr;
     GUID128 issuer(0);
     PermissionConfigurator& pc = signingBus.GetPermissionConfigurator();
 
@@ -219,13 +224,15 @@ QStatus SecurityApplicationProxyTestHelper::CreateMembershipCert(const String& s
     return status;
 }
 
-QStatus SecurityApplicationProxyTestHelper::CreateMembershipCert(const String& serial, BusAttachment& signingBus, const String& subject, const ECCPublicKey* subjectPubKey, const GUID128& guild, bool delegate, String& pem)
+QStatus SecurityApplicationProxyTestHelper::CreateMembershipCert(const string& serial, BusAttachment& signingBus, const string& subject, const ECCPublicKey* subjectPubKey, const GUID128& guild, bool delegate, string& pem)
 {
     MembershipCertificate cert;
+    String qccPem;
     QStatus status = CreateMembershipCert(serial, signingBus, subject, subjectPubKey, guild, delegate, cert);
 
     if (ER_OK == status) {
-        status = cert.EncodeCertificatePEM(pem);
+        status = cert.EncodeCertificatePEM(qccPem);
+        pem = qccPem.c_str();
     }
 
     return status;
