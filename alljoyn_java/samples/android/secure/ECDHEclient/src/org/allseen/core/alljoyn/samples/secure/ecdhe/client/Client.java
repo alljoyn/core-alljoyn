@@ -124,10 +124,10 @@ public class Client extends Activity {
         mListView.setAdapter(mListViewArrayAdapter);
 
         mEditText = (EditText) findViewById(R.id.EditText);
+        mEditText.setSingleLine();
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_NULL
-                        && event.getAction() == KeyEvent.ACTION_UP) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
                     Message msg = mBusHandler.obtainMessage(BusHandler.PING,
                                                             view.getText().toString());
                     mBusHandler.sendMessage(msg);
