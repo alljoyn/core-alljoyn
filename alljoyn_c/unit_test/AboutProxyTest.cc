@@ -27,6 +27,7 @@
 #include "alljoyn/DBusStd.h"
 #include <qcc/Thread.h>
 #include <qcc/GUID.h>
+#include <qcc/Util.h>
 #include <stdlib.h>
 
 #define WAIT_TIME 5

@@ -40,6 +40,11 @@
 
 #include <alljoyn/Status.h>
 
+/**
+ * Returns the size of a statically allocated array
+ */
+#define ArraySize(a)  (sizeof(a) / sizeof(a[0]))
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -168,7 +173,14 @@ class SrpKeyXListener : public AuthListener {
                     srand(time(NULL));
                     int pin = rand() % 1000000;
                     char pinStr[7];
-                    snprintf(pinStr, 7, "%06d", pin);
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+                    _snprintf(pinStr, ArraySize(pinStr), "%06d", pin);
+                    pinStr[ArraySize(pinStr) - 1] = '\0';
+#else
+                    snprintf(pinStr, ArraySize(pinStr), "%06d", pin);
+#endif
+
                     printf("One Time Password : %s\n", pinStr);
                     fflush(stdout);
                     creds.SetPassword(pinStr);
