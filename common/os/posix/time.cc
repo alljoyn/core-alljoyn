@@ -137,7 +137,8 @@ int64_t qcc::ConvertStructureToTime(struct tm* timeptr)
 }
 
 QStatus qcc::ConvertTimeToStructure(const int64_t* timer, struct tm* tm) {
-    if (gmtime_r((time_t*)timer, tm)) {
+    int32_t t = (int32_t)(*timer);
+    if (gmtime_r((time_t*)&t, tm)) {
         return ER_OK;
     }
     return ER_FAIL;
