@@ -137,14 +137,16 @@ int64_t qcc::ConvertStructureToTime(struct tm* timeptr)
 }
 
 QStatus qcc::ConvertTimeToStructure(const int64_t* timer, struct tm* tm) {
-    if (gmtime_r((time_t*)timer, tm)) {
+    time_t t = static_cast<time_t>(*timer);
+    if (gmtime_r(reinterpret_cast<const time_t*>(&t), tm)) {
         return ER_OK;
     }
     return ER_FAIL;
 }
 
 QStatus qcc::ConvertToLocalTime(const int64_t* timer, struct tm* tm) {
-    if (localtime_r((time_t*)timer, tm)) {
+    time_t t = static_cast<time_t>(*timer);
+    if (localtime_r(reinterpret_cast<const time_t*>(&t), tm)) {
         return ER_OK;
     }
     return ER_FAIL;
