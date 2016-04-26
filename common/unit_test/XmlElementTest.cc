@@ -282,3 +282,25 @@ TEST(XmlElement, GetPath)
     EXPECT_STREQ("hello", root->GetPath("foo/value@first")[0]->GetAttribute("first").c_str());
     EXPECT_STREQ("world", root->GetPath("foo/value@second")[0]->GetAttribute("second").c_str());
 }
+
+TEST(XmlElement, ParseInvalidXml)
+{
+    /* Test that the parser fails gracefully on invalid input. */
+    String xml = "</ ";
+    StringSource source(xml);
+    XmlParseContext pc(source);
+    EXPECT_EQ(ER_OK, XmlElement::Parse(pc));
+    /* Note: XmlElement::Parse should return ER_MALFORMED_XML, not ER_OK.  See ASACORE-2902. */
+}
+
+TEST(XmlElement, GetRootInvalidXml)
+{
+    /* Test that GetRoot fails gracefully on invalid input. */
+    String xml = "</ ";
+    XmlElement* root = NULL;
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(xml.c_str(), &root));
+    /* Note: GetRoot should return ER_MALFORMED_XML, not ER_OK.  See ASACORE-2902. */
+
+    EXPECT_EQ(String::Empty, root->GetName().c_str());
+    EXPECT_EQ(0, root->GetChildren().size());
+}
