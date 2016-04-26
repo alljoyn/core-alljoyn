@@ -425,6 +425,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         delete managerAuthListener;
         delete peer1AuthListener;
         delete peer2AuthListener;
+        delete peer3AuthListener;
     }
 
     void InstallMembershipOnManager() {
@@ -1584,11 +1585,15 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
     EXPECT_EQ(ER_OK, sapWithPeer2.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
     count = arg.v_array.GetNumElements();
     EXPECT_EQ((uint32_t)1, count);
+    delete [] serials;
+    delete [] keyInfos;
     serials = new String[count];
     keyInfos = new KeyInfoNISTP256[count];
     EXPECT_EQ(ER_OK, sapWithPeer2.MsgArgToCertificateIds(arg, serials, keyInfos, count));
     EXPECT_EQ(count, (uint32_t)1);
     EXPECT_STREQ(serials[0].c_str(), "5678");
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_serial_does_not_match)
@@ -1662,7 +1667,8 @@ TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_serial_does_not_
     // Call RemoveMembership
     String fakeSerial("333");
     EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, sapWithPeer2.RemoveMembership(fakeSerial, keyInfos[0]));
-
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_issuer_does_not_match)
@@ -1734,6 +1740,8 @@ TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_issuer_does_not_
 
     // Call RemoveMembership
     EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, sapWithPeer2.RemoveMembership(serials[0], peer2PublicKey));
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 
@@ -1936,6 +1944,7 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     peer2Obj = ProxyBusObject(peer1Bus, org::alljoyn::Bus::InterfaceName, org::alljoyn::Bus::ObjectPath, peer1ToPeer2SessionId, false);
 
     EXPECT_EQ(ER_OK, peer2Obj.IntrospectRemoteObject());
+    delete caAuthListener;
 }
 
 
@@ -2094,6 +2103,7 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_memb
     EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
 
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 3));
+    delete caAuthListener;
 }
 
 
@@ -2203,6 +2213,7 @@ TEST_F(SecurityManagementPolicyTest, chained_membership_signed_upto_ca_fails)
     EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
 
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 3));
+    delete caAuthListener;
 }
 
 TEST_F(SecurityManagementPolicyTest, chained_membership_with_two_levels_fails)
@@ -2327,6 +2338,7 @@ TEST_F(SecurityManagementPolicyTest, chained_membership_with_two_levels_fails)
     EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
 
     EXPECT_EQ(ER_FAIL, sapWithPeer1.InstallMembership(membershipCertChain, 4));
+    delete caAuthListener;
 }
 
 TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegation_is_false)
@@ -2467,6 +2479,7 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
 
     //EXPECT_EQ(ER_OK, sapWithPeer1.Reset());
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 2));
+    delete caAuthListener;
 }
 
 /*
@@ -2699,6 +2712,8 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
     EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
     EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
     EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 /*
@@ -3133,6 +3148,8 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
     EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
 
     // Claim the target app again
+    delete managerAuthListener;
+    delete peer2AuthListener;
     managerAuthListener = new DefaultECDHEAuthListener();
     peer2AuthListener = new DefaultECDHEAuthListener();
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
