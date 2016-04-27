@@ -178,9 +178,10 @@ class MyAboutListener : public AboutListener {
                         if (strcmp(defaultLanguage, langs[i]) != 0) {
                             status = aboutProxy.GetAboutData(langs[i], aArg);
                             if (ER_OK == status) {
-                                defaultLangAboutData.CreatefromMsgArg(aArg, langs[i]);
+                                AboutData nonDefaultAboutData;
+                                nonDefaultAboutData.CreatefromMsgArg(aArg, langs[i]);
                                 printf("AboutProxy.GetAboutData: (%s)\n", langs[i]);
-                                printAboutData(defaultLangAboutData, langs[i], 1);
+                                printAboutData(nonDefaultAboutData, langs[i], 1);
                             }
                         }
                     }
