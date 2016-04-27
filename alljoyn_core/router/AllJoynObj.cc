@@ -2644,6 +2644,8 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                 SessionMapEntry tsme = it->second;
                 pair<String, SessionId> key = it->first;
                 if (!it->second.isInitializing) {
+                    BusEndpoint ep = router.FindEndpoint(it->first.first);
+                    ep->UnregisterSessionId(it->first.second);
                     sessionMap.erase(it++);
                     sessionsLost.push_back(tsme);
                 } else {
