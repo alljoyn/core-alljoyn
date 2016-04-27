@@ -244,7 +244,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     QStatus status;
 
-    g_bus = new BusAttachment("AboutServiceTest", true);
+    g_bus = new BusAttachment("AboutServiceTest", true, 256);
 
     status = g_bus->Start();
     if (ER_OK == status) {
