@@ -3652,7 +3652,7 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
     }
 
     /* Remove advertisement from local nameMap so local discoverers are notified of advertisement going away */
-    if ((status == ER_OK) && (transports & TRANSPORT_LOCAL)) {
+    if (status == ER_OK) {
         vector<String> names;
         names.push_back(advertiseName);
         FoundNames("local:", bus.GetGlobalGUIDString(), TRANSPORT_LOCAL, &names, 0);
