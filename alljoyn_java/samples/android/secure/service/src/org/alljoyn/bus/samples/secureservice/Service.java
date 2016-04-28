@@ -476,21 +476,33 @@ public class Service extends Activity {
         /* the followings are sample data to try out the ECDHE_ECDSA key exchange */
         private static final String SERVER_PK_PEM =
             "-----BEGIN EC PRIVATE KEY-----\n" +
-            "MDECAQEEIICSqj3zTadctmGnwyC/SXLioO39pB1MlCbNEX04hjeioAoGCCqGSM49\n" +
-            "AwEH\n" +
-            "-----END EC PRIVATE KEY-----";
+                "MDECAQEEIP7pbEF7CiuHpW7FSodaUZRiBQKT0ydBJtm8TdaqFGRdoAoGCCqGSM49\n" +
+                "AwEH\n" +
+                "-----END EC PRIVATE KEY-----";
 
         private static final String SERVER_ECC_X509_PEM =
-        "-----BEGIN CERTIFICATE-----\n" +
-        "MIIBWjCCAQGgAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjArMSkwJwYDVQQDDCAw\n" +
-        "ZTE5YWZhNzlhMjliMjMwNDcyMGJkNGY2ZDVlMWIxOTAeFw0xNTAyMjYyMTU1MjVa\n" +
-        "Fw0xNjAyMjYyMTU1MjVaMCsxKTAnBgNVBAMMIDZhYWM5MjQwNDNjYjc5NmQ2ZGIy\n" +
-        "NmRlYmRkMGM5OWJkMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEP/HbYga30Afm\n" +
-        "0fB6g7KaB5Vr5CDyEkgmlif/PTsgwM2KKCMiAfcfto0+L1N0kvyAUgff6sLtTHU3\n" +
-        "IdHzyBmKP6MQMA4wDAYDVR0TBAUwAwEB/zAKBggqhkjOPQQDAgNHADBEAiAZmNVA\n" +
-        "m/H5EtJl/O9x0P4zt/UdrqiPg+gA+wm0yRY6KgIgetWANAE2otcrsj3ARZTY/aTI\n" +
-        "0GOQizWlQm8mpKaQ3uE=\n" +
-        "-----END CERTIFICATE-----";
+                "-----BEGIN CERTIFICATE-----\n" +
+                "MIIBgDCCASegAwIBAgIUaWYhK64WMTXX2P7Mx9+jPS8nM/IwCgYIKoZIzj0EAwIw\n" +
+                "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n" +
+                "aG9yaXR5MB4XDTE1MDkxMjAyMjAzNVoXDTIwMDkxMDAyMjAzNVowJjEkMCIGA1UE\n" +
+                "AwwbQWxsSm95biBFQ0RIRSBTYW1wbGUgU2VydmVyMFkwEwYHKoZIzj0CAQYIKoZI\n" +
+                "zj0DAQcDQgAEDbQwLViVEHKnNwZ8DQJHIVoLohH4cInElLJ2DC73+eT8Y3Se2bMv\n" +
+                "yMFE70OovRyLnC53conK2WqIOQAOp92saKMkMCIwCQYDVR0TBAIwADAVBgNVHSUE\n" +
+                "DjAMBgorBgEEAYLefAEBMAoGCCqGSM49BAMCA0cAMEQCIHDb8SVrYon3EYaf6U57\n" +
+                "d+xcBtr4kAN8GXSrQ3zuVgGSAiB2o+faXMa6O3Ae5+dB3kPOVMiOFg3WryPgYEzb\n" +
+                "PN/PTg==\n" +
+                "-----END CERTIFICATE-----\n" +
+                "-----BEGIN CERTIFICATE-----\n" +
+                "MIIBnzCCAUWgAwIBAgIUdcyHkQndQDgjP2XnhmP43Kak/GAwCgYIKoZIzj0EAwIw\n" +
+                "NTEzMDEGA1UEAwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0\n" +
+                "aG9yaXR5MB4XDTE1MDkxMjAyMTYzOFoXDTI1MDkwOTAyMTYzOFowNTEzMDEGA1UE\n" +
+                "AwwqQWxsSm95biBFQ0RIRSBTYW1wbGUgQ2VydGlmaWNhdGUgQXV0aG9yaXR5MFkw\n" +
+                "EwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEhUADDEGG1bvJ4qDDodD2maFmENFSEmhQ\n" +
+                "hvP4iJ82WT7XrhIx/L/XIZo9wKnwNsHJusLVXXMKjyUwcPuVpYU7JqMzMDEwDAYD\n" +
+                "VR0TBAUwAwEB/zAhBgNVHSUEGjAYBgorBgEEAYLefAEBBgorBgEEAYLefAEFMAoG\n" +
+                "CCqGSM49BAMCA0gAMEUCIAWutM+O60m/awMwJvQXHVGXq+z+6nac4KRLDT5OXqn1\n" +
+                "AiEAq/NwQWXJ/FYHBxVOXrKxGZXTFoBiudw9+konMAu1MaE=\n" +
+                "-----END CERTIFICATE-----" ;
     }
 
     class SecureService implements SecureInterface, BusObject {

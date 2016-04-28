@@ -453,7 +453,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             if ((tag != ASN_BITS) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
             } else {
-                if (len == 0) {
+                if (len < 2) {
                     status = ER_FAIL;
                     continue;
                 }
@@ -636,23 +636,26 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             QCC_LogError(status, ("Invalid syntax character \'%c\'", *(syntax - 1)));
         }
         // Shared code for all cases that fall through here
-        if (status == ER_OK) {
+        if ((status == ER_OK) && (len > 0)) {
             val = va_arg(argp, qcc::String*);
             val->assign((char*)asn, len);
             asn += len;
         }
     }
-    // Consume wildcard if we ran out of data
-    if (*syntax == '*') {
-        ++syntax;
-    } else if (*syntax == '/') {
-        // Optional arg was not present
-        val = va_arg(argp, qcc::String*);
-        val->clear();
-        if (syntax[1]) {
-            syntax += 2;
-        } else {
-            status = ER_BAD_ARG_1;
+
+    if (status == ER_OK) {
+        // Consume wildcard if we ran out of data
+        if (*syntax == '*') {
+            ++syntax;
+        } else if (*syntax == '/') {
+            // Optional arg was not present
+            val = va_arg(argp, qcc::String*);
+            val->clear();
+            if (syntax[1]) {
+                syntax += 2;
+            } else {
+                status = ER_BAD_ARG_1;
+            }
         }
     }
     return status;
