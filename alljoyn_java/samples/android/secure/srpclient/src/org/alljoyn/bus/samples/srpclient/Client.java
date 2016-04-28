@@ -135,10 +135,10 @@ public class Client extends Activity {
         mListView.setAdapter(mListViewArrayAdapter);
 
         mEditText = (EditText) findViewById(R.id.EditText);
+        mEditText.setSingleLine();
         mEditText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                if (actionId == EditorInfo.IME_NULL
-                        && event.getAction() == KeyEvent.ACTION_UP) {
+                if (actionId == EditorInfo.IME_ACTION_DONE) {
                     Message msg = mBusHandler.obtainMessage(BusHandler.PING,
                                                             view.getText().toString());
                     mBusHandler.sendMessage(msg);
@@ -190,10 +190,10 @@ public class Client extends Activity {
             LayoutInflater factory = LayoutInflater.from(this);
             View view = factory.inflate(R.layout.alert_dialog, null);
             EditText editText = (EditText) view.findViewById(R.id.PasswordEditText);
+            editText.setSingleLine();
             editText.setOnEditorActionListener(new TextView.OnEditorActionListener() {
                 public boolean onEditorAction(TextView view, int actionId, KeyEvent event) {
-                    if (actionId == EditorInfo.IME_NULL
-                            && event.getAction() == KeyEvent.ACTION_UP) {
+                    if (actionId == EditorInfo.IME_ACTION_DONE) {
                         mPassword = view.getText().toString();
                         mLatch.countDown();
                         dismissDialog(DIALOG_GET_CREDENTIALS);
