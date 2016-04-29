@@ -1,29 +1,27 @@
-TODO:
-* Search for 15.09 below and update the text still refering to that older
-  release
-
 AllJoyn Standard Core Version 16.04 Release Notes
 ==================================================
 
 Fully Validated Platforms
 -------------------------
 1) Linux Ubuntu 14.04 LTS (64 bit)
-2) Android JellyBean 4.1 (ARM7)
-3) OpenWRT Barrier Breaker and Chaos Calmer branches
+2) Android Lollipop 5.0 (ARM7)
+3) OpenWRT Chaos Calmer
+4) Windows 7 and 10
 
 For information on AllJoyn support in Windows 10 see link below:
 https://msdn.microsoft.com/en-us/library/windows/apps/windows.devices.alljoyn.aspx
 
 See the release review page for other platforms that have not been fully
 verified, but may work:
-https://wiki.allseenalliance.org/core/core_15.09_release_review#regression_test
+https://wiki.allseenalliance.org/core/core_16.04_release_review#regression_test
 
 
 Features added in Version 16.04
 -------------------------------
 * Security 2.0 continues to be a Developer Preview Feature (ASACORE-1393)
 * New password-based authentication mechanism ECDHE_SPEKE (ASACORE-2055)
-* Improved multi-thread and multi-process Key Store synchronization (ASACORE-2751)
+* Improved multi-thread and multi-process Key Store synchronization
+  (ASACORE-2751)
 * Support for unified introspection XML format (ASACORE-964)
 * Additional C APIs for InterfaceDescription (ASACORE-2662)
 * CreateInterfacesFromXml and IntrospectWithDescription support for multiple
@@ -35,11 +33,13 @@ Features added in Version 16.04
   (ASACORE-2607)
 * Support for multiple Security 2.0 Manifests for a single app (ASACORE-2710)
 * Each Security 2.0 Manifest must be signed (ASACORE-2750)
-* StartManagement/EndManagement notifications for Security 2.0 apps (ASACORE-2599)
+* StartManagement/EndManagement notifications for Security 2.0 apps
+  (ASACORE-2599)
 * Reject attempts to Claim Security 2.0 app using an authentication mechanism
   that is not present in app's ClaimCapabilities (ASACORE-2660)
-* Security Manager application (secmgr) is now a sample app of the Standard Core
-  release. Secmgr has been released outside of Core in 15.09, as described by
+* Security Manager application (secmgr) is now a sample app of the Standard
+  Core release. Previously Secmgr had been released outside of Core in 15.09,
+  as described in
   https://wiki.allseenalliance.org/release/15.09?s[]=securitymgr#release_1509.
 * maxAlarms feature is now disabled on Windows, because the risk of deadlocks
   was larger than the risk of using too many Alarms (ASACORE-2810)
@@ -47,6 +47,7 @@ Features added in Version 16.04
 Issues Addressed in Version 16.04
 ---------------------------------
 ASACORE-2367 [Security 2.0] Unable to send sessioncast signals
+ASACORE-2379 Android DONE softkey is missing on sample Java apps
 ASACORE-2426 Simultaneous authentication of two peers doesn't work
 ASACORE-2444 Crash on BusAttachment destructor if application bus object
              registered at object path '/'
@@ -59,42 +60,30 @@ ASACORE-2588 Applications built in Release mode cannot interop with Standard
              Core Library built in Debug mode, and vice versa
 
 For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20issuetype%20%3D%20Bug%20AND%20status%20in%20%28Closed%2C%20Resolved%29%20AND%20resolution%20%3D%20Fixed%20AND%20fixVersion%20in%20%2815.09%2C%2015.09a%29%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20issuetype%20%3D%20Bug%20AND%20status%20in%20%28Closed%2C%20Resolved%29%20AND%20resolution%20%3D%20Fixed%20AND%20fixVersion%20in%20%2816.04%29%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
 
 
 Known Issues in Version 16.04
 ------------------------------
 ASACORE-49   Multipoint session lost on joiner side and not binder side
              prevents joiner from rejoining
-ASACORE-367  Router AJ objects that don't call BusController::ObjectRegister()
-             due to a failure will cause the program to lockup in a fast
-             spinning while/sleep loop
 ASACORE-1244 Legacy About service truncates the AppID to 16 bytes
-ASACORE-1286 FindAdvertisedName does not work with certain config options
-ASACORE-1493 Ping in AboutListener::Announced fails
 ASACORE-1600 iOS AboutService sample can not inter-operate with Java AboutClient
              sample
-ASACORE-1714 ECDSA Certificate generation APIs should be implemented for
-             language bindings.
-ASACORE-1715 Private key protection support for using pass-phrase not applicable
-             for ECDHE_ECDSA mechanism.
-ASACORE-1738 Multipoint session member attach does not work in some backward
-             compatibility scenarios
 ASACORE-1827 GetTimestamp() function on Darwin is not monotonic
 ASACORE-1867 TRANSPORT_LOCAL SessionOpts does not work
 ASACORE-1893 Interface org.allseen.Introspectable cannot be marked as ANNOUNCED
              until RegisterBusObject is called
-ASACORE-2331 Automated retry of method and getproperty calls after security
-             updates
-ASACORE-2379 Android DONE softkey is missing on sample Java apps
-ASACORE-2432 Sending of signals does not generate a new master secret
-ASACORE-2479 Automation test: Windows7 TC service and SC client authentication
-             fail
 ASACORE-2481 DefaultKeyStoreListener implementation uses faulty algorithm to
              derive keystore filename
-ASACORE-2512 [Security2.0] authentication should try all auth mechanisms before
-             falling back on ECDHE_NULL
-ASACORE-2741 Sharing a Key Store file between 64 bit and 32 apps is not supported
+ASACORE-2656 Error starting JNI Samples
+ASACORE-2741 Sharing a Key Store file between 64 bit and 32 apps is not
+             supported
+ASACORE-2797 AboutIconProxy::GetIcon ignores error return from GetContent
+ASACORE-2841 Android chat sample fails when the channel name includes a decimal
+ASACORE-2865 AJCORE-471: JNI Chat sample for Android fails to start
+ASACORE-2867 AJCORE-472: JNI Simple Service and Simple Client fail to start
+
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20AND%20%28component%20in%20%28%22Router%2FSCL%22%2C%20SCONS%29%20OR%20component%20is%20EMPTY%29%20AND%20%28status%20%3D%20closed%20AND%20resolution%20%3D%20Postponed%20OR%20status%20not%20in%20%28closed%2C%20resolved%29%20AND%20issuetype%20%3D%20Bug%29%20ORDER%20BY%20Severity%20DESC%2C%20priority%20DESC%2C%20id%20ASC
@@ -108,24 +97,30 @@ Version 16.04:
 * Some of the qcc::String methods have been marked deprecated (ASACORE-2274)
 * Apps calling AllJoynShutdown before waiting for all Standard Core Threads to
   finish execution will trigger a failed assertion on Debug builds and possibly
-  an application crash on Release builds. Applications should use 
+  an application crash on Release builds. Applications should use
   BusAttachment::Join() to wait for threads to finish execution (ASACORE-2811)
-* Security 2.0 methods BusAttachment::AddApplicationStateRule and BusAttachment::
-  RemoveApplicationStateRule were not needed so they have been removed (ASACORE-2683)
-* The incorrect definition of snprintf for Windows has been removed (ASACORE-2891). 
-  Applications should either:
-  - Use the Visual Studio 2015 CRT, that provides a correct snprintf implementation, or
-  - When using an older version of the Visual Studio CRT, call _snprintf then add
-    a zero character string terminator if _snprintf returns a negative value
+* Security 2.0 methods BusAttachment::AddApplicationStateRule and
+  BusAttachment::RemoveApplicationStateRule were not needed so they have been
+  removed (ASACORE-2683)
+* qcc::GetGid() and qcc::GetUid() return hard-coded, constant values on Windows,
+  regardless of the current user's name and domain. This behavior is new for
+  Windows domain users. Non-domain users were already getting hard-coded IDs in
+  the 15.09 release (ASACORE-2854)
+* The incorrect definition of snprintf for Windows has been removed
+  (ASACORE-2891). Applications should either:
+  - Use the Visual Studio 2015 CRT, that provides a correct snprintf
+    implementation, or
+  - When using an older version of the Visual Studio CRT, call _snprintf then
+    add a zero character string terminator if _snprintf returns a negative value
 
 More details on these changes can be found on the release plan page:
-https://wiki.allseenalliance.org/core/core_15.09_release_plan#compatibility_with_previous_releases
+https://wiki.allseenalliance.org/core/core_16.04_release_plan#compatibility_with_previous_releases
 
 For details of previous releases/release families please see the release notes:
+15.09: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.09/
 15.04: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.04/
 14.12: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB14.12
 14.06: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB14.06
-14.02: https://git.allseenalliance.org/cgit/core/alljoyn.git/tree/alljoyn_core/docs/ReleaseNotes.txt?id=v14.02
 
 
 Change history
@@ -156,5 +151,3 @@ Change history
          ASACORE-863, ASACORE-909 and ASACORE-921.
 14.06  - Stability Bug fixes. Removed support for ICE.  Added a number of
          features listed above.
-14.02  - Bug fixes. Removed support for Windows RT.
-3.4.6  - Bug fixes. Improve CPU and memory usage when using sessionless signals.
