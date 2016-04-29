@@ -55,7 +55,7 @@ static const char testData[] = "This is the message that we are going to store a
 TEST(KeyStoreTest, basic_store_load) {
     QStatus status = ER_OK;
     KeyBlob key;
-    const char* fileName = "keystore_test";
+    qcc::String fileName = qcc::GetHomeDir() + "/keystore_test";
 
     /*
      *  Testing basic key encryption/decryption
@@ -66,6 +66,7 @@ TEST(KeyStoreTest, basic_store_load) {
             ASSERT_EQ(ER_OK, qcc::DeleteFile(fileName));
         }
         FileSink sink(fileName);
+        ASSERT_EQ(true, sink.IsValid()) << " Failed to create keystore file";
 
         key.Set((const uint8_t*)testData, sizeof(testData), KeyBlob::GENERIC);
         //printf("Key %d in  %s\n", key.GetType(), BytesToHexString(key.GetData(), key.GetSize()).c_str());
