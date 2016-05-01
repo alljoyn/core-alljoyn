@@ -55,7 +55,7 @@ static const char testData[] = "This is the message that we are going to store a
 TEST(KeyStoreTest, basic_store_load) {
     QStatus status = ER_OK;
     KeyBlob key;
-    std::string fileName = qcc::GetHomeDir() + "/keystore_test";
+    qcc::String fileName = qcc::GetHomeDir() + "/keystore_test";
 
     /*
      *  Testing basic key encryption/decryption
