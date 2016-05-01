@@ -17,9 +17,13 @@
 #include "PermissionMgmtTest.h"
 #include "KeyInfoHelper.h"
 #include "KeyExchanger.h"
+#include "ajTestCommon.h"
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
 #include <string>
+
+#define SLEEP_TIME_10 (10 * GlobalTimerMultiplier)
+#define SLEEP_TIME_2000 (200 * SLEEP_TIME_10)
 
 using namespace ajn;
 using namespace qcc;
@@ -1201,7 +1205,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
                 if (GetApplicationStateSignalReceived()) {
                     break;
                 }
-                qcc::Sleep(10);
+                qcc::Sleep(SLEEP_TIME_10);
             }
             EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
         }
@@ -1362,7 +1366,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             if (GetPolicyChangedReceived()) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(SLEEP_TIME_10);
         }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
@@ -1408,7 +1412,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             if (GetPolicyChangedReceived()) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(SLEEP_TIME_10);
         }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
@@ -1456,7 +1460,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
             if (GetPolicyChangedReceived()) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(SLEEP_TIME_10);
         }
         EXPECT_TRUE(GetPolicyChangedReceived());
         TestStateSignalReception();
@@ -1684,8 +1688,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::SignManifests(bus, identityCertChain[0], manifests);
         EXPECT_EQ(ER_OK, status) << "  SignManifest failed.";
 
-        /* sleep 2 seconds to get the cert to expire */
-        qcc::Sleep(2000);
+        /* sleep to get the cert to expire */
+        qcc::Sleep(SLEEP_TIME_2000);
         EXPECT_NE(ER_OK, saProxy.UpdateIdentity(identityCertChain, 1, manifests.data(), manifests.size())) << "InstallIdentity did not fail.";
         delete [] certs;
 
@@ -2332,7 +2336,7 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Fail to receive expected ChannelChanged signal.";
 
@@ -2833,7 +2837,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalAllowedFromAnyUser)
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Fail to receive expected ChannelChanged signal.";
 }
@@ -2860,7 +2864,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToEmit)
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Unexpect to receive ChannelChanged signal.";
 }
@@ -2888,7 +2892,7 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToReceive)
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Unexpect to receive ChannelChanged signal.";
 }
@@ -3645,7 +3649,7 @@ TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_TRUE(GetPropertiesChangedSignalReceived()) << " Did not receive PropertiesChanged signal.";
     /* test the PropertiesChanged signal for a list of properties changed */
@@ -3655,7 +3659,7 @@ TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_TRUE(GetPropertiesChangedSignalReceived()) << " Did not receive PropertiesChanged signal.";
 }
@@ -3696,7 +3700,7 @@ TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_FALSE(GetPropertiesChangedSignalReceived()) << " Not expected to receive PropertiesChanged signal.";
     /* test the PropertiesChanged signal for a list of properties changed */
@@ -3706,7 +3710,7 @@ TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_FALSE(GetPropertiesChangedSignalReceived()) << " Not expected to receive PropertiesChanged signal.";
 }
@@ -3741,7 +3745,7 @@ TEST_F(PermissionMgmtUseCaseTest, ReceiverAcceptsBroadcastSignal)
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Expect to receive ChannelChanged signal.";
 }
@@ -3776,7 +3780,7 @@ TEST_F(PermissionMgmtUseCaseTest, ReceiverIgnoresBroadcastSignal)
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Not expect to receive ChannelChanged signal.";
 }

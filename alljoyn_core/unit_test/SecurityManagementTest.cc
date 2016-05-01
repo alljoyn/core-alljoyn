@@ -24,6 +24,7 @@
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
 #include "KeyStore.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -33,7 +34,7 @@ using namespace std;
  * over thread sleeps because of the ease of understanding the busy wait loops.
  * Also busy wait loops do not require any platform specific threading code.
  */
-#define WAIT_MSECS 5
+#define WAIT_MSECS (5 * GlobalTimerMultiplier)
 #define TEN_MINS 600 // 600 secs is 10 mins
 
 class SecurityManagement_ApplicationStateListener : public ApplicationStateListener {

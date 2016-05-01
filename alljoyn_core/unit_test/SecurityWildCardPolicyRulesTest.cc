@@ -24,6 +24,7 @@
 #include "InMemoryKeyStore.h"
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -33,7 +34,7 @@ using namespace std;
  * over thread sleeps because of the ease of understanding the busy wait loops.
  * Also busy wait loops do not require any platform specific threading code.
  */
-#define WAIT_MSECS 5
+#define WAIT_MSECS (5 * GlobalTimerMultiplier)
 
 class WildCardPolicyRules_ApplicationStateListener : public ApplicationStateListener {
   public:

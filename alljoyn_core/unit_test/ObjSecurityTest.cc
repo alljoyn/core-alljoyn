@@ -33,6 +33,8 @@ static const char* interface1 = "org.alljoyn.alljoyn_test.interface1";
 static const char* interface2 = "org.alljoyn.alljoyn_test.interface2";
 static const char* object_path = "/org/alljoyn/alljoyn_test";
 
+#define SLEEP_TIME (10 * GlobalTimerMultiplier)
+
 class SvcTestObject : public BusObject {
 
   public:
@@ -254,9 +256,9 @@ TEST_F(ObjectSecurityTest, Test1) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     status = servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -289,7 +291,7 @@ TEST_F(ObjectSecurityTest, Test1) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -349,9 +351,9 @@ TEST_F(ObjectSecurityTest, Test2) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -384,7 +386,7 @@ TEST_F(ObjectSecurityTest, Test2) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -442,9 +444,9 @@ TEST_F(ObjectSecurityTest, Test3) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -477,7 +479,7 @@ TEST_F(ObjectSecurityTest, Test3) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -536,9 +538,9 @@ TEST_F(ObjectSecurityTest, Test4) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -571,7 +573,7 @@ TEST_F(ObjectSecurityTest, Test4) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -630,9 +632,9 @@ TEST_F(ObjectSecurityTest, Test5) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -665,7 +667,7 @@ TEST_F(ObjectSecurityTest, Test5) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -725,9 +727,9 @@ TEST_F(ObjectSecurityTest, Test6) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -760,7 +762,7 @@ TEST_F(ObjectSecurityTest, Test6) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -819,9 +821,9 @@ TEST_F(ObjectSecurityTest, Test7) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -841,7 +843,7 @@ TEST_F(ObjectSecurityTest, Test7) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -898,9 +900,9 @@ TEST_F(ObjectSecurityTest, Test8) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -917,7 +919,7 @@ TEST_F(ObjectSecurityTest, Test8) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -974,9 +976,9 @@ TEST_F(ObjectSecurityTest, Test9) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -994,7 +996,7 @@ TEST_F(ObjectSecurityTest, Test9) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -1049,9 +1051,9 @@ TEST_F(ObjectSecurityTest, Test10) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1069,7 +1071,7 @@ TEST_F(ObjectSecurityTest, Test10) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -1125,9 +1127,9 @@ TEST_F(ObjectSecurityTest, Test11) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1145,7 +1147,7 @@ TEST_F(ObjectSecurityTest, Test11) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -1201,9 +1203,9 @@ TEST_F(ObjectSecurityTest, Test12) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1221,7 +1223,7 @@ TEST_F(ObjectSecurityTest, Test12) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -1277,9 +1279,9 @@ TEST_F(ObjectSecurityTest, Test13) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1300,7 +1302,7 @@ TEST_F(ObjectSecurityTest, Test13) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -1358,9 +1360,9 @@ TEST_F(ObjectSecurityTest, Test14) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1381,7 +1383,7 @@ TEST_F(ObjectSecurityTest, Test14) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -1438,9 +1440,9 @@ TEST_F(ObjectSecurityTest, Test15) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1461,7 +1463,7 @@ TEST_F(ObjectSecurityTest, Test15) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -1520,9 +1522,9 @@ TEST_F(ObjectSecurityTest, Test16) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1540,7 +1542,7 @@ TEST_F(ObjectSecurityTest, Test16) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -1597,9 +1599,9 @@ TEST_F(ObjectSecurityTest, Test17) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1617,7 +1619,7 @@ TEST_F(ObjectSecurityTest, Test17) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -1674,9 +1676,9 @@ TEST_F(ObjectSecurityTest, Test18) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1694,7 +1696,7 @@ TEST_F(ObjectSecurityTest, Test18) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -1747,9 +1749,9 @@ TEST_F(ObjectSecurityTest, Test19) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1834,9 +1836,9 @@ TEST_F(ObjectSecurityTest, Test20) {
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1871,9 +1873,9 @@ TEST_F(ObjectSecurityTest, Test20) {
     status = serviceObject.SendSignal();
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 3 sec for signal to be arrived
+    //Wait for signal to be arrived
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered && signalReceiver.signalReceived) {
             break;
         }
@@ -1905,9 +1907,9 @@ TEST_F(ObjectSecurityTest, Test21) {
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -1943,9 +1945,9 @@ TEST_F(ObjectSecurityTest, Test21) {
     status = serviceObject.SendSignal();
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 3 sec for signal to be arrived
+    //Wait for signal to be arrived
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered && signalReceiver.signalReceived) {
             break;
         }
@@ -1977,9 +1979,9 @@ TEST_F(ObjectSecurityTest, Test22) {
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
     servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2014,9 +2016,9 @@ TEST_F(ObjectSecurityTest, Test22) {
     status = serviceObject.SendSignal();
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 3 sec for signal to be arrived
+    //Wait for signal to be arrived
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered && signalReceiver.signalReceived) {
             break;
         }
@@ -2048,9 +2050,9 @@ TEST_F(ObjectSecurityTest, Test23) {
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2085,9 +2087,9 @@ TEST_F(ObjectSecurityTest, Test23) {
     status = serviceObject.SendSignal();
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 3 sec for signal to be arrived
+    //Wait for signal to be arrived
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered && signalReceiver.signalReceived) {
             break;
         }
@@ -2119,9 +2121,9 @@ TEST_F(ObjectSecurityTest, Test24) {
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2156,9 +2158,9 @@ TEST_F(ObjectSecurityTest, Test24) {
     status = serviceObject.SendSignal();
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 3 sec for signal to be arrived
+    //Wait for signal to be arrived
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered && signalReceiver.signalReceived) {
             break;
         }
@@ -2191,9 +2193,9 @@ TEST_F(ObjectSecurityTest, Test25) {
 
     SignalSecurityTestObject serviceObject(object_path, *servicetestIntf);
     servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2228,9 +2230,9 @@ TEST_F(ObjectSecurityTest, Test25) {
     status = serviceObject.SendSignal();
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 3 sec for signal to be arrived
+    //Wait for signal to be arrived
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered && signalReceiver.signalReceived) {
             break;
         }
@@ -2454,9 +2456,9 @@ TEST_F(ObjectSecurityTest, Test26) {
     status = servicebus.RegisterBusObject(parentTestObject, false);
     ChildTestObject childTestObject(child_object_path, servicebus);
     status = servicebus.RegisterBusObject(childTestObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (grandParentTestObject.objectRegistered &&  parentTestObject.objectRegistered && childTestObject.objectRegistered) {
             break;
         }
@@ -2493,7 +2495,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     const InterfaceDescription* ifc = grandParentProxyObject.GetInterface(grand_parent_interface1);
     grandParentPingMethod = ifc->GetMember("grand_parent_ping");
     EXPECT_EQ(ER_OK, status);
-    status = grandParentProxyObject.MethodCall(*grandParentPingMethod, &pingArgs, 1, reply, 5000);
+    status = grandParentProxyObject.MethodCall(*grandParentPingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(grandParentTestObject.msgEncrypted);
@@ -2503,7 +2505,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     const InterfaceDescription* ifc2 = parentProxyObject.GetInterface(parent_interface1);
     parentPingMethod = ifc2->GetMember("parent_ping");
     EXPECT_EQ(ER_OK, status);
-    status = parentProxyObject.MethodCall(*parentPingMethod, &pingArgs, 1, reply, 5000);
+    status = parentProxyObject.MethodCall(*parentPingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(parentTestObject.msgEncrypted);
@@ -2513,7 +2515,7 @@ TEST_F(ObjectSecurityTest, Test26) {
     const InterfaceDescription* ifc3 = childProxyObject.GetInterface(child_interface1);
     childPingMethod = ifc3->GetMember("child_ping");
     EXPECT_EQ(ER_OK, status);
-    status = childProxyObject.MethodCall(*childPingMethod, &pingArgs, 1, reply, 5000);
+    status = childProxyObject.MethodCall(*childPingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(childTestObject.msgEncrypted);
@@ -2569,9 +2571,9 @@ TEST_F(ObjectSecurityTest, Test27) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     status = servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2589,7 +2591,7 @@ TEST_F(ObjectSecurityTest, Test27) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -2661,9 +2663,9 @@ TEST_F(ObjectSecurityTest, Test28) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     status = servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2681,7 +2683,7 @@ TEST_F(ObjectSecurityTest, Test28) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -2754,9 +2756,9 @@ TEST_F(ObjectSecurityTest, Test29) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     status = servicebus.RegisterBusObject(serviceObject, false);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2774,7 +2776,7 @@ TEST_F(ObjectSecurityTest, Test29) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -2847,9 +2849,9 @@ TEST_F(ObjectSecurityTest, Test30) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     status = servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2867,7 +2869,7 @@ TEST_F(ObjectSecurityTest, Test30) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_FALSE(serviceObject.msgEncrypted);
@@ -2939,9 +2941,9 @@ TEST_F(ObjectSecurityTest, Test31) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     status = servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -2959,7 +2961,7 @@ TEST_F(ObjectSecurityTest, Test31) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);
@@ -3031,9 +3033,9 @@ TEST_F(ObjectSecurityTest, Test32) {
 
     SvcTestObject serviceObject(object_path, servicebus);
     status = servicebus.RegisterBusObject(serviceObject, true);
-    //Wait for a maximum of 3 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 300; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME);
         if (serviceObject.objectRegistered) {
             break;
         }
@@ -3051,7 +3053,7 @@ TEST_F(ObjectSecurityTest, Test32) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject.msgEncrypted);

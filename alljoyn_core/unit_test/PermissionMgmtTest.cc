@@ -39,6 +39,9 @@
 #include "PermissionMgmtTest.h"
 #include "BusInternal.h"
 
+#define SLEEP_TIME_10 (10 * GlobalTimerMultiplier)
+#define SLEEP_TIME_100 (10 * SLEEP_TIME_10)
+
 using namespace ajn;
 using namespace qcc;
 
@@ -688,12 +691,12 @@ QStatus BasePermissionMgmtTest::TeardownBus(BusAttachment& bus)
 
 void BasePermissionMgmtTest::DetermineStateSignalReachable()
 {
-    /* sleep a max of 1 second to see whether the ApplicationState signal is received */
+    /* sleep to see whether the ApplicationState signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetApplicationStateSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
     }
     canTestStateSignalReception = GetApplicationStateSignalReceived();
     SetApplicationStateSignalReceived(false);
@@ -883,7 +886,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject&
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -899,7 +902,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOff(BusAttachment& bus, ProxyBusObject
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -915,7 +918,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVUp(BusAttachment& bus, ProxyBusObjec
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -972,7 +975,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVDown(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -988,7 +991,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVChannel(BusAttachment& bus, ProxyBus
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1004,7 +1007,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVMute(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1020,7 +1023,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVInputSource(BusAttachment& bus, Prox
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1040,7 +1043,7 @@ QStatus PermissionMgmtTestHelper::JoinPeerSession(BusAttachment& initiator, BusA
             return status;
         }
         /* sleep a few seconds since the responder may not yet setup the listener port */
-        qcc::Sleep(100);
+        qcc::Sleep(SLEEP_TIME_100);
     }
     return status;
 }
@@ -1057,7 +1060,7 @@ QStatus BasePermissionMgmtTest::JoinSessionWithService(BusAttachment& initiator,
         if (servicePortListener.lastJoiner == initiator.GetUniqueName()) {
             return ER_OK;
         }
-        qcc::Sleep(100);
+        qcc::Sleep(SLEEP_TIME_100);
     }
     return ER_TIMEOUT;
 }

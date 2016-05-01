@@ -41,7 +41,7 @@
  * over thread sleeps because of the ease of understanding the busy wait loops.
  * Also busy wait loops do not require any platform specific threading code.
  */
-#define WAIT_TIME 5
+#define WAIT_TIME (5 * GlobalTimerMultiplier)
 
 using namespace std;
 using namespace qcc;
@@ -179,7 +179,7 @@ TEST_F(PresenceTest, PresenceWellKnownNames) {
     status = bus.AdvertiseName(wellKnownNameReqAdvLocalOnly.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    // wait for up to 10 seconds to find name
+    // wait to find name
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (presenceFoundAdvReq && presenceFoundAdvNotReq && presenceFoundNotAdvReq && presenceFoundReqAdvLocalOnly) {
             break;
@@ -379,7 +379,7 @@ TEST_F(PresenceTest, PingSessionNames) {
     status = otherBus.FindAdvertisedName(getUniqueNamePrefix(bus).c_str());
     EXPECT_EQ(ER_OK, status);
 
-    // wait for up to 10 seconds to find name
+    // wait to find name
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (presenceFoundAdvReq) {
             break;

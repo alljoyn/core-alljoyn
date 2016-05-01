@@ -23,6 +23,7 @@
 #include "InMemoryKeyStore.h"
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -32,7 +33,7 @@ using namespace std;
  * over thread sleeps because of the ease of understanding the busy wait loops.
  * Also busy wait loops do not require any platform specific threading code.
  */
-#define WAIT_MSECS 5
+#define WAIT_MSECS (5 * GlobalTimerMultiplier)
 
 class DefaultPolicy_ApplicationStateListener : public ApplicationStateListener {
   public:
@@ -662,7 +663,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDSA_everything_passes)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
+    //Wait for the Chirp Signal.
     for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
@@ -679,7 +680,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDSA_everything_passes)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer2BusObject.Signal(peer1Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer2Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
+    //Wait for the Chirp Signal.
     for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
@@ -772,7 +773,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_manager_must_have_certificate_to
                                                  *managerBus.GetInterface(interfaceName)->GetMember("Chirp"),
                                                  &arg, 1, 0, 0));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
+        //Wait for the Chirp Signal.
         for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
@@ -799,7 +800,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_manager_must_have_certificate_to
                                                *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"),
                                                &arg, 1, 0, 0));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
+        //Wait for the Chirp Signal.
         for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
@@ -933,7 +934,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDHE_NULL_everything_fails)
         // was actually sent or is it just a failure to properly report the
         // proper status.
         if (ER_OK == status) {
-            //Wait for a maximum of 2 sec for the Chirp Signal.
+            //Wait for the Chirp Signal.
             for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
                 if (chirpSignalReceiver.signalReceivedFlag) {
                     break;
@@ -992,7 +993,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_ECDHE_NULL_everything_fails)
                                                *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"),
                                                &arg, 1, 0, 0));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
+        //Wait for the Chirp Signal.
         for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
@@ -1146,7 +1147,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_MemberShipCertificate_not_instal
                                                *peer2Bus.GetInterface(interfaceName)->GetMember("Chirp"),
                                                &arg, 1, 0, 0));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
+        //Wait for the Chirp Signal.
         for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
@@ -1205,7 +1206,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_MemberShipCertificate_not_instal
                                                *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"),
                                                &arg, 1, 0, 0));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
+        //Wait for the Chirp Signal.
         for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
@@ -1336,7 +1337,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_unsecure_method_signal_propertie
                                                *peer2Bus.GetInterface(interfaceName)->GetMember("Chirp"),
                                                &arg, 1, 0, 0));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
+        //Wait for the Chirp Signal.
         for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
@@ -1409,7 +1410,7 @@ TEST_F(SecurityDefaultPolicyTest, DefaultPolicy_unsecure_method_signal_propertie
                                                *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"),
                                                &arg, 1, 0, 0));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
+        //Wait for the Chirp Signal.
         for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;

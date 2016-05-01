@@ -21,6 +21,8 @@
 
 #include "ajTestCommon.h"
 
+#define SLEEP_TIME (10 * GlobalTimerMultiplier)
+
 using namespace ajn;
 
 class AutoPingerTest : public testing::Test {
@@ -88,7 +90,7 @@ class TestPingListener : public PingListener {
         foundmutex.Lock();
         while (retries < MAX_RETRIES && found.find(destination) == found.end()) {
             foundmutex.Unlock();
-            qcc::Sleep(10);
+            qcc::Sleep(SLEEP_TIME);
             foundmutex.Lock();
         }
         foundmutex.Unlock();
@@ -103,7 +105,7 @@ class TestPingListener : public PingListener {
         lostmutex.Lock();
         while (retries < MAX_RETRIES && lost.find(destination) == lost.end()) {
             lostmutex.Unlock();
-            qcc::Sleep(10);
+            qcc::Sleep(SLEEP_TIME);
             lostmutex.Lock();
             ++retries;
         }

@@ -42,7 +42,7 @@
  * over thread sleeps because of the ease of understanding the busy wait loops.
  * Also busy wait loops do not require any platform specific threading code.
  */
-#define WAIT_TIME 5
+#define WAIT_TIME (5 * GlobalTimerMultiplier)
 
 using namespace ajn;
 

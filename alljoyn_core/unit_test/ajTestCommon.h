@@ -21,6 +21,12 @@
 #include <qcc/String.h>
 #include <alljoyn/BusAttachment.h>
 #include "BusEndpoint.h"
+
+/* Defined in ajTest.cc */
+extern size_t GlobalTimerMultiplier;
+
+#define METHOD_CALL_TIMEOUT (5000 * GlobalTimerMultiplier)
+
 /*
  * this header file contains a functions that can be used to replace common
  * actions in the test code.

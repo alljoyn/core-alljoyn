@@ -42,7 +42,7 @@
  * over thread sleeps because of the ease of understanding the busy wait loops.
  * Also busy wait loops do not require any platform specific threading code.
  */
-#define WAIT_TIME 5
+#define WAIT_TIME (5 * GlobalTimerMultiplier)
 
 using namespace ajn;
 using namespace qcc;
@@ -198,7 +198,7 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -256,7 +256,7 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -275,7 +275,7 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -340,7 +340,7 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -401,7 +401,7 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -415,7 +415,7 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -519,7 +519,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag1) {
             break;
@@ -527,7 +527,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
+    //Wait for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (announceListenerFlag2) {
             break;
@@ -592,7 +592,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag1) {
             break;
@@ -600,7 +600,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
+    //Wait for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (announceListenerFlag2) {
             break;
@@ -618,7 +618,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
+    //Wait for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (announceListenerFlag2) {
             break;
@@ -686,7 +686,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag1) {
             break;
@@ -694,7 +694,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
+    //Wait for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (announceListenerFlag2) {
             break;
@@ -702,7 +702,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
         qcc::Sleep(WAIT_TIME);
     }
 
-    //Wait for a maximum of 5 sec for the 3rd Announce Signal.
+    //Wait for the 3rd Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (announceListenerFlag3) {
             break;
@@ -728,7 +728,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
+    //Wait for the second Announce Signal.
     for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
         if (announceListenerFlag2) {
             break;
@@ -833,7 +833,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -923,7 +923,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -1019,7 +1019,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag) {
             break;
@@ -1106,7 +1106,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerCount == 1) {
             break;
@@ -1181,7 +1181,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerCount == 1) {
             break;
@@ -1256,7 +1256,7 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerCount == 1) {
             break;
@@ -1330,7 +1330,7 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerCount == 1) {
             break;
@@ -1428,7 +1428,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerCount == 1) {
             break;
@@ -1443,7 +1443,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerCount == 2) {
             break;
@@ -1538,7 +1538,7 @@ TEST_F(AboutListenerTest, StressInterfaces) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (announceListenerFlag3) {
             break;
@@ -1683,7 +1683,7 @@ TEST_F(AboutListenerTest, WhoImplementsNull) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
+    //Wait for the Announce Signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
         if (aboutListener.announceListenerCount == 1) {
             break;
@@ -1789,7 +1789,7 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
+    //Wait for the Announce Signal. Even if we get an
     // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
     // Announce signal
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
@@ -1821,7 +1821,7 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
+    //Wait for the Announce Signal. Even if we get an
     // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
     // Announce signal.
     for (int msec = 0; msec < 10000; msec += WAIT_TIME) {

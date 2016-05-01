@@ -20,6 +20,9 @@
 
 #include <qcc/Thread.h>
 
+#define SLEEP_TIME_5 (5 * GlobalTimerMultiplier)
+#define SLEEP_TIME_10 (10 * GlobalTimerMultiplier)
+
 const char* SERVICE_OBJECT_PATH = "/org/alljoyn/test_services";
 
 class InterfaceTest : public testing::Test {
@@ -143,12 +146,12 @@ TEST_F(InterfaceTest, SUCCESS_RegisterBusObject) {
     //Register service object
     status =  g_msgBus->RegisterBusObject(myService);
     ASSERT_EQ(ER_OK, status);
-    // wait for signal upto 1.0 sec (5 * 200 ms)
+    // wait for signal
     for (int i = 0; i < 200; ++i) {
         if (true == myService.getobjectRegistered()) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(SLEEP_TIME_5);
     }
     ASSERT_TRUE(myService.getobjectRegistered());
 }
@@ -228,9 +231,9 @@ TEST_F(InterfaceTest, AddInterfaceAgainToRegisteredObject) {
 
     status =  g_msgBus->RegisterBusObject(myService);
     ASSERT_EQ(ER_OK, status);
-    //Wait for a maximum of 2 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
         if (myService.getobjectRegistered()) {
             break;
         }
@@ -296,9 +299,9 @@ TEST_F(InterfaceTest, GetSignal) {
 
     status =  g_msgBus->RegisterBusObject(myService);
     ASSERT_EQ(ER_OK, status);
-    //Wait for a maximum of 2 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
         if (myService.getobjectRegistered()) {
             break;
         }
@@ -330,9 +333,9 @@ TEST_F(InterfaceTest, AddSameSignalToInterface_AndActivateItLater) {
     /* After Activation nothing can be added to the interface - this test should throw an error*/
     status =  g_msgBus->RegisterBusObject(myService);
     ASSERT_EQ(ER_OK, status);
-    //Wait for a maximum of 2 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
         if (myService.getobjectRegistered()) {
             break;
         }
@@ -369,9 +372,9 @@ TEST_F(InterfaceTest, AddSamePropertyToInterface_AndActivateItLater) {
 
     status =  g_msgBus->RegisterBusObject(myService);
     ASSERT_EQ(ER_OK, status);
-    //Wait for a maximum of 2 sec for object to be registered
+    //Wait for object to be registered
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(SLEEP_TIME_10);
         if (myService.getobjectRegistered()) {
             break;
         }

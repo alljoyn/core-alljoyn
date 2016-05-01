@@ -22,6 +22,7 @@
 #include <qcc/Debug.h>
 
 #include <string.h>
+#include <climits>
 
 static void DebugOut(DbgMsgType type, const char* module, const char* msg, void* context)
 {
@@ -43,6 +44,24 @@ static bool IsDebugOn(char** env)
     return false;
 }
 
+static void usage(void)
+{
+    printf("Usage: ajtest [-h] [--timeout_multiplier <value>] [gtest options]\n\n");
+    printf("Options:\n");
+    printf("   -h                           = Print this help message\n");
+    printf("   --timeout_multiplier <value> = Various timeouts multiplier, positivie integer value which defaults to 1. Useful for example when running ajtest under Valgrind.\n");
+    printf("\n");
+}
+
+/*
+ * Multiplier factor allowing to scale hardcoded UT timeouts for calls like:
+ * - Condition::TimedWait
+ * - qcc::Sleep
+ * - Event::Wait
+ * - ProxyBusObject::MethodCall
+ * - RemoteEndpoint::Join
+ */
+size_t GlobalTimerMultiplier = 1;
 
 /** Main entry point */
 int CDECL_CALL main(int argc, char** argv, char** envArg)
@@ -63,6 +82,29 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
 
     if (!IsDebugOn(envArg)) {
         QCC_RegisterOutputCallback(DebugOut, NULL);
+    }
+
+    for (int i = 1; i < argc; ++i) {
+        if (0 == strcmp("--timeout_multiplier", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option --timeout_multiplier requires a parameter\n");
+                usage();
+                exit(1);
+            } else {
+                unsigned long gtm = strtoul(argv[i], NULL, 10);
+                if ((gtm > 0) && (gtm < ULONG_MAX)) {
+                    GlobalTimerMultiplier = gtm;
+                } else {
+                    printf("out of range --timeout_multiplier value\n");
+                    usage();
+                    exit(1);
+                }
+            }
+        } else if (0 == strcmp("-h", argv[i])) {
+            usage();
+            exit(0);
+        }
     }
 
     printf("\n Running alljoyn_core unit test\n");
