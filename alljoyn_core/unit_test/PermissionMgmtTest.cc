@@ -883,7 +883,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject&
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, 50000);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -899,7 +899,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOff(BusAttachment& bus, ProxyBusObject
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, 50000);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -915,7 +915,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVUp(BusAttachment& bus, ProxyBusObjec
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, 50000);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -972,7 +972,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVDown(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, 50000);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -988,7 +988,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVChannel(BusAttachment& bus, ProxyBus
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, 50000);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1004,7 +1004,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVMute(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, 50000);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1020,7 +1020,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVInputSource(BusAttachment& bus, Prox
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, 50000);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;

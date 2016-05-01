@@ -972,7 +972,7 @@ class SecSignalTest :
         QStatus status = destination ? prov.SendSignal(newValue, *destination) : prov.SendSignal(newValue);
 
         if (status == ER_OK) {
-            EXPECT_EQ(ER_OK, (status = condition.TimedWait(lock, 10000)));
+            EXPECT_EQ(ER_OK, (status = condition.TimedWait(lock, 50000)));
             EXPECT_EQ(requiredEvents, eventCount);
             EXPECT_EQ(newValue, lastValue) << "Signal value";
             status = ((eventCount == requiredEvents) && (newValue == lastValue)) ? ER_OK : ER_FAIL;

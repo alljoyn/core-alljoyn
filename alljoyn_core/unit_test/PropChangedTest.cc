@@ -2523,7 +2523,7 @@ class SecPropChangedTest :
     QStatus GetProperty()
     {
         MsgArg arg;
-        return proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+        return proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 50000);
     }
 
     QStatus GetAllProperties(size_t expected = 2)
@@ -2580,7 +2580,7 @@ class SecPropChangedTest :
     QStatus CheckProperty(bool expected)
     {
         MsgArg arg;
-        QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+        QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 50000);
         EXPECT_EQ(ER_OK, status) << "Failed to GetProperty";
         if (ER_OK != status) {
             return status;

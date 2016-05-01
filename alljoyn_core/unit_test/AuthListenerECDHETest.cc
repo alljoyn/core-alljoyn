@@ -579,7 +579,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         proxyObj.AddInterface(*itf);
         Message reply(selectedClientBus);
 
-        return proxyObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
+        return proxyObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, 50000);
     }
 
   private:

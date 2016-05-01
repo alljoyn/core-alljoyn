@@ -476,7 +476,7 @@ TEST_F(PerfTest, AsyncMethodCallTest_SimpleCall) {
     ASSERT_EQ(ER_OK, status);
     //Wait upto 2 seconds for the AsyncMethodCalls to complete;
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(100);
         if (testclient.getSignalFlag() == 1000) {
             break;
         }
