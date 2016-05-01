@@ -17,9 +17,12 @@
 #include "PermissionMgmtTest.h"
 #include "KeyInfoHelper.h"
 #include "KeyExchanger.h"
+#include "ajTestCommon.h"
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
 #include <string>
+
+#define CERT_EXPIRE_WAIT_TIME (200 * s_globalTimerMultiplier)
 
 using namespace ajn;
 using namespace qcc;
@@ -1196,12 +1199,12 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void TestStateSignalReception()
     {
         if (canTestStateSignalReception) {
-            /* sleep a second to see whether the ApplicationState signal is received */
+            /* sleep to see whether the ApplicationState signal is received */
             for (int cnt = 0; cnt < 100; cnt++) {
                 if (GetApplicationStateSignalReceived()) {
                     break;
                 }
-                qcc::Sleep(10);
+                qcc::Sleep(WAIT_TIME_10);
             }
             EXPECT_TRUE(GetApplicationStateSignalReceived()) << " Fail to receive expected ApplicationState signal.";
         }
@@ -1355,14 +1358,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         /* try claiming with state claimable.  Expect to succeed */
         SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", false, &adminBus)) << " InvokeClaim failed.";
-        /* sleep a max of 1 second to see whether the claimed app issues the
+        /* sleep to see whether the claimed app issues the
            PolicyChanged callback after the InvokeClaim is returned.
          */
         for (int cnt = 0; cnt < 100; cnt++) {
             if (GetPolicyChangedReceived()) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
         }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
@@ -1401,14 +1404,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         SetApplicationStateSignalReceived(false);
         SetPolicyChangedReceived(false);
         EXPECT_EQ(ER_OK, InvokeClaim(false, adminBus, consumerBus, "3030303", "Consumer", false, &adminBus)) << " InvokeClaim failed.";
-        /* sleep a max of 1 second to see whether the claimed app issues the
+        /* sleep to see whether the claimed app issues the
            PolicyChanged callback after the InvokeClaim is returned.
          */
         for (int cnt = 0; cnt < 100; cnt++) {
             if (GetPolicyChangedReceived()) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
         }
         EXPECT_TRUE(GetPolicyChangedReceived());
 
@@ -1449,14 +1452,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         IdentityCertificate* identityCertChain = NULL;
         size_t certChainCount = 0;
         EXPECT_EQ(ER_OK, InvokeClaim(false, consumerBus, remoteControlBus, "6060606", "remote control", false, &consumerBus, &identityCertChain, &certChainCount)) << " InvokeClaim failed.";
-        /* sleep a max of 1 second to see whether the claimed app issues the
+        /* sleep to see whether the claimed app issues the
            PolicyChanged callback after the InvokeClaim is returned.
          */
         for (int cnt = 0; cnt < 100; cnt++) {
             if (GetPolicyChangedReceived()) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
         }
         EXPECT_TRUE(GetPolicyChangedReceived());
         TestStateSignalReception();
@@ -1684,8 +1687,8 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         status = PermissionMgmtTestHelper::SignManifests(bus, identityCertChain[0], manifests);
         EXPECT_EQ(ER_OK, status) << "  SignManifest failed.";
 
-        /* sleep 2 seconds to get the cert to expire */
-        qcc::Sleep(2000);
+        /* sleep to get the cert to expire */
+        qcc::Sleep(CERT_EXPIRE_WAIT_TIME);
         EXPECT_NE(ER_OK, saProxy.UpdateIdentity(identityCertChain, 1, manifests.data(), manifests.size())) << "InstallIdentity did not fail.";
         delete [] certs;
 
@@ -2327,12 +2330,12 @@ TEST_F(PermissionMgmtUseCaseTest, TestAllCalls)
     EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     SetChannelChangedSignalReceived(false);
     ConsumerCanTVUpAndDownAndNotChannel();
-    /* sleep a second to see whether the ChannelChanged signal is received */
+    /* sleep to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Fail to receive expected ChannelChanged signal.";
 
@@ -2828,12 +2831,12 @@ TEST_F(PermissionMgmtUseCaseTest, SignalAllowedFromAnyUser)
 
     SetChannelChangedSignalReceived(false);
     ConsumerCanChangeChannel();
-    /* sleep a second to see whether the ChannelChanged signal is received */
+    /* sleep to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Fail to receive expected ChannelChanged signal.";
 }
@@ -2855,12 +2858,12 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToEmit)
 
     SetChannelChangedSignalReceived(false);
     ConsumerCanChangeChannel();
-    /* sleep a second to see whether the ChannelChanged signal is received */
+    /* sleep to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Unexpect to receive ChannelChanged signal.";
 }
@@ -2883,12 +2886,12 @@ TEST_F(PermissionMgmtUseCaseTest, SignalNotAllowedToReceive)
 
     SetChannelChangedSignalReceived(false);
     ConsumerCanChangeChannel();
-    /* sleep a second to see whether the ChannelChanged signal is received */
+    /* sleep to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Unexpect to receive ChannelChanged signal.";
 }
@@ -3640,22 +3643,22 @@ TEST_F(PermissionMgmtUseCaseTest, ReceivePropertiesChangedSignal)
     SessionId sessionId;
     EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     AppCanSetTVVolume(consumerBus, serviceBus, 14, true);
-    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    /* sleep to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(GetPropertiesChangedSignalReceived()) << " Did not receive PropertiesChanged signal.";
     /* test the PropertiesChanged signal for a list of properties changed */
     AppCanSetTVVolume(consumerBus, serviceBus, 23, true);
-    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    /* sleep to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(GetPropertiesChangedSignalReceived()) << " Did not receive PropertiesChanged signal.";
 }
@@ -3691,22 +3694,22 @@ TEST_F(PermissionMgmtUseCaseTest, DoesNotReceivePropertiesChangedSignal)
     SessionId sessionId;
     EXPECT_EQ(ER_OK, JoinSessionWithService(consumerBus, sessionId));
     AppCanSetTVVolume(consumerBus, serviceBus, 14, true, false);
-    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    /* sleep to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_FALSE(GetPropertiesChangedSignalReceived()) << " Not expected to receive PropertiesChanged signal.";
     /* test the PropertiesChanged signal for a list of properties changed */
     AppCanSetTVVolume(consumerBus, serviceBus, 25, true, false);
-    /* sleep at most 2 seconds to see whether the PropertiesChanged signal is received */
+    /* sleep to see whether the PropertiesChanged signal is received */
     for (int cnt = 0; cnt < 200; cnt++) {
         if (GetPropertiesChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_FALSE(GetPropertiesChangedSignalReceived()) << " Not expected to receive PropertiesChanged signal.";
 }
@@ -3736,12 +3739,12 @@ TEST_F(PermissionMgmtUseCaseTest, ReceiverAcceptsBroadcastSignal)
     SetChannelChangedSignalReceived(false);
     ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::ExerciseTVDown(consumerBus, clientProxyObject));
-    /* sleep at most 5 seconds to see whether the ChannelChanged signal is received */
+    /* sleep to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 500; cnt++) {
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(GetChannelChangedSignalReceived()) << " Expect to receive ChannelChanged signal.";
 }
@@ -3771,12 +3774,12 @@ TEST_F(PermissionMgmtUseCaseTest, ReceiverIgnoresBroadcastSignal)
     SetChannelChangedSignalReceived(false);
     ProxyBusObject clientProxyObject(consumerBus, serviceBus.GetUniqueName().c_str(), GetPath(), 0, false);
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::ExerciseTVDown(consumerBus, clientProxyObject));
-    /* sleep at most 5 seconds to see whether the ChannelChanged signal is received */
+    /* sleep to see whether the ChannelChanged signal is received */
     for (int cnt = 0; cnt < 500; cnt++) {
         if (GetChannelChangedSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_FALSE(GetChannelChangedSignalReceived()) << " Not expect to receive ChannelChanged signal.";
 }

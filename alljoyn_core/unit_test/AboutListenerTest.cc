@@ -37,13 +37,6 @@
  * responding to an advertisement we have made.
  */
 
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_TIME 5
-
 using namespace ajn;
 using namespace qcc;
 using namespace std;
@@ -198,12 +191,12 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -256,12 +249,12 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -275,12 +268,12 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -340,12 +333,12 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface)
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -401,12 +394,12 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -415,12 +408,12 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     status = clientBus.CancelWhoImplements(ifaceName.c_str());
@@ -519,20 +512,20 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
-    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+    //Wait for the second Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (announceListenerFlag2) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag1);
@@ -592,20 +585,20 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
-    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+    //Wait for the second Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (announceListenerFlag2) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag1);
@@ -618,12 +611,12 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
-    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+    //Wait for the second Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (announceListenerFlag2) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_FALSE(announceListenerFlag1);
@@ -686,28 +679,28 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
-    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+    //Wait for the second Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (announceListenerFlag2) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
-    //Wait for a maximum of 5 sec for the 3rd Announce Signal.
-    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+    //Wait for the 3rd Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (announceListenerFlag3) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag1);
@@ -728,12 +721,12 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     status = clientBus.WhoImplements(ifaceName.c_str());
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 5 sec for the second Announce Signal.
-    for (int msec = 0; msec < 5000; msec += WAIT_TIME) {
+    //Wait for the second Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (announceListenerFlag2) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_FALSE(announceListenerFlag1);
@@ -833,12 +826,12 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -923,12 +916,12 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -1019,12 +1012,12 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -1106,12 +1099,12 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerCount == 1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_EQ(1u, aboutListener.announceListenerCount);
@@ -1181,12 +1174,12 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerCount == 1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_EQ(1u, aboutListener.announceListenerCount);
@@ -1256,12 +1249,12 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerCount == 1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_EQ(1u, aboutListener.announceListenerCount);;
@@ -1330,12 +1323,12 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerCount == 1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_EQ(1u, aboutListener.announceListenerCount);;
@@ -1428,12 +1421,12 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerCount == 1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_EQ(1u, aboutListener.announceListenerCount);
@@ -1443,12 +1436,12 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerCount == 2) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_EQ(2u, aboutListener.announceListenerCount);
@@ -1538,12 +1531,12 @@ TEST_F(AboutListenerTest, StressInterfaces) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag3) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag3);
@@ -1683,12 +1676,12 @@ TEST_F(AboutListenerTest, WhoImplementsNull) {
 
     aboutObj.Announce(port, aboutData);
 
-    //Wait for a maximum of 10 sec for the Announce Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    //Wait for the Announce Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerCount == 1) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_EQ(1u, aboutListener.announceListenerCount);
@@ -1789,14 +1782,14 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
+    //Wait for the Announce Signal. Even if we get an
     // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
     // Announce signal
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);
@@ -1821,14 +1814,14 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     status = aboutObj.Announce(port, aboutData);
     EXPECT_EQ(ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE, status);
 
-    //Wait for a maximum of 10 sec for the Announce Signal. Even if we get an
+    //Wait for the Announce Signal. Even if we get an
     // ER_ABOUT_INVALID_ABOUTDATA_FIELD_APPID_SIZE error we expect to get the
     // Announce signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (announceListenerFlag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(announceListenerFlag);

@@ -24,16 +24,12 @@
 #include "InMemoryKeyStore.h"
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
 using namespace std;
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_MSECS 5
+
 #define TEN_MINS 600
 
 static String PrintActionMask(uint8_t actionMask) {
@@ -301,11 +297,11 @@ class SecurityPolicyRulesTest : public testing::Test {
                                               identityCertChainMaster, certChainSize,
                                               manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(managerBus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         ECCPublicKey managerPublicKey;
@@ -336,11 +332,11 @@ class SecurityPolicyRulesTest : public testing::Test {
                                             identityCertChainPeer1, certChainSize,
                                             manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(peer1Bus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
@@ -365,11 +361,11 @@ class SecurityPolicyRulesTest : public testing::Test {
                                             identityCertChainPeer2, certChainSize,
                                             manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
@@ -1992,12 +1988,12 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
 
     if (GetParam().busObjAllowedToSendSignal) {
         EXPECT_EQ(ER_OK, status);
-        //Wait for a maximum of 2 sec for the Chirp Signal.
-        for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        //Wait for the Chirp Signal.
+        for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
         if (GetParam().allowedToReceiveSignal) {
             EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
@@ -2227,12 +2223,12 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
 
     if (GetParam().busObjAllowedToSendSignal) {
         EXPECT_EQ(ER_OK, status);
-        //Wait for a maximum of 2 sec for the Chirp Signal.
-        for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        //Wait for the Chirp Signal.
+        for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
         if (GetParam().allowedToReceiveSignal) {
             EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
@@ -3631,12 +3627,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_1)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -3823,12 +3819,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_2)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -4009,12 +4005,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_3)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -4198,12 +4194,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_4)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -4455,12 +4451,12 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -4713,12 +4709,12 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -4906,12 +4902,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_7)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -5100,12 +5096,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -5463,12 +5459,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_10)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -5733,12 +5729,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -6003,12 +5999,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -6226,12 +6222,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_13)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -6451,12 +6447,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_14)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -6595,12 +6591,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_15)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 
@@ -6742,12 +6738,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_16)
     // Signals are send and forget.  They will always return ER_OK.
     EXPECT_EQ(ER_OK, peer1BusObject.Signal(peer2Bus.GetUniqueName().c_str(), peer1ToPeer2SessionId, *peer1Bus.GetInterface(interfaceName)->GetMember("Chirp"), &arg, 1, 0, 0));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
 

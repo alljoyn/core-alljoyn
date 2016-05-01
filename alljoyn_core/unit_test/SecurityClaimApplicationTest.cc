@@ -28,17 +28,11 @@
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
 #include "InMemoryKeyStore.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
 using namespace std;
-
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_MSECS 5
 
 class SecurityClaimApplicationTest : public testing::Test {
   public:
@@ -212,12 +206,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -228,12 +222,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -285,12 +279,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_session_successful)
                                         identityCertChain, ArraySize(identityCertChain),
                                         manifests, ArraySize(manifests)));
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
@@ -313,12 +307,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_PS
     //The State signal is only emitted if manifest template is installed
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -342,12 +336,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_PS
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -418,12 +412,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_SP
     //The State signal is only emitted if manifest template is installed
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -447,12 +441,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_with_NULL_fails_when_peer_requires_SP
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -705,12 +699,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -721,12 +715,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -737,12 +731,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer2Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -804,12 +798,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
                                         identityCertChain, ArraySize(identityCertChain),
                                         manifests, ArraySize(manifests)));
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
@@ -844,12 +838,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -871,12 +865,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -928,12 +922,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_PSK_session_successful)
                                         identityCertChain, ArraySize(identityCertChain),
                                         manifests, ArraySize(manifests)));
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
@@ -969,12 +963,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_SPEKE_session_successful)
     /* The State signal is only emitted if manifest template is installed. */
     SetManifestTemplate(securityManagerBus);
 
-    /* Wait for a maximum of 10 sec for the Application.State Signal. */
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    /* Wait for the Application.State Signal. */
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -996,12 +990,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_SPEKE_session_successful)
     /* The State signal is only emitted if manifest template is installed. */
     SetManifestTemplate(peer1Bus);
 
-    /* Wait for a maximum of 10 sec for the Application.State Signal */
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    /* Wait for the Application.State Signal */
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -1052,12 +1046,12 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_SPEKE_session_successful)
                                         identityCertChain, 1,
                                         manifests, ArraySize(manifests)));
 
-    /* Wait for a maximum of 10 sec for the Application.State Signal. */
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    /* Wait for the Application.State Signal. */
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
@@ -1090,12 +1084,12 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1106,12 +1100,12 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -1163,12 +1157,12 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim)
                                         identityCertChain, ArraySize(identityCertChain),
                                         manifests, ArraySize(manifests)));
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
@@ -1208,12 +1202,12 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1224,12 +1218,12 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -1281,12 +1275,12 @@ TEST_F(SecurityClaimApplicationTest, fail_second_claim_with_different_parameters
                                         identityCertChain, ArraySize(identityCertChain),
                                         manifests, ArraySize(manifests)));
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
@@ -1335,12 +1329,12 @@ TEST_F(SecurityClaimApplicationTest, fail_when_claiming_non_claimable)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1351,12 +1345,12 @@ TEST_F(SecurityClaimApplicationTest, fail_when_claiming_non_claimable)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -1437,12 +1431,12 @@ TEST_F(SecurityClaimApplicationTest, fail_claimer_security_not_enabled)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1453,12 +1447,12 @@ TEST_F(SecurityClaimApplicationTest, fail_claimer_security_not_enabled)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer2Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -1521,12 +1515,12 @@ TEST_F(SecurityClaimApplicationTest, fail_when_peer_being_claimed_is_not_securit
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
 
@@ -1693,12 +1687,12 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1709,12 +1703,12 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1725,12 +1719,12 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer2Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -1758,12 +1752,12 @@ TEST_F(SecurityClaimApplicationTest, two_peers_claim_application_simultaneously)
     EXPECT_TRUE(claimThread1.status == ER_OK || claimThread2.status == ER_OK);
     EXPECT_TRUE(claimThread1.status == ER_PERMISSION_DENIED || claimThread2.status == ER_PERMISSION_DENIED);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);
@@ -1796,12 +1790,12 @@ TEST_F(SecurityClaimApplicationTest, fail_when_admin_and_peer_use_different_secu
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1812,12 +1806,12 @@ TEST_F(SecurityClaimApplicationTest, fail_when_admin_and_peer_use_different_secu
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -1882,12 +1876,12 @@ TEST_F(SecurityClaimApplicationTest, fail_if_incorrect_publickey_used_in_identit
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     appStateListener.stateChanged = false;
@@ -1898,12 +1892,12 @@ TEST_F(SecurityClaimApplicationTest, fail_if_incorrect_publickey_used_in_identit
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     SecurityApplicationProxy sapWithPeer1(securityManagerBus, peer1Bus.GetUniqueName().c_str());
@@ -2018,12 +2012,12 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal)
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(appStateListener.stateChanged);
@@ -2077,12 +2071,12 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(securityManagerBus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(appStateListener.stateChanged);
@@ -2110,12 +2104,12 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
     /* The State signal is only emitted if manifest template is installed */
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (peer1AppStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(peer1AppStateListener.stateChanged);
@@ -2169,12 +2163,12 @@ TEST_F(SecurityClaimApplicationTest, get_application_state_signal_for_claimed_pe
                                         identityCertChain, ArraySize(identityCertChain),
                                         manifests, ArraySize(manifests)));
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (peer1AppStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(peer1AppStateListener.stateChanged);
@@ -2295,12 +2289,12 @@ TEST_F(SecurityClaimApplicationTest, DISABLED_get_application_state_signal_for_c
     peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer1KeyListener);
     SetManifestTemplate(peer1Bus);
 
-    //Wait for a maximum of 10 sec for the Application.State Signal.
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    //Wait for the Application.State Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.stateChanged) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(appStateListener.stateChanged);

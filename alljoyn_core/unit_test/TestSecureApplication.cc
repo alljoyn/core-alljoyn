@@ -31,11 +31,11 @@ using namespace ajn;
 using namespace qcc;
 
 /*
- * Wait up to 10 seconds, to be lenient toward slow tests running on VMs, built in
+ * Wait to be lenient toward slow tests running on VMs, built in
  * Debug mode, with App Verifier enabled, using an out-of-proc router node, while
  * the VM host machine is busy compiling from multiple threads, etc.
  */
-static const uint32_t s_slowTestResponseTimeout = 10000;
+#define SLOW_TEST_RESPONSE_TIMEOUT (10000 * s_globalTimerMultiplier)
 
 QStatus TestSecureApplication::Init(TestSecurityManager& tsm)
 {
@@ -119,7 +119,7 @@ QStatus TestSecureApplication::JoinSession(TestSecureApplication& sessionHost, S
     sessionHost.SetJoinSessionEvent(&sessionHostReady);
     QStatus status = bus.JoinSession(sessionHost.bus.GetUniqueName().c_str(), port, this, sessionId, opts);
     if (ER_OK == status) {
-        sessionHost.WaitJoinSessionEvent(s_slowTestResponseTimeout);
+        sessionHost.WaitJoinSessionEvent(SLOW_TEST_RESPONSE_TIMEOUT);
         sessionHost.RemoveJoinSessionEvent();
 
         sessionLock.Lock();
@@ -238,7 +238,7 @@ QStatus TestSecureApplication::SetAnyTrustedUserPolicy(TestSecurityManager& tsm,
     SetEndManagementEvent(&endManagement);
     QStatus status = tsm.UpdatePolicy(bus, policy);
     if (status == ER_OK) {
-        WaitEndManagementEvent(s_slowTestResponseTimeout);
+        WaitEndManagementEvent(SLOW_TEST_RESPONSE_TIMEOUT);
     }
     RemoveEndManagementEvent();
     return status;
@@ -443,8 +443,8 @@ QStatus TestSecureApplication::SecureConnection(TestSecureApplication& peer, boo
     EXPECT_EQ(ER_OK, (status = bus.SecureConnection(peer.GetBusAttachement().GetUniqueName().c_str(), forceAuth)));
 
     if (status == ER_OK) {
-        WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
-        peer.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+        WaitAllAuthenticationEvents(SLOW_TEST_RESPONSE_TIMEOUT);
+        peer.WaitAllAuthenticationEvents(SLOW_TEST_RESPONSE_TIMEOUT);
     }
 
     DeleteAllAuthenticationEvents();
@@ -473,8 +473,8 @@ QStatus TestSecureApplication::SecureConnectionAllSessionsCommon(bool async, Tes
     }
 
     if (status == ER_OK) {
-        WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
-        peer.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+        WaitAllAuthenticationEvents(SLOW_TEST_RESPONSE_TIMEOUT);
+        peer.WaitAllAuthenticationEvents(SLOW_TEST_RESPONSE_TIMEOUT);
     }
 
     DeleteAllAuthenticationEvents();
@@ -517,9 +517,9 @@ QStatus TestSecureApplication::SecureConnectionAllSessionsCommon(bool async, Tes
     }
 
     if (status == ER_OK) {
-        WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
-        peer1.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
-        peer2.WaitAllAuthenticationEvents(s_slowTestResponseTimeout);
+        WaitAllAuthenticationEvents(SLOW_TEST_RESPONSE_TIMEOUT);
+        peer1.WaitAllAuthenticationEvents(SLOW_TEST_RESPONSE_TIMEOUT);
+        peer2.WaitAllAuthenticationEvents(SLOW_TEST_RESPONSE_TIMEOUT);
     }
 
     DeleteAllAuthenticationEvents();

@@ -24,17 +24,13 @@
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
 #include "KeyStore.h"
+#include "ajTestCommon.h"
+
+#define TEN_MINS 600 // 600 secs is 10 mins
 
 using namespace ajn;
 using namespace qcc;
 using namespace std;
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_MSECS 5
-#define TEN_MINS 600 // 600 secs is 10 mins
 
 class SecurityManagement_ApplicationStateListener : public ApplicationStateListener {
   public:
@@ -338,11 +334,11 @@ class SecurityManagementPolicyTest : public testing::Test {
                                                  identityCertChainMaster, certChainSize,
                                                  manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(managerBus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         ECCPublicKey managerPublicKey;
@@ -371,11 +367,11 @@ class SecurityManagementPolicyTest : public testing::Test {
                                             identityCertChainPeer1, certChainSize,
                                             manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(peer1Bus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
@@ -396,11 +392,11 @@ class SecurityManagementPolicyTest : public testing::Test {
                                             identityCertChainPeer2, certChainSize,
                                             manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
 
@@ -3198,11 +3194,11 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
                                         identityCertChainPeer2, certChainSize,
                                         manifests, ArraySize(manifests)));
 
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer2Bus.GetUniqueName()]);
