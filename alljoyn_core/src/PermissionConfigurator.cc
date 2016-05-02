@@ -162,6 +162,40 @@ QStatus PermissionConfigurator::SignCertificate(CertificateX509& cert)
     return cert.SignAndGenerateAuthorityKeyId(&privateKey, &publicKey);
 }
 
+QStatus PermissionConfigurator::SignManifest(const std::vector<uint8_t>& subjectThumbprint, Manifest& manifest)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    CredentialAccessor ca(m_internal->m_bus);
+    ECCPrivateKey privateKey;
+    QStatus status = ca.GetDSAPrivateKey(privateKey);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Could not GetDSAPrivateKey"));
+        return status;
+    }
+
+    status = manifest->Sign(subjectThumbprint, &privateKey);
+
+    return status;
+}
+
+QStatus PermissionConfigurator::ComputeThumbprintAndSignManifest(const qcc::CertificateX509& subjectCertificate, Manifest& manifest)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    CredentialAccessor ca(m_internal->m_bus);
+    ECCPrivateKey privateKey;
+    QStatus status = ca.GetDSAPrivateKey(privateKey);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Could not GetDSAPrivateKey"));
+        return status;
+    }
+
+    status = manifest->ComputeThumbprintAndSign(subjectCertificate, &privateKey);
+
+    return status;
+}
+
 QStatus PermissionConfigurator::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();

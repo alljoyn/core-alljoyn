@@ -161,6 +161,32 @@ class PermissionConfigurator {
     QStatus SignCertificate(qcc::CertificateX509& cert);
 
     /**
+     * Sign a manifest using the signing key, and bind the manifest to a particular identity
+     * certificate by providing its thumbprint. For this manifest to be valid when later used,
+     * the signing key of this PermissionConfigurator must be the signing key that issued the
+     * certificate. Callers must ensure the correct key is used.
+     *
+     * @param[in] subjectThumbprint Identity certificate thumbprint to use the manifest
+     * @param[in,out] manifest Manifest to sign
+     * @return ER_OK of successful; otherwise, an error code.
+     */
+    QStatus SignManifest(const std::vector<uint8_t>& subjectThumbprint, Manifest& manifest);
+
+    /**
+     * Sign a manifest using the signing key, and bind the manifest to a particular identity
+     * certificate by providing the certificate. For this manifest to be valid when later used,
+     * the signing key of this PermissionConfigurator must be the signing key that issued the
+     * certificate. Callers must ensure the correct key is used; this method does not verify
+     * the signing key was used to issue the provided certificate.
+     *
+     * @param[in] subjectCertificate Certificate to use the manifest. Certificate must already be
+     *                               signed in order to encode its identity correctly in the manifest.
+     * @param[in,out] manifest       Manifest to sign
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus ComputeThumbprintAndSignManifest(const qcc::CertificateX509& subjectCertificate, Manifest& manifest);
+
+    /**
      * Reset the permission settings by removing the manifest all the
      * trust anchors, installed policy and certificates. This call
      * must be invoked after the bus attachment has enable peer security.
