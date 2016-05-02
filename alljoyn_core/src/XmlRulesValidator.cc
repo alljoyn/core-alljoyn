@@ -290,7 +290,10 @@ QStatus XmlRulesValidator::ValidateMember(const qcc::XmlElement* member, MemberV
 
     QStatus status = MemberValidator::GetValidMemberType(member, &type);
     if (ER_OK == status) {
-        status = memberValidatorFactory.ForType(type)->Validate(member);
+        MemberValidator* validator = memberValidatorFactory.ForType(type);
+
+        status = validator->Validate(member);
+        delete validator;
     }
 
     return status;
