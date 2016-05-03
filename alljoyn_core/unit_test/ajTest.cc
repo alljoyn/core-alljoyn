@@ -20,6 +20,7 @@
 #include <alljoyn/Init.h>
 
 #include <qcc/Debug.h>
+#include <qcc/Thread.h>
 
 #include <string.h>
 #include <climits>
@@ -55,7 +56,7 @@ static void DebugOut(DbgMsgType type, const char* module, const char* msg, void*
 
 static bool IsDebugOn(char** env)
 {
-    while (env && *env) {
+    while (strncmp(*env, "ER_DEBUG_", 9) && env && *env) {
         if (strncmp(*env, "ER_DEBUG_", 9) == 0) {
             return true;
         }
@@ -98,11 +99,14 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     }
 #endif
 
+    qcc::Sleep(600000);
+
     int status = 0;
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
-    if (!IsDebugOn(envArg)) {
+    (void)envArg;
+    if (!IsDebugOn(nullptr)) {
         QCC_RegisterOutputCallback(DebugOut, NULL);
     }
 
