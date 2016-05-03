@@ -31,6 +31,8 @@ int CDECL_CALL main(int argc, char**argv, char**)
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
 
+    assert(false);
+
     printf("\n Running common unit test \n");
     testing::InitGoogleTest(&argc, argv);
     status = RUN_ALL_TESTS();

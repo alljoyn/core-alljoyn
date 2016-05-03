@@ -41,6 +41,9 @@ int CDECL_CALL main(int argc, char**argv, char**)
 
     printf("\n Running alljoyn_c unit test\n");
     testing::InitGoogleTest(&argc, argv);
+    if (argc > 0) {
+        throw 1;
+    }
     status = RUN_ALL_TESTS();
 
     printf("%s exiting with status %d \n", argv[0], status);
