@@ -34,7 +34,7 @@
 #include "Bus.h"
 #ifdef ENABLE_POLICYDB
 #include "NameTable.h"
-#include "PolicyDB.h"
+#include "policydb/PolicyDB.h"
 #endif
 
 /**
