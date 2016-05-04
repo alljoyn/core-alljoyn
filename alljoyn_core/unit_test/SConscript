@@ -35,6 +35,12 @@ def builder_check(target, source, env):
     check = str(source[0].abspath)
     return subprocess.call(check)
 
+def is_filename_in_list(file, list):
+    for file_name in list:
+        if file.path.endswith(file_name):
+            return True
+    return False
+
 env.Append(BUILDERS = {'Check' : Builder(action = builder_check)})
 
 if not env.has_key('GTEST_DIR'):
@@ -97,6 +103,9 @@ else:
     gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
 
     unittest_env = env.Clone()
+    vars = Variables()
+    vars.Add(EnumVariable('POLICYDB', 'Enable policy support', 'off', allowed_values=('on', 'off')))
+    vars.Update(unittest_env)
 
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
@@ -132,10 +141,12 @@ else:
 
     unittest_env.Prepend(LIBS = ['gtest'])
 
-    ajtest_src = unittest_env.Glob('*.cc')
+    excluded_src = []
     if unittest_env['BR'] != 'on':
-        # need to remove DiscoveryTest.cc from sources
-        ajtest_src = [l for l in unittest_env.Glob('*.cc') if not l.path.endswith('DiscoveryTest.cc')]
+        excluded_src.append('DiscoveryTest.cc')
+    if unittest_env['POLICYDB'] != 'on':
+        excluded_src.append('PolicyDBTest.cc')
+    ajtest_src = [f for f in unittest_env.Glob('*.cc') if not is_filename_in_list(f, excluded_src)]
 
     ajtest_obj = unittest_env.Object(ajtest_src);
     ajtest_prog = unittest_env.Program('ajtest', ajtest_obj)
