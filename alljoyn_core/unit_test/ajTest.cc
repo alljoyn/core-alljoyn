@@ -23,6 +23,18 @@
 
 #include <string.h>
 
+/**
+ * Needed to allow automatic memory dumps for Windows Jenkins builds.
+ * The default exception filter will cause a UI prompt to appear instead
+ * of running the default debugger.
+ */
+#ifdef QCC_CRASHING_ASSERT
+LONG DummyExceptionFilter(LPEXCEPTION_POINTERS pointers) {
+    QCC_UNUSED(pointers);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif // QCC_CRASHING_ASSERT
+
 static void DebugOut(DbgMsgType type, const char* module, const char* msg, void* context)
 {
     QCC_UNUSED(type);
@@ -47,6 +59,10 @@ static bool IsDebugOn(char** env)
 /** Main entry point */
 int CDECL_CALL main(int argc, char** argv, char** envArg)
 {
+#ifdef QCC_CRASHING_ASSERT
+    SetUnhandledExceptionFilter(DummyExceptionFilter);
+#endif // QCC_CRASHING_ASSERT
+
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
