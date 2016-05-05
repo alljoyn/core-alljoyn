@@ -147,6 +147,10 @@ else:
    env.Append(LINKFLAGS=['/opt:ref'])
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
 
+# Include needed to do automatic memory dumps for Jenkins builds
+if os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
+    env.Append(CXXFLAGS = '-FIqcc/${OS_GROUP}/CrashDumpSupport.h')
+
 vars = Variables()
 vars.Add(PathVariable('OPENSSL_BASE', 'Base OpenSSL directory (windows only)', os.environ.get('OPENSSL_BASE')))
 vars.Update(env)
