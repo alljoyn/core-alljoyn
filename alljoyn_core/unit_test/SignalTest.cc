@@ -1141,7 +1141,7 @@ TEST_F(SecSignalTest, SendSignalAllowedAfterProviderPolicyUpdate)
 #define NR_OF_CONSUMERS 3
 
 /* Disabled pending investigation under ASACORE-2775. */
-TEST_F(SecSignalTest, DISABLED_SendSignalToAllHostedSession)
+TEST_F(SecSignalTest, SendSignalToAllHostedSession)
 {
     // Define policy for basic consumer and provider
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
@@ -1182,8 +1182,7 @@ TEST_F(SecSignalTest, DISABLED_SendSignalToAllHostedSession)
     // Policy is ok, session secure, but not allowed by provider manifest
     ASSERT_EQ(ER_OK, prov.UpdateManifest(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
     ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
-    // Signal is send successfully, but event is not shown to the app.
-    ASSERT_EQ(ER_OK, prov.SendSignal(true));
+    ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
     qcc::Sleep(500);
     ASSERT_EQ(0, eventCount);
 
