@@ -50,8 +50,6 @@ using namespace qcc;
 
 namespace ajn {
 
-#define SESSION_SELF_JOIN 0x02
-
 DaemonRouter::DaemonRouter()
     : ruleTable(), nameTable(), busController(NULL), alljoynObj(NULL), sessionlessObj(NULL),
     m_Lock(LOCK_LEVEL_DAEMONROUTER_MLOCK)
@@ -407,7 +405,10 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
          * allow for easier changes should they be necessary in the future.)
          */
         add = add && policyDB->OKToSend(nmh, dest);
-        add = add && policyDB->OKToReceive(nmh, dest);
+        if (dest != lep) {
+            add = add && policyDB->OKToReceive(nmh, dest);
+        }
+
         if (!add) {
             QCC_DbgPrintf(("    policy rejected"));
             policyRejected = true;
