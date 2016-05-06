@@ -20,9 +20,31 @@
 
 #include <qcc/StaticGlobals.h>
 
+/**
+ * Needed to allow automatic memory dumps for Windows Jenkins builds.
+ * For C++ exception the default exception filter will cause a UI
+ * prompt to appear instead of running the default debugger.
+ */
+#if defined(QCC_OS_GROUP_WINDOWS) && defined(QCC_CRASH_DUMP_SUPPORT)
+static LONG DummyExceptionFilter(LPEXCEPTION_POINTERS pointers) {
+    QCC_UNUSED(pointers);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+static void SetExceptionHandling() {
+    SetUnhandledExceptionFilter(DummyExceptionFilter);
+}
+#else
+static void SetExceptionHandling() {
+    return;
+}
+#endif
+
 /** Main entry point */
 int CDECL_CALL main(int argc, char**argv, char**)
 {
+    SetExceptionHandling();
+
     if (qcc::Init() != ER_OK) {
         return -1;
     }
