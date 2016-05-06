@@ -11,8 +11,8 @@ Fully Validated Platforms
 For information on AllJoyn support in Windows 10 see link below:
 https://msdn.microsoft.com/en-us/library/windows/apps/windows.devices.alljoyn.aspx
 
-See the release review page for other platforms that have not been fully
-verified, but may work:
+See the Core Release Review wiki page for other platforms that have not been
+fully verified, but may work:
 https://wiki.allseenalliance.org/core/core_16.04_release_review#regression_test
 
 
@@ -113,8 +113,8 @@ Version 16.04:
   - When using an older version of the Visual Studio CRT, call _snprintf then
     add a zero character string terminator if _snprintf returns a negative value
 
-More details on these changes can be found on the release plan page:
-https://wiki.allseenalliance.org/core/core_16.04_release_plan#compatibility_with_previous_releases
+More details on these changes may be found on the Core Release Review wiki page:
+https://wiki.allseenalliance.org/core/core_16.04_release_review#compatibility
 
 For details of previous releases/release families please see the release notes:
 15.09: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.09/
