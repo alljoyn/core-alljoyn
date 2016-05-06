@@ -19,30 +19,30 @@
 
 struct SizeParams {
   public:
-    AJ_PCSTR rulesXml;
-    size_t integer;
+    AJ_PCSTR m_rulesXml;
+    size_t m_integer;
 
     SizeParams(AJ_PCSTR _rulesXml, size_t _integer) :
-        rulesXml(_rulesXml),
-        integer(_integer)
+        m_rulesXml(_rulesXml),
+        m_integer(_integer)
     { }
 };
 
 struct TwoStringsParams {
   public:
-    AJ_PCSTR rulesXml;
-    std::vector<std::string> strings;
+    AJ_PCSTR m_rulesXml;
+    std::vector<std::string> m_strings;
 
     TwoStringsParams(AJ_PCSTR _rulesXml, AJ_PCSTR first, AJ_PCSTR second) :
-        rulesXml(_rulesXml)
+        m_rulesXml(_rulesXml)
     {
-        strings = std::vector<std::string>(2U);
-        strings[0] = first;
-        strings[1] = second;
+        m_strings = std::vector<std::string>(2U);
+        m_strings[0] = first;
+        m_strings[1] = second;
     }
 };
 
-static AJ_PCSTR VALID_NEED_ALL_MANIFEST_TEMPLATE =
+static AJ_PCSTR s_validNeedAllManifestTemplate =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -62,7 +62,7 @@ static AJ_PCSTR VALID_NEED_ALL_MANIFEST_TEMPLATE =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NODE_WITH_NAME =
+static AJ_PCSTR s_validNodeWithName =
     "<manifest>"
     "<node name = \"/Node\">"
     "<interface>"
@@ -72,7 +72,7 @@ static AJ_PCSTR VALID_NODE_WITH_NAME =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NODE_WITH_UNDERSCORE =
+static AJ_PCSTR s_validNodeWithUnderscore =
     "<manifest>"
     "<node name = \"/_Node\">"
     "<interface>"
@@ -82,7 +82,7 @@ static AJ_PCSTR VALID_NODE_WITH_UNDERSCORE =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NODE_WILDCARD_ONLY =
+static AJ_PCSTR s_validNodeWildcardOnly =
     "<manifest>"
     "<node name = \"*\">"
     "<interface>"
@@ -92,7 +92,7 @@ static AJ_PCSTR VALID_NODE_WILDCARD_ONLY =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NODE_WITH_WILDCARD =
+static AJ_PCSTR s_validNodeWithWildcard =
     "<manifest>"
     "<node name = \"/Node/*\">"
     "<interface>"
@@ -102,7 +102,7 @@ static AJ_PCSTR VALID_NODE_WITH_WILDCARD =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NODE_WITH_DIGIT =
+static AJ_PCSTR s_validNodeWithDigit =
     "<manifest>"
     "<node name = \"/Node1\">"
     "<interface>"
@@ -112,7 +112,7 @@ static AJ_PCSTR VALID_NODE_WITH_DIGIT =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_INTERFACE_WITH_NAME =
+static AJ_PCSTR s_validInterfaceWithName =
     "<manifest>"
     "<node>"
     "<interface name = \"org.Interface\">"
@@ -122,7 +122,7 @@ static AJ_PCSTR VALID_INTERFACE_WITH_NAME =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_INTERFACE_WITH_WILDCARD =
+static AJ_PCSTR s_validInterfaceWithWildcard =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface.*\">"
@@ -132,7 +132,7 @@ static AJ_PCSTR VALID_INTERFACE_WITH_WILDCARD =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_INTERFACE_WITH_DIGIT =
+static AJ_PCSTR s_validInterfaceWithDigit =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface1\">"
@@ -142,7 +142,7 @@ static AJ_PCSTR VALID_INTERFACE_WITH_DIGIT =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_INTERFACE_WITH_UNDERSCORE =
+static AJ_PCSTR s_validInterfaceWithUnderscore =
     "<manifest>"
     "<node>"
     "<interface name = \"_org.interface\">"
@@ -152,7 +152,7 @@ static AJ_PCSTR VALID_INTERFACE_WITH_UNDERSCORE =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_MEMBER_WITH_NAME =
+static AJ_PCSTR s_validMemberWithName =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -162,7 +162,7 @@ static AJ_PCSTR VALID_MEMBER_WITH_NAME =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_MEMBER_WITH_DIGIT =
+static AJ_PCSTR s_validMemberWithDigit =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -172,7 +172,7 @@ static AJ_PCSTR VALID_MEMBER_WITH_DIGIT =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_MEMBER_WITH_UNDERSCORE =
+static AJ_PCSTR s_validMemberWithUnderscore =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -182,7 +182,7 @@ static AJ_PCSTR VALID_MEMBER_WITH_UNDERSCORE =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_MEMBER_WITH_WILDCARD =
+static AJ_PCSTR s_validMemberWithWildcard =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -192,7 +192,7 @@ static AJ_PCSTR VALID_MEMBER_WITH_WILDCARD =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_METHOD_WITH_DENY =
+static AJ_PCSTR s_validMethodWithDeny =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -202,7 +202,7 @@ static AJ_PCSTR VALID_METHOD_WITH_DENY =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_SAME_NAME_INTERFACES_IN_SEPARATE_NODES =
+static AJ_PCSTR s_validSameNameInterfacesInSeparateNodes =
     "<manifest>"
     "<node name = \"/Node0\">"
     "<interface name = \"org.interface\">"
@@ -219,7 +219,7 @@ static AJ_PCSTR VALID_SAME_NAME_INTERFACES_IN_SEPARATE_NODES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NAMELESS_INTERFACES_IN_SEPARATE_NODES =
+static AJ_PCSTR s_validNamelessInterfacesInSeparateNodes =
     "<manifest>"
     "<node name = \"/Node0\">"
     "<interface>"
@@ -236,7 +236,7 @@ static AJ_PCSTR VALID_NAMELESS_INTERFACES_IN_SEPARATE_NODES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_DIFFERENT_NAME_INTERFACES_IN_ONE_NODE =
+static AJ_PCSTR s_validDifferentNameInterfacesInOneNode =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface1\">"
@@ -251,7 +251,7 @@ static AJ_PCSTR VALID_DIFFERENT_NAME_INTERFACES_IN_ONE_NODE =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_SAME_NAME_METHODS_IN_SEPARATE_INTERFACES =
+static AJ_PCSTR s_validSameNameMethodsInSeparateInterfaces =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface0\">"
@@ -266,7 +266,7 @@ static AJ_PCSTR VALID_SAME_NAME_METHODS_IN_SEPARATE_INTERFACES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NAMELESS_METHODS_IN_SEPARATE_INTERFACES =
+static AJ_PCSTR s_validNamelessMethodsInSeparateInterfaces =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface0\">"
@@ -281,7 +281,7 @@ static AJ_PCSTR VALID_NAMELESS_METHODS_IN_SEPARATE_INTERFACES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_DIFFERENT_NAME_METHODS_IN_ONE_INTERFACE =
+static AJ_PCSTR s_validDifferentNameMethodsInOneInterface =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -294,7 +294,7 @@ static AJ_PCSTR VALID_DIFFERENT_NAME_METHODS_IN_ONE_INTERFACE =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_SAME_NAME_PROPERTIES_IN_SEPARATE_INTERFACES =
+static AJ_PCSTR s_validSameNamePropertiesInSeparateInterfaces =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface0\">"
@@ -309,7 +309,7 @@ static AJ_PCSTR VALID_SAME_NAME_PROPERTIES_IN_SEPARATE_INTERFACES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NAMELESS_PROPERTIES_IN_SEPARATE_INTERFACES =
+static AJ_PCSTR s_validNamelessPropertiesInSeparateInterfaces =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface0\">"
@@ -324,7 +324,7 @@ static AJ_PCSTR VALID_NAMELESS_PROPERTIES_IN_SEPARATE_INTERFACES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_DIFFERENT_NAME_PROPERTIES_IN_ONE_INTERFACE =
+static AJ_PCSTR s_validDifferentNamePropertiesInOneInterface =
     "<manifest>"
     "<node>"
     "<interface>"
@@ -337,7 +337,7 @@ static AJ_PCSTR VALID_DIFFERENT_NAME_PROPERTIES_IN_ONE_INTERFACE =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_SAME_NAME_SIGNALS_IN_SEPARATE_INTERFACES =
+static AJ_PCSTR s_validSameNameSignalsInSeparateInterfaces =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface0\">"
@@ -352,7 +352,7 @@ static AJ_PCSTR VALID_SAME_NAME_SIGNALS_IN_SEPARATE_INTERFACES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_NAMELESS_SIGNALS_IN_SEPARATE_INTERFACES =
+static AJ_PCSTR s_validNamelessSignalsInSeparateInterfaces =
     "<manifest>"
     "<node>"
     "<interface name = \"org.interface0\">"
@@ -367,7 +367,7 @@ static AJ_PCSTR VALID_NAMELESS_SIGNALS_IN_SEPARATE_INTERFACES =
     "</interface>"
     "</node>"
     "</manifest>";
-static AJ_PCSTR VALID_DIFFERENT_NAME_SIGNALS_IN_ONE_INTERFACE =
+static AJ_PCSTR s_validDifferentNameSignalsInOneInterface =
     "<manifest>"
     "<node>"
     "<interface>"

@@ -24,11 +24,11 @@ using namespace std;
 using namespace qcc;
 using namespace ajn;
 
-static AJ_PCSTR NON_WELL_FORMED_XML = "<abc>";
-static AJ_PCSTR EMPTY_MANIFEST_ELEMENT =
+static AJ_PCSTR s_nonWellFormedXml = "<abc>";
+static AJ_PCSTR s_emptyManifestElement =
     "<manifest>"
     "</manifest>";
-static AJ_PCSTR MISSING_VERSION_ELEMENT =
+static AJ_PCSTR s_missingVersionElement =
     "<manifest>"
     VALID_RULES_ELEMENT
     "<thumbprint>"
@@ -40,7 +40,7 @@ static AJ_PCSTR MISSING_VERSION_ELEMENT =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_RULES_ELEMENT =
+static AJ_PCSTR s_missingRulesElement =
     "<manifest>"
     "<version>1</version>"
     "<thumbprint>"
@@ -52,7 +52,7 @@ static AJ_PCSTR MISSING_RULES_ELEMENT =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_THUMBPRINT_ELEMENT =
+static AJ_PCSTR s_missingThumbprintElement =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -61,7 +61,7 @@ static AJ_PCSTR MISSING_THUMBPRINT_ELEMENT =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_SIGNATURE_ELEMENT =
+static AJ_PCSTR s_missingSignatureElement =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -70,7 +70,7 @@ static AJ_PCSTR MISSING_SIGNATURE_ELEMENT =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</thumbprint>"
     "</manifest>";
-static AJ_PCSTR MISSING_VERSION_CONTENT =
+static AJ_PCSTR s_missingVersionContent =
     "<manifest>"
     "<version></version>"
     VALID_RULES_ELEMENT
@@ -83,7 +83,7 @@ static AJ_PCSTR MISSING_VERSION_CONTENT =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR INVALID_VERSION_NUMBER =
+static AJ_PCSTR s_invalidVersionNumber =
     "<manifest>"
     "<version>0</version>"
     VALID_RULES_ELEMENT
@@ -96,7 +96,7 @@ static AJ_PCSTR INVALID_VERSION_NUMBER =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_THUMBPRINT_CONTENT =
+static AJ_PCSTR s_missingThumbprintContent =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -107,7 +107,7 @@ static AJ_PCSTR MISSING_THUMBPRINT_CONTENT =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_THUMBPRINT_OID =
+static AJ_PCSTR s_missingThumbprintOid =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -119,7 +119,7 @@ static AJ_PCSTR MISSING_THUMBPRINT_OID =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_THUMBPRINT_VALUE =
+static AJ_PCSTR s_missingThumbprintValue =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -131,7 +131,7 @@ static AJ_PCSTR MISSING_THUMBPRINT_VALUE =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR INVALID_THUMBPRINT_OID =
+static AJ_PCSTR s_invalidThumbprintOid =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -144,7 +144,7 @@ static AJ_PCSTR INVALID_THUMBPRINT_OID =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR INVALID_THUMBPRINT_VALUE_NOT_BASE64 =
+static AJ_PCSTR s_invalidThumbprintValueNotBase64 =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -157,7 +157,7 @@ static AJ_PCSTR INVALID_THUMBPRINT_VALUE_NOT_BASE64 =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR INVALID_THUMBPRINT_VALUE_NOT_BINARY =
+static AJ_PCSTR s_invalidThumbprintValueNotBinary =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -170,7 +170,7 @@ static AJ_PCSTR INVALID_THUMBPRINT_VALUE_NOT_BINARY =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_SIGNATURE_CONTENT =
+static AJ_PCSTR s_missingSignatureContent =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -181,7 +181,7 @@ static AJ_PCSTR MISSING_SIGNATURE_CONTENT =
     "<signature>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_SIGNATURE_OID =
+static AJ_PCSTR s_missingSignatureOid =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -193,7 +193,7 @@ static AJ_PCSTR MISSING_SIGNATURE_OID =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR MISSING_SIGNATURE_VALUE =
+static AJ_PCSTR s_missingSignatureValue =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -205,7 +205,7 @@ static AJ_PCSTR MISSING_SIGNATURE_VALUE =
     "<oid>1.2.840.10045.4.3.2</oid>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR INVALID_SIGNATURE_OID =
+static AJ_PCSTR s_invalidSignatureOid =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -218,7 +218,7 @@ static AJ_PCSTR INVALID_SIGNATURE_OID =
     "<value>NjY2ZjZmNjI2MTcy</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR INVALID_SIGNATURE_VALUE_NOT_BASE64 =
+static AJ_PCSTR s_invalidSignatureValueNotBase64 =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -231,7 +231,7 @@ static AJ_PCSTR INVALID_SIGNATURE_VALUE_NOT_BASE64 =
     "<value>ABB.</value>"
     "</signature>"
     "</manifest>";
-static AJ_PCSTR INVALID_SIGNATURE_VALUE_NOT_BINARY =
+static AJ_PCSTR s_invalidSignatureValueNotBinary =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT
@@ -250,88 +250,88 @@ class XmlManifestConverterToManifestDetailedTest : public testing::Test {
 
     virtual void SetUp()
     {
-        ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(VALID_MANIFEST, retrievedManifest));
+        ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(s_validManifest, m_retrievedManifest));
     }
 
   protected:
-    Manifest retrievedManifest;
+    Manifest m_retrievedManifest;
 };
 
 class XmlManifestConverterToManifestInvalidXmlTest : public testing::TestWithParam<AJ_PCSTR> {
   public:
     XmlManifestConverterToManifestInvalidXmlTest() :
-        manifestXml(GetParam())
+        m_manifestXml(GetParam())
     { }
 
   protected:
-    Manifest retrievedManifest;
-    AJ_PCSTR manifestXml;
+    Manifest m_retrievedManifest;
+    AJ_PCSTR m_manifestXml;
 };
 
 TEST(XmlManifestConverterToManifestTest, shouldReturnErrorForNonWellFormedXml)
 {
     Manifest retrievedManifest;
-    EXPECT_EQ(ER_EOF, XmlManifestConverter::XmlToManifest(NON_WELL_FORMED_XML, retrievedManifest));
+    EXPECT_EQ(ER_EOF, XmlManifestConverter::XmlToManifest(s_nonWellFormedXml, retrievedManifest));
 }
 
-TEST_F(XmlManifestConverterToManifestDetailedTest, shouldPassForValidInput)
+TEST(XmlManifestConverterToManifestTest, shouldPassForValidInput)
 {
     Manifest someManifest;
-    EXPECT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(VALID_MANIFEST, someManifest));
+    EXPECT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(s_validManifest, someManifest));
 }
 
 TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveCorrectVersion)
 {
-    EXPECT_EQ(1U, retrievedManifest->GetVersion());
+    EXPECT_EQ(1U, m_retrievedManifest->GetVersion());
 }
 
 TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveCorrectRulesSize)
 {
-    EXPECT_EQ(1U, retrievedManifest->GetRules().size());
+    EXPECT_EQ(1U, m_retrievedManifest->GetRules().size());
 }
 
 TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveCorrectThumbprintOid)
 {
-    EXPECT_STREQ(OID_DIG_SHA256.c_str(), retrievedManifest->GetThumbprintAlgorithmOid().c_str());
+    EXPECT_STREQ(OID_DIG_SHA256.c_str(), m_retrievedManifest->GetThumbprintAlgorithmOid().c_str());
 }
 
 TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveSetThumbprint)
 {
-    EXPECT_GT(retrievedManifest->GetThumbprint().size(), 0U);
+    EXPECT_LT(0U, m_retrievedManifest->GetThumbprint().size());
 }
 
 TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveCorrectSignatureOid)
 {
-    EXPECT_STREQ(OID_SIG_ECDSA_SHA256.c_str(), retrievedManifest->GetSignatureAlgorithmOid().c_str());
+    EXPECT_STREQ(OID_SIG_ECDSA_SHA256.c_str(), m_retrievedManifest->GetSignatureAlgorithmOid().c_str());
 }
 
 TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveSetSignature)
 {
-    EXPECT_GT(retrievedManifest->GetSignature().size(), 0U);
+    EXPECT_LT(0U, m_retrievedManifest->GetSignature().size());
 }
 
 INSTANTIATE_TEST_CASE_P(XmlManifestConverterToRulesInvalidXml,
                         XmlManifestConverterToManifestInvalidXmlTest,
-                        ::testing::Values(EMPTY_MANIFEST_ELEMENT,
-                                          MISSING_VERSION_ELEMENT,
-                                          MISSING_RULES_ELEMENT,
-                                          MISSING_THUMBPRINT_ELEMENT,
-                                          MISSING_SIGNATURE_ELEMENT,
-                                          MISSING_VERSION_CONTENT,
-                                          INVALID_VERSION_NUMBER,
-                                          MISSING_THUMBPRINT_CONTENT,
-                                          MISSING_THUMBPRINT_OID,
-                                          MISSING_THUMBPRINT_VALUE,
-                                          INVALID_THUMBPRINT_OID,
-                                          INVALID_THUMBPRINT_VALUE_NOT_BASE64,
-                                          INVALID_THUMBPRINT_VALUE_NOT_BINARY,
-                                          MISSING_SIGNATURE_CONTENT,
-                                          MISSING_SIGNATURE_OID,
-                                          MISSING_SIGNATURE_VALUE,
-                                          INVALID_SIGNATURE_OID,
-                                          INVALID_SIGNATURE_VALUE_NOT_BASE64,
-                                          INVALID_SIGNATURE_VALUE_NOT_BINARY));
+                        ::testing::Values(s_emptyManifestElement,
+                                          s_missingVersionElement,
+                                          s_missingRulesElement,
+                                          s_missingThumbprintElement,
+                                          s_missingSignatureElement,
+                                          s_missingVersionContent,
+                                          s_invalidVersionNumber,
+                                          s_missingThumbprintContent,
+                                          s_missingThumbprintOid,
+                                          s_missingThumbprintValue,
+                                          s_invalidThumbprintOid,
+                                          s_invalidThumbprintValueNotBase64,
+                                          s_invalidThumbprintValueNotBinary,
+                                          s_missingSignatureContent,
+                                          s_missingSignatureOid,
+                                          s_missingSignatureValue,
+                                          s_invalidSignatureOid,
+                                          s_invalidSignatureValueNotBase64,
+                                          s_invalidSignatureValueNotBinary));
 TEST_P(XmlManifestConverterToManifestInvalidXmlTest, shouldReturnErrorForInvalidManifestXml)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlManifestConverter::XmlToManifest(manifestXml, retrievedManifest));
+    EXPECT_EQ(ER_XML_MALFORMED, XmlManifestConverter::XmlToManifest(m_manifestXml, m_retrievedManifest));
 }
