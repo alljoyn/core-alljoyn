@@ -12,6 +12,7 @@
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
+from os.path import basename
 import subprocess
 
 Import('env')
@@ -97,13 +98,20 @@ else:
     gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
 
     unittest_env = env.Clone()
+    vars = Variables()
+    vars.Add(EnumVariable('POLICYDB', 'Enable policy support', 'off', allowed_values=('on', 'off')))
+    vars.Update(unittest_env)
+    if unittest_env['POLICYDB'] == 'on':
+        unittest_env.Append(CPPDEFINES = ['ENABLE_POLICYDB'])
 
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
         unittest_env.Prepend(LIBS = [unittest_env['ajrlib']])
+    elif unittest_env['POLICYDB'] == 'on':
+        # PolicyDB without Bundled Router - link directly with router objects
+        unittest_env.Prepend(LIBS = [unittest_env['srobj'], unittest_env['router_objs']])
     # Add private header include path to test bundled router code
     unittest_env.Append(CPPPATH = [ unittest_env.Dir('../router').srcnode() ])
-
     unittest_env.Append(CPPPATH = unittest_env.Dir('..').srcnode())
 
     gtest_dir = unittest_env['GTEST_DIR']
@@ -132,10 +140,12 @@ else:
 
     unittest_env.Prepend(LIBS = ['gtest'])
 
-    ajtest_src = unittest_env.Glob('*.cc')
+    excluded_src = []
     if unittest_env['BR'] != 'on':
-        # need to remove DiscoveryTest.cc from sources
-        ajtest_src = [l for l in unittest_env.Glob('*.cc') if not l.path.endswith('DiscoveryTest.cc')]
+        excluded_src.append('DiscoveryTest.cc')
+    if unittest_env['POLICYDB'] != 'on':
+        excluded_src.append('PolicyDBTest.cc')
+    ajtest_src = [f for f in unittest_env.Glob('*.cc') if not basename(str(f)) in excluded_src]
 
     ajtest_obj = unittest_env.Object(ajtest_src);
     ajtest_prog = unittest_env.Program('ajtest', ajtest_obj)
@@ -150,16 +160,12 @@ else:
     # instead want to link explicitly with the router objects.
     check_env = unittest_env.Clone()
     check_env.Replace(LIBS = [l for l in check_env['LIBS'] if l != check_env['ajrlib']])
-    check_env.Prepend(LIBS = [check_env['srobj'], check_env['router_objs']])
+    if check_env['srobj'] not in check_env['LIBS']:
+        check_env.Prepend(LIBS = [check_env['srobj']])
+    if check_env['router_objs'] not in check_env['LIBS']:
+        check_env.Prepend(LIBS = [check_env['router_objs']])
 
     ajcheck_src = check_env.Glob('check/*.cc')
-    vars = Variables()
-    vars.Add(EnumVariable('POLICYDB', 'Enable policy support', 'off', allowed_values=('on', 'off')))
-    vars.Update(check_env)
-
-    if check_env['POLICYDB'] == 'on':
-        check_env.Append(CPPDEFINES = ['ENABLE_POLICYDB'])
-        check_env.Append(CPPPATH = [ check_env.Dir('../router/policydb').srcnode() ])
 
     ajcheck_objs = [ obj for obj in ajtest_obj if str(obj).startswith('ajTestCommon') ] + check_env.Object(ajcheck_src)
     ajcheck_prog = check_env.Program('ajcheck', ajcheck_objs)
