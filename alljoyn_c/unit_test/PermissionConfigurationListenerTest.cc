@@ -17,7 +17,6 @@
 #include <alljoyn/PermissionConfigurationListener.h>
 #include <alljoyn_c/PermissionConfigurationListener.h>
 #include <qcc/Util.h>
-#include "ajTestCommon.h"
 
 using namespace ajn;
 
@@ -30,20 +29,20 @@ class PermissionConfigurationListenerTest : public testing::Test {
 
     virtual void SetUp()
     {
-        memset(&callbacks, 0, sizeof(callbacks));
-        callbacks.factory_reset = factoryResetCallback;
-        callbacks.policy_changed = policyChangedCallback;
-        callbacks.start_management = startManagementCallback;
-        callbacks.end_management = endManagementCallback;
+        memset(&m_callbacks, 0, sizeof(m_callbacks));
+        m_callbacks.factory_reset = FactoryResetCallback;
+        m_callbacks.policy_changed = PolicyChangedCallback;
+        m_callbacks.start_management = StartManagementCallback;
+        m_callbacks.end_management = EndManagementCallback;
     }
 
   protected:
 
-    alljoyn_permissionconfigurationlistener_callbacks callbacks;
+    alljoyn_permissionconfigurationlistener_callbacks m_callbacks;
 
   private:
 
-    static void AJ_CALL policyChangedCallback(const void* context)
+    static void AJ_CALL PolicyChangedCallback(const void* context)
     {
         ASSERT_NE(nullptr, context);
 
@@ -51,7 +50,7 @@ class PermissionConfigurationListenerTest : public testing::Test {
         *policyChangedHappened = true;
     }
 
-    static QStatus AJ_CALL factoryResetCallback(const void* context)
+    static QStatus AJ_CALL FactoryResetCallback(const void* context)
     {
         /*
          * ASSERT_* returns from the method without any value so it cannot be used here.
@@ -66,7 +65,7 @@ class PermissionConfigurationListenerTest : public testing::Test {
         return ER_OK;
     }
 
-    static void AJ_CALL startManagementCallback(const void* context)
+    static void AJ_CALL StartManagementCallback(const void* context)
     {
         ASSERT_NE(nullptr, context);
 
@@ -74,7 +73,7 @@ class PermissionConfigurationListenerTest : public testing::Test {
         *startManagementHappened = true;
     }
 
-    static void AJ_CALL endManagementCallback(const void* context)
+    static void AJ_CALL EndManagementCallback(const void* context)
     {
         ASSERT_NE(nullptr, context);
 
@@ -85,17 +84,17 @@ class PermissionConfigurationListenerTest : public testing::Test {
 
 TEST_F(PermissionConfigurationListenerTest, shouldCreateListenerWithCallbacksAndNullContext)
 {
-    EXPECT_NE(nullptr, alljoyn_permissionconfigurationlistener_create(&callbacks, nullptr));
+    EXPECT_NE(nullptr, alljoyn_permissionconfigurationlistener_create(&m_callbacks, nullptr));
 }
 
 TEST_F(PermissionConfigurationListenerTest, shouldCreateListenerWithCallbacksAndNonNullContext)
 {
-    EXPECT_NE(nullptr, alljoyn_permissionconfigurationlistener_create(&callbacks, this));
+    EXPECT_NE(nullptr, alljoyn_permissionconfigurationlistener_create(&m_callbacks, this));
 }
 
 TEST_F(PermissionConfigurationListenerTest, shouldDestroyNonNullListenerWithoutException)
 {
-    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&callbacks, nullptr);
+    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, nullptr);
 
     alljoyn_permissionconfigurationlistener_destroy(listener);
 }
@@ -104,8 +103,8 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallFactoryResetCallback)
 {
     bool factoryResetHappened = false;
 
-    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&callbacks, &factoryResetHappened);
-    ((ajn::PermissionConfigurationListener*)listener)->FactoryReset();
+    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, &factoryResetHappened);
+    ((PermissionConfigurationListener*)listener)->FactoryReset();
 
     EXPECT_TRUE(factoryResetHappened);
 }
@@ -114,8 +113,8 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallPolicyChangedCallback)
 {
     bool policyChangedHappened = false;
 
-    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&callbacks, &policyChangedHappened);
-    ((ajn::PermissionConfigurationListener*)listener)->PolicyChanged();
+    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, &policyChangedHappened);
+    ((PermissionConfigurationListener*)listener)->PolicyChanged();
 
     EXPECT_TRUE(policyChangedHappened);
 }
@@ -124,8 +123,8 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallStartManagementCallback)
 {
     bool startManagementHappened = false;
 
-    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&callbacks, &startManagementHappened);
-    ((ajn::PermissionConfigurationListener*)listener)->StartManagement();
+    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, &startManagementHappened);
+    ((PermissionConfigurationListener*)listener)->StartManagement();
 
     EXPECT_TRUE(startManagementHappened);
 }
@@ -134,8 +133,8 @@ TEST_F(PermissionConfigurationListenerTest, shouldCallEndManagementCallback)
 {
     bool endManagementHappened = false;
 
-    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&callbacks, &endManagementHappened);
-    ((ajn::PermissionConfigurationListener*)listener)->EndManagement();
+    alljoyn_permissionconfigurationlistener listener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, &endManagementHappened);
+    ((PermissionConfigurationListener*)listener)->EndManagement();
 
     EXPECT_TRUE(endManagementHappened);
 }

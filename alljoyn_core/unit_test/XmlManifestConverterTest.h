@@ -31,7 +31,7 @@
     "</node>" \
     "</rules>"
 
-static AJ_PCSTR VALID_MANIFEST =
+static AJ_PCSTR s_validManifest =
     "<manifest>"
     "<version>1</version>"
     VALID_RULES_ELEMENT

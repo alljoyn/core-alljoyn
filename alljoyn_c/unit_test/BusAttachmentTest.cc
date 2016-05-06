@@ -15,7 +15,6 @@
  ******************************************************************************/
 #include <gtest/gtest.h>
 #include <time.h>
-#include <alljoyn/BusAttachment.h>
 #include <alljoyn_c/ApplicationStateListener.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/DBusStdDefines.h>
@@ -37,51 +36,82 @@
 #define WAIT_MSECS 5
 #define STATE_CHANGE_TIMEOUT_MS 2000
 
-static const char s_busAttachmentTestName[] = "BusAttachmentTest";
-static const char s_otherBusAttachmentTestName[] = "BusAttachment OtherBus";
+#define SECURITY_AGENT_BUS_NAME "SecurityAgentBus"
+#define MANAGED_APP_BUS_NAME "SampleManagedApp"
+
+static AJ_PCSTR s_allowAllManifestTemplate =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<method>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</method>"
+    "<property>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</property>"
+    "<signal>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</signal>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+
+static AJ_PCSTR s_busAttachmentTestName = "BusAttachmentTest";
+static AJ_PCSTR s_otherBusAttachmentTestName = "BusAttachment OtherBus";
+
+using namespace ajn;
+using namespace qcc;
+using namespace std;
 
 class BusAttachmentSecurity20Test : public testing::Test {
   public:
 
     BusAttachmentSecurity20Test() :
-        securityAgent((alljoyn_busattachment) & privateSecurityAgentBus),
-        privateSecurityAgentBus("SecurityAgentBus"),
-        managedApp("SampleManagedApp")
+        m_securityAgent(nullptr),
+        m_managedApp(nullptr)
     {
-        memset(&callbacks, 0, sizeof(callbacks));
-        callbacks.state = stateCallback;
+        memset(&m_callbacks, 0, sizeof(m_callbacks));
+        m_callbacks.state = stateCallback;
     };
 
     virtual void SetUp()
     {
-        basicBusSetup(privateSecurityAgentBus, securityAgentKeyStoreListener);
-        basicBusSetup(managedApp, managedAppKeyStoreListener);
-        setupAgent();
+        BasicBusSetup(&m_securityAgent, SECURITY_AGENT_BUS_NAME, &m_securityAgentKeyStoreListener);
+        BasicBusSetup(&m_managedApp, MANAGED_APP_BUS_NAME, &m_managedAppKeyStoreListener);
+        SetupAgent();
     }
 
     virtual void TearDown()
     {
-        appTearDown(privateSecurityAgentBus);
-        appTearDown(managedApp);
+        BasicBusTearDown(m_securityAgent);
+        BasicBusTearDown(m_managedApp);
     }
 
   protected:
 
-    alljoyn_busattachment securityAgent;
+    alljoyn_busattachment m_securityAgent;
 
-    void createApplicationStateListener(alljoyn_applicationstatelistener* listener, bool* listenerCalled = nullptr)
+    void CreateApplicationStateListener(alljoyn_applicationstatelistener* listener, bool* listenerCalled = nullptr)
     {
-        *listener = alljoyn_applicationstatelistener_create(&callbacks, listenerCalled);
+        *listener = alljoyn_applicationstatelistener_create(&m_callbacks, listenerCalled);
         ASSERT_NE(nullptr, listener);
     }
 
-    void changeApplicationState()
+    void ChangeApplicationState()
     {
-        managedApp.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", nullptr);
-        SetManifestTemplate(managedApp);
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(m_managedApp,
+                                                                  "ALLJOYN_ECDHE_NULL",
+                                                                  nullptr,
+                                                                  nullptr,
+                                                                  QCC_FALSE));
+        SetManifestTemplate(m_managedApp);
     }
 
-    bool waitForTrueOrTimeout(bool* isTrue, int timeoutMs)
+    bool WaitForTrueOrTimeout(bool* isTrue, int timeoutMs)
     {
         time_t startTime = time(nullptr);
         int timeDiffMs = difftime(time(nullptr), startTime) * 1000;
@@ -96,11 +126,10 @@ class BusAttachmentSecurity20Test : public testing::Test {
 
   private:
 
-    ajn::BusAttachment privateSecurityAgentBus;
-    ajn::BusAttachment managedApp;
-    alljoyn_applicationstatelistener_callbacks callbacks;
-    ajn::InMemoryKeyStoreListener securityAgentKeyStoreListener;
-    ajn::InMemoryKeyStoreListener managedAppKeyStoreListener;
+    alljoyn_busattachment m_managedApp;
+    alljoyn_applicationstatelistener_callbacks m_callbacks;
+    InMemoryKeyStoreListener m_securityAgentKeyStoreListener;
+    InMemoryKeyStoreListener m_managedAppKeyStoreListener;
 
     static void AJ_CALL stateCallback(AJ_PCSTR busName,
                                       AJ_PCSTR publicKey,
@@ -116,137 +145,133 @@ class BusAttachmentSecurity20Test : public testing::Test {
         }
     }
 
-    void setupAgent()
+    void SetupAgent()
     {
-        ASSERT_EQ(ER_OK, privateSecurityAgentBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL", nullptr));
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(m_securityAgent,
+                                                                  "ALLJOYN_ECDHE_NULL",
+                                                                  nullptr,
+                                                                  nullptr,
+                                                                  QCC_FALSE));
     }
 
-    void basicBusSetup(ajn::BusAttachment& bus, ajn::InMemoryKeyStoreListener& keyStoreListener)
+    void BasicBusSetup(alljoyn_busattachment* bus, AJ_PCSTR busName, InMemoryKeyStoreListener* keyStoreListener)
     {
-        ASSERT_EQ(ER_OK, bus.RegisterKeyStoreListener(keyStoreListener));
-        ASSERT_EQ(ER_OK, bus.Start());
-        ASSERT_EQ(ER_OK, bus.Connect(ajn::getConnectArg().c_str()));
+        *bus = alljoyn_busattachment_create(busName, QCC_FALSE);
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_start(*bus));
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_connect(*bus, getConnectArg().c_str()));
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_registerkeystorelistener(*bus, (alljoyn_keystorelistener)keyStoreListener));
     }
 
-    void appTearDown(ajn::BusAttachment& bus)
+    void BasicBusTearDown(alljoyn_busattachment bus)
     {
-        bus.UnregisterKeyStoreListener();
-        bus.Stop();
-        bus.Join();
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_stop(bus));
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_join(bus));
+        alljoyn_busattachment_destroy(bus);
     }
 
-    void SetManifestTemplate(ajn::BusAttachment& bus)
+    void SetManifestTemplate(alljoyn_busattachment bus)
     {
-        ajn::PermissionPolicy::Rule manifestTemplate[1];
-        ajn::PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*",
-                      ajn::PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                      ajn::PermissionPolicy::Rule::Member::ACTION_PROVIDE
-                      | ajn::PermissionPolicy::Rule::Member::ACTION_MODIFY
-                      | ajn::PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifestTemplate[0].SetObjPath("*");
-        manifestTemplate[0].SetInterfaceName("*");
-        manifestTemplate[0].SetMembers(1, member);
-        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifest(manifestTemplate, 1));
+        alljoyn_permissionconfigurator configurator = alljoyn_busattachment_getpermissionconfigurator(bus);
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(configurator, s_allowAllManifestTemplate));
     }
 };
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnNonNullPermissionConfigurator)
 {
-    EXPECT_NE(alljoyn_busattachment_getpermissionconfigurator(securityAgent), nullptr);
+    EXPECT_NE(nullptr, alljoyn_busattachment_getpermissionconfigurator(m_securityAgent));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenRegisteringWithNullListener)
 {
-    EXPECT_EQ(ER_INVALID_ADDRESS, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, nullptr));
+    EXPECT_EQ(ER_INVALID_ADDRESS, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, nullptr));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringWithNullListener)
 {
-    EXPECT_EQ(ER_INVALID_ADDRESS, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, nullptr));
+    EXPECT_EQ(ER_INVALID_ADDRESS, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, nullptr));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringUnknownListener)
 {
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
+    CreateApplicationStateListener(&listener);
 
-    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldRegisterSuccessfullyForNewListener)
 {
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
+    CreateApplicationStateListener(&listener);
 
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldUnregisterSuccessfullyForSameListener)
 {
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
+    CreateApplicationStateListener(&listener);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
 
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenRegisteringSameListenerTwice)
 {
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
+    CreateApplicationStateListener(&listener);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
 
-    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldReturnErrorWhenUnregisteringSameListenerTwice)
 {
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
+    CreateApplicationStateListener(&listener);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
 
-    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+    EXPECT_EQ(ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldRegisterSameListenerSuccessfullyAfterUnregister)
 {
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener);
+    CreateApplicationStateListener(&listener);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
 
-    EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldCallStateListenerAfterRegister)
 {
     bool listenerCalled = false;
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener, &listenerCalled);
+    CreateApplicationStateListener(&listener, &listenerCalled);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
-    changeApplicationState();
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
+    ChangeApplicationState();
 
-    EXPECT_TRUE(waitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_TRUE(WaitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldNotCallStateListenerAfterUnregister)
 {
     bool listenerCalled = false;
     alljoyn_applicationstatelistener listener = nullptr;
-    createApplicationStateListener(&listener, &listenerCalled);
+    CreateApplicationStateListener(&listener, &listenerCalled);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, listener));
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, listener));
-    changeApplicationState();
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, listener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, listener));
+    ChangeApplicationState();
 
-    EXPECT_FALSE(waitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_FALSE(WaitForTrueOrTimeout(&listenerCalled, STATE_CHANGE_TIMEOUT_MS));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldCallAllStateListeners)
@@ -255,15 +280,15 @@ TEST_F(BusAttachmentSecurity20Test, shouldCallAllStateListeners)
     bool secondListenerCalled = false;
     alljoyn_applicationstatelistener firstListener = nullptr;
     alljoyn_applicationstatelistener secondListener = nullptr;
-    createApplicationStateListener(&firstListener, &firstListenerCalled);
-    createApplicationStateListener(&secondListener, &secondListenerCalled);
+    CreateApplicationStateListener(&firstListener, &firstListenerCalled);
+    CreateApplicationStateListener(&secondListener, &secondListenerCalled);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, firstListener));
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, secondListener));
-    changeApplicationState();
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, firstListener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, secondListener));
+    ChangeApplicationState();
 
-    EXPECT_TRUE(waitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
-    EXPECT_TRUE(waitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_TRUE(WaitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_TRUE(WaitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
 }
 
 TEST_F(BusAttachmentSecurity20Test, shouldCallOnlyOneStateListenerWhenOtherUnregistered)
@@ -272,16 +297,16 @@ TEST_F(BusAttachmentSecurity20Test, shouldCallOnlyOneStateListenerWhenOtherUnreg
     bool secondListenerCalled = false;
     alljoyn_applicationstatelistener firstListener = nullptr;
     alljoyn_applicationstatelistener secondListener = nullptr;
-    createApplicationStateListener(&firstListener, &firstListenerCalled);
-    createApplicationStateListener(&secondListener, &secondListenerCalled);
+    CreateApplicationStateListener(&firstListener, &firstListenerCalled);
+    CreateApplicationStateListener(&secondListener, &secondListenerCalled);
 
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, firstListener));
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(securityAgent, secondListener));
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(securityAgent, firstListener));
-    changeApplicationState();
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, firstListener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_registerapplicationstatelistener(m_securityAgent, secondListener));
+    ASSERT_EQ(ER_OK, alljoyn_busattachment_unregisterapplicationstatelistener(m_securityAgent, firstListener));
+    ChangeApplicationState();
 
-    EXPECT_FALSE(waitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
-    EXPECT_TRUE(waitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_FALSE(WaitForTrueOrTimeout(&firstListenerCalled, STATE_CHANGE_TIMEOUT_MS));
+    EXPECT_TRUE(WaitForTrueOrTimeout(&secondListenerCalled, STATE_CHANGE_TIMEOUT_MS));
 }
 
 TEST(BusAttachmentTest, createinterface) {
@@ -392,13 +417,13 @@ TEST(BusAttachmentTest, isconnected)
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         EXPECT_FALSE(alljoyn_busattachment_isconnected(bus));
 
-        status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+        status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         if (ER_OK == status) {
             EXPECT_TRUE(alljoyn_busattachment_isconnected(bus));
         }
 
-        status = alljoyn_busattachment_disconnect(bus, ajn::getConnectArg().c_str());
+        status = alljoyn_busattachment_disconnect(bus, getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         if (ER_OK == status) {
             EXPECT_FALSE(alljoyn_busattachment_isconnected(bus));
@@ -438,13 +463,13 @@ TEST(BusAttachmentTest, disconnect)
         status = alljoyn_busattachment_disconnect(bus, NULL);
         EXPECT_EQ(ER_BUS_NOT_CONNECTED, status);
 
-        status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+        status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         if (ER_OK == status) {
             EXPECT_TRUE(alljoyn_busattachment_isconnected(bus));
         }
 
-        status = alljoyn_busattachment_disconnect(bus, ajn::getConnectArg().c_str());
+        status = alljoyn_busattachment_disconnect(bus, getConnectArg().c_str());
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         if (ER_OK == status) {
             EXPECT_FALSE(alljoyn_busattachment_isconnected(bus));
@@ -482,7 +507,7 @@ TEST(BusAttachmentTest, connect_null)
     AJ_PCSTR preferredConnectSpec;
 
 #if defined(QCC_OS_GROUP_WINDOWS)
-    if (qcc::NamedPipeWrapper::AreApisAvailable()) {
+    if (NamedPipeWrapper::AreApisAvailable()) {
         preferredConnectSpec = "npipe:";
     } else {
         preferredConnectSpec = "tcp:addr=127.0.0.1,port=9955";
@@ -517,7 +542,7 @@ TEST(BusAttachmentTest, getconnectspec)
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     AJ_PCSTR connectspec = alljoyn_busattachment_getconnectspec(bus);
@@ -527,7 +552,7 @@ TEST(BusAttachmentTest, getconnectspec)
      * the in process name service.  If the internal name service is used
      * the connect spec will be 'null:' otherwise it will match the ConnectArg.
      */
-    EXPECT_TRUE(strcmp(ajn::getConnectArg().c_str(), connectspec) == 0 ||
+    EXPECT_TRUE(strcmp(getConnectArg().c_str(), connectspec) == 0 ||
                 strcmp("null:", connectspec) == 0);
 
     status = alljoyn_busattachment_stop(bus);
@@ -547,7 +572,7 @@ TEST(BusAttachmentTest, getdbusobject) {
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_proxybusobject dBusProxyObject = alljoyn_busattachment_getdbusproxyobj(bus);
@@ -583,7 +608,7 @@ TEST(BusAttachmentTest, ping_self) {
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     ASSERT_EQ(ER_OK, alljoyn_busattachment_ping(bus, alljoyn_busattachment_getuniquename(bus), 1000));
@@ -599,7 +624,7 @@ TEST(BusAttachmentTest, ping_other_on_same_bus) {
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_busattachment otherbus = NULL;
@@ -608,7 +633,7 @@ TEST(BusAttachmentTest, ping_other_on_same_bus) {
 
     status = alljoyn_busattachment_start(otherbus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_busattachment_connect(otherbus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(otherbus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     ASSERT_EQ(ER_OK, alljoyn_busattachment_ping(bus, alljoyn_busattachment_getuniquename(otherbus), 1000));
@@ -664,7 +689,7 @@ TEST(BusAttachmentTest, BasicSecureConnection)
     QStatus status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnection(bus, "busname", false));
-    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_EQ(ER_BUS_SECURITY_NOT_ENABLED, alljoyn_busattachment_secureconnection(bus, "busname", false));
 
@@ -674,7 +699,7 @@ TEST(BusAttachmentTest, BasicSecureConnection)
 
     status = alljoyn_busattachment_start(otherbus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_busattachment_connect(otherbus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(otherbus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_authlistener al = NULL;
@@ -717,7 +742,7 @@ TEST(BusAttachmentTest, BasicSecureConnectionAsync)
     QStatus status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnectionasync(bus, "busname", false));
-    status = alljoyn_busattachment_connect(bus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(bus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_EQ(ER_BUS_SECURITY_NOT_ENABLED, alljoyn_busattachment_secureconnectionasync(bus, "busname", false));
 
@@ -727,7 +752,7 @@ TEST(BusAttachmentTest, BasicSecureConnectionAsync)
 
     status = alljoyn_busattachment_start(otherbus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    status = alljoyn_busattachment_connect(otherbus, ajn::getConnectArg().c_str());
+    status = alljoyn_busattachment_connect(otherbus, getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_authlistener al = NULL;
     alljoyn_authlistener_callbacks cbs;
