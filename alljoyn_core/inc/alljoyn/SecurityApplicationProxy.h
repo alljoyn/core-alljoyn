@@ -139,15 +139,22 @@ class SecurityApplicationProxy : public ProxyBusObject {
 
     /**
      * Returns the XML version of the manifest template. The returned value
-     * is managed by the caller and has to be freed using delete[].
+     * is managed by the caller and has to be freed using DestroyManifestTemplate.
      *
-     * @param[out] manifestTemplate The manifest temaplte in XML format.
+     * @param[out] manifestTemplateXml  The manifest template in XML format.
      *
      * @return
      *  - #ER_OK if successful.
      *  - An error status indicating failure.
      */
     QStatus GetManifestTemplate(AJ_PSTR* manifestTemplateXml);
+
+    /**
+     * Destroys the manifest template XML created by GetManifestTemplate.
+     *
+     * @param[in] manifestTemplateXml    The manifest temaplte in XML format.
+     */
+    static void DestroyManifestTemplate(AJ_PSTR manifestTemplateXml);
 
     /**
      * The authentication mechanisms the application supports for the claim process.

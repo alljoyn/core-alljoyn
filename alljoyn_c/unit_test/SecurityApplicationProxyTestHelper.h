@@ -41,7 +41,6 @@ class SecurityApplicationProxyTestHelper {
     static void RetrieveDSAPrivateKeyFromKeyStore(alljoyn_busattachment bus, AJ_PSTR* privateKey);
     static void RetrieveDSAPublicKeyFromKeyStore(alljoyn_busattachment bus, AJ_PSTR* publicKey);
     static void ReplaceString(std::string& original, const AJ_PCSTR from, AJ_PCSTR to);
-    static void String2CString(const qcc::String& qccString, AJ_PSTR* resultString);
     static void CreateIdentityCert(alljoyn_busattachment issuerBus,
                                    alljoyn_busattachment receiverBus,
                                    AJ_PSTR* certificatePem,
@@ -51,6 +50,8 @@ class SecurityApplicationProxyTestHelper {
                                      const uint8_t* groupId,
                                      bool delegate,
                                      AJ_PSTR* membershipCertificatePem);
+    static void DestroyCertificate(AJ_PSTR cert);
+    static void DestroyKey(AJ_PSTR key);
 
   private:
     static const uint32_t oneHourInSeconds;
@@ -58,34 +59,34 @@ class SecurityApplicationProxyTestHelper {
     static QStatus RetrieveDSAPublicKeyFromKeyStore(BusAttachment* bus, qcc::ECCPublicKey& publicKey);
     static QStatus GetGUID(BusAttachment& bus, qcc::GUID128& guid);
     static QStatus CreateIdentityCert(BusAttachment& issuerBus,
-                                      const qcc::String& serial,
-                                      const qcc::String& subject,
+                                      const std::string& serial,
+                                      const std::string& subject,
                                       const qcc::ECCPublicKey* subjectPubKey,
-                                      const qcc::String& alias,
+                                      const std::string& alias,
                                       qcc::IdentityCertificate& cert,
                                       bool delegate);
     static QStatus CreateIdentityCert(BusAttachment& issuerBus,
-                                      const qcc::String& serial,
-                                      const qcc::String& subject,
+                                      const std::string& serial,
+                                      const std::string& subject,
                                       const qcc::ECCPublicKey* subjectPubKey,
-                                      const qcc::String& alias,
-                                      qcc::String& der,
+                                      const std::string& alias,
+                                      std::string& der,
                                       bool delegate);
-    static QStatus CreateMembershipCert(const qcc::String& serial,
+    static QStatus CreateMembershipCert(const std::string& serial,
                                         BusAttachment& signingBus,
-                                        const qcc::String& subject,
+                                        const std::string& subject,
                                         const qcc::ECCPublicKey* subjectPubKey,
                                         const qcc::GUID128& guild,
                                         bool delegate,
                                         qcc::MembershipCertificate& cert,
                                         bool setEmptyAKI = false);
-    static QStatus CreateMembershipCert(const qcc::String& serial,
+    static QStatus CreateMembershipCert(const std::string& serial,
                                         BusAttachment& signingBus,
-                                        const qcc::String& subject,
+                                        const std::string& subject,
                                         const qcc::ECCPublicKey* subjectPubKey,
                                         const qcc::GUID128& guild,
                                         bool delegate,
-                                        qcc::String& der);
+                                        std::string& der);
 };
 }
 #endif

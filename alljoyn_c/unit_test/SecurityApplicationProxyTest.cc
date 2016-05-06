@@ -23,6 +23,7 @@
 #include <alljoyn_c/SecurityApplicationProxy.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
+#include <qcc/StringUtil.h>
 #include <qcc/XmlElement.h>
 #include "ajTestCommon.h"
 #include "InMemoryKeyStore.h"
@@ -188,9 +189,9 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
             alljoyn_securityapplicationproxy_manifest_destroy(signedManifestXml);
         }
 
-        delete[] securityManagerIdentityCertificate;
-        delete[] securityManagerPublicKey;
-        delete[] securityManagerPrivateKey;
+        SecurityApplicationProxyTestHelper::DestroyCertificate(securityManagerIdentityCertificate);
+        SecurityApplicationProxyTestHelper::DestroyKey(securityManagerPublicKey);
+        SecurityApplicationProxyTestHelper::DestroyKey(securityManagerPrivateKey);
         alljoyn_authlistenerasync_destroy(defaultEcdheAuthListener);
 
         alljoyn_permissionconfigurationlistener_destroy(securityManagerPermissionConfigurationListener);
@@ -342,7 +343,7 @@ class SecurityApplicationProxySelfClaimTest : public SecurityApplicationProxyPre
     virtual void TearDown()
     {
         BasicBusTearDown(managedApp);
-        DeleteArrayElements(securityManagerSignedManifests, ArraySize(securityManagerSignedManifests));
+        DeleteManifestsArray(securityManagerSignedManifests, ArraySize(securityManagerSignedManifests));
 
         alljoyn_permissionconfigurationlistener_destroy(managedAppPermissionConfigurationListener);
 
@@ -365,10 +366,10 @@ class SecurityApplicationProxySelfClaimTest : public SecurityApplicationProxyPre
         }
     }
 
-    void DeleteArrayElements(AJ_PSTR* someArray, size_t elementCount)
+    void DeleteManifestsArray(AJ_PSTR* someArray, size_t elementCount)
     {
         for (size_t index = 0; index < elementCount; index++) {
-            delete[] someArray[index];
+            alljoyn_securityapplicationproxy_manifest_destroy(someArray[index]);
         }
     }
 
@@ -412,11 +413,11 @@ class SecurityApplicationProxyPreClaimTest : public SecurityApplicationProxySelf
 
         alljoyn_securityapplicationproxy_destroy(managedAppSecurityApplicationProxy);
 
-        delete[] managedAppIdentityCertificateChain;
-        delete[] managedAppIdentityCertificate;
-        delete[] adminGroupMembershipCertificate;
+        SecurityApplicationProxyTestHelper::DestroyCertificate(managedAppIdentityCertificateChain);
+        SecurityApplicationProxyTestHelper::DestroyCertificate(managedAppIdentityCertificate);
+        SecurityApplicationProxyTestHelper::DestroyCertificate(adminGroupMembershipCertificate);
 
-        DeleteArrayElements(managedAppSignedManifests, ArraySize(managedAppSignedManifests));
+        DeleteManifestsArray(managedAppSignedManifests, ArraySize(managedAppSignedManifests));
 
         SecurityApplicationProxySelfClaimTest::TearDown();
     }
@@ -542,8 +543,8 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
 
     virtual void TearDown()
     {
-        delete[] newPolicy;
-        delete[] oldPolicy;
+        DestroyStringCopy(newPolicy);
+        DestroyStringCopy(oldPolicy);
 
         SecurityApplicationProxyPostClaimTest::TearDown();
     }
@@ -555,8 +556,8 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
 
     void ModifyManagedAppIdentityCertAndManifests()
     {
-        delete[] managedAppIdentityCertificate;
-        delete[] managedAppSignedManifests[0];
+        SecurityApplicationProxyTestHelper::DestroyCertificate(managedAppIdentityCertificate);
+        alljoyn_securityapplicationproxy_manifest_destroy(managedAppSignedManifests[0]);
 
         SecurityApplicationProxyTestHelper::CreateIdentityCert(securityManager,
                                                                managedApp,
@@ -594,7 +595,7 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
 
         fixedPolicyXml->GetChildren()[ACLS_INDEX]->AddChild(fixXml);
 
-        SecurityApplicationProxyTestHelper::String2CString(fixedPolicyXml->Generate(), fixedPolicy);
+        *fixedPolicy = CreateStringCopy(fixedPolicyXml->Generate());
         delete fixedPolicyXml;
     }
 
