@@ -50,11 +50,11 @@ using namespace ajn;
 #define FIRST_VALID_GUID "16fc57377fced83516fc57377fced835"
 #define SECOND_VALID_GUID "f5175474e932917fa3d9b5fd665f65de"
 
-static AJ_PCSTR NON_WELL_FORMED_XML = "<abc>";
-static AJ_PCSTR EMPTY_POLICY_ELEMENT =
+static AJ_PCSTR s_nonWellFormedXml = "<abc>";
+static AJ_PCSTR s_emptyPolicyElement =
     "<policy>"
     "</policy>";
-static AJ_PCSTR MISSING_POLICY_VERSION_ELEMENT =
+static AJ_PCSTR s_missingPolicyVersionElement =
     "<policy>"
     "<serialNumber>10</serialNumber>"
     "<acls>"
@@ -68,7 +68,7 @@ static AJ_PCSTR MISSING_POLICY_VERSION_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR MISSING_SERIAL_NUMBER_ELEMENT =
+static AJ_PCSTR s_missingSerialNumberElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<acls>"
@@ -82,18 +82,18 @@ static AJ_PCSTR MISSING_SERIAL_NUMBER_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR MISSING_ACLS_ELEMENT =
+static AJ_PCSTR s_missingAclsElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
     "</policy>";
-static AJ_PCSTR MISSING_ACL_ELEMENT =
+static AJ_PCSTR s_missingAclElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
     "<acls></acls>"
     "</policy>";
-static AJ_PCSTR MISSING_PEERS_ELEMENT =
+static AJ_PCSTR s_missingPeersElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -103,7 +103,7 @@ static AJ_PCSTR MISSING_PEERS_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR MISSING_RULES_ELEMENT =
+static AJ_PCSTR s_missingRulesElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -117,7 +117,7 @@ static AJ_PCSTR MISSING_RULES_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR MISSING_PEER_ELEMENT =
+static AJ_PCSTR s_missingPeerElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -128,7 +128,7 @@ static AJ_PCSTR MISSING_PEER_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR MISSING_TYPE_ELEMENT =
+static AJ_PCSTR s_missingTypeElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -141,7 +141,7 @@ static AJ_PCSTR MISSING_TYPE_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR EMPTY_POLICY_VERSION_ELEMENT =
+static AJ_PCSTR s_emptyPolicyVersionElement =
     "<policy>"
     "<policyVersion></policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -156,7 +156,7 @@ static AJ_PCSTR EMPTY_POLICY_VERSION_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR EMPTY_SERIAL_NUMBER_ELEMENT =
+static AJ_PCSTR s_emptySerialNumberElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber></serialNumber>"
@@ -171,7 +171,7 @@ static AJ_PCSTR EMPTY_SERIAL_NUMBER_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR EMPTY_TYPE_ELEMENT =
+static AJ_PCSTR s_emptyTypeElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -186,7 +186,7 @@ static AJ_PCSTR EMPTY_TYPE_ELEMENT =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR POLICY_ELEMENTS_INCORRECT_ORDER =
+static AJ_PCSTR s_policyElementsIncorrectOrder =
     "<policy>"
     "<serialNumber>10</serialNumber>"
     "<policyVersion>1</policyVersion>"
@@ -201,7 +201,7 @@ static AJ_PCSTR POLICY_ELEMENTS_INCORRECT_ORDER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR ACL_ELEMENTS_INCORRECT_ORDER =
+static AJ_PCSTR s_aclElementsIncorrectOrder =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -216,7 +216,7 @@ static AJ_PCSTR ACL_ELEMENTS_INCORRECT_ORDER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR PEER_ELEMENTS_INCORRECT_ORDER =
+static AJ_PCSTR s_peerElementsIncorrectOrder =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -234,7 +234,7 @@ static AJ_PCSTR PEER_ELEMENTS_INCORRECT_ORDER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR INVALID_PUBLIC_KEY =
+static AJ_PCSTR s_invalidPublicKey =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -251,7 +251,7 @@ static AJ_PCSTR INVALID_PUBLIC_KEY =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR INVALID_SGID =
+static AJ_PCSTR s_invalidSgId =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -270,7 +270,7 @@ static AJ_PCSTR INVALID_SGID =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR POLICY_VERSION_NOT_ONE =
+static AJ_PCSTR s_policyVersionNotOne =
     "<policy>"
     "<policyVersion>100</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -285,7 +285,7 @@ static AJ_PCSTR POLICY_VERSION_NOT_ONE =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR SERIAL_NUMBER_NEGATIVE =
+static AJ_PCSTR s_serialNumberNegative =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>-1</serialNumber>"
@@ -300,7 +300,7 @@ static AJ_PCSTR SERIAL_NUMBER_NEGATIVE =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR UNKNOWN_PEER_TYPE =
+static AJ_PCSTR s_unknownPeerType =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -315,7 +315,7 @@ static AJ_PCSTR UNKNOWN_PEER_TYPE =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR ALL_TYPE_WITH_OTHER =
+static AJ_PCSTR s_allTypeWithOther =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -333,7 +333,7 @@ static AJ_PCSTR ALL_TYPE_WITH_OTHER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR ANY_TRUSTED_TWICE =
+static AJ_PCSTR s_anyTrustedTwice =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -351,7 +351,7 @@ static AJ_PCSTR ANY_TRUSTED_TWICE =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR SAME_FROM_CA_TWICE =
+static AJ_PCSTR s_sameFromCaTwice =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -375,7 +375,7 @@ static AJ_PCSTR SAME_FROM_CA_TWICE =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR SAME_WITH_PUBLIC_KEY_TWICE =
+static AJ_PCSTR s_sameWithPublicKeyTwice =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -399,7 +399,7 @@ static AJ_PCSTR SAME_WITH_PUBLIC_KEY_TWICE =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR SAME_WITH_MEMBERSHIP_TWICE =
+static AJ_PCSTR s_sameWithMembershipTwice =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -427,7 +427,7 @@ static AJ_PCSTR SAME_WITH_MEMBERSHIP_TWICE =
     "</acls>"
     "</policy>";
 
-static AJ_PCSTR VALID_ALL_TYPE_PEER =
+static AJ_PCSTR s_validAllTypePeer =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -442,7 +442,7 @@ static AJ_PCSTR VALID_ALL_TYPE_PEER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_TWO_ACLS =
+static AJ_PCSTR s_validTwoAcls =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -465,7 +465,7 @@ static AJ_PCSTR VALID_TWO_ACLS =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_WHITESPACE_IN_POLICY_VERSION =
+static AJ_PCSTR s_validWhitespaceInPolicyVersion =
     "<policy>"
     "<policyVersion> 1 </policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -480,7 +480,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_POLICY_VERSION =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_WHITESPACE_IN_SERIAL_NUMBER =
+static AJ_PCSTR s_validWhitespaceInSerialNumber =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber> 1 </serialNumber>"
@@ -495,7 +495,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_SERIAL_NUMBER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_WHITESPACE_IN_TYPE =
+static AJ_PCSTR s_validWhitespaceInType =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -510,7 +510,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_TYPE =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_WHITESPACE_IN_PUBLIC_KEY =
+static AJ_PCSTR s_validWhitespaceInPublicKey =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -528,7 +528,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_PUBLIC_KEY =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_WHITESPACE_IN_SGID =
+static AJ_PCSTR s_validWhitespaceInSgid =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -547,7 +547,7 @@ static AJ_PCSTR VALID_WHITESPACE_IN_SGID =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_ANY_TRUSTED_PEER =
+static AJ_PCSTR s_validAnyTrustedPeer =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -562,7 +562,7 @@ static AJ_PCSTR VALID_ANY_TRUSTED_PEER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_FROM_CA =
+static AJ_PCSTR s_validFromCa =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -580,7 +580,7 @@ static AJ_PCSTR VALID_FROM_CA =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_WITH_MEMBERSHIP =
+static AJ_PCSTR s_validWithMembership =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -599,7 +599,7 @@ static AJ_PCSTR VALID_WITH_MEMBERSHIP =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_WITH_PUBLIC_KEY =
+static AJ_PCSTR s_validWithPublicKey =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -617,7 +617,7 @@ static AJ_PCSTR VALID_WITH_PUBLIC_KEY =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_ANY_TRUSTED_PEER_WITH_OTHER =
+static AJ_PCSTR s_validAnyTrustedPeerWithOther =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -638,7 +638,7 @@ static AJ_PCSTR VALID_ANY_TRUSTED_PEER_WITH_OTHER =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_TWO_DIFFERENT_CA =
+static AJ_PCSTR s_validTwoDifferentCa =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -662,7 +662,7 @@ static AJ_PCSTR VALID_TWO_DIFFERENT_CA =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_KEYS =
+static AJ_PCSTR s_validTwoWithMembershipDifferentKeys =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -688,7 +688,7 @@ static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_KEYS =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_SGIDS =
+static AJ_PCSTR s_validTwoWithMembershipDifferentSgids =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -714,7 +714,7 @@ static AJ_PCSTR VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_SGIDS =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_TWO_DIFFERENT_WITH_PUBLIC_KEY =
+static AJ_PCSTR s_validTwoDifferentWithPublicKey =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -738,7 +738,7 @@ static AJ_PCSTR VALID_TWO_DIFFERENT_WITH_PUBLIC_KEY =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR VALID_SAME_KEY_CA_AND_WITH_PUBLIC_KEY =
+static AJ_PCSTR s_validSameKeyCaAndWithPublicKey =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>10</serialNumber>"
@@ -765,38 +765,30 @@ static AJ_PCSTR VALID_SAME_KEY_CA_AND_WITH_PUBLIC_KEY =
 
 class XmlPoliciesConverterDetailedTest : public testing::Test {
   public:
-    PermissionPolicy policy;
-    PermissionPolicy::Peer::PeerType retrievedPeerType;
-    const qcc::KeyInfoNISTP256* retrievedPeerPublicKey;
-    qcc::String retrievedPeerPublicKeyPEM;
-    qcc::GUID128 retrievedPeerSgId;
-
-    virtual void SetUp()
-    {
-        /*
-         * Workaround for ASACORE-2703. Initializes algorithm providers for global variable "cngCache".
-         */
-        Crypto_ECC ecc;
-    }
+    PermissionPolicy m_policy;
+    PermissionPolicy::Peer::PeerType m_retrievedPeerType;
+    const qcc::KeyInfoNISTP256* m_retrievedPeerPublicKey;
+    qcc::String m_retrievedPeerPublicKeyPEM;
+    qcc::GUID128 m_retrievedPeerSgId;
 
     void RetrievePeerDetails(const PermissionPolicy::Peer& retrievedPeer)
     {
-        retrievedPeerType = retrievedPeer.GetType();
-        retrievedPeerPublicKey = retrievedPeer.GetKeyInfo();
-        if (nullptr != retrievedPeerPublicKey) {
-            ASSERT_EQ(ER_OK, qcc::CertificateX509::EncodePublicKeyPEM(retrievedPeerPublicKey->GetPublicKey(), retrievedPeerPublicKeyPEM));
+        m_retrievedPeerType = retrievedPeer.GetType();
+        m_retrievedPeerPublicKey = retrievedPeer.GetKeyInfo();
+        if (nullptr != m_retrievedPeerPublicKey) {
+            ASSERT_EQ(ER_OK, qcc::CertificateX509::EncodePublicKeyPEM(m_retrievedPeerPublicKey->GetPublicKey(), m_retrievedPeerPublicKeyPEM));
         }
-        retrievedPeerSgId = retrievedPeer.GetSecurityGroupId();
+        m_retrievedPeerSgId = retrievedPeer.GetSecurityGroupId();
     }
 };
 
 class XmlPoliciesConverterBasicTest : public testing::TestWithParam<AJ_PCSTR> {
   public:
-    PermissionPolicy policy;
-    AJ_PCSTR policyXml;
+    PermissionPolicy m_policy;
+    AJ_PCSTR m_policyXml;
 
     XmlPoliciesConverterBasicTest() :
-        policyXml(GetParam())
+        m_policyXml(GetParam())
     { }
 };
 
@@ -806,170 +798,170 @@ class XmlPoliciesConverterPassTest : public XmlPoliciesConverterBasicTest { };
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldReturnErrorForNonWellFormedXml)
 {
-    EXPECT_EQ(ER_EOF, XmlPoliciesConverter::FromXml(NON_WELL_FORMED_XML, policy));
+    EXPECT_EQ(ER_EOF, XmlPoliciesConverter::FromXml(s_nonWellFormedXml, m_policy));
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetPolicyVersion)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ALL_TYPE_PEER, policy));
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validAllTypePeer, m_policy));
 
-    EXPECT_EQ(1U, policy.GetSpecificationVersion());
+    EXPECT_EQ(1U, m_policy.GetSpecificationVersion());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetSerialNumber)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ALL_TYPE_PEER, policy));
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validAllTypePeer, m_policy));
 
-    EXPECT_EQ((uint16_t)10, policy.GetVersion());
+    EXPECT_EQ((uint16_t)10, m_policy.GetVersion());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetOneAcl)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ALL_TYPE_PEER, policy));
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validAllTypePeer, m_policy));
 
-    EXPECT_EQ((size_t)1, policy.GetAclsSize());
+    EXPECT_EQ((size_t)1, m_policy.GetAclsSize());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetTwoAcls)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_TWO_ACLS, policy));
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validTwoAcls, m_policy));
 
-    EXPECT_EQ((size_t)2, policy.GetAclsSize());
+    EXPECT_EQ((size_t)2, m_policy.GetAclsSize());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetOnePeer)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ALL_TYPE_PEER, policy));
-    ASSERT_EQ((size_t)1, policy.GetAclsSize());
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validAllTypePeer, m_policy));
+    ASSERT_EQ((size_t)1, m_policy.GetAclsSize());
 
-    EXPECT_EQ((size_t)1, policy.GetAcls()[0].GetPeersSize());
+    EXPECT_EQ((size_t)1, m_policy.GetAcls()[0].GetPeersSize());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetTwoPeers)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_TWO_DIFFERENT_CA, policy));
-    ASSERT_EQ((size_t)1, policy.GetAclsSize());
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validTwoDifferentCa, m_policy));
+    ASSERT_EQ((size_t)1, m_policy.GetAclsSize());
 
-    EXPECT_EQ((size_t)2, policy.GetAcls()[0].GetPeersSize());
+    EXPECT_EQ((size_t)2, m_policy.GetAcls()[0].GetPeersSize());
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetValidPeerForAllType)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ALL_TYPE_PEER, policy));
-    ASSERT_EQ((size_t)1, policy.GetAclsSize());
-    ASSERT_EQ((size_t)1, policy.GetAcls()[0].GetPeersSize());
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validAllTypePeer, m_policy));
+    ASSERT_EQ((size_t)1, m_policy.GetAclsSize());
+    ASSERT_EQ((size_t)1, m_policy.GetAcls()[0].GetPeersSize());
 
-    RetrievePeerDetails(policy.GetAcls()[0].GetPeers()[0]);
+    RetrievePeerDetails(m_policy.GetAcls()[0].GetPeers()[0]);
 
-    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_ALL, retrievedPeerType);
-    EXPECT_EQ(nullptr, retrievedPeerPublicKey);
-    EXPECT_EQ(qcc::GUID128(0), retrievedPeerSgId);
+    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_ALL, m_retrievedPeerType);
+    EXPECT_EQ(nullptr, m_retrievedPeerPublicKey);
+    EXPECT_EQ(qcc::GUID128(0), m_retrievedPeerSgId);
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetValidPeerForAnyTrustedType)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_ANY_TRUSTED_PEER, policy));
-    ASSERT_EQ((size_t)1, policy.GetAclsSize());
-    ASSERT_EQ((size_t)1, policy.GetAcls()[0].GetPeersSize());
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validAnyTrustedPeer, m_policy));
+    ASSERT_EQ((size_t)1, m_policy.GetAclsSize());
+    ASSERT_EQ((size_t)1, m_policy.GetAcls()[0].GetPeersSize());
 
-    RetrievePeerDetails(policy.GetAcls()[0].GetPeers()[0]);
+    RetrievePeerDetails(m_policy.GetAcls()[0].GetPeers()[0]);
 
-    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED, retrievedPeerType);
-    EXPECT_EQ(nullptr, retrievedPeerPublicKey);
-    EXPECT_EQ(qcc::GUID128(0), retrievedPeerSgId);
+    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED, m_retrievedPeerType);
+    EXPECT_EQ(nullptr, m_retrievedPeerPublicKey);
+    EXPECT_EQ(qcc::GUID128(0), m_retrievedPeerSgId);
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetValidPeerForFromCAType)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_FROM_CA, policy));
-    ASSERT_EQ((size_t)1, policy.GetAclsSize());
-    ASSERT_EQ((size_t)1, policy.GetAcls()[0].GetPeersSize());
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validFromCa, m_policy));
+    ASSERT_EQ((size_t)1, m_policy.GetAclsSize());
+    ASSERT_EQ((size_t)1, m_policy.GetAcls()[0].GetPeersSize());
 
-    RetrievePeerDetails(policy.GetAcls()[0].GetPeers()[0]);
+    RetrievePeerDetails(m_policy.GetAcls()[0].GetPeers()[0]);
 
-    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY, retrievedPeerType);
-    EXPECT_STREQ(FIRST_VALID_PUBLIC_KEY, retrievedPeerPublicKeyPEM.c_str());
-    EXPECT_EQ(qcc::GUID128(0), retrievedPeerSgId);
+    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY, m_retrievedPeerType);
+    EXPECT_STREQ(FIRST_VALID_PUBLIC_KEY, m_retrievedPeerPublicKeyPEM.c_str());
+    EXPECT_EQ(qcc::GUID128(0), m_retrievedPeerSgId);
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetValidPeerForWithPublicKey)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_WITH_PUBLIC_KEY, policy));
-    ASSERT_EQ((size_t)1, policy.GetAclsSize());
-    ASSERT_EQ((size_t)1, policy.GetAcls()[0].GetPeersSize());
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validWithPublicKey, m_policy));
+    ASSERT_EQ((size_t)1, m_policy.GetAclsSize());
+    ASSERT_EQ((size_t)1, m_policy.GetAcls()[0].GetPeersSize());
 
-    RetrievePeerDetails(policy.GetAcls()[0].GetPeers()[0]);
+    RetrievePeerDetails(m_policy.GetAcls()[0].GetPeers()[0]);
 
-    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY, retrievedPeerType);
-    EXPECT_STREQ(FIRST_VALID_PUBLIC_KEY, retrievedPeerPublicKeyPEM.c_str());
-    EXPECT_EQ(qcc::GUID128(0), retrievedPeerSgId);
+    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY, m_retrievedPeerType);
+    EXPECT_STREQ(FIRST_VALID_PUBLIC_KEY, m_retrievedPeerPublicKeyPEM.c_str());
+    EXPECT_EQ(qcc::GUID128(0), m_retrievedPeerSgId);
 }
 
 TEST_F(XmlPoliciesConverterDetailedTest, shouldGetValidPeerForWithMembershipType)
 {
-    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(VALID_WITH_MEMBERSHIP, policy));
-    ASSERT_EQ((size_t)1, policy.GetAclsSize());
-    ASSERT_EQ((size_t)1, policy.GetAcls()[0].GetPeersSize());
+    ASSERT_EQ(ER_OK, XmlPoliciesConverter::FromXml(s_validWithMembership, m_policy));
+    ASSERT_EQ((size_t)1, m_policy.GetAclsSize());
+    ASSERT_EQ((size_t)1, m_policy.GetAcls()[0].GetPeersSize());
 
-    RetrievePeerDetails(policy.GetAcls()[0].GetPeers()[0]);
+    RetrievePeerDetails(m_policy.GetAcls()[0].GetPeers()[0]);
 
-    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP, retrievedPeerType);
-    EXPECT_STREQ(FIRST_VALID_PUBLIC_KEY, retrievedPeerPublicKeyPEM.c_str());
-    EXPECT_EQ(qcc::GUID128(FIRST_VALID_GUID), retrievedPeerSgId);
+    EXPECT_EQ(PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP, m_retrievedPeerType);
+    EXPECT_STREQ(FIRST_VALID_PUBLIC_KEY, m_retrievedPeerPublicKeyPEM.c_str());
+    EXPECT_EQ(qcc::GUID128(FIRST_VALID_GUID), m_retrievedPeerSgId);
 }
 
 INSTANTIATE_TEST_CASE_P(XmlPoliciesConverterInvalidRulesSet,
                         XmlPoliciesConverterFailureTest,
-                        ::testing::Values(EMPTY_POLICY_ELEMENT,
-                                          EMPTY_POLICY_VERSION_ELEMENT,
-                                          EMPTY_SERIAL_NUMBER_ELEMENT,
-                                          EMPTY_TYPE_ELEMENT,
-                                          MISSING_ACLS_ELEMENT,
-                                          MISSING_ACL_ELEMENT,
-                                          MISSING_PEERS_ELEMENT,
-                                          MISSING_PEER_ELEMENT,
-                                          MISSING_POLICY_VERSION_ELEMENT,
-                                          MISSING_RULES_ELEMENT,
-                                          MISSING_SERIAL_NUMBER_ELEMENT,
-                                          MISSING_TYPE_ELEMENT,
-                                          POLICY_ELEMENTS_INCORRECT_ORDER,
-                                          ACL_ELEMENTS_INCORRECT_ORDER,
-                                          PEER_ELEMENTS_INCORRECT_ORDER,
-                                          INVALID_PUBLIC_KEY,
-                                          INVALID_SGID,
-                                          POLICY_VERSION_NOT_ONE,
-                                          SERIAL_NUMBER_NEGATIVE,
-                                          UNKNOWN_PEER_TYPE,
-                                          ALL_TYPE_WITH_OTHER,
-                                          ANY_TRUSTED_TWICE,
-                                          SAME_FROM_CA_TWICE,
-                                          SAME_WITH_PUBLIC_KEY_TWICE,
-                                          SAME_WITH_MEMBERSHIP_TWICE));
+                        ::testing::Values(s_emptyPolicyElement,
+                                          s_emptyPolicyVersionElement,
+                                          s_emptySerialNumberElement,
+                                          s_emptyTypeElement,
+                                          s_missingAclsElement,
+                                          s_missingAclElement,
+                                          s_missingPeersElement,
+                                          s_missingPeerElement,
+                                          s_missingPolicyVersionElement,
+                                          s_missingRulesElement,
+                                          s_missingSerialNumberElement,
+                                          s_missingTypeElement,
+                                          s_policyElementsIncorrectOrder,
+                                          s_aclElementsIncorrectOrder,
+                                          s_peerElementsIncorrectOrder,
+                                          s_invalidPublicKey,
+                                          s_invalidSgId,
+                                          s_policyVersionNotOne,
+                                          s_serialNumberNegative,
+                                          s_unknownPeerType,
+                                          s_allTypeWithOther,
+                                          s_anyTrustedTwice,
+                                          s_sameFromCaTwice,
+                                          s_sameWithPublicKeyTwice,
+                                          s_sameWithMembershipTwice));
 TEST_P(XmlPoliciesConverterFailureTest, shouldReturnErrorForInvalidRulesSet)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlPoliciesConverter::FromXml(policyXml, policy));
+    EXPECT_EQ(ER_XML_MALFORMED, XmlPoliciesConverter::FromXml(m_policyXml, m_policy));
 }
 
 INSTANTIATE_TEST_CASE_P(XmlPoliciesConverterPass,
                         XmlPoliciesConverterPassTest,
-                        ::testing::Values(VALID_ALL_TYPE_PEER,
-                                          VALID_TWO_ACLS,
-                                          VALID_ANY_TRUSTED_PEER,
-                                          VALID_ANY_TRUSTED_PEER_WITH_OTHER,
-                                          VALID_FROM_CA,
-                                          VALID_SAME_KEY_CA_AND_WITH_PUBLIC_KEY,
-                                          VALID_TWO_DIFFERENT_CA,
-                                          VALID_TWO_DIFFERENT_WITH_PUBLIC_KEY,
-                                          VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_KEYS,
-                                          VALID_TWO_WITH_MEMBERSHIP_DIFFERENT_SGIDS,
-                                          VALID_WHITESPACE_IN_POLICY_VERSION,
-                                          VALID_WHITESPACE_IN_PUBLIC_KEY,
-                                          VALID_WHITESPACE_IN_SERIAL_NUMBER,
-                                          VALID_WHITESPACE_IN_SGID,
-                                          VALID_WHITESPACE_IN_TYPE,
-                                          VALID_WITH_MEMBERSHIP,
-                                          VALID_WITH_PUBLIC_KEY));
+                        ::testing::Values(s_validAllTypePeer,
+                                          s_validTwoAcls,
+                                          s_validAnyTrustedPeer,
+                                          s_validAnyTrustedPeerWithOther,
+                                          s_validFromCa,
+                                          s_validSameKeyCaAndWithPublicKey,
+                                          s_validTwoDifferentCa,
+                                          s_validTwoDifferentWithPublicKey,
+                                          s_validTwoWithMembershipDifferentKeys,
+                                          s_validTwoWithMembershipDifferentSgids,
+                                          s_validWhitespaceInPolicyVersion,
+                                          s_validWhitespaceInPublicKey,
+                                          s_validWhitespaceInSerialNumber,
+                                          s_validWhitespaceInSgid,
+                                          s_validWhitespaceInType,
+                                          s_validWithMembership,
+                                          s_validWithPublicKey));
 TEST_P(XmlPoliciesConverterPassTest, shouldPassForValidInput)
 {
-    EXPECT_EQ(ER_OK, XmlPoliciesConverter::FromXml(policyXml, policy));
+    EXPECT_EQ(ER_OK, XmlPoliciesConverter::FromXml(m_policyXml, m_policy));
 }
