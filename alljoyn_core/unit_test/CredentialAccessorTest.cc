@@ -565,17 +565,39 @@ TEST_F(CredentialAccessorTest, TwoKeysWithTheSameGUID)
  * application with keystore version 0x103.
  */
 
-static const char Rev0X103KeyStore[] = {
-    "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAAAAAAAA4jYH7mABwaANNQGjS70p"
-    "JlYX7kbxeF02f/K0iTrVcQGe343Yz60DjEo9cG8Gam5jngLGS3k4+etaHjEo"
-    "C/Q8GX8eQTtk7hhewBt7U4zHzhQnlIST0y8ZXMYgDaCvwv6LY8vriQLSs0Qo"
-    "SqrXmZPxwOyUCaL4QwNZjKuSLSoyobvizzLc7/SQTMpICbY7VkCrRlALyZx+"
-    "6hjUHWgSYbxpod65fZrIf3BE6YUMg1uH10lWJo5AzLEINUcRdJKCFwnbArH8"
-    "3Q0IoF4/1Wx5EMjK6SSBlHdppV7yFRlRSctx+tBPHv0xXCVOnyRNuoebIWTp"
-    "kfaOjXVjwlSdVHaymkLN+vRp43Vfm3zqwcICwhVAdukv/ubr/PJBAVNEu9EJ"
-    "cPHY1bVUcQUdDcUfPMFs4zYhSEdat0yghfhMyiIjTNWRFSpIU/Bn9BpgWXVn"
-    "7vSFQOmd2b+2gO271nSBT3QXdFdLRK0S3rznBBBoveJlyA=="
-};
+/** the byte length of the encrypted keys length value is dependent on
+ * the byte size of size_t which is different in 64 and 32 bit systems.
+ * Check in which system we are on and use the appropriate keystore.
+ */
+qcc::String Rev0X103KeyStore() {
+    qcc::String revKeyStore;
+    if (sizeof(size_t) == 4) { // We are on a 32-bit system
+        revKeyStore = {
+            "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAADiNgfuYAHBoA01AaNLvSkmVhfu"
+            "RvF4XTZ/8rSJOtVxAZ7fjdjPrQOMSj1wbwZqbmOeAsZLeTj561oeMSgL9DwZ"
+            "fx5BO2TuGF7AG3tTjMfOFCeUhJPTLxlcxiANoK/C/otjy+uJAtKzRChKqteZ"
+            "k/HA7JQJovhDA1mMq5ItKjKhu+LPMtzv9JBMykgJtjtWQKtGUAvJnH7qGNQd"
+            "aBJhvGmh3rl9msh/cETphQyDW4fXSVYmjkDMsQg1RxF0koIXCdsCsfzdDQig"
+            "Xj/VbHkQyMrpJIGUd2mlXvIVGVFJy3H60E8e/TFcJU6fJE26h5shZOmR9o6N"
+            "dWPCVJ1UdrKaQs369GnjdV+bfOrBwgLCFUB26S/+5uv88kEBU0S70Qlw8djV"
+            "tVRxBR0NxR88wWzjNiFIR1q3TKCF+EzKIiNM1ZEVKkhT8Gf0GmBZdWfu9IVA"
+            "6Z3Zv7aA7bvWdIFPdBd0V0tErRLevOcEEGi94mXI"
+        };
+    } else {
+        revKeyStore = {
+            "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAAAAAAAA4jYH7mABwaANNQGjS70p"
+            "JlYX7kbxeF02f/K0iTrVcQGe343Yz60DjEo9cG8Gam5jngLGS3k4+etaHjEo"
+            "C/Q8GX8eQTtk7hhewBt7U4zHzhQnlIST0y8ZXMYgDaCvwv6LY8vriQLSs0Qo"
+            "SqrXmZPxwOyUCaL4QwNZjKuSLSoyobvizzLc7/SQTMpICbY7VkCrRlALyZx+"
+            "6hjUHWgSYbxpod65fZrIf3BE6YUMg1uH10lWJo5AzLEINUcRdJKCFwnbArH8"
+            "3Q0IoF4/1Wx5EMjK6SSBlHdppV7yFRlRSctx+tBPHv0xXCVOnyRNuoebIWTp"
+            "kfaOjXVjwlSdVHaymkLN+vRp43Vfm3zqwcICwhVAdukv/ubr/PJBAVNEu9EJ"
+            "cPHY1bVUcQUdDcUfPMFs4zYhSEdat0yghfhMyiIjTNWRFSpIU/Bn9BpgWXVn"
+            "7vSFQOmd2b+2gO271nSBT3QXdFdLRK0S3rznBBBoveJlyA=="
+        };
+    }
+    return revKeyStore;
+}
 static const char Rev0X103KeyStorePwd[] = {
     "L3VzcjIvcGhpbG4vQ3JlZGVudGlhbEFjY2Vzc29yVGVzdA=="
 };
@@ -583,7 +605,7 @@ static const char Rev0X103KeyStorePwd[] = {
 class CompatibleCredentialAccessorTest : public CredentialAccessorTest {
   public:
 
-    CompatibleCredentialAccessorTest() : CredentialAccessorTest(Rev0X103KeyStore, Rev0X103KeyStorePwd)
+    CompatibleCredentialAccessorTest() : CredentialAccessorTest(Rev0X103KeyStore(), Rev0X103KeyStorePwd)
     {
     }
 };
