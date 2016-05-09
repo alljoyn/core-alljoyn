@@ -22,6 +22,7 @@
 
 #include <map>
 
+#include <qcc/Util.h>
 #include <qcc/platform.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
@@ -526,6 +527,9 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
 
     /* Pull and check the key store version */
     QStatus status = source.PullBytes(&version, sizeof(version), pulled);
+#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN)
+    version = EndianSwap16(version);
+#endif
     if ((status == ER_OK) && ((version > KeyStoreVersion) || (version < LowStoreVersion))) {
         status = ER_BUS_KEYSTORE_VERSION_MISMATCH;
         QCC_LogError(status, ("Keystore has wrong version expected %u got %u", KeyStoreVersion, version));
@@ -533,6 +537,9 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
     /* Pull the persistent storage revision number */
     if (status == ER_OK) {
         status = source.PullBytes(&persistentRevisionLocalBuffer, sizeof(persistentRevisionLocalBuffer), pulled);
+#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN)
+        persistentRevisionLocalBuffer = EndianSwap32(persistentRevisionLocalBuffer);
+#endif
     }
     /* Pull the application GUID */
     if (status == ER_OK) {
@@ -553,6 +560,9 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
     QCC_DbgPrintf(("KeyStore::Pull (revision %u)", persistentRevisionLocalBuffer));
     /* Get length of the encrypted keys */
     status = source.PullBytes(&len, sizeof(len), pulled);
+#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN)
+    len = EndianSwap64(len);
+#endif
     if (status != ER_OK) {
         goto ExitPull;
     }
