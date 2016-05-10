@@ -88,7 +88,7 @@ class TestPingListener : public PingListener {
         foundmutex.Lock();
         while (retries < MAX_RETRIES && found.find(destination) == found.end()) {
             foundmutex.Unlock();
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
             foundmutex.Lock();
         }
         foundmutex.Unlock();
@@ -103,7 +103,7 @@ class TestPingListener : public PingListener {
         lostmutex.Lock();
         while (retries < MAX_RETRIES && lost.find(destination) == lost.end()) {
             lostmutex.Unlock();
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
             lostmutex.Lock();
             ++retries;
         }

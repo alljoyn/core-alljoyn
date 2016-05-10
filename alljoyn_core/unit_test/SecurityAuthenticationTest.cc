@@ -29,12 +29,6 @@
 using namespace ajn;
 using namespace qcc;
 using namespace std;
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_MSECS 5
 
 /**
  * This is a collection of misc. test cases that did not fit into another

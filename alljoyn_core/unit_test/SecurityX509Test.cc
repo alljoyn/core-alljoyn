@@ -329,7 +329,7 @@ TEST_F(SecurityX509Test, Test1) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject->msgEncrypted);
@@ -414,7 +414,7 @@ TEST_F(SecurityX509Test, Test2) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -484,7 +484,7 @@ TEST_F(SecurityX509Test, Test3) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -570,7 +570,7 @@ TEST_F(SecurityX509Test, Test4) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -656,7 +656,7 @@ TEST_F(SecurityX509Test, Test5) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -703,7 +703,7 @@ TEST_F(SecurityX509Test, Test6) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -752,7 +752,7 @@ TEST_F(SecurityX509Test, Test7) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -809,7 +809,7 @@ TEST_F(SecurityX509Test, Test8) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -866,7 +866,7 @@ TEST_F(SecurityX509Test, Test9) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_AUTH_FAIL", reply->GetArg(0)->v_string.str);
 
@@ -988,7 +988,7 @@ TEST_F(SecurityX509Test, Test10) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject->msgEncrypted);
@@ -1301,7 +1301,7 @@ TEST_F(SecurityX509Test, Test11) {
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Ping String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, 5000, ALLJOYN_FLAG_ENCRYPTED);
+    status = clientProxyObject->MethodCall(*pingMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_ENCRYPTED);
     ASSERT_EQ(ER_OK, status);
     EXPECT_STREQ("Ping String", reply->GetArg(0)->v_string.str);
     EXPECT_TRUE(serviceObject->msgEncrypted);
