@@ -104,7 +104,7 @@ TEST_F(BusListenerTest, listener_registered_unregistered) {
         if (listener_registered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_registered_flag);
     bus.UnregisterBusListener(buslistener);
@@ -112,7 +112,7 @@ TEST_F(BusListenerTest, listener_registered_unregistered) {
         if (listener_unregistered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_unregistered_flag);
 }
@@ -124,7 +124,7 @@ TEST_F(BusListenerTest, bus_unregister_listener_when_busAttachment_destroyed) {
         if (listener_registered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_registered_flag);
 
@@ -137,7 +137,7 @@ TEST_F(BusListenerTest, bus_unregister_listener_when_busAttachment_destroyed) {
         if (bus_stopping_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(bus_stopping_flag);
     busattachment->Join();
@@ -147,7 +147,7 @@ TEST_F(BusListenerTest, bus_unregister_listener_when_busAttachment_destroyed) {
         if (bus_disconnected_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(bus_disconnected_flag);
 
@@ -173,7 +173,7 @@ TEST_F(BusListenerTest, bus_stopping_disconnected) {
         if (listener_registered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_registered_flag);
 
@@ -186,7 +186,7 @@ TEST_F(BusListenerTest, bus_stopping_disconnected) {
         if (bus_disconnected_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     /*
      * Expect the bus_disconnected_flag to be set when BusAttachment.Disconnect
@@ -199,7 +199,7 @@ TEST_F(BusListenerTest, bus_stopping_disconnected) {
         if (bus_stopping_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(bus_disconnected_flag);
     EXPECT_TRUE(bus_stopping_flag);
@@ -210,7 +210,7 @@ TEST_F(BusListenerTest, bus_stopping_disconnected) {
         if (listener_unregistered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_unregistered_flag);
 }
@@ -225,7 +225,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
         if (listener_registered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_registered_flag);
 
@@ -241,7 +241,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
         if (found_advertised_name_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(found_advertised_name_flag);
 
@@ -251,7 +251,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
         if (lost_advertised_name_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(lost_advertised_name_flag);
 
@@ -260,7 +260,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
         if (bus_stopping_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(bus_stopping_flag);
     bus.Join();
@@ -269,7 +269,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
         if (bus_disconnected_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(bus_disconnected_flag);
 
@@ -278,7 +278,7 @@ TEST_F(BusListenerTest, found_lost_advertised_name) {
         if (listener_unregistered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_unregistered_flag);
 
@@ -296,7 +296,7 @@ TEST_F(BusListenerTest, name_owner_changed) {
         if (listener_registered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_registered_flag);
 
@@ -305,7 +305,7 @@ TEST_F(BusListenerTest, name_owner_changed) {
         if (name_owner_changed_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(name_owner_changed_flag);
 
@@ -314,7 +314,7 @@ TEST_F(BusListenerTest, name_owner_changed) {
         if (bus_stopping_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(bus_stopping_flag);
     bus.Join();
@@ -323,7 +323,7 @@ TEST_F(BusListenerTest, name_owner_changed) {
         if (bus_disconnected_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(bus_disconnected_flag);
 
@@ -332,7 +332,7 @@ TEST_F(BusListenerTest, name_owner_changed) {
         if (listener_unregistered_flag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(listener_unregistered_flag);
 

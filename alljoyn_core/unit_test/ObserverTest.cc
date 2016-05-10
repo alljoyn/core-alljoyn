@@ -53,7 +53,7 @@ using namespace ajn;
 
 #define PATH_PREFIX "/test/"
 
-#define MAX_WAIT_MS 6000
+#define MAX_WAIT_MS (6000 * s_globalTimerMultiplier)
 
 #define STRESS_FACTOR 5
 
@@ -621,7 +621,7 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
             CountProxies(obsAB) == 1) {
             break;
         }
-        qcc::Sleep(20);
+        qcc::Sleep(WAIT_TIME_20);
     }
     EXPECT_EQ(2, CountProxies(obsA));
     EXPECT_EQ(1, CountProxies(obsB));
@@ -731,9 +731,10 @@ TEST_F(ObserverTest, Rejection)
     EXPECT_TRUE(WaitForAll(events));
 
     /* now let doubtful kill the connection */
-    qcc::Sleep(100); // This sleep is necessary to make sure the provider
-                     // knows it has a session. Otherwise, CloseSession
-                     // sporadically fails.
+    // This sleep is necessary to make sure the provider
+    // knows it has a session. Otherwise, CloseSession
+    // sporadically fails.
+    qcc::Sleep(WAIT_TIME_100);
     listener.ExpectInvocations(1);
     doubtful.CloseSession(consumer);
     EXPECT_TRUE(WaitForAll(events));
@@ -1378,7 +1379,7 @@ TEST_F(ObserverTest, StressNumPartObjects) {
         }
         observers[i]->RegisterListener(*(listeners[i]));
 
-        qcc::Sleep(20);
+        qcc::Sleep(WAIT_TIME_20);
     }
 
     EXPECT_TRUE(WaitForAll(events, MAX_WAIT_MS * (1 + STRESS_FACTOR / 2)));

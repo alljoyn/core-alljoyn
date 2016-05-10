@@ -39,13 +39,6 @@
  * responding to an advertisement we have made.
  */
 
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_TIME 5
-
 using namespace ajn;
 using namespace std;
 using namespace qcc;
@@ -288,11 +281,11 @@ TEST_F(AboutProxyTest, GetObjectDescription) {
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutEnglishData);
 
-    for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerFlag == true) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(aboutListener.announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
@@ -384,11 +377,11 @@ TEST_F(AboutProxyTest, GetAboutData_English) {
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutEnglishData);
 
-    for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerFlag == true) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(aboutListener.announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
@@ -498,11 +491,11 @@ TEST_F(AboutProxyTest, GetAboutData_Spanish) {
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutSpanishData);
 
-    for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerFlag == true) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(aboutListener.announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";
@@ -598,11 +591,11 @@ TEST_F(AboutProxyTest, GetAboutData_UnsupportedLanguage) {
     AboutObj aboutObj(*serviceBus);
     aboutObj.Announce(port, aboutEnglishData);
 
-    for (uint32_t msec = 0; msec < 5000; msec += WAIT_TIME) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_5) {
         if (aboutListener.announceListenerFlag == true) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_TRUE(aboutListener.announceListenerFlag) << "The announceListenerFlag must be true to continue this test.";

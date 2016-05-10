@@ -18,6 +18,8 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#define CLIENT_TEST_WAIT_TIME (1 * s_globalTimerMultiplier)
+
 namespace cl {
 namespace org {
 namespace alljoyn {
@@ -101,7 +103,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 &pingStr,
                 1,
                 reply,
-                5000);
+                METHOD_CALL_TIMEOUT);
             EXPECT_EQ(ER_OK, status) << " Problem while calling remote method.";
             if (status != ER_OK) {
                 //exit the if status not ER_OK
@@ -133,7 +135,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 inputArgs,
                 10,
                 reply,
-                5000);
+                METHOD_CALL_TIMEOUT);
             EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
@@ -163,7 +165,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 inputArgs,
                 10,
                 reply,
-                5000);
+                METHOD_CALL_TIMEOUT);
             EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
@@ -197,7 +199,7 @@ QStatus ClientSetup::MethodCall(int noOfCalls, int type)
                 inputArgs,
                 10,
                 reply,
-                5000);
+                METHOD_CALL_TIMEOUT);
             EXPECT_EQ(ER_BUS_UNEXPECTED_SIGNATURE, status);
             if (status != ER_OK) {
                 return status;
@@ -234,7 +236,7 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
                                                this, static_cast<MessageReceiver::ReplyHandler>(&ClientSetup::AsyncCallReplyHandler),
                                                &pingStr, 1);
             //don't clog up the the queue sending signals too quickly
-            qcc::Sleep(1);
+            qcc::Sleep(CLIENT_TEST_WAIT_TIME);
             EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
@@ -256,7 +258,7 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
         inputArgs[9] = "ten";
 
         for (int i = 0; i < noOfCalls; i++) {
-            status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_param_test", inputArgs, 10, reply, 5000);
+            status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_param_test", inputArgs, 10, reply, METHOD_CALL_TIMEOUT);
             EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
                 return status;
@@ -334,13 +336,13 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
 
     if (type == 1) {
         MsgArg singStr("s", "Sing String");
-        status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_sing", &singStr, 1, reply, 5000);
+        status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_sing", &singStr, 1, reply, METHOD_CALL_TIMEOUT);
         EXPECT_EQ(ER_OK, status) << " MethodCall on " << ::cl::org::alljoyn::alljoyn_test::InterfaceName << "." << "my_sing";
         EXPECT_STREQ("Sing String", reply->GetArg(0)->v_string.str);
     } // end if type == 1
     else if (type == 2) {
         MsgArg singStr("s", "Huge String");
-        status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_sing", &singStr, 1, reply, 5000);
+        status = remoteObj.MethodCall(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_sing", &singStr, 1, reply, METHOD_CALL_TIMEOUT);
         EXPECT_EQ(ER_OK, status) << " MethodCall on " << ::cl::org::alljoyn::alljoyn_test::InterfaceName << "." << "my_sing";
     } // end if type == 2
     return status;

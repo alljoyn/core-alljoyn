@@ -47,21 +47,21 @@ TEST(BusObjectTest, ObjectRegisteredUnregistered) {
     status = bus.Connect(ajn::getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status);
 
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     EXPECT_TRUE(testObj.wasUnregistered);
@@ -87,21 +87,21 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
     status = bus.Connect(ajn::getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status);
 
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     EXPECT_TRUE(testObj.wasUnregistered);
@@ -111,21 +111,21 @@ TEST(BusObjectTest, ObjectRegisteredUnregisteredMultipleConnectDisconnect) {
     status = bus.Connect(ajn::getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status);
 
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     EXPECT_TRUE(testObj.wasUnregistered);
@@ -150,21 +150,21 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnect) {
 
     status = bus.RegisterBusObject(testObj);
     EXPECT_EQ(ER_OK, status);
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     status = bus.Disconnect();
     EXPECT_EQ(ER_OK, status);
 
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     EXPECT_TRUE(testObj.wasUnregistered);
@@ -188,20 +188,20 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnectUnregisteredBeforDisconnect) {
 
     status = bus.RegisterBusObject(testObj);
     EXPECT_EQ(ER_OK, status);
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
 
     bus.UnregisterBusObject(testObj);
-    for (int msec = 0; msec < 5000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_5000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(testObj.wasRegistered);
     EXPECT_TRUE(testObj.wasUnregistered);
@@ -212,11 +212,11 @@ TEST(BusObjectTest, ObjectRegisteredAfterConnectUnregisteredBeforDisconnect) {
     testObj.wasUnregistered = false;
     // We don't expect to get a second ObjectUnregistered signal wait for two
     // seconds and check that we did not get an ObjectUntegistered signal
-    for (int msec = 0; msec < 2000; msec += 10) {
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_10) {
         if (testObj.wasRegistered && testObj.wasUnregistered) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_FALSE(testObj.wasRegistered);
     EXPECT_FALSE(testObj.wasUnregistered);
@@ -253,7 +253,7 @@ TEST(BusObjectTest, DISABLED_Send_Signal_After_BusObject_Unregister)
     status = bus.RegisterBusObject(testObj);
     EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (testObj.wasRegistered) {
             break;
         }
@@ -264,7 +264,7 @@ TEST(BusObjectTest, DISABLED_Send_Signal_After_BusObject_Unregister)
     bus.UnregisterBusObject(testObj);
     EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (testObj.wasUnregistered) {
             break;
         }
@@ -323,7 +323,7 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
     status = busService.RegisterBusObject(testObj);
     EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (testObj.wasRegistered) {
             break;
         }
@@ -347,7 +347,7 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
 
     //verify that client received the signal
     for (int i = 0; i < 500; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (signalReceiver.signalReceived) {
             break;
         }
@@ -369,7 +369,7 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
 
     //verify that client HAS NOT received the signal
     for (int i = 0; i < 500; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (signalReceiver.signalReceived) {
             break;
         }
@@ -466,7 +466,7 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
     status = busService.RegisterBusObject(testObj);
     EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (testObj.wasRegistered) {
             break;
         }
@@ -486,7 +486,7 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
     MsgArg pingArgs;
     status = pingArgs.Set("s", "Pasta String");
     EXPECT_EQ(ER_OK, status);
-    status = clientProxyObject.MethodCall(*pastaMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pastaMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     EXPECT_EQ(ER_OK, status);
     EXPECT_STREQ("Pasta String", reply->GetArg(0)->v_string.str);
 
@@ -495,7 +495,7 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
     busService.UnregisterBusObject(testObj);
     EXPECT_EQ(ER_OK, status);
     for (int i = 0; i < 500; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (testObj.wasUnregistered) {
             break;
         }
@@ -503,7 +503,7 @@ TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)
     EXPECT_TRUE(testObj.wasUnregistered);
 
     //Make a method call and it should fail gracefully as the service side bus object is unregistsred.
-    status = clientProxyObject.MethodCall(*pastaMethod, &pingArgs, 1, reply, 5000);
+    status = clientProxyObject.MethodCall(*pastaMethod, &pingArgs, 1, reply, METHOD_CALL_TIMEOUT);
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     EXPECT_STREQ("ER_BUS_NO_SUCH_OBJECT", reply->GetArg(0)->v_string.str);
 

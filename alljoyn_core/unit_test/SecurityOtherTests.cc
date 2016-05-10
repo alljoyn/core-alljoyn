@@ -26,16 +26,11 @@
 #include "InMemoryKeyStore.h"
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
 using namespace std;
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_MSECS 5
 
 /*
  * String constants used throughout this test file.
@@ -755,12 +750,12 @@ TEST(SecurityOtherTest, unsecure_messages_not_blocked_by_policies_rules) {
                                                        *peer1Bus.GetInterface("org.allseen.test.security.other.insecure")->GetMember("Chirp"),
                                                        &signalArg, 1));
 
-        //Wait for a maximum of 2 sec for the Chirp Signal.
-        for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+        //Wait for the Chirp Signal.
+        for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
             if (chirpSignalReceiver.signalReceivedFlag) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
@@ -1711,12 +1706,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_ECDHE_NULL_acl_peer_ANY_T
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);
@@ -1850,12 +1845,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_SRP_KEYX_acl_peer_ANY_TRU
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
@@ -1933,12 +1928,12 @@ TEST_F(SecurityOther2Test, security2_to_security1_over_SRP_KEYX_acl_peer_ANY_TRU
                                            *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
@@ -2016,12 +2011,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_ECDHE_PSK_acl_peer_ANY_TR
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
@@ -2099,12 +2094,12 @@ TEST_F(SecurityOther2Test, security2_to_security1_over_ECDHE_PSK_acl_peer_ANY_TR
                                            *peer2Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(chirpSignalReceiver.signalReceivedFlag);
@@ -2165,12 +2160,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_ECDHE_ECDSA_acl_peer_ANY_
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);
@@ -2331,12 +2326,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_ECDHE_NULL_acl_peer_FROM_
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);
@@ -2453,12 +2448,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_SRP_KEYX_acl_peer_FROM_CE
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);
@@ -2575,12 +2570,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_ECDHE_PSK_acl_peer_FROM_C
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);
@@ -2702,12 +2697,12 @@ TEST_F(SecurityOther2Test, security1_to_security2_over_ECDHE_ECDSA_acl_peer_FROM
                                            *peer1Bus.GetInterface(interfaceName.c_str())->GetMember("Chirp"),
                                            &signalArg, 1));
 
-    //Wait for a maximum of 2 sec for the Chirp Signal.
-    for (int msec = 0; msec < 2000; msec += WAIT_MSECS) {
+    //Wait for the Chirp Signal.
+    for (uint32_t msec = 0; msec < LOOP_END_2000; msec += WAIT_TIME_5) {
         if (chirpSignalReceiver.signalReceivedFlag) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_FALSE(chirpSignalReceiver.signalReceivedFlag);

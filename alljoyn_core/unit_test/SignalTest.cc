@@ -42,11 +42,12 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#define SIGNAL_TEST_TIMEOUT (10000 * s_globalTimerMultiplier)
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
 
-const uint32_t SLEEP_TIME = 2000;
 const uint32_t BACKPRESSURE_TEST_NUM_SIGNALS = 12;
 
 class TestObject : public BusObject {
@@ -222,7 +223,7 @@ class Participant : public SessionPortListener, public SessionListener {
         /* make sure both sides know we're in session before we continue */
         int count = 0;
         while (part.hostedSessionMap.find(SessionMapKey(bus.GetUniqueName(), multipoint)) == part.hostedSessionMap.end()) {
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
             if (++count > 200) {
                 ADD_FAILURE() << "JoinSession: joiner got OK reply, but host did not receive SessionJoined.";
                 break;
@@ -239,7 +240,7 @@ class Participant : public SessionPortListener, public SessionListener {
         /* make sure both sides know the session is lost before we continue */
         int count = 0;
         while (part.hostedSessionMap.find(SessionMapKey(bus.GetUniqueName(), multipoint)) != part.hostedSessionMap.end()) {
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
             if (++count > 200) {
                 ADD_FAILURE() << "LeaveSession: joiner got OK reply, but host did not receive SessionLost.";
                 break;
@@ -321,7 +322,7 @@ class SignalReceiver : public MessageReceiver {
 
         if (blocking) {
             blocking = false;
-            qcc::Sleep(SLEEP_TIME);
+            qcc::Sleep(WAIT_TIME_2000);
         }
         signalReceived++;
     }
@@ -379,7 +380,7 @@ class SignalTest : public testing::Test {
 
 void wait_for_signal()
 {
-    qcc::Sleep(1000);
+    qcc::Sleep(WAIT_TIME_1000);
 }
 
 TEST_F(SignalTest, Point2PointSimple)
@@ -760,8 +761,8 @@ TEST_F(SignalTest, Rules) {
 }
 
 /* This is a blocking test. The idea is to send out 12 signals, the first signal handler
-   will sleep for SLEEP_TIME, as a result of which the SendSignal should block for approx
-   SLEEP_TIME ms until that signal handler returns.
+   will sleep for WAIT_TIME_2000, as a result of which the SendSignal should block for approx
+   WAIT_TIME_2000 ms until that signal handler returns.
 
    Note: this test is removed if the LOCAL_ENDPOINT_MAXALARMS override is defined.
  */
@@ -782,7 +783,7 @@ TEST_F(SignalTest, BackPressure) {
         }
         uint64_t elapsed = qcc::GetTimestamp64() - start_time;
 
-        EXPECT_GE(elapsed, SLEEP_TIME - QCC_TIMESTAMP_GRANULARITY);
+        EXPECT_GE(elapsed, WAIT_TIME_2000 - QCC_TIMESTAMP_GRANULARITY);
         wait_for_signal();
         recvBy.verify_recv(BACKPRESSURE_TEST_NUM_SIGNALS);
     }
@@ -972,7 +973,7 @@ class SecSignalTest :
         QStatus status = destination ? prov.SendSignal(newValue, *destination) : prov.SendSignal(newValue);
 
         if (status == ER_OK) {
-            EXPECT_EQ(ER_OK, (status = condition.TimedWait(lock, 10000)));
+            EXPECT_EQ(ER_OK, (status = condition.TimedWait(lock, SIGNAL_TEST_TIMEOUT)));
             EXPECT_EQ(requiredEvents, eventCount);
             EXPECT_EQ(newValue, lastValue) << "Signal value";
             status = ((eventCount == requiredEvents) && (newValue == lastValue)) ? ER_OK : ER_FAIL;
@@ -1049,7 +1050,7 @@ TEST_F(SecSignalTest, SendSignalNotAllowedAfterConsumerPolicyUpdate)
     ASSERT_EQ(ER_OK, cons.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
     ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
     ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 
     // This is a known limitation. The session has to be secured. See ASACORE-2432
@@ -1058,7 +1059,7 @@ TEST_F(SecSignalTest, SendSignalNotAllowedAfterConsumerPolicyUpdate)
     ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
     ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
 
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 }
 
@@ -1077,7 +1078,7 @@ TEST_F(SecSignalTest, SendSignalNotAllowedAfterProviderPolicyUpdate)
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
     ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
     ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 
     // This is a known limitation. The session has to be secured. See ASACORE-2432
@@ -1086,7 +1087,7 @@ TEST_F(SecSignalTest, SendSignalNotAllowedAfterProviderPolicyUpdate)
     ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
     ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
 
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 }
 
@@ -1104,7 +1105,7 @@ TEST_F(SecSignalTest, SendSignalAllowedAfterConsumerPolicyUpdate)
     // The master secret for the session is dropped by the consumer. No events will come until it secures the connection again.
     ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
     ASSERT_EQ(ER_OK, prov.SendSignal(true, cons));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 
     // The consumer application has reinitilize the securrity on the session to enable the events
@@ -1129,7 +1130,7 @@ TEST_F(SecSignalTest, SendSignalAllowedAfterProviderPolicyUpdate)
     // However the provider has no means to secure the connection.
     ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
     ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true, cons));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 
     // The consumer application has reinitilize the securrity on the session in order to enable the events
@@ -1163,7 +1164,7 @@ TEST_F(SecSignalTest, SendSignalToAllHostedSession)
 
     // Signal is send successfully, but event is not shown to the app.
     ASSERT_EQ(ER_OK, prov.SendSignal(true));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 
     // Good config and secure sessions. Event should arrive
@@ -1183,7 +1184,7 @@ TEST_F(SecSignalTest, SendSignalToAllHostedSession)
     ASSERT_EQ(ER_OK, prov.UpdateManifest(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE, "wrong.interface"));
     ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
     ASSERT_EQ(ER_PERMISSION_DENIED, prov.SendSignal(true));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 
     ASSERT_EQ(ER_OK, prov.UpdateManifest(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
@@ -1208,10 +1209,10 @@ TEST_F(SecSignalTest, SendSignalToAllHostedSession)
     ASSERT_EQ(ER_OK, proxy->SecureConnection(true));
 
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, false, NULL, NR_OF_CONSUMERS));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(prov, true, NULL, NR_OF_CONSUMERS));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(0, eventCount);
 }
 
@@ -1359,7 +1360,7 @@ TEST_F(SecSignalTest, DISABLED_SendSignalToSelf)
     // Host a session the consumer and join it. Policy should allow events...
     ASSERT_EQ(ER_OK, cons.HostSession());
     ASSERT_EQ(ER_OK, cons.JoinSession(cons, sid));
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_EQ(ER_OK, cons.GetBusAttachement().SecureConnection(cons.GetBusAttachement().GetUniqueName().c_str()));
     ASSERT_EQ(ER_OK, SendAndWaitForEvent(cons, true, &cons, 1));
 }
