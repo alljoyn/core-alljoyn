@@ -56,7 +56,7 @@ hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
 
 if commonenv['OS_GROUP'] == 'windows':
     hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
-    if os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
+    if commonenv['VARIANT'] == 'debug' and os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
         hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/CrashDumpSupport.h'])
 
 
