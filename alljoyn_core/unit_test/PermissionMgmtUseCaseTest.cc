@@ -3331,7 +3331,8 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyCAPublicKey)
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
-    EXPECT_EQ(ER_BAD_ARG_1, saProxy.Claim(emptyKeyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
+    /* The app will fail when trying to de-serialize the empty public key, and reply with the corrupt key blob error code.*/
+    EXPECT_EQ(ER_CORRUPT_KEYBLOB, saProxy.Claim(emptyKeyInfo, adminAdminGroupGUID, adminAdminGroupAuthority, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
 
 }
 
@@ -3409,7 +3410,8 @@ TEST_F(PermissionMgmtUseCaseTest, ClaimWithEmptyAdminSecurityGroupPublicKey)
     /* app is claimable after installing manifest template or explicitly set to be claimable */
     SetManifestTemplate(adminBus);
     KeyInfoNISTP256 emptyKeyInfo;
-    EXPECT_EQ(ER_BAD_ARG_4, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
+    /* The app will fail when trying to de-serialize the empty public key, and reply with the corrupt key blob error code.*/
+    EXPECT_EQ(ER_CORRUPT_KEYBLOB, saProxy.Claim(adminAdminGroupAuthority, adminAdminGroupGUID, emptyKeyInfo, identityCertChain, certChainCount, manifests.data(), manifests.size())) << "Claim did not fail.";
 
 }
 

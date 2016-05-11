@@ -26,7 +26,7 @@
 #include "BusInternal.h"
 #include "PeerState.h"
 
-#define QCC_MODULE "ALLJOYN"
+#define QCC_MODULE "CREDENTIAL_ACCESSOR"
 
 
 using namespace std;
@@ -65,7 +65,12 @@ QStatus CredentialAccessor::GetDSAPublicKey(qcc::ECCPublicKey& publicKey)
     if (status != ER_OK) {
         return status;
     }
-    memcpy(&publicKey, kb.GetData(), kb.GetSize());
+
+    status = publicKey.Import(kb.GetData(), kb.GetSize());
+    if (status != ER_OK) {
+        QCC_LogError(status, ("%s Failed setting public key (KeyBlob size: %d)", __FUNCTION__, kb.GetSize()));
+        return status;
+    }
     return ER_OK;
 }
 
@@ -78,7 +83,12 @@ QStatus CredentialAccessor::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
     if (status != ER_OK) {
         return status;
     }
-    memcpy(&privateKey, kb.GetData(), kb.GetSize());
+
+    status = privateKey.Import(kb.GetData(), kb.GetSize());
+    if (status != ER_OK) {
+        QCC_LogError(status, ("%s Failed setting private key (KeyBlob size: %d)", __FUNCTION__, kb.GetSize()));
+        return status;
+    }
     return ER_OK;
 }
 
