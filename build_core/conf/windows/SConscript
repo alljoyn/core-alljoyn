@@ -148,7 +148,7 @@ else:
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
 
 # Include needed to do automatic memory dumps for Jenkins builds
-if os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
+if env['VARIANT'] == 'debug' and os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
     env.Append(CXXFLAGS = '-FIqcc/${OS_GROUP}/CrashDumpSupport.h')
 
 vars = Variables()
