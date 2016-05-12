@@ -31,6 +31,7 @@
 #include "XmlPoliciesValidator.h"
 #include "XmlRulesConverter.h"
 #include "XmlRulesValidator.h"
+#include <limits>
 
 namespace ajn {
 
@@ -88,7 +89,10 @@ QStatus AJ_CALL AllJoynInit(void)
             ajn::StaticGlobals::Init();
             allJoynInitCount = 1;
         }
-    } else if (allJoynInitCount < 0xFFFFFFFF) {
+    } else if (allJoynInitCount == std::numeric_limits<uint32_t>::max()) {
+        QCC_ASSERT(!"Incorrect allJoynInitCount count");
+        status = ER_INVALID_APPLICATION_STATE;
+    } else {
         allJoynInitCount++;
     }
 
@@ -101,13 +105,12 @@ QStatus AJ_CALL AllJoynShutdown(void)
 {
     allJoynInitLock.Lock();
 
-    if (allJoynInitCount > 0) {
-        allJoynInitCount--;
+    QCC_ASSERT(allJoynInitCount > 0);
+    allJoynInitCount--;
 
-        if (allJoynInitCount == 0) {
-            ajn::StaticGlobals::Shutdown();
-            qcc::Shutdown();
-        }
+    if (allJoynInitCount == 0) {
+        ajn::StaticGlobals::Shutdown();
+        qcc::Shutdown();
     }
 
     allJoynInitLock.Unlock();
