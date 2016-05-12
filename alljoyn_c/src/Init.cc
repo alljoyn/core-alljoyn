@@ -19,16 +19,20 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <alljoyn_c/Init.h>
+#include "DeferredCallback.h"
 #include <alljoyn/Init.h>
 
 #define QCC_MODULE "ALLJOYN_C"
 
 QStatus AJ_CALL alljoyn_init(void)
 {
+    ajn::DeferredCallback::Init();
     return AllJoynInit();
 }
 
 QStatus AJ_CALL alljoyn_shutdown(void)
 {
-    return AllJoynShutdown();
+    QStatus status =  AllJoynShutdown();
+    ajn::DeferredCallback::Shutdown();
+    return status;
 }
