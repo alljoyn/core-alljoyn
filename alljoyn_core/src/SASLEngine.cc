@@ -102,7 +102,7 @@ static const char* StateText[] = {
 
 
 
-static qcc::String HexToAscii(qcc::String&& hex)
+static qcc::String HexToAscii(qcc::String& hex)
 {
     qcc::String ascii;
     size_t len = hex.length() / 2;
