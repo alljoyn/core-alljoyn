@@ -141,7 +141,7 @@ QStatus AJ_CALL CertificateX509::EncodePrivateKeyPEM(const ECCPrivateKey* privat
         goto Exit;
     }
 
-    prv.assign((const char*)privateKeyBytes, privateKeyLength);
+    prv.assign_std((const char*)privateKeyBytes, privateKeyLength);
     status = Crypto_ASN1::Encode(der, "(ixc(o))", 1, &prv, 0, &oid);
     if (ER_OK != status) {
         QCC_LogError(status, ("Error encoding private key in PEM format"));
@@ -383,11 +383,11 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, const Certificat
     qcc::String cn;
     if (name.ouLen > 0) {
         ouOID = OID_DN_OU;
-        ou.assign((const char*) name.ou, name.ouLen);
+        ou.assign_std((const char*) name.ou, name.ouLen);
     }
     if (name.cnLen > 0) {
         cnOID = OID_DN_CN;
-        cn.assign((const char*) name.cn, name.cnLen);
+        cn.assign_std((const char*) name.cn, name.cnLen);
     }
     if ((name.ouLen > 0) && (name.cnLen > 0)) {
         return Crypto_ASN1::Encode(dn, "{(ou)}{(ou)}", &ouOID, &ou, &cnOID, &cn);
@@ -931,7 +931,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
-    serialStr.assign((const char*)serial, serialLen);
+    serialStr.assign_std((const char*)serial, serialLen);
     tbs.clear(); //empty the tbs string.
     status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(R)(R)(R)R)",
                                  0, x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
@@ -1209,7 +1209,7 @@ QStatus AJ_CALL CertificateX509::GenerateAuthorityKeyId(const ECCPublicKey* issu
      */
     memcpy(keyId, &digest[Crypto_SHA256::DIGEST_SIZE - AUTHORITY_KEY_ID_SZ], AUTHORITY_KEY_ID_SZ);
     keyId[0] = 0x40 | (keyId[0] & 0xF);
-    authorityKeyId.assign((const char*) keyId, sizeof(keyId));
+    authorityKeyId.assign_std((const char*) keyId, sizeof(keyId));
     return ER_OK;
 }
 

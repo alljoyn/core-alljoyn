@@ -1130,7 +1130,7 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
     uint8_t* remoteVerifier;
     size_t remoteVerifierLen;
     status = variant->Get("(ayay)", &peerPskNameLen, &peerPskName, &remoteVerifierLen, &remoteVerifier);
-    pskName.assign((const char*) peerPskName, peerPskNameLen);
+    pskName.assign_std((const char*) peerPskName, peerPskNameLen);
     if (!IsInitiator()) {
         status = RequestCredentialsCB(peerName);
         if (status != ER_OK) {

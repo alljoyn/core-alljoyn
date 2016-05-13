@@ -463,7 +463,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 } else {
                     --len;
                     val = va_arg(argp, qcc::String*);
-                    val->assign((char*)asn, len);
+                    val->assign_std((char*)asn, len);
                     asn += len;
                     *va_arg(argp, size_t*) = len * 8 - unusedBits;
                 }
@@ -602,7 +602,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     asn += len;
                     val = va_arg(argp, qcc::String*);
                     if (val) {
-                        val->assign((char*)start, asn - start);
+                        val->assign_std((char*)start, asn - start);
                     }
                 }
             }
@@ -625,7 +625,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 len = eod - start;
                 val = va_arg(argp, qcc::String*);
                 if (val) {
-                    val->assign((char*)start, len);
+                    val->assign_std((char*)start, len);
                 }
                 asn = eod; /* everything has been consumed */
                 continue;
@@ -638,7 +638,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
         // Shared code for all cases that fall through here
         if ((status == ER_OK) && (len > 0)) {
             val = va_arg(argp, qcc::String*);
-            val->assign((char*)asn, len);
+            val->assign_std((char*)asn, len);
             asn += len;
         }
     }

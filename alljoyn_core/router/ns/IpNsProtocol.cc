@@ -108,7 +108,7 @@ size_t StringData::Deserialize(uint8_t const* buffer, uint32_t bufsize)
         return 0;
     }
     if (m_size > 0) {
-        m_string.assign(reinterpret_cast<const char*>(buffer + 1), m_size);
+        m_string.assign_std(reinterpret_cast<const char*>(buffer + 1), m_size);
     } else {
         m_string.clear();
     }
@@ -2298,7 +2298,7 @@ size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::
             return 0;
         }
         if (sz) {
-            str.assign(reinterpret_cast<const char*>(p), sz);
+            str.assign_std(reinterpret_cast<const char*>(p), sz);
         }
         size_t eqPos = str.find_first_of('=', 0);
         if (eqPos != String::npos) {
