@@ -107,7 +107,7 @@ class String {
     operator std::string & () { return s; }
 
     /** Assignment operator */
-    std::string operator=(const String& assignFromMe) { return s = assignFromMe.s; }
+    String& operator=(const String& assignFromMe) { s = assignFromMe.s; return *this; }
 
     /**
      * Assign a value to a string
@@ -116,7 +116,7 @@ class String {
      * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
      * @return  Reference to this string.
      */
-    std::string assign(const char* str, size_type len);
+    String& assign(const char* str, size_type len);
 
     /**
      * Assign a nul-terminated string value to a string
@@ -124,7 +124,7 @@ class String {
      * @param str  Value to assign to string.
      * @return  Reference to this string.
      */
-    std::string assign(const char* str);
+    String& assign(const char* str);
 
     /**
      * Get the current storage capacity for this string.
@@ -197,8 +197,8 @@ class String {
      * @param len  Number of characters to append or 0 to insert up to first nul byte in str.
      * @return  Reference to this string.
      */
-    std::string append(const char* str, size_type len);
-    std::string append(const char* str);
+    String& append(const char* str, size_type len);
+    String& append(const char* str);
 
     /**
      * Append a string to another to string.
@@ -206,7 +206,7 @@ class String {
      * @param str  Value to append to string.
      * @return  Reference to this string.
      */
-    std::string append(const String& str) { return s.append(str.s); }
+    String& append(const String& str) { s.append(str.s); return *this; }
 
     /**
      * Append a character N times to the string.
@@ -215,7 +215,7 @@ class String {
      * @param c  Character to append to string.
      * @return  Reference to this string.
      */
-    std::string append(size_type n, char c) { return s.append(n, c); }
+    String& append(size_type n, char c) { s.append(n, c); return *this; }
 
     /**
      * Append a single character to string.
@@ -232,7 +232,7 @@ class String {
      * @param n      Number of chars to erase.
      * @return  Reference to this string.
      */
-    std::string erase(size_type pos = 0, size_type n = npos) { return s.erase(pos, n); }
+    String& erase(size_type pos = 0, size_type n = npos) { s.erase(pos, n); return *this; }
 
     /**
      * Resize string by appending chars or removing them to make string a specified size.
@@ -263,7 +263,7 @@ class String {
      * @param c Character to append to string.
      * @return  Reference to this string.
      */
-    std::string operator+=(const char c) { return s += c; }
+    String& operator+=(const char c) { s += c; return *this; }
 
     /**
      * Append to string.
@@ -271,7 +271,7 @@ class String {
      * @param str  Value to append to string.
      * @return  Reference to this string.
      */
-    std::string operator+=(const char* str) { return append(str); }
+    String& operator+=(const char* str) { append(str); return *this; }
 
     /**
      * Append to string.
@@ -279,9 +279,9 @@ class String {
      * @param str  Value to append to string.
      * @return  Reference to this string.
      */
-    std::string operator+=(const String& str) { return s += str.s; }
+    String& operator+=(const String& str) { s += str.s; return *this; }
 
-    std::string operator+=(const std::string& str) { return s += str; }
+    String& operator+=(const std::string& str) { s += str; return *this; }
 
     /**
      * Insert characters into string at position.
@@ -291,9 +291,9 @@ class String {
      * @param len   Optional number of chars to insert.
      * @return  Reference to the string.
      */
-    std::string insert(size_type pos, const char* str, size_type len);
+    String& insert(size_type pos, const char* str, size_type len);
 
-    std::string insert(size_type pos, const char* str);
+    String& insert(size_type pos, const char* str);
 
     /**
      * Return true if string is equal to this string.
