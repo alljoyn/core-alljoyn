@@ -1569,7 +1569,12 @@ void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* mem
         return;
     }
     ECCPublicKey publicKey;
-    publicKey.Import(xCoord, xLen, yCoord, yLen);
+    status = publicKey.Import(xCoord, xLen, yCoord, yLen);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("%s: Failed to import public key", __FUNCTION__));
+        MethodReply(msg, ER_INVALID_DATA);
+        return;
+    }
     KeyInfoNISTP256 issuerKeyInfo;
     issuerKeyInfo.SetPublicKey(&publicKey);
     String issuerAki;
