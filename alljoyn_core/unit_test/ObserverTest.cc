@@ -462,12 +462,15 @@ class ObserverListener : public Observer::Listener {
             EXPECT_TRUE(proxy.ImplementsInterface(INTF_B));
         }
 
-        status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
+        // Extra time to receive a reply to the method call: ASACORE-2845
+        status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply, 50000);
         EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
                     (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
 
         bus.EnableConcurrentCallbacks();
-        status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
+
+        // Extra time to receive a reply to the method call: ASACORE-2845
+        status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply, 50000);
         EXPECT_TRUE((status == ER_OK) || (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
