@@ -463,12 +463,18 @@ class ObserverListener : public Observer::Listener {
         }
 
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
-                    (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
+
+        // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
+        QCC_ASSERT((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
+                   (status == ER_PERMISSION_DENIED));
 
         bus.EnableConcurrentCallbacks();
+
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
+
+        // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
+        QCC_ASSERT((status == ER_OK) || (status == ER_PERMISSION_DENIED));
+
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
             if (strict) {
