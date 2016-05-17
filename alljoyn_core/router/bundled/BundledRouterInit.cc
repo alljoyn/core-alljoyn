@@ -25,6 +25,7 @@
 #include <alljoyn/Init.h>
 #include "BundledRouter.h"
 #include "RouterGlobals.h"
+#include <limits>
 
 static ajn::BundledRouter* bundledRouter = NULL;
 
@@ -35,33 +36,37 @@ static qcc::Mutex allJoynRouterInitLock;
 
 QStatus AJ_CALL AllJoynRouterInit(void)
 {
+    QStatus status = ER_OK;
+
     allJoynRouterInitLock.Lock();
 
     if (allJoynRouterInitCount == 0) {
         ajn::RouterGlobals::Init();
         bundledRouter = new ajn::BundledRouter();
         allJoynRouterInitCount = 1;
-    } else if (allJoynRouterInitCount < 0xFFFFFFFF) {
+    } else if (allJoynRouterInitCount == std::numeric_limits<uint32_t>::max()) {
+        QCC_ASSERT(!"Incorrect allJoynRouterInitCount count");
+        status = ER_INVALID_APPLICATION_STATE;
+    } else {
         allJoynRouterInitCount++;
     }
 
     allJoynRouterInitLock.Unlock();
 
-    return ER_OK;
+    return status;
 }
 
 QStatus AJ_CALL AllJoynRouterShutdown(void)
 {
     allJoynRouterInitLock.Lock();
 
-    if (allJoynRouterInitCount > 0) {
-        allJoynRouterInitCount--;
+    QCC_ASSERT(allJoynRouterInitCount > 0);
+    allJoynRouterInitCount--;
 
-        if (allJoynRouterInitCount == 0) {
-            delete bundledRouter;
-            bundledRouter = NULL;
-            ajn::RouterGlobals::Shutdown();
-        }
+    if (allJoynRouterInitCount == 0) {
+        delete bundledRouter;
+        bundledRouter = NULL;
+        ajn::RouterGlobals::Shutdown();
     }
 
     allJoynRouterInitLock.Unlock();
