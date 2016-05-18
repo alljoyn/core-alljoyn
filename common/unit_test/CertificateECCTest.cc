@@ -1618,7 +1618,7 @@ TEST_F(CertificateECCTest, InvalidPemTests)
 
     /* Test that inputs with invalid characters are rejected */
     validPem[30] = 0x01;
-    pemStr.assign(validPem, sizeof(validPem));
+    pemStr.assign_std(validPem, sizeof(validPem));
     EXPECT_EQ(ER_INVALID_DATA, cert.LoadPEM(pemStr)) << " PEM with invalid characters was accepted.";
 }
 

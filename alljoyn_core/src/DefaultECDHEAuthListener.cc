@@ -115,7 +115,7 @@ bool DefaultECDHEAuthListener::RequestCredentials(const char* authMechanism, con
             return false;
         }
         qcc::String outpsk;
-        outpsk.assign(reinterpret_cast<const char*>(m_psk), m_pskSize);
+        outpsk.assign_std(reinterpret_cast<const char*>(m_psk), m_pskSize);
         credentials.SetPassword(outpsk);    /* The credentials class has only one way to store pre-shared credentials. */
         outpsk.clear();
         return true;
@@ -130,7 +130,7 @@ bool DefaultECDHEAuthListener::RequestCredentials(const char* authMechanism, con
             return false;
         }
         qcc::String outpassword;
-        outpassword.assign(reinterpret_cast<const char*>(m_password), m_passwordSize);
+        outpassword.assign_std(reinterpret_cast<const char*>(m_password), m_passwordSize);
         credentials.SetPassword(outpassword);
         outpassword.clear();
         return true;

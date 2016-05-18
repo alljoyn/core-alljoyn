@@ -687,7 +687,7 @@ QStatus SecurityApplicationProxy::MsgArgToCertificateIds(const MsgArg& arg, qcc:
         }
         issuerKeyInfos[cnt].SetPublicKey(&publicKey);
         issuerKeyInfos[cnt].SetKeyId(akiVal, akiLen);
-        serials[cnt].assign((const char*) serialVal, serialLen);
+        serials[cnt].assign_std((const char*) serialVal, serialLen);
     }
     return status;
 }
@@ -852,7 +852,7 @@ QStatus SecurityApplicationProxy::GetIdentityCertificateId(qcc::String& serial, 
         if (serialLen == 0) {
             serial = qcc::String::Empty;
         } else {
-            serial.assign((const char*)serialVal, serialLen);
+            serial.assign_std((const char*)serialVal, serialLen);
         }
     }
 

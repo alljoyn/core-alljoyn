@@ -1133,7 +1133,7 @@ QStatus PermissionMgmtObj::RetrieveIdentityCertificateId(qcc::String& serial, qc
         return status;
     }
     if (leafCert.GetSerialLen() > 0) {
-        serial.assign(reinterpret_cast<const char*>(leafCert.GetSerial()), leafCert.GetSerialLen());
+        serial.assign_std(reinterpret_cast<const char*>(leafCert.GetSerial()), leafCert.GetSerialLen());
     }
     issuerKeyInfo.SetKeyId((uint8_t*) leafCert.GetAuthorityKeyId().data(), leafCert.GetAuthorityKeyId().size());
 
@@ -1454,7 +1454,7 @@ QStatus PermissionMgmtObj::StoreMembership(const qcc::CertificateX509* certChain
             /* handle the leaf cert */
             String serialTag;
             if (certChain[cnt].GetSerialLen() > 0) {
-                serialTag.assign(reinterpret_cast<const char*>(certChain[cnt].GetSerial()), certChain[cnt].GetSerialLen());
+                serialTag.assign_std(reinterpret_cast<const char*>(certChain[cnt].GetSerial()), certChain[cnt].GetSerialLen());
             }
             kb.SetTag(serialTag);
 
@@ -1585,7 +1585,7 @@ void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* mem
             return;
         }
     } else {
-        issuerAki.assign((const char*) akiVal, akiLen);
+        issuerAki.assign_std((const char*) akiVal, akiLen);
     }
     issuerKeyInfo.SetKeyId((uint8_t*) issuerAki.data(), issuerAki.size());
     String serial((const char*) serialVal, serialLen);
@@ -2132,7 +2132,7 @@ QStatus PermissionMgmtObj::ParseSendMemberships(Message& msg, bool& done)
             meta->certChain.push_back(cert);
             String serialTag;
             if (cert->GetSerialLen() > 0) {
-                serialTag.assign(reinterpret_cast<const char*>(cert->GetSerial()), cert->GetSerialLen());
+                serialTag.assign_std(reinterpret_cast<const char*>(cert->GetSerial()), cert->GetSerialLen());
             }
             peerState->SetGuildMetadata(serialTag, cert->GetAuthorityKeyId(), meta);
         } else {

@@ -116,7 +116,16 @@ class String {
      * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
      * @return  Reference to this string.
      */
-    String& assign(const char* str, size_type len);
+    QCC_DEPRECATED_ON(String& assign(const char* str, size_type len), 16.10);
+
+    /**
+     * Assign a value to a string. Behaves like std::string version but returns by value.
+     *
+     * @param str  Value to assign to string.
+     * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
+     * @return  Reference to this string.
+     */
+    String& assign_std(const char* str, size_type len) { s.assign(str, len); return *this; }
 
     /**
      * Assign a nul-terminated string value to a string
@@ -289,7 +298,7 @@ class String {
      * @param pos   Insert position.
      * @param str   Character string to insert.
      * @param len   Optional number of chars to insert.
-     * @return  Reference to the string.
+     * @return  Reference to this string.
      */
     String& insert(size_type pos, const char* str, size_type len);
 
