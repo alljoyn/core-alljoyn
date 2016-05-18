@@ -131,7 +131,7 @@ String::~String()
     IncrementPerfCounter(PERF_COUNTER_STRING_DESTROYED);
 }
 
-std::string String::assign(const char* str, std::string::size_type len)
+String& String::assign(const char* str, std::string::size_type len)
 {
     if (str) {
         if (len == 0) {
@@ -150,10 +150,10 @@ std::string String::assign(const char* str, std::string::size_type len)
         QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
         s = "";
     }
-    return s;
+    return *this;
 }
 
-std::string String::assign(const char* str)
+String& String::assign(const char* str)
 {
     if (str) {
         s.assign(str);
@@ -162,7 +162,7 @@ std::string String::assign(const char* str)
         QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
         s = "";
     }
-    return s;
+    return *this;
 }
 
 std::string::size_type String::secure_clear()
@@ -172,7 +172,7 @@ std::string::size_type String::secure_clear()
     return 1;
 }
 
-std::string String::append(const char* str, std::string::size_type len)
+String& String::append(const char* str, std::string::size_type len)
 {
     if (str) {
         s.append(str, len);
@@ -180,10 +180,10 @@ std::string String::append(const char* str, std::string::size_type len)
         QCC_LogError(ER_WARNING, ("Appending string from nullptr will cause a crash in future versions!"));
         QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
-    return s;
+    return *this;
 }
 
-std::string String::append(const char* str)
+String& String::append(const char* str)
 {
     if (str) {
         s.append(str);
@@ -191,10 +191,10 @@ std::string String::append(const char* str)
         QCC_LogError(ER_WARNING, ("Appending string from nullptr will cause a crash in future versions!"));
         QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
-    return s;
+    return *this;
 }
 
-std::string String::insert(std::string::size_type pos, const char* str, std::string::size_type len)
+String& String::insert(std::string::size_type pos, const char* str, std::string::size_type len)
 {
     if (str) {
         s.insert(pos, str, len);
@@ -202,10 +202,10 @@ std::string String::insert(std::string::size_type pos, const char* str, std::str
         QCC_LogError(ER_WARNING, ("Appending string from nullptr will cause a crash in future versions!"));
         QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
-    return s;
+    return *this;
 }
 
-std::string String::insert(std::string::size_type pos, const char* str)
+String& String::insert(std::string::size_type pos, const char* str)
 {
     if (str) {
         s.insert(pos, str);
@@ -213,10 +213,10 @@ std::string String::insert(std::string::size_type pos, const char* str)
         QCC_LogError(ER_WARNING, ("Constructing string from nullptr will cause a crash in future versions!"));
         QCC_ASSERT(str != nullptr);  // Assert fail in debug mode
     }
-    return s;
+    return *this;
 }
 
-std::string String::revsubstr(std::string::size_type pos, std::string::size_type n) const
+String String::revsubstr(std::string::size_type pos, std::string::size_type n) const
 {
     String r;
     n = std::min(n, s.size());
