@@ -638,23 +638,6 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     static QStatus MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize);
-
-  private:
-
-    /**
-     * Extracts a vector of Manifest objects from an array of signed
-     * manifests in XML format.
-     *
-     * @param[in]    manifestsXmls   An array of signed manifests in XML format.
-     * @param[in]    manifestsCount  Count of the "manifestsXmls" array elements.
-     * @param[out]   manifests       Output vector containing the Manifest objects.
-     *
-     * @return
-     *  - #ER_OK             If successful
-     *  - #ER_XML_MALFORMED  If one of the signed manifests was in an invalid format.
-     *  - Some other error status indicating failure.
-     */
-    QStatus ExtractManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests);
 };
 }
 

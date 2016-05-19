@@ -16,6 +16,7 @@
 #include <alljoyn/Status.h>
 #include <gtest/gtest.h>
 #include <qcc/platform.h>
+#include <qcc/Util.h>
 
 #include "XmlManifestConverter.h"
 #include "XmlManifestConverterTest.h"
@@ -278,6 +279,19 @@ TEST(XmlManifestConverterToManifestTest, shouldPassForValidInput)
 {
     Manifest someManifest;
     EXPECT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(s_validManifest, someManifest));
+}
+
+TEST(XmlManifestConverterToManifestTest, shouldPassForValidInputArray)
+{
+    AJ_PCSTR xmls[10];
+    std::vector<Manifest> manifests;
+
+    for (size_t i = 0; i < ArraySize(xmls); i++) {
+        xmls[i] = s_validManifest;
+    }
+
+    EXPECT_EQ(ER_OK, XmlManifestConverter::XmlArrayToManifests(xmls, ArraySize(xmls), manifests));
+    EXPECT_EQ(ArraySize(xmls), manifests.size());
 }
 
 TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveCorrectVersion)

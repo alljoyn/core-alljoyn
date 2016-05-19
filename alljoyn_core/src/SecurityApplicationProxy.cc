@@ -332,7 +332,7 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
 
     std::vector<Manifest> manifests;
-    QStatus status = ExtractManifests(manifestsXmls, manifestsCount, manifests);
+    QStatus status = XmlManifestConverter::XmlArrayToManifests(manifestsXmls, manifestsCount, manifests);
 
     if (ER_OK == status) {
         status = Claim(certificateAuthority,
@@ -437,7 +437,7 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* ide
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
 
     std::vector<Manifest> manifests;
-    QStatus status = ExtractManifests(manifestsXmls, manifestsCount, manifests);
+    QStatus status = XmlManifestConverter::XmlArrayToManifests(manifestsXmls, manifestsCount, manifests);
 
     if (ER_OK == status) {
         status = UpdateIdentity(identityCertificateChain, identityCertificateChainCount,
@@ -791,6 +791,10 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateX
 
     if (ER_OK == status) {
         *manifestTemplateXml = qcc::CreateStringCopy(manifestTemplate);
+
+        if (nullptr == *manifestTemplateXml) {
+            status = ER_OUT_OF_MEMORY;
+        }
     }
 
     delete[] rules;
@@ -943,27 +947,6 @@ QStatus SecurityApplicationProxy::EndManagement()
             QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
     }
-    return status;
-}
-
-QStatus SecurityApplicationProxy::ExtractManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests)
-{
-    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
-
-    QStatus status = ER_OK;
-
-    for (size_t index = 0; index < manifestsCount; index++) {
-        Manifest manifest;
-
-        status = XmlManifestConverter::XmlToManifest(manifestsXmls[index], manifest);
-
-        if (ER_OK != status) {
-            break;
-        }
-
-        manifests.push_back(manifest);
-    }
-
     return status;
 }
 

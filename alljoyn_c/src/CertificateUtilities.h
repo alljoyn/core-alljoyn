@@ -1,3 +1,7 @@
+/**
+ * @file
+ * This contains helper utilities for the C binding
+ */
 /******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
  *
@@ -14,33 +18,19 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
-#define VALID_RULES_ELEMENT \
-    "<rules>" \
-    "<node>" \
-    "<interface>" \
-    "<method>" \
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
-    "</method>" \
-    "<property>" \
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
-    "</property>" \
-    "<signal>" \
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
-    "</signal>" \
-    "</interface>" \
-    "</node>" \
-    "</rules>"
+#ifndef _ALLJOYN_C_UTILITIES_H
+#define _ALLJOYN_C_UTILITIES_H
 
-static AJ_PCSTR s_validManifest =
-    "<manifest>"
-    "<version>1</version>"
-    VALID_RULES_ELEMENT
-    "<thumbprint>"
-    "<oid>2.16.840.1.101.3.4.2.1</oid>"
-    "<value>NjY2ZjZmNjI2MTcy</value>"
-    "</thumbprint>"
-    "<signature>"
-    "<oid>1.2.840.10045.4.3.2</oid>"
-    "<value>NjY2ZjZmNjI2MTcy</value>"
-    "</signature>"
-    "</manifest>";
+#include <qcc/GUID.h>
+#include <qcc/CertificateECC.h>
+#include <qcc/CertificateHelper.h>
+
+/*
+ * The "certs" variable must be freed by the caller using "delete[]".
+ */
+QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, qcc::CertificateX509** certs);
+
+/* This helper sets the GUID128 object equal to the raw bytes in the groupId array. */
+QStatus GetGroupId(const uint8_t* groupId, size_t groupSize, qcc::GUID128& extractedId);
+
+#endif

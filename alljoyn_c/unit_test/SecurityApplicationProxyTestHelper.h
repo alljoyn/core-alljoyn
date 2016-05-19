@@ -49,6 +49,12 @@ class SecurityApplicationProxyTestHelper {
                                      alljoyn_busattachment memberBus,
                                      const uint8_t* groupId,
                                      bool delegate,
+                                     const std::string& subject,
+                                     AJ_PSTR* membershipCertificatePem);
+    static void CreateMembershipCert(alljoyn_busattachment signingBus,
+                                     alljoyn_busattachment memberBus,
+                                     const uint8_t* groupId,
+                                     bool delegate,
                                      AJ_PSTR* membershipCertificatePem);
     static void DestroyCertificate(AJ_PSTR cert);
     static void DestroyKey(AJ_PSTR key);

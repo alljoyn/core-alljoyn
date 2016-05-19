@@ -64,6 +64,34 @@ QStatus XmlManifestConverter::ManifestToXml(const Manifest& manifest, string& ma
     return status;
 }
 
+QStatus XmlManifestConverter::XmlArrayToManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, vector<Manifest>& manifests)
+{
+    manifests.resize(manifestsCount);
+    for (size_t i = 0; i < manifestsCount; i++) {
+        QStatus status = XmlToManifest(manifestsXmls[i], manifests[i]);
+        if (ER_OK != status) {
+            manifests.clear();
+            return status;
+        }
+    }
+
+    return ER_OK;
+}
+
+QStatus XmlManifestConverter::ManifestsToXmlArray(const Manifest* manifests, size_t manifestsCount, vector<string>& manifestsXmls)
+{
+    manifestsXmls.resize(manifestsCount);
+    for (size_t i = 0; i < manifestsCount; i++) {
+        QStatus status = ManifestToXml(manifests[i], manifestsXmls[i]);
+        if (ER_OK != status) {
+            manifestsXmls.clear();
+            return status;
+        }
+    }
+
+    return ER_OK;
+}
+
 void XmlManifestConverter::BuildManifest(const XmlElement* root, Manifest& manifest)
 {
     SetRules(root->GetChildren()[MANIFEST_RULES_INDEX], manifest);
