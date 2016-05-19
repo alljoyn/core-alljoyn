@@ -100,9 +100,29 @@ class KeyInfoHelper {
      * @param[in]    pemKey  The ECC public key in PEM format.
      * @param[out]   key     Instance of the created KeyInfoNISTP256.
      *
-     * @return ER_OK if successfull; otherwise, error code.
+     * @return ER_OK if successful; otherwise, error code.
      */
     static QStatus PEMToKeyInfoNISTP256(AJ_PCSTR pemKey, qcc::KeyInfoNISTP256& key);
+
+    /**
+     * Helper function to create a PEM-encoded representation of a KeyInfoNISTP256 object.
+     *
+     * @param[in]    key     The KeyInfoNISTP256 to be converted.
+     * @param[out]   pemStr  A qcc::String containing the PEM-encoded representation.
+     *
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    static QStatus KeyInfoNISTP256ToPEM(const qcc::KeyInfoNISTP256& key, qcc::String& pemStr);
+
+    /**
+     * Helper function to extract the AKI from a KeyInfoNISTP256 object.
+     *
+     * @param[in]    key     The KeyInfoNISTP256 to be converted.
+     * @param[out]   aki     A qcc::String containing the AKI.
+     *
+     * @return ER_OK if successful; otherwise, error code.
+     */
+    static QStatus KeyInfoNISTP256ExtractAki(const qcc::KeyInfoNISTP256& key, qcc::String& aki);
 };
 
 }

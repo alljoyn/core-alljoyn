@@ -16,6 +16,7 @@
 #include <alljoyn/Status.h>
 #include <gtest/gtest.h>
 #include <qcc/platform.h>
+#include <qcc/Util.h>
 #include <string>
 
 #include "XmlManifestConverter.h"
@@ -91,4 +92,18 @@ TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameXmlAfterTwoConversion
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_retrievedManifest, secondRetrievedManifestXml));
 
     EXPECT_EQ(m_retrievedManifestXml, secondRetrievedManifestXml);
+}
+
+TEST_F(XmlManifestConverterToXmlDetailedTest, shouldPassForValidManifestArray)
+{
+    Manifest manifests[10];
+
+    for (size_t i = 0; i < ArraySize(manifests); i++) {
+        manifests[i] = m_validManifest;
+    }
+
+    std::vector<std::string> xmls;
+
+    EXPECT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), xmls));
+    EXPECT_EQ(ArraySize(manifests), xmls.size());
 }

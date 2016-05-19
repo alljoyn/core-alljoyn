@@ -244,6 +244,7 @@ class PermissionMgmtTestHelper {
     static QStatus SetTVVolume(BusAttachment& bus, ProxyBusObject& remoteObj, uint32_t volume);
     static QStatus GetTVCaption(BusAttachment& bus, ProxyBusObject& remoteObj, size_t& propertyCount);
     static void CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const uint8_t* pskBytes, size_t pskLength);
+    static void UnwrapStrings(const std::vector<std::string>& strings, std::vector<AJ_PCSTR>& unwrapped);
 };
 
 }

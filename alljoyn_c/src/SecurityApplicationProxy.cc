@@ -29,7 +29,6 @@
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/PermissionConfigurator.h>
 #include <alljoyn_c/SecurityApplicationProxy.h>
-#include <qcc/CertificateHelper.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/KeyInfoECC.h>
@@ -37,17 +36,13 @@
 #include "KeyInfoHelper.h"
 #include "XmlRulesConverter.h"
 #include "XmlManifestConverter.h"
+#include "CertificateUtilities.h"
 
 #define QCC_MODULE "ALLJOYN_C"
 
 using namespace qcc;
 using namespace ajn;
 using namespace std;
-
-/*
- * The "certs" variable must be freed by the caller using "delete[]".
- */
-static QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, CertificateX509** certs);
 
 /*
  * The "signedManifestXml" variable must be freed by the caller using delete[].
@@ -61,8 +56,6 @@ static QStatus BuildSignedManifest(const IdentityCertificate& identityCertificat
                                    const ECCPrivateKey& privateKey,
                                    AJ_PCSTR unsignedManifestXml,
                                    Manifest& manifest);
-
-static QStatus GetGroupId(const uint8_t* groupId, size_t groupSize, GUID128& extractedId);
 
 const alljoyn_sessionport PERMISSION_MANAGEMENT_SESSION_PORT = ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
 
@@ -275,6 +268,10 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_geteccpublickey(alljoyn_securit
 
     if (ER_OK == status) {
         *eccPublicKey = CreateStringCopy(publicKeyString);
+
+        if (nullptr == *eccPublicKey) {
+            status = ER_OUT_OF_MEMORY;
+        }
     }
 
     return status;
@@ -313,32 +310,6 @@ AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR si
 }
 
 /*
- * The "certs" variable must be freed by the caller using "delete[]".
- */
-QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, CertificateX509** certs)
-{
-    QStatus status = CertificateHelper::GetCertCount(identCertChain, certCount);
-    *certs = nullptr;
-
-    if ((ER_OK == status) &&
-        (*certCount == 0)) {
-        status = ER_INVALID_DATA;
-    }
-
-    if (ER_OK == status) {
-        *certs = new CertificateX509[*certCount];
-        status = CertificateX509::DecodeCertChainPEM(identCertChain, *certs, *certCount);
-    }
-
-    if (ER_OK != status) {
-        delete[] *certs;
-        *certs = nullptr;
-    }
-
-    return status;
-}
-
-/*
  * The "signedManifestXml" variable must be freed by the caller using delete[].
  */
 QStatus SignManifest(const IdentityCertificate& identityCertificate,
@@ -359,6 +330,10 @@ QStatus SignManifest(const IdentityCertificate& identityCertificate,
 
     if (ER_OK == status) {
         *signedManifestXml = CreateStringCopy(signedManifest);
+
+        if (nullptr == *signedManifestXml) {
+            status = ER_OUT_OF_MEMORY;
+        }
     }
 
     return status;
@@ -383,13 +358,3 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
     return status;
 }
 
-QStatus GetGroupId(const uint8_t* groupId, size_t groupSize, GUID128& extractedId)
-{
-    if (GUID128::SIZE != groupSize) {
-        return ER_INVALID_GUID;
-    } else {
-        extractedId.SetBytes(groupId);
-    }
-
-    return ER_OK;
-}
