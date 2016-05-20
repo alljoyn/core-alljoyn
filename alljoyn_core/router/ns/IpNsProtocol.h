@@ -3276,6 +3276,34 @@ class MDNSSenderRData : public MDNSTextRData {
      */
     qcc::String GetIPV4ResponseAddr();
 
+    /**
+     * @internal
+     * @brief Set the ipv6Port for this Sender RData.
+     * @param ipv6Port The ipv6Port to set.
+     */
+    void SetIPV6ResponsePort(uint16_t ipv6Port);
+
+    /**
+     * @internal
+     * @brief Get the ipv6Port for this Sender RData.
+     * @return The ipv6Port contained in this Sender RData.
+     */
+    uint16_t GetIPV6ResponsePort();
+
+    /**
+     * @internal
+     * @brief Set the ipv6Addr for this Sender RData.
+     * @param ipv6Addr The ipv6Addr to set.
+     */
+    void SetIPV6ResponseAddr(qcc::String ipv6Addr);
+
+    /**
+     * @internal
+     * @brief Get the ipv6Addr for this Sender RData.
+     * @return The ipv6Addr contained in this Sender RData.
+     */
+    qcc::String GetIPV6ResponseAddr();
+
 };
 
 /**
@@ -3817,7 +3845,13 @@ class _MDNSPacket : public _Packet {
      * @brief Clear the internal state of this MDNSPacket.
      */
     void Clear();
-
+#ifndef NDEBUG
+    /**
+     * @internal
+     * @brief print the contents of an MDNS packet
+     */
+    void Dump();
+#endif
     /**
      * @internal
      * @brief Set the Header for this packet.
