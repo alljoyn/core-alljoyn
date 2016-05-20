@@ -72,8 +72,8 @@ elif platform.system() == 'Darwin':
 
     default_msvc_version = None
 
-    default_crypto = 'openssl'
-    allowed_crypto = ('openssl', 'builtin')
+    default_crypto = 'builtin'
+    allowed_crypto = ('openssl', 'builtin', 'commoncrypto')
 
 vars = Variables()
 
@@ -106,9 +106,7 @@ vars.AddVariables(('OBJDIR', '', '#' + build_dir + '/obj'),
 target_os = ARGUMENTS.get('OS', default_target_os)
 target_cpu = ARGUMENTS.get('CPU', default_target_cpu)
 
-if target_os == 'android' or target_os == 'iOS':
-    default_crypto = 'builtin'
-if target_os == 'darwin' and target_cpu in ['x86', 'x86_64']:
+if target_os == 'android':
     default_crypto = 'builtin'
 
 vars.Add(EnumVariable('CRYPTO', 'Crypto implementation', default_crypto, allowed_values = allowed_crypto))
