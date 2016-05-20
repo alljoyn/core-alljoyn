@@ -1138,12 +1138,16 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
 {
     QStatus status = ER_OK;
 
+    if (isShared == false) {
+        QCC_LogError(ER_WARNING, ("Ignoring isShared parameter. KeyStore always works in shared mode."));
+    }
+
     busInternal->SetPermissionConfigurationListener(permissionConfigurationListener);
 
     /* If there are no auth mechanisms peer security is being disabled. */
     if (authMechanisms) {
         busInternal->keyStore.SetKeyEventListener(&busInternal->ksKeyEventListener);
-        status = busInternal->keyStore.Init(keyStoreFileName, isShared);
+        status = busInternal->keyStore.Init(keyStoreFileName);
         if (status == ER_KEY_STORE_ALREADY_INITIALIZED) {
             status = ER_OK;
         }
