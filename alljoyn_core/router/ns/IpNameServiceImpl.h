@@ -1186,7 +1186,7 @@ class IpNameServiceImpl : public qcc::Thread {
     void RewriteVersionSpecific(uint32_t msgVersion, Packet packet,
                                 bool haveIPv4address, qcc::IPAddress ipv4address,
                                 bool haveIPv6Address, qcc::IPAddress ipv6address,
-                                uint16_t unicastIpv4Port = 0, const qcc::String& interface = qcc::String(),
+                                uint16_t unicastIpv4Port = 0, uint16_t unicastIpv6Port = 0, const qcc::String& interface = qcc::String(),
                                 const uint16_t reliableTransportPort = 0, const uint16_t unreliableTransportPort = 0);
 
     /**
@@ -1591,7 +1591,9 @@ class IpNameServiceImpl : public qcc::Thread {
     qcc::SocketFd m_ipv6QuietSockFd;
 
     qcc::SocketFd m_ipv4UnicastSockFd;
+    qcc::SocketFd m_ipv6UnicastSockFd;
     qcc::Event* m_unicastEvent;
+    qcc::Event* m_unicast6Event;
 
     std::list<BurstResponseHeader> m_burstQueue;
 

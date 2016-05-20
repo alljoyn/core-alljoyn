@@ -3014,6 +3014,25 @@ void MDNSSenderRData::SetIPV4ResponseAddr(qcc::String ipv4Addr)
 {
     MDNSTextRData::SetValue("ipv4", ipv4Addr);
 }
+uint16_t MDNSSenderRData::GetIPV6ResponsePort()
+{
+    return MDNSTextRData::GetU16Value("upcv6");
+}
+
+void MDNSSenderRData::SetIPV6ResponsePort(uint16_t ipv6Port)
+{
+    MDNSTextRData::SetValue("upcv6", U32ToString(ipv6Port));
+}
+
+qcc::String MDNSSenderRData::GetIPV6ResponseAddr()
+{
+    return MDNSTextRData::GetValue("ipv6");
+}
+
+void MDNSSenderRData::SetIPV6ResponseAddr(qcc::String ipv6Addr)
+{
+    MDNSTextRData::SetValue("ipv6", ipv6Addr);
+}
 
 //MDNSHeader
 MDNSHeader::MDNSHeader() :
@@ -3371,6 +3390,24 @@ void _MDNSPacket::RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RR
         it1++;
     }
 }
+
+#ifndef NDEBUG
+void _MDNSPacket::Dump()
+{
+    std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
+    QCC_DbgPrintf(("Dumping MDNSPacket additional\n"));
+    while (it1 != m_additional.end()) {
+        QCC_DbgPrintf((" %s %d\n", (*it1).GetDomainName().c_str(),  (int)((*it1).GetRRType())));
+        it1++;
+    }
+    it1 = m_answers.begin();
+    QCC_DbgPrintf(("Dumping MDNSPacket answers\n"));
+    while (it1 != m_answers.end()) {
+        QCC_DbgPrintf((" %s %d\n", (*it1).GetDomainName().c_str(), (int)((*it1).GetRRType())));
+        it1++;
+    }
+}
+#endif
 
 bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** additional)
 {
