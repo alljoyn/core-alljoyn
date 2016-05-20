@@ -14,6 +14,35 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+echo_help()
+{
+  echo "Usage: $0 [options...]"
+  echo " CRYPTO=crypto_module_name         Build AllJoyn Core with specific crypto module"
+  echo " -h, --help                        Print help (this message)"
+}
+
+CRYPTO=builtin
+
+# Process command line arguments
+for i in "$@"
+do
+case $i in
+  -h|--help)
+    echo_help
+    exit 1
+    ;;
+  CRYPTO=*)
+    CRYPTO="${i#*=}"
+    shift
+    ;;
+  *)
+    echo "Unknown argument: ${i}"
+    echo_help
+    exit 1
+    ;;
+esac
+done
+
 cd ..
 SDKROOT_MACOS=`xcodebuild -version -sdk macosx Path`
 CPU_NUM=`sysctl -n hw.ncpu`
@@ -25,5 +54,5 @@ echo "CPU_NUM: $CPU_NUM"
 set -e
 
 export PLATFORM_NAME=macosx
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS

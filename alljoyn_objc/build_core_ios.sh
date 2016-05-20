@@ -14,6 +14,35 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
+echo_help()
+{
+  echo "Usage: $0 [options...]"
+  echo " CRYPTO=crypto_module_name         Build AllJoyn Core with specific crypto module"
+  echo " -h, --help                        Print help (this message)"
+}
+
+CRYPTO=builtin
+
+# Process command line arguments
+for i in "$@"
+do
+case $i in
+  -h|--help)
+    echo_help
+    exit 1
+    ;;
+  CRYPTO=*)
+    CRYPTO="${i#*=}"
+    shift
+    ;;
+  *)
+    echo "Unknown argument: ${i}"
+    echo_help
+    exit 1
+    ;;
+esac
+done
+
 cd ..
 SDKROOT_IOS_SIMULATOR=`xcodebuild -version -sdk iphonesimulator Path`
 SDKROOT_IOS=`xcodebuild -version -sdk iphoneos Path`
@@ -28,12 +57,12 @@ set -e
 
 export CONFIGURATION=release
 export PLATFORM_NAME=iphoneos
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
 export PLATFORM_NAME=iphonesimulator
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
 
 export CONFIGURATION=debug
 export PLATFORM_NAME=iphoneos
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
 export PLATFORM_NAME=iphonesimulator
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
+scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=$CRYPTO BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
