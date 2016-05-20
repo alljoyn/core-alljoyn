@@ -48,24 +48,31 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         CopySink(source);
     }
 
-    QStatus LoadRequest(KeyStore& keyStore) {
+    QStatus LoadRequest() {
         lock.Lock(MUTEX_CONTEXT);
-        qcc::StringSource source(sink.GetString());
-        QStatus status = keyStore.Pull(source, pwd);
+        //qcc::StringSource source(sink.GetString());
+        //QStatus status = keyStore.Pull(source, pwd);
+        QStatus status = PutKeys(sink.GetString(), pwd);
         lock.Unlock(MUTEX_CONTEXT);
         return status;
     }
 
-    QStatus StoreRequest(KeyStore& keyStore) {
+    QStatus StoreRequest() {
         qcc::StringSink newSink;
-        QStatus status = keyStore.Push(newSink);
-        if (ER_OK != status) {
-            return status;
+        //QStatus status = keyStore.Push(newSink);
+        qcc::String s;
+        QStatus status = GetKeys(s);
+        if (ER_OK == status) {
+            size_t pushed = 0;
+            status = newSink.PushBytes(s.data(), s.size(), pushed);
+            QCC_ASSERT(s.size() == pushed);
+            if (ER_OK == status) {
+                lock.Lock(MUTEX_CONTEXT);
+                sink.Clear();
+                status = CopySink(newSink.GetString());
+                lock.Unlock(MUTEX_CONTEXT);
+            }
         }
-        lock.Lock(MUTEX_CONTEXT);
-        sink.Clear();
-        status = CopySink(newSink.GetString());
-        lock.Unlock(MUTEX_CONTEXT);
         return status;
     }
 

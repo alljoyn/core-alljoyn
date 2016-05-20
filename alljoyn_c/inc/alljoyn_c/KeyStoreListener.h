@@ -58,7 +58,7 @@ typedef struct _alljoyn_keystorelistener_handle*            alljoyn_keystorelist
  *      - An error status otherwise
  *
  */
-typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void* context, alljoyn_keystorelistener listener);
 
 /**
  * Type for the StoreRequest callback.
@@ -76,7 +76,7 @@ typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void*
  *      - #ER_OK if the store request was satisfied
  *      - An error status otherwise
  */
-typedef QStatus (AJ_CALL * alljoyn_keystorelistener_storerequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_storerequest_ptr)(const void* context, alljoyn_keystorelistener listener);
 
 /**
  * Structure used during alljoyn_keystorelistener_create to provide callbacks into C.
@@ -126,7 +126,7 @@ extern AJ_API void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelist
  *      - An error status otherwise
  *
  */
-extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener,
                                                                const char* source, const char* password);
 
 /**
@@ -158,7 +158,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorel
  *        to hold the sink
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener,
                                                                char* sink, size_t* sink_sz);
 
 #ifdef __cplusplus

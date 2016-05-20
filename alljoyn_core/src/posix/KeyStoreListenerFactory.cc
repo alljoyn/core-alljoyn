@@ -113,7 +113,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
         KeyStoreListener::ReleaseExclusiveLock(file, line);
     }
 
-    QStatus LoadRequest(KeyStore& keyStore)
+    QStatus LoadRequest()
     {
         FileLock readLock;
         QStatus status = fileLocker.GetFileLockForRead(&readLock);
@@ -121,9 +121,22 @@ class DefaultKeyStoreListener : public KeyStoreListener {
             FileSource* source = readLock.GetSource();
             QCC_ASSERT(source != nullptr);
             if (source != nullptr) {
-                status = keyStore.Pull(*source, fileLocker.GetFileName());
+                //status = keyStore.Pull(*source, fileLocker.GetFileName());
+                int64_t size = 0;
+                source->GetSize(size);
+                if (size == 0) {
+                    status = PutKeys("", fileLocker.GetFileName());
+                } else {
+                    char buffer[size];
+                    size_t pulled = 0;
+                    status = source->PullBytes(buffer, size, pulled);
+                    QCC_ASSERT(static_cast<size_t>(size) == pulled);
+                    status = PutKeys(String(buffer, pulled), fileLocker.GetFileName());
+                }
                 if (status == ER_OK) {
                     QCC_DbgHLPrintf(("Read key store from %s", fileLocker.GetFileName()));
+                } else {
+                    QCC_LogError(status, ("Failed PutKeys from %s", fileLocker.GetFileName()));
                 }
             } else {
                 status = ER_OS_ERROR;
@@ -135,7 +148,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
         return status;
     }
 
-    QStatus StoreRequest(KeyStore& keyStore)
+    QStatus StoreRequest()
     {
         class BufferSink : public Sink {
           public:
@@ -160,19 +173,20 @@ class DefaultKeyStoreListener : public KeyStoreListener {
         FileLock writeLock;
         QStatus status = fileLocker.GetFileLockForWrite(&writeLock);
         if (status == ER_OK) {
-            BufferSink buffer;
-            status = keyStore.Push(buffer);
+            //status = keyStore.Push(buffer);
+            String ssink;
+            status = GetKeys(ssink);
             if (status != ER_OK) {
                 QCC_LogError(status, ("StoreRequest error during data buffering"));
                 return status;
             }
             size_t pushed = 0;
-            status = writeLock.GetSink()->PushBytes(buffer.GetBuffer().data(), buffer.GetBuffer().size(), pushed);
+            status = writeLock.GetSink()->PushBytes(ssink.data(), ssink.size(), pushed);
             if (status != ER_OK) {
                 QCC_LogError(status, ("StoreRequest error during data saving"));
                 return status;
             }
-            if (pushed != buffer.GetBuffer().size()) {
+            if (pushed != ssink.size()) {
                 status = ER_BUS_CORRUPT_KEYSTORE;
                 QCC_LogError(status, ("StoreRequest failed to save data correctly"));
                 return status;

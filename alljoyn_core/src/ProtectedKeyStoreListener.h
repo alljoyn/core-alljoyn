@@ -90,7 +90,7 @@ class ProtectedKeyStoreListener {
     /**
      * Simply wraps the call of the same name to the inner KeyStoreListener
      */
-    QStatus LoadRequest(KeyStore& keyStore);
+    QStatus LoadRequest();
 
     /**
      * Simply wraps the call of the same name to the inner KeyStoreListener
@@ -99,7 +99,7 @@ class ProtectedKeyStoreListener {
      *      - #ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus StoreRequest(KeyStore& keyStore);
+    QStatus StoreRequest();
 
   private: ~ProtectedKeyStoreListener();
 

@@ -70,18 +70,18 @@ static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacede
 /* Keystore listener callback functions */
 static char* inMemoryKeystore = NULL;
 
-static QStatus AJ_CALL alljoyn_keystorelistener_loadrequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
+static QStatus AJ_CALL alljoyn_keystorelistener_loadrequest(const void* context, alljoyn_keystorelistener listener)
 {
     QCC_UNUSED(context);
 
-    QStatus status = alljoyn_keystorelistener_putkeys(listener, keyStore, inMemoryKeystore, "password");
+    QStatus status = alljoyn_keystorelistener_putkeys(listener, inMemoryKeystore, "password");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     keystorelistener_loadrequest_flag = QCC_TRUE;
     return status;
 
 }
 
-static QStatus AJ_CALL alljoyn_keystorelistener_storerequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
+static QStatus AJ_CALL alljoyn_keystorelistener_storerequest(const void* context, alljoyn_keystorelistener listener)
 {
     QCC_UNUSED(context);
 
@@ -90,10 +90,10 @@ static QStatus AJ_CALL alljoyn_keystorelistener_storerequest(const void* context
         free(inMemoryKeystore);
     }
     size_t sink_sz = 0;
-    status = alljoyn_keystorelistener_getkeys(listener, keyStore, NULL, &sink_sz);
+    status = alljoyn_keystorelistener_getkeys(listener, NULL, &sink_sz);
     EXPECT_EQ(ER_BUFFER_TOO_SMALL, status) << "  Actual Status: " << QCC_StatusText(status);
     inMemoryKeystore = (char*) malloc(sizeof(char) * sink_sz);
-    status = alljoyn_keystorelistener_getkeys(listener, keyStore, inMemoryKeystore, &sink_sz);
+    status = alljoyn_keystorelistener_getkeys(listener, inMemoryKeystore, &sink_sz);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     keystorelistener_storerequest_flag = QCC_TRUE;
     return status;

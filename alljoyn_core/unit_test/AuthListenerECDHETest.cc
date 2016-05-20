@@ -487,13 +487,13 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
     {
         EXPECT_EQ(ER_OK, clientBus.Start());
         EXPECT_EQ(ER_OK, clientBus.Connect());
-        EXPECT_EQ(ER_OK, clientBus.RegisterKeyStoreListener(clientKeyStoreListener));
+        EXPECT_EQ(ER_OK, clientBus.RegisterKeyStoreListener(clientKeyStoreListener1));
         CreateOnOffAppInterface(clientBus, false);
         /* Although secondClientBus is currently used in only one test, it's simpler to handle
          * setup and teardown of it here rather than duplicate code in the test itself. */
         EXPECT_EQ(ER_OK, secondClientBus.Start());
         EXPECT_EQ(ER_OK, secondClientBus.Connect());
-        EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(clientKeyStoreListener));
+        EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(clientKeyStoreListener2));
         CreateOnOffAppInterface(secondClientBus, false);
         EXPECT_EQ(ER_OK, serverBus.Start());
         EXPECT_EQ(ER_OK, serverBus.Connect());
@@ -585,7 +585,8 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
 
   private:
 
-    InMemoryKeyStoreListener clientKeyStoreListener;
+    InMemoryKeyStoreListener clientKeyStoreListener1;
+    InMemoryKeyStoreListener clientKeyStoreListener2;
     InMemoryKeyStoreListener serverKeyStoreListener;
 };
 
@@ -1231,10 +1232,7 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
     EXPECT_EQ(ER_OK, EnableSecurity(true, mechanism));
     EXPECT_EQ(ER_OK, EnableSecurity(false, mechanism));
     /* setup the second bus not sharing the same key store as client bus */
-    InMemoryKeyStoreListener secondClientKeyStoreListener;
     ECDHEKeyXListener secondClientAuthListener(false);
-    EXPECT_EQ(ER_OK, secondClientBus.UnregisterKeyStoreListener());
-    EXPECT_EQ(ER_OK, secondClientBus.RegisterKeyStoreListener(secondClientKeyStoreListener));
     EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity(mechanism, &secondClientAuthListener, NULL, false));
 
     String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();

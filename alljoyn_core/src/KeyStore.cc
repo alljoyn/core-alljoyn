@@ -84,21 +84,16 @@ static const uint16_t KeyStoreVersion = 0x0104;
  */
 static qcc::Mutex* s_exclusiveLock = nullptr;
 
-
-KeyStoreListener::~KeyStoreListener()
-{
-}
-
-QStatus KeyStoreListener::PutKeys(KeyStore& keyStore, const qcc::String& source, const qcc::String& password)
+QStatus KeyStoreListener::PutKeys(const qcc::String& source, const qcc::String& password)
 {
     StringSource stringSource(source);
-    return keyStore.Pull(stringSource, password);
+    return keyStore->Pull(stringSource, password);
 }
 
-QStatus KeyStoreListener::GetKeys(KeyStore& keyStore, qcc::String& sink)
+QStatus KeyStoreListener::GetKeys(qcc::String& sink)
 {
     StringSink stringSink;
-    QStatus status = keyStore.Push(stringSink);
+    QStatus status = keyStore->Push(stringSink);
     if (status == ER_OK) {
         sink = stringSink.GetString();
     }
@@ -230,15 +225,18 @@ QStatus KeyStore::SetListener(KeyStoreListener& keyStoreListener)
         setIt = true;
     }
     if (setIt) {
-        if (listener) {
-            listener->DelRef();
-            listener = nullptr;
+        QStatus status = keyStoreListener.SetKeyStore(this);
+        if (status == ER_OK) {
+            if (listener) {
+                listener->DelRef();
+                listener = nullptr;
+            }
+            this->listener = new ProtectedKeyStoreListener(&keyStoreListener);
+            useDefaultListener = false;
         }
-        this->listener = new ProtectedKeyStoreListener(&keyStoreListener);
-        useDefaultListener = false;
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
-        return ER_OK;
+        return status;
     }
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
@@ -309,6 +307,7 @@ QStatus KeyStore::Init(const char* fileName, bool isShared)
     if (storeState == UNAVAILABLE) {
         if (listener == NULL) {
             defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
+            defaultListener->SetKeyStore(this);
             listener = new ProtectedKeyStoreListener(defaultListener);
         }
         return Load();
@@ -349,7 +348,7 @@ QStatus KeyStore::StoreInternal(std::vector<Key>& expiredKeys)
     }
     storedRefCount++;
 
-    QStatus status = listener->StoreRequest(*this);
+    QStatus status = listener->StoreRequest();
     if (status == ER_OK) {
         status = Event::Wait(*stored);
     }
@@ -375,7 +374,7 @@ QStatus KeyStore::LoadPersistentKeys()
     loadedRefCount++;
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     if (callingLoadRequest) {
-        status = listener->LoadRequest(*this);
+        status = listener->LoadRequest();
     } else {
         status = ER_OK;
     }

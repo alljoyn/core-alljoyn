@@ -41,12 +41,27 @@ class KeyStore;
  * behavior. This will override the default key store behavior.
  */
 class KeyStoreListener {
+    friend KeyStore;
+
+  private:
+    KeyStore* keyStore; //KeyStoreListener does not own the KeyStore!
+
+    QStatus SetKeyStore(KeyStore* keyStore) {
+        /* KeyStroeListener should be registered only with single KeyStore */
+        QCC_ASSERT(this->keyStore == nullptr);
+        if (this->keyStore != nullptr) {
+            return ER_BUS_LISTENER_ALREADY_SET; //needs better (dedicated) error code
+        }
+        this->keyStore = keyStore;
+        return ER_OK;
+    }
 
   public:
+    KeyStoreListener() : keyStore(nullptr) { }
     /**
      * Virtual destructor for derivable class.
      */
-    virtual ~KeyStoreListener();
+    virtual ~KeyStoreListener() { }
 
     /**
      * This method is called when a key store needs to be loaded.
@@ -60,7 +75,7 @@ class KeyStoreListener {
      *      - An error status otherwise
      *
      */
-    virtual QStatus LoadRequest(KeyStore& keyStore) = 0;
+    virtual QStatus LoadRequest() = 0;
 
     /**
      * Put keys into the key store from an encrypted byte string.
@@ -74,7 +89,7 @@ class KeyStoreListener {
      *      - An error status otherwise
      *
      */
-    QStatus PutKeys(KeyStore& keyStore, const qcc::String& source, const qcc::String& password);
+    QStatus PutKeys(const qcc::String& source, const qcc::String& password);
 
     /**
      * This method is called when a key store needs to be stored.
@@ -86,7 +101,7 @@ class KeyStoreListener {
      *      - #ER_OK if the store request was satisfied
      *      - An error status otherwise
      */
-    virtual QStatus StoreRequest(KeyStore& keyStore) = 0;
+    virtual QStatus StoreRequest() = 0;
 
     /**
      * Get the current keys from the key store as an encrypted byte string.
@@ -97,7 +112,7 @@ class KeyStoreListener {
      *      - #ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus GetKeys(KeyStore& keyStore, qcc::String& sink);
+    QStatus GetKeys(qcc::String& sink);
 
     /**
      * Request to acquire exclusive lock (e.g., file lock) on the keyStore.
