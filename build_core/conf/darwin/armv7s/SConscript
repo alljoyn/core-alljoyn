@@ -48,6 +48,10 @@ env['PATH'] = '$DT_TOOLCHAIN_DIR/usr/bin:$IPHONE_OS_PLATFORM_DIR/Developer/usr/b
 env['CC'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang'
 env['CXX'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang++'
 
+# The -fembed-bitcode flag is required for Xcode 7 and higher
+# env.Append(CCFLAGS=[
+#             '-fembed-bitcode'])
+
 env.Append(CFLAGS=[
             '-fdiagnostics-show-category=id',
             '-fdiagnostics-parseable-fixits',
@@ -60,6 +64,7 @@ env.Append(CFLAGS=[
             '-Wunused-value'])
 
 env.Append(CXXFLAGS=[
+            '-Wreturn-type',
             '-fno-rtti',
             '-fno-exceptions',
             '-Wc++11-extensions'])
