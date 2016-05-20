@@ -312,7 +312,7 @@ void IpNameService::SetCallback(TransportMask transportMask,
 }
 
 void IpNameService::SetNetworkEventCallback(TransportMask transportMask,
-                                            Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* cb)
+                                            Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* cb)
 {
     if (m_destroyed) {
         return;
@@ -425,7 +425,7 @@ QStatus IpNameService::CloseInterface(TransportMask transportMask, const qcc::IP
 
 QStatus IpNameService::Enable(TransportMask transportMask,
                               const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
-                              const std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t unreliableIPv6Port,
+                              const std::map<qcc::String, uint16_t>& unreliablePortMap,
                               bool enableReliableIPv4, bool enableReliableIPv6,
                               bool enableUnreliableIPv4, bool enableUnreliableIPv6)
 {
@@ -441,7 +441,7 @@ QStatus IpNameService::Enable(TransportMask transportMask,
     }
 
     ASSERT_STATE("Enable");
-    m_pimpl->Enable(transportMask, reliableIPv4PortMap, reliableIPv6Port, unreliableIPv4PortMap, unreliableIPv6Port,
+    m_pimpl->Enable(transportMask, reliableIPv4PortMap, reliableIPv6Port, unreliablePortMap,
                     enableReliableIPv4, enableReliableIPv6, enableUnreliableIPv4, enableUnreliableIPv6);
     return ER_OK;
 }
@@ -456,7 +456,7 @@ QStatus IpNameService::UpdateDynamicScore(TransportMask transportMask, uint32_t 
 
 QStatus IpNameService::Enabled(TransportMask transportMask,
                                std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t& reliableIPv6Port,
-                               std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t& unreliableIPv6Port)
+                               std::map<qcc::String, uint16_t>& unreliablePortMap)
 {
     //
     // If the entry gate has been closed, we do not allow an Enabled to actually
@@ -466,14 +466,14 @@ QStatus IpNameService::Enabled(TransportMask transportMask,
     // may be temporarily running is okay.
     //
     if (m_destroyed) {
-        reliableIPv6Port = unreliableIPv6Port = 0;
+        reliableIPv6Port = 0;
         reliableIPv4PortMap.clear();
-        unreliableIPv4PortMap.clear();
+        unreliablePortMap.clear();
         return ER_OK;
     }
 
     ASSERT_STATE("Enabled");
-    return m_pimpl->Enabled(transportMask, reliableIPv4PortMap, reliableIPv6Port, unreliableIPv4PortMap, unreliableIPv6Port);
+    return m_pimpl->Enabled(transportMask, reliableIPv4PortMap, reliableIPv6Port, unreliablePortMap);
 }
 
 QStatus IpNameService::FindAdvertisement(TransportMask transportMask, const qcc::String& matching, TransportMask completeTransportMask)
