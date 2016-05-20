@@ -186,16 +186,14 @@ class KeyStore {
      *
      * @param fileName  The filename to be used by the default key store if the default key store is being used.
      *                  This overrides the value in the applicationName parameter passed into the constructor.
-     * @param isShared  This parameter is not used as of 16.04. It is ignored internally (always shared).
      * @return
      *      - ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus Init(const char* fileName, bool isShared);
+    QStatus Init(const char* fileName);
 
     /**
-     * Re-read keys from the key store. This is a no-op unless the key store is shared.
-     * If the key store is shared the key store is reloaded merging any changes made by
+     * Re-read keys from the key store. The key store is reloaded merging any changes made by
      * other applications with changes made by the calling application.
      *
      * @return
@@ -503,11 +501,6 @@ class KeyStore {
     KeyStore();
 
     /**
-     * Internal Load function
-     */
-    QStatus Load();
-
-    /**
      * wait for the guid to set
      */
     QStatus WaitForGuidSet();
@@ -563,8 +556,7 @@ class KeyStore {
     void ReleaseExclusiveLock(const char* file = NULL, uint32_t line = 0);
 
     /**
-     * The application that owns this key store. If the key store is shared this will be the name
-     * of a suite of applications.
+     * The application that owns this key store.
      */
     qcc::String application;
 
