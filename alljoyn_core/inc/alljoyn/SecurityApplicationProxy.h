@@ -24,7 +24,6 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/PermissionConfigurator.h>
-#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 
 namespace ajn {
