@@ -108,6 +108,18 @@ QStatus Connect(SocketFd sockfd, const char* pathName);
  * @param sockfd        Socket descriptor.
  * @param localAddr     IP Address to bind on the local host (maybe 0.0.0.0 or ::).
  * @param localPort     IP Port to bind on the local host.
+ * @param scopeId       Scope ID of the interface
+ *
+ * @return  Indication of success of failure.
+ */
+QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort, uint32_t scopeId);
+
+/**
+ * Bind a socket to an address and port.
+ *
+ * @param sockfd        Socket descriptor.
+ * @param localAddr     IP Address to bind on the local host (maybe 0.0.0.0 or ::).
+ * @param localPort     IP Port to bind on the local host.
  *
  * @return  Indication of success of failure.
  */
