@@ -47,7 +47,6 @@
 #include "ArdpProtocol.h"
 #include "ns/IpNameService.h"
 #include "UDPTransport.h"
-
 #if ARDP_TESTHOOKS
 #include "ScatterGatherList.h"
 #endif
@@ -471,6 +470,19 @@ const uint32_t UDP_TIMEWAIT = 1000;  /**< How long do we stay in TIMWAIT state b
  */
 const uint32_t UDP_SEGBMAX = 4440;  /**< Maximum size of an ARDP segment (quantum of reliable transmission) */
 const uint32_t UDP_SEGMAX = 93;  /**< Maximum number of ARDP segment in-flight (bandwidth-delay product sizing) */
+
+/*
+ * The default address for use in listen specs. INADDR_ANY or IN6ADDR_ANY means to listen
+ * for UDP connections on any interfaces that are currently up or any that may
+ * come up in the future.
+ */
+static const char* ADDR4_DEFAULT = "0.0.0.0";
+static const char* ADDR6_DEFAULT = "::";
+
+/*
+ * The default port for use in listen specs.
+ */
+static const uint16_t PORT_DEFAULT = 9955;
 
 namespace ajn {
 
@@ -5098,7 +5110,7 @@ QStatus UDPTransport::Start()
                                               (&m_foundCallback, &FoundCallback::Found));
 
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_UDP,
-                                                      new CallbackImpl<NetworkEventCallback, void, const std::map<qcc::String, qcc::IPAddress>&>
+                                                      new CallbackImpl<NetworkEventCallback, void, const std::multimap<qcc::String, qcc::IPAddress>&>
                                                           (&m_networkEventCallback, &NetworkEventCallback::Handler));
     uint32_t availConn = m_maxConn -  m_currConn;
     uint32_t availRemoteClientsUdp = m_maxRemoteClientsUdp - m_numUntrustedClients;
@@ -5668,7 +5680,7 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
 
     /*
      * The next thing to do is to get the list of requested interfaces that
-     * have been processed. A '*' or '0.0.0.0'  being a wildcard indicating
+     * have been processed. A '*' or '0.0.0.0'/'::'  being a wildcard indicating
      * that we want to match any interface.  If there is no configuration
      * item, we default to something rational.
      */
@@ -5685,13 +5697,14 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
     } else {
         for (std::map<qcc::String, InterfaceInfo>::const_iterator it = m_requestedInterfaces.begin();
              it != m_requestedInterfaces.end(); it++) {
-            if (it->first != "*" && it->second.m_address.ToString() != "0.0.0.0") {
+            if ((it->first != "*") && !InterfaceHasAddress(it->first, IPAddress(ADDR4_DEFAULT)) &&
+                !InterfaceHasAddress(it->first, IPAddress(ADDR6_DEFAULT))) {
                 interfaceSet.insert(it->first);
             }
         }
         for (std::map<qcc::String, AddressInfo>::const_iterator it = m_requestedAddresses.begin();
              it != m_requestedAddresses.end(); it++) {
-            if (it->first != "0.0.0.0" && !it->second.m_interface.empty()) {
+            if ((it->first != ADDR4_DEFAULT) && (it->first != ADDR6_DEFAULT) && (!it->second.m_interface.empty())) {
                 interfaceSet.insert(it->second.m_interface);
             }
         }
@@ -5766,11 +5779,9 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                      */
                     qcc::String ipv4address;
                     qcc::String ipv6address;
-                    std::map<qcc::String, uint16_t> reliableIpv4PortMap, unreliableIpv4PortMap;
-                    uint16_t reliableIpv6Port, unreliableIpv6port;
-                    IpNameService::Instance().Enabled(TRANSPORT_UDP,
-                                                      reliableIpv4PortMap, reliableIpv6Port,
-                                                      unreliableIpv4PortMap, unreliableIpv6port);
+                    std::map<qcc::String, uint16_t> reliableIpv4PortMap, unreliablePortMap;
+                    uint16_t reliableIpv6Port;
+                    IpNameService::Instance().Enabled(TRANSPORT_UDP, reliableIpv4PortMap, reliableIpv6Port, unreliablePortMap);
 
                     /*
                      * If no listening port corresponding to this network interface is found in the map,
@@ -5782,25 +5793,26 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                      * matches the entry we are comparing to, in which case we are not comparing the entry to
                      * what's in the port map, we are using what's in the port map to confirm the entry.
                      */
-                    bool portMapWildcard = unreliableIpv4PortMap.find(qcc::String("*")) != unreliableIpv4PortMap.end();
-                    bool portMapExplicit = unreliableIpv4PortMap.find(entries[i].m_name) != unreliableIpv4PortMap.end();
+                    bool portMapWildcard = unreliablePortMap.find(qcc::String("*")) != unreliablePortMap.end();
+                    bool portMapExplicit = unreliablePortMap.find(entries[i].m_name) != unreliablePortMap.end();
 
                     if (portMapWildcard || portMapExplicit) {
                         uint16_t port = 0;
                         if (portMapWildcard) {
-                            port = unreliableIpv4PortMap[qcc::String("*")];
+                            port = unreliablePortMap[qcc::String("*")];
                         } else {
-                            port = unreliableIpv4PortMap[entries[i].m_name];
+                            port = unreliablePortMap[entries[i].m_name];
                         }
 
                         /*
                          * Now put this information together into a bus address
                          * that the rest of the AllJoyn world can understand.
                          */
-                        if (!entries[i].m_addr.empty() && (entries[i].m_family == QCC_AF_INET)) {
+                        if (!entries[i].m_addr.empty() &&
+                            ((entries[i].m_family == QCC_AF_INET) || (entries[i].m_family == QCC_AF_INET6))) {
                             qcc::String busAddr = "udp:addr=" + entries[i].m_addr + ","
-                                                  "port=" + U32ToString(port) + ","
-                                                  "family=ipv4";
+                                                  "port=" + U32ToString(port) + ",family=" +
+                                                  ((entries[i].m_family == QCC_AF_INET6) ? "ipv6" : "ipv4");
                             QCC_DbgPrintf(("UDPTransport::GetListenAddresses(): push busAddr=\"%s\"", busAddr.c_str()));
                             busAddrs.push_back(busAddr);
                         }
@@ -9037,7 +9049,7 @@ void UDPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
 
         if (m_isListening) {
             if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, true, false);
+                IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
                 m_isNsEnabled = true;
             }
         }
@@ -9139,7 +9151,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
          * enabled on any of the possible ports.
          */
         QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): Disabling NS"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -9160,12 +9172,14 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
-                qcc::String acceptingNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
-                QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", acceptingNormSpec.c_str()));
-                DoStopListen(acceptingNormSpec);
-                qcc::String activeNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
-                QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", activeNormSpec.c_str()));
-                DoStopListen(activeNormSpec);
+                for (const auto& entry : m_requestedInterfaces[interface].m_addresses) {
+                    qcc::String acceptingNormSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
+                    QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", acceptingNormSpec.c_str()));
+                    DoStopListen(acceptingNormSpec);
+                    qcc::String activeNormSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
+                    QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", activeNormSpec.c_str()));
+                    DoStopListen(activeNormSpec);
+                }
             } else if (argMap.find("addr") != argMap.end()) {
                 QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", i->c_str()));
                 DoStopListen(*i);
@@ -9300,7 +9314,7 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
                    isEmpty ? "true" : "false", m_isAdvertising ? "true" : "false"));
     if (isEmpty && !m_isAdvertising) {
         QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): Disabling NS"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -9321,12 +9335,14 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
-                qcc::String acceptingNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
-                QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", acceptingNormSpec.c_str()));
-                DoStopListen(acceptingNormSpec);
-                qcc::String activeNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
-                QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", activeNormSpec.c_str()));
-                DoStopListen(activeNormSpec);
+                for (const auto& entry : m_requestedInterfaces[interface].m_addresses) {
+                    qcc::String acceptingNormSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
+                    QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", acceptingNormSpec.c_str()));
+                    DoStopListen(acceptingNormSpec);
+                    qcc::String activeNormSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
+                    QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", activeNormSpec.c_str()));
+                    DoStopListen(activeNormSpec);
+                }
             } else if (argMap.find("addr") != argMap.end()) {
                 QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", i->c_str()));
                 DoStopListen(*i);
@@ -9373,18 +9389,6 @@ void UDPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
     IpNameService::Instance().UpdateDynamicScore(TRANSPORT_UDP, availConn, m_maxConn, availRemoteClientsUdp, m_maxRemoteClientsUdp);
 }
 
-/*
- * The default address for use in listen specs.  INADDR_ANY means to listen
- * for UDP connections on any interfaces that are currently up or any that may
- * come up in the future.
- */
-static const char* ADDR4_DEFAULT = "0.0.0.0";
-
-/*
- * The default port for use in listen specs.
- */
-static const uint16_t PORT_DEFAULT = 9955;
-
 QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSpec, map<qcc::String, qcc::String>& argMap) const
 {
     qcc::String family;
@@ -9398,8 +9402,8 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
      * argMap with those pairs.
      *
      * There are lots of legal possibilities for an IP-based transport, but
-     * all we are going to recognize is the "reliable IPv4 mechanism" and
-     * so we will summarily pitch everything else.
+     * all we are going to recognize is the "unreliable IPv4 or IPv6 mechanism"
+     * and so we will summarily pitch everything else.
      *
      * We expect to end up with a normalized outSpec that looks something
      * like:
@@ -9417,18 +9421,10 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
     map<qcc::String, qcc::String>::iterator iter;
 
     /*
-     * We just ignore the family since ipv4 was the only possibld working choice.
-     */
-    iter = argMap.find("family");
-    if (iter != argMap.end()) {
-        argMap.erase(iter);
-    }
-
-    /*
      * Transports, by definition, may support reliable Ipv4, unreliable IPv4,
-     * reliable IPv6 and unreliable IPv6 mechanisms to move bits.  In this
-     * incarnation, the UDP transport will only support unrreliable IPv4; so we
-     * log errors and ignore any requests for other mechanisms.
+     * reliable IPv6 and unreliable IPv6 mechanisms to move bits. In this
+     * incarnation, the UDP transport will support unrreliable IPv4 and IPv6;
+     * so we log errors and ignore any requests for other mechanisms.
      */
     iter = argMap.find("r4addr");
     if (iter != argMap.end()) {
@@ -9458,20 +9454,6 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
         argMap.erase(iter);
     }
 
-    iter = argMap.find("u6addr");
-    if (iter != argMap.end()) {
-        QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"u6addr\" is not supported"));
-        argMap.erase(iter);
-    }
-
-    iter = argMap.find("u6port");
-    if (iter != argMap.end()) {
-        QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                     ("UDPTransport::NormalizeListenSpec(): The mechanism implied by \"u6port\" is not supported"));
-        argMap.erase(iter);
-    }
-
     /*
      * Now, begin normalizing what we want to see in a listen spec.
      *
@@ -9496,21 +9478,28 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
         iter = argMap.find("addr");
         if (iter == argMap.end()) {
             /*
-             * We have no value associated with an "addr" key.  Do we have an
-             * "u4addr" which would be synonymous?  If so, save it as an addr,
-             * erase it and point back to the new addr.
+             * We have no value associated with an "addr" key. Do we have an
+             * "u4addr" or "u6addr" which would be synonymous? If so, save it
+             * as an addr, erase it and point back to the new addr.
              */
             iter = argMap.find("u4addr");
             if (iter != argMap.end()) {
+                QCC_DbgPrintf(("Setting ipv4 address to %s", iter->second.c_str()));
                 argMap["addr"] = iter->second;
                 argMap.erase(iter);
+            } else {
+                iter = argMap.find("u6addr");
+                if (iter != argMap.end()) {
+                    QCC_DbgPrintf(("Setting ipv6 address to %s", iter->second.c_str()));
+                    argMap["addr"] = iter->second;
+                    argMap.erase(iter);
+                }
             }
-
             iter = argMap.find("addr");
         }
 
         /*
-         * Now, deal with the addr, possibly derived from u4addr.
+         * Now, deal with the addr
          */
         if (iter != argMap.end()) {
             /*
@@ -9518,26 +9507,21 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
              * conversion function to make sure it's a valid value and to get into
              * in a standard representation.
              */
+
             IPAddress addr;
             status = addr.SetAddress(iter->second, false);
             if (status == ER_OK) {
-                /*
-                 * The addr had better be an IPv4 address, otherwise we bail.
-                 */
-                if (!addr.IsIPv4()) {
-                    QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                                 ("UDPTransport::NormalizeListenSpec(): The addr \"%s\" is not a legal IPv4 address.",
-                                  iter->second.c_str()));
-                    return ER_BUS_BAD_TRANSPORT_ARGS;
-                }
                 iter->second = addr.ToString();
                 outSpec.append("addr=" + addr.ToString());
             } else {
                 QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
-                             ("UDPTransport::NormalizeListenSpec(): The addr \"%s\" is not a legal IPv4 address.",
+                             ("UDPTransport::NormalizeListenSpec(): The addr \"%s\" is not a legal IP address.",
                               iter->second.c_str()));
                 return ER_BUS_BAD_TRANSPORT_ARGS;
             }
+        } else {
+            QCC_DbgTrace(("Did not find address"));
+
         }
     }
 
@@ -9546,6 +9530,7 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
          * We have no value associated with an "iface" or "addr" key.  Use the default
          * network interface name for the outspec and create a new key for the map.
          */
+        QCC_DbgPrintf(("Setting default iface"));
         outSpec.append("iface=" + qcc::String(INTERFACES_DEFAULT));
         argMap["iface"] = INTERFACES_DEFAULT;
     }
@@ -9558,14 +9543,20 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
     iter = argMap.find("port");
     if (iter == argMap.end()) {
         /*
-         * We have no value associated with a "port" key.  Do we have a
-         * "u4port" which would be synonymous?  If so, save it as a port,
+         * We have no value associated with a "port" key. Do we have a
+         * "u4port" or "u6port" which would be synonymous? If so, save it as a port,
          * erase it and point back to the new port.
          */
         iter = argMap.find("u4port");
         if (iter != argMap.end()) {
             argMap["port"] = iter->second;
             argMap.erase(iter);
+        } else {
+            iter = argMap.find("u6port");
+            if (iter != argMap.end()) {
+                argMap["port"] = iter->second;
+                argMap.erase(iter);
+            }
         }
 
         iter = argMap.find("port");
@@ -9591,8 +9582,8 @@ QStatus UDPTransport::NormalizeListenSpec(const char* inSpec, qcc::String& outSp
         }
     } else {
         /*
-         * We have no value associated with an "port" key.  Use the default
-         * IPv4 listen port for the outspec and create a new key for the map.
+         * We have no value associated with an "port" key. Use the default
+         * listen port for the outspec and create a new key for the map.
          */
         qcc::String portString = U32ToString(PORT_DEFAULT);
         outSpec += ",port=" + portString;
@@ -9611,7 +9602,7 @@ QStatus UDPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
     /*
      * Aside from the presence of the guid, the only fundamental difference
      * between a listenSpec and a transportSpec (actually a connectSpec) is that
-     * a connectSpec must have a valid and specific address IP address to
+     * a connectSpec must have a valid and specific IP address to
      * connect to (i.e., INADDR_ANY isn't a valid IP address to connect to).
      * This means that we can just call NormalizeListenSpec to get everything
      * into standard form.
@@ -9629,7 +9620,7 @@ QStatus UDPTransport::NormalizeTransportSpec(const char* inSpec, qcc::String& ou
      */
     map<qcc::String, qcc::String>::iterator i = argMap.find("addr");
     QCC_ASSERT(i != argMap.end());
-    if ((i->second == ADDR4_DEFAULT)) {
+    if ((i->second == ADDR4_DEFAULT) || (i->second == ADDR6_DEFAULT)) {
         QCC_LogError(ER_BUS_BAD_TRANSPORT_ARGS,
                      ("UDPTransport::NormalizeTransportSpec(): The addr may not be the default address"));
         return ER_BUS_BAD_TRANSPORT_ARGS;
@@ -9737,7 +9728,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * To avoid unnecessary differences, we do not allow a requested connection
      * to "ourself" to succeed.
      *
-     * The code here is not a failsafe way to prevent this since thre are going
+     * The code here is not a failsafe way to prevent this since there are going
      * to be multiple processes involved that have no knowledge of what the
      * other is doing (for example, the wireless supplicant and this daemon).
      * This means we can't synchronize and there will be race conditions that
@@ -9762,7 +9753,8 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * to connect to ourself and we must fail that request.
      */
     char anyspec[64];
-    snprintf(anyspec, sizeof(anyspec), "%s:addr=0.0.0.0,port=%u", GetTransportName(), ipPort);
+    const char* anySpecFormat = (ipAddr.IsIPv6() ? "%s:addr=::,port=%u" : "%s:addr=0.0.0.0,port=%u");
+    snprintf(anyspec, sizeof(anyspec), anySpecFormat, GetTransportName(), ipPort);
 
     qcc::String normAnySpec;
     map<qcc::String, qcc::String> normArgMap;
@@ -9835,7 +9827,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * explicitly.  If we see that we are listening on the INADDR_ANY address
      * make a note of it.  We sort that out in the next bit of code.
      */
-    QCC_DbgPrintf(("UDPTransport::Connect(): Checking for connection to self (\"%s\"", normSpec.c_str()));
+    QCC_DbgPrintf(("UDPTransport::Connect(): Checking for connection to self (\"%s\")", normSpec.c_str()));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
     bool anyEncountered = false;
     for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
@@ -9949,8 +9941,8 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
      * would do.
      *
      * There are therefore two cases to consider: First, if there is a socket
-     * bound to INADDR_ANY (which means that we got a listen on 0.0.0.0); and
-     * second, there are possibly multiple sockets bound to specific addresses.
+     * bound to INADDR_ANY/IN6ADDR_ANY (which means that we got a listen on 0.0.0.0 or ::);
+     * and second, there are possibly multiple sockets bound to specific addresses.
      * The upshot is that if we have a listening socket bound to INADDR_ANY we
      * just use it.  If we don't listen to INADDR_ANY we look for a socket bound
      * to an IP address that puts it on the same network as the destination
@@ -9966,7 +9958,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     qcc::SocketFd sock = 0;
     bool foundSock = false;
 
-    QCC_DbgPrintf(("UDPTransport::Connect(): Look for socket corresponding to destination network"));
+    QCC_DbgPrintf(("UDPTransport::Connect(): Look for socket corresponding to destination network, m_listenFds.size() == %d", m_listenFds.size()));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
     for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
         /*
@@ -9988,75 +9980,105 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         qcc::GetLocalAddress(i->m_sockFd, listenAddr, listenPort);
         QCC_DbgPrintf(("UDPTransport::Connect(): Check out local address \"%s\"", listenAddr.ToString().c_str()));
 
-        /*
-         * If we encounter a socket bound to INADDR_ANY, we use it per the
-         * simple "rules" above.
-         */
-        if (listenAddr.ToString() == "0.0.0.0") {
-            sock = i->m_sockFd;
-            foundSock = true;
-            QCC_DbgPrintf(("UDPTransport::Connect(): Found socket (%d.) listening on INADDR_ANY", sock));
-            break;
-        }
-
-        /*
-         * If this isn't a socket bound to INADDR_ANY it must be bound to a
-         * specific interface.  Find the corresponding interface information in
-         * the IfConfig entries.  We need the network mask from that entry so we
-         * can see if the network numbers match.
-         *
-         * TODO: what if we have multiple interfaces with the same network
-         * number i.e. 192.168.1.x?  The advertisement will have come in over
-         * one of them but we lose track of the source of the advertisement that
-         * precipitated the JoinSession that got us here.  We need to remember
-         * that info (perhaps as a "zone index" equivalent) in the connect spec,
-         * but that has to be plumbed in from the name service and allowed all
-         * the way up into the AllJoyn obj and back down!
-         */
-        uint32_t prefixLen = 0;
-        for (uint32_t j = 0; j < entries.size(); ++j) {
-            if (entries[j].m_addr == listenAddr.ToString()) {
-                prefixLen = entries[j].m_prefixlen;
-            }
-        }
-
-        QCC_DbgPrintf(("UDPTransport::Connect(): prefixlen=%d.", prefixLen));
-
-        /*
-         * Create a netmask with a one in the leading bits for each position
-         * implied by the prefix length.
-         */
-        uint32_t mask = 0;
-        for (uint32_t j = 0; j < prefixLen; ++j) {
-            mask >>= 1;
-            mask |= 0x80000000;
-        }
-
-        QCC_DbgPrintf(("UDPTransport::Connect(): net mask is 0x%x", mask));
-
-        /*
-         * Is local address of the currently indexed listenFd on the same
-         * network as the destination address supplied as a parameter to the
-         * connect?  If so, we use this listenFD as the socket to use when we
-         * try to connect to the remote daemon.
-         */
-        uint32_t network1 = listenAddr.GetIPv4AddressCPUOrder() & mask;
-        uint32_t network2 = ipAddr.GetIPv4AddressCPUOrder() & mask;
-        if (network1 == network2) {
-            QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" matches network \"%s\"",
-                           IPAddress(network1).ToString().c_str(), IPAddress(network2).ToString().c_str()));
+        if (listenAddr.IsIPv4() && ipAddr.IsIPv4()) {
             /*
-             * Mark the socket as found, but don't break here in case there is a
-             * socket bound to INADDR_ANY that happens to be later in the list.
-             * We prefer to use that one since we assume a user configured it in
-             * order to be more generic.  We do the break there so that generic
-             * choice other specific choices.
+             * If we encounter a socket bound to INADDR_ANY, we use it per the
+             * simple "rules" above.
              */
-            sock = i->m_sockFd;
-            foundSock = true;
-        } else {
-            QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" does not match network \"%s\"",
-                           IPAddress(network1).ToString().c_str(), IPAddress(network2).ToString().c_str()));
+            if ((listenAddr.ToString() == ADDR4_DEFAULT)) {
+                sock = i->m_sockFd;
+                foundSock = true;
+                QCC_DbgPrintf(("UDPTransport::Connect(): Found socket (%d.) listening on INADDR_ANY", sock));
+                break;
+            }
+
+            /*
+             * If this isn't a socket bound to INADDR_ANY it must be bound to a
+             * specific interface.  Find the corresponding interface information in
+             * the IfConfig entries.  We need the network mask from that entry so we
+             * can see if the network numbers match.
+             *
+             * TODO: what if we have multiple interfaces with the same network
+             * number i.e. 192.168.1.x?  The advertisement will have come in over
+             * one of them but we lose track of the source of the advertisement that
+             * precipitated the JoinSession that got us here.  We need to remember
+             * that info (perhaps as a "zone index" equivalent) in the connect spec,
+             * but that has to be plumbed in from the name service and allowed all
+             * the way up into the AllJoyn obj and back down!
+             */
+            uint32_t prefixLen = 0;
+            for (uint32_t j = 0; j < entries.size(); ++j) {
+                if (entries[j].m_addr == listenAddr.ToString()) {
+                    prefixLen = entries[j].m_prefixlen;
+                }
+            }
+
+            QCC_DbgPrintf(("UDPTransport::Connect(): prefixlen=%d.", prefixLen));
+
+            /*
+             * Create a netmask with a one in the leading bits for each position
+             * implied by the prefix length.
+             */
+            uint32_t mask = 0;
+            for (uint32_t j = 0; j < prefixLen; ++j) {
+                mask >>= 1;
+                mask |= 0x80000000;
+            }
+
+            QCC_DbgPrintf(("UDPTransport::Connect(): net mask is 0x%x", mask));
+
+            /*
+             * Is local address of the currently indexed listenFd on the same
+             * network as the destination address supplied as a parameter to the
+             * connect?  If so, we use this listenFD as the socket to use when we
+             * try to connect to the remote daemon.
+             */
+            uint32_t network1 = listenAddr.GetIPv4AddressCPUOrder() & mask;
+            uint32_t network2 = ipAddr.GetIPv4AddressCPUOrder() & mask;
+            if (network1 == network2) {
+                QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" matches network \"%s\"",
+                               IPAddress(network1).ToString().c_str(), IPAddress(network2).ToString().c_str()));
+                /*
+                 * Mark the socket as found, but don't break here in case there is a
+                 * socket bound to INADDR_ANY that happens to be later in the list.
+                 * We prefer to use that one since we assume a user configured it in
+                 * order to be more generic.  We do the break there so that generic
+                 * choice other specific choices.
+                 */
+                sock = i->m_sockFd;
+                foundSock = true;
+            } else {
+                QCC_DbgPrintf(("UDPTransport::Connect(): network \"%s\" does not match network \"%s\"",
+                               IPAddress(network1).ToString().c_str(), IPAddress(network2).ToString().c_str()));
+            }
+        } else if (listenAddr.IsIPv6() && ipAddr.IsIPv6()) {
+            /*
+             * If we encounter a socket bound to IN6ADDR_ANY, we use it per the
+             * simple "rules" above.
+             */
+            if ((listenAddr.ToString() == ADDR6_DEFAULT)) {
+                sock = i->m_sockFd;
+                foundSock = true;
+                QCC_DbgPrintf(("UDPTransport::Connect(): Found socket (%d.) listening on IN6ADDR_ANY", sock));
+                break;
+            }
+
+            if (listenAddr.IsSameIPv6Network(ipAddr)) {
+                QCC_DbgPrintf(("UDPTransport::Connect(): network of \"%s\" matches network of \"%s\"",
+                               listenAddr.ToString().c_str(), ipAddr.ToString().c_str()));
+                /*
+                 * Mark the socket as found, but don't break here in case there is a
+                 * socket bound to IN6ADDR_ANY that happens to be later in the list.
+                 * We prefer to use that one since we assume a user configured it in
+                 * order to be more generic.  We do the break there so that generic
+                 * choice other specific choices.
+                 */
+                sock = i->m_sockFd;
+                foundSock = true;
+            } else {
+                QCC_DbgPrintf(("UDPTransport::Connect(): network of \"%s\" does not match network of \"%s\"",
+                               listenAddr.ToString().c_str(), ipAddr.ToString().c_str()));
+            }
         }
     }
 
@@ -10433,7 +10455,7 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
         DecrementAndFetch(&m_refCount);
         return status;
     }
-
+    QCC_DbgPrintf(("NormalizeListenSpec returned %s", normSpec.c_str()));
     /*
      * We allow the listen request to be specified with either
      * a network interface name or an IP address.
@@ -10445,23 +10467,6 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
         key = "addr";
     }
 
-    /*
-     * The daemon code is in a state where it lags in functionality a bit with
-     * respect to the common code.  Common supports the use of IPv6 addresses
-     * but the name service is not quite ready for prime time.  Until the name
-     * service can properly distinguish between various cases, we fail any
-     * request to listen on an IPv6 address.
-     */
-    if (key == "addr") {
-        IPAddress ipAddress;
-        status = ipAddress.SetAddress(argMap["addr"].c_str());
-        if (ipAddress.IsIPv6()) {
-            status = ER_INVALID_ADDRESS;
-            QCC_LogError(status, ("UDPTransport::StartListen(): IPv6 address (\"%s\") in \"u4addr\" not allowed", argMap["u4addr"].c_str()));
-            DecrementAndFetch(&m_refCount);
-            return status;
-        }
-    }
     QCC_DbgPrintf(("UDPTransport::StartListen(): %s = \"%s\", port = \"%s\"",
                    key.c_str(), argMap[key].c_str(), argMap["port"].c_str()));
 
@@ -10562,29 +10567,29 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
     /*
      * We have been given a listenSpec that provides an iface or addr and a port
      * in the parameters to this method.  We are expected to listen on that
-     * network interface's primary IPv4 address and port for inbound connections.
+     * network interface's primary IPv4 or IPv6 address and port for inbound connections.
      * The name service will also advertise and discover over this network interface.
      *
      * We can either be given the wildcard iface "*", a specific network
-     * interface name, the default address "0.0.0.0" or a specific address.
-     * If given "*" or "0.0.0.0", this means that the TCP Transport will
-     * listen for inbound connections on the INADDR_ANY address and the name
+     * interface name, the default address "0.0.0.0" or "::" or a specific address.
+     * If given "*" or ("0.0.0.0" AND "::"), this means that the UDP Transport will
+     * listen for inbound connections on the INADDR_ANY and IN6ADDR_ANY address and the name
      * service will advertise and discover over any currently IFF_UP interface
      * or any interface that may come IFF_UP in the future.
      *
-     * If given a network interface name, the TCP Transport will listen for
-     * inbound connections on the current primary IPv4 address of that network
+     * If given a network interface name, the UDP Transport will listen for
+     * inbound connections on the current primary IP address of that network
      * interface and the name service will advertise and discover over that
      * network interface.
      *
-     * If given a specific address, the TCP Transport will listen for
+     * If given a specific address, the UDP Transport will listen for
      * inbound connections on the specified address and the name service
      * will advertise and discover over the underlying network interface
      * as long as it retains that address.
      *
      *     iface                  Action
      *     ----------             -----------------------------------------
-     * 1.  *                      Listen on 0.0.0.0 and advertise/discover
+     * 1.  *                      Listen on 0.0.0.0 and :: and advertise/discover
      *                            over '*'.  This is the default case where
      *                            the system listens on all interfaces and
      *                            advertises / discovers on all interfaces.
@@ -10612,15 +10617,15 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
      *
      *     address                Action
      *     --------               -----------------------------------------
-     * 1.  0.0.0.0                Listen on 0.0.0.0 and advertise/discover
-     *                            over '*'.  This is the default case where
+     * 1.  0.0.0.0                Listen on 0.0.0.0 or :: and advertise/discover
+     *     ::                     over '*'.  This is the default case where
      *                            the system listens on all interfaces and
      *                            advertises / discovers on all interfaces.
      *                            This is the "speak alljoyn over all of
      *                            your interfaces" situation.
      *
      * 2.  'a.b.c.d'              Listen only on the specified address if
-     *                            or when it appears on the network and
+     *     'a:b:c:d:e:f:g:h'      or when it appears on the network and
      *                            advertise and discover over the
      *                            underlying interface for that address,
      *                            so long as it retains the address.
@@ -10633,41 +10638,37 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
      *                            way must select another port.
      *
      * This is much harder to describe than to implement; but the upshot is that
-     * we listen on the primary IPv4 address of the named network interface that
+     * we listen on the primary IP address of the named network interface that
      * comes in with the listenSpec and we enable the name service on that same
      * interface. It is up to the person doing the configuration to understand
      * what he or she is trying to do and the impact of choosing those values.
      */
     uint16_t listenPort = StringToU32(argMap["port"]);
-    qcc::String interface = "";
+    qcc::String iface = "";
     qcc::IPAddress addr;
-    if (argMap.find("iface") != argMap.end()) {
-        interface = argMap["iface"];
-    }
-    if (argMap.find("addr") != argMap.end()) {
-        addr = IPAddress(argMap["addr"]);
-    }
 
-    /*
-     * Request the port we have obtained from the caller for the accepting socket and an ephemeral port (0)
-     * for the active socket.
-     */
-    if (!interface.empty()) {
-        m_requestedInterfaces[interface] = InterfaceInfo("0.0.0.0", listenPort, 0);
-    } else if (addr.Size() && addr.IsIPv4()) {
-        m_requestedAddresses[addr.ToString()] = AddressInfo("", listenPort, 0);
+    if (argMap.find("iface") != argMap.end()) {
+        iface = argMap["iface"];
+    } else if (argMap.find("addr") != argMap.end()) {
+        addr = IPAddress(argMap["addr"]);
     }
 
     /* We first determine whether a network interface name or an IP address was
      * specified and then we invoke the appropriate name service method.
+     * Request the port we have obtained from the caller for the accepting socket
+     * and an ephemeral port (0) for the active socket.
      */
-    if (!interface.empty()) {
-        status = IpNameService::Instance().OpenInterface(TRANSPORT_UDP, interface);
-    } else if (addr.Size() && addr.IsIPv4()) {
-        status = IpNameService::Instance().OpenInterface(TRANSPORT_UDP, addr.ToString());
+
+    if (!iface.empty()) {
+        m_requestedInterfaces[iface] = InterfaceInfo(ADDR4_DEFAULT, listenPort, 0);
+        status = IpNameService::Instance().OpenInterface(TRANSPORT_UDP, iface);
+    } else if (addr.Size()) {
+        m_requestedAddresses[addr.ToString()] = AddressInfo("", listenPort, 0);
+        status = IpNameService::Instance().OpenInterface(TRANSPORT_UDP, addr);
     }
+
     if (status != ER_OK) {
-        QCC_LogError(status, ("UDPTransport::DoStartListen(): OpenInterface() failed for %s", (interface.empty() ? addr.ToString().c_str() : interface.c_str())));
+        QCC_LogError(status, ("UDPTransport::DoStartListen(): OpenInterface() failed for %s", (iface.empty() ? addr.ToString().c_str() : iface.c_str())));
     }
 
     DecrementAndFetch(&m_refCount);
@@ -11168,9 +11169,6 @@ void UDPTransport::QueueUpdateRouterAdvertisementAndDynamicScore()
 void UDPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::String& guid,
                                         std::vector<qcc::String>& nameList, uint32_t timer)
 {
-//  Makes lots of noise!
-    //QCC_DbgTrace(("UDPTransport::FoundCallback::Found(): busAddr = \"%s\" nameList %d", busAddr.c_str(), nameList.size()));
-
     qcc::String addr("addr=");
     qcc::String port("port=");
     qcc::String comma(",");
@@ -11209,7 +11207,7 @@ void UDPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::S
     }
 }
 
-void UDPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc::IPAddress>& ifMap)
+void UDPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
 {
     IncrementAndFetch(&m_transport.m_refCount);
     QCC_DbgPrintf(("UDPTransport::NetworkEventCallback::Handler()"));
@@ -11236,7 +11234,7 @@ void UDPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc
     DecrementAndFetch(&m_transport.m_refCount);
 }
 
-void UDPTransport::QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAddress>& ifMap)
+void UDPTransport::QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
 {
     IncrementAndFetch(&m_refCount);
     QCC_DbgPrintf(("UDPTransport::QueueHandleNetworkEvent()"));
@@ -11252,20 +11250,27 @@ void UDPTransport::QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAd
     DecrementAndFetch(&m_refCount);
 }
 
-QStatus UDPTransport::SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port)
+QStatus UDPTransport::SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port, uint32_t scopeId)
 {
     QCC_DbgTrace(("UDPTransport::SetupSocket(): addr=%s, port=%d", addr.ToString().c_str(), port));
 
     QStatus status;
 
     socketFd = INVALID_SOCKET_FD;
-    status = Socket(QCC_AF_INET, QCC_SOCK_DGRAM, socketFd);
+    status = Socket((addr.IsIPv6() ? QCC_AF_INET6 : QCC_AF_INET), QCC_SOCK_DGRAM, socketFd);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::SetupSocket(): Socket() failed"));
         return status;
     }
 
-    QCC_DbgPrintf(("UDPTransport::SetupSocket(): Socket(): socketFd=%d.", socketFd));
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): Socket(): socketFd=%d", socketFd));
+
+    if (addr.IsIPv6()) {
+        status = qcc::SetRecvIPv6Only(socketFd, true);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("UDPTransport::SetupSocket(): enable recv IPv6 only failed for sockFd %d", socketFd));
+        }
+    }
 
     /*
      * Listener sockets get closed every once in a while - see the DoStopListen code path.
@@ -11283,7 +11288,7 @@ QStatus UDPTransport::SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress&
     /*
      * ARDP expects us to use select and non-blocking sockets.
      */
-    QCC_DbgPrintf(("UDPTransport::SetupSocket(): SetBlocking(socketFd=%d, false)", socketFd));;
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): SetBlocking(socketFd=%d, false)", socketFd));
     status = qcc::SetBlocking(socketFd, false);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::SetupSocket(): SetBlocking() failed"));
@@ -11356,15 +11361,99 @@ QStatus UDPTransport::SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress&
     QCC_DbgPrintf(("UDPTransport::SetupSocket(): GetRcvBuf(socketFd=%d) <= %u. bytes)", socketFd, rcvSize));
 #endif
 
-    QCC_DbgPrintf(("UDPTransport::SetupSocket(): Bind(socketFd=%d., addr=\"%s\", port=%u.)",
-                   socketFd, addr.ToString().c_str(), port));
-    status = qcc::Bind(socketFd, addr, port);
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): Bind(socketFd=%d., addr=\"%s\", port=%u, scopeId=%u.)",
+                   socketFd, addr.ToString().c_str(), port, scopeId));
+    status = qcc::Bind(socketFd, addr, port, scopeId);
     if (status != ER_OK) {
         QCC_LogError(status, ("UDPTransport::SetupSocket(): Bind() failed"));
         qcc::Close(socketFd);
     }
 
     return status;
+}
+
+bool UDPTransport::InterfaceHasAddress(const String& iface, const IPAddress& addr) const
+{
+    for (const auto& entry : m_requestedInterfaces.at(iface).m_addresses) {
+        if (entry == addr) {
+            return true;
+        }
+    }
+    return false;
+}
+
+SocketFd UDPTransport::GetMatchingListenFdEntry(const String& listenSpec) const
+{
+    for (const auto& entry : m_listenFds) {
+        if (entry.m_normSpec == listenSpec) {
+            return entry.m_sockFd;
+        }
+    }
+    return INVALID_SOCKET_FD;
+}
+
+void UDPTransport::AddListenSpecsToList(const IPAddress& addr, const InterfaceInfo& ifaceInfo, list<String>& specsList) const
+{
+    String acceptingSpec = "udp:addr=" + addr.ToString() + ",port=" + U32ToString(ifaceInfo.m_acceptingPort);
+    specsList.push_back(acceptingSpec);
+    String activeSpec = "udp:addr=" + addr.ToString() + ",port=" + U32ToString(ifaceInfo.m_activePort);
+    specsList.push_back(activeSpec);
+}
+
+void UDPTransport::CleanupRequestedInterfaces(const multimap<String, IPAddress>& ifMap, list<String>& replacedList)
+{
+    vector<String> liveInterfaces;
+    /*
+     * Iterate through all unique keys (interfaces) in ifMap to find all live interfaces.
+     */
+    for (auto it = ifMap.begin(), end = ifMap.end(); it != end; it = ifMap.upper_bound(it->first)) {
+        liveInterfaces.push_back(it->first);
+    }
+
+    /*
+     * If m_requestedInterfaces contains interface entry which is not present in liveInterfaces
+     * then remove all associated IPAddresses.
+     */
+    for (map<String, InterfaceInfo>::iterator ifaceEntry = m_requestedInterfaces.begin(); ifaceEntry != m_requestedInterfaces.end(); ++ifaceEntry) {
+        if (find(liveInterfaces.begin(), liveInterfaces.end(), ifaceEntry->first) == liveInterfaces.end()) {
+            QCC_DbgTrace(("UDPTransport::CleanupRequestedInterfaces(),  Adding all specs of interface '%s' to replacedList", ifaceEntry->first.c_str()));
+            for (vector<IPAddress>::iterator addrEntry = ifaceEntry->second.m_addresses.begin(); addrEntry != ifaceEntry->second.m_addresses.end(); ++addrEntry) {
+                AddListenSpecsToList(*addrEntry, ifaceEntry->second, replacedList);
+                QCC_DbgTrace(("UDPTransport::CleanupRequestedInterfaces(), Adding m_requestedInterfaces[%s] address entry '%s' to replacedList",
+                              ifaceEntry->first.c_str(), addrEntry->ToString().c_str()));
+            }
+            ifaceEntry->second.m_addresses.clear();
+        }
+    }
+
+    for (vector<String>::iterator it = liveInterfaces.begin(); it != liveInterfaces.end(); ++it) {
+        if (m_requestedInterfaces.find(*it) == m_requestedInterfaces.end()) {
+            QCC_DbgTrace(("UDPTransport::CleanupRequestedInterfaces(), m_requestedInterfaces[%s] does not exist, advancing the loop", (*it).c_str()));
+            continue;
+        }
+
+        pair <multimap<String, IPAddress>::const_iterator, multimap<String, IPAddress>::const_iterator> ifMapInterfaceAddresses;
+        ifMapInterfaceAddresses = ifMap.equal_range(*it);
+
+        /*
+         * If m_requestedInterfaces[interface].m_addresses contains entry which is not present in ifMap[interface] then remove it
+         */
+        for (vector<IPAddress>::iterator addrEntry = m_requestedInterfaces[*it].m_addresses.begin();
+             addrEntry != m_requestedInterfaces[*it].m_addresses.end(); ++addrEntry) {
+            if (find_if(ifMapInterfaceAddresses.first, ifMapInterfaceAddresses.second,
+                        [addrEntry](pair<const qcc::String, qcc::IPAddress> p) -> bool {
+                    return (p.second == *addrEntry);
+                }) == ifMapInterfaceAddresses.second) {
+                AddListenSpecsToList(*addrEntry, m_requestedInterfaces[*it], replacedList);
+                QCC_DbgTrace(("UDPTransport::CleanupRequestedInterfaces(), Removing m_requestedInterfaces[%s].m_addresses entry: %s",
+                              (*it).c_str(), addrEntry->ToString().c_str()));
+                addrEntry = m_requestedInterfaces[*it].m_addresses.erase(addrEntry);
+                if (addrEntry == m_requestedInterfaces[*it].m_addresses.end()) {
+                    break;
+                }
+            }
+        }
+    }
 }
 
 /* This is the callback handler that is invoked when the name service detects that a network interface
@@ -11378,15 +11467,28 @@ QStatus UDPTransport::SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress&
  */
 void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 {
-    QCC_DbgTrace(("UDPTransport::HandleNetworkEventInstance()"));
-
-    std::map<qcc::String, qcc::IPAddress>& ifMap = listenRequest.ifMap;
+    const std::multimap<qcc::String, qcc::IPAddress>& ifMap = listenRequest.ifMap;
     QStatus status = ER_OK;
     IncrementAndFetch(&m_refCount);
     list<String> replacedList;
     list<ListenFdEntry> addedList;
+    bool wildcardIPv4Processed = false;
+    bool wildcardIPv6Processed = false;
     bool wildcardIfaceRequested = (m_requestedInterfaces.find("*") != m_requestedInterfaces.end());
-    bool wildcardAddressRequested = (m_requestedAddresses.find("0.0.0.0") != m_requestedAddresses.end());
+    bool wildcardIPv4AddressRequested = (m_requestedAddresses.find(ADDR4_DEFAULT) != m_requestedAddresses.end());
+    bool wildcardIPv6AddressRequested = (m_requestedAddresses.find(ADDR6_DEFAULT) != m_requestedAddresses.end());
+    bool wildcardAddressRequested = (wildcardIPv4AddressRequested || wildcardIPv6AddressRequested);
+
+    QCC_DbgTrace(("UDPTransport::HandleNetworkEventInstance(), wildcardIfaceRequested = %d, wildcardAddressRequested = %d, ifMap.size() = %d",
+                  wildcardIfaceRequested, wildcardAddressRequested, ifMap.size()
+                  ));
+
+#ifndef NDEBUG
+    for (std::multimap<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
+        QCC_DbgTrace(("UDPTransport::HandleNetworkEventInstance() ifMap entry %s => %s",
+                      it->first.c_str(), it->second.ToString().c_str()));
+    }
+#endif
 
     /* If we don't have any interfaces or addresses that we are required to listen on then we return.
      * If a wildcard interface or wildcard address was specified, once we have processed the request
@@ -11403,7 +11505,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
     }
 
     /*
-     * We walk through the list of interfaces that have changed in some way provided to us by the name service.
+     * We walk through the list of interfaces and addresses. That list is provided to us by the name service
+     * and has been created based on all interfaces/addresses available in the system.
      * For each interface, we check if that interface is one of the interfaces specified in the configuration
      * database. If we don't have a wildcard interface or wildcard address in the configuration database and
      * the current interface's network interface name or IP address is not specified in the configuration
@@ -11411,7 +11514,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      * is in the configuration database and its IP address has not changed we proceed to the next interface.
      * Similarly, if a network IP address still corresponds to the same network interface we proceed to the
      * next interface in the list. At this point, we check if the change in IP address for a network interface
-     * is a change from the default address "0.0.0.0". If it is, then this is the first time we are learning of
+     * is a change from the default address "0.0.0.0"/"::". If it is, then this is the first time we are learning of
      * the actual IP address of the specified interface. If it isn't, then this is a previously known interface
      * that has just changed its IP address. We save a copy of its listen spec so that we can stop listening on
      * the old IP address once we start listening on the new IP address. If we find an address has previously
@@ -11423,12 +11526,26 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      * while walking the list of interfaces and return.
      */
     QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Walk map"));
-    for (std::map<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
+    for (std::multimap<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
         qcc::String interface = it->first;
         qcc::IPAddress address = it->second;
 
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): interface=\"%s\", address=\"%s\"",
                        interface.c_str(), address.ToString().c_str()));
+
+        if (wildcardIfaceRequested || wildcardAddressRequested) {
+            if ((wildcardIPv4Processed && address.IsIPv4()) ||
+                (wildcardIPv6Processed && address.IsIPv6())) {
+                continue;
+            }
+        }
+
+        if (wildcardAddressRequested) {
+            if ((!wildcardIPv6AddressRequested && address.IsIPv6()) ||
+                (!wildcardIPv4AddressRequested && address.IsIPv4())) {
+                continue;
+            }
+        }
 
         qcc::String addressStr = address.ToString();
         bool currentIfaceRequested = (m_requestedInterfaces.find(interface) != m_requestedInterfaces.end());
@@ -11439,62 +11556,72 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             continue;
         }
 
-        if (!wildcardIfaceRequested && currentIfaceRequested &&
-            m_requestedInterfaces[interface].m_address == address) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): not wildcard iface, not current iface but requested addr"));
-            continue;
-        }
-
-        if (!wildcardAddressRequested && currentAddressRequested &&
-            m_requestedAddresses[addressStr].m_interface == interface) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): wildcard addr, not current addr but requested iface"));
-            continue;
-        }
-
         if (!wildcardIfaceRequested && currentIfaceRequested) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current iface requested"));
-            if (m_requestedInterfaces[interface].m_address != qcc::IPAddress("0.0.0.0")) {
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current iface addr not INADDR_ANY"));
-                if (m_requestedAddresses.find(m_requestedInterfaces[interface].m_address.ToString()) != m_requestedAddresses.end()) {
-                    m_requestedAddresses.erase(m_requestedInterfaces[interface].m_address.ToString());
+            if (InterfaceHasAddress(interface, address)) {
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): not wildcard iface, current iface and addr matches"));
+                String spec = "udp:addr=" + address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
+                SocketFd fd = GetMatchingListenFdEntry(spec);
+                if (fd != INVALID_SOCKET_FD) {
+                    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): found address %s on matching interface %s which has a valid listedFd %d => moving to the next entry in the loop",
+                                   address.ToString().c_str(), interface.c_str(), fd
+                                   ));
+                    continue;
+                } else {
+                    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): found address %s on matching interface %s but without valid listedFd => proceed",
+                                   address.ToString().c_str(), interface.c_str()
+                                   ));
                 }
-                qcc::String replacedAcceptingSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Replacing accepting spec \"%s\"", replacedAcceptingSpec.c_str()));
-                replacedList.push_back(replacedAcceptingSpec);
-                qcc::String replacedActiveSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Replacing active spec \"%s\"", replacedActiveSpec.c_str()));
-                replacedList.push_back(replacedActiveSpec);
+            } else {
+                m_requestedInterfaces[interface].m_addresses.push_back(address);
             }
-            m_requestedInterfaces[interface] = InterfaceInfo(address, m_requestedInterfaces[interface].m_acceptingPort, m_requestedInterfaces[interface].m_activePort);
         }
 
         if (!wildcardAddressRequested && currentAddressRequested) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current address requested"));
-            if (!m_requestedAddresses[addressStr].m_interface.empty()) {
+            if (m_requestedAddresses[addressStr].m_interface == interface) {
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): not wildcard addr, current addr and iface matches"));
+                String spec = "udp:addr=" + addressStr + ",port=" + U32ToString(m_requestedAddresses[addressStr].m_acceptingPort);
+                SocketFd fd = GetMatchingListenFdEntry(spec);
+                if (fd != INVALID_SOCKET_FD) {
+                    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): found address %s on matching interface %s which has a valid listedFd %d => moving to the next entry in the loop",
+                                   addressStr.c_str(), interface.c_str(), fd
+                                   ));
+                    continue;
+                }
+            } else if (!m_requestedAddresses[addressStr].m_interface.empty()) {
+                /*
+                 * This address has moved between interfaces, socket (if opened) needs to be recreated so add this to cleanup list.
+                 */
+                String replacedAcceptingSpec = "udp:addr=" + addressStr + ",port=" + U32ToString(m_requestedAddresses[addressStr].m_acceptingPort);
+                replacedList.push_back(replacedAcceptingSpec);
+                String replacedActiveSpec = "udp:addr=" + addressStr + ",port=" + U32ToString(m_requestedAddresses[addressStr].m_activePort);
+                replacedList.push_back(replacedActiveSpec);
                 m_requestedAddresses[addressStr].m_interface = interface;
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set interface \"%s\" for address", interface.c_str()));
-                continue;
             }
             m_requestedAddresses[addressStr].m_interface = interface;
         }
 
         qcc::IPAddress listenAddr;
+        uint32_t listenAddrScopeId = 0;
         uint16_t requestedAcceptingPort = 0;
         uint16_t requestedActivePort = 0;
+        const char* wildcardAddress = "";
+
         if (wildcardIfaceRequested) {
-            listenAddr = qcc::IPAddress("0.0.0.0");
+            wildcardAddress = (address.IsIPv6() ? ADDR6_DEFAULT : ADDR4_DEFAULT);
+            listenAddr = qcc::IPAddress(wildcardAddress);
             requestedAcceptingPort = m_requestedInterfaces["*"].m_acceptingPort;
             requestedActivePort = m_requestedInterfaces["*"].m_activePort;
         } else if (wildcardAddressRequested) {
-            listenAddr = qcc::IPAddress("0.0.0.0");
-            requestedAcceptingPort = m_requestedAddresses["0.0.0.0"].m_acceptingPort;
-            requestedActivePort = m_requestedAddresses["0.0.0.0"].m_activePort;
+            wildcardAddress = (address.IsIPv6() ? ADDR6_DEFAULT : ADDR4_DEFAULT);
+            listenAddr = qcc::IPAddress(wildcardAddress);
+            requestedAcceptingPort = m_requestedAddresses[wildcardAddress].m_acceptingPort;
+            requestedActivePort = m_requestedAddresses[wildcardAddress].m_activePort;
         } else {
-            if (!listenAddr.Size() && currentIfaceRequested) {
-                listenAddr = m_requestedInterfaces[interface].m_address;
+            if (currentIfaceRequested) {
+                listenAddr = address;
                 requestedAcceptingPort = m_requestedInterfaces[interface].m_acceptingPort;
                 requestedActivePort = m_requestedInterfaces[interface].m_activePort;
-            } else if (!listenAddr.Size() && currentAddressRequested) {
+            } else if (currentAddressRequested) {
                 listenAddr = address;
                 requestedAcceptingPort = m_requestedAddresses[addressStr].m_acceptingPort;
                 requestedActivePort = m_requestedAddresses[addressStr].m_activePort;
@@ -11504,8 +11631,23 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         }
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): listenAddr=\"%s\", requestedAcceptingPort=%d, requestedActivePort=%d.",
                        listenAddr.ToString().c_str(), requestedAcceptingPort, requestedActivePort));
-        if (!listenAddr.Size() || !listenAddr.IsIPv4()) {
+        if (!listenAddr.IsIPv4() && !listenAddr.IsIPv6()) {
             continue;
+        }
+
+        /*
+         * IPv4 addresses and unspecified IPv6 address ("::") have no scope,
+         * otherwise determine the scope needed for Bind().
+         */
+        if (listenAddr.IsIPv6() && (listenAddr.ToString() != ADDR6_DEFAULT)) {
+            struct addrinfo* resp;
+            qcc::String tmpaddr = qcc::IPAddress::IPv6ToString(listenAddr.GetIPv6Reference()) + "%" + interface;
+            int ret = getaddrinfo(tmpaddr.c_str(), NULL, NULL, &resp);
+            if (ret == 0) {
+                listenAddrScopeId = ((struct sockaddr_in6*)resp->ai_addr)->sin6_scope_id;
+            } else {
+                QCC_LogError(ER_FAIL, ("UDPTransport::HandleNetworkEventInstance(): getaddrinfo() failed for node '%s', reason: %s", tmpaddr.c_str(), gai_strerror(ret)));
+            }
         }
 
         /*
@@ -11513,14 +11655,16 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * and activeFd for sessions we have joined, hosted by other routing nodes.
          */
         qcc::SocketFd acceptingFd = INVALID_SOCKET_FD;
-        status = SetupSocket(acceptingFd, listenAddr, requestedAcceptingPort);
+        status = SetupSocket(acceptingFd, listenAddr, requestedAcceptingPort, listenAddrScopeId);
+
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetupSocket() for accepting FD failed"));
             continue;
         }
 
         qcc::SocketFd activeFd = INVALID_SOCKET_FD;
-        status = SetupSocket(activeFd, listenAddr, requestedActivePort);
+        status = SetupSocket(activeFd, listenAddr, requestedActivePort, listenAddrScopeId);
+
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetupSocket() for active FD failed"));
             if (acceptingFd != INVALID_SOCKET_FD) {
@@ -11569,13 +11713,14 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             }
 
             if (wildcardIfaceRequested) {
-                m_requestedInterfaces["*"] = InterfaceInfo("0.0.0.0", acceptingPort, activePort);
+                m_requestedInterfaces["*"] = InterfaceInfo(wildcardAddress, acceptingPort, activePort);
             } else if (wildcardAddressRequested) {
-                m_requestedAddresses["0.0.0.0"].m_acceptingPort = acceptingPort;
-                m_requestedAddresses["0.0.0.0"].m_activePort = activePort;
+                m_requestedAddresses[wildcardAddress].m_acceptingPort = acceptingPort;
+                m_requestedAddresses[wildcardAddress].m_activePort = activePort;
             } else {
                 if (currentIfaceRequested) {
-                    m_requestedInterfaces[interface] = InterfaceInfo(m_requestedInterfaces[interface].m_address.ToString(), acceptingPort, activePort);
+                    m_requestedInterfaces[interface].m_acceptingPort = acceptingPort;
+                    m_requestedInterfaces[interface].m_activePort = activePort;
                 } else if (currentAddressRequested) {
                     m_requestedAddresses[addressStr].m_acceptingPort = acceptingPort;
                     m_requestedAddresses[addressStr].m_activePort = activePort;
@@ -11621,8 +11766,8 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"*\"] to listenFd %d.", acceptingFd));
             m_listenPortMap["*"] = acceptingPort;
         } else if (wildcardAddressRequested) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"0.0.0.0\"] to listenFd %d.", acceptingFd));
-            m_listenPortMap["0.0.0.0"] = acceptingPort;
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.", wildcardAddress, acceptingFd));
+            m_listenPortMap[wildcardAddress] = acceptingPort;
         } else {
             if (currentIfaceRequested) {
                 QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.",
@@ -11644,13 +11789,9 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * but build a reliability layer on top of it).  Also, IP implies either
          * IPv4 or IPv6 addressing.
          *
-         * In the UDPTransport, we only support unreliable data transfer over IPv4
-         * addresses, so we leave all of the other possibilities turned off (provide
-         * a zero port).  Remember the port we enabled so we can re-enable the name
-         * service if listeners come and go.
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): IpNameService::Instance().Enable()"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, true, false);
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, true, true);
         m_isNsEnabled = true;
 
         /*
@@ -11692,35 +11833,98 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * also ensure that our listenPortMap only has a wildcard entry.
          */
         if (wildcardIfaceRequested) {
-            m_wildcardIfaceProcessed = true;
-            for (std::map<qcc::String, InterfaceInfo>::const_iterator iter = m_requestedInterfaces.begin(); iter != m_requestedInterfaces.end(); iter++) {
-                if (iter->first != "*" && iter->second.m_address != qcc::IPAddress("0.0.0.0")) {
-                    m_listenPortMap.erase(iter->first);
-                    qcc::String replacedAcceptingSpec = "udp:addr=" + m_requestedInterfaces[iter->first].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_acceptingPort);
-                    replacedList.push_back(replacedAcceptingSpec);
-                    qcc::String replacedActiveSpec = "udp:addr=" + m_requestedInterfaces[iter->first].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_activePort);
-                    replacedList.push_back(replacedActiveSpec);
+            if (!wildcardIPv4Processed && !wildcardIPv6Processed) {
+                for (std::map<qcc::String, InterfaceInfo>::const_iterator iter = m_requestedInterfaces.begin(); iter != m_requestedInterfaces.end(); iter++) {
+                    if (iter->first != "*") {
+                        for (const auto& entry : m_requestedInterfaces[iter->first].m_addresses) {
+                            if ((entry != qcc::IPAddress(ADDR4_DEFAULT)) && (entry != qcc::IPAddress(ADDR4_DEFAULT))) {
+                                m_listenPortMap.erase(iter->first);
+                                qcc::String replacedAcceptingSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_acceptingPort);
+                                replacedList.push_back(replacedAcceptingSpec);
+                                qcc::String replacedActiveSpec = "udp:addr=" + entry.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_activePort);
+                                replacedList.push_back(replacedActiveSpec);
+                            }
+                        }
+                    }
                 }
+                m_requestedInterfaces.clear();
+                m_requestedAddresses.clear();
             }
-            m_requestedInterfaces.clear();
-            m_requestedAddresses.clear();
-            m_requestedInterfaces["*"] = InterfaceInfo("0.0.0.0", acceptingPort, activePort);
-            break;
+            m_requestedInterfaces["*"] = InterfaceInfo(wildcardAddress, acceptingPort, activePort);
+            if (address.IsIPv6()) {
+                wildcardIPv6Processed = true;
+            } else {
+                wildcardIPv4Processed = true;
+            }
+            m_wildcardIfaceProcessed = (wildcardIPv4Processed && wildcardIPv6Processed);
+            if (m_wildcardIfaceProcessed) {
+                break;
+            }
         } else if (wildcardAddressRequested) {
-            m_wildcardAddressProcessed = true;
-            for (std::map<qcc::String, AddressInfo>::const_iterator iter = m_requestedAddresses.begin(); iter != m_requestedAddresses.end(); iter++) {
-                if (iter->first != "0.0.0.0" && !iter->second.m_interface.empty()) {
-                    m_listenPortMap.erase(iter->first);
-                    qcc::String replacedAcceptingSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_acceptingPort);
-                    replacedList.push_back(replacedAcceptingSpec);
-                    qcc::String replacedActiveSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_activePort);
-                    replacedList.push_back(replacedActiveSpec);
+            if (!wildcardIPv4Processed && !wildcardIPv6Processed) {
+                for (std::map<qcc::String, AddressInfo>::iterator iter = m_requestedAddresses.begin(); iter != m_requestedAddresses.end(); iter++) {
+                    if ((iter->first != wildcardAddress) && !iter->second.m_interface.empty()) {
+                        m_listenPortMap.erase(iter->first);
+                        qcc::String replacedAcceptingSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_acceptingPort);
+                        replacedList.push_back(replacedAcceptingSpec);
+                        qcc::String replacedActiveSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_activePort);
+                        replacedList.push_back(replacedActiveSpec);
+                        iter = m_requestedAddresses.erase(iter);
+                    }
                 }
             }
-            m_requestedAddresses.clear();
-            m_requestedAddresses["0.0.0.0"] = AddressInfo("*", acceptingPort, activePort);
-            break;
+            m_requestedAddresses[wildcardAddress] = AddressInfo("*", acceptingPort, activePort);
+            if (address.IsIPv6()) {
+                wildcardIPv6Processed = true;
+            } else {
+                wildcardIPv4Processed = true;
+            }
+            if ((wildcardIPv4Processed && wildcardIPv6Processed) ||
+                (wildcardIPv4Processed && !wildcardIPv6AddressRequested) ||
+                (wildcardIPv6Processed && !wildcardIPv4AddressRequested)) {
+                m_wildcardAddressProcessed = true;
+                break;
+            }
         }
+    }
+
+    /*
+     * We stop advertising and discovering on all the listen specs that were
+     * replaced during the processing.  These listen specs usually represent the
+     * old IP addresses that are no longer in use.  In addition, if the last
+     * advertisement or discovery request was cancelled before the relevant
+     * network interfaces became IFF_UP, we also stop listening.
+     */
+    if (m_advertising.empty() && m_discovering.empty()) {
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Not advertising or discovering"));
+        for (list<ListenFdEntry>::iterator it = addedList.begin(); it != addedList.end(); it++) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): send \"%s\" to replacedList", it->m_normSpec.c_str()));
+            replacedList.push_back(it->m_normSpec);
+        }
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Disable NS"));
+        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, false, false, false, false);
+        m_isListening = false;
+        m_isNsEnabled = false;
+        m_listenPortMap.clear();
+        m_pendingDiscoveries.clear();
+        m_pendingAdvertisements.clear();
+        m_wildcardIfaceProcessed = false;
+    }
+
+    /*
+     * Check if we have some trash (stale IPs) on m_requestedInterfaces map and do a proper cleanup.
+     * For the (wildcardAddressRequested || wildcardIfaceRequested) case, cleanup already happened in the main loop.
+     */
+    if (!wildcardAddressRequested && !wildcardIfaceRequested) {
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): calling CleanupRequestedInterfaces()"));
+        CleanupRequestedInterfaces(ifMap, replacedList);
+    }
+
+    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): walk replacedList"));
+    for (list<String>::iterator it = replacedList.begin(); it != replacedList.end(); it++) {
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): DoStopListen() on \"%s\" from replacedList",
+                       it->c_str()));
+        DoStopListen(*it);
     }
 
     /*
@@ -11740,40 +11944,10 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * the new socket(s) to its list of sockets it is waiting for
          * connections on.
          */
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Alert()"));
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Alert() (m_listenFds.size() == %d)", m_listenFds.size()));
         Alert();
 
         m_listenFdsLock.Unlock(MUTEX_CONTEXT);
-    }
-
-    /*
-     * We stop advertising and discovering on all the listen specs that were
-     * replaced during the processing.  These listen specs usually represent the
-     * old IP addresses that are no longer in use.  In addition, if the last
-     * advertisement or discovery request was cancelled before the relevant
-     * network interfaces became IFF_UP, we also stop listening.
-     */
-    if (m_advertising.empty() && m_discovering.empty()) {
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Not advertising or discovering"));
-        for (list<ListenFdEntry>::iterator it = addedList.begin(); it != addedList.end(); it++) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): send \"%s\" to replacedList", it->m_normSpec.c_str()));
-            replacedList.push_back(it->m_normSpec);
-        }
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Disable NS"));
-        IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, false, false);
-        m_isListening = false;
-        m_isNsEnabled = false;
-        m_listenPortMap.clear();
-        m_pendingDiscoveries.clear();
-        m_pendingAdvertisements.clear();
-        m_wildcardIfaceProcessed = false;
-    }
-
-    QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): walk replacedList"));
-    for (list<String>::iterator it = replacedList.begin(); it != replacedList.end(); it++) {
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): DoStopListen() on \"%s\" from replacedList",
-                       it->c_str()));
-        DoStopListen(*it);
     }
 
     /*
