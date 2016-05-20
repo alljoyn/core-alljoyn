@@ -130,8 +130,8 @@ class SecurityX509Test : public testing::Test {
 
     virtual void TearDown() {
 
-        clientbus.UnregisterKeyStoreListener();
-        servicebus.UnregisterKeyStoreListener();
+        clientbus.UnregisterKeyStoreListener(clientKeyStoreListener);
+        servicebus.UnregisterKeyStoreListener(serviceKeyStoreListener);
         servicebus.UnregisterBusObject(*serviceObject);
 
         status = clientbus.Disconnect();

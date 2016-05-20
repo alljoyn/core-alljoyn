@@ -324,6 +324,18 @@ void BasePermissionMgmtTest::RegisterKeyStoreListeners()
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 }
 
+void BasePermissionMgmtTest::UnregisterKeyStoreListeners()
+{
+    status = adminBus.UnregisterKeyStoreListener(adminKeyStoreListener);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = serviceBus.UnregisterKeyStoreListener(serviceKeyStoreListener);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = consumerBus.UnregisterKeyStoreListener(consumerKeyStoreListener);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+    status = remoteControlBus.UnregisterKeyStoreListener(remoteControlKeyStoreListener);
+    EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+}
+
 static void GenerateSecurityGroupKey(BusAttachment& bus, KeyInfoNISTP256& keyInfo)
 {
     PermissionConfigurator& pc = bus.GetPermissionConfigurator();
@@ -350,6 +362,7 @@ void BasePermissionMgmtTest::SetUp()
 
 void BasePermissionMgmtTest::TearDown()
 {
+    UnregisterKeyStoreListeners();
     status = TeardownBus(adminBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = serviceBus.UnbindSessionPort(servicePort);
@@ -659,7 +672,6 @@ QStatus BasePermissionMgmtTest::TeardownBus(BusAttachment& bus)
     if (!bus.IsStarted()) {
         return ER_OK;
     }
-    bus.UnregisterKeyStoreListener();
     bus.UnregisterBusObject(*this);
     status = bus.Disconnect();
     if (ER_OK != status) {

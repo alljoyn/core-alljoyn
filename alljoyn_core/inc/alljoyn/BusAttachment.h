@@ -866,7 +866,7 @@ class BusAttachment : public MessageReceiver {
      * @return
      *      - #ER_OK if the key store Unregistered
      */
-    QStatus UnregisterKeyStoreListener();
+    QStatus UnregisterKeyStoreListener(KeyStoreListener& listener);
 
     /**
      * Reloads the key store for this bus attachment. This function would normally only be called in

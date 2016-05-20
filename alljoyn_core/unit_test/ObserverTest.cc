@@ -141,7 +141,7 @@ class Participant : public SessionPortListener, public SessionListener {
         StartBus();
 
         if (secure) {
-            EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
+            EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", keyStoreListener);
         }
 
         /* create interfaces */
@@ -191,6 +191,10 @@ class Participant : public SessionPortListener, public SessionListener {
 
     void Fini() {
         ASSERT_EQ(ER_OK, aboutObj.Unannounce());
+        
+        if (secure) {
+            bus.UnregisterKeyStoreListener(keyStoreListener);
+        }
 
         ObjectMap::iterator it;
         for (it = objects.begin(); it != objects.end(); ++it) {
@@ -284,7 +288,7 @@ class Participant : public SessionPortListener, public SessionListener {
         bus.LeaveHostedSession(sessionId);
     }
 
-    void EnableSecurity(string authMechanisms) {
+    void EnableSecurity(string authMechanisms, InMemoryKeyStoreListener& keyStoreListener) {
         bus.RegisterKeyStoreListener(keyStoreListener);
         bus.EnablePeerSecurity(authMechanisms.c_str(), &authListener);
     }
@@ -1495,19 +1499,22 @@ TEST_F(ObserverTest, SecurityDifferentToSameRoT) {
 
     EXPECT_EQ(ER_PERMISSION_DENIED, proxy.MethodCall(INTF_A, METHOD, NULL, 0, reply));
 
-    provider.EnableSecurity("ALLJOYN_ECDHE_ECDSA");
-    consumer.EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    InMemoryKeyStoreListener providerKeyStoreListener;
+    InMemoryKeyStoreListener consumerKeyStoreListener;
+    provider.EnableSecurity("ALLJOYN_ECDHE_ECDSA", providerKeyStoreListener);
+    consumer.EnableSecurity("ALLJOYN_ECDHE_ECDSA", consumerKeyStoreListener);
 
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, proxy.MethodCall(INTF_A, METHOD, NULL, 0, reply));
     EXPECT_STREQ(reply->GetErrorName(), org::alljoyn::Bus::ErrorName);
     EXPECT_TRUE(reply->GetArg(1));
     QStatus status = static_cast<QStatus>(reply->GetArg(1)->v_uint16);
     EXPECT_EQ(ER_AUTH_FAIL, status);
+    
 
     ASSERT_EQ(ER_OK, secMgrA.Reset(provider.bus));
-    provider.EnableSecurity("ALLJOYN_ECDHE_NULL");
+    provider.EnableSecurity("ALLJOYN_ECDHE_NULL", providerKeyStoreListener);
     ASSERT_EQ(ER_OK, secMgrB.Claim(provider.bus, manifest));
-    provider.EnableSecurity("ALLJOYN_ECDHE_ECDSA");
+    provider.EnableSecurity("ALLJOYN_ECDHE_ECDSA", providerKeyStoreListener);
     ASSERT_EQ(ER_OK, secMgrB.UpdatePolicy(provider.bus, policyAB));
 
     EXPECT_EQ(ER_OK, proxy.MethodCall(INTF_A, METHOD, NULL, 0, reply));

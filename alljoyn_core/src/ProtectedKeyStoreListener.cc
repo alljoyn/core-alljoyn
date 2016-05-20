@@ -61,6 +61,12 @@ void ProtectedKeyStoreListener::DelRef()
     int32_t count = qcc::DecrementAndFetch(&refCountSelf);
     QCC_ASSERT(count >= 0);
     if (count == 0) {
+        QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
+        if (listener != nullptr) {
+            listener->busAttachment = nullptr;
+        }
+        QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
+
         delete this;
     }
 }
@@ -111,7 +117,7 @@ void ProtectedKeyStoreListener::ReleaseExclusiveLock(const char* file, uint32_t 
     DelRef();
 }
 
-QStatus ProtectedKeyStoreListener::LoadRequest(KeyStore& keyStore)
+QStatus ProtectedKeyStoreListener::LoadRequest()
 {
     AddRef();
     QStatus status = ER_FAIL;
@@ -121,7 +127,7 @@ QStatus ProtectedKeyStoreListener::LoadRequest(KeyStore& keyStore)
     QCC_ASSERT(refCount > 0);
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     if (keyStoreListener) {
-        status = keyStoreListener->LoadRequest(keyStore);
+        status = keyStoreListener->LoadRequest();
     }
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     --refCount;
@@ -131,7 +137,7 @@ QStatus ProtectedKeyStoreListener::LoadRequest(KeyStore& keyStore)
     return status;
 }
 
-QStatus ProtectedKeyStoreListener::StoreRequest(KeyStore& keyStore)
+QStatus ProtectedKeyStoreListener::StoreRequest()
 {
     AddRef();
     QStatus status = ER_FAIL;
@@ -141,7 +147,7 @@ QStatus ProtectedKeyStoreListener::StoreRequest(KeyStore& keyStore)
     QCC_ASSERT(refCount > 0);
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     if (keyStoreListener) {
-        status = keyStoreListener->StoreRequest(keyStore);
+        status = keyStoreListener->StoreRequest();
     }
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     --refCount;

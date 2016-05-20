@@ -953,12 +953,28 @@ const InterfaceDescription* BusAttachment::GetInterface(const char* name) const
 
 QStatus BusAttachment::RegisterKeyStoreListener(KeyStoreListener& listener)
 {
-    return busInternal->keyStore.SetListener(listener);
+    QCC_ASSERT(listener.busAttachment == nullptr);
+    if (listener.busAttachment != nullptr) {
+        return ER_BUS_LISTENER_ALREADY_SET; //needed distinct error code for this scenario
+    }
+    listener.busAttachment = this;
+    QStatus status = busInternal->keyStore.SetListener(listener);
+    if (status != ER_OK) {
+        listener.busAttachment = nullptr;
+    }
+    return status;
 }
 
-QStatus BusAttachment::UnregisterKeyStoreListener()
+QStatus BusAttachment::UnregisterKeyStoreListener(KeyStoreListener& listener)
 {
-    return busInternal->keyStore.SetDefaultListener();
+    QCC_ASSERT(listener.busAttachment == this);
+    QStatus status;
+    if (listener.busAttachment == this) {
+        status = busInternal->keyStore.SetDefaultListener();
+    } else {
+        status = ER_FAIL; //needed distinct error code
+    }
+    return status;
 }
 
 void BusAttachment::ClearKeyStore()
@@ -1143,7 +1159,7 @@ QStatus BusAttachment::EnablePeerSecurity(const char* authMechanisms,
     /* If there are no auth mechanisms peer security is being disabled. */
     if (authMechanisms) {
         busInternal->keyStore.SetKeyEventListener(&busInternal->ksKeyEventListener);
-        status = busInternal->keyStore.Init(keyStoreFileName, isShared);
+        status = busInternal->keyStore.Init(this, keyStoreFileName, isShared);
         if (status == ER_KEY_STORE_ALREADY_INITIALIZED) {
             status = ER_OK;
         }

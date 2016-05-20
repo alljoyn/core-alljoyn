@@ -42,18 +42,18 @@ class KeyStoreListenerCallbackC : public KeyStoreListener {
         context = in_context;
     }
 
-    virtual QStatus LoadRequest(KeyStore& keyStore)
+    virtual QStatus LoadRequest()
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
         QCC_ASSERT(callbacks.load_request != NULL && "load_request callback required.");
-        return callbacks.load_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        return callbacks.load_request(context, (alljoyn_keystorelistener) this);
     }
 
-    virtual QStatus StoreRequest(KeyStore& keyStore)
+    virtual QStatus StoreRequest()
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
         QCC_ASSERT(callbacks.store_request != NULL && "store_request callback required.");
-        return callbacks.store_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        return callbacks.store_request(context, (alljoyn_keystorelistener) this);
     }
   protected:
     alljoyn_keystorelistener_callbacks callbacks;
@@ -81,21 +81,19 @@ void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelistener listener)
     delete (ajn::KeyStoreListenerCallbackC*)listener;
 }
 
-QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener,
                                                  const char* source, const char* password)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    ajn::KeyStore& ks = *((ajn::KeyStore*)keyStore);
-    return ((ajn::KeyStoreListener*)listener)->PutKeys(ks, source ? source : "", password);
+    return ((ajn::KeyStoreListener*)listener)->PutKeys(source ? source : "", password);
 }
 
-QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener,
                                                  char* sink, size_t* sink_sz)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String sinkStr;
-    ajn::KeyStore& ks = *((ajn::KeyStore*)keyStore);
-    QStatus ret = ((ajn::KeyStoreListener*)listener)->GetKeys(ks, sinkStr);
+    QStatus ret = ((ajn::KeyStoreListener*)listener)->GetKeys(sinkStr);
 
     if ((sink != nullptr) && (*sink_sz >= 1)) {
         strncpy(sink, sinkStr.c_str(), *sink_sz);

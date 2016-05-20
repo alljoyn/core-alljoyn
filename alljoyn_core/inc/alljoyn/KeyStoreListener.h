@@ -31,22 +31,28 @@
 
 namespace ajn {
 
-/**
- * Forward declaration.
- */
-class KeyStore;
+/* forward decl */
+class BusAttachment;
+class ProtectedKeyStoreListener;
 
 /**
  * An application can provide a key store listener to override the default key store Load and Store
  * behavior. This will override the default key store behavior.
  */
 class KeyStoreListener {
+  /* Private access needed by RegisterKeyStoreListener and UnegisterKeyStoreListener */
+  friend class BusAttachment;
+  friend class ProtectedKeyStoreListener;
+
+  protected:
+    BusAttachment* busAttachment; //KeyStoreListener does not own the BusAttachment!
 
   public:
+    KeyStoreListener() : busAttachment(nullptr) { }
     /**
      * Virtual destructor for derivable class.
      */
-    virtual ~KeyStoreListener();
+    virtual ~KeyStoreListener() { }
 
     /**
      * This method is called when a key store needs to be loaded.
@@ -60,7 +66,7 @@ class KeyStoreListener {
      *      - An error status otherwise
      *
      */
-    virtual QStatus LoadRequest(KeyStore& keyStore) = 0;
+    virtual QStatus LoadRequest() = 0;
 
     /**
      * Put keys into the key store from an encrypted byte string.
@@ -74,7 +80,7 @@ class KeyStoreListener {
      *      - An error status otherwise
      *
      */
-    QStatus PutKeys(KeyStore& keyStore, const qcc::String& source, const qcc::String& password);
+    QStatus PutKeys(const qcc::String& source, const qcc::String& password);
 
     /**
      * This method is called when a key store needs to be stored.
@@ -86,7 +92,7 @@ class KeyStoreListener {
      *      - #ER_OK if the store request was satisfied
      *      - An error status otherwise
      */
-    virtual QStatus StoreRequest(KeyStore& keyStore) = 0;
+    virtual QStatus StoreRequest() = 0;
 
     /**
      * Get the current keys from the key store as an encrypted byte string.
@@ -97,7 +103,7 @@ class KeyStoreListener {
      *      - #ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus GetKeys(KeyStore& keyStore, qcc::String& sink);
+    QStatus GetKeys(qcc::String& sink);
 
     /**
      * Request to acquire exclusive lock (e.g., file lock) on the keyStore.

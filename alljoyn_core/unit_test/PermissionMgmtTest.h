@@ -191,6 +191,7 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
 
   private:
     void RegisterKeyStoreListeners();
+    void UnregisterKeyStoreListeners();
 
     uint32_t currentTVChannel;
     uint32_t volume;

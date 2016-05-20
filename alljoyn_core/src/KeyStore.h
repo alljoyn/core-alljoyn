@@ -48,6 +48,7 @@ namespace ajn {
 /* forward decl */
 class KeyStoreKeyEventListener;
 class ProtectedKeyStoreListener;
+class BusAttachment;
 
 /**
  * The %KeyStore class manages the storing and loading of key blobs from
@@ -191,7 +192,7 @@ class KeyStore {
      *      - ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus Init(const char* fileName, bool isShared);
+    QStatus Init(BusAttachment* busAttachment, const char* fileName, bool isShared);
 
     /**
      * Re-read keys from the key store. This is a no-op unless the key store is shared.
@@ -725,7 +726,7 @@ class KeyStoreKeyEventListener {
 class KeyStoreListenerFactory {
 
   public:
-    static KeyStoreListener* CreateInstance(const qcc::String& application, const char* fname);
+    static KeyStoreListener* CreateInstance(BusAttachment* busAttachment, const qcc::String& application, const char* fname);
 
 };
 

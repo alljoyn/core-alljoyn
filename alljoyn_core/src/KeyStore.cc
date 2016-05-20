@@ -37,13 +37,14 @@
 #include <qcc/Thread.h>
 
 #include <alljoyn/KeyStoreListener.h>
+#include <alljoyn/Status.h>
+#include <alljoyn/BusAttachment.h>
 
 #include "PeerState.h"
 #include "KeyStore.h"
 #include "BusUtil.h"
 #include "ProtectedKeyStoreListener.h"
-
-#include <alljoyn/Status.h>
+#include "BusInternal.h"
 
 #define QCC_MODULE "ALLJOYN_AUTH"
 
@@ -84,21 +85,18 @@ static const uint16_t KeyStoreVersion = 0x0104;
  */
 static qcc::Mutex* s_exclusiveLock = nullptr;
 
-
-KeyStoreListener::~KeyStoreListener()
-{
-}
-
-QStatus KeyStoreListener::PutKeys(KeyStore& keyStore, const qcc::String& source, const qcc::String& password)
+QStatus KeyStoreListener::PutKeys(const qcc::String& source, const qcc::String& password)
 {
     StringSource stringSource(source);
-    return keyStore.Pull(stringSource, password);
+    QCC_ASSERT(busAttachment != nullptr);
+    return busAttachment->GetInternal().GetKeyStore().Pull(stringSource, password);
 }
 
-QStatus KeyStoreListener::GetKeys(KeyStore& keyStore, qcc::String& sink)
+QStatus KeyStoreListener::GetKeys(qcc::String& sink)
 {
     StringSink stringSink;
-    QStatus status = keyStore.Push(stringSink);
+    QCC_ASSERT(busAttachment != nullptr);
+    QStatus status = busAttachment->GetInternal().GetKeyStore().Push(stringSink);
     if (status == ER_OK) {
         sink = stringSink.GetString();
     }
@@ -265,12 +263,14 @@ QStatus KeyStore::SetDefaultListener()
      */
     QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
-    if (listener) {
-        listener->DelRef();
-        listener = nullptr;
+    if (!useDefaultListener) {
+        if (listener) {
+            listener->DelRef();
+            listener = nullptr;
+        }
+        this->listener = new ProtectedKeyStoreListener(defaultListener);
+        useDefaultListener = true;
     }
-    this->listener = new ProtectedKeyStoreListener(defaultListener);
-    useDefaultListener = true;
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
     return ER_OK;
@@ -303,12 +303,12 @@ QStatus KeyStore::Reset()
     }
 }
 
-QStatus KeyStore::Init(const char* fileName, bool isShared)
+QStatus KeyStore::Init(BusAttachment* busAttachment, const char* fileName, bool isShared)
 {
     QCC_UNUSED(isShared);
     if (storeState == UNAVAILABLE) {
         if (listener == NULL) {
-            defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
+            defaultListener = KeyStoreListenerFactory::CreateInstance(busAttachment, application, fileName);
             listener = new ProtectedKeyStoreListener(defaultListener);
         }
         return Load();
@@ -349,7 +349,7 @@ QStatus KeyStore::StoreInternal(std::vector<Key>& expiredKeys)
     }
     storedRefCount++;
 
-    QStatus status = listener->StoreRequest(*this);
+    QStatus status = listener->StoreRequest();
     if (status == ER_OK) {
         status = Event::Wait(*stored);
     }
@@ -375,7 +375,7 @@ QStatus KeyStore::LoadPersistentKeys()
     loadedRefCount++;
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     if (callingLoadRequest) {
-        status = listener->LoadRequest(*this);
+        status = listener->LoadRequest();
     } else {
         status = ER_OK;
     }
