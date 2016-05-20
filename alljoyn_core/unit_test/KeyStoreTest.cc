@@ -132,11 +132,11 @@ TEST(KeyStoreTest, keystore_clear) {
 
     KeyStore keyStore1(keyStoreName);
     keyStore1.SetListener(listener);
-    keyStore1.Init(NULL, true);
+    keyStore1.Init(NULL);
 
     KeyStore keyStore2(keyStoreName);
     keyStore2.SetListener(listener);
-    keyStore2.Init(NULL, true);
+    keyStore2.Init(NULL);
 
     /* Add Key1 to keyStore1 */
     qcc::GUID128 guid1;
@@ -187,7 +187,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
     {
         KeyStore keyStore(fileName);
         ASSERT_EQ(ER_OK, DeleteDefaultKeyStoreFile(fileName));
-        keyStore.Init(NULL, true);
+        keyStore.Init(NULL);
         keyStore.Clear();
 
         key.Rand(620, KeyBlob::GENERIC);
@@ -201,7 +201,7 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
      */
     {
         KeyStore keyStore(fileName);
-        keyStore.Init(NULL, true);
+        keyStore.Init(NULL);
 
         status = keyStore.GetKey(idx1, key);
         ASSERT_EQ(ER_OK, status) << " Failed to load key1";
@@ -215,14 +215,14 @@ TEST(KeyStoreTest, keystore_store_load_merge) {
      */
     {
         KeyStore keyStore(fileName);
-        keyStore.Init(NULL, true);
+        keyStore.Init(NULL);
 
         key.Rand(620, KeyBlob::GENERIC);
         keyStore.AddKey(idx4, key);
 
         {
             KeyStore keyStore2(fileName);
-            keyStore2.Init(NULL, true);
+            keyStore2.Init(NULL);
 
             /* Replace a key */
             key.Rand(620, KeyBlob::GENERIC);
@@ -261,7 +261,7 @@ class KeyStoreThread : public Thread {
         if (keyStore == NULL) {
             owns = true;
             this->keyStore = new KeyStore(keyStoreName);
-            QStatus status = this->keyStore->Init(NULL, true);
+            QStatus status = this->keyStore->Init(NULL);
             EXPECT_EQ(ER_OK, status);
         }
     }
@@ -332,7 +332,7 @@ TEST(KeyStoreTest, concurrent_access_single_keystore_inmemory)
     InMemoryKeyStoreListener keyStoreListener;
     KeyStore keyStore(keyStoreName);
     keyStore.SetListener(keyStoreListener);
-    keyStore.Init(NULL, true);
+    keyStore.Init(NULL);
 
     vector<KeyStore::Key> workList1;
     vector<KeyStore::Key> deleteList1;
@@ -381,7 +381,7 @@ TEST(KeyStoreTest, concurrent_access_single_keystore)
 {
     EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile(keyStoreName));
     KeyStore keyStore(keyStoreName);
-    keyStore.Init(NULL, true);
+    keyStore.Init(NULL);
 
     vector<KeyStore::Key> workList1;
     vector<KeyStore::Key> deleteList1;
