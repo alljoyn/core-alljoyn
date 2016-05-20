@@ -48,6 +48,10 @@ env['PATH'] = '$DT_TOOLCHAIN_DIR/usr/bin:$IPHONE_OS_PLATFORM_DIR/Developer/usr/b
 env['CC'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang'
 env['CXX'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang++'
 
+# The -fembed-bitcode flag is required for Xcode 7 and higher
+# env.Append(CCFLAGS=[
+#             '-fembed-bitcode'])
+
 env.Append(CFLAGS=[
             '-fdiagnostics-show-category=id',
             '-fdiagnostics-parseable-fixits',
@@ -60,6 +64,7 @@ env.Append(CFLAGS=[
             '-Wunused-value'])
 
 env.Append(CXXFLAGS=[
+            '-Wreturn-type',
             '-fno-rtti',
             '-fno-exceptions',
             '-Wc++11-extensions'])
@@ -71,7 +76,7 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
     if env['VARIANT'] == 'debug':
         ccld = [
                 '-g',
-                '-arch', 'i686',
+                '-m64',
                 '-miphoneos-version-min=9.0',
                 '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
                 '-isysroot', '$SDKROOT'
@@ -79,7 +84,7 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
         print 'Using iOS debug configuration'
     else:
         ccld = [
-                '-arch', 'i686',
+                '-m64',
                 '-miphoneos-version-min=9.0',
                 '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
                 '-isysroot', '$SDKROOT'
@@ -116,3 +121,4 @@ env.Append(CXXFLAGS=ccld)
 env.Append(CFLAGS=ccld)
 env.Append(LINKFLAGS=ccld)
 env.Append(LINKFLAGS=ld)
+
