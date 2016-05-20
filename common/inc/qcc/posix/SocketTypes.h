@@ -30,6 +30,7 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <sys/uio.h>
+#include <netdb.h>
 
 /** Windows uses SOCKET_ERROR to signify errors */
 #define SOCKET_ERROR -1

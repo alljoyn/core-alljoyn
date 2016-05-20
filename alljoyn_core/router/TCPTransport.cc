@@ -1023,7 +1023,7 @@ QStatus TCPTransport::Start()
      * detects that an interface has become IFF_UP or its IP address has changed.
      */
     IpNameService::Instance().SetNetworkEventCallback(TRANSPORT_TCP,
-                                                      new CallbackImpl<NetworkEventCallback, void, const std::map<qcc::String, qcc::IPAddress>&>
+                                                      new CallbackImpl<NetworkEventCallback, void, const std::multimap<qcc::String, qcc::IPAddress>&>
                                                           (&m_networkEventCallback, &NetworkEventCallback::Handler));
 
     ConfigDB* config = ConfigDB::GetConfigDB();
@@ -1433,11 +1433,9 @@ QStatus TCPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
                      */
                     qcc::String ipv4address;
                     qcc::String ipv6address;
-                    std::map<qcc::String, uint16_t> reliableIpv4PortMap, unreliableIpv4PortMap;
-                    uint16_t reliableIpv6Port, unreliableIpv6port;
-                    IpNameService::Instance().Enabled(TRANSPORT_TCP,
-                                                      reliableIpv4PortMap, reliableIpv6Port,
-                                                      unreliableIpv4PortMap, unreliableIpv6port);
+                    std::map<qcc::String, uint16_t> reliableIpv4PortMap, unreliablePortMap;
+                    uint16_t reliableIpv6Port;
+                    IpNameService::Instance().Enabled(TRANSPORT_TCP, reliableIpv4PortMap, reliableIpv6Port, unreliablePortMap);
                     /*
                      * If no listening port corresponding to this network interface is found in the map,
                      * then it hasn't been set and this implies that there is no listener for this transport
@@ -2288,7 +2286,7 @@ void TCPTransport::EnableAdvertisementInstance(ListenRequest& listenRequest)
          */
         if (m_isListening) {
             if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, true, false, false, false);
+                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
                 m_isNsEnabled = true;
             }
         }
@@ -2379,7 +2377,7 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
          * name service.  We do this by telling it we don't want it to be
          * enabled on any of the possible ports.
          */
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -2462,7 +2460,7 @@ void TCPTransport::EnableDiscoveryInstance(ListenRequest& listenRequest)
          */
         if (m_isListening) {
             if (!m_isNsEnabled) {
-                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, true, false, false, false);
+                IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
                 m_isNsEnabled = true;
             }
         }
@@ -2537,7 +2535,7 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
      */
     if (isEmpty && !m_isAdvertising) {
 
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false, false);
         m_isNsEnabled = false;
 
         /*
@@ -3539,7 +3537,7 @@ QStatus TCPTransport::DoStartListen(qcc::String& normSpec)
     if (!interface.empty()) {
         status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, interface);
     } else if (addr.Size() && addr.IsIPv4()) {
-        status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, addr.ToString());
+        status = IpNameService::Instance().OpenInterface(TRANSPORT_TCP, addr);
     }
     if (status != ER_OK) {
         QCC_LogError(status, ("TCPTransport::DoStartListen(): OpenInterface() failed for %s", (interface.empty() ? addr.ToString().c_str() : interface.c_str())));
@@ -4133,7 +4131,7 @@ void TCPTransport::FoundCallback::Found(const qcc::String& busAddr, const qcc::S
     }
 }
 
-void TCPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc::IPAddress>& ifMap)
+void TCPTransport::NetworkEventCallback::Handler(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
 {
     QCC_DbgPrintf(("TCPTransport::NetworkEventCallback::Handler()"));
 
@@ -4158,7 +4156,7 @@ void TCPTransport::NetworkEventCallback::Handler(const std::map<qcc::String, qcc
     m_transport.QueueHandleNetworkEvent(ifMap);
 }
 
-void TCPTransport::QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAddress>& ifMap)
+void TCPTransport::QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>& ifMap)
 {
     QCC_DbgPrintf(("TCPTransport::QueueHandleNetworkEvent()"));
 
@@ -4185,7 +4183,7 @@ void TCPTransport::QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAd
 void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 {
     QCC_DbgTrace(("TCPTransport::HandleNetworkEventInstance()"));
-    std::map<qcc::String, qcc::IPAddress>& ifMap = listenRequest.ifMap;
+    std::multimap<qcc::String, qcc::IPAddress>& ifMap = listenRequest.ifMap;
     QStatus status = ER_OK;
     list<String> replacedList;
     list<pair<qcc::String, SocketFd> > addedList;
@@ -4204,7 +4202,8 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
     }
 
     /*
-     * We walk through the list of interfaces that have changed in some way provided to us by the name service.
+     * We walk through the list of interfaces and addresses. That list is provided to us by the name service
+     * and has been created based on all interfaces/addresses available in the system.
      * For each interface, we check if that interface is one of the interfaces specified in the configuration
      * database. If we don't have a wildcard interface or wildcard address in the configuration database and
      * the current interface's network interface name or IP address is not specified in the configuration
@@ -4223,7 +4222,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      * have a wildcard in the configuration database that we have not yet processed, we process it the first time
      * while walking the list of interfaces and return.
      */
-    for (std::map<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
+    for (std::multimap<qcc::String, qcc::IPAddress>::const_iterator it = ifMap.begin(); it != ifMap.end(); it++) {
         qcc::String interface = it->first;
         qcc::IPAddress address = it->second;
         qcc::String addressStr = address.ToString();
@@ -4231,6 +4230,12 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         bool currentAddressRequested = (m_requestedAddresses.find(addressStr) != m_requestedAddresses.end());
         if (!wildcardIfaceRequested && !wildcardAddressRequested &&
             !currentIfaceRequested && !currentAddressRequested) {
+            continue;
+        }
+
+        if (address.IsIPv6()) {
+            QCC_DbgPrintf(("TCPTransport::HandleNetworkEventInstance(): found IPv6 address %s on the interface %s, moving to the next entry in the loop",
+                           addressStr.c_str(), interface.c_str()));
             continue;
         }
 
@@ -4388,7 +4393,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          * a zero port).  Remember the port we enabled so we can re-enable the name
          * service if listeners come and go.
          */
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, true, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), true, false, false, false);
 
         /*
          * There is a special case in which we respond to embedded AllJoyn bus
@@ -4486,7 +4491,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         for (list<pair<qcc::String, SocketFd> >::iterator it = addedList.begin(); it != addedList.end(); it++) {
             replacedList.push_back(it->first);
         }
-        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), 0, false, false, false, false);
+        IpNameService::Instance().Enable(TRANSPORT_TCP, m_listenPortMap, 0, std::map<qcc::String, uint16_t>(), false, false, false, false);
         m_isListening = false;
         m_isNsEnabled = false;
         m_listenPortMap.clear();
