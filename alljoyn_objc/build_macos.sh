@@ -16,7 +16,7 @@
 
 set -e
 
-./build_core_macos.sh
+./build_core_macos.sh $*
 
 BASE_DIR=../build/darwin
 BUILD_DIR="${BASE_DIR}/AllJoynFramework"

@@ -163,7 +163,9 @@ env.Append(LINKFLAGS=ld)
 
 env.Append(CPPDEFINES=['MECHANISM_PIPE'])
 env.AppendUnique(LIBS =['stdc++', 'pthread'])
-if env['CRYPTO'] == 'openssl':
+if env['CRYPTO'] == 'commoncrypto':
+    print 'Using CommonCrypto'
+elif env['CRYPTO'] == 'openssl':
     env.AppendUnique(LIBS =['crypto', 'ssl'])
     vars = Variables()
     vars.Add(PathVariable('OPENSSL_ROOT', 'Base OpenSSL directory (darwin only)', os.environ.get('OPENSSL_ROOT')))
