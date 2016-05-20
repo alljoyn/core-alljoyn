@@ -232,6 +232,10 @@ QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
     return status;
 }
 
+QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort, uint32_t scopeId)
+{
+    return Bind(sockfd, localAddr, localPort);
+}
 
 QStatus Bind(SocketFd sockfd, const char* pathName)
 {
