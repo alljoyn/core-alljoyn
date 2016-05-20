@@ -613,8 +613,6 @@
 					"-lalljoyn",
 					"-lajrouter",
 					"-lBundledRouter.o",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
@@ -648,8 +646,6 @@
 					"-lalljoyn",
 					"-lajrouter",
 					"-lBundledRouter.o",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;

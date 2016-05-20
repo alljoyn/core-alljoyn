@@ -55,8 +55,11 @@ else:
 env.SConscript('${CPU}/SConscript')
 
 env.Append(CPPDEFINES=['MECHANISM_PIPE'])
-env.AppendUnique(LIBS =['stdc++', 'pthread'])
-if env['CRYPTO'] == 'openssl':
+# env.AppendUnique(LIBS =['stdc++', 'pthread'])
+env.AppendUnique(LIBS =['c++'])
+if env['CRYPTO'] == 'commoncrypto':
+    print 'Using CommonCrypto'
+elif env['CRYPTO'] == 'openssl':
     env.AppendUnique(LIBS =['crypto', 'ssl'])
     if env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64']:
         vars = Variables()

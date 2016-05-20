@@ -862,8 +862,6 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
@@ -906,8 +904,6 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;

@@ -48,10 +48,14 @@ env['PATH'] = '$DT_TOOLCHAIN_DIR/usr/bin:$IPHONE_OS_PLATFORM_DIR/Developer/usr/b
 env['CC'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang'
 env['CXX'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang++'
 
+env.Append(CCFLAGS=[
+            '-fembed-bitcode'])
+
 env.Append(CFLAGS=[
             '-fdiagnostics-show-category=id',
             '-fdiagnostics-parseable-fixits',
             '-fpascal-strings',
+            '-fembed-bitcode',
             '-Wreturn-type',
             '-Wparentheses',
             '-Wswitch',
@@ -60,6 +64,8 @@ env.Append(CFLAGS=[
             '-Wunused-value'])
             
 env.Append(CXXFLAGS=[
+            '-fembed-bitcode',
+            '-Wreturn-type',
             '-fno-rtti',
             '-fno-exceptions',
             '-Wc++11-extensions'])

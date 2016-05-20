@@ -565,8 +565,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = AboutClient;
 				WRAPPER_EXTENSION = app;
@@ -601,8 +599,6 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = AboutClient;
 				WRAPPER_EXTENSION = app;
