@@ -175,7 +175,7 @@ class SigInfoECC : public SigInfo {
      */
     void SetSignature(const ECCSignature* sig)
     {
-        memcpy(&this->sig, sig, sizeof(ECCSignature));
+        this->sig = *sig;
     }
     /**
      * Get the signature.
@@ -358,7 +358,8 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     KeyInfoNISTP256(const KeyInfoNISTP256& other) : KeyInfoECC(Crypto_ECC::ECC_NIST_P256)
     {
         SetKeyId(other.GetKeyId(), other.GetKeyIdLen());
-        SetPublicCtx(other.GetPublicCtx());
+        pubkey.form = other.pubkey.form;
+        pubkey.key = other.pubkey.key;
     }
 
     /**
@@ -372,7 +373,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
      * Get the public key context
      * @return the public key context
      */
-    const uint8_t* GetPublicCtx() const
+    QCC_DEPRECATED_ON(const uint8_t * GetPublicCtx() const, 16.10)
     {
         return (const uint8_t*) &pubkey;
     }
@@ -399,7 +400,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
      * Set the public key context
      * @param[in] ctx the public key context
      */
-    void SetPublicCtx(const uint8_t* ctx)
+    QCC_DEPRECATED_ON(void SetPublicCtx(const uint8_t * ctx), 16.10)
     {
         memcpy((uint8_t*) &pubkey, ctx, sizeof (pubkey));
     }
@@ -413,7 +414,7 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     {
         /* using uncompressed */
         pubkey.form = 0x4;
-        memcpy((uint8_t*) &pubkey.key, (uint8_t*) key, sizeof (pubkey.key));
+        pubkey.key = *key;
     }
 
     /**
@@ -498,7 +499,8 @@ class KeyInfoNISTP256 : public KeyInfoECC {
     {
         if (this != &other) {
             SetKeyId(other.GetKeyId(), other.GetKeyIdLen());
-            SetPublicCtx(other.GetPublicCtx());
+            pubkey.form = other.pubkey.form;
+            pubkey.key = other.pubkey.key;
         }
         return *this;
     }
