@@ -142,11 +142,11 @@ QStatus Crypto_Hash::Update(const uint8_t* buf, size_t bufSize)
     if (initialized) {
         if (MAC) {
             CCHmacUpdate(&ctx->hmac, buf, bufSize);
-        } else if (ctx->algorithm == qcc::Crypto_Hash::SHA1)   {
+        } else if (ctx->algorithm == qcc::Crypto_Hash::SHA1) {
             CC_SHA1_Update(&ctx->md.sha1, buf, bufSize);
-        } else if (ctx->algorithm == qcc::Crypto_Hash::SHA256)   {
+        } else if (ctx->algorithm == qcc::Crypto_Hash::SHA256) {
             CC_SHA256_Update(&ctx->md.sha256, buf, bufSize);
-        } else   {
+        } else {
             status = ER_CRYPTO_ERROR;
             QCC_LogError(status, ("Updating hash digest"));
         }
@@ -198,9 +198,9 @@ QStatus Crypto_Hash::GetDigest(uint8_t* digest, bool keepAlive)
             }
             if (ctx->algorithm == qcc::Crypto_Hash::SHA1) {
                 CC_SHA1_Final(digest, &ctx->md.sha1);
-            } else if (ctx->algorithm == qcc::Crypto_Hash::SHA256)   {
+            } else if (ctx->algorithm == qcc::Crypto_Hash::SHA256) {
                 CC_SHA256_Final(digest, &ctx->md.sha256);
-            } else   {
+            } else {
                 status = ER_CRYPTO_ERROR;
                 QCC_LogError(status, ("Finalizing hash digest"));
             }
