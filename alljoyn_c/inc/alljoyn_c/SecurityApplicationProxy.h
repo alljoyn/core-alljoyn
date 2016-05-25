@@ -98,23 +98,23 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_claim(alljoyn_securityap
 /**
  * Retrieves the manifest template in XML form from the application.
  *
- * @param[in]    proxy           The alljoyn_securityapplicationproxy connected to the managed application.
- * @param[out]   manifestXml     A null-terminated C string with the manifest template in XML format.
- *                               The string is managed by the caller and must be later destroyed
- *                               using alljoyn_securityapplicationproxy_manifesttemplate_destroy.
+ * @param[in]    proxy                  The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   manifestTemplateXml    A null-terminated C string with the manifest template in XML format.
+ *                                      The string is managed by the caller and must be later destroyed
+ *                                      using alljoyn_securityapplicationproxy_manifesttemplate_destroy.
  *
  * @return
  *          - #ER_OK If successful.
  *          - Other error status codes indicating a failure.
  */
-AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplate(alljoyn_securityapplicationproxy proxy, AJ_PSTR* manifestXml);
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplate(alljoyn_securityapplicationproxy proxy, AJ_PSTR* manifestTemplateXml);
 
 /**
  * Frees the memory allocated for the manifest template inside alljoyn_securityapplicationproxy_get_manifest_template.
  *
- * @param[in]   manifestXml     Manifest string created using alljoyn_securityapplicationproxy_get_manifest_template.
+ * @param[in]   manifestTemplateXml Manifest string created using alljoyn_securityapplicationproxy_getmanifesttemplate.
  */
-AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestXml);
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestTemplateXml);
 
 /**
  * Representation of the current state of the application.
