@@ -303,15 +303,14 @@ QStatus KeyStore::Reset()
     }
 }
 
-QStatus KeyStore::Init(const char* fileName, bool isShared)
+QStatus KeyStore::Init(const char* fileName)
 {
-    QCC_UNUSED(isShared);
     if (storeState == UNAVAILABLE) {
         if (listener == NULL) {
             defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
             listener = new ProtectedKeyStoreListener(defaultListener);
         }
-        return Load();
+        return Reload();
     } else {
         return ER_KEY_STORE_ALREADY_INITIALIZED;
     }
@@ -398,7 +397,7 @@ QStatus KeyStore::LoadPersistentKeys()
 /**
  * An instance of the KeyStore has a cached copy in memory and the persistent
  * storage.  The persistent storage can be shared with other processes.
- * Therefore, the Load function loads the data from the persistent storage and
+ * Therefore, the Reload function loads the data from the persistent storage and
  * merges with its cache.  The following merging rules apply.
  * 1. If the entry is deleted from the cache then it will not be merged.
  * 2. If the entry is in the cache but not in the persistent storage:
@@ -409,9 +408,9 @@ QStatus KeyStore::LoadPersistentKeys()
  *          persistent storage revision.  The entry be merged only if its
  *          revision is not older than the persistent storage revision.
  */
-QStatus KeyStore::Load()
+QStatus KeyStore::Reload()
 {
-    QCC_DbgHLPrintf(("KeyStore::Load"));
+    QCC_DbgHLPrintf(("KeyStore::Reload"));
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     ExclusiveLockRefreshState refreshState = exclusiveLockRefreshState;
@@ -763,22 +762,12 @@ QStatus KeyStore::Clear(const qcc::String& tagPrefixPattern)
     return status;
 }
 
-QStatus KeyStore::Reload()
-{
-    QCC_DbgHLPrintf(("KeyStore::Reload"));
-    /*
-     * KeyStore "isShared" feature is removed in 16.04.
-     * All instances of KeyStore that point to the same file are now always shared.
-     */
-    return Load();
-}
-
 QStatus KeyStore::Push(Sink& sink)
 {
     QCC_DbgHLPrintf(("KeyStore::Push (revision %u)", revision + 1));
 
     /* Refresh the keystore. */
-    (void)Load();
+    (void)Reload();
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
 
@@ -865,7 +854,7 @@ QStatus KeyStore::GetKey(const Key& key, KeyBlob& keyBlob, uint8_t accessRights[
     QCC_DbgPrintf(("KeyStore::GetKey %s", key.ToString().c_str()));
 
     /* Refresh the keystore. */
-    (void)Load();
+    (void)Reload();
 
     KeyRecord* keyRec = nullptr;
     KeyBlob* kb = nullptr;
@@ -913,7 +902,7 @@ Exit:
 bool KeyStore::HasKey(const Key& key)
 {
     /* Refresh the keystore. */
-    (void)Load();
+    (void)Reload();
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     bool hasKey = false;
@@ -1086,7 +1075,7 @@ QStatus KeyStore::GetKeyExpiration(const Key& key, Timespec<EpochTime>& expirati
     }
 
     /* Refresh the keystore. */
-    (void)Load();
+    (void)Reload();
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     if (keys->count(key) != 0) {
@@ -1102,7 +1091,7 @@ QStatus KeyStore::GetKeyExpiration(const Key& key, Timespec<EpochTime>& expirati
 QStatus KeyStore::SearchAssociatedKeys(const Key& key, Key** list, size_t* numItems)
 {
     /* Refresh the keystore. */
-    (void)Load();
+    (void)Reload();
 
     size_t count = 0;
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
@@ -1195,12 +1184,12 @@ QStatus KeyStore::AcquireExclusiveLock(const char* file, uint32_t line)
     QCC_VERIFY(ER_OK == lock.Lock(file, line));
     /* This assert fires if there is a recursive call to acquire the lock. */
     QCC_ASSERT(exclusiveLockRefreshState == ExclusiveLockNotHeld);
-    /* Mark the refresh state to 'dirty' so Load() would refresh the keys. */
+    /* Mark the refresh state to 'dirty' so Reload() would refresh the keys. */
     exclusiveLockRefreshState = ExclusiveLockHeld_Dirty;
     QCC_VERIFY(ER_OK == lock.Unlock(file, line));
 
     /* Refresh the keystore. */
-    (void)Load();
+    (void)Reload();
     return ER_OK;
 }
 
