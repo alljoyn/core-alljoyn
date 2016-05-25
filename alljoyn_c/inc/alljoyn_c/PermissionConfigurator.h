@@ -91,15 +91,15 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_setapplicationstate(alljoy
 /**
  * Set the application's manifest template from an XML.
  *
- * @param[in]   configurator    The queried alljoyn_permissionconfigurator.
- * @param[in]   manifestXml     String containing the XML version of the manifest template.
+ * @param[in]   configurator        The queried alljoyn_permissionconfigurator.
+ * @param[in]   manifestTemplateXml String containing the XML version of the manifest template.
  *
  * @return
  *          #ER_OK if successful.
  *          #ER_XML_MALFORMED if the the XML is not in a valid manifest template format.
  *          Other error status codes indicating a failure.
  */
-AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_setmanifestfromxml(alljoyn_permissionconfigurator configurator, AJ_PCSTR manifestXml);
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_setmanifesttemplatefromxml(alljoyn_permissionconfigurator configurator, AJ_PCSTR manifestTemplateXml);
 
 /**
  * Get the authentication mechanisms the application supports for the

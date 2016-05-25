@@ -172,7 +172,7 @@ class BusAttachmentSecurity20Test : public testing::Test {
     void SetManifestTemplate(alljoyn_busattachment bus)
     {
         alljoyn_permissionconfigurator configurator = alljoyn_busattachment_getpermissionconfigurator(bus);
-        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(configurator, s_allowAllManifestTemplate));
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configurator, s_allowAllManifestTemplate));
     }
 };
 
