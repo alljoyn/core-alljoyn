@@ -54,11 +54,11 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_setapplicationstate(alljoyn_permi
     return ((PermissionConfigurator*)configurator)->SetApplicationState((PermissionConfigurator::ApplicationState)state);
 }
 
-QStatus AJ_CALL alljoyn_permissionconfigurator_setmanifestfromxml(alljoyn_permissionconfigurator configurator, AJ_PCSTR manifestXml)
+QStatus AJ_CALL alljoyn_permissionconfigurator_setmanifesttemplatefromxml(alljoyn_permissionconfigurator configurator, AJ_PCSTR manifestTemplateXml)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
-    return ((PermissionConfigurator*)configurator)->SetManifestTemplateFromXml(manifestXml);
+    return ((PermissionConfigurator*)configurator)->SetManifestTemplateFromXml(manifestTemplateXml);
 }
 
 QStatus AJ_CALL alljoyn_permissionconfigurator_getclaimcapabilities(const alljoyn_permissionconfigurator configurator, alljoyn_claimcapabilities* claimCapabilities)
