@@ -47,11 +47,25 @@ class TranslatorC : public Translator {
     }
 
     virtual QStatus AddTargetLanguage(const char* language, bool* added = NULL) {
-        targetLanguages.push_back(language);
+        bool addStatus = targetLanguages.insert(language).second;
         if (added != NULL) {
-            *added = true;
+            *added = addStatus;
         }
         return ER_OK;
+    }
+
+    size_t CopyPointersToArray(const char** array, size_t size) {
+        if (array == nullptr) {
+            return 0;
+        }
+
+        size_t count = 0u;
+        for (std::set<qcc::String>::const_iterator itL = targetLanguages.begin();
+             (itL != targetLanguages.end()) && (count < size);
+             itL++) {
+            array[count++] = itL->c_str();
+        }
+        return count;
     }
 
   private:
@@ -63,7 +77,9 @@ class TranslatorC : public Translator {
     virtual void GetTargetLanguage(size_t index, qcc::String& ret)
     {
         if (index < targetLanguages.size()) {
-            ret = targetLanguages[index];
+            std::set<qcc::String>::const_iterator itL = targetLanguages.begin();
+            std::advance(itL, index);
+            ret = *itL;
         } else {
             ret = "";
         }
@@ -78,7 +94,7 @@ class TranslatorC : public Translator {
     }
 
   private:
-    std::vector<qcc::String> targetLanguages;
+    std::set<qcc::String> targetLanguages;
     alljoyn_interfacedescription_translation_callback_ptr translation_callback_ptr;
 };
 
@@ -664,15 +680,10 @@ size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoy
     if (translator == &ajn::translatorC) {
         /* Get description languages from translator */
         size_t numTargetLanguages = translator->NumTargetLanguages();
-        if (languages == nullptr) {
-            count = numTargetLanguages;
-        } else {
-            qcc::String language;
-            for (count = 0; (count < numTargetLanguages) && (count < size); count++) {
-                translator->GetTargetLanguage(count, language);
-                languages[count] = language.c_str();
-            }
+        if (languages == nullptr || size == 0u) {
+            return numTargetLanguages;
         }
+        count = ajn::translatorC.CopyPointersToArray(languages, size);
     } else {
         if (languages == nullptr) {
             count = 1;
