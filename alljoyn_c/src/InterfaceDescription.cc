@@ -82,8 +82,33 @@ class TranslatorC : public Translator {
     alljoyn_interfacedescription_translation_callback_ptr translation_callback_ptr;
 };
 
+class LanguagesStorage {
+  public:
+    bool AddLanguage(const qcc::String& language) {
+        return languages.insert(language).second;
+    }
+
+    size_t CopyPointersToArray(const char** array, size_t size) {
+        if (array == nullptr) {
+            return 0;
+        }
+
+        size_t count = 0u;
+        for (std::set<qcc::String>::const_iterator itL = languages.begin();
+             (itL != languages.end()) && (count < size);
+             itL++) {
+            array[count++] = itL->c_str();
+        }
+        return count;
+    }
+
+  private:
+    std::set<qcc::String> languages;
+};
+
 /* static instances of class used for translation callback */
 static TranslatorC translatorC;
+static LanguagesStorage languagesStorage;
 }
 
 struct _alljoyn_interfacedescription_handle {
@@ -664,15 +689,15 @@ size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoy
     if (translator == &ajn::translatorC) {
         /* Get description languages from translator */
         size_t numTargetLanguages = translator->NumTargetLanguages();
-        if (languages == nullptr) {
-            count = numTargetLanguages;
-        } else {
-            qcc::String language;
-            for (count = 0; (count < numTargetLanguages) && (count < size); count++) {
-                translator->GetTargetLanguage(count, language);
-                languages[count] = language.c_str();
-            }
+        if (languages == nullptr || size == 0u) {
+            return numTargetLanguages;
         }
+        qcc::String language;
+        for (count = 0; (count < numTargetLanguages) && (count < size); count++) {
+            translator->GetTargetLanguage(count, language);
+            ajn::languagesStorage.AddLanguage(language);
+        }
+        count = ajn::languagesStorage.CopyPointersToArray(languages, size);
     } else {
         if (languages == nullptr) {
             count = 1;
