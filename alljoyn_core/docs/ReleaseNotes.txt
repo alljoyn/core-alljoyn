@@ -84,6 +84,8 @@ ASACORE-2841 Android chat sample fails when the channel name includes a decimal
 ASACORE-2865 AJCORE-471: JNI Chat sample for Android fails to start
 ASACORE-2867 AJCORE-472: JNI Simple Service and Simple Client fail to start
 ASACORE-2933 C++ SecurityApplicationProxy.h includes a private header Crypto.h
+ASACORE-2955 C binding for InterfaceDescription relies on qcc::String reference
+             counting
 
 
 For a complete list of open issues:
