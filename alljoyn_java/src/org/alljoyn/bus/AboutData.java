@@ -51,9 +51,8 @@ public class AboutData implements AboutDataListener, AboutKeys {
      *  - AppName
      *  - Manufacturer
      *  - Description
-     * @throws BusException
      */
-    AboutData() {
+    public AboutData() {
         initializeFieldDetails();
         propertyStore = new HashMap<String, Variant>();
         localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
@@ -71,9 +70,8 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * @param defaultLanguage a Locale containing a IETF language tag specified
      *                        by RFC 5646 specifying the default language for the
      *                        AboutData fields
-     * @throws BusException
      */
-    AboutData(String defaultLanguage) {
+    public AboutData(String defaultLanguage) {
         initializeFieldDetails();
         propertyStore = new HashMap<String, Variant>();
         localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
@@ -99,7 +97,7 @@ public class AboutData implements AboutDataListener, AboutKeys {
      *
      * @throws BusException
      */
-    AboutData(Map<String, Variant> aboutData) throws BusException {
+    public AboutData(Map<String, Variant> aboutData) throws BusException {
         initializeFieldDetails();
         propertyStore = new HashMap<String, Variant>();
         localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
@@ -116,7 +114,7 @@ public class AboutData implements AboutDataListener, AboutKeys {
      * @throws BusException
      */
 
-    AboutData(Map<String, Variant> aboutData, String language) throws BusException {
+    public AboutData(Map<String, Variant> aboutData, String language) throws BusException {
         initializeFieldDetails();
         propertyStore = new HashMap<String, Variant>();
         localizedPropertyStore = new HashMap<String, Map<String, Variant>>();
@@ -1288,34 +1286,25 @@ public class AboutData implements AboutDataListener, AboutKeys {
             throw new ErrorReplyBusException(Status.LANGUAGE_NOT_SUPPORTED);
         }
 
-        for (String s: aboutFields.keySet()) {
-            if(isFieldRequired(s)) {
-                if (isFieldLocalized(s)) {
-                    if (!localizedPropertyStore.containsKey(s) ||!localizedPropertyStore.get(s).containsKey(language)) {
-                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
-                    }
-                } else {
-                    if (!propertyStore.containsKey(s)) {
-                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
-                    }
-                }
-            }
-        }
-
         Map<String, Variant> aboutData = new HashMap<String, Variant>();
         for (String s: aboutFields.keySet()) {
             if(isFieldAnnounced(s)) {
                 if (isFieldLocalized(s)) {
-                    if (!localizedPropertyStore.containsKey(s) ||!localizedPropertyStore.get(s).containsKey(language)) {
+                    if (!localizedPropertyStore.containsKey(s) || !localizedPropertyStore.get(s).containsKey(language)) {
+                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+                    } else {
                         aboutData.put(s, localizedPropertyStore.get(s).get(language));
                     }
                 } else {
                     if (!propertyStore.containsKey(s)) {
+                        throw new ErrorReplyBusException(Status.ABOUT_ABOUTDATA_MISSING_REQUIRED_FIELD);
+                    } else {
                         aboutData.put(s, propertyStore.get(s));
                     }
                 }
             }
         }
+
         return aboutData;
     }
 
@@ -1354,6 +1343,7 @@ public class AboutData implements AboutDataListener, AboutKeys {
         aboutFields.put(ABOUT_HARDWARE_VERSION, new FieldDetails(FieldDetails.EMPTY_MASK, "s"));
         aboutFields.put(ABOUT_SUPPORT_URL, new FieldDetails(FieldDetails.EMPTY_MASK, "s"));
     }
+
     private Set<String> supportedLanguages;
     private Map<String, Variant> propertyStore;
     private Map<String, Map<String, Variant>> localizedPropertyStore;
