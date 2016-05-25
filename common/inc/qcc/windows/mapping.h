@@ -122,4 +122,11 @@
 #define WHITELISTED_APPLICATION       "WhitelistedApplication"
 ///@}
 
+/**
+ * This API has been renamed, but older Windows 10 apps might still be using the old name.
+ */
+#if (_WIN32_WINNT == _WIN32_WINNT_WIN10) && !defined(AJ_DISABLE_DEPRECATED_API_MAPPING)
+#define alljoyn_permissionconfigurator_setmanifestfromxml alljoyn_permissionconfigurator_setmanifesttemplatefromxml
+#endif
+
 #endif
