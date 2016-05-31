@@ -107,33 +107,33 @@ class String {
     operator std::string & () { return s; }
 
     /** Assignment operator */
-    String& operator=(const String& assignFromMe) { s = assignFromMe.s; return *this; }
+    std::string operator=(const String& assignFromMe) { return s = assignFromMe.s; }
 
     /**
      * Assign a value to a string
      *
      * @param str  Value to assign to string.
      * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    QCC_DEPRECATED_ON(String& assign(const char* str, size_type len), 16.10);
+    QCC_DEPRECATED_ON(std::string assign(const char* str, size_type len), 16.10);
 
     /**
      * Assign a value to a string. Behaves like std::string version but returns by value.
      *
      * @param str  Value to assign to string.
      * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& assign_std(const char* str, size_type len) { s.assign(str, len); return *this; }
+    std::string assign_std(const char* str, size_type len) { return s.assign(str, len); }
 
     /**
      * Assign a nul-terminated string value to a string
      *
      * @param str  Value to assign to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& assign(const char* str);
+    std::string assign(const char* str);
 
     /**
      * Get the current storage capacity for this string.
@@ -204,33 +204,33 @@ class String {
      *
      * @param str  Value to append to string.
      * @param len  Number of characters to append or 0 to insert up to first nul byte in str.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& append(const char* str, size_type len);
-    String& append(const char* str);
+    std::string append(const char* str, size_type len);
+    std::string append(const char* str);
 
     /**
      * Append a string to another to string.
      *
      * @param str  Value to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& append(const String& str) { s.append(str.s); return *this; }
+    std::string append(const String& str) { return s.append(str.s); }
 
     /**
      * Append a character N times to the string.
      *
      * @param n  Number of copies of 'c' to append.
      * @param c  Character to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& append(size_type n, char c) { s.append(n, c); return *this; }
+    std::string append(size_type n, char c) { return s.append(n, c); }
 
     /**
      * Append a single character to string.
      *
      * @param c Character to append to string.
-     * @return  Reference to this string.
+     * @return  New String object.
      */
     QCC_DEPRECATED_ON(String append(const char c), 16.04) { return s.append(1, c); }
 
@@ -239,9 +239,9 @@ class String {
      *
      * @param pos    Offset first char to erase.
      * @param n      Number of chars to erase.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& erase(size_type pos = 0, size_type n = npos) { s.erase(pos, n); return *this; }
+    std::string erase(size_type pos = 0, size_type n = npos) { return s.erase(pos, n); }
 
     /**
      * Resize string by appending chars or removing them to make string a specified size.
@@ -270,27 +270,27 @@ class String {
      * Append a character.
      *
      * @param c Character to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& operator+=(const char c) { s += c; return *this; }
+    std::string operator+=(const char c) { return s += c; }
 
     /**
      * Append to string.
      *
      * @param str  Value to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& operator+=(const char* str) { append(str); return *this; }
+    std::string operator+=(const char* str) { return append(str); }
 
     /**
      * Append to string.
      *
      * @param str  Value to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& operator+=(const String& str) { s += str.s; return *this; }
+    std::string operator+=(const String& str) { return s += str.s; }
 
-    String& operator+=(const std::string& str) { s += str; return *this; }
+    std::string operator+=(const std::string& str) { return s += str; }
 
     /**
      * Insert characters into string at position.
@@ -298,11 +298,11 @@ class String {
      * @param pos   Insert position.
      * @param str   Character string to insert.
      * @param len   Optional number of chars to insert.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    String& insert(size_type pos, const char* str, size_type len);
+    std::string insert(size_type pos, const char* str, size_type len);
 
-    String& insert(size_type pos, const char* str);
+    std::string insert(size_type pos, const char* str);
 
     /**
      * Return true if string is equal to this string.
@@ -517,7 +517,7 @@ class String {
      * @param  n    Number of bytes in substring.
      * @return  Substring of this string.
      */
-    String substr(size_type pos = 0, size_type n = npos) const { return s.substr(pos, n); }
+    std::string substr(size_type pos = 0, size_type n = npos) const { return s.substr(pos, n); }
 
     /**
      * Return a substring of this string with the order of the characters reversed.
@@ -526,7 +526,7 @@ class String {
      * @param  n    Number of bytes in substring.
      * @return  The reversed substring of this string.
      */
-    QCC_DEPRECATED_ON(String revsubstr(size_type pos = 0, size_type n = npos) const, 16.04);
+    QCC_DEPRECATED_ON(std::string revsubstr(size_type pos = 0, size_type n = npos) const, 16.04);
 
     /**
      * Compare this string with other.
