@@ -35,6 +35,8 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/version.h>
 
+#include "CustomKeyStoreListener.h"
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -218,11 +220,18 @@ QStatus StartMessageBus(void)
 QStatus EnableSecurity(void)
 {
     /*
-     * note the location of the keystore file has been specified and the
-     * isShared parameter is being set to true. So this keystore file can
-     * be used by multiple applications.
+     * note that custom KeyStoreListener implementation has been provided
      */
-    QStatus status = g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX", new SrpKeyXListener(), "/.alljoyn_keystore/central.ks", true);
+    static CustomtKeyStoreListener ksl("/.alljoyn_keystore/central.ks");
+    QStatus status = g_msgBus->RegisterKeyStoreListener(ksl);
+
+    if (ER_OK == status) {
+        printf("BusAttachment::RegisterKeyStoreListener successful.\n");
+    } else {
+        printf("BusAttachment::RegisterKeyStoreListener failed (%s).\n", QCC_StatusText(status));
+    }
+
+    status = g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX", new SrpKeyXListener());
 
     if (ER_OK == status) {
         printf("BusAttachment::EnablePeerSecurity successful.\n");

@@ -31,7 +31,7 @@ extern "C" {
  * The alljoyn_keystore manages storing and loading of key blobs from
  * external storage.
  */
-typedef struct _alljoyn_keystore_handle*                    alljoyn_keystore;
+typedef void* alljoyn_keystore;
 
 /**
  * An application can provide a key store listener to override the default key store
@@ -51,7 +51,7 @@ typedef struct _alljoyn_keystorelistener_handle*            alljoyn_keystorelist
  * @param listener   The listener that is responsible for the LoadRequest callback.
  *                   This listener should be used when calling the @c alljoyn_keystorelistener_putkeys
  *                   function.
- * @param keyStore   Reference to the alljoyn_keystore to be loaded.
+ * @param keyStore   Reference to the @c alljoyn_keystore to be loaded.
  *
  * @return
  *      - #ER_OK if the load request was satisfied
@@ -117,7 +117,7 @@ extern AJ_API void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelist
  * Put keys into the key store from an encrypted byte string.
  *
  * @param listener  The alljoyn_keystorelistener into which to put the keys.
- * @param keyStore  The keyStore to put to. This is the keystore indicated in the LoadRequest call.
+ * @param keyStore  The KeyStore to put to. This is the KeyStore indicated in the LoadRequest call.
  * @param source    The byte string containing the encrypted key store contents.
  * @param password  The password required to decrypt the key data
  *
@@ -143,7 +143,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorel
  * @endcode
  *
  * @param listener  The alljoyn_keystorelistener from which to get the keys.
- * @param keyStore  The keyStore to get from. This is the keystore indicated in
+ * @param keyStore  The KeyStore to get from. This is the KeyStore indicated in
  *                  the StoreRequest call.
  * @param sink      The byte string to write the keys to. If sink is NULL then the
  *                  sink_sz parameter will return the size of the sink plus the

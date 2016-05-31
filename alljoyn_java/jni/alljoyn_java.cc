@@ -1928,8 +1928,8 @@ class JKeyStoreListener : public KeyStoreListener {
   public:
     JKeyStoreListener(jobject jlistener);
     ~JKeyStoreListener();
-    QStatus LoadRequest(KeyStore& keyStore);
-    QStatus StoreRequest(KeyStore& keyStore);
+    QStatus LoadRequest(KeyStoreContext keyStoreContext);
+    QStatus StoreRequest(KeyStoreContext keyStoreContext);
   private:
     JKeyStoreListener(const JKeyStoreListener& other);
     JKeyStoreListener& operator =(const JKeyStoreListener& other);
@@ -2695,7 +2695,7 @@ JKeyStoreListener::~JKeyStoreListener()
 /**
  * Handle the C++ LoadRequest callback from the AllJoyn system.
  */
-QStatus JKeyStoreListener::LoadRequest(KeyStore& keyStore)
+QStatus JKeyStoreListener::LoadRequest(KeyStoreContext keyStoreContext)
 {
     QCC_DbgPrintf(("JKeyStoreListener::LoadRequest()"));
 
@@ -2809,7 +2809,7 @@ QStatus JKeyStoreListener::LoadRequest(KeyStore& keyStore)
     if (env->ExceptionCheck()) {
         return ER_FAIL;
     }
-    QStatus status = PutKeys(keyStore, source, String((const char*)password, env->GetArrayLength(jpassword)));
+    QStatus status = PutKeys(keyStoreContext, source, String((const char*)password, env->GetArrayLength(jpassword)));
     memset(password, 0, env->GetArrayLength(jpassword) * sizeof(jbyte));
     env->ReleaseByteArrayElements(jpassword, password, 0);
 
@@ -2819,13 +2819,13 @@ QStatus JKeyStoreListener::LoadRequest(KeyStore& keyStore)
 /**
  * Handle the C++ StoreRequest callback from the AllJoyn system.
  */
-QStatus JKeyStoreListener::StoreRequest(KeyStore& keyStore)
+QStatus JKeyStoreListener::StoreRequest(KeyStoreContext keyStoreContext)
 {
     QCC_DbgPrintf(("JKeyStoreListener::StoreRequest()"));
 
     String sink;
 
-    QStatus status = GetKeys(keyStore, sink);
+    QStatus status = GetKeys(keyStoreContext, sink);
     if (ER_OK != status) {
         return status;
     }

@@ -111,7 +111,7 @@ void ProtectedKeyStoreListener::ReleaseExclusiveLock(const char* file, uint32_t 
     DelRef();
 }
 
-QStatus ProtectedKeyStoreListener::LoadRequest(KeyStore& keyStore)
+QStatus ProtectedKeyStoreListener::LoadRequest(KeyStoreListener::KeyStoreContext keyStoreContext)
 {
     AddRef();
     QStatus status = ER_FAIL;
@@ -121,7 +121,7 @@ QStatus ProtectedKeyStoreListener::LoadRequest(KeyStore& keyStore)
     QCC_ASSERT(refCount > 0);
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     if (keyStoreListener) {
-        status = keyStoreListener->LoadRequest(keyStore);
+        status = keyStoreListener->LoadRequest(keyStoreContext);
     }
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     --refCount;
@@ -131,7 +131,7 @@ QStatus ProtectedKeyStoreListener::LoadRequest(KeyStore& keyStore)
     return status;
 }
 
-QStatus ProtectedKeyStoreListener::StoreRequest(KeyStore& keyStore)
+QStatus ProtectedKeyStoreListener::StoreRequest(KeyStoreListener::KeyStoreContext keyStoreContext)
 {
     AddRef();
     QStatus status = ER_FAIL;
@@ -141,7 +141,7 @@ QStatus ProtectedKeyStoreListener::StoreRequest(KeyStore& keyStore)
     QCC_ASSERT(refCount > 0);
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     if (keyStoreListener) {
-        status = keyStoreListener->StoreRequest(keyStore);
+        status = keyStoreListener->StoreRequest(keyStoreContext);
     }
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     --refCount;
