@@ -574,7 +574,7 @@ char AJ_CALL qcc::U8ToChar(uint8_t d)
     return '\0';
 }
 
-AJ_PSTR qcc::CreateStringCopy(const std::string& input)
+AJ_PSTR AJ_CALL qcc::CreateStringCopy(const std::string& input)
 {
     AJ_PSTR result = new char[input.size() + 1];
     strncpy(result, input.c_str(), input.size() + 1);
@@ -582,7 +582,7 @@ AJ_PSTR qcc::CreateStringCopy(const std::string& input)
     return result;
 }
 
-void qcc::DestroyStringCopy(AJ_PSTR input)
+void AJ_CALL qcc::DestroyStringCopy(AJ_PSTR input)
 {
     delete[] input;
 }
