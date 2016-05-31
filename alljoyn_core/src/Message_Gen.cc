@@ -1484,7 +1484,7 @@ QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStat
 QStatus _Message::ErrorMsg(const Message& call, const qcc::String& sender, QStatus status, const char* errorName, const char* description)
 {
     qcc::String destination = call->hdrFields.field[ALLJOYN_HDR_FIELD_SENDER].v_string.str;
-    qcc::String msg = QCC_StatusText(status);
+    qcc::String msg;
     uint16_t msgStatus = status;
 
     QCC_ASSERT(call->msgHeader.msgType == MESSAGE_METHOD_CALL);
