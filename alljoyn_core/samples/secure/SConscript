@@ -20,13 +20,14 @@ env2 = env.Clone();
 env1.Append(CPPDEFINES=[('CLIENT=1')])
 env2.Append(CPPDEFINES=[('CLIENT=2')])
 
+obj_common = env.Object('CustomKeyStoreListener',  ['CustomKeyStoreListener.cc'])
 obj = env2.Object('DeskTopSharedKSClient2',  ['DeskTopSharedKSClient.cc'])
 
 # Sample Programs
 progs = [
-    env1.Program('DeskTopSharedKSClient1',  ['DeskTopSharedKSClient.cc']),
-    env2.Program('DeskTopSharedKSClient2',  [obj]),
-    env.Program('DeskTopSharedKSService', ['DeskTopSharedKSService.cc']),
+    env1.Program('DeskTopSharedKSClient1',  ['DeskTopSharedKSClient.cc', obj_common]),
+    env2.Program('DeskTopSharedKSClient2',  [obj, obj_common]),
+    env.Program('DeskTopSharedKSService', ['DeskTopSharedKSService.cc', obj_common]),
     env.Program('SampleServiceECDHE', ['SampleServiceECDHE.cc', 'SampleCertificateChainEngine.cc']),
     env.Program('SampleClientECDHE', ['SampleClientECDHE.cc', 'SampleCertificateChainEngine.cc']),
     env.Program('SampleCertificateUtility', ['SampleCertificateUtility.cc'])

@@ -48,17 +48,17 @@ class InMemoryKeyStoreListener : public KeyStoreListener {
         CopySink(source);
     }
 
-    QStatus LoadRequest(KeyStore& keyStore) {
+    QStatus LoadRequest(KeyStoreContext keyStoreContext) {
         lock.Lock(MUTEX_CONTEXT);
         qcc::StringSource source(sink.GetString());
-        QStatus status = keyStore.Pull(source, pwd);
+        QStatus status = static_cast<KeyStore*>(keyStoreContext)->Pull(source, pwd);
         lock.Unlock(MUTEX_CONTEXT);
         return status;
     }
 
-    QStatus StoreRequest(KeyStore& keyStore) {
+    QStatus StoreRequest(KeyStoreContext keyStoreContext) {
         qcc::StringSink newSink;
-        QStatus status = keyStore.Push(newSink);
+        QStatus status = static_cast<KeyStore*>(keyStoreContext)->Push(newSink);
         if (ER_OK != status) {
             return status;
         }

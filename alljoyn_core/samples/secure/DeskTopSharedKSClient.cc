@@ -34,13 +34,22 @@
 #include <alljoyn/Init.h>
 #include <alljoyn/Status.h>
 #include <alljoyn/version.h>
+#include <alljoyn/KeyStoreListener.h>
 
 using namespace std;
 using namespace qcc;
 using namespace ajn;
 
+/*
+ * This creates instance of CustomKeyStoreListener
+ */
+extern KeyStoreListener* CreateKeyStoreListenerInstance(const char* fname);
+
 /** Static top level message bus object */
-static BusAttachment* g_msgBus = NULL;
+static BusAttachment* g_msgBus = nullptr;
+
+static KeyStoreListener* keyStoreListener = nullptr;
+static AuthListener* authListener = nullptr;
 
 /*constants*/
 static const char* INTERFACE_NAME = "org.alljoyn.bus.samples.secure.SecureInterface";
@@ -78,7 +87,7 @@ char*get_line(char*str, size_t num, FILE*fp)
 
     // fgets will capture the '\n' character if the string entered is shorter than
     // num. Remove the '\n' from the end of the line and replace it with nul '\0'.
-    if (p != NULL) {
+    if (p != nullptr) {
         size_t last = strlen(str) - 1;
         if (str[last] == '\n') {
             str[last] = '\0';
@@ -186,7 +195,7 @@ void MakeClientName(void)
 QStatus CreateInterface(void)
 {
     /* Add org.alljoyn.Bus.method_sample interface */
-    InterfaceDescription* testIntf = NULL;
+    InterfaceDescription* testIntf = nullptr;
     QStatus status = g_msgBus->CreateInterface(INTERFACE_NAME, testIntf, AJ_IFC_SECURITY_REQUIRED);
 
     if (status == ER_OK) {
@@ -215,14 +224,22 @@ QStatus StartMessageBus(void)
 }
 
 /** Enable security, report the result to stdout, and return the result status. */
-QStatus EnableSecurity(void)
+QStatus EnableSecurity()
 {
     /*
-     * note the location of the keystore file has been specified and the
-     * isShared parameter is being set to true. So this keystore file can
-     * be used by multiple applications.
+     * Registering custom KeyStoreListener instance
      */
-    QStatus status = g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX", new SrpKeyXListener(), "/.alljoyn_keystore/central.ks", true);
+    keyStoreListener = CreateKeyStoreListenerInstance("/.alljoyn_keystore/central.ks");
+    QStatus status = g_msgBus->RegisterKeyStoreListener(*keyStoreListener);
+
+    if (ER_OK == status) {
+        printf("BusAttachment::RegisterKeyStoreListener successful.\n");
+    } else {
+        printf("BusAttachment::RegisterKeyStoreListener failed (%s).\n", QCC_StatusText(status));
+    }
+
+    authListener = new SrpKeyXListener();
+    status = g_msgBus->EnablePeerSecurity("ALLJOYN_SRP_KEYX", authListener);
 
     if (ER_OK == status) {
         printf("BusAttachment::EnablePeerSecurity successful.\n");
@@ -367,7 +384,7 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
     /* Create message bus */
     g_msgBus = new BusAttachment(buffer, true);
 
-    /* This test for NULL is only required if new() behavior is to return NULL
+    /* This test for nullptr is only required if new() behavior is to return nullptr
      * instead of throwing an exception upon an out of memory failure.
      */
     if (!g_msgBus) {
@@ -405,7 +422,11 @@ int CDECL_CALL main(int argc, char** argv, char** envArg)
 
     /* Deallocate bus */
     delete g_msgBus;
-    g_msgBus = NULL;
+    g_msgBus = nullptr;
+    delete keyStoreListener;
+    keyStoreListener = nullptr;
+    delete authListener;
+    authListener = nullptr;
 
     printf("Basic client exiting with status 0x%04x (%s).\n", status, QCC_StatusText(status));
 
