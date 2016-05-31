@@ -52,7 +52,7 @@ class AJNKeyStoreListenerImpl : public ajn::KeyStoreListener {
      *      - An error status otherwise
      *
      */
-    QStatus LoadRequest(ajn::KeyStore& keyStore);
+    QStatus LoadRequest(KeyStoreContext keyStore);
 
 
     /**
@@ -65,25 +65,25 @@ class AJNKeyStoreListenerImpl : public ajn::KeyStoreListener {
      *      - ER_OK if the store request was satisfied
      *      - An error status otherwise
      */
-    QStatus StoreRequest(ajn::KeyStore& keyStore);
+    QStatus StoreRequest(KeyStoreContext keyStore);
 
 
     /**
      * Get the current keys from the key store as an encrypted byte string.
      *
-     * @param keyStore  The keyStore to get from. This is the keystore indicated in the StoreRequest call.
+     * @param keyStore  The KeyStore to get from. This is the KeyStore indicated in the StoreRequest call.
      * @param sink      The byte string to write the keys to.
      * @return
      *      - ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus GetKeys(ajn::KeyStore& keyStore, qcc::String& sink);
+    QStatus GetKeys(KeyStoreContext keyStore, qcc::String& sink);
 
 
     /**
      * Put keys into the key store from an encrypted byte string.
      *
-     * @param keyStore  The keyStore to put to. This is the keystore indicated in the LoadRequest call.
+     * @param keyStore  The KeyStore to put to. This is the KeyStore indicated in the LoadRequest call.
      * @param source    The byte string containing the encrypted key store contents.
      * @param password  The password required to decrypt the key data
      *
@@ -92,7 +92,7 @@ class AJNKeyStoreListenerImpl : public ajn::KeyStoreListener {
      *      - An error status otherwise
      *
      */
-    QStatus PutKeys(ajn::KeyStore& keyStore, const qcc::String& source, const qcc::String& password);
+    QStatus PutKeys(KeyStoreContext keyStore, const qcc::String& source, const qcc::String& password);
 
 
     /**

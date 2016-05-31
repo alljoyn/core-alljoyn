@@ -36,7 +36,7 @@
  *          - An error status otherwise
  *
  */
-- (QStatus)load:(AJNHandle)keyStore;
+- (QStatus)load:(void*)keyStore;
 
 /**
  * This method is called when a key store needs to be stored.
@@ -47,22 +47,22 @@
  * @return  - ER_OK if the store request was satisfied
  *          - An error status otherwise
  */
-- (QStatus)store:(AJNHandle)keyStore;
+- (QStatus)store:(void*)keyStore;
 
 /**
  * Get the current keys from the key store as an encrypted byte string.
  *
- * @param keyStore  The keyStore to get from. This is the keystore indicated in the StoreRequest call.
+ * @param keyStore  The KeyStore to get from. This is the KeyStore indicated in the StoreRequest call.
  * @param sink      The byte string to write the keys to.
  * @return  - ER_OK if successful
  *          - An error status otherwise
  */
-- (QStatus)getKeys:(AJNHandle) keyStore sink:(NSString *)sink;
+- (QStatus)getKeys:(void*) keyStore sink:(NSString *)sink;
 
 /**
  * Put keys into the key store from an encrypted byte string.
  *
- * @param keyStore  The keyStore to put to. This is the keystore indicated in the LoadRequest call.
+ * @param keyStore  The KeyStore to put to. This is the KeyStore indicated in the LoadRequest call.
  * @param source    The byte string containing the encrypted key store contents.
  * @param password  The password required to decrypt the key data
  *
@@ -70,7 +70,7 @@
  *          - An error status otherwise
  *
  */
-- (QStatus)putKeys:(AJNHandle) keyStore source:(NSString *)source password:(NSString *)password;
+- (QStatus)putKeys:(void*) keyStore source:(NSString *)source password:(NSString *)password;
 
 
 @end

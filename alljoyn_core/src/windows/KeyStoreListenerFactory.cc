@@ -51,8 +51,8 @@ class DefaultKeyStoreListener : public KeyStoreListener {
     virtual QStatus AcquireExclusiveLock(const char* file, uint32_t line);
     virtual void ReleaseExclusiveLock(const char* file, uint32_t line);
 
-    virtual QStatus LoadRequest(KeyStore& keyStore);
-    virtual QStatus StoreRequest(KeyStore& keyStore);
+    virtual QStatus LoadRequest(KeyStoreContext keyStoreContext);
+    virtual QStatus StoreRequest(KeyStoreContext keyStoreContext);
 
   private:
     FileLocker m_fileLocker;
@@ -141,7 +141,7 @@ void DefaultKeyStoreListener::ReleaseExclusiveLock(const char* file, uint32_t li
     KeyStoreListener::ReleaseExclusiveLock(file, line);
 }
 
-QStatus DefaultKeyStoreListener::LoadRequest(KeyStore& keyStore)
+QStatus DefaultKeyStoreListener::LoadRequest(KeyStoreContext keyStoreContext)
 {
     DATA_BLOB dataIn = { };
     DATA_BLOB dataOut = { };
@@ -176,7 +176,7 @@ QStatus DefaultKeyStoreListener::LoadRequest(KeyStore& keyStore)
 
     if (fileSize == 0LL) {
         /* Load the empty keystore */
-        keyStore.LoadFromEmptyFile(m_fileLocker.GetFileName());
+        static_cast<KeyStore*>(keyStoreContext)->LoadFromEmptyFile(m_fileLocker.GetFileName());
     } else {
         dataIn.cbData = fileSize;
         dataIn.pbData = new uint8_t[dataIn.cbData];
@@ -206,7 +206,7 @@ QStatus DefaultKeyStoreListener::LoadRequest(KeyStore& keyStore)
         }
 
         StringSource bufferSource(dataOut.pbData, dataOut.cbData);
-        status = keyStore.Pull(bufferSource, m_fileLocker.GetFileName());
+        status = static_cast<KeyStore*>(keyStoreContext)->Pull(bufferSource, m_fileLocker.GetFileName());
         if (status != ER_OK) {
             QCC_LogError(status, ("KeyStore::Pull failed, status=(%#x)", status));
             goto Exit;
@@ -224,7 +224,7 @@ Exit:
     return status;
 }
 
-QStatus DefaultKeyStoreListener::StoreRequest(KeyStore& keyStore)
+QStatus DefaultKeyStoreListener::StoreRequest(KeyStoreContext keyStoreContext)
 {
     class BufferSink : public Sink {
       public:
@@ -259,7 +259,7 @@ QStatus DefaultKeyStoreListener::StoreRequest(KeyStore& keyStore)
         goto Exit;
     }
 
-    status = keyStore.Push(buffer);
+    status = static_cast<KeyStore*>(keyStoreContext)->Push(buffer);
     if (status != ER_OK) {
         goto Exit;
     }

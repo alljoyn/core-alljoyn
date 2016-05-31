@@ -32,17 +32,18 @@
 namespace ajn {
 
 /**
- * Forward declaration.
- */
-class KeyStore;
-
-/**
  * An application can provide a key store listener to override the default key store Load and Store
  * behavior. This will override the default key store behavior.
  */
 class KeyStoreListener {
 
   public:
+    /**
+     * Pointer to the KeyStore context object.
+     * It is passed to PutKeys() and GetKeys() from LoadRequest() and StoreRequest() methods.
+     */
+    typedef void* KeyStoreContext;
+
     /**
      * Virtual destructor for derivable class.
      */
@@ -53,19 +54,19 @@ class KeyStoreListener {
      * @remark The application must call <tt>#PutKeys</tt> to put the new key store data into the
      * internal key store.
      *
-     * @param keyStore   Reference to the KeyStore to be loaded.
+     * @param keyStoreContext   Pointer to the KeyStore to be loaded.
      *
      * @return
      *      - #ER_OK if the load request was satisfied
      *      - An error status otherwise
      *
      */
-    virtual QStatus LoadRequest(KeyStore& keyStore) = 0;
+    virtual QStatus LoadRequest(KeyStoreContext keyStoreContext) = 0;
 
     /**
      * Put keys into the key store from an encrypted byte string.
      *
-     * @param keyStore  The keyStore to put to. This is the keystore indicated in the LoadRequest call.
+     * @param keyStoreContext  The KeyStore to put to. This is the KeyStore indicated in the LoadRequest call.
      * @param source    The byte string containing the encrypted key store contents.
      * @param password  The password required to decrypt the key data
      *
@@ -74,30 +75,30 @@ class KeyStoreListener {
      *      - An error status otherwise
      *
      */
-    QStatus PutKeys(KeyStore& keyStore, const qcc::String& source, const qcc::String& password);
+    QStatus PutKeys(KeyStoreContext keyStoreContext, const qcc::String& source, const qcc::String& password);
 
     /**
      * This method is called when a key store needs to be stored.
      * @remark The application must call <tt>#GetKeys</tt> to obtain the key data to be stored.
      *
-     * @param keyStore   Reference to the KeyStore to be stored.
+     * @param keyStoreContext   Pointer to the KeyStore to be stored.
      *
      * @return
      *      - #ER_OK if the store request was satisfied
      *      - An error status otherwise
      */
-    virtual QStatus StoreRequest(KeyStore& keyStore) = 0;
+    virtual QStatus StoreRequest(KeyStoreContext keyStoreContext) = 0;
 
     /**
      * Get the current keys from the key store as an encrypted byte string.
      *
-     * @param keyStore  The keyStore to get from. This is the keystore indicated in the StoreRequest call.
+     * @param keyStoreContext  The KeyStore to get from. This is the KeyStore indicated in the StoreRequest call.
      * @param sink      The byte string to write the keys to.
      * @return
      *      - #ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus GetKeys(KeyStore& keyStore, qcc::String& sink);
+    QStatus GetKeys(KeyStoreContext keyStoreContext, qcc::String& sink);
 
     /**
      * Request to acquire exclusive lock (e.g., file lock) on the keyStore.
