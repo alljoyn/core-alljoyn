@@ -52,6 +52,80 @@ public class PropsTest extends TestCase {
         }
     }
 
+    public class CustomExceptionService implements PropsInterface, BusObject {
+        public static final String GET_STRING_ERROR_NAME = "getStringPropFailed";
+        public static final String GET_STRING_ERROR_MESSAGE = "getString customMessage";
+        public static final String SET_STRING_ERROR_NAME = "setStringPropFailed set";
+        public static final String SET_STRING_ERROR_MESSAGE = "setString customMessage set";
+        public static final String GET_INT_ERROR_NAME = "getIntPropFailed";
+        public static final String GET_INT_ERROR_MESSAGE = "getInt customMessage";
+        public static final String SET_INT_ERROR_NAME = "setIntPropFailed set";
+        public static final String SET_INT_ERROR_MESSAGE = "setInt customMessage set";
+
+        private String stringProperty = "Hello";
+
+        private int intProperty = 6;
+
+        public String getStringProp() throws BusException {
+            throw new ErrorReplyBusException(GET_STRING_ERROR_NAME, GET_STRING_ERROR_MESSAGE);
+        }
+
+        public void setStringProp(String stringProperty) throws BusException{
+            this.stringProperty = stringProperty;
+            throw new ErrorReplyBusException(SET_STRING_ERROR_NAME, SET_STRING_ERROR_MESSAGE);
+        }
+
+        public int getIntProp() throws BusException {
+            throw new ErrorReplyBusException(GET_INT_ERROR_NAME, GET_INT_ERROR_MESSAGE);
+        }
+
+        public void setIntProp(int intProperty) throws BusException {
+            this.intProperty = intProperty;
+            throw new ErrorReplyBusException(SET_INT_ERROR_NAME, SET_INT_ERROR_MESSAGE);
+        }
+
+        public String ping(String str) throws BusException {
+            return str;
+        }
+    }
+
+    public class CustomExceptionService2 implements PropsInterface, BusObject {
+        public static final String GET_STRING_ERROR_NAME = "";
+        public static final String GET_STRING_ERROR_MESSAGE = "";
+        public static final String SET_STRING_ERROR_NAME = "";
+        public static final String SET_STRING_ERROR_MESSAGE = "";
+        public static final String GET_INT_ERROR_NAME = "";
+        public static final String GET_INT_ERROR_MESSAGE = "";
+        public static final String SET_INT_ERROR_NAME = "";
+        public static final String SET_INT_ERROR_MESSAGE = "test";
+
+        private String stringProperty = "Hello";
+
+        private int intProperty = 6;
+
+        public String getStringProp() throws BusException {
+            throw new ErrorReplyBusException(GET_STRING_ERROR_NAME, GET_STRING_ERROR_MESSAGE);
+        }
+
+        public void setStringProp(String stringProperty) throws BusException{
+            this.stringProperty = stringProperty;
+            throw new ErrorReplyBusException(SET_STRING_ERROR_NAME, SET_STRING_ERROR_MESSAGE);
+        }
+
+        public int getIntProp() throws BusException {
+            throw new ErrorReplyBusException(GET_INT_ERROR_NAME, GET_INT_ERROR_MESSAGE);
+        }
+
+        public void setIntProp(int intProperty) throws BusException {
+            this.intProperty = intProperty;
+            throw new ErrorReplyBusException(SET_INT_ERROR_NAME, SET_INT_ERROR_MESSAGE);
+        }
+
+        public String ping(String str) throws BusException {
+            return str;
+        }
+    }
+
     BusAttachment bus;
     BusAttachment clientBus;
 
@@ -62,6 +136,18 @@ public class PropsTest extends TestCase {
         /* Register the service */
         Service service = new Service();
         Status status = bus.registerBusObject(service, "/testProperties");
+        if (Status.OK != status) {
+            throw new BusException("BusAttachment.registerBusObject() failed: " + status.toString());
+        }
+
+        CustomExceptionService customExceptionService = new CustomExceptionService();
+        status = bus.registerBusObject(customExceptionService, "/testPropertiesCustomException");
+        if (Status.OK != status) {
+            throw new BusException("BusAttachment.registerBusObject() failed: " + status.toString());
+        }
+
+        CustomExceptionService2 customExceptionService2 = new CustomExceptionService2();
+        status = bus.registerBusObject(customExceptionService2, "/testPropertiesCustomException2");
         if (Status.OK != status) {
             throw new BusException("BusAttachment.registerBusObject() failed: " + status.toString());
         }
@@ -152,5 +238,107 @@ public class PropsTest extends TestCase {
 
         PropsInterface proxy = remoteObj.getInterface(PropsInterface.class);
         assertEquals("World", proxy.ping("World"));
+   }
+
+    /* ALLJOYN-2924 */
+    public void testCustomException() throws Exception {
+        /* Request a well-known name */
+        DBusProxyObj control = bus.getDBusProxyObj();
+        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.samples.props",
+                                                                DBusProxyObj.REQUEST_NAME_NO_FLAGS);
+        if (res != DBusProxyObj.RequestNameResult.PrimaryOwner) {
+            throw new BusException("Failed to obtain well-known name");
+        }
+
+        /* Get a remote object */
+        ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.samples.props",
+                                                         "/testPropertiesCustomException",
+                                                         BusAttachment.SESSION_ID_ANY,
+                                                         new Class<?>[] { PropsInterface.class,
+                                                                          Properties.class });
+        PropsInterface proxy = remoteObj.getInterface(PropsInterface.class);
+
+        /* Get a String property */
+        try {
+            proxy.getStringProp();
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), CustomExceptionService.GET_STRING_ERROR_NAME);
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService.GET_STRING_ERROR_MESSAGE);
+        } catch (BusException busException) {}
+
+        /* Set a String property */
+        try {
+            proxy.setStringProp("MyNewValue");
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), CustomExceptionService.SET_STRING_ERROR_NAME);
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService.SET_STRING_ERROR_MESSAGE);
+        } catch (BusException busException) {}
+
+        /* get an int property */
+        try {
+            proxy.getIntProp();
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), CustomExceptionService.GET_INT_ERROR_NAME);
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService.GET_INT_ERROR_MESSAGE);
+        } catch (BusException busException) {}
+
+        /* set an int property */
+        try {
+            proxy.setIntProp(1);
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), CustomExceptionService.SET_INT_ERROR_NAME);
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService.SET_INT_ERROR_MESSAGE);
+        } catch (BusException busException) {}
+   }
+
+    /* ALLJOYN-2924 */
+    public void testCustomException2() throws Exception {
+        /* Request a well-known name */
+        DBusProxyObj control = bus.getDBusProxyObj();
+        DBusProxyObj.RequestNameResult res = control.RequestName("org.alljoyn.bus.samples.props",
+                                                                DBusProxyObj.REQUEST_NAME_NO_FLAGS);
+        if (res != DBusProxyObj.RequestNameResult.PrimaryOwner) {
+            throw new BusException("Failed to obtain well-known name");
+        }
+
+        /* Get a remote object */
+        ProxyBusObject remoteObj = bus.getProxyBusObject("org.alljoyn.bus.samples.props",
+                                                         "/testPropertiesCustomException2",
+                                                         BusAttachment.SESSION_ID_ANY,
+                                                         new Class<?>[] { PropsInterface.class,
+                                                                          Properties.class });
+        PropsInterface proxy = remoteObj.getInterface(PropsInterface.class);
+
+        /* Get a String property */
+        try {
+            proxy.getStringProp();
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), "org.alljoyn.Bus.ErStatus");
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService2.GET_STRING_ERROR_MESSAGE);
+        } catch (BusException busException) {}
+
+        /* Set a String property */
+        try {
+            proxy.setStringProp("MyNewValue");
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), "org.alljoyn.Bus.ErStatus");
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService2.SET_STRING_ERROR_MESSAGE);
+        } catch (BusException busException) {}
+
+        /* get an int property */
+        try {
+            proxy.getIntProp();
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), "org.alljoyn.Bus.ErStatus");
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService2.GET_INT_ERROR_MESSAGE);
+        } catch (BusException busException) {}
+
+        /* set an int property */
+        try {
+            proxy.setIntProp(1);
+        } catch (ErrorReplyBusException errorReply) {
+            assertEquals(errorReply.getErrorName(), "org.alljoyn.Bus.ErStatus");
+            assertEquals(errorReply.getErrorMessage(), "ER_BUS_REPLY_IS_ERROR_MESSAGE" + CustomExceptionService2.SET_INT_ERROR_MESSAGE);
+        } catch (BusException busException) {}
    }
 }
