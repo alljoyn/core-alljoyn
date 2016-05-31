@@ -32,10 +32,8 @@
 
 namespace ajn {
 
-class KeyStore;
-
 /**
- * This class adds a level of indirection to an AuthListener so the actual AuthListener can
+ * This class adds a level of indirection to an KeyStoreListener so the actual KeyStoreListener can
  * asynchronously be set or removed safely.
  */
 class ProtectedKeyStoreListener {
@@ -90,7 +88,7 @@ class ProtectedKeyStoreListener {
     /**
      * Simply wraps the call of the same name to the inner KeyStoreListener
      */
-    QStatus LoadRequest(KeyStore& keyStore);
+    QStatus LoadRequest(KeyStoreListener::KeyStoreContext keyStoreContext);
 
     /**
      * Simply wraps the call of the same name to the inner KeyStoreListener
@@ -99,7 +97,7 @@ class ProtectedKeyStoreListener {
      *      - #ER_OK if successful
      *      - An error status otherwise
      */
-    QStatus StoreRequest(KeyStore& keyStore);
+    QStatus StoreRequest(KeyStoreListener::KeyStoreContext keyStoreContext);
 
   private: ~ProtectedKeyStoreListener();
 

@@ -28,17 +28,17 @@ extern "C" {
 #endif
 
 /**
- * The alljoyn_keystore manages storing and loading of key blobs from
- * external storage.
+ * The alljoyn_keystore_context is a wrapper for key store object which manages
+ * storing and loading of key blobs from external storage.
  */
-typedef struct _alljoyn_keystore_handle*                    alljoyn_keystore;
+typedef void* alljoyn_keystore_context;
 
 /**
  * An application can provide a key store listener to override the default key store
  * load request and store request behavior.  If an alljoyn_keystorelistener is provided it will
  * override the default key store behavior.
  */
-typedef struct _alljoyn_keystorelistener_handle*            alljoyn_keystorelistener;
+typedef struct _alljoyn_keystorelistener_handle* alljoyn_keystorelistener;
 
 /**
  * Type for the LoadRequest callback.
@@ -51,14 +51,14 @@ typedef struct _alljoyn_keystorelistener_handle*            alljoyn_keystorelist
  * @param listener   The listener that is responsible for the LoadRequest callback.
  *                   This listener should be used when calling the @c alljoyn_keystorelistener_putkeys
  *                   function.
- * @param keyStore   Reference to the alljoyn_keystore to be loaded.
+ * @param keyStore   The @c alljoyn_keystore_context to be loaded.
  *
  * @return
  *      - #ER_OK if the load request was satisfied
  *      - An error status otherwise
  *
  */
-typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore_context keyStore);
 
 /**
  * Type for the StoreRequest callback.
@@ -70,13 +70,13 @@ typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void*
  * @param listener   The listener that responsible for the StoreRequest callback.
  *                   This listener should be used when calling the @c alljoyn_keystorelistener_getkeys
  *                   function.
- * @param keyStore   Reference to the @c alljoyn_keystore to be stored.
+ * @param keyStore   The @c alljoyn_keystore_context to be stored.
  *
  * @return
  *      - #ER_OK if the store request was satisfied
  *      - An error status otherwise
  */
-typedef QStatus (AJ_CALL * alljoyn_keystorelistener_storerequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_storerequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore_context keyStore);
 
 /**
  * Structure used during alljoyn_keystorelistener_create to provide callbacks into C.
@@ -117,7 +117,7 @@ extern AJ_API void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelist
  * Put keys into the key store from an encrypted byte string.
  *
  * @param listener  The alljoyn_keystorelistener into which to put the keys.
- * @param keyStore  The keyStore to put to. This is the keystore indicated in the LoadRequest call.
+ * @param keyStore  The KeyStore to put to. This is the KeyStore indicated in the LoadRequest call.
  * @param source    The byte string containing the encrypted key store contents.
  * @param password  The password required to decrypt the key data
  *
@@ -126,7 +126,7 @@ extern AJ_API void AJ_CALL alljoyn_keystorelistener_destroy(alljoyn_keystorelist
  *      - An error status otherwise
  *
  */
-extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorelistener listener, alljoyn_keystore_context keyStore,
                                                                const char* source, const char* password);
 
 /**
@@ -143,7 +143,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorel
  * @endcode
  *
  * @param listener  The alljoyn_keystorelistener from which to get the keys.
- * @param keyStore  The keyStore to get from. This is the keystore indicated in
+ * @param keyStore  The KeyStore to get from. This is the KeyStore indicated in
  *                  the StoreRequest call.
  * @param sink      The byte string to write the keys to. If sink is NULL then the
  *                  sink_sz parameter will return the size of the sink plus the
@@ -158,7 +158,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_putkeys(alljoyn_keystorel
  *        to hold the sink
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore keyStore,
+extern AJ_API QStatus AJ_CALL alljoyn_keystorelistener_getkeys(alljoyn_keystorelistener listener, alljoyn_keystore_context keyStore,
                                                                char* sink, size_t* sink_sz);
 
 #ifdef __cplusplus

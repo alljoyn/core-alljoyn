@@ -70,7 +70,7 @@ static void AJ_CALL ping_method(alljoyn_busobject bus, const alljoyn_interfacede
 /* Keystore listener callback functions */
 static char* inMemoryKeystore = NULL;
 
-static QStatus AJ_CALL alljoyn_keystorelistener_loadrequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
+static QStatus AJ_CALL alljoyn_keystorelistener_loadrequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore_context keyStore)
 {
     QCC_UNUSED(context);
 
@@ -81,7 +81,7 @@ static QStatus AJ_CALL alljoyn_keystorelistener_loadrequest(const void* context,
 
 }
 
-static QStatus AJ_CALL alljoyn_keystorelistener_storerequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore)
+static QStatus AJ_CALL alljoyn_keystorelistener_storerequest(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore_context keyStore)
 {
     QCC_UNUSED(context);
 
