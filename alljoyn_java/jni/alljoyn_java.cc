@@ -2196,7 +2196,9 @@ class JBusObject : public BusObject {
     QStatus Signal(const char* destination, SessionId sessionId, const char* ifaceName, const char* signalName,
                    const MsgArg* args, size_t numArgs, uint32_t timeToLive, uint8_t flags, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
+    QStatus Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
+    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
     String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
     String GenerateIntrospection(bool deep = false, size_t indent = 0) const;
     void ObjectRegistered();
@@ -9134,7 +9136,7 @@ QStatus JBusObject::MethodReply(const InterfaceDescription::Member* member, Mess
 
 QStatus JBusObject::MethodReply(const InterfaceDescription::Member* member, const Message& msg, const char* error, const char* errorMessage)
 {
-    QCC_DbgPrintf(("JBusObject::MethodReply()"));
+    QCC_DbgPrintf(("JBusObject::MethodReply2"));
 
     qcc::String val;
     if (member->GetAnnotation(org::freedesktop::DBus::AnnotateNoReply, val) && val == "true") {
@@ -9146,7 +9148,7 @@ QStatus JBusObject::MethodReply(const InterfaceDescription::Member* member, cons
 
 QStatus JBusObject::MethodReply(const InterfaceDescription::Member* member, Message& msg, jobject jreply)
 {
-    QCC_DbgPrintf(("JBusObject::MethodReply()"));
+    QCC_DbgPrintf(("JBusObject::MethodReply3()"));
 
     qcc::String val;
     if (member->GetAnnotation(org::freedesktop::DBus::AnnotateNoReply, val) && val == "true") {
@@ -9225,7 +9227,13 @@ QStatus JBusObject::Signal(const char* destination, SessionId sessionId, const c
 QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val)
 {
     QCC_DbgPrintf(("JBusObject::Get()"));
+    qcc::String errorName;
+    qcc::String errorMessage;
+    return Get(ifcName, propName, val, errorName, errorMessage);
+}
 
+QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+{
     /*
      * JScopedEnv will automagically attach the JVM to the current native
      * thread.
@@ -9271,9 +9279,93 @@ QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val)
     }
 
     JLocalRef<jobject> jvalue = CallObjectMethod(env, property->second.jget, mid, jo, NULL);
-    if (env->ExceptionCheck()) {
+    JLocalRef<jthrowable> exception = env->ExceptionOccurred();
+    if (exception) {
+        env->ExceptionClear();
+        JLocalRef<jclass> clazz = env->GetObjectClass(exception);
+        jmethodID mid = env->GetMethodID(clazz, "getCause", "()Ljava/lang/Throwable;");
+        if (!mid) {
+            mapLock.Unlock();
+            return ER_FAIL;
+        }
+        exception = (jthrowable) CallObjectMethod(env, exception, mid);
+
+        if (env->IsInstanceOf(exception, CLS_ErrorReplyBusException)) {
+            mid = env->GetMethodID(CLS_ErrorReplyBusException, "getErrorStatus", "()Lorg/alljoyn/bus/Status;");
+            if (!mid) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jobject> jstatus = CallObjectMethod(env, exception, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jclass> statusClazz = env->GetObjectClass(jstatus);
+            mid = env->GetMethodID(statusClazz, "getErrorCode", "()I");
+            if (!mid) {
+                QCC_LogMsg(("method id for getErrorCode not exists"));
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            QStatus errorCode = (QStatus) env->CallIntMethod(jstatus, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            mid = env->GetMethodID(CLS_ErrorReplyBusException, "getErrorName", "()Ljava/lang/String;");
+            if (!mid) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jstring> jerrorName = (jstring) CallObjectMethod(env, exception, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JString locErrorName(jerrorName);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            mid = env->GetMethodID(CLS_ErrorReplyBusException, "getErrorMessage", "()Ljava/lang/String;");
+            if (!mid) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jstring> jerrorMessage = (jstring) CallObjectMethod(env, exception, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JString locErrorMessage(jerrorMessage);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            if (locErrorName.c_str()) {
+                errorName = locErrorName.c_str();
+            }
+
+            if (locErrorMessage.c_str()) {
+                errorMessage = locErrorMessage.c_str();
+            }
+
+            QCC_UNUSED(errorCode);
+
+        }
         mapLock.Unlock();
-        return ER_FAIL;
+        return ER_BUS_REPLY_IS_ERROR_MESSAGE;
     }
 
     if (!Marshal(property->second.signature.c_str(), (jobject)jvalue, &val)) {
@@ -9288,7 +9380,13 @@ QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val)
 QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val)
 {
     QCC_DbgPrintf(("JBusObject::Set()"));
+    qcc::String errorName;
+    qcc::String errorMessage;
+    return Set(ifcName, propName, val, errorName, errorMessage);
+}
 
+QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+{
     /*
      * JScopedEnv will automagically attach the JVM to the current native
      * thread.
@@ -9341,9 +9439,94 @@ QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val)
     }
 
     CallObjectMethod(env, property->second.jset, mid, jo, (jobjectArray)jvalue);
-    if (env->ExceptionCheck()) {
+    JLocalRef<jthrowable> exception = env->ExceptionOccurred();
+    if (exception) {
+        env->ExceptionClear();
+        JLocalRef<jclass> clazz = env->GetObjectClass(exception);
+        jmethodID mid = env->GetMethodID(clazz, "getCause", "()Ljava/lang/Throwable;");
+        if (!mid) {
+            mapLock.Unlock();
+            return ER_FAIL;
+        }
+        exception = (jthrowable) CallObjectMethod(env, exception, mid);
+
+        if (env->IsInstanceOf(exception, CLS_ErrorReplyBusException)) {
+            mid = env->GetMethodID(CLS_ErrorReplyBusException, "getErrorStatus", "()Lorg/alljoyn/bus/Status;");
+            if (!mid) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jobject> jstatus = CallObjectMethod(env, exception, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jclass> statusClazz = env->GetObjectClass(jstatus);
+            mid = env->GetMethodID(statusClazz, "getErrorCode", "()I");
+            if (!mid) {
+                QCC_LogMsg(("method id for getErrorCode not exists"));
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            QStatus errorCode = (QStatus) env->CallIntMethod(jstatus, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            mid = env->GetMethodID(CLS_ErrorReplyBusException, "getErrorName", "()Ljava/lang/String;");
+            if (!mid) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jstring> jerrorName = (jstring) CallObjectMethod(env, exception, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JString locErrorName(jerrorName);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            mid = env->GetMethodID(CLS_ErrorReplyBusException, "getErrorMessage", "()Ljava/lang/String;");
+            if (!mid) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JLocalRef<jstring> jerrorMessage = (jstring) CallObjectMethod(env, exception, mid);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            JString locErrorMessage(jerrorMessage);
+            if (env->ExceptionCheck()) {
+                mapLock.Unlock();
+                return ER_FAIL;
+            }
+
+            if (locErrorName.c_str()) {
+                errorName = locErrorName.c_str();
+            }
+
+            if (locErrorMessage.c_str()) {
+                errorMessage = locErrorMessage.c_str();
+            }
+
+            QCC_UNUSED(errorCode);
+
+        }
+
         mapLock.Unlock();
-        return ER_FAIL;
+        return ER_BUS_REPLY_IS_ERROR_MESSAGE;
     }
 
     mapLock.Unlock();
@@ -11632,15 +11815,29 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_ProxyBusObject_getProperty(JNIEnv
     }
 
     MsgArg value;
-    QStatus status = proxyBusObj->GetProperty(interfaceName.c_str(), propertyName.c_str(), value);
+
+    qcc::String errorName;
+    qcc::String errorMessage;
+
+    QStatus status = proxyBusObj->GetProperty(interfaceName.c_str(), propertyName.c_str(), value, errorName, errorMessage);
+
     if (ER_OK == status) {
         jobject obj = Unmarshal(&value, CLS_Variant);
         busPtr->baProxyLock.Unlock();
         return obj;
     } else {
         QCC_LogError(ER_FAIL, ("ProxyBusObjexct_getProperty(): Exception"));
+        if (errorName.c_str()) {
+            if (!strcmp("org.alljoyn.bus.BusException", errorName.c_str())) {
+                env->ThrowNew(CLS_BusException, errorMessage.c_str());
+            } else {
+                ThrowErrorReplyBusException(errorName.c_str(), errorMessage.c_str());
+            }
+        } else {
+            env->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        }
+
         busPtr->baProxyLock.Unlock();
-        env->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return NULL;
     }
 }
@@ -11799,14 +11996,25 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty(JNIEnv* e
 
     MsgArg value;
     QStatus status;
+    qcc::String errorName;
+    qcc::String errorMessage;
     if (Marshal(signature.c_str(), jvalue, &value)) {
-        status = proxyBusObj->SetProperty(interfaceName.c_str(), propertyName.c_str(), value);
+        status = proxyBusObj->SetProperty(interfaceName.c_str(), propertyName.c_str(), value, errorName, errorMessage);
     } else {
         status = ER_FAIL;
     }
+
     if (ER_OK != status) {
         QCC_LogError(ER_FAIL, ("ProxyBusObjexct_setProperty(): Exception"));
-        env->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        if (errorName.c_str()) {
+            if (!strcmp("org.alljoyn.bus.BusException", errorName.c_str())) {
+                env->ThrowNew(CLS_BusException, errorMessage.c_str());
+            } else {
+                ThrowErrorReplyBusException(errorName.c_str(), errorMessage.c_str());
+            }
+        } else {
+            env->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        }
     }
     busPtr->baProxyLock.Unlock();
 }
