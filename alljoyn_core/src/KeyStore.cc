@@ -89,16 +89,16 @@ KeyStoreListener::~KeyStoreListener()
 {
 }
 
-QStatus KeyStoreListener::PutKeys(KeyStore& keyStore, const qcc::String& source, const qcc::String& password)
+QStatus KeyStoreListener::PutKeys(KeyStoreContext keyStoreContext, const qcc::String& source, const qcc::String& password)
 {
     StringSource stringSource(source);
-    return keyStore.Pull(stringSource, password);
+    return static_cast<KeyStore*>(keyStoreContext)->Pull(stringSource, password);
 }
 
-QStatus KeyStoreListener::GetKeys(KeyStore& keyStore, qcc::String& sink)
+QStatus KeyStoreListener::GetKeys(KeyStoreContext keyStoreContext, qcc::String& sink)
 {
     StringSink stringSink;
-    QStatus status = keyStore.Push(stringSink);
+    QStatus status = static_cast<KeyStore*>(keyStoreContext)->Push(stringSink);
     if (status == ER_OK) {
         sink = stringSink.GetString();
     }
@@ -348,7 +348,7 @@ QStatus KeyStore::StoreInternal(std::vector<Key>& expiredKeys)
     }
     storedRefCount++;
 
-    QStatus status = listener->StoreRequest(*this);
+    QStatus status = listener->StoreRequest(this);
     if (status == ER_OK) {
         status = Event::Wait(*stored);
     }
@@ -374,7 +374,7 @@ QStatus KeyStore::LoadPersistentKeys()
     loadedRefCount++;
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     if (callingLoadRequest) {
-        status = listener->LoadRequest(*this);
+        status = listener->LoadRequest(this);
     } else {
         status = ER_OK;
     }
