@@ -113,7 +113,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
         KeyStoreListener::ReleaseExclusiveLock(file, line);
     }
 
-    QStatus LoadRequest(KeyStore& keyStore)
+    QStatus LoadRequest(KeyStoreContext keyStoreContext)
     {
         FileLock readLock;
         QStatus status = fileLocker.GetFileLockForRead(&readLock);
@@ -121,7 +121,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
             FileSource* source = readLock.GetSource();
             QCC_ASSERT(source != nullptr);
             if (source != nullptr) {
-                status = keyStore.Pull(*source, fileLocker.GetFileName());
+                status = static_cast<KeyStore*>(keyStoreContext)->Pull(*source, fileLocker.GetFileName());
                 if (status == ER_OK) {
                     QCC_DbgHLPrintf(("Read key store from %s", fileLocker.GetFileName()));
                 }
@@ -135,7 +135,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
         return status;
     }
 
-    QStatus StoreRequest(KeyStore& keyStore)
+    QStatus StoreRequest(KeyStoreContext keyStoreContext)
     {
         class BufferSink : public Sink {
           public:
@@ -161,7 +161,7 @@ class DefaultKeyStoreListener : public KeyStoreListener {
         QStatus status = fileLocker.GetFileLockForWrite(&writeLock);
         if (status == ER_OK) {
             BufferSink buffer;
-            status = keyStore.Push(buffer);
+            status = static_cast<KeyStore*>(keyStoreContext)->Push(buffer);
             if (status != ER_OK) {
                 QCC_LogError(status, ("StoreRequest error during data buffering"));
                 return status;
