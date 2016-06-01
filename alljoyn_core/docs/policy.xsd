@@ -128,7 +128,7 @@
             <xs:attribute name="name" use="optional" default="*">
                 <xs:simpleType>
                     <xs:restriction base="xs:string">
-                        <xs:pattern value="(\*|/(\*)?|(/[a-zA-Z0-9_]+)+(/\*)?)"/>
+                        <xs:pattern value="(\*|/(\*)?|(/[a-zA-Z0-9_]+)+(/?\*)?)"/>
                     </xs:restriction>
                 </xs:simpleType>
             </xs:attribute>
@@ -145,11 +145,12 @@
                 <xs:element ref="method"/>
                 <xs:element ref="property"/>
                 <xs:element ref="signal"/>
+                <xs:element ref="any"/>
             </xs:choice>
             <xs:attribute name="name" use="optional" default="*">
                 <xs:simpleType>
                     <xs:restriction base="xs:string">
-                        <xs:pattern value="(\*|[a-zA-Z_][a-zA-Z0-9_]*((\.[a-zA-Z_][a-zA-Z0-9_]*)*(\.\*)|(\.[a-zA-Z_][a-zA-Z0-9_]*)+))"/>
+                        <xs:pattern value="(\*|[a-zA-Z_][a-zA-Z0-9_]*((\.[a-zA-Z_][a-zA-Z0-9_]*)*(\.?\*)|(\.[a-zA-Z_][a-zA-Z0-9_]*)+))"/>
                         <xs:maxLength value="255"/>
                     </xs:restriction>
                 </xs:simpleType>
@@ -165,6 +166,10 @@
         </xs:unique>
         <xs:unique name="signalNamesUnique">
             <xs:selector xpath="signal"/>
+            <xs:field xpath="@name"/>
+        </xs:unique>
+        <xs:unique name="anyNamesUnique">
+            <xs:selector xpath="any"/>
             <xs:field xpath="@name"/>
         </xs:unique>
     </xs:element>
@@ -217,6 +222,22 @@
         </xs:unique>
     </xs:element>
 
+    <xs:element name="any">
+        <xs:complexType>
+            <xs:sequence maxOccurs="3">
+                <xs:element name="annotation" type="anyAnnotation"/>
+            </xs:sequence>
+            <xs:attribute name="name" type="memberName" use="optional" default="*"/>
+            <!-- "Deny" annotation cannot appear with other annotations. -->
+            <xs:assert test="(annotation[@value = 'Deny'] and (count(annotation) = 1))
+                       or not(annotation[@value = 'Deny'])"/>
+        </xs:complexType>
+        <xs:unique name="anyActionNamesUnique">
+            <xs:selector xpath="annotation"/>
+            <xs:field xpath="@value"/>
+        </xs:unique>
+    </xs:element>
+
     <xs:simpleType name="memberName">
         <xs:restriction base="xs:string">
             <xs:pattern value="(\*|([a-zA-Z_][a-zA-Z0-9_]*)(\*)?)"/>
@@ -257,6 +278,20 @@
             <xs:simpleType>
                 <xs:restriction base="xs:string">
                     <xs:enumeration value="Deny"/>
+                    <xs:enumeration value="Provide"/>
+                    <xs:enumeration value="Observe"/>
+                </xs:restriction>
+            </xs:simpleType>
+        </xs:attribute>
+    </xs:complexType>
+
+    <xs:complexType name="anyAnnotation">
+        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="value" use="required">
+            <xs:simpleType>
+                <xs:restriction base="xs:string">
+                    <xs:enumeration value="Deny"/>
+                    <xs:enumeration value="Modify"/>
                     <xs:enumeration value="Provide"/>
                     <xs:enumeration value="Observe"/>
                 </xs:restriction>
