@@ -599,7 +599,7 @@ class XmlRulesConverterToRulesCountTest : public testing::TestWithParam<SizePara
 
     XmlRulesConverterToRulesCountTest() :
         m_expectedCount(GetParam().m_integer),
-        m_rulesXml(GetParam().m_rulesXml)
+        m_rulesXml(GetParam().m_xml)
     { }
 };
 

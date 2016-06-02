@@ -43,16 +43,14 @@ const std::regex XmlRulesValidator::s_memberNameRegex = std::regex("(\\*|([a-zA-
 
 void XmlRulesValidator::Init()
 {
-    static bool initialized = false;
+    MemberTypeMapInit();
+    MethodsValidator::Init();
+    SignalsValidator::Init();
+    PropertiesValidator::Init();
+}
 
-    if (!initialized) {
-        MemberTypeMapInit();
-        MethodsValidator::Init();
-        SignalsValidator::Init();
-        PropertiesValidator::Init();
-
-        initialized = true;
-    }
+void XmlRulesValidator::Shutdown()
+{
 }
 
 void XmlRulesValidator::MemberTypeMapInit()

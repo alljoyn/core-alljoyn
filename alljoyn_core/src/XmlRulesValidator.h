@@ -74,10 +74,15 @@ class XmlRulesValidator : public XmlValidator {
      */
     static std::unordered_map<std::string, PermissionPolicy::Rule::Member::MemberType> s_memberTypeMap;
 
-    /*
+    /**
      * Initializes the static members.
      */
     static void Init();
+
+    /**
+     * Performs the static members cleanup.
+     */
+    static void Shutdown();
 
     /**
      * Validates the set of rules map to an XML that is valid according

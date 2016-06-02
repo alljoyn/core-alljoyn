@@ -269,7 +269,7 @@ class XmlRulesConverterToXmlCountTest : public testing::TestWithParam<SizeParams
 
     virtual void SetUp()
     {
-        ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(GetParam().m_rulesXml, m_rulesVector));
+        ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(GetParam().m_xml, m_rulesVector));
         m_rules = m_rulesVector.data();
         m_rulesCount = m_rulesVector.size();
     }

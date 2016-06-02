@@ -40,10 +40,15 @@ namespace ajn {
 class XmlRulesConverter {
   public:
 
-    /*
+    /**
      * Initializes the static members.
      */
     static void Init();
+
+    /**
+     * Performs the static members cleanup.
+     */
+    static void Shutdown();
 
     /**
      * Extract PermissionPolicy::Rules from rules in XML format. The rules

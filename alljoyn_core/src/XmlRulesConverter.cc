@@ -37,14 +37,12 @@ unordered_map<string, uint8_t> XmlRulesConverter::s_memberMasksMap;
 
 void XmlRulesConverter::Init()
 {
-    static bool initialized = false;
+    InitInverseMemberTypeMap();
+    InitMemberMasksMap();
+}
 
-    if (!initialized) {
-        InitInverseMemberTypeMap();
-        InitMemberMasksMap();
-
-        initialized = true;
-    }
+void XmlRulesConverter::Shutdown()
+{
 }
 
 void XmlRulesConverter::InitInverseMemberTypeMap()

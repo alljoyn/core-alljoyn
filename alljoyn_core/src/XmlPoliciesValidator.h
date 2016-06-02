@@ -80,10 +80,15 @@ class XmlPoliciesValidator : public XmlValidator {
      */
     static std::unordered_map<std::string, PermissionPolicy::Peer::PeerType> s_peerTypeMap;
 
-    /*
+    /**
      * Initializes the static members.
      */
     static void Init();
+
+    /**
+     * Performs the static members cleanup.
+     */
+    static void Shutdown();
 
     /**
      * Verifies the input XML follows the policy XML schema
@@ -96,6 +101,19 @@ class XmlPoliciesValidator : public XmlValidator {
      *           #ER_XML_MALFORMED if the XML does not follow the policy XML schema.
      */
     static QStatus Validate(const qcc::XmlElement* policyXml);
+
+    /**
+     * Validates that the PermissionPolicy object maps to an XML
+     * that is valid according to the schema for policy rules XMLs.
+     * The schema is available under alljoyn_core/docs/policy.xsd.
+     *
+     * @param[in]   policy  PermissionPolicy object.
+     *
+     * @return
+     *            #ER_OK if the input is correct.
+     *            #ER_FAIL if the policy is not following the schema.
+     */
+    static QStatus Validate(const PermissionPolicy& policy);
 
     /**
      * Default destructor.
@@ -190,6 +208,58 @@ class XmlPoliciesValidator : public XmlValidator {
      */
     static QStatus ValidatePeer(const qcc::XmlElement* peer, PeerValidatorFactory& peerValidatorFactory);
 
+    /**
+     * Verifies the policy version.
+     *
+     * @param[in]    policyVersion   Policy version.
+     *
+     * @return   #ER_OK      If the policy version is valid.
+     *           #ER_FAIL    If the policy version is invalid.
+     */
+    static QStatus ValidatePolicyVersion(uint32_t policyVersion);
+
+    /**
+     * Verifies the policy's serial number.
+     *
+     * @param[in]    serialNumber   Policy's serial number.
+     *
+     * @return   #ER_OK      If the policy's serial number is valid.
+     *           #ER_FAIL    If the policy's serial number is invalid.
+     */
+    static QStatus ValidateSerialNumber(uint32_t serialNumber);
+
+    /**
+     * Veifies if the policy's ACLs are valid.
+     *
+     * @param[in]    acls        An array of policy's ACLs.
+     * @param[in]    aclsSize    Count of policy's ACLs.
+     *
+     * @return   #ER_OK      If the policy's ACLs are valid.
+     *           #ER_FAIL    If the policy's ACLs are invalid.
+     */
+    static QStatus ValidateAcls(const PermissionPolicy::Acl* acls, size_t aclsSize);
+
+    /**
+     * Veifies if a single policy's ACL is valid.
+     *
+     * @param[in]    acl   Single policy's ACL.
+     *
+     * @return   #ER_OK      If the policy's ACL is valid.
+     *           #ER_FAIL    If the policy's ACL is invalid.
+     */
+    static QStatus ValidateAcl(const PermissionPolicy::Acl& acl);
+
+    /**
+     * Veifies if the policy's peers are valid.
+     *
+     * @param[in]    peers       An array of permission policy peers.
+     * @param[in]    peersSize   Count of policy's peers.
+     *
+     * @return   #ER_OK      If the policy's peers are valid.
+     *           #ER_FAIL    If the policy's peers are invalid.
+     */
+    static QStatus ValidatePeers(const PermissionPolicy::Peer* peers, size_t peersSize);
+
 
     /*
      * Base class for validating XML "peer" elements.
@@ -223,13 +293,16 @@ class XmlPoliciesValidator : public XmlValidator {
         virtual QStatus Validate(const qcc::XmlElement* peer);
 
         /**
-         * Updates information about already analyzed peers.
+         * Validates the peer given as an PermissionPolicy::Peer object.
          *
-         * @param[in]    allTypeAbsent          Flag indicating that the "ALL" peer
-         *                                      has already been validated.
-         * @param[in]    firstPeer              Flag indicating this is the first validated peer.
-         * @param[in]    anyTrustedTypePresent  Flag indicating that the "ANY_TRUSTED"
-         *                                      peer has already been validated.
+         * @param[in]    peer  Validated peer.
+         *
+         * @return  #ER_OK if the input is correct.
+         *          #ER_FAIL otherwise.
+         */
+        virtual QStatus Validate(const PermissionPolicy::Peer& peer);
+
+        /**
          */
         void UpdatePeersFlags(bool allTypeAbsent, bool firstPeer, bool anyTrustedTypePresent);
 
@@ -273,6 +346,16 @@ class XmlPoliciesValidator : public XmlValidator {
         virtual QStatus ValidateTypeSpecific(const qcc::XmlElement* peer);
 
         /**
+         * Validates peer details specific to a given type.
+         *
+         * @param[in]    peer    The validated peer.
+         *
+         * @return  #ER_OK   If the input is correct.
+         *          #ER_FAIL If the peer is not valid.
+         */
+        virtual QStatus ValidateTypeSpecific(const PermissionPolicy::Peer& peer) = 0;
+
+        /**
          * Retrieves the expected children count of the validated peer element.
          *
          * @param[in]    peer    A XML "peer" element.
@@ -289,9 +372,9 @@ class XmlPoliciesValidator : public XmlValidator {
          * is not present at all.
          *
          * @return  #ER_OK if true.
-         *          #ER_XML_MALFORMED otherwise.
+         *          #ER_FAIL otherwise.
          */
-        QStatus ValidateNoAllTypeWithOther();
+        QStatus ValidateAllTypeAbsentOrOnlyPeer();
 
         /**
          * Validates peer contents that are common for all peer types.
@@ -302,6 +385,14 @@ class XmlPoliciesValidator : public XmlValidator {
          *          #ER_XML_MALFORMED if the XML is not a valid peer.
          */
         QStatus ValidateCommon(const qcc::XmlElement* peer);
+
+        /**
+         * Validates peer contents that are common for all peer types.
+         *
+         * @return  #ER_OK      If the input is correct.
+         *          #ER_FAIL    If the peer is not valid.
+         */
+        QStatus ValidateCommon();
 
         /**
          * Validates if the peer contains the correct number of child eleemnts.
@@ -315,19 +406,28 @@ class XmlPoliciesValidator : public XmlValidator {
     };
 
 
-    class AllValidator : public PeerValidator {
+    class PeerWithoutPublicKey : public PeerValidator {
+      protected:
+
+        virtual QStatus ValidateTypeSpecific(const PermissionPolicy::Peer& peer);
+    };
+
+
+    class AllValidator : public PeerWithoutPublicKey {
       private:
 
         virtual size_t GetPeerChildrenCount();
     };
 
 
-    class AnyTrustedValidator : public PeerValidator {
+    class AnyTrustedValidator : public PeerWithoutPublicKey {
       private:
 
         virtual size_t GetPeerChildrenCount();
 
         virtual QStatus ValidateTypeSpecific(const qcc::XmlElement* peer);
+
+        virtual QStatus ValidateTypeSpecific(const PermissionPolicy::Peer& peer);
     };
 
 
@@ -339,6 +439,8 @@ class XmlPoliciesValidator : public XmlValidator {
 
         virtual QStatus ValidateTypeSpecific(const qcc::XmlElement* peer);
 
+        virtual QStatus ValidateTypeSpecific(const PermissionPolicy::Peer& peer);
+
         /**
          * Retrieves the the currently validated peer's ID.
          *
@@ -349,6 +451,16 @@ class XmlPoliciesValidator : public XmlValidator {
          */
         virtual std::string GetPeerId(const qcc::XmlElement* peer);
 
+        /**
+         * Retrieves the the currently validated peer's ID.
+         *
+         * @param[in]    peer    The validated peer object.
+         *
+         * @return  Current peer's ID. An ID is either the peer's public key
+         * or public key and sgID - type dependent.
+         */
+        virtual std::string GetPeerId(const PermissionPolicy::Peer& peer);
+
       private:
 
         /**
@@ -358,7 +470,7 @@ class XmlPoliciesValidator : public XmlValidator {
         std::unordered_set<std::string> m_peersIds;
 
         /**
-         * Validates the peer is unique in terms of it's type and ID.
+         * Validates the peer is unique in terms of its type and ID.
          *
          * @param[in]    peer    A XML "peer" element.
          *
@@ -366,6 +478,16 @@ class XmlPoliciesValidator : public XmlValidator {
          *          #ER_XML_MALFORMED if the XML is not a valid peer.
          */
         QStatus ValidatePeerUnique(const qcc::XmlElement* peer);
+
+        /**
+         * Validates the peer is unique in terms of its type and ID.
+         *
+         * @param[in]    peer    The validated peer.
+         *
+         * @return  #ER_OK   If the input is correct.
+         *          #ER_FAIL If the peer is not valid.
+         */
+        QStatus ValidatePeerUnique(const PermissionPolicy::Peer& peer);
 
         /**
          * Validates the peer's public key is in correct PEM format.
@@ -376,6 +498,16 @@ class XmlPoliciesValidator : public XmlValidator {
          *          #ER_XML_MALFORMED if the XML is not a valid peer.
          */
         QStatus ValidatePublicKey(const qcc::XmlElement* peer);
+
+        /**
+         * Validates that the peer's public key is set.
+         *
+         * @param[in]    peer    The validated peer.
+         *
+         * @return  #ER_OK   If the input is correct.
+         *          #ER_FAIL If the peer is not valid.
+         */
+        QStatus ValidatePublicKey(const PermissionPolicy::Peer& peer);
 
         virtual size_t GetPeerChildrenCount();
     };
@@ -391,6 +523,8 @@ class XmlPoliciesValidator : public XmlValidator {
         virtual size_t GetPeerChildrenCount();
 
         virtual std::string GetPeerId(const qcc::XmlElement* peer);
+
+        virtual std::string GetPeerId(const PermissionPolicy::Peer& peer);
     };
 
     /*
