@@ -147,7 +147,7 @@ class Participant : public SessionPortListener, public SessionListener {
         /* create interfaces */
         InterfaceDescription* intf = NULL;
         status = bus.CreateInterface(INTF_A, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
-                                     AJ_IFC_SECURITY_INHERIT);
+                                     AJ_IFC_SECURITY_OFF);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -156,7 +156,7 @@ class Participant : public SessionPortListener, public SessionListener {
 
         intf = NULL;
         status = bus.CreateInterface(INTF_B, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
-                                     AJ_IFC_SECURITY_INHERIT);
+                                     AJ_IFC_SECURITY_OFF);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -462,6 +462,7 @@ class ObserverListener : public Observer::Listener {
             EXPECT_TRUE(proxy.ImplementsInterface(INTF_B));
         }
 
+        EXPECT_EQ(proxy.IsSecure(), false);
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
 
         // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
@@ -470,6 +471,7 @@ class ObserverListener : public Observer::Listener {
 
         bus.EnableConcurrentCallbacks();
 
+        EXPECT_EQ(proxy.IsSecure(), false);
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
 
         // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
@@ -581,6 +583,7 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     provider.RegisterObject("justA");
     provider.RegisterObject("justB");
     provider.RegisterObject("both");
+
     EXPECT_TRUE(WaitForAll(allEvents));
 
     /* remove justA from the bus */
