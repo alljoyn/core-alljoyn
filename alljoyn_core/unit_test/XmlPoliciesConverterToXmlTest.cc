@@ -91,18 +91,20 @@ class PolicyOverwriteUtils {
 
     static void ChangeRules(size_t rulesCount, PermissionPolicy::Rule* rules, PermissionPolicy& policy)
     {
-        PermissionPolicy::Acl mutableAcl;
-        mutableAcl.SetRules(rulesCount, rules);
+        PermissionPolicy::Acl* mutableAcls = nullptr;
+        GetAclsCopy(policy, &mutableAcls);
+        mutableAcls[0].SetRules(rulesCount, rules);
 
-        policy.SetAcls(1U, &mutableAcl);
+        policy.SetAcls(1U, mutableAcls);
     }
 
     static void ChangePeers(size_t peersCount, PermissionPolicy::Peer* peers, PermissionPolicy& policy)
     {
-        PermissionPolicy::Acl mutableAcl;
-        mutableAcl.SetPeers(peersCount, peers);
+        PermissionPolicy::Acl* mutableAcls = nullptr;
+        GetAclsCopy(policy, &mutableAcls);
+        mutableAcls[0].SetPeers(peersCount, peers);
 
-        policy.SetAcls(1U, &mutableAcl);
+        policy.SetAcls(1U, mutableAcls);
     }
 
     static void ChangePeerType(size_t m_peerIndex, PermissionPolicy::Peer::PeerType peerType, PermissionPolicy& policy)
@@ -364,14 +366,6 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForZeroPeers
     EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
-TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForZeroRules)
-{
-    ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
-    PolicyOverwriteUtils::ChangeRules(0, nullptr, m_validPolicy);
-
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
-}
-
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAllTypePeerWithOthers)
 {
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
@@ -586,7 +580,8 @@ INSTANTIATE_TEST_CASE_P(XmlPolicyConverterToXmlPass,
                                           s_validTwoWithMembershipDifferentKeys,
                                           s_validTwoWithMembershipDifferentSgids,
                                           s_validWithMembership,
-                                          s_validWithPublicKey));
+                                          s_validWithPublicKey,
+                                          s_validNoRulesElement));
 TEST_P(XmlPolicyConverterToXmlPassTest, shouldPassForValidInput)
 {
     EXPECT_EQ(ER_OK, XmlPoliciesConverter::ToXml(m_policy, m_retrievedPolicyXml));
@@ -618,7 +613,8 @@ INSTANTIATE_TEST_CASE_P(XmlPolicyConverterToXmlPeersCount,
                                           SizeParams(s_validTwoWithMembershipDifferentKeys, 2),
                                           SizeParams(s_validTwoWithMembershipDifferentSgids, 2),
                                           SizeParams(s_validWithMembership, 1),
-                                          SizeParams(s_validWithPublicKey, 1)));
+                                          SizeParams(s_validWithPublicKey, 1),
+                                          SizeParams(s_validNoRulesElement, 1)));
 TEST_P(XmlPolicyConverterToXmlPeersCountTest, shouldGetCorrectPeersCount)
 {
     ASSERT_EQ(ER_OK, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));

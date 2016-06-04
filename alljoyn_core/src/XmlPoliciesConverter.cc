@@ -120,7 +120,9 @@ void XmlPoliciesConverter::AddAcl(const XmlElement* aclXml, vector<PermissionPol
 void XmlPoliciesConverter::BuildAcl(const XmlElement* aclXml, PermissionPolicy::Acl& acl)
 {
     SetAclPeers(aclXml->GetChildren()[PEERS_INDEX], acl);
-    SetAclRules(aclXml->GetChildren()[RULES_INDEX], acl);
+    if (aclXml->GetChildren().size() == ACL_ELEMENT_WITH_RULES_CHILDREN_COUNT) {
+        SetAclRules(aclXml->GetChildren()[RULES_INDEX], acl);
+    }
 }
 
 void XmlPoliciesConverter::SetAclPeers(const XmlElement* peersXml, PermissionPolicy::Acl& acl)
@@ -227,7 +229,9 @@ void XmlPoliciesConverter::AddAcl(const PermissionPolicy::Acl& acl, XmlElement* 
     XmlElement* aclXml = aclsXml->CreateChild(ACL_XML_ELEMENT);
 
     SetAclPeers(acl.GetPeers(), acl.GetPeersSize(), aclXml);
-    SetAclRules(acl.GetRules(), acl.GetRulesSize(), aclXml);
+    if (acl.GetRulesSize() > 0) {
+        SetAclRules(acl.GetRules(), acl.GetRulesSize(), aclXml);
+    }
 }
 
 void XmlPoliciesConverter::SetAclPeers(const PermissionPolicy::Peer* peers, size_t peersSize, XmlElement* aclXml)

@@ -38,7 +38,8 @@
 namespace ajn {
 
 #define POLICIES_ROOT_ELEMENT_CHILDREN_COUNT 3
-#define ACL_ELEMENT_CHILDREN_COUNT 2
+#define ACL_ELEMENT_WITH_RULES_CHILDREN_COUNT 2
+#define ACL_ELEMENT_WITHOUT_RULES_CHILDREN_COUNT (ACL_ELEMENT_WITH_RULES_CHILDREN_COUNT - 1)
 #define PEER_ALL_ANY_TRUSTED_ELEMENTS_COUNT 1
 #define PEER_WITH_PUBLIC_KEY_FROM_CA_ELEMENTS_COUNT 2
 #define PEER_WITH_MEMBERSHIP_ELEMENTS_COUNT 3
@@ -217,16 +218,6 @@ class XmlPoliciesValidator : public XmlValidator {
      *           #ER_FAIL    If the policy version is invalid.
      */
     static QStatus ValidatePolicyVersion(uint32_t policyVersion);
-
-    /**
-     * Verifies the policy's serial number.
-     *
-     * @param[in]    serialNumber   Policy's serial number.
-     *
-     * @return   #ER_OK      If the policy's serial number is valid.
-     *           #ER_FAIL    If the policy's serial number is invalid.
-     */
-    static QStatus ValidateSerialNumber(uint32_t serialNumber);
 
     /**
      * Veifies if the policy's ACLs are valid.

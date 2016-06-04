@@ -297,3 +297,17 @@ static AJ_PCSTR s_validSameKeyCaAndWithPublicKey =
     "</acl>"
     "</acls>"
     "</policy>";
+static AJ_PCSTR s_validNoRulesElement =
+    "<policy>"
+    "<policyVersion>1</policyVersion>"
+    "<serialNumber>10</serialNumber>"
+    "<acls>"
+    "<acl>"
+    "<peers>"
+    "<peer>"
+    "<type>ALL</type>"
+    "</peer>"
+    "</peers>"
+    "</acl>"
+    "</acls>"
+    "</policy>";
