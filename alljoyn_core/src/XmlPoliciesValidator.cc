@@ -21,6 +21,7 @@
  ******************************************************************************/
 
 #include <cctype>
+#include <climits>
 #include <qcc/StringSource.h>
 #include <qcc/StringUtil.h>
 #include "KeyInfoHelper.h"
@@ -73,10 +74,6 @@ QStatus XmlPoliciesValidator::Validate(const PermissionPolicy& policy)
     QStatus status = ValidatePolicyVersion(policy.GetSpecificationVersion());
 
     if (ER_OK == status) {
-        status = ValidateSerialNumber(policy.GetVersion());
-    }
-
-    if (ER_OK == status) {
         status = ValidateAcls(policy.GetAcls(), policy.GetAclsSize());
     }
 
@@ -96,13 +93,9 @@ QStatus XmlPoliciesValidator::ValidatePolicyVersion(const XmlElement* policyVers
 
 QStatus XmlPoliciesValidator::ValidatePolicyVersionContent(const XmlElement* policyVersion)
 {
-    uint32_t version = qcc::StringToU32(policyVersion->GetContent());
+    uint32_t version = StringToU32(policyVersion->GetContent());
 
-    if (VALID_VERSION_NUMBER != version) {
-        return ER_XML_MALFORMED;
-    }
-
-    return ER_OK;
+    return (VALID_VERSION_NUMBER != version) ? ER_XML_MALFORMED : ER_OK;
 }
 
 QStatus XmlPoliciesValidator::ValidateSerialNumber(const XmlElement* policySerialNumber)
@@ -118,14 +111,10 @@ QStatus XmlPoliciesValidator::ValidateSerialNumber(const XmlElement* policySeria
 
 QStatus XmlPoliciesValidator::ValidateSerialNumberContent(const XmlElement* policySerialNumber)
 {
-    uint32_t badValue = 0;
-    uint32_t serialNumber = qcc::StringToU32(policySerialNumber->GetContent(), DECIMAL_BASE, badValue);
+    uint64_t badValue = ULLONG_MAX;
+    uint64_t serialNumber = StringToU64(policySerialNumber->GetContent(), DECIMAL_BASE, badValue);
 
-    if (serialNumber == badValue) {
-        return ER_XML_MALFORMED;
-    }
-
-    return ER_OK;
+    return (serialNumber == badValue) ? ER_XML_MALFORMED : ER_OK;
 }
 
 QStatus XmlPoliciesValidator::ValidateAcls(const XmlElement* acls)
@@ -152,14 +141,19 @@ QStatus XmlPoliciesValidator::ValidateAcl(const XmlElement* acl)
     QStatus status = ValidateElementName(acl, ACL_XML_ELEMENT);
 
     if (ER_OK == status) {
-        status = ValidateChildrenCountEqual(acl, ACL_ELEMENT_CHILDREN_COUNT);
+        status = ValidateChildrenCountEqual(acl, ACL_ELEMENT_WITH_RULES_CHILDREN_COUNT);
+
+        if (ER_OK != status) {
+            status = ValidateChildrenCountEqual(acl, ACL_ELEMENT_WITHOUT_RULES_CHILDREN_COUNT);
+        }
     }
 
     if (ER_OK == status) {
         status = ValidatePeers(acl->GetChildren()[PEERS_INDEX]);
     }
 
-    if (ER_OK == status) {
+    if ((ER_OK == status) &&
+        (acl->GetChildren().size() == ACL_ELEMENT_WITH_RULES_CHILDREN_COUNT)) {
         status = XmlRulesValidator::Validate(acl->GetChildren()[RULES_INDEX]);
     }
 
@@ -206,7 +200,7 @@ QStatus XmlPoliciesValidator::ValidatePeer(const XmlElement* peer, PeerValidator
     return status;
 }
 
-QStatus XmlPoliciesValidator::PeerValidator::Validate(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::PeerValidator::Validate(const XmlElement* peer)
 {
     QStatus status = ValidateCommon(peer);
 
@@ -228,7 +222,7 @@ QStatus XmlPoliciesValidator::PeerValidator::Validate(const PermissionPolicy::Pe
     return status;
 }
 
-QStatus XmlPoliciesValidator::PeerValidator::GetValidPeerType(const qcc::XmlElement* peer, PermissionPolicy::Peer::PeerType* peerType)
+QStatus XmlPoliciesValidator::PeerValidator::GetValidPeerType(const XmlElement* peer, PermissionPolicy::Peer::PeerType* peerType)
 {
     QStatus status = ER_OK;
     AJ_PCSTR stringPeerType = peer->GetChildren()[PEER_TYPE_INDEX]->GetContent().c_str();
@@ -248,7 +242,7 @@ QStatus XmlPoliciesValidator::PeerValidator::ValidateAllTypeAbsentOrOnlyPeer()
     return (m_allTypeAbsent || m_firstPeer) ? ER_OK : ER_FAIL;
 }
 
-QStatus XmlPoliciesValidator::PeerValidator::ValidateCommon(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::PeerValidator::ValidateCommon(const XmlElement* peer)
 {
     QStatus status = ValidateChildrenCount(peer);
 
@@ -268,12 +262,12 @@ QStatus XmlPoliciesValidator::PeerValidator::ValidateCommon()
     return ValidateAllTypeAbsentOrOnlyPeer();
 }
 
-QStatus XmlPoliciesValidator::PeerValidator::ValidateChildrenCount(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::PeerValidator::ValidateChildrenCount(const XmlElement* peer)
 {
     return (peer->GetChildren().size() == GetPeerChildrenCount()) ? ER_OK : ER_XML_MALFORMED;
 }
 
-QStatus XmlPoliciesValidator::PeerValidator::ValidateTypeSpecific(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::PeerValidator::ValidateTypeSpecific(const XmlElement* peer)
 {
     /*
      * NOP so that subclasses that don't have any type specific validation don't have to override the method.
@@ -289,7 +283,7 @@ void XmlPoliciesValidator::PeerValidator::UpdatePeersFlags(bool allTypeAbsent, b
     m_anyTrustedTypePresent = anyTrustedTypePresent;
 }
 
-QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidatePublicKey(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidatePublicKey(const XmlElement* peer)
 {
     KeyInfoNISTP256 keyInfo;
     AJ_PCSTR publicKey = peer->GetChildren()[PEER_PUBLIC_KEY_INDEX]->GetContent().c_str();
@@ -301,7 +295,7 @@ QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidatePublicKey(cons
     return (nullptr != peer.GetKeyInfo()) ? ER_OK : ER_FAIL;
 }
 
-std::string XmlPoliciesValidator::PeerWithPublicKeyValidator::GetPeerId(const qcc::XmlElement* peer)
+std::string XmlPoliciesValidator::PeerWithPublicKeyValidator::GetPeerId(const XmlElement* peer)
 {
     return peer->GetChildren()[PEER_PUBLIC_KEY_INDEX]->GetContent().c_str();
 }
@@ -311,7 +305,7 @@ std::string XmlPoliciesValidator::PeerWithPublicKeyValidator::GetPeerId(const Pe
     return peer.GetKeyInfo()->ToString().c_str();
 }
 
-QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidateTypeSpecific(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidateTypeSpecific(const XmlElement* peer)
 {
     QStatus status = ValidateElementName(peer->GetChildren()[PEER_PUBLIC_KEY_INDEX], PUBLIC_KEY_XML_ELEMENT);
 
@@ -337,7 +331,7 @@ QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidateTypeSpecific(c
     return status;
 }
 
-QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidatePeerUnique(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::PeerWithPublicKeyValidator::ValidatePeerUnique(const XmlElement* peer)
 {
     std::string id = GetPeerId(peer);
     return InsertUniqueOrFail(id, m_peersIds);
@@ -369,7 +363,7 @@ size_t XmlPoliciesValidator::AnyTrustedValidator::GetPeerChildrenCount()
     return PEER_ALL_ANY_TRUSTED_ELEMENTS_COUNT;
 }
 
-QStatus XmlPoliciesValidator::AnyTrustedValidator::ValidateTypeSpecific(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::AnyTrustedValidator::ValidateTypeSpecific(const XmlElement* peer)
 {
     QCC_UNUSED(peer);
     return m_anyTrustedTypePresent ? ER_XML_MALFORMED : ER_OK;
@@ -386,7 +380,7 @@ QStatus XmlPoliciesValidator::AnyTrustedValidator::ValidateTypeSpecific(const Pe
     return status;
 }
 
-QStatus XmlPoliciesValidator::WithMembershipValidator::ValidateTypeSpecific(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::WithMembershipValidator::ValidateTypeSpecific(const XmlElement* peer)
 {
     QStatus status = ValidateElementName(peer->GetChildren()[PEER_SGID_INDEX], SGID_KEY_XML_ELEMENT);
 
@@ -401,10 +395,10 @@ QStatus XmlPoliciesValidator::WithMembershipValidator::ValidateTypeSpecific(cons
     return status;
 }
 
-QStatus XmlPoliciesValidator::WithMembershipValidator::ValidateSgId(const qcc::XmlElement* peer)
+QStatus XmlPoliciesValidator::WithMembershipValidator::ValidateSgId(const XmlElement* peer)
 {
     AJ_PCSTR sgId = peer->GetChildren()[PEER_SGID_INDEX]->GetContent().c_str();
-    return qcc::GUID128::IsGUID(sgId) ? ER_OK : ER_XML_MALFORMED;
+    return GUID128::IsGUID(sgId) ? ER_OK : ER_XML_MALFORMED;
 }
 
 size_t XmlPoliciesValidator::WithMembershipValidator::GetPeerChildrenCount()
@@ -412,7 +406,7 @@ size_t XmlPoliciesValidator::WithMembershipValidator::GetPeerChildrenCount()
     return PEER_WITH_MEMBERSHIP_ELEMENTS_COUNT;
 }
 
-std::string XmlPoliciesValidator::WithMembershipValidator::GetPeerId(const qcc::XmlElement* peer)
+std::string XmlPoliciesValidator::WithMembershipValidator::GetPeerId(const XmlElement* peer)
 {
     return PeerWithPublicKeyValidator::GetPeerId(peer) + peer->GetChildren()[PEER_SGID_INDEX]->GetContent().c_str();
 }
@@ -425,11 +419,6 @@ std::string XmlPoliciesValidator::WithMembershipValidator::GetPeerId(const Permi
 QStatus XmlPoliciesValidator::ValidatePolicyVersion(uint32_t policyVersion)
 {
     return (VALID_VERSION_NUMBER == policyVersion) ? ER_OK : ER_FAIL;
-}
-
-QStatus XmlPoliciesValidator::ValidateSerialNumber(uint32_t serialNumber)
-{
-    return (serialNumber > 0) ? ER_OK : ER_FAIL;
 }
 
 QStatus XmlPoliciesValidator::ValidateAcls(const PermissionPolicy::Acl* acls, size_t aclsSize)
@@ -481,7 +470,8 @@ QStatus XmlPoliciesValidator::ValidateAcl(const PermissionPolicy::Acl& acl)
 {
     QStatus status = ValidatePeers(acl.GetPeers(), acl.GetPeersSize());
 
-    if (ER_OK == status) {
+    if ((ER_OK == status) &&
+        (acl.GetRulesSize() > 0)) {
         status = XmlRulesValidator::ValidateRules(acl.GetRules(), acl.GetRulesSize());
     }
 

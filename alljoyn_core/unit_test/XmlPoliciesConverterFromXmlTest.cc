@@ -78,20 +78,6 @@ static AJ_PCSTR s_missingPeersElement =
     "</acl>"
     "</acls>"
     "</policy>";
-static AJ_PCSTR s_missingRulesElement =
-    "<policy>"
-    "<policyVersion>1</policyVersion>"
-    "<serialNumber>10</serialNumber>"
-    "<acls>"
-    "<acl>"
-    "<peers>"
-    "<peer>"
-    "<type>ALL</type>"
-    "</peer>"
-    "</peers>"
-    "</acl>"
-    "</acls>"
-    "</policy>";
 static AJ_PCSTR s_missingPeerElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"
@@ -260,10 +246,40 @@ static AJ_PCSTR s_policyVersionNotOne =
     "</acl>"
     "</acls>"
     "</policy>";
+static AJ_PCSTR s_policyVersionNotNumeric =
+    "<policy>"
+    "<policyVersion>value</policyVersion>"
+    "<serialNumber>10</serialNumber>"
+    "<acls>"
+    "<acl>"
+    "<peers>"
+    "<peer>"
+    "<type>ALL</type>"
+    "</peer>"
+    "</peers>"
+    BASIC_VALID_RULES
+    "</acl>"
+    "</acls>"
+    "</policy>";
 static AJ_PCSTR s_serialNumberNegative =
     "<policy>"
     "<policyVersion>1</policyVersion>"
     "<serialNumber>-1</serialNumber>"
+    "<acls>"
+    "<acl>"
+    "<peers>"
+    "<peer>"
+    "<type>ALL</type>"
+    "</peer>"
+    "</peers>"
+    BASIC_VALID_RULES
+    "</acl>"
+    "</acls>"
+    "</policy>";
+static AJ_PCSTR s_serialNumberNotNumeric =
+    "<policy>"
+    "<policyVersion>1</policyVersion>"
+    "<serialNumber>value</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -406,6 +422,21 @@ static AJ_PCSTR s_validWhitespaceInPolicyVersion =
     "<policy>"
     "<policyVersion> 1 </policyVersion>"
     "<serialNumber>10</serialNumber>"
+    "<acls>"
+    "<acl>"
+    "<peers>"
+    "<peer>"
+    "<type>ALL</type>"
+    "</peer>"
+    "</peers>"
+    BASIC_VALID_RULES
+    "</acl>"
+    "</acls>"
+    "</policy>";
+static AJ_PCSTR s_validSerialNumberEqualToZero =
+    "<policy>"
+    "<policyVersion>1</policyVersion>"
+    "<serialNumber>0</serialNumber>"
     "<acls>"
     "<acl>"
     "<peers>"
@@ -643,7 +674,6 @@ INSTANTIATE_TEST_CASE_P(XmlPoliciesConverterInvalidRulesSet,
                                           s_missingPeersElement,
                                           s_missingPeerElement,
                                           s_missingPolicyVersionElement,
-                                          s_missingRulesElement,
                                           s_missingSerialNumberElement,
                                           s_missingTypeElement,
                                           s_policyElementsIncorrectOrder,
@@ -652,7 +682,9 @@ INSTANTIATE_TEST_CASE_P(XmlPoliciesConverterInvalidRulesSet,
                                           s_invalidPublicKey,
                                           s_invalidSgId,
                                           s_policyVersionNotOne,
+                                          s_policyVersionNotNumeric,
                                           s_serialNumberNegative,
+                                          s_serialNumberNotNumeric,
                                           s_unknownPeerType,
                                           s_allTypeWithOther,
                                           s_anyTrustedTwice,
@@ -679,10 +711,12 @@ INSTANTIATE_TEST_CASE_P(XmlPoliciesConverterPass,
                                           s_validWhitespaceInPolicyVersion,
                                           s_validWhitespaceInPublicKey,
                                           s_validWhitespaceInSerialNumber,
+                                          s_validSerialNumberEqualToZero,
                                           s_validWhitespaceInSgid,
                                           s_validWhitespaceInType,
                                           s_validWithMembership,
-                                          s_validWithPublicKey));
+                                          s_validWithPublicKey,
+                                          s_validNoRulesElement));
 TEST_P(XmlPoliciesConverterFromXmlPassTest, shouldPassForValidInput)
 {
     EXPECT_EQ(ER_OK, XmlPoliciesConverter::FromXml(m_policyXml, m_policy));
