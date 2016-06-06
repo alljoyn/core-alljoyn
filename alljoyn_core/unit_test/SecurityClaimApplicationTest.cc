@@ -87,7 +87,7 @@ class SecurityClaimApplicationTest : public testing::Test {
         manifestTemplate[0].SetObjPath("*");
         manifestTemplate[0].SetInterfaceName("*");
         manifestTemplate[0].SetMembers(1, member);
-        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifest(manifestTemplate, manifestSize));
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifestTemplate(manifestTemplate, manifestSize));
     }
 
 

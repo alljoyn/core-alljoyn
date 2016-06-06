@@ -77,11 +77,11 @@ PermissionConfigurator::~PermissionConfigurator()
     m_internal = nullptr;
 }
 
-QStatus PermissionConfigurator::SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count)
+QStatus PermissionConfigurator::SetPermissionManifestTemplate(PermissionPolicy::Rule* rules, size_t count)
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
-        QCC_DbgPrintf(("PermissionConfigurator::SetPermissionManifest does not have PermissionMgmtObj initialized"));
+        QCC_DbgPrintf(("PermissionConfigurator::SetPermissionManifestTemplate does not have PermissionMgmtObj initialized"));
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetManifestTemplate(rules, count);
@@ -95,7 +95,7 @@ QStatus PermissionConfigurator::SetManifestTemplateFromXml(AJ_PCSTR manifestXml)
     status = XmlRulesConverter::XmlToRules(manifestXml, rules);
 
     if (ER_OK == status) {
-        status = SetPermissionManifest(rules.data(), rules.size());
+        status = SetPermissionManifestTemplate(rules.data(), rules.size());
     }
 
     return status;
