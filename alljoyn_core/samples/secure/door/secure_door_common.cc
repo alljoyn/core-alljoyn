@@ -359,9 +359,9 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
         manifestRule.SetMembers(1, &member);
     }
 
-    status = ba->GetPermissionConfigurator().SetPermissionManifest(&manifestRule, 1);
+    status = ba->GetPermissionConfigurator().SetPermissionManifestTemplate(&manifestRule, 1);
     if (ER_OK != status) {
-        fprintf(stderr, "Failed to SetPermissionManifest - status (%s)\n", QCC_StatusText(status));
+        fprintf(stderr, "Failed to SetPermissionManifestTemplate - status (%s)\n", QCC_StatusText(status));
         return status;
     }
 
@@ -387,9 +387,9 @@ QStatus DoorCommon::UpdateManifest(const PermissionPolicy::Acl& manifest)
 {
     PermissionPolicy::Rule* rules = const_cast<PermissionPolicy::Rule*> (manifest.GetRules());
 
-    QStatus status = ba->GetPermissionConfigurator().SetPermissionManifest(rules, manifest.GetRulesSize());
+    QStatus status = ba->GetPermissionConfigurator().SetPermissionManifestTemplate(rules, manifest.GetRulesSize());
     if (ER_OK != status) {
-        fprintf(stderr, "Failed to SetPermissionManifest - status (%s)\n", QCC_StatusText(status));
+        fprintf(stderr, "Failed to SetPermissionManifestTemplate - status (%s)\n", QCC_StatusText(status));
         return status;
     }
 

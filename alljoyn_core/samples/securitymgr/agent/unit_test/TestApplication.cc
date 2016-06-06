@@ -133,7 +133,7 @@ QStatus TestApplication::AnnounceManifest()
 
     if ((manifestRulesCount > 0) && manifestRules) {
         status = busAttachment->GetPermissionConfigurator().
-                 SetPermissionManifest(manifestRules, manifestRulesCount);
+                 SetPermissionManifestTemplate(manifestRules, manifestRulesCount);
     }
 
     return status;

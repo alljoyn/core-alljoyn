@@ -109,12 +109,12 @@ class PermissionConfigurator {
     virtual ~PermissionConfigurator();
 
     /**
-     * Set the permission manifest for the application.
+     * Set the permission manifest template for the application.
      * @param rules the permission rules.
      * @param count the number of permission rules
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count);
+    QStatus SetPermissionManifestTemplate(PermissionPolicy::Rule* rules, size_t count);
 
     /**
      * Set the manifest template for the application from an XML.

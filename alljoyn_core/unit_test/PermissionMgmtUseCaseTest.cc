@@ -1219,7 +1219,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         size_t count = 0;
         EXPECT_EQ(ER_OK, GenerateManifestTemplate(&rules, &count));
         PermissionConfigurator& pc = bus.GetPermissionConfigurator();
-        EXPECT_EQ(ER_OK, pc.SetPermissionManifest(rules, count));
+        EXPECT_EQ(ER_OK, pc.SetPermissionManifestTemplate(rules, count));
         delete [] rules;
     }
 
@@ -2114,14 +2114,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         PermissionPolicy::Rule* rules = NULL;
         size_t count = 0;
         QStatus status = GenerateManifestTemplate(&rules, &count);
-        EXPECT_EQ(ER_OK, status) << "  SetPermissionManifest GenerateManifest failed.  Actual Status: " << QCC_StatusText(status);
+        EXPECT_EQ(ER_OK, status) << "  SetPermissionManifestTemplate GenerateManifest failed.  Actual Status: " << QCC_StatusText(status);
         PermissionConfigurator& pc = serviceBus.GetPermissionConfigurator();
-        status = pc.SetPermissionManifest(rules, count);
-        EXPECT_EQ(ER_OK, status) << "  SetPermissionManifest SetPermissionManifest failed.  Actual Status: " << QCC_StatusText(status);
+        status = pc.SetPermissionManifestTemplate(rules, count);
+        EXPECT_EQ(ER_OK, status) << "  SetPermissionManifestTemplate SetPermissionManifestTemplate failed.  Actual Status: " << QCC_StatusText(status);
 
         SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
         MsgArg arg;
-        EXPECT_EQ(ER_OK, saProxy.GetManifestTemplate(arg)) << "SetPermissionManifest GetManifestTemplate failed.";
+        EXPECT_EQ(ER_OK, saProxy.GetManifestTemplate(arg)) << "SetPermissionManifestTemplate GetManifestTemplate failed.";
         size_t retrievedCount = arg.v_array.GetNumElements();
         ASSERT_EQ(count, retrievedCount) << "Install manifest template size is different than original.";
         if (retrievedCount == 0) {
@@ -2136,7 +2136,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
 
         /* retrieve the manifest template digest */
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-        EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, Crypto_SHA256::DIGEST_SIZE)) << "SetPermissionManifest GetManifestTemplateDigest failed.";
+        EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, Crypto_SHA256::DIGEST_SIZE)) << "SetPermissionManifestTemplate GetManifestTemplateDigest failed.";
     }
 
     /*
@@ -3608,7 +3608,7 @@ TEST_F(PermissionMgmtUseCaseTest, GetEmptyManifestTemplateDigestBeforeClaim)
     SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
     /* retrieve the manifest template digest and expect to be empty */
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, 0)) << "SetPermissionManifest GetManifestTemplateDigest failed.";
+    EXPECT_EQ(ER_OK, saProxy.GetManifestTemplateDigest(digest, 0)) << "SetPermissionManifestTemplate GetManifestTemplateDigest failed.";
 }
 
 TEST_F(PermissionMgmtUseCaseTest, CertificateIdNotAvailableBeforeClaim)
