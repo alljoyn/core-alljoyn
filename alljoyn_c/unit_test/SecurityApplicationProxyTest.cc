@@ -192,10 +192,10 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
         SecurityApplicationProxyTestHelper::DestroyCertificate(m_securityManagerIdentityCertificate);
         SecurityApplicationProxyTestHelper::DestroyKey(m_securityManagerPublicKey);
         SecurityApplicationProxyTestHelper::DestroyKey(m_securityManagerPrivateKey);
-        alljoyn_authlistenerasync_destroy(m_defaultEcdheAuthListener);
 
         alljoyn_permissionconfigurationlistener_destroy(m_securityManagerPermissionConfigurationListener);
         BasicBusTearDown(m_securityManager);
+        delete (DefaultECDHEAuthListener*) m_defaultEcdheAuthListener;
     }
 
   protected:
