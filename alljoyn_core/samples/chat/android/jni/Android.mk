@@ -1,3 +1,7 @@
+# Define ALLJOYN_DIST before building. It should point to the "dist/cpp" directory for the appropriate
+# platform and version (debug or release). For example:
+# <AJ_ROOT>/core/alljoyn/build/android/arm/debug/dist/cpp
+
 # An Android.mk file must begin with the definition of the LOCAL_PATH
 # variable. It is used to locate source files in the development tree. Here
 # the macro function 'my-dir', provided by the build system, is used to return
@@ -5,22 +9,19 @@
 #
 LOCAL_PATH := $(call my-dir)
 
-# AllJoyn specifics
-#ALLJOYN_DIST := ../../../../build/android/arm/$(APP_OPTIM)/dist
-ALLJOYN_DIST := ../..
 
 # Declare the prebuilt libajrouter.a static library.
 #
 include $(CLEAR_VARS)
 LOCAL_MODULE := ajrouter
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/../lib/libajrouter.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/libajrouter.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 # Declare the prebuilt liballjoyn.a static library.
 #
 include $(CLEAR_VARS)
 LOCAL_MODULE := alljoyn
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/../lib/liballjoyn.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 # The CLEAR_VARS variable is provided by the build system and points to a
@@ -49,7 +50,6 @@ TARGET_PLATFORM := android-16
 # corresponding inclusion flag in LOCAL_CFLAGS / LOCAL_CPPFLAGS.
 #
 LOCAL_C_INCLUDES := \
-	$(MYDROID_PATH)/external/openssl/include \
 	$(ALLJOYN_DIST)/inc
 
 # An optional set of compiler flags that will be passed when building
@@ -57,7 +57,7 @@ LOCAL_C_INCLUDES := \
 #
 # NOTE1: flag "-Wno-psabi" removes warning about GCC 4.4 va_list warning
 # NOTE2: flag "-Wno-write-strings" removes warning about deprecated conversion
-#        from string constant to �char*�
+#        from string constant to "char*"
 #
 LOCAL_CFLAGS := -std=c++11 -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DANDROID
 
@@ -82,8 +82,7 @@ LOCAL_STATIC_LIBRARIES := \
 # with the "-l" prefix and library paths with the "-L" prefix.
 #
 LOCAL_LDLIBS := \
-	-llog \
-	$(ALLJOYN_OPENSSL_LIBS)
+	-llog
 
 # By default, ARM target binaries will be generated in 'thumb' mode, where
 # each instruction are 16-bit wide. You can define this variable to 'arm'
