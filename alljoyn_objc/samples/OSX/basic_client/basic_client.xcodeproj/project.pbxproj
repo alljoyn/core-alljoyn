@@ -58,10 +58,7 @@
 		AC8D8ECD1614EA2100361742 /* AJNVersion.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8EB61614EA2100361742 /* AJNVersion.mm */; };
 		AC8D8ED91614EFFB00361742 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8ED61614EFFB00361742 /* AJNBasicObject.mm */; };
 		AC8D8EDA1614EFFB00361742 /* BasicObject.m in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8ED81614EFFB00361742 /* BasicObject.m */; };
-		AC8D8F381614F50400361742 /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F371614F50400361742 /* libcrypto.dylib */; };
 		AC8D8F3A1614F54900361742 /* libobjc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F391614F54900361742 /* libobjc.dylib */; };
-		AC8D8F3C1614F56300361742 /* libssl.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F3B1614F56300361742 /* libssl.0.9.8.dylib */; };
-		AC8D8F3E1614F56A00361742 /* libcrypto.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F3D1614F56A00361742 /* libcrypto.0.9.8.dylib */; };
 		ACFCF77D1566A4AF00BC922D /* SConscript in Resources */ = {isa = PBXBuildFile; fileRef = ACFCF77C1566A4AF00BC922D /* SConscript */; };
 /* End PBXBuildFile section */
 
@@ -186,12 +183,8 @@
 		AC8D8ED61614EFFB00361742 /* AJNBasicObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNBasicObject.mm; path = ../../../iOS/BasicClient/BasicClient/AJNBasicObject.mm; sourceTree = "<group>"; };
 		AC8D8ED71614EFFB00361742 /* BasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BasicObject.h; path = ../../../iOS/BasicClient/BasicClient/BasicObject.h; sourceTree = "<group>"; };
 		AC8D8ED81614EFFB00361742 /* BasicObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BasicObject.m; path = ../../../iOS/BasicClient/BasicClient/BasicObject.m; sourceTree = "<group>"; };
-		AC8D8F371614F50400361742 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = usr/lib/libcrypto.dylib; sourceTree = SDKROOT; };
 		AC8D8F391614F54900361742 /* libobjc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjc.dylib; path = usr/lib/libobjc.dylib; sourceTree = SDKROOT; };
-		AC8D8F3B1614F56300361742 /* libssl.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.0.9.8.dylib; path = usr/lib/libssl.0.9.8.dylib; sourceTree = SDKROOT; };
-		AC8D8F3D1614F56A00361742 /* libcrypto.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.0.9.8.dylib; path = usr/lib/libcrypto.0.9.8.dylib; sourceTree = SDKROOT; };
 		ACC30415156AE901006D9A40 /* basic_client-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "basic_client-Prefix.pch"; sourceTree = "<group>"; };
-		ACC3042E156C235F006D9A40 /* libssl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.dylib; path = usr/lib/libssl.dylib; sourceTree = SDKROOT; };
 		ACFCF77C1566A4AF00BC922D /* SConscript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SConscript; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -201,11 +194,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				7DEA2F331AC402EA007ECE82 /* libc++.dylib in Frameworks */,
-				AC8D8F3E1614F56A00361742 /* libcrypto.0.9.8.dylib in Frameworks */,
-				AC8D8F3C1614F56300361742 /* libssl.0.9.8.dylib in Frameworks */,
 				AC8D8F3A1614F54900361742 /* libobjc.dylib in Frameworks */,
 				7DEA2F361AC40311007ECE82 /* libstdc++.dylib in Frameworks */,
-				AC8D8F381614F50400361742 /* libcrypto.dylib in Frameworks */,
 				AC1D97ED150E7F340005211D /* libpthread.dylib in Frameworks */,
 				AC1D97B6150E7C980005211D /* Cocoa.framework in Frameworks */,
 			);
@@ -248,12 +238,8 @@
 				7DEA2F341AC40306007ECE82 /* libstdc++.6.dylib */,
 				7DEA2F321AC402EA007ECE82 /* libc++.dylib */,
 				AC1D97EE150E7FBE0005211D /* libstdc++.dylib */,
-				AC8D8F371614F50400361742 /* libcrypto.dylib */,
-				AC8D8F3D1614F56A00361742 /* libcrypto.0.9.8.dylib */,
-				AC8D8F3B1614F56300361742 /* libssl.0.9.8.dylib */,
 				AC8D8F391614F54900361742 /* libobjc.dylib */,
 				AC1D97EC150E7F340005211D /* libpthread.dylib */,
-				ACC3042E156C235F006D9A40 /* libssl.dylib */,
 				AC1D97B5150E7C980005211D /* Cocoa.framework */,
 				AC1D97D3150E7C990005211D /* SenTestingKit.framework */,
 				AC1D97B7150E7C980005211D /* Other Frameworks */,
