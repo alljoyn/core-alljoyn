@@ -34,29 +34,78 @@ namespace ajn {
  */
 class KeyStoreListenerCallbackC : public KeyStoreListener {
   public:
-    KeyStoreListenerCallbackC(const alljoyn_keystorelistener_callbacks* in_callbacks, const void* in_context)
+    KeyStoreListenerCallbackC(const alljoyn_keystorelistener_callbacks* in_callbacks, const void* in_context) : with_synch(false)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
         memcpy(&callbacks, in_callbacks, sizeof(alljoyn_keystorelistener_callbacks));
+        const_context = in_context;
+    }
+
+    KeyStoreListenerCallbackC(const alljoyn_keystorelistener_with_synchronization_callbacks* in_callbacks, void* in_context) : with_synch(true)
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        memcpy(&with_synchronization_callbacks, in_callbacks, sizeof(alljoyn_keystorelistener_with_synchronization_callbacks));
         context = in_context;
     }
 
     virtual QStatus LoadRequest(KeyStore& keyStore)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        QCC_ASSERT(callbacks.load_request != NULL && "load_request callback required.");
-        return callbacks.load_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        if (!with_synch) {
+            QCC_ASSERT(callbacks.load_request != NULL && "load_request callback required.");
+            return callbacks.load_request(const_context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        } else {
+            QCC_ASSERT(with_synchronization_callbacks.load_request != NULL && "load_request callback required.");
+            return with_synchronization_callbacks.load_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        }
     }
 
     virtual QStatus StoreRequest(KeyStore& keyStore)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        QCC_ASSERT(callbacks.store_request != NULL && "store_request callback required.");
-        return callbacks.store_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        if (!with_synch) {
+            QCC_ASSERT(callbacks.store_request != NULL && "store_request callback required.");
+            return callbacks.store_request(const_context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        } else {
+            QCC_ASSERT(with_synchronization_callbacks.store_request != NULL && "store_request callback required.");
+            return with_synchronization_callbacks.store_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
+        }
+    }
+
+    virtual QStatus AcquireExclusiveLock(const char* file, uint32_t line)
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        QStatus status = KeyStoreListener::AcquireExclusiveLock(file, line);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("KeyStoreListener::AcquireExclusiveLock failed"));
+            return status;
+        }
+        if (with_synch) {
+            QCC_ASSERT(with_synchronization_callbacks.acquire_exclusive_lock != NULL && "acquire_exclusive_lock callback required.");
+            status = with_synchronization_callbacks.acquire_exclusive_lock(context, (alljoyn_keystorelistener) this);
+        }
+        return status;
+    }
+
+    virtual void ReleaseExclusiveLock(const char* file, uint32_t line)
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        if (with_synch) {
+            QCC_ASSERT(with_synchronization_callbacks.release_exclusive_lock != NULL && "release_exclusive_lock callback required.");
+            with_synchronization_callbacks.release_exclusive_lock(context, (alljoyn_keystorelistener) this);
+        }
+        KeyStoreListener::ReleaseExclusiveLock(file, line);
     }
   protected:
-    alljoyn_keystorelistener_callbacks callbacks;
-    const void* context;
+    union {
+        alljoyn_keystorelistener_callbacks callbacks;
+        alljoyn_keystorelistener_with_synchronization_callbacks with_synchronization_callbacks;
+    };
+    union {
+        const void* const_context;
+        void* context;
+    };
+    bool with_synch;
 };
 
 }
@@ -70,6 +119,16 @@ alljoyn_keystorelistener AJ_CALL alljoyn_keystorelistener_create(const alljoyn_k
     QCC_DbgTrace(("%s", __FUNCTION__));
     QCC_ASSERT(callbacks->load_request != NULL && "load_request callback required.");
     QCC_ASSERT(callbacks->store_request != NULL && "store_request callback required.");
+    return (alljoyn_keystorelistener) new ajn::KeyStoreListenerCallbackC(callbacks, context);
+}
+
+alljoyn_keystorelistener AJ_CALL alljoyn_keystorelistener_with_synchronization_create(const alljoyn_keystorelistener_with_synchronization_callbacks* callbacks, void* context)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_ASSERT(callbacks->load_request != NULL && "load_request callback required.");
+    QCC_ASSERT(callbacks->store_request != NULL && "store_request callback required.");
+    QCC_ASSERT(callbacks->acquire_exclusive_lock != NULL && "acquire_exclusive_lock callback required.");
+    QCC_ASSERT(callbacks->release_exclusive_lock != NULL && "release_exclusive_lock callback required.");
     return (alljoyn_keystorelistener) new ajn::KeyStoreListenerCallbackC(callbacks, context);
 }
 

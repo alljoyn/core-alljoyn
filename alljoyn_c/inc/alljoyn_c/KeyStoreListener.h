@@ -47,7 +47,8 @@ typedef struct _alljoyn_keystorelistener_handle*            alljoyn_keystorelist
  * @remark The application must call <tt>#alljoyn_keystorelistener_putkeys</tt> to put the new key store data into the
  * internal key store.
  *
- * @param context    The context pointer passed into the alljoyn_keystorelistener_create function
+ * @param context    The context pointer passed into the alljoyn_keystorelistener_create function (const)
+ *                   or into the alljoyn_keystorelistener_with_synchronization_create (non const)
  * @param listener   The listener that is responsible for the LoadRequest callback.
  *                   This listener should be used when calling the @c alljoyn_keystorelistener_putkeys
  *                   function.
@@ -59,6 +60,7 @@ typedef struct _alljoyn_keystorelistener_handle*            alljoyn_keystorelist
  *
  */
 typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr_nconst)(void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
 
 /**
  * Type for the StoreRequest callback.
@@ -66,8 +68,9 @@ typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void*
  * This function is called when a key store needs to be stored.
  * @remark The application must call <tt>#alljoyn_keystorelistener_getkeys</tt> to obtain the key data to be stored.
  *
- * @param context    The context pointer passed into the alljoyn_keystorelistener_create function
- * @param listener   The listener that responsible for the StoreRequest callback.
+ * @param context    The context pointer passed into the alljoyn_keystorelistener_create function (const)
+ *                   or into the alljoyn_keystorelistener_with_synchronization_create (non const)
+ * @param listener   The listener that is responsible for the StoreRequest callback.
  *                   This listener should be used when calling the @c alljoyn_keystorelistener_getkeys
  *                   function.
  * @param keyStore   Reference to the @c alljoyn_keystore to be stored.
@@ -77,6 +80,31 @@ typedef QStatus (AJ_CALL * alljoyn_keystorelistener_loadrequest_ptr)(const void*
  *      - An error status otherwise
  */
 typedef QStatus (AJ_CALL * alljoyn_keystorelistener_storerequest_ptr)(const void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_storerequest_ptr_nconst)(void* context, alljoyn_keystorelistener listener, alljoyn_keystore keyStore);
+
+/**
+ * Type for the AcquireExclusiveLock callback.
+ *
+ * This function is called when a key store acquires exclusive lock (e.g., file lock).
+ *
+ * @param context    The context pointer passed into the alljoyn_keystorelistener_with_synchronization_create function
+ * @param listener   The listener that is responsible for the AcquireExclusiveLock callback.
+ *
+ * @return
+ *      - #ER_OK if the store request was satisfied
+ *      - An error status otherwise
+ */
+typedef QStatus (AJ_CALL * alljoyn_keystorelistener_acquireexclusivelock_ptr)(void* context, alljoyn_keystorelistener listener);
+
+/**
+ * Type for the ReleaseExclusiveLock callback.
+ *
+ * This function is called when a key store releases exclusive lock (e.g., file lock).
+ *
+ * @param context    The context pointer passed into the alljoyn_keystorelistener_with_synchronization_create function
+ * @param listener   The listener that is responsible for the ReleaseExclusiveLock callback.
+ */
+typedef void (AJ_CALL * alljoyn_keystorelistener_releaseexclusivelock_ptr)(void* context, alljoyn_keystorelistener listener);
 
 /**
  * Structure used during alljoyn_keystorelistener_create to provide callbacks into C.
@@ -96,6 +124,33 @@ typedef struct {
 } alljoyn_keystorelistener_callbacks;
 
 /**
+ * Structure used during alljoyn_keystorelistener_with_synchronization_create to provide callbacks into C.
+ * An implementation must provide all
+ *     alljoyn_keystorelistener_loadrequest_ptr_nconst
+ *     alljoyn_keystorelistener_storerequest_ptr_nconst
+ *     alljoyn_keystorelistener_acquireexclusivelock_ptr
+ *     alljoyn_keystorelistener_releaseexclusivelock_ptr
+ */
+typedef struct {
+    /**
+     * This function is called when a key store needs to be loaded.
+     */
+    alljoyn_keystorelistener_loadrequest_ptr_nconst load_request;
+    /**
+     * This function is called when a key store needs to be stored.
+     */
+    alljoyn_keystorelistener_storerequest_ptr_nconst store_request;
+    /**
+     * This function is called when a key store acquires exclusive lock.
+     */
+    alljoyn_keystorelistener_acquireexclusivelock_ptr acquire_exclusive_lock;
+    /**
+     * This function is called when a key store releases exclusive lock.
+     */
+    alljoyn_keystorelistener_releaseexclusivelock_ptr release_exclusive_lock;
+} alljoyn_keystorelistener_with_synchronization_callbacks;
+
+/**
  * Create an alljoyn_keystorelistener
  *
  * @param callbacks  Callbacks to trigger for associated events.
@@ -106,6 +161,16 @@ typedef struct {
 extern AJ_API alljoyn_keystorelistener AJ_CALL alljoyn_keystorelistener_create(const alljoyn_keystorelistener_callbacks* callbacks,
                                                                                const void* context);
 
+/**
+ * Create an alljoyn_keystorelistener with synchronization callbacks
+ *
+ * @param callbacks  Callbacks to trigger for associated events.
+ * @param context    Non const context to pass along to callback functions.
+ *
+ * @return an allocated alljoyn_keystorelistener
+ */
+extern AJ_API alljoyn_keystorelistener AJ_CALL alljoyn_keystorelistener_with_synchronization_create(const alljoyn_keystorelistener_with_synchronization_callbacks* callbacks,
+                                                                                                    void* context);
 /**
  * Destroy an alljoyn_keystorelistener
  *
