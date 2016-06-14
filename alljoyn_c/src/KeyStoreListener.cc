@@ -54,6 +54,29 @@ class KeyStoreListenerCallbackC : public KeyStoreListener {
         QCC_ASSERT(callbacks.store_request != NULL && "store_request callback required.");
         return callbacks.store_request(context, (alljoyn_keystorelistener) this, (alljoyn_keystore)(&keyStore));
     }
+
+    virtual QStatus AcquireExclusiveLock(const char* file, uint32_t line)
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        QStatus status = KeyStoreListener::AcquireExclusiveLock(file, line);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("KeyStoreListener::AcquireExclusiveLock failed"));
+            return status;
+        }
+        if (callbacks.acquire_exclusive_lock != NULL) {
+            status = callbacks.acquire_exclusive_lock(context, (alljoyn_keystorelistener) this);
+        }
+        return status;
+    }
+
+    virtual void ReleaseExclusiveLock(const char* file, uint32_t line)
+    {
+        QCC_DbgTrace(("%s", __FUNCTION__));
+        if (callbacks.release_exclusive_lock != NULL) {
+            callbacks.release_exclusive_lock(context, (alljoyn_keystorelistener) this);
+        }
+        KeyStoreListener::ReleaseExclusiveLock(file, line);
+    }
   protected:
     alljoyn_keystorelistener_callbacks callbacks;
     const void* context;
