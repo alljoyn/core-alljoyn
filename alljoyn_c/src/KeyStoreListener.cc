@@ -1,7 +1,6 @@
 /**
  * @file
- * This implements the C accessable version of the SessionPortListener class using
- * function pointers, and a pass-through implementation of SessionPortListener.
+ * This implements the C accessable version of the KeyStoreListener class.
  */
 
 /******************************************************************************
