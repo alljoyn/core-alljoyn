@@ -299,8 +299,8 @@ class ObserverTest : public testing::Test {
     void SimpleScenario(Participant& provider, Participant& consumer);
 };
 
-static void object_discovered(const void* ctx, alljoyn_proxybusobject_ref proxyref);
-static void object_lost(const void* ctx, alljoyn_proxybusobject_ref proxyref);
+static void AJ_CALL object_discovered(const void* ctx, alljoyn_proxybusobject_ref proxyref);
+static void AJ_CALL object_lost(const void* ctx, alljoyn_proxybusobject_ref proxyref);
 
 static alljoyn_observerlistener_callback listener_cbs = { object_discovered, object_lost };
 
@@ -397,14 +397,14 @@ struct ObserverListener {
     ObserverListener& operator=(const ObserverListener&);
 };
 
-static void object_discovered(const void* ctx, alljoyn_proxybusobject_ref proxyref)
+static void AJ_CALL object_discovered(const void* ctx, alljoyn_proxybusobject_ref proxyref)
 {
     EXPECT_TRUE(ctx != NULL);
     ObserverListener* listener = (ObserverListener*) ctx;
     listener->ObjectDiscovered(proxyref);
 }
 
-static void object_lost(const void* ctx, alljoyn_proxybusobject_ref proxyref)
+static void AJ_CALL object_lost(const void* ctx, alljoyn_proxybusobject_ref proxyref)
 {
     EXPECT_TRUE(ctx != NULL);
     ObserverListener* listener = (ObserverListener*) ctx;

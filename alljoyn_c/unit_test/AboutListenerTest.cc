@@ -33,10 +33,10 @@
 extern QCC_BOOL announceListenerFlags[];
 
 static
-QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
-                                                    alljoyn_sessionport sessionPort,
-                                                    const char* joiner,
-                                                    const alljoyn_sessionopts opts)
+QCC_BOOL AJ_CALL my_sessionportlistener_acceptsessionjoiner(const void* context,
+                                                            alljoyn_sessionport sessionPort,
+                                                            const char* joiner,
+                                                            const alljoyn_sessionopts opts)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(sessionPort);
