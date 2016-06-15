@@ -54,8 +54,6 @@ typedef enum {
     CAPABLE_ECDHE_SPEKE = 0x0008
 } alljoyn_claimcapability_masks;
 
-extern const alljoyn_claimcapabilities CLAIM_CAPABILITIES_DEFAULT;
-
 /**
  *  Bitmasks used to indicate password source.
  */
@@ -64,6 +62,13 @@ typedef enum {
     PASSWORD_GENERATED_BY_SECURITY_MANAGER = 0x0001,
     PASSWORD_GENERATED_BY_APPLICATION = 0x0002
 } alljoyn_claimcapabilityadditionalinfo_masks;
+
+/**
+ * Get the default claim capabilities bitmask.
+ *
+ * @return alljoyn_claimcapabilities containing the default capability set.
+ */
+AJ_API alljoyn_claimcapabilities AJ_CALL alljoyn_permissionconfigurator_getdefaultclaimcapabilities();
 
 /**
  * Struct used to return identifying information about a certificate.

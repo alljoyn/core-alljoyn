@@ -248,7 +248,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
                                                                      ALLJOYN_TRANSPORT_ANY);
         ASSERT_EQ(ER_OK, alljoyn_busattachment_joinsession(fromBus,
                                                            toBusUniqueName,
-                                                           PERMISSION_MANAGEMENT_SESSION_PORT,
+                                                           alljoyn_securityapplicationproxy_getpermissionmanagementsessionport(),
                                                            nullptr,
                                                            sessionId,
                                                            sessionOpts));
@@ -879,7 +879,7 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldGetDefaultClaimCapabilities)
 {
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getclaimcapabilities(m_managedAppSecurityApplicationProxy, &m_retrievedManagedAppClaimCapabilities));
 
-    EXPECT_EQ(CLAIM_CAPABILITIES_DEFAULT, m_retrievedManagedAppClaimCapabilities);
+    EXPECT_EQ(alljoyn_permissionconfigurator_getdefaultclaimcapabilities(), m_retrievedManagedAppClaimCapabilities);
 }
 
 TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingClaimCapabilitiesAdditionalInfoWithInvalidProxy)

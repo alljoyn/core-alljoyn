@@ -57,7 +57,10 @@ static QStatus BuildSignedManifest(const IdentityCertificate& identityCertificat
                                    AJ_PCSTR unsignedManifestXml,
                                    Manifest& manifest);
 
-const alljoyn_sessionport PERMISSION_MANAGEMENT_SESSION_PORT = ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
+alljoyn_sessionport AJ_CALL alljoyn_securityapplicationproxy_getpermissionmanagementsessionport()
+{
+    return ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
+}
 
 alljoyn_securityapplicationproxy AJ_CALL alljoyn_securityapplicationproxy_create(alljoyn_busattachment bus,
                                                                                  AJ_PCSTR appBusName,

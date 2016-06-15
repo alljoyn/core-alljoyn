@@ -543,7 +543,7 @@ TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyHaveDefaultClaimCa
     alljoyn_claimcapabilities claimCapabilities;
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getclaimcapabilities(m_configuratorUnderTest, &claimCapabilities));
 
-    EXPECT_EQ(CLAIM_CAPABILITIES_DEFAULT, claimCapabilities);
+    EXPECT_EQ(alljoyn_permissionconfigurator_getdefaultclaimcapabilities(), claimCapabilities);
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyHaveNoClaimCapabilityAdditionalInfo)

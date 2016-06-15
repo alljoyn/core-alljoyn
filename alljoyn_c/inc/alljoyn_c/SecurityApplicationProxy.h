@@ -31,15 +31,17 @@ extern "C" {
 #endif
 
 /**
- * Session port reserved for SecurityApplicationProxy connections.
- */
-extern const alljoyn_sessionport PERMISSION_MANAGEMENT_SESSION_PORT;
-
-/**
  * alljoyn_securityapplicationproxy is a handle which exposes Security 2.0
  * proxy object used to managed the remote application's security settings.
  */
 typedef struct _alljoyn_securityapplicationproxy_handle* alljoyn_securityapplicationproxy;
+
+/**
+ * Get the session port reserved for SecurityApplicationProxy connections.
+ *
+ * @return alljoyn_sessionport with the value of the reserved port.
+ */
+AJ_API alljoyn_sessionport AJ_CALL alljoyn_securityapplicationproxy_getpermissionmanagementsessionport();
 
 /**
  * Creates a Security 2.0 proxy object used to manage the remote application's security settings.
