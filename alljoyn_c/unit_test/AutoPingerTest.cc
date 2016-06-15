@@ -129,11 +129,11 @@ class TestPingListener {
     }
 };
 
-static void destination_found(const void* context, const char* group, const char* destination)
+static void AJ_CALL destination_found(const void* context, const char* group, const char* destination)
 {
     ((TestPingListener*) context)->DestinationFound(group, destination);
 }
-static void destination_lost(const void* context, const char* group, const char* destination)
+static void AJ_CALL destination_lost(const void* context, const char* group, const char* destination)
 {
     ((TestPingListener*) context)->DestinationLost(group, destination);
 }
