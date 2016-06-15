@@ -46,7 +46,7 @@
 
 static uint16_t translationCount = 0;
 
-const char* translation_callback(const char* sourceLanguage, const char* targetLanguage, const char* sourceText)
+const char* AJ_CALL translation_callback(const char* sourceLanguage, const char* targetLanguage, const char* sourceText)
 {
     static qcc::String translated;
 

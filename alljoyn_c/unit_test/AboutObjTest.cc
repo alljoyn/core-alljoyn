@@ -48,10 +48,10 @@
 
 using namespace ajn;
 
-static QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
-                                                           alljoyn_sessionport sessionPort,
-                                                           const char* joiner,
-                                                           const alljoyn_sessionopts opts)
+static QCC_BOOL AJ_CALL my_sessionportlistener_acceptsessionjoiner(const void* context,
+                                                                   alljoyn_sessionport sessionPort,
+                                                                   const char* joiner,
+                                                                   const alljoyn_sessionopts opts)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(sessionPort);
@@ -60,9 +60,9 @@ static QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
     return QCC_TRUE;
 }
 
-static void echo_aboutobject(alljoyn_busobject object,
-                             const alljoyn_interfacedescription_member* member,
-                             alljoyn_message message)
+static void AJ_CALL echo_aboutobject(alljoyn_busobject object,
+                                     const alljoyn_interfacedescription_member* member,
+                                     alljoyn_message message)
 {
     QCC_UNUSED(member);
     alljoyn_msgarg arg = alljoyn_message_getarg(message, 0);
@@ -116,12 +116,12 @@ typedef struct about_obj_test_about_listener_2_t {
     uint16_t version;
 }about_obj_test_about_listener_2;
 
-static void about_obj_test_about_listener_announced_cb(const void* context,
-                                                       const char* busName,
-                                                       uint16_t version,
-                                                       alljoyn_sessionport port,
-                                                       const alljoyn_msgarg objectDescriptionArg,
-                                                       const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL about_obj_test_about_listener_announced_cb(const void* context,
+                                                               const char* busName,
+                                                               uint16_t version,
+                                                               alljoyn_sessionport port,
+                                                               const alljoyn_msgarg objectDescriptionArg,
+                                                               const alljoyn_msgarg aboutDataArg)
 {
     QCC_UNUSED(aboutDataArg);
     about_obj_test_about_listener_2* listener = (about_obj_test_about_listener_2*)(context);
