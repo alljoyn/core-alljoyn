@@ -29,13 +29,9 @@ srcs = [ f for f in libenv.Glob('*.cc') + libenv.Glob('*.c')
 # Platform specific sources
 if libenv['OS'] == 'darwin':
     os_srcs = [ f for f in libenv.Glob(libenv['OS'] + '/*.cc') ]
+    os_srcs = [ f for f in libenv.Glob(libenv['OS_GROUP'] + '/KeyStoreListenerFactory.cc') ]
 else:
     os_srcs = [ f for f in libenv.Glob(libenv['OS_GROUP'] + '/*.cc') ]
-
-    if libenv['OS'] == 'openwrt':
-        os_srcs += [ f for f in libenv.Glob('posix/linux/*.cc')]
-    else:
-        os_srcs += [ f for f in libenv.Glob(libenv['OS_GROUP'] + '/' + libenv['OS'] + '/*.cc')]
 
 version_cc = libenv.GenVersion('version')
 
