@@ -147,7 +147,7 @@ extern AJ_API void AJ_CALL alljoyn_busattachment_destroy(alljoyn_busattachment b
  * gracefully brought down together.
  *
  * The alljoyn_busattachment function alljoyn_busattachment_start(),
- * alljoyn_busattachment_stop() and alljoyn_busattacment_join() all work together to
+ * alljoyn_busattachment_stop() and alljoyn_busattachment_join() all work together to
  * manage the autonomous activities that can happen in an alljoyn_busattachment.
  * These activities are carried out by so-called hardware threads.  POSIX
  * defines functions used to control hardware threads, which it calls
