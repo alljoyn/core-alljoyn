@@ -599,7 +599,7 @@ class Crypto_ASN1 {
      *         An error status otherwise.
      *
      */
-    static QStatus AJ_CALL Decode(const uint8_t* asn, size_t asnLen, const char* syntax, ...)
+    static QStatus CDECL_CALL Decode(const uint8_t* asn, size_t asnLen, const char* syntax, ...)
     {
         if (!syntax) {
             return ER_BAD_ARG_1;
@@ -626,7 +626,7 @@ class Crypto_ASN1 {
      *         An error status otherwise.
      *
      */
-    static QStatus AJ_CALL Decode(const qcc::String& asn, const char* syntax, ...)
+    static QStatus CDECL_CALL Decode(const qcc::String& asn, const char* syntax, ...)
     {
         if (!syntax) {
             return ER_BAD_ARG_1;
@@ -693,7 +693,7 @@ class Crypto_ASN1 {
      * @return ER_OK if the encode succeeded.
      *         An error status otherwise.
      */
-    static QStatus AJ_CALL Encode(qcc::String& asn, const char* syntax, ...)
+    static QStatus CDECL_CALL Encode(qcc::String& asn, const char* syntax, ...)
     {
         if (!syntax) {
             return ER_FAIL;
