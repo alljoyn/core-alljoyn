@@ -35,7 +35,7 @@ namespace ajn {
  * Abstract base class implemented by AllJoyn users and called by AllJoyn to inform
  * users of bus related events.
  */
-class AuthListenerCallbackC : public AuthListener {
+class AuthListenerCallbackC : public DefaultECDHEAuthListener {
   public:
     AuthListenerCallbackC(const alljoyn_authlistener_callbacks* callbacks_in, const void* context_in)
     {
@@ -48,20 +48,34 @@ class AuthListenerCallbackC : public AuthListener {
                                     const char* userName, uint16_t credMask, Credentials& credentials)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        QCC_ASSERT(callbacks.request_credentials != NULL && "request_credentials callback must be specified");
-        bool ret = (callbacks.request_credentials(context, authMechanism, peerName, authCount, userName,
-                                                  credMask, (alljoyn_credentials)(&credentials)) == QCC_TRUE ? true : false);
-        return ret;
+        if (NULL != callbacks.request_credentials) {
+            QCC_BOOL ret = callbacks.request_credentials(context,
+                                                         authMechanism,
+                                                         peerName,
+                                                         authCount,
+                                                         userName,
+                                                         credMask,
+                                                         (alljoyn_credentials)(&credentials));
+            return (QCC_TRUE == ret);
+        }
+
+        return DefaultECDHEAuthListener::RequestCredentials(authMechanism,
+                                                            peerName,
+                                                            authCount,
+                                                            userName,
+                                                            credMask,
+                                                            credentials);
     }
 
     virtual bool VerifyCredentials(const char* authMechanism, const char* peerName, const Credentials& credentials)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        bool ret = AuthListener::VerifyCredentials(authMechanism, peerName, credentials);
         if (callbacks.verify_credentials != NULL) {
-            ret = (callbacks.verify_credentials(context, authMechanism, peerName, (alljoyn_credentials)(&credentials)) == QCC_TRUE ? true : false);
+            QCC_BOOL result = callbacks.verify_credentials(context, authMechanism, peerName, (alljoyn_credentials)(&credentials));
+            return (QCC_TRUE == result);
         }
-        return ret;
+
+        return DefaultECDHEAuthListener::VerifyCredentials(authMechanism, peerName, credentials);;
     }
 
     virtual void SecurityViolation(QStatus status, const Message& msg)
@@ -69,14 +83,19 @@ class AuthListenerCallbackC : public AuthListener {
         QCC_DbgTrace(("%s", __FUNCTION__));
         if (callbacks.security_violation != NULL) {
             callbacks.security_violation(context, status, (alljoyn_message)(&msg));
+        } else {
+            DefaultECDHEAuthListener::SecurityViolation(status, msg);
         }
     }
 
     virtual void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success)
     {
         QCC_DbgTrace(("%s", __FUNCTION__));
-        QCC_ASSERT(callbacks.authentication_complete != NULL && "authentication_complete callback must be specified");
-        callbacks.authentication_complete(context, authMechanism, peerName, (success == true ? QCC_TRUE : QCC_FALSE));
+        if (NULL != callbacks.authentication_complete) {
+            callbacks.authentication_complete(context, authMechanism, peerName, (success == true ? QCC_TRUE : QCC_FALSE));
+        } else {
+            DefaultECDHEAuthListener::AuthenticationComplete(authMechanism, peerName, success);
+        }
     }
   private:
     alljoyn_authlistener_callbacks callbacks;
@@ -161,6 +180,12 @@ void AJ_CALL alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener)
     QCC_DbgTrace(("%s", __FUNCTION__));
     QCC_ASSERT(listener != NULL && "listener parameter must not be NULL");
     delete (ajn::AuthListenerAsyncCallbackC*)listener;
+}
+
+QStatus AJ_CALL alljoyn_authlistener_setsharedsecret(alljoyn_authlistener listener, uint8_t* sharedSecret, size_t sharedSecretSize)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ((ajn::AuthListenerCallbackC*)listener)->SetPassword(sharedSecret, sharedSecretSize);
 }
 
 QStatus AJ_CALL alljoyn_authlistener_requestcredentialsresponse(alljoyn_authlistener listener, void* authContext, QCC_BOOL accept, alljoyn_credentials credentials)
