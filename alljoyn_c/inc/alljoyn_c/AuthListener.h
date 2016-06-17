@@ -42,7 +42,7 @@ typedef struct _alljoyn_credentials_handle*                 alljoyn_credentials;
  *  Bitmasks used to indicated what type of credentials are being used.
  */
 // @{
-static const uint16_t ALLJOYN_CRED_PASSWORD     = 0x0001; /**< Bit 0 indicates credentials include a password, pincode, or passphrase */
+static const uint16_t ALLJOYN_CRED_PASSWORD     = 0x0001; /**< Bit 0 indicates credentials include a password */
 static const uint16_t ALLJOYN_CRED_USER_NAME    = 0x0002; /**< Bit 1 indicates credentials include a user name */
 static const uint16_t ALLJOYN_CRED_CERT_CHAIN   = 0x0004; /**< Bit 2 indicates credentials include a chain of PEM-encoded X509 certificates */
 static const uint16_t ALLJOYN_CRED_PRIVATE_KEY  = 0x0008; /**< Bit 3 indicates credentials include a PEM-encoded private key */
@@ -256,7 +256,23 @@ typedef struct {
 } alljoyn_authlistenerasync_callbacks;
 
 /**
- * Create an alljoyn_authlistener which will trigger the provided callbacks, passing along the provided context.
+ * Create an alljoyn_authlistener which will trigger the provided callbacks, passing along the context.
+ * If a callback is not provided the listener will default to the below behavior.
+ *
+ * NOTE: The default request_credentials behavior should NOT be used for ECDHE_ECDSA authentication
+ * for an application in CLAIMABLE state, as it does not provide any credentials to verify and always
+ * returns true.
+ *
+ * The callbacks' default behavior:
+ *   request_credentials - depends on the authentication method:
+ *     - ECDHE_NULL  - The callback returns true.
+ *     - ECDHE_SPEKE - Provides the password set using alljoyn_authlistener_setpassword and returns true,
+ *                     unless the number of authentication attempts is greater than 10.
+ *                     For no set password returns false.
+ *     - ECDHE_ECDSA - The callback returns true without providing any credential.
+ *   verify_credentials - Returns true.
+ *   security_violation - No operation.
+ *   authentication_complete - No operation.
  *
  * @param callbacks Callbacks to trigger for associated events.
  * @param context   Context to pass to callback functions
@@ -290,6 +306,19 @@ extern AJ_API void AJ_CALL alljoyn_authlistener_destroy(alljoyn_authlistener lis
 extern AJ_API void AJ_CALL alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener);
 
 /**
+ * Sets a shared secret to be returned by the listener during ECDHE_SPEKE authentication.
+ *
+ * @param listener          alljoyn_authlistener for which the secret should be set.
+ * @param sharedSecret      An array containing the shared secret. Must be at least 4 bytes long.
+ * @param sharedSecretSize  The shared secret's size in bytes.
+ *
+ * @return true
+ *          - #ER_OK        If successful.
+ *          - #ER_BAD_ARG_2 If the secret is shorter than 4 bytes.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_authlistener_setsharedsecret(alljoyn_authlistener listener, const uint8_t* sharedSecret, size_t sharedSecretSize);
+
+/**
  * Create credentials
  *
  * @return Newly created credentials.
@@ -313,7 +342,7 @@ extern AJ_API void AJ_CALL alljoyn_credentials_destroy(alljoyn_credentials cred)
 extern AJ_API QCC_BOOL AJ_CALL alljoyn_credentials_isset(const alljoyn_credentials cred, uint16_t creds);
 
 /**
- * Sets a requested password, pincode, or passphrase.
+ * Sets a requested password.
  *
  * @param cred The credentials to set.
  * @param pwd  The password to set.
@@ -368,7 +397,7 @@ extern AJ_API void AJ_CALL alljoyn_credentials_setlogonentry(alljoyn_credentials
 extern AJ_API void AJ_CALL alljoyn_credentials_setexpiration(alljoyn_credentials cred, uint32_t expiration);
 
 /**
- * Gets the password, pincode, or passphrase from this credentials instance.
+ * Gets the password from this credentials instance.
  *
  * @param cred The credentials to query.
  * @return A password or an empty string.
