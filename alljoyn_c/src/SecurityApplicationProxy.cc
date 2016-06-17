@@ -307,7 +307,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedM
     return status;
 }
 
-AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml)
+void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml)
 {
     DestroyStringCopy(signedManifestXml);
 }
@@ -361,3 +361,120 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
     return status;
 }
 
+QStatus AJ_CALL alljoyn_securityapplicationproxy_computemanifestdigest(AJ_PCSTR unsignedManifestXml,
+                                                                       AJ_PCSTR identityCertificatePem,
+                                                                       uint8_t** digest,
+                                                                       size_t* digestSize)
+{
+    CertificateX509 identityCertificate;
+    Manifest manifest;
+    vector<PermissionPolicy::Rule> rules;
+
+    QStatus status = XmlRulesConverter::XmlToRules(unsignedManifestXml, rules);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not convert manifest XML to rules"));
+        return status;
+    }
+
+    status = manifest->SetRules(rules.data(), rules.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set manifest rules"));
+        return status;
+    }
+
+    status = identityCertificate.LoadPEM(identityCertificatePem);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not load identity certificate"));
+        return status;
+    }
+
+    vector<uint8_t> digestVector;
+    status = manifest->ComputeThumbprintAndDigest(identityCertificate, digestVector);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not ComputeThumbprintAndDigest"));
+        return status;
+    }
+
+    *digest = new (std::nothrow) uint8_t[digestVector.size()];
+    if (nullptr == *digest) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Out of memory allocating digest"));
+        return ER_OUT_OF_MEMORY;
+    }
+
+    memcpy(*digest, digestVector.data(), digestVector.size());
+    *digestSize = digestVector.size();
+
+    return ER_OK;
+}
+
+void AJ_CALL alljoyn_securityapplicationproxy_digest_destroy(uint8_t* digest)
+{
+    delete[] digest;
+}
+
+QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_PCSTR unsignedManifestXml,
+                                                                      AJ_PCSTR identityCertificatePem,
+                                                                      const uint8_t* signature,
+                                                                      size_t signatureSize,
+                                                                      AJ_PSTR* signedManifestXml)
+{
+    if ((2 * ECC_COORDINATE_SZ) != signatureSize) {
+        return ER_BAD_ARG_4;
+    }
+
+    CertificateX509 identityCertificate;
+    Manifest manifest;
+    vector<PermissionPolicy::Rule> rules;
+
+    QStatus status = XmlRulesConverter::XmlToRules(unsignedManifestXml, rules);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not convert manifest XML to rules"));
+        return status;
+    }
+
+    status = manifest->SetRules(rules.data(), rules.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set manifest rules"));
+        return status;
+    }
+
+    status = identityCertificate.LoadPEM(identityCertificatePem);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not load identity certificate"));
+        return status;
+    }
+
+    status = manifest->SetSubjectThumbprint(identityCertificate);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set subject thumbprint"));
+        return status;
+    }
+
+    ECCSignature eccSig;
+    /* TODO ASACORE-3006: Need Import/Export methods for ECCSignature */
+    memcpy(eccSig.r, signature, ECC_COORDINATE_SZ);
+    memcpy(eccSig.s, signature + ECC_COORDINATE_SZ, ECC_COORDINATE_SZ);
+
+    status = manifest->SetSignature(eccSig);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set manifest signature"));
+        return status;
+    }
+
+    std::string signedManifest;
+
+    status = XmlManifestConverter::ManifestToXml(manifest, signedManifest);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not convert signed manifest to XML"));
+        return status;
+    }
+
+    *signedManifestXml = CreateStringCopy(signedManifest);
+
+    if (nullptr == *signedManifestXml) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Out of memory copying manifest XML"));
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return ER_OK;
+}
