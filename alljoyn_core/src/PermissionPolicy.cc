@@ -1367,7 +1367,21 @@ QStatus _Manifest::ComputeThumbprintAndSign(const CertificateX509& subjectCertif
     return Sign(m_thumbprint, issuerPrivateKey);
 }
 
-QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECCPrivateKey* issuerPrivateKey)
+QStatus _Manifest::ComputeThumbprintAndDigest(const qcc::CertificateX509& subjectCertificate, std::vector<uint8_t>& digest)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    m_thumbprint.resize(Crypto_SHA256::DIGEST_SIZE);
+    QStatus status = subjectCertificate.GetSHA256Thumbprint(m_thumbprint.data());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not compute certificate thumbprint"));
+        return status;
+    }
+
+    return ComputeDigest(m_thumbprint, digest);
+}
+
+QStatus _Manifest::ComputeDigest(const std::vector<uint8_t>& subjectThumbprint, std::vector<uint8_t>& digest)
 {
     if (&subjectThumbprint != &m_thumbprint) {
         m_thumbprint = subjectThumbprint;
@@ -1378,10 +1392,43 @@ QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECC
     /* Only ECDSA with SHA-256 is supported as the signature algorithm. */
     m_signatureAlgorithmOid.assign(qcc::OID_SIG_ECDSA_SHA256.c_str());
 
-    std::vector<uint8_t> digest(Crypto_SHA256::DIGEST_SIZE);
     QStatus status = GetDigest(digest);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not compute manifest digest"));
+        return status;
+    }
+
+    return ER_OK;
+}
+
+void _Manifest::SetSubjectThumbprint(const std::vector<uint8_t>& subjectThumbprint)
+{
+    if (&subjectThumbprint != &m_thumbprint) {
+        m_thumbprint = subjectThumbprint;
+    }
+}
+
+QStatus _Manifest::SetSubjectThumbprint(const CertificateX509& subjectCertificate)
+{
+    m_thumbprint.resize(Crypto_SHA256::DIGEST_SIZE);
+    return subjectCertificate.GetSHA256Thumbprint(m_thumbprint.data());
+}
+
+QStatus _Manifest::SetSignature(const ECCSignature& signature)
+{
+    /* Only SHA-256 is supported as the thumbprint algorithm. */
+    m_thumbprintAlgorithmOid.assign(qcc::OID_DIG_SHA256.c_str());
+    /* Only ECDSA with SHA-256 is supported as the signature algorithm. */
+    m_signatureAlgorithmOid.assign(qcc::OID_SIG_ECDSA_SHA256.c_str());
+
+    return SetECCSignature(signature);
+}
+
+QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECCPrivateKey* issuerPrivateKey)
+{
+    std::vector<uint8_t> digest(Crypto_SHA256::DIGEST_SIZE);
+    QStatus status = ComputeDigest(subjectThumbprint, digest);
+    if (ER_OK != status) {
         return status;
     }
 
