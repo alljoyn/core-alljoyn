@@ -256,7 +256,23 @@ typedef struct {
 } alljoyn_authlistenerasync_callbacks;
 
 /**
- * Create an alljoyn_authlistener which will trigger the provided callbacks, passing along the provided context.
+ * Create an alljoyn_authlistener which will trigger the provided callbacks, passing along the context.
+ * If a callback is not provided the listener will default to the below behavior.
+ *
+ * NOTE: The default request_credentials behavior should NOT be used for ECDHE_ECDSA authentication
+ * for an application in CLAIMABLE state, as it does not provide any credentials to verify and always
+ * returns true.
+ *
+ * The callbacks' default behavior:
+ *   request_credentials - depends on the authentication method:
+ *     - ECDHE_NULL  - The callback returns true.
+ *     - ECDHE_SPEKE - Provides the password set using alljoyn_authlistener_setpassword and returns true,
+ *                     unless the number of authentication attempts is greater than 10.
+ *                     For no set password returns false.
+ *     - ECDHE_ECDSA - The callback returns true without providing any credential.
+ *   verify_credentials - Returns true.
+ *   security_violation - No operation.
+ *   authentication_complete - No operation.
  *
  * @param callbacks Callbacks to trigger for associated events.
  * @param context   Context to pass to callback functions
@@ -288,6 +304,19 @@ extern AJ_API void AJ_CALL alljoyn_authlistener_destroy(alljoyn_authlistener lis
  * @param listener alljoyn_authlistener to destroy.
  */
 extern AJ_API void AJ_CALL alljoyn_authlistenerasync_destroy(alljoyn_authlistener listener);
+
+/**
+ * Sets a password to be returned by the listener during ECDHE_SPEKE authentication.
+ *
+ * @param listener      alljoyn_authlistener for which the password should be set.
+ * @param password      The password to set. Must be at least 4 bytes long.
+ * @param passwordSize  The size of the password.
+ *
+ * @return true
+ *          - #ER_OK        If successful.
+ *          - #ER_BAD_ARG_2 If password is shorter than 4 bytes.
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_authlistener_setpassword(alljoyn_authlistener listener, const uint8_t* password, size_t passwordSize);
 
 /**
  * Create credentials
