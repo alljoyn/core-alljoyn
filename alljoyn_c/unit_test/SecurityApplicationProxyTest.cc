@@ -162,8 +162,8 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
     virtual void SetUp()
     {
         SetUpCallbacks();
+        SetUpAuthListener();
 
-        m_defaultEcdheAuthListener = (alljoyn_authlistener) new DefaultECDHEAuthListener();
         m_securityManagerPermissionConfigurationListener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, nullptr);
         BasicBusSetup(&m_securityManager,
                       SECURITY_MANAGER_BUS_NAME,
@@ -195,7 +195,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
 
         alljoyn_permissionconfigurationlistener_destroy(m_securityManagerPermissionConfigurationListener);
         BasicBusTearDown(m_securityManager);
-        delete (DefaultECDHEAuthListener*) m_defaultEcdheAuthListener;
+        alljoyn_authlistener_destroy(m_defaultEcdheAuthListener);
     }
 
   protected:
@@ -286,6 +286,12 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
     {
         QCC_UNUSED(context);
         s_endManagementHappened = true;
+    }
+
+    void SetUpAuthListener()
+    {
+        alljoyn_authlistener_callbacks callbacks = { nullptr, nullptr, nullptr, nullptr };
+        m_defaultEcdheAuthListener = alljoyn_authlistener_create(&callbacks, nullptr);
     }
 
     void SetUpCallbacks()
