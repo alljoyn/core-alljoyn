@@ -634,7 +634,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
         BusEndpoint ep = ajObj.FindEndpoint(sessionHost);
         if (ep->GetEndpointType() == ENDPOINT_TYPE_VIRTUAL) {
             vSessionEp = VirtualEndpoint::cast(ep);
-            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): vSessionEp=\"%s\"", sessionHost));
+            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): vSessionEp=\"%s\"", vSessionEp->GetUniqueName().c_str()));
         } else if ((ep->GetEndpointType() == ENDPOINT_TYPE_REMOTE) || (ep->GetEndpointType() == ENDPOINT_TYPE_NULL) ||
                    (ep->GetEndpointType() == ENDPOINT_TYPE_LOCAL)) {
             rSessionEp = ep;
@@ -818,17 +818,26 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
             QCC_DbgPrintf(("JoinSessionThread::RunJoin(): session is with a remote attachment"));
             /* Session is with a connected or unconnected remote device */
 
+            if (ajObj.pendingSessionSet.find(sessionHost) != ajObj.pendingSessionSet.end()) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): there is already an attempt to join a session with this service"));
+                replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINING;
+            }
+            ajObj.pendingSessionSet.insert(sessionHost);
+
             /*
              * Step 1: get a b2bEp to the session host.
              */
 
             /* Check for an existing multipoint session. */
-            if (vSessionEp->IsValid()) {
-                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Existing virtual endpoint IsValid() and isMultipoint"));
+            if (vSessionEp->IsValid() && replyCode != ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINING) {
+                QCC_DbgPrintf(("JoinSessionThread::RunJoin(): Existing virtual endpoint IsValid() and isMultipoint", vSessionEp->GetUniqueName().c_str()));
                 SessionMapType::iterator it = ajObj.sessionMap.begin();
                 while (it != ajObj.sessionMap.end()) {
                     if ((it->second.sessionHost == vSessionEp->GetUniqueName()) && (it->second.sessionPort == sessionPort)) {
-                        if (it->second.opts.IsCompatible(optsIn)) {
+                        if (it->first.first == joinerEp->GetUniqueName()) {
+                            QCC_DbgPrintf(("JoinSessionThread::RunJoin(): session already joined: same joiner and same host")); 
+                            replyCode = ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
+                        } else if (it->second.opts.IsCompatible(optsIn)) {
                             if (it->second.opts.isMultipoint) {
                                 b2bEp = vSessionEp->GetBusToBusEndpoint(it->second.id);
                                 optsIn.nameTransfer = it->second.opts.nameTransfer;
@@ -853,7 +862,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
              * multipoint session.
              */
             vector<String> busAddrs;
-            if (!b2bEp->IsValid()) {
+            if (!b2bEp->IsValid() && replyCode != ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED && replyCode != ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINING) {
                 GetBusAddrsFromAdvertisements(sessionHost, optsIn, busAddrs);
                 if (busAddrs.empty()) {
                     /*
@@ -892,7 +901,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     ++bit;
                 }
 
-                if (!b2bEp->IsValid()) {
+                if (!b2bEp->IsValid() && replyCode != ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINING && replyCode != ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED) {
                     replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
                 } else if (b2bEp->GetRemoteProtocolVersion() < 12) {
                     /*
@@ -1035,6 +1044,8 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                 if (sessionMapEntryCreated && (replyCode != ALLJOYN_JOINSESSION_REPLY_SUCCESS)) {
                     ajObj.SessionMapErase(sme);
                 }
+                    
+                ajObj.pendingSessionSet.erase(sessionHost);
 
                 /* Cleanup b2bEp if its ref hasn't been incremented */
                 if (b2bEp->IsValid()) {
