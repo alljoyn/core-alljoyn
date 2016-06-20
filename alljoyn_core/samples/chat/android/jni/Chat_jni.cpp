@@ -62,7 +62,6 @@ static BusAttachment* s_bus = NULL;
 static ChatObject* s_chatObj = NULL;
 static qcc::String s_advertisedName;
 static MyBusListener* s_busListener = NULL;
-static qcc::String s_sessionHost;
 static SessionId s_sessionId = 0;
 
 class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
@@ -71,12 +70,11 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
     {
         printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
 
-        if (s_sessionHost.empty()) {
+        if (0 == strcmp(name, CHAT_SERVICE_WELL_KNOWN_NAME)) {
             const char* convName = name + strlen(NAME_PREFIX);
             LOGD("Discovered chat conversation: %s \n", name);
 
             /* Enable Concurrency since JoinSession can block */
-            s_sessionHost = name;
             s_bus->EnableConcurrentCallbacks();
 
             /* Join the conversation */

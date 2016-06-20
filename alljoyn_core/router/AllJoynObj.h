@@ -899,6 +899,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
     typedef std::multimap<std::pair<qcc::String, SessionId>, SessionMapEntry> SessionMapType;
 
     SessionMapType sessionMap;  /**< Map (endpointName,sessionId) to session info */
+    std::set<qcc::String> pendingSessionSet;  /**< Set (sessionHost) */
 
     /**
      * Helper function to convert a QStatus into a SessionLost reason
