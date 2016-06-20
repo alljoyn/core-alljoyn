@@ -2052,6 +2052,10 @@ QStatus BusAttachment::GetJoinSessionResponse(Message& reply, SessionId& session
             status = ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINED;
             break;
 
+        case ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINING:
+            status = ER_ALLJOYN_JOINSESSION_REPLY_ALREADY_JOINING;
+            break;
+
         case ALLJOYN_JOINSESSION_REPLY_FAILED:
             status = ER_ALLJOYN_JOINSESSION_REPLY_FAILED;
             break;
