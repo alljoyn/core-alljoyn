@@ -46,7 +46,7 @@ alljoyn_msgarg AJ_CALL alljoyn_msgarg_create()
     return (alljoyn_msgarg)arg;
 }
 
-alljoyn_msgarg AJ_CALL alljoyn_msgarg_create_and_set(const char* signature, ...)
+alljoyn_msgarg CDECL_CALL alljoyn_msgarg_create_and_set(const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::MsgArgC* arg = new ajn::MsgArgC[1];
@@ -97,7 +97,7 @@ alljoyn_msgarg AJ_CALL alljoyn_msgarg_array_element(alljoyn_msgarg arg, size_t i
     return (alljoyn_msgarg)(&array_arg[index]);
 }
 
-QStatus AJ_CALL alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ...)
+QStatus CDECL_CALL alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -121,7 +121,7 @@ QStatus AJ_CALL alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ..
     return status;
 }
 
-QStatus AJ_CALL alljoyn_msgarg_get(alljoyn_msgarg arg, const char* signature, ...)
+QStatus CDECL_CALL alljoyn_msgarg_get(alljoyn_msgarg arg, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -164,7 +164,7 @@ QCC_BOOL AJ_CALL alljoyn_msgarg_equal(alljoyn_msgarg lhv, alljoyn_msgarg rhv)
     return (*(ajn::MsgArgC*)lhv) == (*(ajn::MsgArgC*)rhv);
 }
 
-QStatus AJ_CALL alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, const char* signature, ...)
+QStatus CDECL_CALL alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!args) {
@@ -177,7 +177,7 @@ QStatus AJ_CALL alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, c
     return status;
 }
 
-QStatus AJ_CALL alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numArgs, const char* signature, ...)
+QStatus CDECL_CALL alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numArgs, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!args) {
@@ -279,7 +279,7 @@ QCC_BOOL AJ_CALL alljoyn_msgarg_hassignature(alljoyn_msgarg arg, const char* sig
     return ((ajn::MsgArgC*)arg)->HasSignature(signature);
 }
 
-QStatus AJ_CALL alljoyn_msgarg_getdictelement(alljoyn_msgarg arg, const char* elemSig, ...)
+QStatus CDECL_CALL alljoyn_msgarg_getdictelement(alljoyn_msgarg arg, const char* elemSig, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
@@ -358,7 +358,7 @@ void AJ_CALL alljoyn_msgarg_stabilize(alljoyn_msgarg arg)
  * AllJoyn Unity Extension. The functions could be changed at any time.
  ******************************************************************************/
 
-QStatus AJ_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, size_t* numArgs, const char* signature, ...)
+QStatus CDECL_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, size_t* numArgs, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     va_list argp;
@@ -368,7 +368,7 @@ QStatus AJ_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argO
     return status;
 }
 
-QStatus AJ_CALL alljoyn_msgarg_set_and_stabilize(alljoyn_msgarg arg, const char* signature, ...) {
+QStatus CDECL_CALL alljoyn_msgarg_set_and_stabilize(alljoyn_msgarg arg, const char* signature, ...) {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (!arg) {
         return ER_BAD_ARG_1;
