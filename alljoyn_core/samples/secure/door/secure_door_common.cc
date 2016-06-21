@@ -16,7 +16,6 @@
 
 #include "secure_door_common.h"
 
-#include <qcc/Thread.h>
 #include <alljoyn/PermissionPolicy.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -37,7 +36,12 @@ void DoorCommonPCL::PolicyChanged()
     PermissionConfigurator::ApplicationState appState;
     if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState))) {
         if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
-            qcc::Sleep(250); // Allow SecurityMgmtObj to send method reply (see ASACORE-2331)
+            #ifdef _WIN32           // Allow SecurityMgmtObj to send method reply (see ASACORE-2331)
+                Sleep(250);
+            #else
+                usleep(250 * 1000);
+            #endif
+
             // Upon a policy update, existing connections are invalidated
             // and one needs to make them valid again.
             if (ER_OK != (status = ba.SecureConnectionAsync(nullptr, true))) {
