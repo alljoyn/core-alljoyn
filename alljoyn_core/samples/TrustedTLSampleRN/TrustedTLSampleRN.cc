@@ -27,10 +27,8 @@
 #include <alljoyn/version.h>
 
 #include <qcc/Debug.h>
-#include <qcc/Event.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
-#include <qcc/Thread.h>
 
 #include <iostream>
 #include <vector>
@@ -144,7 +142,11 @@ int CDECL_CALL main(int argc, char** argv)
 
     // Wait for Ctrl-C to exit
     while (!g_interrupted) {
-        qcc::Sleep(100);
+        #if defined(QCC_OS_GROUP_WINDOWS)
+        Sleep(100);
+        #else
+        usleep(100 * 1000);
+        #endif
     }
 
     delete msgBus;
