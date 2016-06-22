@@ -31,20 +31,20 @@ void zero_announceListenerFlags()
     }
 }
 
-static void foo_cb(alljoyn_busobject object,
-                   const alljoyn_interfacedescription_member* member,
-                   alljoyn_message msg)
+static void AJ_CALL foo_cb(alljoyn_busobject object,
+                           const alljoyn_interfacedescription_member* member,
+                           alljoyn_message msg)
 {
     QCC_UNUSED(member);
     alljoyn_busobject_methodreply_args(object, msg, NULL, 0);
 }
 
-static void announced_cb(const void* context,
-                         const char* busName,
-                         uint16_t version,
-                         alljoyn_sessionport port,
-                         const alljoyn_msgarg objectDescriptionArg,
-                         const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL announced_cb(const void* context,
+                                 const char* busName,
+                                 uint16_t version,
+                                 alljoyn_sessionport port,
+                                 const alljoyn_msgarg objectDescriptionArg,
+                                 const alljoyn_msgarg aboutDataArg)
 {
     QCC_UNUSED(busName);
     QCC_UNUSED(version);
@@ -55,12 +55,12 @@ static void announced_cb(const void* context,
     announceListenerFlags[*idx] = QCC_TRUE;
 }
 
-static void about_test_wildcard_about_listener_announced_cb(const void* context,
-                                                            const char* busName,
-                                                            uint16_t version,
-                                                            alljoyn_sessionport port,
-                                                            const alljoyn_msgarg objectDescriptionArg,
-                                                            const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL about_test_wildcard_about_listener_announced_cb(const void* context,
+                                                                    const char* busName,
+                                                                    uint16_t version,
+                                                                    alljoyn_sessionport port,
+                                                                    const alljoyn_msgarg objectDescriptionArg,
+                                                                    const alljoyn_msgarg aboutDataArg)
 {
     QCC_UNUSED(busName);
     QCC_UNUSED(version);
@@ -72,12 +72,12 @@ static void about_test_wildcard_about_listener_announced_cb(const void* context,
     listener->announcelistenercount++;
 }
 
-static void non_128_bit_app_id_about_listener_announced_cb(const void* context,
-                                                           const char* busName,
-                                                           uint16_t version,
-                                                           alljoyn_sessionport port,
-                                                           const alljoyn_msgarg objectDescriptionArg,
-                                                           const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL non_128_bit_app_id_about_listener_announced_cb(const void* context,
+                                                                   const char* busName,
+                                                                   uint16_t version,
+                                                                   alljoyn_sessionport port,
+                                                                   const alljoyn_msgarg objectDescriptionArg,
+                                                                   const alljoyn_msgarg aboutDataArg)
 {
     QCC_UNUSED(busName);
     QCC_UNUSED(version);
@@ -90,12 +90,12 @@ static void non_128_bit_app_id_about_listener_announced_cb(const void* context,
     alljoyn_msgarg_stabilize(listener->aboutData);
 }
 
-static void remove_object_description_about_listener_cb(const void* context,
-                                                        const char* busName,
-                                                        uint16_t version,
-                                                        alljoyn_sessionport port,
-                                                        const alljoyn_msgarg objectDescriptionArg,
-                                                        const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL remove_object_description_about_listener_cb(const void* context,
+                                                                const char* busName,
+                                                                uint16_t version,
+                                                                alljoyn_sessionport port,
+                                                                const alljoyn_msgarg objectDescriptionArg,
+                                                                const alljoyn_msgarg aboutDataArg)
 {
     QCC_UNUSED(busName);
     QCC_UNUSED(version);
@@ -118,12 +118,12 @@ static void remove_object_description_about_listener_cb(const void* context,
     alljoyn_aboutobjectdescription_destroy(objectDescription);
 }
 
-static void filtered_about_listener_cb(const void* context,
-                                       const char* busName,
-                                       uint16_t version,
-                                       alljoyn_sessionport port,
-                                       const alljoyn_msgarg objectDescriptionArg,
-                                       const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL filtered_about_listener_cb(const void* context,
+                                               const char* busName,
+                                               uint16_t version,
+                                               alljoyn_sessionport port,
+                                               const alljoyn_msgarg objectDescriptionArg,
+                                               const alljoyn_msgarg aboutDataArg)
 {
     QCC_UNUSED(busName);
     QCC_UNUSED(version);

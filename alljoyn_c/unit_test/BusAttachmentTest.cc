@@ -653,8 +653,13 @@ TEST(BusAttachmentTest, ping_other_on_same_bus) {
     alljoyn_busattachment_destroy(bus);
 }
 
-static QCC_BOOL test_alljoyn_authlistener_requestcredentials(const void* context, AJ_PCSTR authMechanism, AJ_PCSTR peerName, uint16_t authCount,
-                                                             AJ_PCSTR userName, uint16_t credMask, alljoyn_credentials credentials)
+static QCC_BOOL AJ_CALL test_alljoyn_authlistener_requestcredentials(const void* context,
+                                                                     AJ_PCSTR authMechanism,
+                                                                     AJ_PCSTR peerName,
+                                                                     uint16_t authCount,
+                                                                     AJ_PCSTR userName,
+                                                                     uint16_t credMask,
+                                                                     alljoyn_credentials credentials)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(authMechanism);
@@ -666,7 +671,7 @@ static QCC_BOOL test_alljoyn_authlistener_requestcredentials(const void* context
     return true;
 }
 
-static void test_alljoyn_authlistener_authenticationcomplete(const void* context, AJ_PCSTR authMechanism, AJ_PCSTR peerName, QCC_BOOL success)
+static void AJ_CALL test_alljoyn_authlistener_authenticationcomplete(const void* context, AJ_PCSTR authMechanism, AJ_PCSTR peerName, QCC_BOOL success)
 {
 
     QCC_UNUSED(authMechanism);
