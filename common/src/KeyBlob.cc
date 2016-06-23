@@ -92,7 +92,7 @@ void KeyBlob::Derive(const qcc::String& secret, size_t len, const Type initType)
     }
 }
 
-void KeyBlob::Rand(const size_t len, const Type initType)
+void KeyBlob::Rand(size_t len, const Type initType)
 {
     Erase();
     if (initType != EMPTY) {

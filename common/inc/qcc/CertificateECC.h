@@ -336,7 +336,7 @@ class CertificateX509 {
      * @param serialNumber The serial number
      * @param len          Length of the serial array
      */
-    void SetSerial(const uint8_t* serialNumber, const size_t len)
+    void SetSerial(const uint8_t* serialNumber, size_t len)
     {
         serialLen = len;
         delete[] this->serial;
@@ -657,7 +657,7 @@ class CertificateX509 {
      * @param ouLength Length of the ou array. Zero if null.
      * @return true if so.
      */
-    bool IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const;
+    bool IsDNEqual(const uint8_t* cn, size_t cnLength, const uint8_t* ou, size_t ouLength) const;
 
     /**
      * Is the subject DN of this certificate equal to a given certificate's DN?

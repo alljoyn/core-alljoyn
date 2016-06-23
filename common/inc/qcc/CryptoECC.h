@@ -102,7 +102,7 @@ class ECCPrivateKey {
      *
      * @return ER_OK  on success others on failure
      */
-    QStatus Import(const uint8_t* data, const size_t size)
+    QStatus Import(const uint8_t* data, size_t size)
     {
         if (ECC_COORDINATE_SZ != size) {
             return ER_BAD_ARG_2;
@@ -297,7 +297,7 @@ class ECCPublicKey {
      *
      * @return ER_OK  on success others on failure
      */
-    QStatus Import(const uint8_t* data, const size_t size);
+    QStatus Import(const uint8_t* data, size_t size);
 
     /**
      * Import the key from two byte arrays, one containing each coordinate
@@ -308,7 +308,7 @@ class ECCPublicKey {
      *
      * @return ER_OK   on success others on failure
      */
-    QStatus Import(const uint8_t* xData, const size_t xSize, const uint8_t* yData, const size_t ySize);
+    QStatus Import(const uint8_t* xData, size_t xSize, const uint8_t* yData, size_t ySize);
 
     /**
      * Return the ECCPublicKey to a string
@@ -434,6 +434,13 @@ struct ECCSignature {
     uint8_t s[ECC_COORDINATE_SZ];
 
     /**
+     * Return the size of the signature in exported form.
+     *
+     * @return Size of the exported signature in bytes.
+     */
+    size_t GetSize() const;
+
+    /**
      * ECCSignature constructor
      *
      * The Elliptic Curve Digital Signature (r,s) signature initialized to zero.
@@ -448,7 +455,6 @@ struct ECCSignature {
      *
      * @param[in] other the ECCSignature to copy
      */
-
     ECCSignature(const ECCSignature& other)
     {
         memcpy(r, other.r, ECC_COORDINATE_SZ);
@@ -469,6 +475,49 @@ struct ECCSignature {
         }
         return *this;
     }
+
+    /**
+     * Export the signature to a byte array. The "r" and "s" values are concatenated.
+     *
+     * @param[out]       data   The array to store the data in.
+     * @param[in,out]    size   Provides the size of the passed buffer as input. For non-null
+     *                          values it will be set to the actual signature size in bytes,
+     *                          even if the returned status is ER_BUFFER_TOO_SMALL.
+     *
+     * @return 
+     *          - #ER_OK                If successful.
+     *          - #ER_BUFFER_TOO_SMALL  If buffer size is too small.
+     *          - Other error status indicating failure.
+     */
+    QStatus Export(uint8_t* data, size_t* size) const;
+
+    /**
+     * Import the signature from a byte array. The values' order in the array must be identical to what
+     * the Export method returns.
+     *
+     * @param[in]    data    The array with the concatenated values "r" and "s".
+     * @param[in]    size    The size of the passed array.
+     *
+     * @return
+     *          - #ER_OK                If successful.
+     *          - Other error status indicating failure.
+     */
+    QStatus Import(const uint8_t* data, size_t size);
+
+    /**
+     * Import the signature from two byte arrays, one containing each value.
+     *
+     * @param[in]    rData   Array containing the bytes of the "r" value.
+     * @param[in]    rSize   Length of rData.
+     * @param[in]    sData   Array containing the bytes of the "s" value.
+     * @param[in]    sSize   Length of sData.
+     *
+     * @return
+     *          - #ER_OK                If successful.
+     *          - Other error status indicating failure.
+     */
+    QStatus Import(const uint8_t* rData, size_t rSize,
+                   const uint8_t* sData, size_t sSize);
 };
 
 /**
@@ -510,7 +559,7 @@ class Crypto_ECC {
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    QStatus GenerateSPEKEKeyPair(const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID);
+    QStatus GenerateSPEKEKeyPair(const uint8_t* pw, size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID);
 
     /**
      * Generates the Diffie-Hellman shared secret.

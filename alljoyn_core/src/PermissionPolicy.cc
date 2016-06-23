@@ -1704,16 +1704,18 @@ QStatus _Manifest::GetECCSignature(ECCSignature& signature) const
         return ER_NOT_IMPLEMENTED;
     }
 
-    if (m_signature.size() != (sizeof(signature.r) + sizeof(signature.s))) {
+    if (m_signature.size() != signature.GetSize()) {
         QCC_LogError(ER_INVALID_DATA, ("Wrong size for signature; got %" PRIuSIZET ", expected %" PRIuSIZET,
                                        m_signature.size(), sizeof(signature.r) + sizeof(signature.s)));
         return ER_INVALID_DATA;
     }
 
-    memcpy(signature.r, m_signature.data(), sizeof(signature.r));
-    memcpy(signature.s, m_signature.data() + sizeof(signature.r), sizeof(signature.s));
+    QStatus status = signature.Import(m_signature.data(), m_signature.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("An error occured while importing signature."));
+    }
 
-    return ER_OK;
+    return status;
 }
 
 QStatus _Manifest::SetECCSignature(const ECCSignature& signature)
@@ -1724,11 +1726,14 @@ QStatus _Manifest::SetECCSignature(const ECCSignature& signature)
         return ER_NOT_IMPLEMENTED;
     }
 
-    m_signature.resize(sizeof(signature.r) + sizeof(signature.s));
-    memcpy(m_signature.data(), signature.r, sizeof(signature.r));
-    memcpy(m_signature.data() + sizeof(signature.r), signature.s, sizeof(signature.s));
+    size_t signatureSize = signature.GetSize();
+    m_signature.resize(signatureSize);
+    QStatus status = signature.Export(m_signature.data(), &signatureSize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("An error occured while exporting signature."));
+    }
 
-    return ER_OK;
+    return status;
 }
 
 QStatus _Manifest::SetRules(const PermissionPolicy::Rule* rules, size_t rulesCount)
