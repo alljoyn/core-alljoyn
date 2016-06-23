@@ -9979,7 +9979,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterSignalHandle
     busPtr->UnregisterSignalHandler(jsignalHandler, jmethod);
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getUniqueName(JNIEnv* env, jobject thiz)
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_BusAttachment_getUniqueName(JNIEnv* env, jobject thiz)
 {
     QCC_DbgPrintf(("BusAttachment_getUniqueName()"));
 
@@ -10004,7 +10004,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getUniqueName(JNIEn
     return env->NewStringUTF(busPtr->GetUniqueName().c_str());
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getGlobalGUIDString(JNIEnv* env, jobject thiz)
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_BusAttachment_getGlobalGUIDString(JNIEnv* env, jobject thiz)
 {
     QCC_DbgPrintf(("BusAttachment_getGlobalGUIDString()"));
 
