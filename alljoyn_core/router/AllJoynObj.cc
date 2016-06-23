@@ -656,9 +656,6 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     if (sit->first.second == 0) {
                         sme = sit->second;
                         foundSessionMapEntry = true;
-                        if (!sme.opts.isMultipoint) {
-                            break;
-                        }
                     } else {
                         /* Check if this joiner has already joined and reject in that case */
                         vector<String>::iterator mit = sit->second.memberNames.begin();
@@ -688,7 +685,7 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                         newSessionId = qcc::Rand32();
                     }
 
-                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): newsessinoId=%d.", newSessionId));
+                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): newSessionId=%d.", newSessionId));
 
                     /* Add an entry to sessionMap here (before sending accept session) since accept session
                      * may trigger a call to GetSessionFd or LeaveSession which must be aware of the new session's
