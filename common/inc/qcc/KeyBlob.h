@@ -130,9 +130,9 @@ class KeyBlob {
      * Set a keyblob to a random value.
      *
      * @param len       Length of the randomly generated key blob
-     * @param blobType  The type for the key blob.
+     * @param initType  The type for the key blob.
      */
-    void Rand(const size_t len, const Type initType);
+    void Rand(size_t len, const Type initType);
 
     /**
      * Sets a key blob with data derived from a password.

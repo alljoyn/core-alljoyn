@@ -33,6 +33,34 @@ using namespace std;
 class CryptoECCTest : public testing::Test {
 };
 
+class ECCSignatureTest : public testing::Test {
+  public:
+
+    ECCSignatureTest() :
+        m_rBufferSize(ArraySize(m_rImportBuffer)),
+        m_sBufferSize(ArraySize(m_sImportBuffer)),
+        m_rsBufferSize(ArraySize(m_rsImportBuffer))
+    {
+        memset(m_exportBuffer, 0, ArraySize(m_exportBuffer));
+        memset(m_rImportBuffer, 0, ArraySize(m_rImportBuffer));
+        memset(m_sImportBuffer, 0, ArraySize(m_sImportBuffer));
+        memset(m_rsImportBuffer, 0, ArraySize(m_rsImportBuffer));
+
+        m_rImportBuffer[0] = 1;
+        memcpy(m_rsImportBuffer, m_rImportBuffer, m_rBufferSize);
+        memcpy(m_rsImportBuffer + m_rBufferSize, m_sImportBuffer, m_sBufferSize);
+    }
+
+    size_t m_rBufferSize;
+    size_t m_sBufferSize;
+    size_t m_rsBufferSize;
+    uint8_t m_exportBuffer[2 * ECC_COORDINATE_SZ];
+    uint8_t m_rImportBuffer[ECC_COORDINATE_SZ];
+    uint8_t m_sImportBuffer[ECC_COORDINATE_SZ];
+    uint8_t m_rsImportBuffer[2 * ECC_COORDINATE_SZ];
+    ECCSignature m_signature;
+};
+
 /* used for injecting errors */
 static QStatus ToggleRandomBit(void* buf, size_t len)
 {
@@ -448,3 +476,151 @@ TEST_F(CryptoECCTest, ECCPublicKeyImportInitializeHandles)
     EXPECT_EQ(ER_OK, key.Import(data.data(), size)) << "Key import failed";
 }
 #endif
+
+TEST_F(ECCSignatureTest, shouldFailImportForNullBuffer)
+{
+    EXPECT_EQ(ER_BAD_ARG_1, m_signature.Import(nullptr, m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForTooSmallBuffer)
+{
+    ASSERT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+    m_rsBufferSize--;
+
+    EXPECT_EQ(ER_BAD_ARG_2, m_signature.Import(m_rsImportBuffer, m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForNullRBuffer)
+{
+    EXPECT_EQ(ER_BAD_ARG_1, m_signature.Import(nullptr, m_rBufferSize,
+                                               m_sImportBuffer, m_sBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForNullSBuffer)
+{
+    EXPECT_EQ(ER_BAD_ARG_3, m_signature.Import(m_rImportBuffer, m_rBufferSize,
+                                               nullptr, m_sBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForTooSmallRBuffer)
+{
+    ASSERT_EQ(ECC_COORDINATE_SZ, m_rBufferSize);
+    m_rBufferSize--;
+
+    EXPECT_EQ(ER_BAD_ARG_2, m_signature.Import(m_rImportBuffer, m_rBufferSize,
+                                               m_sImportBuffer, m_sBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForTooSmallSBuffer)
+{
+    ASSERT_EQ(ECC_COORDINATE_SZ, m_sBufferSize);
+    m_sBufferSize--;
+
+    EXPECT_EQ(ER_BAD_ARG_4, m_signature.Import(m_rImportBuffer, m_rBufferSize,
+                                               m_sImportBuffer, m_sBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForTooLargeSingleBuffer)
+{
+    ASSERT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+    m_rsBufferSize++;
+
+    EXPECT_EQ(ER_BAD_ARG_2, m_signature.Import(m_rsImportBuffer, m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForTooLargeRBuffer)
+{
+    ASSERT_EQ(ECC_COORDINATE_SZ, m_rBufferSize);
+    m_rBufferSize++;
+
+    EXPECT_EQ(ER_BAD_ARG_2, m_signature.Import(m_rImportBuffer, m_rBufferSize,
+                                               m_sImportBuffer, m_sBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailImportForTooLargeSBuffer)
+{
+    ASSERT_EQ(ECC_COORDINATE_SZ, m_sBufferSize);
+    m_sBufferSize++;
+
+    EXPECT_EQ(ER_BAD_ARG_4, m_signature.Import(m_rImportBuffer, m_rBufferSize,
+                                               m_sImportBuffer, m_sBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldImportSuccessfullyForSingleBuffer)
+{
+    EXPECT_EQ(ER_OK, m_signature.Import(m_rsImportBuffer, m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldImportSuccessfullyForRSBuffers)
+{
+    EXPECT_EQ(ER_OK, m_signature.Import(m_rImportBuffer, m_rBufferSize,
+                                        m_sImportBuffer, m_sBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailExportForNullBuffer)
+{
+    EXPECT_EQ(ER_BAD_ARG_1, m_signature.Export(nullptr, &m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldFailExportForNullBufferSize)
+{
+    EXPECT_EQ(ER_BAD_ARG_2, m_signature.Export(m_exportBuffer, nullptr));
+}
+
+TEST_F(ECCSignatureTest, shouldFailExportForTooSmallBuffer)
+{
+    ASSERT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+    m_rsBufferSize--;
+
+    EXPECT_EQ(ER_BUFFER_TOO_SMALL, m_signature.Export(m_exportBuffer, &m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldSetCorrectBufferSizeForExportWithTooSmallBuffer)
+{
+    ASSERT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+    m_rsBufferSize--;
+    ASSERT_EQ(ER_BUFFER_TOO_SMALL, m_signature.Export(m_exportBuffer, &m_rsBufferSize));
+
+    EXPECT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+}
+
+TEST_F(ECCSignatureTest, shouldExportSuccessfully)
+{
+    EXPECT_EQ(ER_OK, m_signature.Export(m_exportBuffer, &m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldExportSuccessfullyForTooLargeBuffer)
+{
+    ASSERT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+    m_rsBufferSize++;
+
+    EXPECT_EQ(ER_OK, m_signature.Export(m_exportBuffer, &m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldSetCorrectBufferSizeForExportWithTooLargeBuffer)
+{
+    ASSERT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+    m_rsBufferSize++;
+    ASSERT_EQ(ER_OK, m_signature.Export(m_exportBuffer, &m_rsBufferSize));
+
+    EXPECT_EQ(2 * ECC_COORDINATE_SZ, m_rsBufferSize);
+}
+
+TEST_F(ECCSignatureTest, shouldExportImportedSingleBuffer)
+{
+    ASSERT_NE(0, memcmp(m_rsImportBuffer, m_exportBuffer, m_rsBufferSize));
+    ASSERT_EQ(ER_OK, m_signature.Import(m_rsImportBuffer, m_rsBufferSize));
+    ASSERT_EQ(ER_OK, m_signature.Export(m_exportBuffer, &m_rsBufferSize));
+
+    EXPECT_EQ(0, memcmp(m_rsImportBuffer, m_exportBuffer, m_rsBufferSize));
+}
+
+TEST_F(ECCSignatureTest, shouldExportImportedRSBuffer)
+{
+    ASSERT_NE(0, memcmp(m_rsImportBuffer, m_exportBuffer, m_rsBufferSize));
+    ASSERT_EQ(ER_OK, m_signature.Import(m_rImportBuffer, m_rBufferSize,
+                                        m_sImportBuffer, m_sBufferSize));
+    ASSERT_EQ(ER_OK, m_signature.Export(m_exportBuffer, &m_rsBufferSize));
+
+    EXPECT_EQ(0, memcmp(m_rsImportBuffer, m_exportBuffer, m_rsBufferSize));
+}

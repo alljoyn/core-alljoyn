@@ -1743,7 +1743,7 @@ void ec_get_REDP_basepoints(ecpoint_t* Q1, ecpoint_t* Q2, curveid_t curveid)
     fpcopy_p256(y2, Q2->y);
 }
 
-static QStatus GenerateSPEKEKeyPair_inner(ecpoint_t* publicKey, digit256_t privateKey, const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
+static QStatus GenerateSPEKEKeyPair_inner(ecpoint_t* publicKey, digit256_t privateKey, const uint8_t* pw, size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
 {
     QStatus status;
     Crypto_SHA256 hash;
@@ -1810,7 +1810,7 @@ Exit:
     return status;
 }
 
-QStatus Crypto_ECC_GenerateSPEKEKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey, const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
+QStatus Crypto_ECC_GenerateSPEKEKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey, const uint8_t* pw, size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
 {
     QStatus status;
     ecpoint_t pub;
