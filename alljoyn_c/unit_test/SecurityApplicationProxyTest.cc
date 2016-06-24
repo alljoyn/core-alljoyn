@@ -25,6 +25,7 @@
 #include <qcc/Util.h>
 #include <qcc/StringUtil.h>
 #include <qcc/XmlElement.h>
+#include <qcc/Crypto.h>
 #include "ajTestCommon.h"
 #include "InMemoryKeyStore.h"
 #include "SecurityApplicationProxyTestHelper.h"
@@ -155,6 +156,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
         m_securityManagerPublicKey(nullptr),
         m_securityManagerPrivateKey(nullptr),
         m_signedManifestXml(nullptr),
+        m_manifestDigest(nullptr),
         m_defaultEcdheAuthListener(nullptr),
         m_securityManagerPermissionConfigurationListener(nullptr)
     { }
@@ -189,6 +191,10 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
             alljoyn_securityapplicationproxy_manifest_destroy(m_signedManifestXml);
         }
 
+        if (nullptr != m_manifestDigest) {
+            alljoyn_securityapplicationproxy_digest_destroy(m_manifestDigest);
+        }
+
         SecurityApplicationProxyTestHelper::DestroyCertificate(m_securityManagerIdentityCertificate);
         SecurityApplicationProxyTestHelper::DestroyKey(m_securityManagerPublicKey);
         SecurityApplicationProxyTestHelper::DestroyKey(m_securityManagerPrivateKey);
@@ -213,6 +219,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
     AJ_PSTR m_securityManagerPublicKey;
     AJ_PSTR m_securityManagerPrivateKey;
     AJ_PSTR m_signedManifestXml;
+    uint8_t* m_manifestDigest;
 
     void BasicBusSetup(alljoyn_busattachment* bus,
                        AJ_PCSTR busName,
@@ -740,6 +747,30 @@ TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenDestroyingSignedManif
 
     alljoyn_securityapplicationproxy_manifesttemplate_destroy(m_signedManifestXml);
     m_signedManifestXml = nullptr;
+}
+
+TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenComputingManifestDigest)
+{
+    size_t digestSize;
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_computemanifestdigest(s_validSecurityManagerManifestTemplate,
+                                                                            m_securityManagerIdentityCertificate,
+                                                                            &m_manifestDigest,
+                                                                            &digestSize));
+    EXPECT_EQ(32U, digestSize);
+    EXPECT_NE(nullptr, m_manifestDigest);
+}
+
+TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenSettingManifestSignature)
+{
+    uint8_t signatureBytes[2 * ECC_COORDINATE_SZ];
+    /* The signature doesn't actually have to be valid, so a set of random bytes will do fine. */
+    ASSERT_EQ(ER_OK, Crypto_GetRandomBytes(signatureBytes, sizeof(signatureBytes)));
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_setmanifestsignature(s_validSecurityManagerManifestTemplate,
+                                                                           m_securityManagerIdentityCertificate,
+                                                                           signatureBytes,
+                                                                           sizeof(signatureBytes),
+                                                                           &m_signedManifestXml));
 }
 
 TEST_F(SecurityApplicationProxySelfClaimTest, shouldReturnErrorWhenClaimingWithInvalidProxy)
