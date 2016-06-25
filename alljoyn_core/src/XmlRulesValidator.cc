@@ -88,7 +88,8 @@ QStatus XmlRulesValidator::Validate(const qcc::XmlElement* rootElement)
     QCC_ASSERT(nullptr != rootElement);
 
     std::unordered_set<std::string> nodeNames;
-    QStatus status = ValidateChildrenCountPositive(rootElement);
+    // For no children we will skip the loop and a valid XML has at least one child.
+    QStatus status = ER_XML_MALFORMED;
 
     for (auto node : rootElement->GetChildren()) {
         status = ValidateNode(node, nodeNames);
