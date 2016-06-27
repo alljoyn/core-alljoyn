@@ -19,8 +19,6 @@
 #include <set>
 #include <memory>
 
-#include <qcc/Crypto.h>
-
 #include <alljoyn/Init.h>
 #include <alljoyn/AboutListener.h>
 

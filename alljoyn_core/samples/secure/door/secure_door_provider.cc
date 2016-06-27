@@ -18,8 +18,6 @@
 
 #include <vector>
 
-#include <qcc/Crypto.h>
-
 #include <alljoyn/Init.h>
 
 using namespace sample::secure::door;
