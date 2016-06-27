@@ -850,6 +850,11 @@ class BusAttachment : public MessageReceiver {
      * Set a key store listener to listen for key store load and store requests.
      * This overrides the internal key store listener.
      *
+     * @remarks
+     *  It is an application who owns the @listener. Once registered, it can be released when security has been
+     *  disabled or when matching UnregisterKeyStoreListener() was called for every bus attachment which was using
+     *  this @listener, or on the application shutdown when the @listener is no longer referenced by the Alljoyn.
+     *
      * @param listener  The key store listener to set.
      *
      * @return

@@ -47,7 +47,6 @@ namespace ajn {
 
 /* forward decl */
 class KeyStoreKeyEventListener;
-class ProtectedKeyStoreListener;
 
 /**
  * The %KeyStore class manages the storing and loading of key blobs from
@@ -616,7 +615,7 @@ class KeyStore {
     /**
      * Listener for handling load/store requests
      */
-    ProtectedKeyStoreListener* listener;
+    KeyStoreListener* listener;
 
     /**
      * The guid for this key store
