@@ -41,7 +41,6 @@
 #include "PeerState.h"
 #include "KeyStore.h"
 #include "BusUtil.h"
-#include "ProtectedKeyStoreListener.h"
 
 #include <alljoyn/Status.h>
 
@@ -190,7 +189,6 @@ KeyStore::~KeyStore()
     }
     delete defaultListener;
     if (listener != nullptr) {
-        listener->DelRef();
         listener = nullptr;
     }
     delete keyStoreKey;
@@ -231,10 +229,9 @@ QStatus KeyStore::SetListener(KeyStoreListener& keyStoreListener)
     }
     if (setIt) {
         if (listener) {
-            listener->DelRef();
             listener = nullptr;
         }
-        this->listener = new ProtectedKeyStoreListener(&keyStoreListener);
+        this->listener = &keyStoreListener;
         useDefaultListener = false;
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
@@ -266,10 +263,9 @@ QStatus KeyStore::SetDefaultListener()
     QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     if (listener) {
-        listener->DelRef();
         listener = nullptr;
     }
-    this->listener = new ProtectedKeyStoreListener(defaultListener);
+    this->listener = defaultListener;
     useDefaultListener = true;
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
@@ -289,7 +285,6 @@ QStatus KeyStore::Reset()
         QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
         storeState = UNAVAILABLE;
         if (listener != nullptr) {
-            listener->DelRef();
             listener = nullptr;
         }
         delete defaultListener;
@@ -308,7 +303,7 @@ QStatus KeyStore::Init(const char* fileName)
     if (storeState == UNAVAILABLE) {
         if (listener == NULL) {
             defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
-            listener = new ProtectedKeyStoreListener(defaultListener);
+            listener = defaultListener;
         }
         return Reload();
     } else {
