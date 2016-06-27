@@ -41,7 +41,6 @@
 #include "PeerState.h"
 #include "KeyStore.h"
 #include "BusUtil.h"
-#include "ProtectedKeyStoreListener.h"
 
 #include <alljoyn/Status.h>
 
@@ -138,20 +137,20 @@ KeyStore::KeyStore(const qcc::String& application) :
     storeState(UNAVAILABLE),
     keys(new KeyMap),
     persistentKeys(new KeyMap),
-    defaultListener(NULL),
-    listener(NULL),
+    defaultListener(nullptr),
+    listener(nullptr),
     thisGuid(),
     lock(LOCK_LEVEL_KEYSTORE_LOCK),
-    keyStoreKey(NULL),
+    keyStoreKey(nullptr),
     revision(0),
     persistentRevision(0),
-    stored(NULL),
+    stored(nullptr),
     storedRefCount(0),
-    loaded(NULL),
+    loaded(nullptr),
     loadedRefCount(0),
-    keyEventListener(NULL),
+    keyEventListener(nullptr),
     useDefaultListener(false),
-    guidSetEvent(NULL),
+    guidSetEvent(nullptr),
     guidSet(false),
     guidSetEventLock(LOCK_LEVEL_KEYSTORE_GUIDSETEVENTLOCK),
     guidSetRefCount(0),
@@ -163,16 +162,16 @@ KeyStore::~KeyStore()
 {
     /* Unblock thread that might be waiting for a store to complete */
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
-    if (stored) {
+    if (stored != nullptr) {
         stored->SetEvent();
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
-        while (stored) {
+        while (stored != nullptr) {
             qcc::Sleep(1);
         }
         QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     }
     /* Unblock thread that might be waiting for a load to complete */
-    if (loaded) {
+    if (loaded != nullptr) {
         loaded->SetEvent();
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         while (loaded) {
@@ -182,7 +181,7 @@ KeyStore::~KeyStore()
     }
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     /* Unblock thread that might be waiting for a guid set to complete */
-    if (guidSetEvent) {
+    if (guidSetEvent != nullptr) {
         guidSetEvent->SetEvent();
         while (guidSetEvent) {
             qcc::Sleep(1);
@@ -190,15 +189,14 @@ KeyStore::~KeyStore()
     }
     delete defaultListener;
     if (listener != nullptr) {
-        listener->DelRef();
         listener = nullptr;
     }
     delete keyStoreKey;
-    if (keys) {
+    if (keys != nullptr) {
         keys->clear();
     }
     delete keys;
-    if (persistentKeys) {
+    if (persistentKeys != nullptr) {
         persistentKeys->clear();
     }
     delete persistentKeys;
@@ -222,7 +220,7 @@ QStatus KeyStore::SetListener(KeyStoreListener& keyStoreListener)
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     bool setIt = false;
-    if (this->listener != NULL) {
+    if (listener != nullptr) {
         if (useDefaultListener) {
             setIt = true;
         }
@@ -230,11 +228,10 @@ QStatus KeyStore::SetListener(KeyStoreListener& keyStoreListener)
         setIt = true;
     }
     if (setIt) {
-        if (listener) {
-            listener->DelRef();
+        if (listener != nullptr) {
             listener = nullptr;
         }
-        this->listener = new ProtectedKeyStoreListener(&keyStoreListener);
+        listener = &keyStoreListener;
         useDefaultListener = false;
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
@@ -265,11 +262,13 @@ QStatus KeyStore::SetDefaultListener()
      */
     QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
-    if (listener) {
-        listener->DelRef();
+    if (listener != nullptr) {
         listener = nullptr;
     }
-    this->listener = new ProtectedKeyStoreListener(defaultListener);
+    if (defaultListener == nullptr) {
+        defaultListener = KeyStoreListenerFactory::CreateInstance(application, nullptr);
+    }
+    listener = defaultListener;
     useDefaultListener = true;
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
@@ -289,11 +288,10 @@ QStatus KeyStore::Reset()
         QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
         storeState = UNAVAILABLE;
         if (listener != nullptr) {
-            listener->DelRef();
             listener = nullptr;
         }
         delete defaultListener;
-        defaultListener = NULL;
+        defaultListener = nullptr;
         useDefaultListener = false;
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         return status;
@@ -306,9 +304,9 @@ QStatus KeyStore::Reset()
 QStatus KeyStore::Init(const char* fileName)
 {
     if (storeState == UNAVAILABLE) {
-        if (listener == NULL) {
+        if (listener == nullptr) {
             defaultListener = KeyStoreListenerFactory::CreateInstance(application, fileName);
-            listener = new ProtectedKeyStoreListener(defaultListener);
+            listener = defaultListener;
         }
         return Reload();
     } else {
@@ -355,7 +353,7 @@ QStatus KeyStore::StoreInternal(std::vector<Key>& expiredKeys)
     storedRefCount--;
     if (storedRefCount == 0) {
         delete stored;
-        stored = NULL;
+        stored = nullptr;
     }
 
     return status;
@@ -385,7 +383,7 @@ QStatus KeyStore::LoadPersistentKeys()
     loadedRefCount--;
     if (loadedRefCount == 0) {
         delete loaded;
-        loaded = NULL;
+        loaded = nullptr;
     }
     if ((status == ER_OK) && (exclusiveLockRefreshState == ExclusiveLockHeld_Dirty)) {
         exclusiveLockRefreshState = ExclusiveLockHeld_Clean;
@@ -541,7 +539,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
     }
 
     /* This is the only chance to generate the key store key */
-    if (!keyStoreKey) {
+    if (keyStoreKey == nullptr) {
         keyStoreKey = new KeyStoreEncryptionKey();
     }
     keyStoreKey->Build(password, thisGuid.ToString());
@@ -556,7 +554,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
         goto ExitPull;
     }
     if (len > 0) {
-        uint8_t* data = NULL;
+        uint8_t* data = nullptr;
         /*
          * Pull the encrypted keys.
          */
@@ -578,7 +576,7 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
              * so the decryption will fail because of key mismatch.
              */
             bool mayUseAlternateKey = (version <= MixupGuidKeyStoreVersion);
-            uint8_t* altData = NULL;
+            uint8_t* altData = nullptr;
             size_t altLen = len;
             if (mayUseAlternateKey) {
                 altData = new uint8_t[altLen];
@@ -587,12 +585,12 @@ QStatus KeyStore::Pull(Source& source, const qcc::String& password)
             }
             KeyBlob nonce((uint8_t*)&persistentRevisionLocalBuffer, sizeof(persistentRevisionLocalBuffer), KeyBlob::GENERIC);
             Crypto_AES aes(*keyStoreKey, Crypto_AES::CCM);
-            status = aes.Decrypt_CCM(data, data, len, nonce, NULL, 0, 16);
+            status = aes.Decrypt_CCM(data, data, len, nonce, nullptr, 0, 16);
             if ((status != ER_OK) && mayUseAlternateKey) {
                 KeyBlob altKey;
                 altKey.Derive(password, Crypto_AES::AES128_SIZE, KeyBlob::AES);
                 Crypto_AES altAES(altKey, Crypto_AES::CCM);
-                status = altAES.Decrypt_CCM(altData, data, altLen, nonce, NULL, 0, 16);
+                status = altAES.Decrypt_CCM(altData, data, altLen, nonce, nullptr, 0, 16);
             }
             delete [] altData;
 
@@ -662,7 +660,7 @@ ExitPull:
             status = ER_OK;
         }
     }
-    if (loaded) {
+    if (loaded != nullptr) {
         loaded->SetEvent();
     }
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
@@ -675,7 +673,7 @@ void KeyStore::LoadFromEmptyFile(const qcc::String& password)
 
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
 
-    if (!keyStoreKey) {
+    if (keyStoreKey == nullptr) {
         keyStoreKey = new KeyStoreEncryptionKey();
     }
     keyStoreKey->Build(password, thisGuid.ToString());
@@ -684,7 +682,7 @@ void KeyStore::LoadFromEmptyFile(const qcc::String& password)
     persistentRevision = 0;
     MarkGuidSet();  /* make thisGuid the keystore guid */
 
-    if (loaded) {
+    if (loaded != nullptr) {
         loaded->SetEvent();
     }
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
@@ -822,7 +820,7 @@ QStatus KeyStore::Push(Sink& sink)
         KeyBlob nonce((uint8_t*)&revision, sizeof(revision), KeyBlob::GENERIC);
         uint8_t* keysData = new uint8_t[keysLen + 16];
         Crypto_AES aes(*keyStoreKey, Crypto_AES::CCM);
-        status = aes.Encrypt_CCM(strSink.GetString().data(), keysData, keysLen, nonce, NULL, 0, 16);
+        status = aes.Encrypt_CCM(strSink.GetString().data(), keysData, keysLen, nonce, nullptr, 0, 16);
         /* Store the length of the encrypted keys */
         if (status == ER_OK) {
             status = sink.PushBytes(&keysLen, sizeof(keysLen), pushed);
@@ -842,7 +840,7 @@ QStatus KeyStore::Push(Sink& sink)
 
 ExitPush:
 
-    if (stored) {
+    if (stored != nullptr) {
         stored->SetEvent();
     }
     QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
@@ -1148,7 +1146,7 @@ QStatus KeyStore::WaitForGuidSet()
     guidSetRefCount--;
     if (guidSetRefCount == 0) {
         delete guidSetEvent;
-        guidSetEvent = NULL;
+        guidSetEvent = nullptr;
     }
     guidSetEventLock.Unlock(MUTEX_CONTEXT);
     return ER_OK;
@@ -1157,7 +1155,7 @@ QStatus KeyStore::WaitForGuidSet()
 void KeyStore::MarkGuidSet()
 {
     guidSet = true;
-    if (guidSetEvent) {
+    if (guidSetEvent != nullptr) {
         guidSetEvent->SetEvent();
     }
 }
@@ -1227,7 +1225,7 @@ void KeyStore::ReleaseExclusiveLock(const char* file, uint32_t line)
     if (status == ER_OK) {
         /* Notify deletion of expired keys. */
         for (auto& key : expiredKeys) {
-            if (keyEventListener) {
+            if (keyEventListener != nullptr) {
                 keyEventListener->NotifyAutoDelete(this, key);
             }
         }
