@@ -376,12 +376,12 @@ namespace ajn {
  * shown here is "org.yadda.foo" (C).  This name is contained in a
  * serialized SDATA (string data) message.  The length of the string is
  * thirteen bytes, and the characters of the string follow.  This ends
- * the question section of the messge since there was only one question
+ * the question section of the message since there was only one question
  * present as indicated by the header.
  *
  * Next, the (D) notation shows the single answer message described in
  * the header.  Answer messages are called IS-AT messages.  There is a
- * count of one bus name in the IS-AT messsage which, the message is
+ * count of one bus name in the IS-AT message which, the message is
  * telling us, can be found at IPv4 address 192.168.10.10 port 9955.
  * The single SDATA record (E) with a count of 13 indicates that the
  * sending daemon supports the bus name "org.yadda.bar" at that address

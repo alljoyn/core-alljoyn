@@ -508,7 +508,7 @@ QStatus GetLocalAddress(SocketFd sockfd, IPAddress& addr, uint16_t& port)
 
     if (ret == -1) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Geting Local Address (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
+        QCC_LogError(status, ("Getting Local Address (sockfd = %u): %d - %s", sockfd, errno, strerror(errno)));
     } else {
         if (addrBuf.ss_family == AF_INET) {
             struct sockaddr_in* sa = reinterpret_cast<struct sockaddr_in*>(&addrBuf);

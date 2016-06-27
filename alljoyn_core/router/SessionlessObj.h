@@ -1,6 +1,6 @@
 /**
  * @file
- * SessionObj is for implementing the daemon-to-daemon inteface org.alljoyn.sl
+ * SessionObj is for implementing the daemon-to-daemon interface org.alljoyn.sl
  */
 
 /******************************************************************************

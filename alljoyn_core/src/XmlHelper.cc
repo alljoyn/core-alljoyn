@@ -368,7 +368,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 QCC_LogError(status, ("Failed to retrieve existing interface \"%s\"", intf.GetName()));
             }
         } else {
-            QCC_LogError(status, ("Failed to create new inteface \"%s\"", intf.GetName()));
+            QCC_LogError(status, ("Failed to create new interface \"%s\"", intf.GetName()));
         }
     }
     return status;
