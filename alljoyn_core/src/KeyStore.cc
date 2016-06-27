@@ -278,12 +278,20 @@ QStatus KeyStore::SetDefaultListener()
 
 QStatus KeyStore::Reset()
 {
+    /**
+     * We need to acquire the exclusive lock here to ensure that the listener
+     * doesn't get removed while someone else is still holding the lock.
+     * Calling release on the same listener is necessary here to ensure that
+     * the listener's exclusive lock doesn't get orphaned.
+     */
+    QCC_VERIFY(ER_OK == s_exclusiveLock->Lock(MUTEX_CONTEXT));
     QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
     if (storeState != UNAVAILABLE) {
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
         /* clear the keys first */
         QStatus status = Clear();
         if (ER_OK != status) {
+            QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
             return status;
         }
         QCC_VERIFY(ER_OK == lock.Lock(MUTEX_CONTEXT));
@@ -296,9 +304,11 @@ QStatus KeyStore::Reset()
         defaultListener = NULL;
         useDefaultListener = false;
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
+        QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
         return status;
     } else {
         QCC_VERIFY(ER_OK == lock.Unlock(MUTEX_CONTEXT));
+        QCC_VERIFY(ER_OK == s_exclusiveLock->Unlock(MUTEX_CONTEXT));
         return ER_FAIL;
     }
 }
