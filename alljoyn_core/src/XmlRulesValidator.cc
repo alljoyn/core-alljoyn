@@ -27,22 +27,26 @@
 #include "XmlRulesValidator.h"
 
 using namespace qcc;
+using namespace std;
 
 namespace ajn {
 
-std::unordered_map<std::string, PermissionPolicy::Rule::Member::MemberType> XmlRulesValidator::s_memberTypeMap;
-std::unordered_map<std::string, uint8_t> XmlRulesValidator::MethodsValidator::s_actionsMap;
-std::unordered_map<std::string, uint8_t> XmlRulesValidator::PropertiesValidator::s_actionsMap;
-std::unordered_map<std::string, uint8_t> XmlRulesValidator::SignalsValidator::s_actionsMap;
+XmlRulesValidator* XmlRulesValidator::s_validator;
+unordered_map<string, PermissionPolicy::Rule::Member::MemberType> XmlRulesValidator::s_memberTypeMap;
+unordered_map<string, uint8_t> XmlRulesValidator::MethodsValidator::s_actionsMap;
+unordered_map<string, uint8_t> XmlRulesValidator::PropertiesValidator::s_actionsMap;
+unordered_map<string, uint8_t> XmlRulesValidator::SignalsValidator::s_actionsMap;
 
 #ifdef REGEX_SUPPORTED
-const std::regex XmlRulesValidator::s_objectPathRegex = std::regex("(\\*|/(\\*)?|(/[a-zA-Z0-9_]+)+(/?\\*)?)");
-const std::regex XmlRulesValidator::s_interfaceNameRegex = std::regex("(\\*|[a-zA-Z_][a-zA-Z0-9_]*((\\.[a-zA-Z_][a-zA-Z0-9_]*)*(\\.?\\*)|(\\.[a-zA-Z_][a-zA-Z0-9_]*)+))");
-const std::regex XmlRulesValidator::s_memberNameRegex = std::regex("(\\*|([a-zA-Z_][a-zA-Z0-9_]*)(\\*)?)");
+const regex XmlRulesValidator::s_objectPathRegex = regex("(\\*|/(\\*)?|(/[a-zA-Z0-9_]+)+(/?\\*)?)");
+const regex XmlRulesValidator::s_interfaceNameRegex = regex("(\\*|[a-zA-Z_][a-zA-Z0-9_]*((\\.[a-zA-Z_][a-zA-Z0-9_]*)*(\\.?\\*)|(\\.[a-zA-Z_][a-zA-Z0-9_]*)+))");
+const regex XmlRulesValidator::s_memberNameRegex = regex("(\\*|([a-zA-Z_][a-zA-Z0-9_]*)(\\*)?)");
 #endif /* REGEX_SUPPORTED */
 
 void XmlRulesValidator::Init()
 {
+    s_validator = new XmlRulesValidator();
+
     MemberTypeMapInit();
     MethodsValidator::Init();
     SignalsValidator::Init();
@@ -51,6 +55,13 @@ void XmlRulesValidator::Init()
 
 void XmlRulesValidator::Shutdown()
 {
+    delete s_validator;
+    s_validator = nullptr;
+}
+
+XmlRulesValidator* XmlRulesValidator::GetInstance()
+{
+    return s_validator;
 }
 
 void XmlRulesValidator::MemberTypeMapInit()
@@ -59,6 +70,11 @@ void XmlRulesValidator::MemberTypeMapInit()
     s_memberTypeMap[PROPERTY_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::PROPERTY;
     s_memberTypeMap[SIGNAL_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::SIGNAL;
     s_memberTypeMap[NOT_SPECIFIED_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED;
+}
+
+string XmlRulesValidator::GetRootElementName()
+{
+    return RULES_XML_ELEMENT;
 }
 
 void XmlRulesValidator::MethodsValidator::Init()
@@ -83,19 +99,24 @@ void XmlRulesValidator::SignalsValidator::Init()
     s_actionsMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
 }
 
-QStatus XmlRulesValidator::Validate(const qcc::XmlElement* rootElement)
+QStatus XmlRulesValidator::Validate(const XmlElement* rootElement)
 {
     QCC_ASSERT(nullptr != rootElement);
 
-    std::unordered_set<std::string> nodeNames;
-    // For no children we will skip the loop and a valid XML has at least one child.
-    QStatus status = ER_XML_MALFORMED;
+    unordered_set<string> nodeNames;
+    string rootElementName = GetRootElementName();
+    QStatus status = ValidateElementName(rootElement, rootElementName.c_str());
 
-    for (auto node : rootElement->GetChildren()) {
-        status = ValidateNode(node, nodeNames);
+    if (ER_OK == status) {
+        // For no children we will skip the loop and a valid XML has at least one child.
+        status = ER_XML_MALFORMED;
 
-        if (ER_OK != status) {
-            break;
+        for (auto node : rootElement->GetChildren()) {
+            status = ValidateNode(node, nodeNames);
+
+            if (ER_OK != status) {
+                break;
+            }
         }
     }
 
@@ -109,7 +130,7 @@ QStatus XmlRulesValidator::ValidateRules(const PermissionPolicy::Rule* rules, co
     QStatus status = (rulesCount > 0) ? ER_OK : ER_FAIL;
 
     if (ER_OK == status) {
-        std::map<std::string, std::vector<PermissionPolicy::Rule> > objectToRulesMap;
+        map<string, vector<PermissionPolicy::Rule> > objectToRulesMap;
         AssignRulesToObjects(rules, rulesCount, objectToRulesMap);
 
         status = ValidateObject(objectToRulesMap);
@@ -118,14 +139,14 @@ QStatus XmlRulesValidator::ValidateRules(const PermissionPolicy::Rule* rules, co
     return (ER_OK == status) ? ER_OK : ER_FAIL;
 }
 
-void XmlRulesValidator::AssignRulesToObjects(const PermissionPolicy::Rule* rules, const size_t rulesCount, std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap)
+void XmlRulesValidator::AssignRulesToObjects(const PermissionPolicy::Rule* rules, const size_t rulesCount, map<string, vector<PermissionPolicy::Rule> >& objectToRulesMap)
 {
     for (size_t index = 0; index < rulesCount; index++) {
         objectToRulesMap[rules[index].GetObjPath().c_str()].push_back(rules[index]);
     }
 }
 
-QStatus XmlRulesValidator::ValidateObject(const std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap)
+QStatus XmlRulesValidator::ValidateObject(const map<string, vector<PermissionPolicy::Rule> >& objectToRulesMap)
 {
     QStatus status = ER_OK;
     for (auto rulesUnderObject : objectToRulesMap) {
@@ -139,10 +160,10 @@ QStatus XmlRulesValidator::ValidateObject(const std::map<std::string, std::vecto
     return status;
 }
 
-QStatus XmlRulesValidator::ValidateRules(const std::vector<PermissionPolicy::Rule>& rules)
+QStatus XmlRulesValidator::ValidateRules(const vector<PermissionPolicy::Rule>& rules)
 {
     QStatus status = ER_OK;
-    std::unordered_set<std::string> interfaceNames;
+    unordered_set<string> interfaceNames;
 
     for (auto rule : rules) {
         status = ValidateRule(rule, interfaceNames);
@@ -155,7 +176,7 @@ QStatus XmlRulesValidator::ValidateRules(const std::vector<PermissionPolicy::Rul
     return status;
 }
 
-QStatus XmlRulesValidator::ValidateRule(const PermissionPolicy::Rule& rule, std::unordered_set<std::string>& interfaceNames)
+QStatus XmlRulesValidator::ValidateRule(const PermissionPolicy::Rule& rule, unordered_set<string>& interfaceNames)
 {
     QStatus status = ER_OK;
 
@@ -184,57 +205,74 @@ QStatus XmlRulesValidator::ValidateMembers(const PermissionPolicy::Rule& rule)
     size_t membersSize = rule.GetMembersSize();
     const PermissionPolicy::Rule::Member* members = rule.GetMembers();
 
-    QStatus status = (membersSize > 0) ? ER_OK : ER_XML_MALFORMED;
+    // There must be at least one member.
+    QStatus status = ER_FAIL;
 
-    if (ER_OK == status) {
-        for (size_t index = 0; index < membersSize; index++) {
-            const PermissionPolicy::Rule::Member& member = members[index];
-            status = memberValidatorFactory.ForType(member.GetMemberType())->Validate(member);
+    for (size_t index = 0; index < membersSize; index++) {
+        const PermissionPolicy::Rule::Member& member = members[index];
+        status = memberValidatorFactory.ForType(member.GetMemberType())->Validate(member);
 
-            if (ER_OK != status) {
-                break;
-            }
+        if (ER_OK != status) {
+            break;
         }
     }
 
     return status;
 }
 
-void XmlRulesValidator::ExtractAttributeOrWildcard(const qcc::XmlElement* xmlElement, AJ_PCSTR attributeName, std::string* attribute)
+QStatus XmlRulesValidator::ValidateNode(const XmlElement* node, unordered_set<string>& nodeNames)
 {
-    *attribute = xmlElement->GetAttribute(attributeName).c_str();
-    if (attribute->empty()) {
-        *attribute = WILDCARD_XML_VALUE;
-    }
-}
+    vector<XmlElement*> annotations;
+    vector<XmlElement*> interfaces;
+    QStatus status = ValidateNodeCommon(node, nodeNames);
 
-QStatus XmlRulesValidator::ValidateNode(const qcc::XmlElement* node, std::unordered_set<std::string>& nodeNames)
-{
-    QStatus status = ValidateElementName(node, NODE_XML_ELEMENT);
+    SeparateAnnotations(node, annotations, interfaces);
 
     if (ER_OK == status) {
-        status = ValidateAttributeValueUnique(node, nodeNames);
+        status = ValidateNodeAnnotations(annotations);
     }
 
-#ifdef REGEX_SUPPORTED
     if (ER_OK == status) {
-        status = ValidateNameAttributeValue(node, s_objectPathRegex);
-    }
-#endif /* REGEX_SUPPORTED */
-
-    if (ER_OK == status) {
-        status = ValidateInterfaces(node);
+        status = ValidateInterfaces(interfaces);
     }
 
     return status;
 }
 
-QStatus XmlRulesValidator::ValidateInterfaces(const qcc::XmlElement* node)
+QStatus XmlRulesValidator::ValidateNodeCommon(const XmlElement* node, unordered_set<string>& nodeNames)
 {
-    std::unordered_set<std::string> interfaceNames;
-    QStatus status = ValidateChildrenCountPositive(node);
+    QStatus status = ValidateElementName(node, NODE_XML_ELEMENT);
 
-    for (auto singleInterface : node->GetChildren()) {
+    if (ER_OK == status) {
+        status = ValidateAttributeValueUnique(node, nodeNames, NAME_XML_ATTRIBUTE);
+    }
+
+    if (ER_OK == status) {
+        status = ValidateChildrenCountPositive(node);
+    }
+
+#ifdef REGEX_SUPPORTED
+    if (ER_OK == status) {
+        status = XmlValidator::ValidateNameAttributeValue(node, s_objectPathRegex);
+    }
+#endif /* REGEX_SUPPORTED */
+
+    return status;
+}
+
+QStatus XmlRulesValidator::ValidateNodeAnnotations(const vector<XmlElement*>& annotations)
+{
+    return (annotations.size() == 0) ? ER_OK : ER_XML_MALFORMED;
+}
+
+QStatus XmlRulesValidator::ValidateInterfaces(const vector<XmlElement*>& interfaces)
+{
+    unordered_set<string> interfaceNames;
+
+    // There must be at least one interface.
+    QStatus status = ER_XML_MALFORMED;
+
+    for (auto singleInterface : interfaces) {
         status = ValidateInterface(singleInterface, interfaceNames);
 
         if (ER_OK != status) {
@@ -245,33 +283,59 @@ QStatus XmlRulesValidator::ValidateInterfaces(const qcc::XmlElement* node)
     return status;
 }
 
-QStatus XmlRulesValidator::ValidateInterface(const qcc::XmlElement* singleInterface, std::unordered_set<std::string>& interfaceNames)
+QStatus XmlRulesValidator::ValidateInterface(const XmlElement* singleInterface, unordered_set<string>& interfaceNames)
 {
-    QStatus status = ValidateElementName(singleInterface, INTERFACE_XML_ELEMENT);
+    vector<XmlElement*> annotations;
+    vector<XmlElement*> members;
+    QStatus status = ValidateInterfaceCommon(singleInterface, interfaceNames);
+
+    SeparateAnnotations(singleInterface, annotations, members);
 
     if (ER_OK == status) {
-        status = ValidateAttributeValueUnique(singleInterface, interfaceNames);
+        status = ValidateInterfaceAnnotations(annotations);
     }
 
-#ifdef REGEX_SUPPORTED
     if (ER_OK == status) {
-        status = ValidateNameAttributeValue(singleInterface, s_interfaceNameRegex, MAX_INTERFACE_NAME_LENGTH);
-    }
-#endif /* REGEX_SUPPORTED */
-
-    if (ER_OK == status) {
-        status = ValidateMembers(singleInterface);
+        status = ValidateMembers(members);
     }
 
     return status;
 }
 
-QStatus XmlRulesValidator::ValidateMembers(const qcc::XmlElement* singleInterface)
+QStatus XmlRulesValidator::ValidateInterfaceCommon(const XmlElement* singleInterface, unordered_set<string>& interfaceNames)
+{
+    QStatus status = ValidateElementName(singleInterface, INTERFACE_XML_ELEMENT);
+
+    if (ER_OK == status) {
+        status = ValidateAttributeValueUnique(singleInterface, interfaceNames, NAME_XML_ATTRIBUTE);
+    }
+
+#ifdef REGEX_SUPPORTED
+    if (ER_OK == status) {
+        status = XmlValidator::ValidateNameAttributeValue(singleInterface, s_interfaceNameRegex, MAX_INTERFACE_NAME_LENGTH);
+    }
+#endif /* REGEX_SUPPORTED */
+
+    if (ER_OK == status) {
+        status = ValidateChildrenCountPositive(singleInterface);
+    }
+
+    return status;
+}
+
+QStatus XmlRulesValidator::ValidateInterfaceAnnotations(const vector<XmlElement*>& annotations)
+{
+    return (annotations.size() == 0) ? ER_OK : ER_XML_MALFORMED;
+}
+
+QStatus XmlRulesValidator::ValidateMembers(const vector<XmlElement*>& members)
 {
     MemberValidatorFactory memberValidatorFactory;
-    QStatus status = ValidateChildrenCountPositive(singleInterface);
 
-    for (auto member : singleInterface->GetChildren()) {
+    // There must be at least one member.
+    QStatus status = ER_XML_MALFORMED;
+
+    for (auto member : members) {
         status = ValidateMember(member, memberValidatorFactory);
 
         if (ER_OK != status) {
@@ -282,7 +346,7 @@ QStatus XmlRulesValidator::ValidateMembers(const qcc::XmlElement* singleInterfac
     return status;
 }
 
-QStatus XmlRulesValidator::ValidateMember(const qcc::XmlElement* member, MemberValidatorFactory& memberValidatorFactory)
+QStatus XmlRulesValidator::ValidateMember(const XmlElement* member, MemberValidatorFactory& memberValidatorFactory)
 {
     PermissionPolicy::Rule::Member::MemberType type;
 
@@ -294,18 +358,18 @@ QStatus XmlRulesValidator::ValidateMember(const qcc::XmlElement* member, MemberV
     return status;
 }
 
-QStatus XmlRulesValidator::MemberValidator::Validate(const qcc::XmlElement* member)
+QStatus XmlRulesValidator::MemberValidator::Validate(const XmlElement* member)
 {
-    QStatus status = ValidateAttributeValueUnique(member, memberNames);
+    QStatus status = ValidateAttributeValueUnique(member, memberNames, NAME_XML_ATTRIBUTE);
 
 #ifdef REGEX_SUPPORTED
     if (ER_OK == status) {
-        status = ValidateNameAttributeValue(member, s_memberNameRegex, MAX_MEMBER_NAME_LENGTH);
+        status = XmlValidator::ValidateNameAttributeValue(member, s_memberNameRegex, MAX_MEMBER_NAME_LENGTH);
     }
 #endif /* REGEX_SUPPORTED */
 
     if (ER_OK == status) {
-        status = ValidateAnnotations(member);
+        status = ValidateMemberAnnotations(member);
     }
 
     return status;
@@ -343,9 +407,9 @@ QStatus XmlRulesValidator::MemberValidator::ValidateActionMask(uint8_t actionMas
     return ((validActions | actionMask) == validActions) ? ER_OK : ER_FAIL;
 }
 
-QStatus XmlRulesValidator::MemberValidator::ValidateAnnotations(const qcc::XmlElement* member)
+QStatus XmlRulesValidator::MemberValidator::ValidateMemberAnnotations(const XmlElement* member)
 {
-    std::unordered_set<std::string> presentAnnotations;
+    unordered_set<string> presentAnnotations;
     QStatus status = ValidateChildrenCountPositive(member);
 
     for (auto annotation : member->GetChildren()) {
@@ -359,7 +423,7 @@ QStatus XmlRulesValidator::MemberValidator::ValidateAnnotations(const qcc::XmlEl
     return status;
 }
 
-QStatus XmlRulesValidator::MemberValidator::ValidateAnnotation(qcc::XmlElement* annotation, std::unordered_set<std::string>& presentAnnotations)
+QStatus XmlRulesValidator::MemberValidator::ValidateAnnotation(XmlElement* annotation, unordered_set<string>& presentAnnotations)
 {
     QStatus status = ValidateElementName(annotation, ANNOTATION_XML_ELEMENT);
 
@@ -378,7 +442,7 @@ QStatus XmlRulesValidator::MemberValidator::ValidateAnnotation(qcc::XmlElement* 
     return status;
 }
 
-QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowed(qcc::XmlElement* annotation, std::unordered_set<std::string>& presentAnnotations)
+QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowed(XmlElement* annotation, unordered_set<string>& presentAnnotations)
 {
     QStatus status = ValidateAnnotationAllowedForMember(annotation);
 
@@ -389,7 +453,7 @@ QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowed(qcc::XmlEl
     return status;
 }
 
-QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowedForMember(qcc::XmlElement* annotation)
+QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowedForMember(XmlElement* annotation)
 {
     String action = annotation->GetAttribute(VALUE_XML_ATTRIBUTE);
     auto foundAction = GetActionsMap().find(action.c_str());
@@ -397,7 +461,7 @@ QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowedForMember(q
     return (foundAction == GetActionsMap().end()) ? ER_XML_MALFORMED : ER_OK;
 }
 
-QStatus XmlRulesValidator::MemberValidator::ValidateDenyAnnotation(std::unordered_set<std::string>& presentAnnotations)
+QStatus XmlRulesValidator::MemberValidator::ValidateDenyAnnotation(unordered_set<string>& presentAnnotations)
 {
     bool denyAbsent = (presentAnnotations.find(DENY_MEMBER_MASK) == presentAnnotations.end());
 
@@ -405,7 +469,7 @@ QStatus XmlRulesValidator::MemberValidator::ValidateDenyAnnotation(std::unordere
             presentAnnotations.size() == 1U) ? ER_OK : ER_XML_MALFORMED;
 }
 
-QStatus XmlRulesValidator::MemberValidator::GetValidMemberType(const qcc::XmlElement* member, PermissionPolicy::Rule::Member::MemberType* memberType)
+QStatus XmlRulesValidator::MemberValidator::GetValidMemberType(const XmlElement* member, PermissionPolicy::Rule::Member::MemberType* memberType)
 {
     QStatus status = ER_OK;
     auto foundType = s_memberTypeMap.find(member->GetName().c_str());
@@ -418,46 +482,7 @@ QStatus XmlRulesValidator::MemberValidator::GetValidMemberType(const qcc::XmlEle
     return status;
 }
 
-QStatus ajn::XmlRulesValidator::ValidateAttributeValueUnique(const qcc::XmlElement* xmlElement, std::unordered_set<std::string>& valuesSet, AJ_PCSTR attributeName)
-{
-    std::string attribute;
-    ExtractAttributeOrWildcard(xmlElement, attributeName, &attribute);
-
-    return InsertUniqueOrFail(attribute, valuesSet);
-}
-
-#ifdef REGEX_SUPPORTED
-
-QStatus XmlRulesValidator::ValidateNameAttributeValue(const qcc::XmlElement* xmlElement, const std::regex& namePattern, size_t maxNameLength)
-{
-    std::string nameAttribute;
-    ExtractAttributeOrWildcard(xmlElement, NAME_XML_ATTRIBUTE, &nameAttribute);
-
-    return ValidateString(nameAttribute, namePattern, maxNameLength);
-}
-
-QStatus XmlRulesValidator::ValidateString(std::string input, const std::regex& pattern, size_t maxLength)
-{
-    if (input.empty() ||
-        (input.size() > maxLength) ||
-        !std::regex_match(input, pattern)) {
-        return ER_FAIL;
-    }
-
-    return ER_OK;
-}
-
-#endif // REGEX_SUPPORTED
-
-QStatus XmlRulesValidator::ValidateNameAttributeValue(const qcc::XmlElement* xmlElement, AJ_PCSTR name)
-{
-    std::string nameAttribute;
-    ExtractAttributeOrWildcard(xmlElement, NAME_XML_ATTRIBUTE, &nameAttribute);
-
-    return (nameAttribute == name) ? ER_OK : ER_FAIL;
-}
-
-const std::unordered_map<std::string, uint8_t>& XmlRulesValidator::MethodsValidator::GetActionsMap()
+const unordered_map<string, uint8_t>& XmlRulesValidator::MethodsValidator::GetActionsMap()
 {
     return s_actionsMap;
 }
@@ -468,7 +493,7 @@ uint8_t XmlRulesValidator::MethodsValidator::GetValidActions()
            PermissionPolicy::Rule::Member::ACTION_MODIFY;
 }
 
-const std::unordered_map<std::string, uint8_t>& XmlRulesValidator::PropertiesValidator::GetActionsMap()
+const unordered_map<string, uint8_t>& XmlRulesValidator::PropertiesValidator::GetActionsMap()
 {
     return s_actionsMap;
 }
@@ -480,7 +505,7 @@ uint8_t XmlRulesValidator::PropertiesValidator::GetValidActions()
            PermissionPolicy::Rule::Member::ACTION_MODIFY;
 }
 
-const std::unordered_map<std::string, uint8_t>& XmlRulesValidator::SignalsValidator::GetActionsMap()
+const unordered_map<string, uint8_t>& XmlRulesValidator::SignalsValidator::GetActionsMap()
 {
     return s_actionsMap;
 }

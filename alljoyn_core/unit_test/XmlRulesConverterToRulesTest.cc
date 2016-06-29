@@ -26,50 +26,50 @@ using namespace qcc;
 using namespace ajn;
 
 static AJ_PCSTR s_nonWellFormedXml = "<abc>";
-static AJ_PCSTR s_emptyManifestElement =
-    "<manifest>"
-    "</manifest>";
+static AJ_PCSTR s_emptyRulesElement =
+    "<rules>"
+    "</rules>";
 static AJ_PCSTR s_emptyNodeElement =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_emptyInterfaceElement =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_emptyMemberElement =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
-static AJ_PCSTR s_annotationElementUnderManifest =
-    "<manifest>"
+    "</rules>";
+static AJ_PCSTR s_annotationElementUnderRules =
+    "<rules>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_annotationElementUnderNode =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_annotationElementUnderInterface =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_bothNodeAndAnnotationElements =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -78,9 +78,9 @@ static AJ_PCSTR s_bothNodeAndAnnotationElements =
     "</interface>"
     "</node>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_bothInterfaceAndAnnotationElements =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -89,9 +89,9 @@ static AJ_PCSTR s_bothInterfaceAndAnnotationElements =
     "</interface>"
     "<annotation name = \"org.alljoyn.Bus.Action\" />"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_bothMemberAndAnnotationElements =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -100,9 +100,9 @@ static AJ_PCSTR s_bothMemberAndAnnotationElements =
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_annotationWithMissingValue =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -110,9 +110,9 @@ static AJ_PCSTR s_annotationWithMissingValue =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_annotationWithInvalidName =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -120,9 +120,9 @@ static AJ_PCSTR s_annotationWithInvalidName =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_repeatedSameAnnotation =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -131,9 +131,9 @@ static AJ_PCSTR s_repeatedSameAnnotation =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNameNodes =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node\">"
     "<interface>"
     "<method>"
@@ -148,9 +148,9 @@ static AJ_PCSTR s_sameNameNodes =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNamelessNodes =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -165,9 +165,9 @@ static AJ_PCSTR s_sameNamelessNodes =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNameInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface\">"
     "<method>"
@@ -180,9 +180,9 @@ static AJ_PCSTR s_sameNameInterfaces =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNamelessInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -195,9 +195,9 @@ static AJ_PCSTR s_sameNamelessInterfaces =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNameMethods =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"Method\">"
@@ -208,9 +208,9 @@ static AJ_PCSTR s_sameNameMethods =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNameProperties =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<property name = \"Property\">"
@@ -221,9 +221,9 @@ static AJ_PCSTR s_sameNameProperties =
     "</property>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNameSignals =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<signal name = \"Signal\">"
@@ -234,9 +234,9 @@ static AJ_PCSTR s_sameNameSignals =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNamelessMethods =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -247,9 +247,9 @@ static AJ_PCSTR s_sameNamelessMethods =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNamelessProperties =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<property>"
@@ -260,9 +260,9 @@ static AJ_PCSTR s_sameNamelessProperties =
     "</property>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_sameNamelessSignals =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<signal>"
@@ -273,9 +273,9 @@ static AJ_PCSTR s_sameNamelessSignals =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_methodWithObserve =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -283,9 +283,9 @@ static AJ_PCSTR s_methodWithObserve =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_signalWithModify =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<signal>"
@@ -293,9 +293,9 @@ static AJ_PCSTR s_signalWithModify =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_methodWithDoubleDeny =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -304,9 +304,9 @@ static AJ_PCSTR s_methodWithDoubleDeny =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_methodWithDenyAndOther =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -315,9 +315,9 @@ static AJ_PCSTR s_methodWithDenyAndOther =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_signalWithDoubleDeny =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<signal>"
@@ -326,9 +326,9 @@ static AJ_PCSTR s_signalWithDoubleDeny =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_signalWithDenyAndOther =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<signal>"
@@ -337,9 +337,9 @@ static AJ_PCSTR s_signalWithDenyAndOther =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_propertyWithDoubleDeny =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<property>"
@@ -348,9 +348,9 @@ static AJ_PCSTR s_propertyWithDoubleDeny =
     "</property>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_propertyWithDenyAndOther =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<property>"
@@ -359,9 +359,9 @@ static AJ_PCSTR s_propertyWithDenyAndOther =
     "</property>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_anyWithDoubleDeny =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<any>"
@@ -370,9 +370,9 @@ static AJ_PCSTR s_anyWithDoubleDeny =
     "</any>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_anyWithDenyAndOther =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<any>"
@@ -381,11 +381,11 @@ static AJ_PCSTR s_anyWithDenyAndOther =
     "</any>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 
 #ifdef REGEX_SUPPORTED
 static AJ_PCSTR s_nodeNameWithoutSlash =
-    "<manifest>"
+    "<rules>"
     "<node name = \"Node\">"
     "<interface>"
     "<method>"
@@ -393,9 +393,9 @@ static AJ_PCSTR s_nodeNameWithoutSlash =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_nodeNameWithSpecialCharacter =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node!\">"
     "<interface>"
     "<method>"
@@ -403,9 +403,9 @@ static AJ_PCSTR s_nodeNameWithSpecialCharacter =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_nodeNameEndingWithSlash =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node/\">"
     "<interface>"
     "<method>"
@@ -413,9 +413,9 @@ static AJ_PCSTR s_nodeNameEndingWithSlash =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_nodeNameDoubleWildcard =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node/**\">"
     "<interface>"
     "<method>"
@@ -423,9 +423,9 @@ static AJ_PCSTR s_nodeNameDoubleWildcard =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_nodeNameWildcardInMiddle =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node/*/MoreNode\">"
     "<interface>"
     "<method>"
@@ -433,9 +433,9 @@ static AJ_PCSTR s_nodeNameWildcardInMiddle =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_nodeNameMultipleSlash =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node//MoreNode\">"
     "<interface>"
     "<method>"
@@ -443,9 +443,9 @@ static AJ_PCSTR s_nodeNameMultipleSlash =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameJustOneElement =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org\">"
     "<method>"
@@ -453,9 +453,9 @@ static AJ_PCSTR s_interfaceNameJustOneElement =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameElementStartingWithDigit =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.1interface\">"
     "<method>"
@@ -463,9 +463,9 @@ static AJ_PCSTR s_interfaceNameElementStartingWithDigit =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameDoubleDot =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org..interface\">"
     "<method>"
@@ -473,9 +473,9 @@ static AJ_PCSTR s_interfaceNameDoubleDot =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameEndingWithDot =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface.\">"
     "<method>"
@@ -483,9 +483,9 @@ static AJ_PCSTR s_interfaceNameEndingWithDot =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameSpecialCharacter =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interf@ce\">"
     "<method>"
@@ -493,9 +493,9 @@ static AJ_PCSTR s_interfaceNameSpecialCharacter =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameOver_255_CHARACTERS =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"Org.interface.with.an.extremely.long.name.that.just.wont."
     "end.because.it.has.to.be.over.two.hundred.fifty_five.characters.long.Were.in."
@@ -507,9 +507,9 @@ static AJ_PCSTR s_interfaceNameOver_255_CHARACTERS =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameDoubleWildcard =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface**\">"
     "<method>"
@@ -517,9 +517,9 @@ static AJ_PCSTR s_interfaceNameDoubleWildcard =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_interfaceNameWildcardInMiddle =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface.*.someMoreInterfaceName\">"
     "<method>"
@@ -527,9 +527,9 @@ static AJ_PCSTR s_interfaceNameWildcardInMiddle =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_memberNameWildcardInMiddle =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"some*MethodName\">"
@@ -537,9 +537,9 @@ static AJ_PCSTR s_memberNameWildcardInMiddle =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_memberNameStartingWithDigit =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"0someMethodName\">"
@@ -547,9 +547,9 @@ static AJ_PCSTR s_memberNameStartingWithDigit =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_memberNameSpecialCharacter =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"some.MethodName\">"
@@ -557,9 +557,9 @@ static AJ_PCSTR s_memberNameSpecialCharacter =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_memberNameDoubleWildcard =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"someMethodName**\">"
@@ -567,7 +567,7 @@ static AJ_PCSTR s_memberNameDoubleWildcard =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 #endif /* REGEX_SUPPORTED */
 
 class XmlRulesConverterToRulesDetailedTest : public testing::Test {
@@ -625,12 +625,12 @@ class XmlRulesConverterToRulesSeparateInterfaceMemberNamesTest : public XmlRules
 
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldReturnErrorForNonWellFormedXml)
 {
-    EXPECT_EQ(ER_EOF, XmlRulesConverter::XmlToRules(s_nonWellFormedXml, m_rules));
+    EXPECT_EQ(ER_EOF, XmlRulesConverter::GetInstance()->XmlToRules(s_nonWellFormedXml, m_rules));
 }
 
-TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidMethodForValidNeedAllManifestTemplate)
+TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidMethodForValidNeedAllRules)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validNeedAllManifestTemplate, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
     ASSERT_EQ((size_t)4, m_rules[0].GetMembersSize());
 
@@ -642,9 +642,9 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidMethodForValidNeedAll
               | PermissionPolicy::Rule::Member::ACTION_PROVIDE, methodMember.GetActionMask());
 }
 
-TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidPropertyForValidNeedAllManifestTemplate)
+TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidPropertyForValidNeedAllRules)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validNeedAllManifestTemplate, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
     ASSERT_EQ((size_t)4, m_rules[0].GetMembersSize());
 
@@ -657,9 +657,9 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidPropertyForValidNeedA
               | PermissionPolicy::Rule::Member::ACTION_OBSERVE, propertyMember.GetActionMask());
 }
 
-TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSignalForValidNeedAllManifestTemplate)
+TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSignalForValidNeedAllRules)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validNeedAllManifestTemplate, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
     ASSERT_EQ((size_t)4, m_rules[0].GetMembersSize());
 
@@ -671,9 +671,9 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSignalForValidNeedAll
               | PermissionPolicy::Rule::Member::ACTION_OBSERVE, signalMember.GetActionMask());
 }
 
-TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidAnyMemberForValidNeedAllManifestTemplate)
+TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidAnyMemberForValidNeedAllRules)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validNeedAllManifestTemplate, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
     ASSERT_EQ((size_t)4, m_rules[0].GetMembersSize());
 
@@ -688,7 +688,7 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidAnyMemberForValidNeed
 
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidMethodForDenyAction)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validMethodWithDeny, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validMethodWithDeny, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
     ASSERT_EQ((size_t)1, m_rules[0].GetMembersSize());
 
@@ -699,7 +699,7 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidMethodForDenyAction)
 
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidNamelessNodeName)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validNeedAllManifestTemplate, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
 
     EXPECT_STREQ("*", m_rules[0].GetObjPath().c_str());
@@ -707,7 +707,7 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidNamelessNodeName)
 
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSpecificNodeName)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validNodeWithName, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNodeWithName, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
 
     EXPECT_STREQ("/Node", m_rules[0].GetObjPath().c_str());
@@ -715,7 +715,7 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSpecificNodeName)
 
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidNamelessInterfaceName)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validNeedAllManifestTemplate, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
 
     EXPECT_STREQ("*", m_rules[0].GetInterfaceName().c_str());
@@ -723,7 +723,7 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidNamelessInterfaceName
 
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSpecificInterfaceName)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(s_validInterfaceWithName, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validInterfaceWithName, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
 
     EXPECT_STREQ("org.Interface", m_rules[0].GetInterfaceName().c_str());
@@ -731,11 +731,11 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSpecificInterfaceName
 
 INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesInvalidRulesSet,
                         XmlRulesConverterToRulesInvalidRulesTest,
-                        ::testing::Values(s_emptyManifestElement,
+                        ::testing::Values(s_emptyRulesElement,
                                           s_emptyNodeElement,
                                           s_emptyInterfaceElement,
                                           s_emptyMemberElement,
-                                          s_annotationElementUnderManifest,
+                                          s_annotationElementUnderRules,
                                           s_annotationElementUnderNode,
                                           s_annotationElementUnderInterface,
                                           s_bothNodeAndAnnotationElements,
@@ -763,10 +763,12 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesInvalidRulesSet,
                                           s_propertyWithDoubleDeny,
                                           s_propertyWithDenyAndOther,
                                           s_anyWithDoubleDeny,
-                                          s_anyWithDenyAndOther));
+                                          s_anyWithDenyAndOther,
+                                          s_needAllManifestTemplateWithNodeSecurityLevelAnnotation,
+                                          s_needAllManifestTemplateWithInterfaceSecurityLevelAnnotation));
 TEST_P(XmlRulesConverterToRulesInvalidRulesTest, shouldReturnErrorForInvalidRulesSet)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlRulesConverter::XmlToRules(m_rulesXml, m_rules));
+    EXPECT_EQ(ER_XML_MALFORMED, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
 }
 
 #ifdef REGEX_SUPPORTED
@@ -793,14 +795,14 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesInvalidNames,
                                           s_memberNameWildcardInMiddle));
 TEST_P(XmlRulesConverterToRulesInvalidNamesTest, shouldReturnErrorForInvalidNames)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlRulesConverter::XmlToRules(m_rulesXml, m_rules));
+    EXPECT_EQ(ER_XML_MALFORMED, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
 }
 
 #endif /* REGEX_SUPPORTED */
 
 INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesPass,
                         XmlRulesConverterToRulesPassTest,
-                        ::testing::Values(s_validNeedAllManifestTemplate,
+                        ::testing::Values(s_validNeedAllRulesXml,
                                           s_validSameNameInterfacesInSeparateNodes,
                                           s_validNamelessInterfacesInSeparateNodes,
                                           s_validDifferentNameInterfacesInOneNode,
@@ -814,7 +816,7 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesPass,
                                           s_validSameNameSignalsInSeparateInterfaces,
                                           s_validNamelessSignalsInSeparateInterfaces,
                                           s_validDifferentNameAnyMembersInOneInterface,
-                                          s_sameNameAnyMembersInSeparateInterfaces,
+                                          s_validSameNameAnyMembersInSeparateInterfaces,
                                           s_validNamelessAnyMembersInSeparateInterfaces,
                                           s_validInterfaceWithName,
                                           s_validInterfaceNameWithWildcardNotAfterDot,
@@ -834,7 +836,7 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesPass,
                                           s_validMethodWithDeny));
 TEST_P(XmlRulesConverterToRulesPassTest, shouldPassForValidInput)
 {
-    EXPECT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_rulesXml, m_rules));
+    EXPECT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
 }
 
 INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesRulesCount,
@@ -842,7 +844,7 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesRulesCount,
                         ::testing::Values(SizeParams(s_validSameNameInterfacesInSeparateNodes, 2),
                                           SizeParams(s_validNamelessInterfacesInSeparateNodes, 2),
                                           SizeParams(s_validDifferentNameInterfacesInOneNode, 2),
-                                          SizeParams(s_validNeedAllManifestTemplate, 1),
+                                          SizeParams(s_validNeedAllRulesXml, 1),
                                           SizeParams(s_validDifferentNameMethodsInOneInterface, 1),
                                           SizeParams(s_validDifferentNamePropertiesInOneInterface, 1),
                                           SizeParams(s_validDifferentNameSignalsInOneInterface, 1),
@@ -850,13 +852,13 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesRulesCount,
                                           SizeParams(s_validSameNamePropertiesInSeparateInterfaces, 2),
                                           SizeParams(s_validSameNameSignalsInSeparateInterfaces, 2),
                                           SizeParams(s_validNamelessMethodsInSeparateInterfaces, 2),
-                                          SizeParams(s_sameNameAnyMembersInSeparateInterfaces, 2),
+                                          SizeParams(s_validSameNameAnyMembersInSeparateInterfaces, 2),
                                           SizeParams(s_validNamelessSignalsInSeparateInterfaces, 2),
                                           SizeParams(s_validNamelessSignalsInSeparateInterfaces, 2),
                                           SizeParams(s_validNamelessAnyMembersInSeparateInterfaces, 2)));
 TEST_P(XmlRulesConverterToRulesRulesCountTest, shouldGetCorrectRulesCount)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_rulesXml, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
 
     EXPECT_EQ(m_expectedCount, m_rules.size());
 }
@@ -867,10 +869,10 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesSameInerfaceMembersCount,
                                           SizeParams(s_validDifferentNamePropertiesInOneInterface, 2),
                                           SizeParams(s_validDifferentNameSignalsInOneInterface, 2),
                                           SizeParams(s_validDifferentNameAnyMembersInOneInterface, 2),
-                                          SizeParams(s_validNeedAllManifestTemplate, 4)));
+                                          SizeParams(s_validNeedAllRulesXml, 4)));
 TEST_P(XmlRulesConverterToRulesMembersCountTest, shouldGetCorrectMembersCount)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_rulesXml, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
 
     EXPECT_EQ(m_expectedCount, m_rules[0].GetMembersSize());
@@ -884,7 +886,7 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesSameInerfaceMemberNames,
                                           TwoStringsParams(s_validDifferentNameAnyMembersInOneInterface, "Any0", "Any1")));
 TEST_P(XmlRulesConverterToRulesSameInterfaceMemberNamesTest, shouldGetCorrectSameInterfaceMemberNames)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_rulesXml, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
     ASSERT_EQ((size_t)1, m_rules.size());
     ASSERT_EQ(m_expectedNames.size(), m_rules[0].GetMembersSize());
 
@@ -898,14 +900,14 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesSeparateInerfaceMemberNames,
                         ::testing::Values(TwoStringsParams(s_validSameNameMethodsInSeparateInterfaces, "Method", "Method"),
                                           TwoStringsParams(s_validSameNamePropertiesInSeparateInterfaces, "Property", "Property"),
                                           TwoStringsParams(s_validSameNameSignalsInSeparateInterfaces, "Signal", "Signal"),
-                                          TwoStringsParams(s_sameNameAnyMembersInSeparateInterfaces, "Any", "Any"),
+                                          TwoStringsParams(s_validSameNameAnyMembersInSeparateInterfaces, "Any", "Any"),
                                           TwoStringsParams(s_validNamelessPropertiesInSeparateInterfaces, "*", "*"),
                                           TwoStringsParams(s_validNamelessSignalsInSeparateInterfaces, "*", "*"),
                                           TwoStringsParams(s_validNamelessSignalsInSeparateInterfaces, "*", "*"),
                                           TwoStringsParams(s_validNamelessAnyMembersInSeparateInterfaces, "*", "*")));
 TEST_P(XmlRulesConverterToRulesSeparateInterfaceMemberNamesTest, shouldGetCorrectSeparateInterfacesMemberNames)
 {
-    ASSERT_EQ(ER_OK, XmlRulesConverter::XmlToRules(m_rulesXml, m_rules));
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
     ASSERT_EQ(m_expectedNames.size(), m_rules.size());
 
     for (size_t index = 0; index < m_expectedNames.size(); index++) {

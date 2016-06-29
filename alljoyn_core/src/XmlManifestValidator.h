@@ -42,9 +42,7 @@ namespace ajn {
 
 #define VALID_MANIFEST_VERSION_NUMBER 1
 
-#define MANIFEST_XML_ELEMENT "manifest"
 #define MANIFEST_VERSION_XML_ELEMENT "version"
-#define RULES_XML_ELEMENT "rules"
 #define THUMBPRINT_XML_ELEMENT "thumbprint"
 #define SIGNATURE_XML_ELEMENT "signature"
 #define OID_XML_ELEMENT "oid"
