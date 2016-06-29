@@ -25,7 +25,7 @@
 #include "PermissionMgmtObj.h"
 #include "KeyInfoHelper.h"
 #include "XmlManifestConverter.h"
-#include "XmlRulesConverter.h"
+#include "XmlManifestTemplateConverter.h"
 #include "XmlPoliciesConverter.h"
 
 #define QCC_MODULE "ALLJOYN_SECURITY"
@@ -786,7 +786,7 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateX
     }
 
     if (ER_OK == status) {
-        status = XmlRulesConverter::RulesToXml(rules, rulesCount, manifestTemplate);
+        status = XmlManifestTemplateConverter::GetInstance()->RulesToXml(rules, rulesCount, manifestTemplate);
     }
 
     if (ER_OK == status) {
