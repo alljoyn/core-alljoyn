@@ -28,8 +28,8 @@
 #include "BusInternal.h"
 #include "CredentialAccessor.h"
 #include "KeyInfoHelper.h"
-#include "XmlRulesConverter.h"
 #include "XmlManifestConverter.h"
+#include "XmlManifestTemplateConverter.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -93,7 +93,7 @@ QStatus PermissionConfigurator::GetManifestTemplateAsXml(std::string& manifestTe
         return status;
     }
 
-    return XmlRulesConverter::RulesToXml(manifestTemplate.data(), manifestTemplate.size(), manifestTemplateXml, MANIFEST_XML_ELEMENT);
+    return XmlManifestTemplateConverter::GetInstance()->RulesToXml(manifestTemplate.data(), manifestTemplate.size(), manifestTemplateXml);
 }
 
 QStatus PermissionConfigurator::SetPermissionManifestTemplate(PermissionPolicy::Rule* rules, size_t count)
@@ -111,7 +111,7 @@ QStatus PermissionConfigurator::SetManifestTemplateFromXml(AJ_PCSTR manifestXml)
     QStatus status;
     std::vector<PermissionPolicy::Rule> rules;
 
-    status = XmlRulesConverter::XmlToRules(manifestXml, rules);
+    status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(manifestXml, rules);
 
     if (ER_OK == status) {
         status = SetPermissionManifestTemplate(rules.data(), rules.size());

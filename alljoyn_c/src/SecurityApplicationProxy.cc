@@ -34,8 +34,8 @@
 #include <qcc/KeyInfoECC.h>
 #include <qcc/StringUtil.h>
 #include "KeyInfoHelper.h"
-#include "XmlRulesConverter.h"
 #include "XmlManifestConverter.h"
+#include "XmlManifestTemplateConverter.h"
 #include "CertificateUtilities.h"
 
 #define QCC_MODULE "ALLJOYN_C"
@@ -348,7 +348,7 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
                             Manifest& manifest)
 {
     vector<PermissionPolicy::Rule> rules;
-    QStatus status = XmlRulesConverter::XmlToRules(unsignedManifestXml, rules);
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
 
     if (ER_OK == status) {
         status = manifest->SetRules(rules.data(), rules.size());
@@ -370,7 +370,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_computemanifestdigest(AJ_PCSTR 
     Manifest manifest;
     vector<PermissionPolicy::Rule> rules;
 
-    QStatus status = XmlRulesConverter::XmlToRules(unsignedManifestXml, rules);
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not convert manifest XML to rules"));
         return status;
@@ -426,7 +426,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_PCSTR u
     Manifest manifest;
     vector<PermissionPolicy::Rule> rules;
 
-    QStatus status = XmlRulesConverter::XmlToRules(unsignedManifestXml, rules);
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not convert manifest XML to rules"));
         return status;

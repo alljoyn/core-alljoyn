@@ -33,6 +33,10 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
 
+#include "XmlManifestTemplateValidator.h"
+
+#define SECURITY_LEVEL_ANNOTATION(level) "<annotation name=\"" SECURITY_LEVEL_ANNOTATION_NAME "\" value=\"" level "\"/>"
+
 namespace ajn {
 
 class SecurityApplicationProxyTestHelper {
