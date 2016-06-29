@@ -154,7 +154,7 @@ QStatus XmlPoliciesValidator::ValidateAcl(const XmlElement* acl)
 
     if ((ER_OK == status) &&
         (acl->GetChildren().size() == ACL_ELEMENT_WITH_RULES_CHILDREN_COUNT)) {
-        status = XmlRulesValidator::Validate(acl->GetChildren()[RULES_INDEX]);
+        status = XmlRulesValidator::GetInstance()->Validate(acl->GetChildren()[RULES_INDEX]);
     }
 
     return status;
@@ -471,7 +471,7 @@ QStatus XmlPoliciesValidator::ValidateAcl(const PermissionPolicy::Acl& acl)
     QStatus status = ValidatePeers(acl.GetPeers(), acl.GetPeersSize());
 
     if ((ER_OK == status) && (acl.GetRulesSize() > 0)) {
-        status = XmlRulesValidator::ValidateRules(acl.GetRules(), acl.GetRulesSize());
+        status = XmlRulesValidator::GetInstance()->ValidateRules(acl.GetRules(), acl.GetRulesSize());
     }
 
     return status;

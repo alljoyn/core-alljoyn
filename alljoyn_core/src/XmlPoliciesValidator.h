@@ -64,7 +64,6 @@ namespace ajn {
 #define TYPE_XML_ELEMENT "type"
 #define PUBLIC_KEY_XML_ELEMENT "publicKey"
 #define SGID_KEY_XML_ELEMENT "sgID"
-#define RULES_XML_ELEMENT "rules"
 #define WILDCARD_XML_VALUE "*"
 
 #define XML_PEER_ALL "ALL"

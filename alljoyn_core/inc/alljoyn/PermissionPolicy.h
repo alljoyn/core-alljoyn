@@ -58,6 +58,15 @@ class PermissionPolicy {
       public:
 
         /**
+         * Enum indicating the suggested security level for the interface
+         */
+        typedef enum {
+            UNAUTHORIZED = 0,
+            NON_PRIVILEGED = 1,
+            PRIVILEGED = 2
+        } SecurityLevel;
+
+        /**
          * Class to allow the application to specify a permission rule at the interface member level
          */
         class Member {
@@ -172,7 +181,12 @@ class PermissionPolicy {
          * Constructor
          *
          */
-        Rule() : objPath("*"), interfaceName(), members(NULL), membersSize(0)
+        Rule() :
+            objPath("*"),
+            interfaceName(),
+            members(NULL),
+            membersSize(0),
+            m_securityLevel(PRIVILEGED)
         {
         }
 
@@ -183,6 +197,18 @@ class PermissionPolicy {
         {
             delete [] members;
         }
+
+        /**
+         * Set the security level.
+         * @param[in]   securityLevel  The interface's security level.
+         */
+        void SetSecurityLevel(SecurityLevel securityLevel);
+
+        /**
+         * Get the security level.
+         * @return The interface's security level.
+         */
+        SecurityLevel GetSecurityLevel() const;
 
         /**
          * Set the object path
@@ -267,6 +293,7 @@ class PermissionPolicy {
         qcc::String interfaceName;
         Member* members;
         size_t membersSize;
+        SecurityLevel m_securityLevel;
     };
 
 

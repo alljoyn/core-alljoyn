@@ -54,6 +54,7 @@ static AJ_PCSTR s_validAllowAllManifestTemplate =
     "<manifest>"
     "<node>"
     "<interface>"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
     "<method>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"

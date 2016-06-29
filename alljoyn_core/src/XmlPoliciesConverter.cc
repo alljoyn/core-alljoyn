@@ -139,7 +139,7 @@ void XmlPoliciesConverter::SetAclPeers(const XmlElement* peersXml, PermissionPol
 void XmlPoliciesConverter::SetAclRules(const XmlElement* rulesXml, PermissionPolicy::Acl& acl)
 {
     vector<PermissionPolicy::Rule> rules;
-    QCC_VERIFY(ER_OK == XmlRulesConverter::XmlToRules(rulesXml->Generate().c_str(), rules));
+    QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->XmlToRules(rulesXml->Generate().c_str(), rules));
     acl.SetRules(rules.size(), rules.data());
 }
 
@@ -281,10 +281,9 @@ void XmlPoliciesConverter::SetAclRules(const PermissionPolicy::Rule* rules, size
 {
     XmlElement* rulesXml = nullptr;
 
-    QCC_VERIFY(ER_OK == XmlRulesConverter::RulesToXml(rules,
-                                                      rulesSize,
-                                                      &rulesXml,
-                                                      RULES_XML_ELEMENT));
+    QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->RulesToXml(rules,
+                                                                     rulesSize,
+                                                                     &rulesXml));
     aclXml->AddChild(rulesXml);
 }
 } /* namespace ajn */

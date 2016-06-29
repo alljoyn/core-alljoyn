@@ -70,6 +70,7 @@ static AJ_PCSTR s_validSecurityManagerManifestTemplate =
     "<manifest>"
     "<node>"
     "<interface>"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
     "<method>"
     "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Modify\"/>"
     "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Provide\"/>"
@@ -91,6 +92,7 @@ static AJ_PCSTR s_validManagedAppManifestTemplate =
     "<manifest>"
     "<node name=\"/Node0\">"
     "<interface name=\"org.test.alljoyn.Interface\">"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
     "<method name=\"MethodName\">"
     "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Modify\"/>"
     "</method>"
