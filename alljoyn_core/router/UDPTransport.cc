@@ -5075,7 +5075,7 @@ QStatus UDPTransport::Start()
      * variable that allows us to only release the singleton on the first transport
      * Join()
      */
-    QCC_DbgPrintf(("UDPTransport::Start(): Aquire instance of NS"));
+    QCC_DbgPrintf(("UDPTransport::Start(): Acquire instance of NS"));
     m_nsReleaseCount = 0;
     IpNameService::Instance().Acquire(guidStr);
 
@@ -7107,7 +7107,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
     /*
      * The Function HelloReply creates and marshals the BusHello reply for the
      * remote side.  Once it is marshaled, there is a buffer associated with the
-     * message that contains the on-the-wire version of the messsage.  The ARDP
+     * message that contains the on-the-wire version of the message.  The ARDP
      * code copies this data in to deal with the possibility of having to
      * retransmit it; So we need to remember to deal with freeing the buffer.
      */
@@ -9878,7 +9878,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         for (uint32_t i = 0; i < entries.size(); ++i) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Checking interface %s", entries[i].m_name.c_str()));
             if (entries[i].m_flags & qcc::IfConfigEntry::UP) {
-                QCC_DbgPrintf(("UDPTransport::Connect(): Interface UP with addresss %s", entries[i].m_addr.c_str()));
+                QCC_DbgPrintf(("UDPTransport::Connect(): Interface UP with address %s", entries[i].m_addr.c_str()));
                 IPAddress foundAddr(entries[i].m_addr);
                 if (foundAddr == ipAddr) {
                     QCC_DbgPrintf(("UDPTransport::Connect(): Attempted connection to self; exiting"));
@@ -10070,7 +10070,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     /*
      * The Function HelloMessage creates and marshals the BusHello Message for
      * the remote side.  Once it is marshaled, there is a buffer associated with
-     * the message that contains the on-the-wire version of the messsage.
+     * the message that contains the on-the-wire version of the message.
      */
     size_t buflen = hello->GetBufferSize();
 #ifndef NDEBUG
