@@ -126,6 +126,16 @@ bool PermissionPolicy::Rule::Member::operator!=(const PermissionPolicy::Rule::Me
 }
 
 
+void PermissionPolicy::Rule::SetSecurityLevel(SecurityLevel securityLevel)
+{
+    m_securityLevel = securityLevel;
+}
+
+PermissionPolicy::Rule::SecurityLevel PermissionPolicy::Rule::GetSecurityLevel() const
+{
+    return m_securityLevel;
+}
+
 void PermissionPolicy::Rule::SetObjPath(const qcc::String& objPath)
 {
     this->objPath = objPath;
@@ -207,6 +217,10 @@ bool PermissionPolicy::Rule::operator==(const PermissionPolicy::Rule& other) con
         return false;
     }
 
+    if (m_securityLevel != other.m_securityLevel) {
+        return false;
+    }
+
     for (size_t i = 0; i < membersSize; i++) {
         if (!(members[i] == other.members[i])) {
             return false;
@@ -225,6 +239,7 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
     if (&other != this) {
         objPath = other.objPath;
         interfaceName = other.interfaceName;
+        m_securityLevel = other.m_securityLevel;
         delete [] members;
         members = NULL;
         if (other.membersSize > 0) {
@@ -243,7 +258,9 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
 
 PermissionPolicy::Rule::Rule(const PermissionPolicy::Rule& other) :
     objPath(other.objPath), interfaceName(other.interfaceName),
-    membersSize(other.membersSize) {
+    membersSize(other.membersSize),
+    m_securityLevel(other.m_securityLevel)
+{
     members = new Member[membersSize];
     if (members == NULL) {
         return;

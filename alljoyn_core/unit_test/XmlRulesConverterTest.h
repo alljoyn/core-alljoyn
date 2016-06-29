@@ -17,6 +17,9 @@
 #include <string>
 #include <vector>
 #include "XmlConverterTest.h"
+#include "XmlManifestTemplateValidator.h"
+
+#define SECURITY_LEVEL_ANNOTATION(level) "<annotation name=\"" SECURITY_LEVEL_ANNOTATION_NAME "\" value=\"" level "\"/>"
 
 struct TwoStringsParams {
   public:
@@ -32,8 +35,8 @@ struct TwoStringsParams {
     }
 };
 
-static AJ_PCSTR s_validNeedAllManifestTemplate =
-    "<manifest>"
+static AJ_PCSTR s_validNeedAllRulesXml =
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -56,9 +59,9 @@ static AJ_PCSTR s_validNeedAllManifestTemplate =
     "</any>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNodeWithName =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node\">"
     "<interface>"
     "<method>"
@@ -66,9 +69,9 @@ static AJ_PCSTR s_validNodeWithName =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNodeWithUnderscore =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/_Node\">"
     "<interface>"
     "<method>"
@@ -76,9 +79,9 @@ static AJ_PCSTR s_validNodeWithUnderscore =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNodeWildcardOnly =
-    "<manifest>"
+    "<rules>"
     "<node name = \"*\">"
     "<interface>"
     "<method>"
@@ -86,9 +89,9 @@ static AJ_PCSTR s_validNodeWildcardOnly =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNodeWithWildcard =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node/*\">"
     "<interface>"
     "<method>"
@@ -96,9 +99,9 @@ static AJ_PCSTR s_validNodeWithWildcard =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNodeWithDigit =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node1\">"
     "<interface>"
     "<method>"
@@ -106,9 +109,9 @@ static AJ_PCSTR s_validNodeWithDigit =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNodeNameWithWildcardNotAfterSlash =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node*\">"
     "<interface>"
     "<method>"
@@ -116,9 +119,9 @@ static AJ_PCSTR s_validNodeNameWithWildcardNotAfterSlash =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validInterfaceWithName =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.Interface\">"
     "<method>"
@@ -126,9 +129,9 @@ static AJ_PCSTR s_validInterfaceWithName =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validInterfaceWithWildcard =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface.*\">"
     "<method>"
@@ -136,9 +139,9 @@ static AJ_PCSTR s_validInterfaceWithWildcard =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validInterfaceWithDigit =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface1\">"
     "<method>"
@@ -146,9 +149,9 @@ static AJ_PCSTR s_validInterfaceWithDigit =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validInterfaceWithUnderscore =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"_org.interface\">"
     "<method>"
@@ -156,9 +159,9 @@ static AJ_PCSTR s_validInterfaceWithUnderscore =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validInterfaceNameWithWildcardNotAfterDot =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface*\">"
     "<method>"
@@ -166,9 +169,9 @@ static AJ_PCSTR s_validInterfaceNameWithWildcardNotAfterDot =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validMemberWithName =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"methodName\">"
@@ -176,9 +179,9 @@ static AJ_PCSTR s_validMemberWithName =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validMemberWithDigit =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"methodName5\">"
@@ -186,9 +189,9 @@ static AJ_PCSTR s_validMemberWithDigit =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validMemberWithUnderscore =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"_methodName\">"
@@ -196,9 +199,9 @@ static AJ_PCSTR s_validMemberWithUnderscore =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validMemberWithWildcard =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"methodName*\">"
@@ -206,9 +209,9 @@ static AJ_PCSTR s_validMemberWithWildcard =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validMethodWithDeny =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method>"
@@ -216,9 +219,9 @@ static AJ_PCSTR s_validMethodWithDeny =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validSameNameInterfacesInSeparateNodes =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node0\">"
     "<interface name = \"org.interface\">"
     "<method>"
@@ -233,9 +236,9 @@ static AJ_PCSTR s_validSameNameInterfacesInSeparateNodes =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNamelessInterfacesInSeparateNodes =
-    "<manifest>"
+    "<rules>"
     "<node name = \"/Node0\">"
     "<interface>"
     "<method>"
@@ -250,9 +253,9 @@ static AJ_PCSTR s_validNamelessInterfacesInSeparateNodes =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validDifferentNameInterfacesInOneNode =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface1\">"
     "<method>"
@@ -265,9 +268,9 @@ static AJ_PCSTR s_validDifferentNameInterfacesInOneNode =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validSameNameMethodsInSeparateInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<method name = \"Method\">"
@@ -280,9 +283,9 @@ static AJ_PCSTR s_validSameNameMethodsInSeparateInterfaces =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNamelessMethodsInSeparateInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<method>"
@@ -295,9 +298,9 @@ static AJ_PCSTR s_validNamelessMethodsInSeparateInterfaces =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validDifferentNameMethodsInOneInterface =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<method name = \"Method0\">"
@@ -308,9 +311,9 @@ static AJ_PCSTR s_validDifferentNameMethodsInOneInterface =
     "</method>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validSameNamePropertiesInSeparateInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<property name = \"Property\">"
@@ -323,9 +326,9 @@ static AJ_PCSTR s_validSameNamePropertiesInSeparateInterfaces =
     "</property>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNamelessPropertiesInSeparateInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<property>"
@@ -338,9 +341,9 @@ static AJ_PCSTR s_validNamelessPropertiesInSeparateInterfaces =
     "</property>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validDifferentNamePropertiesInOneInterface =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<property name = \"Property0\">"
@@ -351,9 +354,9 @@ static AJ_PCSTR s_validDifferentNamePropertiesInOneInterface =
     "</property>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validSameNameSignalsInSeparateInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<signal name = \"Signal\">"
@@ -366,9 +369,9 @@ static AJ_PCSTR s_validSameNameSignalsInSeparateInterfaces =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNamelessSignalsInSeparateInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<signal>"
@@ -381,9 +384,9 @@ static AJ_PCSTR s_validNamelessSignalsInSeparateInterfaces =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validDifferentNameSignalsInOneInterface =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<signal name = \"Signal0\">"
@@ -394,9 +397,9 @@ static AJ_PCSTR s_validDifferentNameSignalsInOneInterface =
     "</signal>"
     "</interface>"
     "</node>"
-    "</manifest>";
-static AJ_PCSTR s_sameNameAnyMembersInSeparateInterfaces =
-    "<manifest>"
+    "</rules>";
+static AJ_PCSTR s_validSameNameAnyMembersInSeparateInterfaces =
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<any name = \"Any\">"
@@ -409,9 +412,9 @@ static AJ_PCSTR s_sameNameAnyMembersInSeparateInterfaces =
     "</any>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validNamelessAnyMembersInSeparateInterfaces =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface name = \"org.interface0\">"
     "<any>"
@@ -424,9 +427,9 @@ static AJ_PCSTR s_validNamelessAnyMembersInSeparateInterfaces =
     "</any>"
     "</interface>"
     "</node>"
-    "</manifest>";
+    "</rules>";
 static AJ_PCSTR s_validDifferentNameAnyMembersInOneInterface =
-    "<manifest>"
+    "<rules>"
     "<node>"
     "<interface>"
     "<any name = \"Any0\">"
@@ -434,6 +437,58 @@ static AJ_PCSTR s_validDifferentNameAnyMembersInOneInterface =
     "</any>"
     "<any name = \"Any1\">"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</rules>";
+static AJ_PCSTR s_needAllManifestTemplateWithNodeSecurityLevelAnnotation =
+    "<manifest>"
+    "<node>"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
+    "<interface>"
+    "<method>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</method>"
+    "<property>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</property>"
+    "<signal>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</signal>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+static AJ_PCSTR s_needAllManifestTemplateWithInterfaceSecurityLevelAnnotation =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
+    "<method>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</method>"
+    "<property>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</property>"
+    "<signal>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</signal>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
     "</any>"
     "</interface>"
     "</node>"
