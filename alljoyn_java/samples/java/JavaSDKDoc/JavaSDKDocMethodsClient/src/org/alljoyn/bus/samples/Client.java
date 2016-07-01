@@ -35,10 +35,17 @@ public class Client {
     private static SampleInterface mSampleInterface;
     
     private static boolean isJoined = false;
+    private static boolean isJoining = false;
     
     static class MyBusListener extends BusListener {
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
             System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
+            
+            if (isJoined || isJoining) {
+                return;
+            }
+            isJoining = true;
+
             short contactPort = CONTACT_PORT;
             SessionOpts sessionOpts = new SessionOpts();
             sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
@@ -52,6 +59,7 @@ public class Client {
             
             Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener());
             if (status != Status.OK) {
+                isJoining = false;
                 return;
             }
             System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
@@ -63,6 +71,7 @@ public class Client {
 
             mSampleInterface = mProxyObj.getInterface(SampleInterface.class);
             isJoined = true;
+            isJoining = false;
             
         }
         public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
