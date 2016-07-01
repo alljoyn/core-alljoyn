@@ -35,10 +35,17 @@ public class Client {
     private static SampleInterface mSampleInterface;
     
     private static boolean isJoined = false;
+    private static boolean isJoining = false;
     
     static class MyBusListener extends BusListener {
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
             System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
+            
+            if (isJoined || isJoining) {
+                return;
+            }
+            isJoining = true;
+
             short contactPort = CONTACT_PORT;
             SessionOpts sessionOpts = new SessionOpts();
             sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
@@ -51,6 +58,7 @@ public class Client {
             mBus.enableConcurrentCallbacks();
             
             Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener());
+            isJoining = false;
             if (status != Status.OK) {
                 return;
             }

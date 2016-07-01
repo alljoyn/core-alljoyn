@@ -38,10 +38,17 @@ public class Client {
     private static SecureInterface mSecureInterface;
 
     private static boolean isJoined = false;
+    private static boolean isJoining = false;
 
     static class MyBusListener extends BusListener {
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
             System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
+
+            if (isJoined || isJoining) {
+                return;
+            }
+
+            isJoining = true;
             short contactPort = CONTACT_PORT;
             SessionOpts sessionOpts = new SessionOpts();
             sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
@@ -58,8 +65,9 @@ public class Client {
                     System.out.println("Session Lost : " + sessionId + "reason: "+reason);
                 }
             });
+            isJoining = false;
             if (status != Status.OK) {
-        return;
+                return;
             }
             System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
 

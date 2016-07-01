@@ -70,11 +70,20 @@ public class Client {
         }
     }
 
+    private static boolean isJoining = false;
+    private static boolean isJoined = false;
+
     public static void main(String[] args) {
 
         class MyBusListener extends BusListener {
             public void foundAdvertisedName(String name, short transport, String namePrefix) {
                 System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
+
+                if (isJoining || isJoined) {
+                    return;
+                }
+
+                isJoining = true;
                 short contactPort = CONTACT_PORT;
                 SessionOpts sessionOpts = new SessionOpts();
                 sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
@@ -87,9 +96,11 @@ public class Client {
                 mBus.enableConcurrentCallbacks();
 
                 Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener());
+                isJoining = false;
                 if (status != Status.OK) {
                     return;
                 }
+                isJoined = true;
                 System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
             }
             public void nameOwnerChanged(String busName, String previousOwner, String newOwner){
