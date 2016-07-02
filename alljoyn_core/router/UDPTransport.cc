@@ -4426,8 +4426,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_connLock(LOCK_LEVEL_UDPTRANSPORT_CONNLOCK), m_dynamicScoreUpdater(*this),
     /* Workaround for known deadlock prediction break ASACORE-2678 */
     m_ardpLock(LOCK_LEVEL_CHECKING_DISABLED),
-    /* Workaround for known deadlock ASACORE-2094 */
-    m_cbLock(LOCK_LEVEL_CHECKING_DISABLED),
+    m_cbLock(LOCK_LEVEL_UDPTRANSPORT_CBLOCK),
     m_handle(NULL), m_dispatcher(NULL), m_exitDispatcher(NULL),
     m_workerCommandQueue(), m_workerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_WORKERCOMMANDQUEUELOCK),
     m_exitWorkerCommandQueue(), m_exitWorkerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_EXITWORKERCOMMANDQUEUELOCK)
@@ -6287,9 +6286,10 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
              * take the endpoint state change lock and hold it while we consider
              * makeing state changes to prevent possible inconsistencies.
              *
-             * Lock order is always endpointListLock then stateLock.  We have
-             * the endpointListLock so we are okay.
+             * Lock order is always endpointListLock, cbLock, then stateLock.  We
+             * already have the endpointListLock so we are okay.
              */
+            m_cbLock.Lock(MUTEX_CONTEXT);
             ep->StateLock(MUTEX_CONTEXT);
             if (ep->IsEpStopping()) {
                 if (ep->IsEpWaitEnabled()) {
@@ -6414,6 +6414,8 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
 
             }
             ep->StateUnlock(MUTEX_CONTEXT);
+            m_cbLock.Unlock(MUTEX_CONTEXT);
+
 
             /*
              * If we are in EP_STOPPING state then we have 1) either
