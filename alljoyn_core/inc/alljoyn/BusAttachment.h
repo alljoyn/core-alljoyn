@@ -815,6 +815,8 @@ class BusAttachment : public MessageReceiver {
      * @param isShared             This parameter is not used as of 16.04. It is ignored internally (always shared).
      * @param permissionConfigurationListener   Passes security 2.0 callbacks to the application.
      *
+     * @remark                     The application must Join the bus attachment before destroying the @authListener.
+     *
      * @return
      *      - #ER_OK if peer security was enabled.
      *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
