@@ -439,6 +439,9 @@ QStatus AutoPingerInternal::RemoveDestination(const qcc::String& group, const qc
                 it->second->destinations.erase(dit);
             }
         }
+    } else {
+        status = ER_BUS_PING_GROUP_NOT_FOUND;
+        QCC_LogError(status, ("AutoPingerInternal: cannot remove destination: '%s' from non-existing group: %u", destination.c_str(), group.c_str()));
     }
     globalPingerLock->Unlock(MUTEX_CONTEXT);
 

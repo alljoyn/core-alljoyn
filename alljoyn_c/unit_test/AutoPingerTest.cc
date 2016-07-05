@@ -105,6 +105,7 @@ class TestPingListener {
             foundmutex.Unlock();
             qcc::Sleep(10);
             foundmutex.Lock();
+            ++retries;
         }
         foundmutex.Unlock();
         EXPECT_NE(MAX_RETRIES, retries);
@@ -164,7 +165,7 @@ TEST_F(AutoPingerTest, Basic)
     alljoyn_busattachment_disconnect(clientBus, NULL);
     tpl.WaitUntilLost(uniqueName);
 
-    EXPECT_EQ(ER_FAIL, alljoyn_autopinger_removedestination(autoPinger, "badgroup",
+    EXPECT_EQ(ER_BUS_PING_GROUP_NOT_FOUND, alljoyn_autopinger_removedestination(autoPinger, "badgroup",
                                                             uniqueName.c_str()));
     EXPECT_EQ(ER_OK, alljoyn_autopinger_removedestination(autoPinger, "testgroup",
                                                           uniqueName.c_str()));
