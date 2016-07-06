@@ -25,6 +25,7 @@
 
 #include <qcc/platform.h>
 
+#include <vector>
 
 #include <qcc/String.h>
 #include <alljoyn/InterfaceDescription.h>
@@ -396,6 +397,22 @@ class BusObject : public MessageReceiver {
      *      - #ER_BUS_NO_SUCH_INTERFACE is method can not be added because interface does not exist.
      */
     QStatus AddMethodHandlers(const MethodEntry* entries, size_t numEntries);
+
+    /**
+     * Mark an array of properties in an interface as readable and accessible.
+     * It is intended to be called as part of GetAllProps().
+     * In particular, classes derived from BusObject overriding GetAllProps() can use this function to check
+     * which properties are readable and which ones can be accessed according to the permission manager.
+     *
+     * @param[out] readable    Vector of boolean values indicating whether a property at a given index is readable
+     * @param[out] allowed     Vector of boolean values indicating whether a property at a given index allows access
+     *                         according to the permission manager
+     * @param[in]  msg         The Properties.GetAll request
+     * @return
+     *                         - #ER_OK if the vectors were filled successfully
+     *                         - #ER_BUS_UNKNOWN_INTERFACE or #ER_BUS_MESSAGE_NOT_ENCRYPTED otherwise
+     */
+    virtual QStatus GetPropAccessibility(std::vector<bool>& readable, std::vector<bool>& allowed, Message& msg);
 
     /**
      * Handle a bus request to read a property from this object.
