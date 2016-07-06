@@ -16,425 +16,51 @@
 
 #include <string>
 #include <vector>
+#include <qcc/platform.h>
 #include "XmlConverterTest.h"
+#include "XmlManifestTemplateValidator.h"
+
+#define SECURITY_LEVEL_ANNOTATION(level) "<annotation name=\"" SECURITY_LEVEL_ANNOTATION_NAME "\" value=\"" level "\"/>"
 
 struct TwoStringsParams {
   public:
     AJ_PCSTR m_rulesXml;
     std::vector<std::string> m_strings;
 
-    TwoStringsParams(AJ_PCSTR _rulesXml, AJ_PCSTR first, AJ_PCSTR second) :
-        m_rulesXml(_rulesXml)
-    {
-        m_strings = std::vector<std::string>(2U);
-        m_strings[0] = first;
-        m_strings[1] = second;
-    }
+    TwoStringsParams(AJ_PCSTR _rulesXml, AJ_PCSTR first, AJ_PCSTR second);
 };
 
-static AJ_PCSTR s_validNeedAllManifestTemplate =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "</method>"
-    "<property>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
-    "</property>"
-    "<signal>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
-    "</signal>"
-    "<any>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
-    "</any>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNodeWithName =
-    "<manifest>"
-    "<node name = \"/Node\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNodeWithUnderscore =
-    "<manifest>"
-    "<node name = \"/_Node\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNodeWildcardOnly =
-    "<manifest>"
-    "<node name = \"*\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNodeWithWildcard =
-    "<manifest>"
-    "<node name = \"/Node/*\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNodeWithDigit =
-    "<manifest>"
-    "<node name = \"/Node1\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNodeNameWithWildcardNotAfterSlash =
-    "<manifest>"
-    "<node name = \"/Node*\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validInterfaceWithName =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.Interface\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validInterfaceWithWildcard =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface.*\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validInterfaceWithDigit =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface1\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validInterfaceWithUnderscore =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"_org.interface\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validInterfaceNameWithWildcardNotAfterDot =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface*\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validMemberWithName =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<method name = \"methodName\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validMemberWithDigit =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<method name = \"methodName5\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validMemberWithUnderscore =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<method name = \"_methodName\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validMemberWithWildcard =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<method name = \"methodName*\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validMethodWithDeny =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Deny\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validSameNameInterfacesInSeparateNodes =
-    "<manifest>"
-    "<node name = \"/Node0\">"
-    "<interface name = \"org.interface\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "<node name = \"/Node1\">"
-    "<interface name = \"org.interface\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNamelessInterfacesInSeparateNodes =
-    "<manifest>"
-    "<node name = \"/Node0\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "<node name = \"/Node1\">"
-    "<interface>"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validDifferentNameInterfacesInOneNode =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface1\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "<interface name = \"org.interface2\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validSameNameMethodsInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<method name = \"Method\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<method name = \"Method\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNamelessMethodsInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<method>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validDifferentNameMethodsInOneInterface =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<method name = \"Method0\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "<method name = \"Method1\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</method>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validSameNamePropertiesInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<property name = \"Property\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</property>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<property name = \"Property\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</property>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNamelessPropertiesInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<property>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</property>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<property>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</property>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validDifferentNamePropertiesInOneInterface =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<property name = \"Property0\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</property>"
-    "<property name = \"Property1\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</property>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validSameNameSignalsInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<signal name = \"Signal\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "</signal>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<signal name = \"Signal\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "</signal>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNamelessSignalsInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<signal>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "</signal>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<signal>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "</signal>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validDifferentNameSignalsInOneInterface =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<signal name = \"Signal0\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "</signal>"
-    "<signal name = \"Signal1\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
-    "</signal>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_sameNameAnyMembersInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<any name = \"Any\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</any>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<any name = \"Any\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</any>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validNamelessAnyMembersInSeparateInterfaces =
-    "<manifest>"
-    "<node>"
-    "<interface name = \"org.interface0\">"
-    "<any>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</any>"
-    "</interface>"
-    "<interface name = \"org.interface1\">"
-    "<any>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</any>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
-static AJ_PCSTR s_validDifferentNameAnyMembersInOneInterface =
-    "<manifest>"
-    "<node>"
-    "<interface>"
-    "<any name = \"Any0\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</any>"
-    "<any name = \"Any1\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
-    "</any>"
-    "</interface>"
-    "</node>"
-    "</manifest>";
+extern AJ_PCSTR s_validNeedAllRulesXml;
+extern AJ_PCSTR s_validNodeWithName;
+extern AJ_PCSTR s_validNodeWithUnderscore;
+extern AJ_PCSTR s_validNodeWildcardOnly;
+extern AJ_PCSTR s_validNodeWithWildcard;
+extern AJ_PCSTR s_validNodeWithDigit;
+extern AJ_PCSTR s_validNodeNameWithWildcardNotAfterSlash;
+extern AJ_PCSTR s_validInterfaceWithName;
+extern AJ_PCSTR s_validInterfaceWithWildcard;
+extern AJ_PCSTR s_validInterfaceWithDigit;
+extern AJ_PCSTR s_validInterfaceWithUnderscore;
+extern AJ_PCSTR s_validInterfaceNameWithWildcardNotAfterDot;
+extern AJ_PCSTR s_validMemberWithName;
+extern AJ_PCSTR s_validMemberWithDigit;
+extern AJ_PCSTR s_validMemberWithUnderscore;
+extern AJ_PCSTR s_validMemberWithWildcard;
+extern AJ_PCSTR s_validMethodWithDeny;
+extern AJ_PCSTR s_validSameNameInterfacesInSeparateNodes;
+extern AJ_PCSTR s_validNamelessInterfacesInSeparateNodes;
+extern AJ_PCSTR s_validDifferentNameInterfacesInOneNode;
+extern AJ_PCSTR s_validSameNameMethodsInSeparateInterfaces;
+extern AJ_PCSTR s_validNamelessMethodsInSeparateInterfaces;
+extern AJ_PCSTR s_validDifferentNameMethodsInOneInterface;
+extern AJ_PCSTR s_validSameNamePropertiesInSeparateInterfaces;
+extern AJ_PCSTR s_validNamelessPropertiesInSeparateInterfaces;
+extern AJ_PCSTR s_validDifferentNamePropertiesInOneInterface;
+extern AJ_PCSTR s_validSameNameSignalsInSeparateInterfaces;
+extern AJ_PCSTR s_validNamelessSignalsInSeparateInterfaces;
+extern AJ_PCSTR s_validDifferentNameSignalsInOneInterface;
+extern AJ_PCSTR s_validSameNameAnyMembersInSeparateInterfaces;
+extern AJ_PCSTR s_validNamelessAnyMembersInSeparateInterfaces;
+extern AJ_PCSTR s_validDifferentNameAnyMembersInOneInterface;
+extern AJ_PCSTR s_needAllManifestTemplateWithNodeSecurityLevelAnnotation;
+extern AJ_PCSTR s_needAllManifestTemplateWithInterfaceSecurityLevelAnnotation;

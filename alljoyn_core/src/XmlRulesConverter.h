@@ -51,6 +51,16 @@ class XmlRulesConverter {
     static void Shutdown();
 
     /**
+     * Return the singleton instance of the converter.
+     */
+    static XmlRulesConverter* GetInstance();
+
+    /**
+     * Default virtual destructor.
+     */
+    virtual ~XmlRulesConverter();
+
+    /**
      * Extract PermissionPolicy::Rules from rules in XML format. The rules
      * XML schema is available under alljoyn_core/docs/manifest_template.xsd.
      *
@@ -60,7 +70,7 @@ class XmlRulesConverter {
      * @return   #ER_OK if extracted correctly.
      *           #ER_XML_MALFORMED if the XML does not follow the policy XML schema.
      */
-    static QStatus XmlToRules(AJ_PCSTR rulesXml, std::vector<PermissionPolicy::Rule>& rules);
+    QStatus XmlToRules(AJ_PCSTR rulesXml, std::vector<PermissionPolicy::Rule>& rules);
 
     /**
      * Extract rules XML from an array of PermissionPolicy::Rules.
@@ -73,10 +83,9 @@ class XmlRulesConverter {
      * @return   #ER_OK if extracted correctly.
      *           #ER_FAIL if the rules do not map to an XML valid according to the rules XML schema.
      */
-    static QStatus RulesToXml(const PermissionPolicy::Rule* rules,
-                              const size_t rulesCount,
-                              std::string& rulesXml,
-                              AJ_PCSTR rootName = MANIFEST_XML_ELEMENT);
+    QStatus RulesToXml(const PermissionPolicy::Rule* rules,
+                       const size_t rulesCount,
+                       std::string& rulesXml);
 
     /**
      * Extract rules XML from an array of PermissionPolicy::Rules.
@@ -85,17 +94,60 @@ class XmlRulesConverter {
      * @param[in]    rulesCount  Number of rules in the array.
      * @param[out]   rulesXml    Manifest in XML format.
      *                           Must be freed by calling "delete".
-     * @param[in]    rootName    Name of the root element.
      *
      * @return   #ER_OK if extracted correctly.
      *           #ER_FAIL if the rules do not map to an XML valid according to the rules XML schema.
      */
-    static QStatus RulesToXml(const PermissionPolicy::Rule* rules,
-                              const size_t rulesCount,
-                              qcc::XmlElement** rulesXml,
-                              AJ_PCSTR rootName = MANIFEST_XML_ELEMENT);
+    QStatus RulesToXml(const PermissionPolicy::Rule* rules,
+                       const size_t rulesCount,
+                       qcc::XmlElement** rulesXml);
+
+  protected:
+
+    /**
+     * User shouldn't be able to create their own instance of the converter.
+     */
+    XmlRulesConverter();
+    XmlRulesConverter(const XmlRulesConverter& other);
+    XmlRulesConverter& operator=(const XmlRulesConverter& other);
+
+    /**
+     * Retrieves the root element name valid for the converted XML.
+     *
+     * @return   Root element name.
+     */
+    virtual std::string GetRootElementName();
+
+    /**
+     * Retrieves a validator for the current converter.
+     *
+     * @return   Validator associated with this converter.
+     */
+    virtual XmlRulesValidator* GetValidator();
+
+    /**
+     * Adds "annotation" elements to the "interface" element if required.
+     *
+     * @param[in]    rule                A single rule object.
+     * @param[out]  interfaceElement    Reference to the built "interface" XmlElement.
+     */
+    virtual void BuildXmlInterfaceAnnotations(const PermissionPolicy::Rule& rule, qcc::XmlElement* interfaceElement);
+
+    /**
+     * Adds an "annotation" XML element to the given parent with a given annotation value and name.
+     *
+     * @param[in]    parent          The parent XmlElement.
+     * @param[in]    annotationName  Name of the added annotation.
+     * @param[in]    annotationValue Value of the added annotation.
+     */
+    void AddChildAnnotation(qcc::XmlElement* parent, AJ_PCSTR annotationName, AJ_PCSTR annotationValue);
 
   private:
+
+    /**
+     * Static converter instance. Required to enable method overwriting.
+     */
+    static XmlRulesConverter* s_converter;
 
     /*
      * Map used to extract XML member type values from the PermissionPolicy::Rule::Member::MemberType enum.
@@ -124,7 +176,7 @@ class XmlRulesConverter {
      * @param[in]    root    Root element of the rules XML.
      * @param[out]   rules   Reference to rules vector.
      */
-    static void BuildRules(const qcc::XmlElement* root, std::vector<PermissionPolicy::Rule>& rules);
+    void BuildRules(const qcc::XmlElement* root, std::vector<PermissionPolicy::Rule>& rules);
 
     /**
      * Adds PermissionPolicy::Rules objects to the vector using the provided XML element.
@@ -132,7 +184,7 @@ class XmlRulesConverter {
      * @param[in]    node    The "node" element of the rules XML.
      * @param[out]    rules   Vector to add the new rule to.
      */
-    static void AddRules(const qcc::XmlElement* node, std::vector<PermissionPolicy::Rule>& rules);
+    void AddRules(const qcc::XmlElement* node, std::vector<PermissionPolicy::Rule>& rules);
 
     /**
      * Sets the PermissionPolicy::Rule's interface name according to the input XML.
@@ -140,25 +192,52 @@ class XmlRulesConverter {
      * @param[in]    singleInterface The "interface" element of the rules XML.
      * @param[out]   rule            Reference to the new rule.
      */
-    static void SetInterfaceName(const qcc::XmlElement* singleInterface, PermissionPolicy::Rule& rule);
+    void SetInterfaceName(const qcc::XmlElement* singleInterface, PermissionPolicy::Rule& rule);
 
     /**
      * Adds a PermissionPolicy::Rule object to the vector using the provided XML element.
      *
-     * @param[in]    singleInterface The "interface" element of the rules XML.
-     * @param[in]    objectPath      The object path of the rule element.
-     * @param[out]    rules           Vector to add the new rule to.
+     * @param[in]    singleInterface    The "interface" element of the rules XML.
+     * @param[in]    objectPath         The object path of the rule element.
+     * @param[in]    objectAnnotations  The annotations defined for the processed object.
+     * @param[out]    rules             Vector to add the new rule to.
      */
-    static void AddRule(const qcc::XmlElement* singleInterface, std::string& objectPath, std::vector<PermissionPolicy::Rule>& rules);
+    void AddRule(const qcc::XmlElement* singleInterface,
+                 const std::string& objectPath,
+                 const std::vector<qcc::XmlElement*>& objectAnnotations,
+                 std::vector<PermissionPolicy::Rule>& rules);
 
     /**
      * Builds a PermissionPolicy::Rule according to the input XML.
      *
-     * @param[in]    singleInterface The "interface" element of the rules XML.
-     * @param[in]    objectPath      The object path of the rule element.
+     * @param[in]    singleInterface    The "interface" element of the rules XML.
+     * @param[in]    objectPath         The object path of the rule element.
+     * @param[in]    objectAnnotations  The annotations defined for the processed object.
+     * @param[out]   rule               Reference to the new rule.
+     */
+    void BuildRule(const qcc::XmlElement* singleInterface,
+                   const std::string& objectPath,
+                   const std::vector<qcc::XmlElement*>& objectAnnotations,
+                   PermissionPolicy::Rule& rule);
+
+    /**
+     * Updates a PermissionPolicy::Rule with the values of its annotations.
+     *
+     * @param[in]    objectAnnotations       The object annotations defined for that rule.
+     * @param[in]    interfaceAnnotations    The interface annotations defined for that rule.
+     * @param[out]   rule                    Reference to the new rule.
+     */
+    void UpdateRuleAnnotations(const std::vector<qcc::XmlElement*>& objectAnnotations,
+                               const std::vector<qcc::XmlElement*>& interfaceAnnotations,
+                               PermissionPolicy::Rule& rule);
+
+    /**
+     * Updates a PermissionPolicy::Rule security level.
+     *
+     * @param[in]    annotationsMap  All annotations name->value map.
      * @param[out]   rule            Reference to the new rule.
      */
-    static void BuildRule(const qcc::XmlElement* singleInterface, std::string& objectPath, PermissionPolicy::Rule& rule);
+    void UpdateRuleSecurityLevel(const std::map<std::string, std::string>& annotationsMap, PermissionPolicy::Rule& rule);
 
     /**
      * Builds a PermissionPolicy::Rule::Member according to the input XML.
@@ -166,15 +245,15 @@ class XmlRulesConverter {
      * @param[in]    xmlMember   The member (method/property/signal) element of the rules XML.
      * @param[out]   member      Reference to the new member.
      */
-    static void BuildMember(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
+    void BuildMember(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
 
     /**
      * Adds PermissionPolicy::Rule::Members objects to the rule using the provided XML element.
      *
-     * @param[in]    singleInterface The "interface" element of the rules XML.
-     * @param[out]   rule            Reference to the new rule.
+     * @param[in]    xmlMembers A collection of XML member elements.
+     * @param[out]   rule       Reference to the new rule.
      */
-    static void AddMembers(const qcc::XmlElement* singleInterface, PermissionPolicy::Rule& rule);
+    void AddMembers(const std::vector<qcc::XmlElement*>& xmlMembers, PermissionPolicy::Rule& rule);
 
     /**
      * Adds a PermissionPolicy::Rule::Member object to the vector using the provided XML element.
@@ -182,7 +261,7 @@ class XmlRulesConverter {
      * @param[in]    xmlMember   The member (method/property/signal) element of the rules XML.
      * @param[in]    members     Vector to add the new member to.
      */
-    static void AddMember(const qcc::XmlElement* xmlMember, std::vector<PermissionPolicy::Rule::Member>& members);
+    void AddMember(const qcc::XmlElement* xmlMember, std::vector<PermissionPolicy::Rule::Member>& members);
 
     /**
      * Sets the PermissionPolicy::Rule::Member's name according to the input XML.
@@ -190,7 +269,7 @@ class XmlRulesConverter {
      * @param[in]    xmlMember   The member (method/property/signal) element of the rules XML.
      * @param[out]   member      Reference to the new member.
      */
-    static void SetMemberName(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
+    void SetMemberName(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
 
     /**
      * Sets the PermissionPolicy::Rule::Member's type according to the input XML.
@@ -198,7 +277,7 @@ class XmlRulesConverter {
      * @param[in]    xmlMember   The member (method/property/signal) element of the rules XML.
      * @param[out]   member      Reference to the new member.
      */
-    static void SetMemberType(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
+    void SetMemberType(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
 
     /**
      * Sets the PermissionPolicy::Rule::Member's action mask according to the input XML.
@@ -206,7 +285,7 @@ class XmlRulesConverter {
      * @param[in]    xmlMember   The member (method/property/signal) element of the rules XML.
      * @param[out]   member      Reference to the new member.
      */
-    static void SetMemberMask(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
+    void SetMemberMask(const qcc::XmlElement* xmlMember, PermissionPolicy::Rule::Member& member);
 
     /**
      * Builds a PermissionPolicy::Rule::Member action mask according to the input XML.
@@ -214,7 +293,7 @@ class XmlRulesConverter {
      * @param[in]    xmlMember   The member (method/property/signal) element of the rules XML.
      * @param[out]   mask        The resulting action mask.
      */
-    static void BuildActionMask(const qcc::XmlElement* xmlMember, uint8_t* mask);
+    void BuildActionMask(const qcc::XmlElement* xmlMember, uint8_t* mask);
 
     /**
      * Builds a XML rules element according to the input PermissionPolicy::Rules.
@@ -223,7 +302,7 @@ class XmlRulesConverter {
      * @param[in]    rulesCount Number of rules in the array.
      * @param[out]   rulesXml   Reference to the built rules XmlElement.
      */
-    static void BuildRulesContents(const PermissionPolicy::Rule* rules, size_t rulesCount, qcc::XmlElement* rulesXml);
+    void BuildRulesContents(const PermissionPolicy::Rule* rules, size_t rulesCount, qcc::XmlElement* rulesXml);
 
     /**
      * Adds a XML "node" element to the rules element according to the input PermissionPolicy::Rules.
@@ -231,7 +310,7 @@ class XmlRulesConverter {
      * @param[in]    rules       A vector of rules with the same object path.
      * @param[out]   rulesXml   Reference to the built rules XmlElement.
      */
-    static void BuildXmlNode(const std::vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* rulesXml);
+    void BuildXmlNode(const std::vector<PermissionPolicy::Rule>& rules, qcc::XmlElement* rulesXml);
 
     /**
      * Adds a XML "interface" element to the "node" element according to the input PermissionPolicy::Rule.
@@ -239,7 +318,7 @@ class XmlRulesConverter {
      * @param[in]    rule        A single rule object.
      * @param[out]   nodeElement Reference to the built "node" XmlElement.
      */
-    static void BuildXmlInterface(const PermissionPolicy::Rule& rule, qcc::XmlElement* nodeElement);
+    void BuildXmlInterface(const PermissionPolicy::Rule& rule, qcc::XmlElement* nodeElement);
 
     /**
      * Adds a XML member (method/property/signal) element to the "interface" element according to the input
@@ -248,7 +327,7 @@ class XmlRulesConverter {
      * @param[in]    member              A single member object.
      * @param[out]   interfaceElement    Reference to the built "interface" XmlElement.
      */
-    static void BuildXmlMember(const PermissionPolicy::Rule::Member& member, qcc::XmlElement* interfaceElement);
+    void BuildXmlMember(const PermissionPolicy::Rule::Member& member, qcc::XmlElement* interfaceElement);
 
     /**
      * Adds a XML "annotation" element to the member element according to the input action masks.
@@ -256,7 +335,7 @@ class XmlRulesConverter {
      * @param[in]    masks           Member action masks.
      * @param[out]   memberElement   Reference to the built member XmlElement.
      */
-    static void BuilXmlAnnotations(uint8_t masks, qcc::XmlElement* memberElement);
+    void BuilXmlAnnotations(uint8_t masks, qcc::XmlElement* memberElement);
 
     /**
      * Helper method creating a child XmlElement with a preset "name" attribute.
@@ -268,18 +347,10 @@ class XmlRulesConverter {
      *
      * @return    Reference to the newly created child element.
      */
-    static void CreateChildWithNameAttribute(qcc::XmlElement* parent,
-                                             AJ_PCSTR childElementName,
-                                             AJ_PCSTR name,
-                                             qcc::XmlElement** child);
-
-    /**
-     * Adds an "annotation" XML element to the given parent with a given annotation value.
-     *
-     * @param[in]    parent          The parent XmlElement.
-     * @param[in]    annotationValue Value of the added annotation.
-     */
-    static void AddChildActionAnnotation(qcc::XmlElement* parent, AJ_PCSTR annotationValue);
+    void CreateChildWithNameAttribute(qcc::XmlElement* parent,
+                                      AJ_PCSTR childElementName,
+                                      AJ_PCSTR name,
+                                      qcc::XmlElement** child);
 
     /**
      * Copies rules from a vector to an array.
@@ -288,7 +359,7 @@ class XmlRulesConverter {
      * @param[out]   rules       Array for the extracted rules.
      * @param[out]   rulesCount  Number of rules in the array.
      */
-    static void CopyRules(std::vector<PermissionPolicy::Rule>& rulesVector, PermissionPolicy::Rule** rules, size_t* rulesCount);
+    void CopyRules(std::vector<PermissionPolicy::Rule>& rulesVector, PermissionPolicy::Rule** rules, size_t* rulesCount);
 
     /**
      * Checks if given action masks contain a particular action.
@@ -299,7 +370,15 @@ class XmlRulesConverter {
      * return    True if the masks contain the action.
      *           False otherwise.
      */
-    static bool MasksContainAction(uint8_t masks, uint8_t action);
+    bool MasksContainAction(uint8_t masks, uint8_t action);
+
+    /**
+     * A helper method to update a name->value map containing the D-Bus annotations.
+     *
+     * @param[in]    annotations     XML elements containing the annotations.
+     * @param[out]   annotationsMap  Map to be updated.
+     */
+    void UpdateAnnotationsMap(const std::vector<qcc::XmlElement*>& annotations, std::map<std::string, std::string>& annotationsMap);
 };
 } /* namespace ajn */
 #endif
