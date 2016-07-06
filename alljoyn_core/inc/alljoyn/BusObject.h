@@ -397,6 +397,8 @@ class BusObject : public MessageReceiver {
      */
     QStatus AddMethodHandlers(const MethodEntry* entries, size_t numEntries);
 
+    virtual QStatus GetPropAccessibility(std::vector<bool>& readable, std::vector<bool>& allowed, const InterfaceDescription::Property** props, Message& msg);
+
     /**
      * Handle a bus request to read a property from this object.
      * BusObjects that implement properties should override this method.
