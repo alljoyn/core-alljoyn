@@ -23,6 +23,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <vector>
+
 #include <qcc/platform.h>
 
 
@@ -396,6 +398,8 @@ class BusObject : public MessageReceiver {
      *      - #ER_BUS_NO_SUCH_INTERFACE is method can not be added because interface does not exist.
      */
     QStatus AddMethodHandlers(const MethodEntry* entries, size_t numEntries);
+
+    virtual QStatus GetPropAccessibility(std::vector<bool>& readable, std::vector<bool>& allowed, const InterfaceDescription::Property** props, Message& msg);
 
     /**
      * Handle a bus request to read a property from this object.
