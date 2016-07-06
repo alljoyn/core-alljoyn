@@ -85,15 +85,17 @@ class ProtectedAuthListener : public AuthListener {
 
   private:
 
-    /*
+    /**
      * The inner listener that is being protected.
      */
     AuthListener* listener;
 
     qcc::Mutex lock;
 
-    /*
-     * Reference count so we know when the inner listener is no longer in use.
+    /**
+     * Reference count used by the @p Set method to wait until the inner @p listener can be replaced.
+     *
+     * @remark Destroying the inner @p listener from the application is incorrect and is not prevented by this reference count.
      */
     volatile int32_t refCount;
 };
