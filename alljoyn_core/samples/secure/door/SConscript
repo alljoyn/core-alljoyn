@@ -16,15 +16,16 @@ Import('env')
 
 app_env = env.Clone()
 app_env.Prepend(LIBS = ['alljoyn'])
+app_env.Append(CPPPATH = [env['INCDIR_COMMON']])
 
 # Sample Programs
 progs = [
-    env.Program('SecureDoorProvider', ['secure_door_provider.cc', 'secure_door_common.cc']),
-    env.Program('SecureDoorConsumer', ['secure_door_consumer.cc', 'secure_door_common.cc']),
+    app_env.Program('SecureDoorProvider', ['secure_door_provider.cc', 'secure_door_common.cc']),
+    app_env.Program('SecureDoorConsumer', ['secure_door_consumer.cc', 'secure_door_common.cc']),
     ]
 
 clientDistDir = '$CPP_DISTDIR/samples/secure/door'
 
 if env['OS'] != 'android':
-     env.Install('$CPP_DISTDIR/bin/samples', progs )
-     env.Install(clientDistDir, env.Glob('*.cc') + env.Glob('*.h'))
+     app_env.Install('$CPP_DISTDIR/bin/samples', progs )
+     app_env.Install(clientDistDir, env.Glob('*.cc') + env.Glob('*.h'))
