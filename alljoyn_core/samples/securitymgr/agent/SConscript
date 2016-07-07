@@ -14,5 +14,11 @@
 
 Import('env')
 
-env.SConscript('src/SConscript', exports = {'env': env})
-env.SConscript('unit_test/SConscript', exports = {'env': env})
+agent_env = env.Clone()
+
+# Temporary fix until ASACORE-2942 is resolved
+agent_env.Append(CPPPATH = [env['INCDIR_COMMON']])
+
+
+agent_env.SConscript('src/SConscript', exports = {'env': env})
+agent_env.SConscript('unit_test/SConscript', exports = {'env': env})
