@@ -16,6 +16,7 @@ Import('env')
 
 app_env = env.Clone()
 
+app_env.Append(CPPPATH = [env['INCDIR_COMMON']])
 app_env.Append(CPPPATH = ['../agent/inc/'])
 app_env.Append(CPPPATH = ['../storage/inc/'])
 

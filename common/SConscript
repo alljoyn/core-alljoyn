@@ -55,10 +55,17 @@ hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
                                             'inc/qcc/${OS_GROUP}/platform_types.h']) }
 
 if commonenv['OS_GROUP'] == 'windows':
+    print('Variant:')
+    print(commonenv['VARIANT'])
+    print('ALLJOYN_CRASH_DUMP_SUPPORT:')
+    os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT')
+    print('Adding mapping.h to headers to be installed')
     hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
     if commonenv['VARIANT'] == 'debug' and os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
+        print('Adding CrashDumpSupport.h to headers to be installed')
         hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/CrashDumpSupport.h'])
-
+              
+env['INCDIR_COMMON'] = env.Dir('inc')
 
 # under normal build conditions the Status.xml found in alljoyn_core is used to
 # build Status.h and Status.cc.  If we are building the code in common independent

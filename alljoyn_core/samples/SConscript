@@ -17,6 +17,16 @@ Import('env')
 
 samples_env = env.Clone()
 
+# Disallow headers that are not are not included in the "dist" directory
+print('Before modifying CPPPATH')
+print map(str, samples_env['CPPPATH'])
+samples_env.Replace(CPPPATH = '.')
+samples_env.Append(CPPPATH = ['$DISTDIR/cpp/inc'])
+samples_env.Append(CPPPATH = ['$DISTDIR/cpp/inc/alljoyn'])
+
+print('After modifying CPPPATH')
+print map(str, samples_env['CPPPATH'])
+
 if samples_env['BR'] == 'on':
     # Build apps with bundled daemon support
     samples_env.Prepend(LIBS = [samples_env['ajrlib']])
