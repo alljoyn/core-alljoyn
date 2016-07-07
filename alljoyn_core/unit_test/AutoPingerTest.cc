@@ -89,6 +89,7 @@ class TestPingListener : public PingListener {
         while (retries < MAX_RETRIES && found.find(destination) == found.end()) {
             foundmutex.Unlock();
             qcc::Sleep(WAIT_TIME_10);
+            ++retries;
             foundmutex.Lock();
         }
         foundmutex.Unlock();
@@ -104,8 +105,8 @@ class TestPingListener : public PingListener {
         while (retries < MAX_RETRIES && lost.find(destination) == lost.end()) {
             lostmutex.Unlock();
             qcc::Sleep(WAIT_TIME_10);
-            lostmutex.Lock();
             ++retries;
+            lostmutex.Lock();
         }
         lostmutex.Unlock();
         EXPECT_NE(MAX_RETRIES, retries);
@@ -131,9 +132,9 @@ TEST_F(AutoPingerTest, Basic) {
     clientBus.Disconnect();
     tpl.WaitUntilLost(uniqueName);
 
-    autoPinger.RemoveDestination("badgroup", uniqueName);
-    autoPinger.RemoveDestination("testgroup", uniqueName);
-    autoPinger.RemoveDestination("testgroup", uniqueName);
+    EXPECT_EQ(ER_BUS_PING_GROUP_NOT_FOUND, autoPinger.RemoveDestination("badgroup", uniqueName));
+    EXPECT_EQ(ER_OK, autoPinger.RemoveDestination("testgroup", uniqueName));
+    EXPECT_EQ(ER_OK, autoPinger.RemoveDestination("testgroup", uniqueName));
 
     EXPECT_EQ(ER_BUS_PING_GROUP_NOT_FOUND, autoPinger.SetPingInterval("badgroup", 2));
     EXPECT_EQ(ER_OK, autoPinger.SetPingInterval("testgroup", 2)); /* no real test on updated interval */
