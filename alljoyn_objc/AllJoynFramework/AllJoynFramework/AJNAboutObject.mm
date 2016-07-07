@@ -33,6 +33,12 @@ using namespace ajn;
 
 @end
 
+@interface AJNObject(Private)
+
+@property (nonatomic) BOOL shouldDeleteHandleOnDealloc;
+
+@end
+
 @interface AJNAboutObject()
 
 /**
@@ -61,8 +67,17 @@ using namespace ajn;
     if (self) {
         self.bus = busAttachment;
         self.handle = new AboutObj(*((BusAttachment*)busAttachment.handle), (BusObject::AnnounceFlag)announceFlag);
+        self.shouldDeleteHandleOnDealloc = YES;
     }
     return self;
+}
+
+- (void)dealloc
+{
+    if (self.shouldDeleteHandleOnDealloc) {
+        delete self.aboutObject;
+        self.handle = nil;
+    }
 }
 
 - (QStatus)announceForSessionPort:(AJNSessionPort)sessionPort withAboutDataListener:(id<AJNAboutDataListener>)aboutDataListener
