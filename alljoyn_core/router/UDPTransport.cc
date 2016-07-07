@@ -11334,8 +11334,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 
         /*
          * We have the name service work out of the way, so we can now create the
-         * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
-         * to wait for four minutes to relaunch the daemon if it crashes.
+         * UDP listener socket.
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Setting up socket"));
 
@@ -11346,6 +11345,19 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         }
 
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Socket(): listenFd=%d.", listenFd));
+
+        /*
+         * Listener sockets get closed every once in a while - see the DoStopListen code path.
+         * Allow Bind to succeed later on, by enabling SO_REUSEADDR or SO_REUSEPORT.
+         */
+        status = qcc::SetReusePort(listenFd, true);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("%s: SetReusePort() failed", __FUNCTION__));
+            if (status != ER_NOT_IMPLEMENTED) {
+                qcc::Close(listenFd);
+                continue;
+            }
+        }
 
         /*
          * ARDP expects us to use select and non-blocking sockets.
