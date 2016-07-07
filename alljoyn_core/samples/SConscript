@@ -17,6 +17,19 @@ Import('env')
 
 samples_env = env.Clone()
 
+# Disallow headers that are not included in the "dist" directory
+if env.has_key('ANDROID_CPPPATH'):
+    # Include android-ndk paths that are needed for android builds
+    samples_env.Replace(CPPPATH = env['ANDROID_CPPPATH'])
+    samples_env.Append(CPPPATH = ['.'])
+else:
+    samples_env.Replace(CPPPATH = '.')
+
+samples_env.Append(CPPPATH = ['$DISTDIR/cpp/inc'])
+samples_env.Append(CPPPATH = ['$DISTDIR/cpp/inc/alljoyn'])
+samples_env.Append(CPPPATH = ['$DISTDIR/c/inc'])
+samples_env.Append(CPPPATH = ['$DISTDIR/c/inc/alljoyn'])
+
 if samples_env['BR'] == 'on':
     # Build apps with bundled daemon support
     samples_env.Prepend(LIBS = [samples_env['ajrlib']])
