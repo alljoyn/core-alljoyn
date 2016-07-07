@@ -149,6 +149,8 @@ else:
 
 # Include needed to do automatic memory dumps for Jenkins builds
 if env['VARIANT'] == 'debug' and os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
+    env['CPP_DISTDIR'] = env['DISTDIR'] + '/cpp'
+    env.Install('$CPP_DISTDIR/inc/qcc/${OS_GROUP}', env.File(['inc/qcc/${OS_GROUP}/CrashDumpSupport.h']))
     env.Append(CXXFLAGS = '-FIqcc/${OS_GROUP}/CrashDumpSupport.h')
 
 vars = Variables()
