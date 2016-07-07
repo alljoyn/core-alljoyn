@@ -194,6 +194,10 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
 
    env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
 
+   # Keep copy of android-specific paths separate.
+   # Needed in alljoyn_core/samples SConscript when excluding private include paths.
+   env.Append(ANDROID_CPPPATH = env['CPPPATH'])
+
    config = Configure(env, custom_tests = { 'CheckCXXFlag' : CheckCXXFlag })
    if not config.CheckCXXFlag('-std=c++11'):
       if not config.CheckCXXFlag('-std=c++0x'):
