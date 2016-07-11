@@ -35,10 +35,10 @@ import org.alljoyn.config.server.PassphraseChangedListener;
 import org.alljoyn.config.server.RestartHandler;
 import org.alljoyn.config.server.SetPasswordHandler;
 import org.alljoyn.config.transport.ConfigTransport;
+import org.alljoyn.config.AboutDataStoreInterface;
+import org.alljoyn.config.AboutDataStoreInterface.Filter;
 import org.alljoyn.services.common.BusObjectDescription;
 import org.alljoyn.services.common.LanguageNotSupportedException;
-import org.alljoyn.services.common.PropertyStore;
-import org.alljoyn.services.common.PropertyStore.Filter;
 import org.alljoyn.services.common.PropertyStoreException;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 import org.alljoyn.services.common.ServiceCommonImpl;
@@ -55,7 +55,7 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
 
     /********* Sender *********/
 
-    private PropertyStore m_propertyStore;
+    private AboutDataStoreInterface m_propertyStore;
     private ConfigInterface m_configInterface;
     private RestartHandler m_restartHandler;
     private FactoryResetHandler m_factoryResetHandler;
@@ -88,15 +88,15 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
     @Override
     public void startConfigServer(ConfigDataStore configDataStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
             PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
-        startConfigServer((PropertyStore)configDataStore, configChangeListener, restartHandler, factoryResetHandler, passphraseChangeListener, bus);
+        startConfigServer((AboutDataStoreInterface) configDataStore, configChangeListener, restartHandler, factoryResetHandler, passphraseChangeListener, bus);
     }
 
     @Override
-    public void startConfigServer(PropertyStore propertyStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
+    public void startConfigServer(AboutDataStoreInterface aboutDataStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
             PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
         setBus(bus);
         super.startServer();
-        m_propertyStore = propertyStore;
+        m_propertyStore = aboutDataStore;
         m_restartHandler = restartHandler;
         m_factoryResetHandler = factoryResetHandler;
         m_passphraseChangeListener = passphraseChangeListener;
@@ -234,7 +234,7 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         @Override
         public void FactoryReset() throws BusException {
             try {
-                m_propertyStore.resetAll();
+                m_propertyStore.factoryReset();
             } catch (PropertyStoreException e) {
                 e.printStackTrace();
             }

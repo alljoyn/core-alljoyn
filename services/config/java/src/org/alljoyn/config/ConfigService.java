@@ -24,7 +24,6 @@ import org.alljoyn.config.server.FactoryResetHandler;
 import org.alljoyn.config.server.PassphraseChangedListener;
 import org.alljoyn.config.server.RestartHandler;
 import org.alljoyn.config.server.SetPasswordHandler;
-import org.alljoyn.services.common.PropertyStore;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 import org.alljoyn.services.common.ServiceCommon;
 
@@ -55,7 +54,7 @@ public interface ConfigService extends ServiceCommon
 
 	/**
 	 * Start server mode.  The application creates the BusAttachment
-	 * @param propertyStore a map of device/application properties.
+	 * @param aboutDataStoreInterface a map of device/application data values.
 	 * @param configChangeListener listener to configuration changes coming from remote client peers.
 	 * @param restartHandler handler for restart requests coming from remote client peers.
 	 * @param factoryResetHandler handler for factory reset requests coming from remote client peers.
@@ -63,11 +62,9 @@ public interface ConfigService extends ServiceCommon
 	 * @param bus the AllJoyn bus attachment.
 	 * @throws Exception
 	 * @see AboutKeys
-	 * @deprecated use {@link startConfigServer(AboutDataListener, ConfigChangeListener, RestartHandler, FactoryResetHandler, PassphraseChangedListener, BusAttachment) startConfigServer} instead
 	 */
-    @Deprecated
-	public void startConfigServer(PropertyStore propertyStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler,
-			FactoryResetHandler factoryResetHandler, PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception;
+    public void startConfigServer(AboutDataStoreInterface aboutDataStoreInterface, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
+            PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception;
 
 	/**
 	 * Stop server mode.

@@ -17,12 +17,6 @@ package org.alljoyn.config;
 
 import org.alljoyn.bus.AboutDataListener;
 
-import org.alljoyn.services.common.PropertyStore;
-
-public interface ConfigDataStore extends AboutDataListener, PropertyStore
-{
-	// Since the PropertyStore class is deprecated, we trivially extend it
-	// so that when it is removed the interface definition can just be copied
-	// here.
+public abstract class ConfigDataStore extends AboutDataStoreInterface implements AboutDataListener {
 }
 
