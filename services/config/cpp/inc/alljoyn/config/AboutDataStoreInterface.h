@@ -26,25 +26,6 @@
 #pragma warning(disable: 4100)
 #endif
 
-
-/**
- * The language tag specified is not supported
- */
-#define ER_LANGUAGE_NOT_SUPPORTED       ((QStatus)0xb001)
-/**
- * The request feature is not available or has not be implemented
- */
-#define ER_FEATURE_NOT_AVAILABLE        ((QStatus)0xb002)
-/**
- * The value requested is invalid
- */
-#define ER_INVALID_VALUE                ((QStatus)0xb003)
-/**
- * The maximum allowed size for an element has been exceeded.
- */
-#define ER_MAX_SIZE_EXCEEDED            ((QStatus)0xb004)
-
-
 /**
  * Structure to hold Filter enum
  */
