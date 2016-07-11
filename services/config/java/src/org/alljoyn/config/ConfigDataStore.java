@@ -15,14 +15,59 @@
  ******************************************************************************/
 package org.alljoyn.config;
 
+import java.util.Map;
 import org.alljoyn.bus.AboutDataListener;
+import org.alljoyn.bus.Status;
 
-import org.alljoyn.services.common.PropertyStore;
+public interface ConfigDataStore extends AboutDataListener {
 
-public interface ConfigDataStore extends AboutDataListener, PropertyStore
-{
-	// Since the PropertyStore class is deprecated, we trivially extend it
-	// so that when it is removed the interface definition can just be copied
-	// here.
+    /**
+     * Classifies the properties by purpose: for announcement, for get-about, for get-config
+     */
+    enum Filter {
+        /**
+         * Properties that should be announced
+         */
+        ANNOUNCE,
+
+        /**
+         * Read only properties that should be retrieved by 'About' requests
+         */
+        READ,
+
+        /**
+         * Read-Write properties that are available through the 'Config' interface
+         */
+        WRITE   //!< WRITE    Property that has  WRITE  enabled -- Config
+    }
+
+    /**
+     * Reset all the properties in the store
+     */
+    void factoryReset();
+
+    /**
+     * Get all the properties that are stored for the given language
+     * @param languageTag IETF language tag
+     * @param filter classifies the properties to get: for announcement,
+     *               for get-about, for get-config
+     * @param dataMap the map to fill
+     */
+    Status readAll(String languageTag, Filter filter, Map<String, Object> dataMap);
+
+    /**
+     * Update a property value for a given language.
+     * @param name the property name
+     * @param languageTag the language in which this property should be set
+     * @param newValue the property value
+     */
+    Status update(String name, String languageTag, Object newValue);
+
+    /**
+     * Reset a property for a given language
+     * @param key the property name
+     * @param languageTag the language in which this property should be set
+     */
+    Status reset(String key, String languageTag);
 }
 
