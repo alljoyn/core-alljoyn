@@ -26,6 +26,37 @@
 #include <float.h>
 
 /**
+ * Support for Windows crash dumps
+ * Hitting _ASSERTE or a regular assert would display a UI window and prevent us
+ * from creating automatic memory dumps in Jenkins for Windows builds. This version
+ * of QCC_ASSERT forces a dereference of a null pointer, which does not display
+ * the UI window, but immediately skips to the default debugger.
+ */
+#define QCC_ASSERT(expr) ((void) (                                                                                  \
+                              (!!(expr)) ||                                                                         \
+                              (printf("%s(%d) : Assertion failed for expression: %s.", __FILE__, __LINE__, # expr), \
+                               fflush(stdout),                                                                      \
+                               *((volatile int*)0))                                                                 \
+                              ))
+
+#define QCC_CRASH_DUMP_SUPPORT
+
+/**
+ * Hitting _ASSERTE or a regular assert would display a UI window and prevent us
+ * from creating automatic memory dumps in Jenkins for Windows builds. This version
+ * of QCC_ASSERT forces a dereference of a null pointer, which does not display
+ * the UI window, but immediately skips to the default debugger.
+ */
+#define QCC_ASSERT(expr) ((void) (                                                                                  \
+                              (!!(expr)) ||                                                                         \
+                              (printf("%s(%d) : Assertion failed for expression: %s.", __FILE__, __LINE__, # expr), \
+                               fflush(stdout),                                                                      \
+                               *((volatile int*)0))                                                                 \
+                              ))
+
+#define QCC_CRASH_DUMP_SUPPORT
+
+/**
  * Map stroll to _strtoi64
  *
  * stroll does not properly map in Windows; this is needed to ensure calls to
