@@ -19,6 +19,7 @@ import org.alljoyn.bus.AboutDataListener;
 
 import org.alljoyn.services.common.PropertyStore;
 
+@Deprecated
 public interface ConfigDataStore extends AboutDataListener, PropertyStore
 {
 	// Since the PropertyStore class is deprecated, we trivially extend it

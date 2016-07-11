@@ -56,6 +56,8 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
     /********* Sender *********/
 
     private PropertyStore m_propertyStore;
+    private Configurable m_configurable;
+
     private ConfigInterface m_configInterface;
     private RestartHandler m_restartHandler;
     private FactoryResetHandler m_factoryResetHandler;
@@ -97,6 +99,20 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         setBus(bus);
         super.startServer();
         m_propertyStore = propertyStore;
+        m_restartHandler = restartHandler;
+        m_factoryResetHandler = factoryResetHandler;
+        m_passphraseChangeListener = passphraseChangeListener;
+        m_configChangeListener = configChangeListener;
+
+        registerConfigInterface();
+    }
+
+    @Override
+    public void startConfigServer(Configurable configurable, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
+            PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
+        setBus(bus);
+        super.startServer();
+        m_configurable = configurable;
         m_restartHandler = restartHandler;
         m_factoryResetHandler = factoryResetHandler;
         m_passphraseChangeListener = passphraseChangeListener;
@@ -162,6 +178,16 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         public Map<String, Variant> GetConfigurations(String languageTag) throws BusException {
             Map<String, Object> persistedConfiguration = new HashMap<String, Object>();
 
+            if (m_propertyStore == null) {
+                Status status = m_configurable.readAll(languageTag, Configurable.Filter.WRITE, persistedConfiguration);
+                if (status == Status.LANGUAGE_NOT_SUPPORTED) {
+                    throw new LanguageNotSupportedException();
+                }
+
+                Map<String, Variant> configuration = TransportUtil.toVariantMap(persistedConfiguration);
+                return configuration;
+            }
+
             try {
                 m_propertyStore.readAll(languageTag, Filter.WRITE, persistedConfiguration);
             } catch (PropertyStoreException e) {
@@ -179,13 +205,20 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         @Override
         public void ResetConfigurations(String language, String[] fieldsToRemove) throws BusException {
             for (String key : fieldsToRemove) {
-                try {
-                    m_propertyStore.reset(key, language);
-                } catch (PropertyStoreException e) {
-                    if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
+                if (m_propertyStore == null) {
+                    Status status = m_configurable.reset(key, language);
+                    if (status == Status.LANGUAGE_NOT_SUPPORTED) {
                         throw new LanguageNotSupportedException();
-                    } else {
-                        e.printStackTrace();
+                    }
+                } else {
+                    try {
+                        m_propertyStore.reset(key, language);
+                    } catch (PropertyStoreException e) {
+                        if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
+                            throw new LanguageNotSupportedException();
+                        } else {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
@@ -217,6 +250,19 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
                 if (m_configChangeListener != null) {
                     m_configChangeListener.onConfigChanged(configuration, languageTag);
                 }
+            } else {
+                for (Entry<String, Object> entry : toObjectMap.entrySet()) {
+                    Status status = m_configurable.update(entry.getKey(), languageTag, entry.getValue());
+                    if (status == Status.LANGUAGE_NOT_SUPPORTED) {
+                        throw new LanguageNotSupportedException();
+                    } else if (status == Status.INVALID_VALUE) {
+                        throw new ErrorReplyBusException("org.alljoyn.Error.InvalidValue", "Invalid value");
+                    }
+                }
+
+                if (m_configChangeListener != null) {
+                    m_configChangeListener.onConfigChanged(configuration, languageTag);
+                }
             }
         }
 
@@ -233,10 +279,14 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
 
         @Override
         public void FactoryReset() throws BusException {
-            try {
-                m_propertyStore.resetAll();
-            } catch (PropertyStoreException e) {
-                e.printStackTrace();
+            if (m_propertyStore == null) {
+                m_configurable.factoryReset();
+            } else {
+                try {
+                    m_propertyStore.resetAll();
+                } catch (PropertyStoreException e) {
+                    e.printStackTrace();
+                }
             }
 
             if (m_factoryResetHandler != null) {
