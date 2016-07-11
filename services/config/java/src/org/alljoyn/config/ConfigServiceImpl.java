@@ -37,9 +37,6 @@ import org.alljoyn.config.server.SetPasswordHandler;
 import org.alljoyn.config.transport.ConfigTransport;
 import org.alljoyn.services.common.BusObjectDescription;
 import org.alljoyn.services.common.LanguageNotSupportedException;
-import org.alljoyn.services.common.PropertyStore;
-import org.alljoyn.services.common.PropertyStore.Filter;
-import org.alljoyn.services.common.PropertyStoreException;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 import org.alljoyn.services.common.ServiceCommonImpl;
 import org.alljoyn.services.common.utils.TransportUtil;
@@ -55,7 +52,7 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
 
     /********* Sender *********/
 
-    private PropertyStore m_propertyStore;
+    private ConfigDataStore m_configDataStore;
     private ConfigInterface m_configInterface;
     private RestartHandler m_restartHandler;
     private FactoryResetHandler m_factoryResetHandler;
@@ -88,15 +85,9 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
     @Override
     public void startConfigServer(ConfigDataStore configDataStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
             PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
-        startConfigServer((PropertyStore)configDataStore, configChangeListener, restartHandler, factoryResetHandler, passphraseChangeListener, bus);
-    }
-
-    @Override
-    public void startConfigServer(PropertyStore propertyStore, ConfigChangeListener configChangeListener, RestartHandler restartHandler, FactoryResetHandler factoryResetHandler,
-            PassphraseChangedListener passphraseChangeListener, BusAttachment bus) throws Exception {
         setBus(bus);
         super.startServer();
-        m_propertyStore = propertyStore;
+        m_configDataStore = configDataStore;
         m_restartHandler = restartHandler;
         m_factoryResetHandler = factoryResetHandler;
         m_passphraseChangeListener = passphraseChangeListener;
@@ -162,14 +153,9 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         public Map<String, Variant> GetConfigurations(String languageTag) throws BusException {
             Map<String, Object> persistedConfiguration = new HashMap<String, Object>();
 
-            try {
-                m_propertyStore.readAll(languageTag, Filter.WRITE, persistedConfiguration);
-            } catch (PropertyStoreException e) {
-                if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
-                    throw new LanguageNotSupportedException();
-                } else {
-                    e.printStackTrace();
-                }
+            Status status = m_configDataStore.readAll(languageTag, ConfigDataStore.Filter.WRITE, persistedConfiguration);
+            if (status == Status.LANGUAGE_NOT_SUPPORTED) {
+                throw new LanguageNotSupportedException();
             }
 
             Map<String, Variant> configuration = TransportUtil.toVariantMap(persistedConfiguration);
@@ -179,14 +165,9 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         @Override
         public void ResetConfigurations(String language, String[] fieldsToRemove) throws BusException {
             for (String key : fieldsToRemove) {
-                try {
-                    m_propertyStore.reset(key, language);
-                } catch (PropertyStoreException e) {
-                    if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
-                        throw new LanguageNotSupportedException();
-                    } else {
-                        e.printStackTrace();
-                    }
+                Status status = m_configDataStore.reset(key, language);
+                if (status == Status.LANGUAGE_NOT_SUPPORTED) {
+                    throw new LanguageNotSupportedException();
                 }
             }
 
@@ -199,18 +180,13 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
             Map<String, Object> toObjectMap = TransportUtil.fromVariantMap(configuration);
 
             // notify application
-            if (m_propertyStore != null) {
+            if (m_configDataStore != null) {
                 for (Entry<String, Object> entry : toObjectMap.entrySet()) {
-                    try {
-                        m_propertyStore.update(entry.getKey(), languageTag, entry.getValue());
-                    } catch (PropertyStoreException e) {
-                        if (e.getReason() == PropertyStoreException.UNSUPPORTED_LANGUAGE) {
-                            throw new LanguageNotSupportedException();
-                        } else if (e.getReason() == PropertyStoreException.INVALID_VALUE) {
-                            throw new ErrorReplyBusException("org.alljoyn.Error.InvalidValue", "Invalid value");
-                        } else {
-                            e.printStackTrace();
-                        }
+                    Status status = m_configDataStore.update(entry.getKey(), languageTag, entry.getValue());
+                    if (status == Status.LANGUAGE_NOT_SUPPORTED) {
+                        throw new LanguageNotSupportedException();
+                    } else if (status == Status.INVALID_VALUE) {
+                        throw new ErrorReplyBusException("org.alljoyn.Error.InvalidValue", "Invalid value");
                     }
                 }
 
@@ -233,11 +209,7 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
 
         @Override
         public void FactoryReset() throws BusException {
-            try {
-                m_propertyStore.resetAll();
-            } catch (PropertyStoreException e) {
-                e.printStackTrace();
-            }
+            m_configDataStore.factoryReset();
 
             if (m_factoryResetHandler != null) {
                 m_factoryResetHandler.doFactoryReset();
