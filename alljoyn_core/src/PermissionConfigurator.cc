@@ -79,7 +79,7 @@ PermissionConfigurator::~PermissionConfigurator()
     m_internal = nullptr;
 }
 
-QStatus PermissionConfigurator::GetManifestTemplateAsXml(std::string& manifestTemplateXml)
+QStatus PermissionConfigurator::GetManifestTemplateAsXml(string& manifestTemplateXml)
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
@@ -87,7 +87,7 @@ QStatus PermissionConfigurator::GetManifestTemplateAsXml(std::string& manifestTe
         return ER_FEATURE_NOT_AVAILABLE;
     }
 
-    std::vector<PermissionPolicy::Rule> manifestTemplate;
+    vector<PermissionPolicy::Rule> manifestTemplate;
     QStatus status = permissionMgmtObj->GetManifestTemplate(manifestTemplate);
     if (ER_OK != status) {
         return status;

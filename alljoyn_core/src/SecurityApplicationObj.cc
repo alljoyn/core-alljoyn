@@ -262,7 +262,7 @@ QStatus SecurityApplicationObj::Get(const char* ifcName, const char* propName, M
         } else if (0 == strcmp("ManifestTemplate", propName)) {
             status = GetManifestTemplate(val);
             if (ER_MANIFEST_NOT_FOUND == status) {
-                status = val.Set(_Manifest::s_TemplateMsgArgSignature, 0, NULL);
+                status = val.Set(_Manifest::s_ManifestTemplateMsgArgSignature, 0, NULL);
             }
         } else if (0 == strcmp("ClaimCapabilities", propName)) {
             status = val.Set("q", claimCapabilities);
