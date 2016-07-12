@@ -2870,8 +2870,10 @@ String MDNSSearchRData::GetSearchCriterion(int index)
 
 
 }
-void MDNSSearchRData::RemoveSearchCriterion(int index)
+
+bool MDNSSearchRData::RemoveSearchCriterion(int index)
 {
+    bool removed = false;
     Fields::iterator it = m_fields.begin();
     String ret = "";
     while (it != m_fields.end() && index > 0) {
@@ -2902,15 +2904,18 @@ void MDNSSearchRData::RemoveSearchCriterion(int index)
             key = key.substr(0, key.find_last_of_std('_'));
             if (key == ";") {
                 m_fields.erase(it);
+                removed = true;
                 break;
             } else if (key == "txtvers") {
                 it++;
             } else {
                 m_fields.erase(it++);
+                removed = true;
             }
         }
 
     }
+    return removed;
 }
 std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
 {
