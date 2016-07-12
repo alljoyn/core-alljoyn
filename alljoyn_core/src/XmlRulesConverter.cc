@@ -177,7 +177,6 @@ void XmlRulesConverter::AddRules(const XmlElement* node, vector<PermissionPolicy
     for (auto singleInterface : interfaces) {
         AddRule(singleInterface, objectPath, objectAnnotations, rules);
     }
-
 }
 
 void XmlRulesConverter::AddRule(const XmlElement* singleInterface,
@@ -201,6 +200,7 @@ void XmlRulesConverter::BuildRule(const XmlElement* singleInterface,
     XmlValidator::SeparateAnnotations(singleInterface, interfaceAnnotations, xmlMembers);
 
     rule.SetObjPath(objectPath.c_str());
+    rule.SetRuleType(GetRuleType());
     SetInterfaceName(singleInterface, rule);
     AddMembers(xmlMembers, rule);
     UpdateRuleAnnotations(objectAnnotations, interfaceAnnotations, rule);
@@ -364,6 +364,11 @@ void XmlRulesConverter::AddChildAnnotation(XmlElement* parent, AJ_PCSTR annotati
     XmlElement* annotation = nullptr;
     CreateChildWithNameAttribute(parent, ANNOTATION_XML_ELEMENT, annotationName, &annotation);
     annotation->AddAttribute(VALUE_XML_ATTRIBUTE, annotationValue);
+}
+
+PermissionPolicy::Rule::RuleType XmlRulesConverter::GetRuleType()
+{
+    return PermissionPolicy::Rule::RuleType::MANIFEST_POLICY_RULE;
 }
 
 void XmlRulesConverter::CopyRules(vector<PermissionPolicy::Rule>& rulesVector, PermissionPolicy::Rule** rules, size_t* rulesCount)

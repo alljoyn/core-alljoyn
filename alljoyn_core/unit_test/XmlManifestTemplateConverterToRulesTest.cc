@@ -229,9 +229,18 @@ class XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest : public te
         ASSERT_EQ(ER_OK, XmlManifestTemplateConverter::GetInstance()->XmlToRules(GetParam().m_manifestTemplateXml, rules));
         ASSERT_EQ((size_t)1, rules.size());
 
-        m_actualSecurityLevel = rules[0].GetSecurityLevel();
+        m_actualSecurityLevel = rules[0].GetRecommendedSecurityLevel();
     }
 };
+
+TEST(XmlManifestTemplateConverterTest, shouldSetManifestTemplateRuleType)
+{
+    vector<PermissionPolicy::Rule> rules;
+    ASSERT_EQ(ER_OK, XmlManifestTemplateConverter::GetInstance()->XmlToRules(s_validDefaultSecurityLevelAnnotation, rules));
+    ASSERT_EQ((size_t)1, rules.size());
+
+    EXPECT_EQ(PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE, rules[0].GetRuleType());
+}
 
 INSTANTIATE_TEST_CASE_P(XmlManifestTemplateConverterToRulesSecurityLevelAnnotations,
                         XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest,

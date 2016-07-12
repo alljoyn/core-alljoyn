@@ -289,30 +289,26 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetManifestTemplate(Manifest& ma
         return status;
     }
 
-    PermissionPolicy::Rule* manifestRules = nullptr;
-    size_t manifestRulesCount;
-    status = PermissionPolicy::ParseRules(rulesMsgArg, &manifestRules, &manifestRulesCount);
+    vector<PermissionPolicy::Rule> manifestRules;
+    status = PermissionPolicy::MsgArgToManifestTemplate(rulesMsgArg, manifestRules);
     if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to ParseRules"));
-        goto Exit;
+        QCC_LogError(status, ("Failed to MsgArgToRules"));
+        return status;
     }
 
-    if (0 == manifestRulesCount) {
+    if (0 == manifestRules.size()) {
         status = ER_MANIFEST_NOT_FOUND;
         QCC_LogError(status, ("Manifest does not contain rules"));
-        goto Exit;
+        return status;
     }
 
-    status = manifest.SetFromRules(manifestRules, manifestRulesCount);
+    status = manifest.SetFromRules(manifestRules.data(), manifestRules.size());
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to SetFromRules"));
-        goto Exit;
+        return status;
     }
 
-Exit:
-    delete[] manifestRules;
-    manifestRules = nullptr;
-    return status;
+    return ER_OK;
 }
 
 QStatus ProxyObjectManager::ManagedProxyObject::GetPublicKey(ECCPublicKey& publicKey)
