@@ -1,6 +1,6 @@
 /**
  * @file
- * The implementation of the the default auth listener.
+ * The implementation of the default auth listener.
  */
 
 /******************************************************************************
