@@ -278,7 +278,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddPropertyAnnotation("EccPublicKey", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("ManufacturerCertificate", "a(yay)", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("ManufacturerCertificate", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddProperty("ManifestTemplate", "a(ssa(syy))", PROP_ACCESS_READ);
+        ifc->AddProperty("ManifestTemplate", "a(ssya(syy))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("ManifestTemplate", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("ClaimCapabilities", "q", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("ClaimCapabilities", org::freedesktop::DBus::AnnotateEmitsChanged, "false");

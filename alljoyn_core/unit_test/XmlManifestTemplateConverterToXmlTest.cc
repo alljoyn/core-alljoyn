@@ -74,5 +74,5 @@ TEST_P(XmlManifestTemplateConverterToXmlSecurityLevelAnnoataionTest, shouldSetPr
     ASSERT_EQ(ER_OK, XmlManifestTemplateConverter::GetInstance()->XmlToRules(m_retrievedRulesXml.c_str(), m_extractedRules));
     ASSERT_EQ((size_t)1, m_extractedRules.size());
 
-    EXPECT_EQ(m_expectedSecurityLevel, m_extractedRules[0].GetSecurityLevel());
+    EXPECT_EQ(m_expectedSecurityLevel, m_extractedRules[0].GetRecommendedSecurityLevel());
 }

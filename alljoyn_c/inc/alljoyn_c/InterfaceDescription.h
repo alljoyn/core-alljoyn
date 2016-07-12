@@ -633,7 +633,7 @@ extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(a
 /**
  * Get the description language of this interface.
  *
- * @note This function returns languages for descriptions set by the the single-language accessors
+ * @note This function returns languages for descriptions set by the single-language accessors
  * (e.g., alljoyn_interfacedescription_setdescription()) and translated using the translation callback.
  * To get languages for the new descriptions, set by the multilingual accessors
  * (e.g., alljoyn_interfacedescription_setdescriptionforlanguage()) or annotation setters
