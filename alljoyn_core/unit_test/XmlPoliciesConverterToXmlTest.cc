@@ -19,6 +19,7 @@
 
 #include "ajTestCommon.h"
 #include "KeyInfoHelper.h"
+#include "PermissionPolicyOverwriteUtils.h"
 #include "XmlPoliciesConverter.h"
 #include "XmlPoliciesConverterTest.h"
 
@@ -85,127 +86,6 @@ static AJ_PCSTR s_validAllCasesPolicy =
     "</acl>"
     "</acls>"
     "</policy>";
-
-class PolicyOverwriteUtils {
-  public:
-
-    static void ChangeRules(size_t rulesCount, PermissionPolicy::Rule* rules, PermissionPolicy& policy)
-    {
-        PermissionPolicy::Acl* mutableAcls = nullptr;
-        GetAclsCopy(policy, &mutableAcls);
-        mutableAcls[0].SetRules(rulesCount, rules);
-
-        policy.SetAcls(1U, mutableAcls);
-    }
-
-    static void ChangePeers(size_t peersCount, PermissionPolicy::Peer* peers, PermissionPolicy& policy)
-    {
-        PermissionPolicy::Acl* mutableAcls = nullptr;
-        GetAclsCopy(policy, &mutableAcls);
-        mutableAcls[0].SetPeers(peersCount, peers);
-
-        policy.SetAcls(1U, mutableAcls);
-    }
-
-    static void ChangePeerType(size_t m_peerIndex, PermissionPolicy::Peer::PeerType peerType, PermissionPolicy& policy)
-    {
-        PermissionPolicy::Acl* mutableAcls = nullptr;
-        PermissionPolicy::Peer* mutablePeers = nullptr;
-
-        GetAclsCopy(policy, &mutableAcls);
-        GetPeersCopy(mutableAcls[0], &mutablePeers);
-
-        mutablePeers[m_peerIndex].SetType(peerType);
-        mutableAcls[0].SetPeers(mutableAcls[0].GetPeersSize(), mutablePeers);
-
-        policy.SetAcls(1, mutableAcls);
-
-        delete[] mutableAcls;
-        delete[] mutablePeers;
-    }
-
-    static void ChangePeerPublicKey(size_t m_peerIndex, AJ_PCSTR publicKeyPem, PermissionPolicy& policy)
-    {
-        PermissionPolicy::Acl* mutableAcls = nullptr;
-        PermissionPolicy::Peer* mutablePeers = nullptr;
-
-        GetAclsCopy(policy, &mutableAcls);
-        GetPeersCopy(mutableAcls[0], &mutablePeers);
-
-        SetPeerPublicKey(publicKeyPem, mutablePeers[m_peerIndex]);
-        mutableAcls[0].SetPeers(mutableAcls[0].GetPeersSize(), mutablePeers);
-
-        policy.SetAcls(1, mutableAcls);
-
-        delete[] mutableAcls;
-        delete[] mutablePeers;
-    }
-
-    static void ChangePeerSgId(size_t m_peerIndex, AJ_PCSTR sgIdHex, PermissionPolicy& policy)
-    {
-        PermissionPolicy::Acl* mutableAcls = nullptr;
-        PermissionPolicy::Peer* mutablePeers = nullptr;
-
-        GetAclsCopy(policy, &mutableAcls);
-        GetPeersCopy(mutableAcls[0], &mutablePeers);
-
-        mutablePeers[m_peerIndex].SetSecurityGroupId(GUID128(sgIdHex));
-        mutableAcls[0].SetPeers(mutableAcls[0].GetPeersSize(), mutablePeers);
-
-        policy.SetAcls(1, mutableAcls);
-
-        delete[] mutableAcls;
-        delete[] mutablePeers;
-    }
-
-    static PermissionPolicy::Peer BuildPeer(PermissionPolicy::Peer::PeerType peerType, AJ_PCSTR publicKeyPem = nullptr, AJ_PCSTR sgIdHex = nullptr)
-    {
-        PermissionPolicy::Peer result;
-
-        result.SetType(peerType);
-        SetPeerPublicKey(publicKeyPem, result);
-
-        if (nullptr != sgIdHex) {
-            result.SetSecurityGroupId(GUID128(sgIdHex));
-        }
-
-        return result;
-    }
-
-  private:
-
-    static void GetAclsCopy(const PermissionPolicy& policy, PermissionPolicy::Acl** mutableAcls)
-    {
-        size_t aclsSize = policy.GetAclsSize();
-        *mutableAcls = new PermissionPolicy::Acl[aclsSize];
-
-        for (size_t index = 0; index < aclsSize; index++) {
-            (*mutableAcls)[index] = policy.GetAcls()[index];
-        }
-    }
-
-    static void GetPeersCopy(const PermissionPolicy::Acl& acl, PermissionPolicy::Peer** mutablePeers)
-    {
-        size_t peersSize = acl.GetPeersSize();
-        *mutablePeers = new PermissionPolicy::Peer[peersSize];
-
-        for (size_t index = 0; index < peersSize; index++) {
-            (*mutablePeers)[index] = acl.GetPeers()[index];
-        }
-    }
-
-    static void SetPeerPublicKey(AJ_PCSTR publicKeyPem, PermissionPolicy::Peer& peer)
-    {
-        KeyInfoNISTP256* publicKey = nullptr;
-
-        if (nullptr != publicKeyPem) {
-            publicKey = new KeyInfoNISTP256();
-            ASSERT_EQ(ER_OK, KeyInfoHelper::PEMToKeyInfoNISTP256(publicKeyPem, *publicKey));
-        }
-
-        peer.SetKeyInfo(publicKey);
-    }
-};
 
 struct KeyParams {
   public:

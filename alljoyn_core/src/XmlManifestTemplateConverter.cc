@@ -87,6 +87,6 @@ XmlRulesValidator* XmlManifestTemplateConverter::GetValidator()
 
 void XmlManifestTemplateConverter::BuildXmlInterfaceAnnotations(const PermissionPolicy::Rule& rule, XmlElement* interfaceElement)
 {
-    AddChildAnnotation(interfaceElement, SECURITY_LEVEL_ANNOTATION_NAME, s_inverseSecurityLevelMap.at(rule.GetSecurityLevel()).c_str());
+    AddChildAnnotation(interfaceElement, SECURITY_LEVEL_ANNOTATION_NAME, s_inverseSecurityLevelMap.at(rule.GetRecommendedSecurityLevel()).c_str());
 }
 }
