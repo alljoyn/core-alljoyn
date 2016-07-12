@@ -17,6 +17,8 @@
 #include "PermissionMgmtTest.h"
 #include "KeyInfoHelper.h"
 #include "KeyExchanger.h"
+#include "XmlManifestTemplateValidator.h"
+#include "XmlRulesConverterTest.h"
 #include "ajTestCommon.h"
 #include <qcc/Crypto.h>
 #include <qcc/Util.h>
@@ -26,19 +28,56 @@
 
 using namespace ajn;
 using namespace qcc;
+using namespace std;
 
 static GUID128 membershipGUID1(1);
-static const char* membershipSerial0 = "10000";
-static const char* membershipSerial1 = "10001";
+static AJ_PCSTR membershipSerial0 = "10000";
+static AJ_PCSTR membershipSerial1 = "10001";
 static GUID128 membershipGUID2(2);
 static GUID128 membershipGUID3(3);
 static GUID128 membershipGUID4(4);
-static const char* membershipSerial2 = "20002";
-static const char* membershipSerial3 = "30003";
-static const char* membershipSerial4 = "40004";
+static AJ_PCSTR membershipSerial2 = "20002";
+static AJ_PCSTR membershipSerial3 = "30003";
+static AJ_PCSTR membershipSerial4 = "40004";
 
-static const char* adminMembershipSerial1 = "900001";
-static const char* adminMembershipSerial2 = "900002";
+static AJ_PCSTR adminMembershipSerial1 = "900001";
+static AJ_PCSTR adminMembershipSerial2 = "900002";
+
+static AJ_PCSTR s_manifestTemplateWithPrivilegedInterface =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+
+static AJ_PCSTR s_manifestTemplateWithNonPrivilegedInterface =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    SECURITY_LEVEL_ANNOTATION(NON_PRIVILEGED_SECURITY_LEVEL)
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+
+static AJ_PCSTR s_manifestTemplateWithUnauthorizedInterface =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    SECURITY_LEVEL_ANNOTATION(UNAUTHORIZED_SECURITY_LEVEL)
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
 
 static QStatus AddAclsToDefaultPolicy(PermissionPolicy& defaultPolicy, PermissionPolicy::Acl* acls, size_t count, bool keepCAentry, bool keepAdminGroupEntry, bool keepInstallMembershipEntry, bool keepAnyTrusted)
 {
@@ -1129,7 +1168,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         generateBogusManifests(false)
     {
     }
-    PermissionMgmtUseCaseTest(const char* path) :
+    PermissionMgmtUseCaseTest(AJ_PCSTR path) :
         BasePermissionMgmtTest(path),
         generateExtraManifests(false),
         generateBogusManifests(false)
@@ -1594,7 +1633,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         ASSERT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs.get(), count)) << "MsgArgToIdentityCertChain failed.";
 
         /* create a new identity cert */
-        qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
+        qcc::String subject((AJ_PCSTR) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
         Crypto_ECC ecc;
         const qcc::ECCPublicKey* subjectPublicKey;
         if (generateRandomSubjectKey) {
@@ -1676,7 +1715,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToIdentityCertChain(certChainArg, certs, count)) << "MsgArgToIdentityCertChain failed.";
 
         /* create a new identity cert */
-        qcc::String subject((const char*) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
+        qcc::String subject((AJ_PCSTR) certs[0].GetSubjectCN(), certs[0].GetSubjectCNLength());
         IdentityCertificate identityCertChain[1];
         std::vector<Manifest> manifests;
 
@@ -1697,7 +1736,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install a membership certificate with the given serial number and guild ID to the service bus attachment.
      */
-    void InstallMembershipToServiceProvider(const char* serial, qcc::GUID128& guildID)
+    void InstallMembershipToServiceProvider(AJ_PCSTR serial, qcc::GUID128& guildID)
     {
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(serviceBus, &claimedPubKey);
@@ -1734,7 +1773,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install Membership to a consumer
      */
-    void InstallMembershipToConsumer(const char* serial, qcc::GUID128& guildID, BusAttachment& authorityBus)
+    void InstallMembershipToConsumer(AJ_PCSTR serial, qcc::GUID128& guildID, BusAttachment& authorityBus)
     {
         ECCPublicKey claimedPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(consumerBus, &claimedPubKey);
@@ -1755,7 +1794,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     /**
      *  Install Membership chain to a consumer
      */
-    void InstallMembershipChainToTarget(BusAttachment& topBus, BusAttachment& middleBus, BusAttachment& targetBus, const char* serial0, const char* serial1, qcc::GUID128& guildID, bool setEmptyAKI = false)
+    void InstallMembershipChainToTarget(BusAttachment& topBus, BusAttachment& middleBus, BusAttachment& targetBus, AJ_PCSTR serial0, AJ_PCSTR serial1, qcc::GUID128& guildID, bool setEmptyAKI = false)
     {
         ECCPublicKey targetPubKey;
         status = PermissionMgmtTestHelper::RetrieveDSAPublicKeyFromKeyStore(targetBus, &targetPubKey);
@@ -1949,7 +1988,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     {
         ProxyBusObject clientProxyObject(bus, targetBus.GetUniqueName().c_str(), GetPath(), 0, false);
         if (listenToPropertiesChanged) {
-            const char* props[1];
+            AJ_PCSTR props[1];
             props[0] = "Volume";
             clientProxyObject.RegisterPropertiesChangedListener(BasePermissionMgmtTest::TV_IFC_NAME, props, ArraySize(props), *this, NULL);
             SetPropertiesChangedSignalReceived(false);
@@ -2291,6 +2330,37 @@ class PathBasePermissionMgmtUseCaseTest : public PermissionMgmtUseCaseTest {
     PathBasePermissionMgmtUseCaseTest() : PermissionMgmtUseCaseTest("/control/guide")
     {
     }
+};
+
+class PermissionMgmtRecommendedSecurityLevelsTest : public PermissionMgmtUseCaseTest {
+  public:
+
+    PermissionMgmtRecommendedSecurityLevelsTest() :
+        PermissionMgmtUseCaseTest(),
+        m_manifestTemplate(nullptr),
+        m_saProxy(nullptr)
+    {
+    }
+
+    virtual void SetUp() {
+        PermissionMgmtUseCaseTest::SetUp();
+
+        EnableSecurity("ALLJOYN_ECDHE_NULL");
+        m_saProxy = new SecurityApplicationProxy(adminBus, serviceBus.GetUniqueName().c_str());
+    }
+
+    virtual void TearDown()
+    {
+        delete m_saProxy;
+        delete[] m_manifestTemplate;
+
+        PermissionMgmtUseCaseTest::TearDown();
+    }
+
+  protected:
+
+    AJ_PSTR m_manifestTemplate;
+    SecurityApplicationProxy* m_saProxy;
 };
 
 /*
@@ -3959,4 +4029,28 @@ TEST_F(PermissionMgmtUseCaseTest, InstallUnsignedManifestFails)
     ASSERT_EQ(ER_OK, GenerateAllowAllManifest(newManifests[0]));
     /* Note that we don't call SignManifests on newManifests[0]. */
     EXPECT_EQ(ER_DIGEST_MISMATCH, saProxy.InstallManifests(newManifests, ArraySize(newManifests)));
+}
+
+TEST_F(PermissionMgmtRecommendedSecurityLevelsTest, shouldGetManifestTemplatePrivilegedRecommendedSecurityLevel)
+{
+    ASSERT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetManifestTemplateFromXml(s_manifestTemplateWithPrivilegedInterface));
+    ASSERT_EQ(ER_OK, m_saProxy->GetManifestTemplate(&m_manifestTemplate));
+
+    EXPECT_TRUE(string(m_manifestTemplate).find(PRIVILEGED_SECURITY_LEVEL) != string::npos);
+}
+
+TEST_F(PermissionMgmtRecommendedSecurityLevelsTest, shouldGetManifestTemplateNonPrivilegedRecommendedSecurityLevel)
+{
+    ASSERT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetManifestTemplateFromXml(s_manifestTemplateWithNonPrivilegedInterface));
+    ASSERT_EQ(ER_OK, m_saProxy->GetManifestTemplate(&m_manifestTemplate));
+
+    EXPECT_TRUE(string(m_manifestTemplate).find(NON_PRIVILEGED_SECURITY_LEVEL) != string::npos);
+}
+
+TEST_F(PermissionMgmtRecommendedSecurityLevelsTest, shouldGetManifestTemplateUnauthorizedRecommendedSecurityLevel)
+{
+    ASSERT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetManifestTemplateFromXml(s_manifestTemplateWithUnauthorizedInterface));
+    ASSERT_EQ(ER_OK, m_saProxy->GetManifestTemplate(&m_manifestTemplate));
+
+    EXPECT_TRUE(string(m_manifestTemplate).find(UNAUTHORIZED_SECURITY_LEVEL) != string::npos);
 }

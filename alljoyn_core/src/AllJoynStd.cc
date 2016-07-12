@@ -241,7 +241,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("ExchangeSuites",     "au",   "au",  "localAuthList,remoteAuthList");
         ifc->AddMethod("KeyExchange",     "uv",   "uv",  "localAuthMask,localPublicKey, remoteAuthMask, remotePublicKey");
         ifc->AddMethod("KeyAuthentication",     "v",   "v",  "localVerifier,remoteVerifier");
-        ifc->AddMethod("SendManifests",     "a(ua(ssa(syy))saysay)",   "a(ua(ssa(syy))saysay)", "manifests,manifests");
+        ifc->AddMethod("SendManifests",     "a(ua(ssya(syy))saysay)",   "a(ua(ssya(syy))saysay)", "manifests,manifests");
         ifc->AddMethod("SendMemberships",     "ya(yay)",   "ya(yay)", "sendCode,memberships,sendCode,memberships");
         ifc->AddProperty("Mechanisms",  "s", PROP_ACCESS_READ);
         ifc->AddProperty("Version",     "u", PROP_ACCESS_READ);
@@ -278,7 +278,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddPropertyAnnotation("EccPublicKey", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("ManufacturerCertificate", "a(yay)", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("ManufacturerCertificate", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddProperty("ManifestTemplate", "a(ssa(syy))", PROP_ACCESS_READ);
+        ifc->AddProperty("ManifestTemplate", "a(ssya(syy))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("ManifestTemplate", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("ClaimCapabilities", "q", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("ClaimCapabilities", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
@@ -298,7 +298,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddAnnotation(org::alljoyn::Bus::Secure, "true");
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "const");
-        ifc->AddMethod("Claim", "(yyayay)ayay(yyayay)aya(yay)a(ua(ssa(syy))saysay)", "",
+        ifc->AddMethod("Claim", "(yyayay)ayay(yyayay)aya(yay)a(ua(ssya(syy))saysay)", "",
                        "certificateAuthority,authorityKeyIdentifier,adminSecurityGroupId,adminSecurityGroupAuthority,adminGroupAuthorityKeyIdentifier,identityCertificateChain,manifests");
 
         ifc->Activate();
@@ -315,19 +315,19 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddProperty("Version", "q", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Version", org::freedesktop::DBus::AnnotateEmitsChanged, "const");
         ifc->AddMethod("Reset", "", "", "");
-        ifc->AddMethod("UpdateIdentity", "a(yay)a(ua(ssa(syy))saysay)", "", "certificateChain,manifests");
+        ifc->AddMethod("UpdateIdentity", "a(yay)a(ua(ssya(syy))saysay)", "", "certificateChain,manifests");
         ifc->AddProperty("Identity", "a(yay)", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Identity", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddProperty("Manifests", "a(ua(ssa(syy))saysay)", PROP_ACCESS_READ);
+        ifc->AddProperty("Manifests", "a(ua(ssya(syy))saysay)", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Manifest", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("IdentityCertificateId", "(ayay(yyayay))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("IdentityCertificateId", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("PolicyVersion", "u", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("PolicyVersion", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddMethod("UpdatePolicy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", "", "policy");
-        ifc->AddProperty("Policy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
+        ifc->AddMethod("UpdatePolicy", "(qua(a(ya(yyayayay)ay)a(ssya(syy))))", "", "policy");
+        ifc->AddProperty("Policy", "(qua(a(ya(yyayayay)ay)a(ssya(syy))))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Policy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
-        ifc->AddProperty("DefaultPolicy", "(qua(a(ya(yyayayay)ay)a(ssa(syy))))", PROP_ACCESS_READ);
+        ifc->AddProperty("DefaultPolicy", "(qua(a(ya(yyayayay)ay)a(ssya(syy))))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("DefaultPolicy", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddMethod("ResetPolicy", "", "", "");
         ifc->AddMethod("InstallMembership", "a(yay)", "", "certificateChain");
@@ -336,7 +336,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddPropertyAnnotation("MembershipSummaries", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddMethod("StartManagement", "", "", "");
         ifc->AddMethod("EndManagement", "", "", "");
-        ifc->AddMethod("InstallManifests", "a(ua(ssa(syy))saysay)", "", "manifests");
+        ifc->AddMethod("InstallManifests", "a(ua(ssya(syy))saysay)", "", "manifests");
 
         ifc->Activate();
     }

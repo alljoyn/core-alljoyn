@@ -229,7 +229,7 @@ class XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest : public te
         ASSERT_EQ(ER_OK, XmlManifestTemplateConverter::GetInstance()->XmlToRules(GetParam().m_manifestTemplateXml, rules));
         ASSERT_EQ((size_t)1, rules.size());
 
-        m_actualSecurityLevel = rules[0].GetSecurityLevel();
+        m_actualSecurityLevel = rules[0].GetRecommendedSecurityLevel();
     }
 };
 

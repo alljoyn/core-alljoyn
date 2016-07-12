@@ -30,12 +30,19 @@
 #include <alljoyn/BusAttachment.h>
 #include "KeyInfoHelper.h"
 #include "PeerState.h"
+#include "XmlManifestTemplateValidator.h"
 #include <memory>
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
 using namespace std;
 using namespace qcc;
+
+const String securityLevelToString[] {
+    UNAUTHORIZED_SECURITY_LEVEL,
+    NON_PRIVILEGED_SECURITY_LEVEL,
+    PRIVILEGED_SECURITY_LEVEL
+};
 
 namespace ajn {
 
@@ -131,7 +138,7 @@ void PermissionPolicy::Rule::SetRecommendedSecurityLevel(SecurityLevel securityL
     m_recommendedSecurityLevel = securityLevel;
 }
 
-PermissionPolicy::Rule::SecurityLevel PermissionPolicy::Rule::GetSecurityLevel() const
+PermissionPolicy::Rule::SecurityLevel PermissionPolicy::Rule::GetRecommendedSecurityLevel() const
 {
     return m_recommendedSecurityLevel;
 }
@@ -196,6 +203,7 @@ qcc::String PermissionPolicy::Rule::ToString(size_t indent) const
     if (interfaceName.length() > 0) {
         str += in + "  <interfaceName>" + interfaceName + "</interfaceName>\n";
     }
+    str += in + "  <recommendedSecurityLevel>" + securityLevelToString[m_recommendedSecurityLevel] + "</recommendedSecurityLevel>\n";
     for (size_t cnt = 0; cnt < GetMembersSize(); cnt++) {
         str += members[cnt].ToString(indent + 2);
     }
@@ -714,9 +722,11 @@ static QStatus GenerateRuleArgs(MsgArg** retArgs, const PermissionPolicy::Rule* 
         }
         String objPath = rules[cnt].GetObjPath();
         String interfaceName = rules[cnt].GetInterfaceName();
-        status = (*retArgs)[cnt].Set("(ssa(syy))",
+        PermissionPolicy::Rule::SecurityLevel securityLevel = rules[cnt].GetRecommendedSecurityLevel();
+        status = (*retArgs)[cnt].Set("(ssya(syy))",
                                      objPath.c_str(),
                                      interfaceName.c_str(),
+                                     securityLevel,
                                      rules[cnt].GetMembersSize(), ruleMembersArgs);
         if (ER_OK != status) {
             delete [] ruleMembersArgs;
@@ -781,20 +791,30 @@ static QStatus BuildRulesFromArgArray(const MsgArg* args, size_t argCount, Permi
     for (size_t cnt = 0; cnt < argCount; cnt++) {
         char* objPath;
         char* interfaceName;
+        uint8_t securityLevel;
         MsgArg* membersArgs = NULL;
         size_t membersArgsCount = 0;
-        status = args[cnt].Get("(ssa(syy))", &objPath, &interfaceName, &membersArgsCount, &membersArgs);
+        status = args[cnt].Get("(ssya(syy))", &objPath, &interfaceName, &securityLevel, &membersArgsCount, &membersArgs);
         if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildRulesFromArg [%d] got status 0x%x\n", cnt, status));
+            QCC_DbgPrintf(("%s [%d] got status 0x%x\n", __FUNCTION__, cnt, status));
             break;
         }
         (*rules)[cnt].SetObjPath(String(objPath));
         (*rules)[cnt].SetInterfaceName(String(interfaceName));
+
+        if (securityLevel <= PermissionPolicy::Rule::SecurityLevel::PRIVILEGED) {
+            (*rules)[cnt].SetRecommendedSecurityLevel((PermissionPolicy::Rule::SecurityLevel)securityLevel);
+        } else {
+            QCC_DbgPrintf(("%s [%d] got invalid recommended security level %d\n", __FUNCTION__, cnt, securityLevel));
+            status = ER_INVALID_DATA;
+            break;
+        }
+
         if (membersArgsCount > 0) {
             PermissionPolicy::Rule::Member* memberRules = NULL;
             status = BuildMembersFromArg(membersArgs, &memberRules, membersArgsCount);
             if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildRulesFromArg [%d] got status 0x%x\n", cnt, status));
+                QCC_DbgPrintf(("%s [%d] got status 0x%x\n", __FUNCTION__, cnt, status));
                 delete [] memberRules;
                 break;
             }
@@ -835,7 +855,7 @@ static QStatus BuildAclsFromArg(MsgArg* arg, PermissionPolicy::Acl** acls, size_
         size_t peersArgsCount = 0;
         MsgArg* rulesArgs;
         size_t rulesArgsCount = 0;
-        status = arg[cnt].Get("(a(ya(yyayayay)ay)a(ssa(syy)))", &peersArgsCount, &peersArgs, &rulesArgsCount, &rulesArgs);
+        status = arg[cnt].Get("(a(ya(yyayayay)ay)a(ssya(syy)))", &peersArgsCount, &peersArgs, &rulesArgsCount, &rulesArgs);
         if (ER_OK != status) {
             QCC_DbgPrintf(("BuildAclsFromArg [%d] got status 0x%x\n", cnt, status));
             break;
@@ -894,7 +914,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg) const
                     break;
                 }
             }
-            status = aclsArgs[cnt].Set("(a(ya(yyayayay)ay)a(ssa(syy)))",
+            status = aclsArgs[cnt].Set("(a(ya(yyayayay)ay)a(ssya(syy)))",
                                        acls[cnt].GetPeersSize(), peersArgs, acls[cnt].GetRulesSize(), rulesArgs);
             if (ER_OK != status) {
                 delete [] peersArgs;
@@ -905,7 +925,7 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg) const
     }
 
     if (ER_OK == status) {
-        status = msgArg.Set("(qua(a(ya(yyayayay)ay)a(ssa(syy))))",
+        status = msgArg.Set("(qua(a(ya(yyayayay)ay)a(ssya(syy))))",
                             GetSpecificationVersion(), GetVersion(), GetAclsSize(), aclsArgs);
         if (ER_OK == status) {
             msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
@@ -924,7 +944,7 @@ QStatus PermissionPolicy::Import(uint16_t expectedVersion, const MsgArg& msgArg)
     MsgArg* aclsArgs;
     size_t aclsArgsCount = 0;
     uint32_t policyVersion;
-    QStatus status = msgArg.Get("(qua(a(ya(yyayayay)ay)a(ssa(syy))))",
+    QStatus status = msgArg.Get("(qua(a(ya(yyayayay)ay)a(ssya(syy))))",
                                 &specVersion, &policyVersion, &aclsArgsCount, &aclsArgs);
     if (ER_OK != status) {
         QCC_DbgPrintf(("PermissionPolicy::Import got status 0x%x\n", status));
@@ -1158,10 +1178,10 @@ void PermissionPolicy::SetAcls(size_t count, const PermissionPolicy::Acl* acls) 
 #undef QCC_MODULE
 #define QCC_MODULE "PERMISSION_MANIFEST"
 
-AJ_PCSTR _Manifest::s_MsgArgArraySignature = "a(ua(ssa(syy))saysay)";
-AJ_PCSTR _Manifest::s_MsgArgSignature = "(ua(ssa(syy))saysay)";
-AJ_PCSTR _Manifest::s_MsgArgDigestSignature = "(ua(ssa(syy))says)";
-AJ_PCSTR _Manifest::s_TemplateMsgArgSignature = "a(ssa(syy))";
+AJ_PCSTR _Manifest::s_MsgArgArraySignature = "a(ua(ssya(syy))saysay)";
+AJ_PCSTR _Manifest::s_MsgArgSignature = "(ua(ssya(syy))saysay)";
+AJ_PCSTR _Manifest::s_MsgArgDigestSignature = "(ua(ssya(syy))says)";
+AJ_PCSTR _Manifest::s_TemplateMsgArgSignature = "a(ssya(syy))";
 const uint32_t _Manifest::DefaultVersion = 1;
 
 /* Static objects used just to serialize/deserialize messages */

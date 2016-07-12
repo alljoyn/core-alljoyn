@@ -208,7 +208,7 @@ class PermissionPolicy {
          * Get the security level.
          * @return The interface's security level.
          */
-        SecurityLevel GetSecurityLevel() const;
+        SecurityLevel GetRecommendedSecurityLevel() const;
 
         /**
          * Set the object path
