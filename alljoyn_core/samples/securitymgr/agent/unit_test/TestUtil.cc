@@ -625,7 +625,7 @@ bool BasicTest::CheckIdentity(const OnlineApplication& app,
         return false;
     }
 
-    if (!remoteManifest.TemplateEquals(expectedManifest)) {
+    if (!storedManifest.TemplateEquals(expectedManifest)) {
         printf("mismatching stored manifest: expected %s, got %s\n",
                expectedManifest.ToString().c_str(),
                storedManifest.ToString().c_str());

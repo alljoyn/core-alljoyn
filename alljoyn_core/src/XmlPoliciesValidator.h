@@ -432,7 +432,7 @@ class XmlPoliciesValidator : public XmlValidator {
         virtual QStatus ValidateTypeSpecific(const PermissionPolicy::Peer& peer);
 
         /**
-         * Retrieves the the currently validated peer's ID.
+         * Retrieves the currently validated peer's ID.
          *
          * @param[in]    peer    A XML "peer" element.
          *
@@ -442,7 +442,7 @@ class XmlPoliciesValidator : public XmlValidator {
         virtual std::string GetPeerId(const qcc::XmlElement* peer);
 
         /**
-         * Retrieves the the currently validated peer's ID.
+         * Retrieves the currently validated peer's ID.
          *
          * @param[in]    peer    The validated peer object.
          *

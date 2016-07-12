@@ -36,7 +36,7 @@
 #define SECURITY_LEVEL_ANNOTATION_NAME "org.alljoyn.Security.Level"
 #define PRIVILEGED_SECURITY_LEVEL "Privileged"
 #define NON_PRIVILEGED_SECURITY_LEVEL "NonPrivileged"
-#define UNAUTHORIZED_SECURITY_LEVEL "Unauthorized"
+#define UNAUTHENTICATED_SECURITY_LEVEL "Unauthenticated"
 
 namespace ajn {
 

@@ -69,7 +69,7 @@ static AJ_PCSTR s_validNodeSecurityLevelAnnotationNonPrivileged =
 static AJ_PCSTR s_validNodeSecurityLevelAnnotationUnauthorized =
     "<manifest>"
     "<node>"
-    SECURITY_LEVEL_ANNOTATION(UNAUTHORIZED_SECURITY_LEVEL)
+    SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)
     "<interface>"
     "<any>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
@@ -94,7 +94,7 @@ static AJ_PCSTR s_validInterfaceSecurityLevelAnnotationUnauthorized =
     "<manifest>"
     "<node>"
     "<interface>"
-    SECURITY_LEVEL_ANNOTATION(UNAUTHORIZED_SECURITY_LEVEL)
+    SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)
     "<any>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "</any>"
@@ -133,7 +133,7 @@ static AJ_PCSTR s_validNodeSecurityLevelAnnotationOverrideToUnauthorized =
     "<node>"
     SECURITY_LEVEL_ANNOTATION(NON_PRIVILEGED_SECURITY_LEVEL)
     "<interface>"
-    SECURITY_LEVEL_ANNOTATION(UNAUTHORIZED_SECURITY_LEVEL)
+    SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)
     "<any>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "</any>"
@@ -146,7 +146,7 @@ static AJ_PCSTR s_doubleSecurityLevelAnnotationInNode =
     "<manifest>"
     "<node>"
     SECURITY_LEVEL_ANNOTATION(NON_PRIVILEGED_SECURITY_LEVEL)
-    SECURITY_LEVEL_ANNOTATION(UNAUTHORIZED_SECURITY_LEVEL)
+    SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)
     "<interface>"
     "<any>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
@@ -160,7 +160,7 @@ static AJ_PCSTR s_doubleSecurityLevelAnnotationInInterface =
     "<node>"
     "<interface>"
     SECURITY_LEVEL_ANNOTATION(NON_PRIVILEGED_SECURITY_LEVEL)
-    SECURITY_LEVEL_ANNOTATION(UNAUTHORIZED_SECURITY_LEVEL)
+    SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)
     "<any>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "</any>"
@@ -173,7 +173,7 @@ static AJ_PCSTR s_securityLevelAnnotationInMember =
     "<node>"
     "<interface>"
     "<any>"
-    SECURITY_LEVEL_ANNOTATION(UNAUTHORIZED_SECURITY_LEVEL)
+    SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "</any>"
     "</interface>"
@@ -229,20 +229,29 @@ class XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest : public te
         ASSERT_EQ(ER_OK, XmlManifestTemplateConverter::GetInstance()->XmlToRules(GetParam().m_manifestTemplateXml, rules));
         ASSERT_EQ((size_t)1, rules.size());
 
-        m_actualSecurityLevel = rules[0].GetSecurityLevel();
+        m_actualSecurityLevel = rules[0].GetRecommendedSecurityLevel();
     }
 };
+
+TEST(XmlManifestTemplateConverterTest, shouldSetManifestTemplateRuleType)
+{
+    vector<PermissionPolicy::Rule> rules;
+    ASSERT_EQ(ER_OK, XmlManifestTemplateConverter::GetInstance()->XmlToRules(s_validDefaultSecurityLevelAnnotation, rules));
+    ASSERT_EQ((size_t)1, rules.size());
+
+    EXPECT_EQ(PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE, rules[0].GetRuleType());
+}
 
 INSTANTIATE_TEST_CASE_P(XmlManifestTemplateConverterToRulesSecurityLevelAnnotations,
                         XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest,
                         ::testing::Values(SecurityLevelParams(s_validDefaultSecurityLevelAnnotation, PermissionPolicy::Rule::SecurityLevel::PRIVILEGED),
                                           SecurityLevelParams(s_validNodeSecurityLevelAnnotationNonPrivileged, PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED),
-                                          SecurityLevelParams(s_validNodeSecurityLevelAnnotationUnauthorized, PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED),
+                                          SecurityLevelParams(s_validNodeSecurityLevelAnnotationUnauthorized, PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED),
                                           SecurityLevelParams(s_validInterfaceSecurityLevelAnnotationNonPrivileged, PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED),
-                                          SecurityLevelParams(s_validInterfaceSecurityLevelAnnotationUnauthorized, PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED),
+                                          SecurityLevelParams(s_validInterfaceSecurityLevelAnnotationUnauthorized, PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED),
                                           SecurityLevelParams(s_validNodeSecurityLevelAnnotationOverrideToPrivileged, PermissionPolicy::Rule::SecurityLevel::PRIVILEGED),
                                           SecurityLevelParams(s_validNodeSecurityLevelAnnotationOverrideToNonPrivileged, PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED),
-                                          SecurityLevelParams(s_validNodeSecurityLevelAnnotationOverrideToUnauthorized, PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED)));
+                                          SecurityLevelParams(s_validNodeSecurityLevelAnnotationOverrideToUnauthorized, PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED)));
 TEST_P(XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest, shouldSetNodeSecurityLevelAnnotationToExpectedValue)
 {
     EXPECT_EQ(m_expectedSecurityLevel, m_actualSecurityLevel);

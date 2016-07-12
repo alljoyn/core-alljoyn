@@ -41,7 +41,7 @@ void XmlManifestTemplateValidator::Init()
 
     s_securityLevelMap[PRIVILEGED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::PRIVILEGED;
     s_securityLevelMap[NON_PRIVILEGED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED;
-    s_securityLevelMap[UNAUTHORIZED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED;
+    s_securityLevelMap[UNAUTHENTICATED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED;
 }
 
 void XmlManifestTemplateValidator::Shutdown()
