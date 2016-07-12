@@ -171,7 +171,7 @@ AJ_API void AJ_CALL alljoyn_permissionconfigurator_manifesttemplate_destroy(AJ_P
  *
  * @return
  *          #ER_OK if successful.
- *          #ER_XML_MALFORMED if the the XML is not in a valid manifest template format.
+ *          #ER_XML_MALFORMED if the XML is not in a valid manifest template format.
  *          Other error status codes indicating a failure.
  */
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_setmanifesttemplatefromxml(alljoyn_permissionconfigurator configurator, AJ_PCSTR manifestTemplateXml);
@@ -456,7 +456,8 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getdefaultpolicy(alljoyn_p
                                                                        AJ_PSTR* policyXml);
 
 /**
- * This method deallocates strings returned by a call to alljoyn_permissionconfigurator_getidentitycertificateid.
+ * This method deallocates strings returned by a call to alljoyn_permissionconfigurator_getdefaultpolicy
+ * and alljoyn_permissionconfigurator_getpolicy.
  *
  * @param[in]    policyXml                  A string containing a policy in XML format returned by a call to either
  *                                          alljoyn_permissionconfigurator_getpolicy or

@@ -386,7 +386,7 @@ ProxyBusObject::Internal::~Internal()
 }
 
 /**
- * Figure out the new status code based on the the reply message's error.
+ * Figure out the new status code based on the reply message's error.
  * If the status code is ER_BUS_REPLY_IS_ERROR_MESSAGE then the error
  * message is searched to compute the status code.
  * @param reply the reply message
