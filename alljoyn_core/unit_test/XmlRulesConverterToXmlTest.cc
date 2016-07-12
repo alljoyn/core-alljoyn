@@ -18,6 +18,7 @@
 #include <qcc/platform.h>
 #include <string>
 
+#include "PermissionPolicyOverwriteUtils.h"
 #include "XmlRulesConverter.h"
 #include "XmlRulesConverterTest.h"
 
@@ -111,43 +112,6 @@ static AJ_PCSTR s_validAllCasesRules =
     "</node>"
     "</rules>";
 
-class MembersOverwriteUtils {
-  public:
-
-    static void ChangeMemberName(PermissionPolicy::Rule& rule, size_t memberIndex, AJ_PCSTR newName)
-    {
-        PermissionPolicy::Rule::Member* mutableMembers = nullptr;
-        GetMembersCopy(rule, &mutableMembers);
-
-        mutableMembers[memberIndex].SetMemberName(newName);
-        rule.SetMembers(rule.GetMembersSize(), mutableMembers);
-
-        delete[] mutableMembers;
-    }
-    static void ChangeMemberActionMask(PermissionPolicy::Rule& rule, size_t memberIndex, uint8_t newActionMask)
-    {
-        PermissionPolicy::Rule::Member* mutableMembers = nullptr;
-        GetMembersCopy(rule, &mutableMembers);
-
-        mutableMembers[memberIndex].SetActionMask(newActionMask);
-        rule.SetMembers(rule.GetMembersSize(), mutableMembers);
-
-        delete[] mutableMembers;
-    }
-
-  private:
-
-    static void GetMembersCopy(const PermissionPolicy::Rule& rule, PermissionPolicy::Rule::Member** mutableMembers)
-    {
-        size_t membersSize = rule.GetMembersSize();
-        *mutableMembers = new PermissionPolicy::Rule::Member[membersSize];
-
-        for (size_t index = 0; index < membersSize; index++) {
-            (*mutableMembers)[index] = rule.GetMembers()[index];
-        }
-    }
-};
-
 class XmlRulesConverterToXmlDetailedTest : public testing::Test {
   public:
     PermissionPolicy::Rule* m_validRules;
@@ -227,7 +191,7 @@ class XmlRulesConverterToXmlInvalidMemberNamesTest : public XmlRulesConverterToX
 
     virtual void FlawRules()
     {
-        MembersOverwriteUtils::ChangeMemberName(m_rulesWithFlaw[0], 0, GetParam());
+        PolicyOverwriteUtils::ChangeMemberName(m_rulesWithFlaw[0], 0, GetParam());
     }
 };
 
@@ -334,7 +298,7 @@ TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMissingInt
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMissingMemberName)
 {
-    MembersOverwriteUtils::ChangeMemberName(m_validRules[0], METHOD_MEMBER_INDEX, "");
+    PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], METHOD_MEMBER_INDEX, "");
 
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
@@ -365,42 +329,42 @@ TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameIn
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameMethods)
 {
-    MembersOverwriteUtils::ChangeMemberName(m_validRules[0], METHOD_MEMBER_INDEX, "Method1");
+    PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], METHOD_MEMBER_INDEX, "Method1");
 
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameProperties)
 {
-    MembersOverwriteUtils::ChangeMemberName(m_validRules[0], PROPERTY_MEMBER_INDEX, "Property1");
+    PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], PROPERTY_MEMBER_INDEX, "Property1");
 
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameSignals)
 {
-    MembersOverwriteUtils::ChangeMemberName(m_validRules[0], SIGNAL_MEMBER_INDEX, "Signal1");
+    PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], SIGNAL_MEMBER_INDEX, "Signal1");
 
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameAnyMemberType)
 {
-    MembersOverwriteUtils::ChangeMemberName(m_validRules[0], ANY_MEMBER_INDEX, "Any1");
+    PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], ANY_MEMBER_INDEX, "Any1");
 
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMethodWithObserve)
 {
-    MembersOverwriteUtils::ChangeMemberActionMask(m_validRules[0], METHOD_MEMBER_INDEX, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    PolicyOverwriteUtils::ChangeMemberActionMask(m_validRules[0], METHOD_MEMBER_INDEX, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
 
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSignalWithModify)
 {
-    MembersOverwriteUtils::ChangeMemberActionMask(m_validRules[0], SIGNAL_MEMBER_INDEX, PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    PolicyOverwriteUtils::ChangeMemberActionMask(m_validRules[0], SIGNAL_MEMBER_INDEX, PermissionPolicy::Rule::Member::ACTION_MODIFY);
 
     EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }

@@ -2683,34 +2683,18 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
     if (count == 0) {
         return ER_OK;
     }
-    PermissionPolicy policy;
-    PermissionPolicy::Acl acls[1];
-    PermissionPolicy::Rule* localRules = NULL;
-    if (count > 0) {
-        localRules = new PermissionPolicy::Rule[count];
-        for (size_t cnt = 0; cnt < count; cnt++) {
-            localRules[cnt] = rules[cnt];
-        }
-    }
-    acls[0].SetRules(count, localRules);
-    policy.SetAcls(1, acls);
 
-    delete [] localRules;
-    localRules = NULL;
-
-    uint8_t* buf = NULL;
-    size_t size;
+    vector<uint8_t> buf;
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    QStatus status = policy.Export(marshaller, &buf, &size);
+    QStatus status = marshaller.MarshalManifestTemplate(rules, count, buf);
     if (ER_OK != status) {
         return status;
     }
     /* store the message into the key store */
     KeyStore::Key key;
     GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
-    KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
-    delete [] buf;
+    KeyBlob kb(buf.data(), buf.size(), KeyBlob::GENERIC);
 
     status = ca->StoreKey(key, kb);
     if (ER_OK == status) {
@@ -2757,7 +2741,7 @@ QStatus PermissionMgmtObj::RetrieveManifests(std::vector<Manifest>& manifests)
     return status;
 }
 
-QStatus PermissionMgmtObj::LoadManifestTemplate(PermissionPolicy& policy)
+QStatus PermissionMgmtObj::LoadManifestTemplate(vector<PermissionPolicy::Rule>& manifestTemplate)
 {
     KeyBlob kb;
     KeyStore::Key key;
@@ -2771,11 +2755,11 @@ QStatus PermissionMgmtObj::LoadManifestTemplate(PermissionPolicy& policy)
     }
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    status = policy.Import(marshaller, kb.GetData(), kb.GetSize());
+    status = marshaller.UnmarshalManifestTemplate(kb.GetData(), kb.GetSize(), manifestTemplate);
     if (ER_OK != status) {
         return status;
     }
-    if (policy.GetAclsSize() == 0) {
+    if (manifestTemplate.size() == 0) {
         return ER_MANIFEST_NOT_FOUND;
     }
     return ER_OK;
@@ -2796,46 +2780,31 @@ QStatus PermissionMgmtObj::LookForManifestTemplate(bool& exist)
     return status;
 }
 
-QStatus PermissionMgmtObj::GetManifestTemplate(std::vector<PermissionPolicy::Rule>& manifestTemplate)
+QStatus PermissionMgmtObj::GetManifestTemplate(vector<PermissionPolicy::Rule>& manifestTemplate)
 {
-    PermissionPolicy policy;
-
-    QStatus status = LoadManifestTemplate(policy);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    const PermissionPolicy::Rule* rules = policy.GetAcls()[0].GetRules();
-    size_t rulesSize = policy.GetAcls()[0].GetRulesSize();
-    manifestTemplate.clear();
-    for (size_t i = 0; i < rulesSize; i++) {
-        manifestTemplate.push_back(rules[i]);
-    }
-
-    return ER_OK;
+    return LoadManifestTemplate(manifestTemplate);
 }
 
 QStatus PermissionMgmtObj::GetManifestTemplate(MsgArg& arg)
 {
-    PermissionPolicy policy;
-    QStatus status = LoadManifestTemplate(policy);
+    vector<PermissionPolicy::Rule> manifestTemplate;
+    QStatus status = LoadManifestTemplate(manifestTemplate);
     if (ER_OK != status) {
         return status;
     }
-    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
-    return PermissionPolicy::GenerateRules(acls[0].GetRules(), acls[0].GetRulesSize(), arg);
+
+    return PermissionPolicy::ManifestTemplateToMsgArg(manifestTemplate.data(), manifestTemplate.size(), arg);
 }
 
 QStatus PermissionMgmtObj::GetManifestTemplateDigest(MsgArg& arg)
 {
-    PermissionPolicy policy;
-    QStatus status = LoadManifestTemplate(policy);
+    vector<PermissionPolicy::Rule> manifestTemplate;
+    QStatus status = LoadManifestTemplate(manifestTemplate);
     if (ER_OK != status) {
         return status;
     }
-    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    status = GenerateManifestDigest(bus, acls[0].GetRules(), acls[0].GetRulesSize(), digest, Crypto_SHA256::DIGEST_SIZE);
+    status = GenerateManifestDigest(bus, manifestTemplate.data(), manifestTemplate.size(), digest, Crypto_SHA256::DIGEST_SIZE);
     if (ER_OK != status) {
         return status;
     }

@@ -149,7 +149,7 @@ class Event {
      * - #ER_OK if successful.
      * - #ER_STOPPING_THREAD if includeStopEvent and the caller's thread is stopping (@see
      *                       qcc::Thread::IsStopping()).
-     * - #ER_ALERTED_THREAD if the caller's thread is not stopping and the the caller's stopEvent
+     * - #ER_ALERTED_THREAD if the caller's thread is not stopping and the caller's stopEvent
      *                      is set (@see qcc::Thread::Alert()).
      * - #ER_TIMEOUT if the event is not set.
      * - #ER_OS_ERROR if the wait failed.
@@ -168,7 +168,7 @@ class Event {
      * - #ER_OK if successful.
      * - #ER_STOPPING_THREAD if includeStopEvent and the caller's thread is stopping (@see
      *                       qcc::Thread::IsStopping()).
-     * - #ER_ALERTED_THREAD if the caller's thread is not stopping and the the caller's stopEvent
+     * - #ER_ALERTED_THREAD if the caller's thread is not stopping and the caller's stopEvent
      *                      is set (@see qcc::Thread::Alert()).
      * - #ER_TIMEOUT if the event is not set.
      * - #ER_OS_ERROR if the wait failed.

@@ -103,6 +103,13 @@ class XmlManifestTemplateConverter : public XmlRulesConverter {
      * @return   Validator associated with this converter.
      */
     virtual XmlRulesValidator* GetValidator();
+
+    /**
+     * Returns the current converter's rule type.
+     *
+     * @return   Converter rule type.
+     */
+    virtual PermissionPolicy::Rule::RuleType GetRuleType();
 };
 } /* namespace ajn */
 #endif

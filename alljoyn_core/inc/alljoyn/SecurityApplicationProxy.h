@@ -627,17 +627,6 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     static QStatus MsgArgToCertificateIds(const MsgArg& arg, qcc::String* serials, qcc::KeyInfoNISTP256* issuerKeyInfos, size_t expectedSize);
-
-    /**
-     * Populate the array of rules certificates with data from the msg arg
-     * @param arg the message arg with signature a(ssa(syy)
-     * @param[in,out] rules the array of rules
-     * @param expectedSize the size of the array of rules
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    static QStatus MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize);
 };
 }
 
