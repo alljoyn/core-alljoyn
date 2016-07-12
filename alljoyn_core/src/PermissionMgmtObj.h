@@ -27,6 +27,7 @@
 #endif
 
 #include <memory>
+#include <vector>
 
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AllJoynStd.h>
@@ -826,7 +827,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus RetrieveIdentityCertChain(MsgArg** certArgs, size_t* count);
     QStatus RetrieveIdentityCertChainPEM(qcc::String& pem);
     QStatus StoreApplicationState();
-    QStatus LoadManifestTemplate(PermissionPolicy& policy);
+    QStatus LoadManifestTemplate(std::vector<PermissionPolicy::Rule>& manifestTemplate);
     bool HasDefaultPolicy();
     bool IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
     QStatus LookForManifestTemplate(bool& exist);

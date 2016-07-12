@@ -25,6 +25,11 @@
 #include <PermissionPolicy.h>
 #include <cstdio>
 
+#include "PermissionPolicyOverwriteUtils.h"
+#include "XmlPoliciesConverter.h"
+#include "XmlPoliciesConverterTest.h"
+#include "XmlManifestTemplateValidator.h"
+
 using namespace ajn;
 
 TEST(PermissionPolicyTest, construct)
@@ -220,6 +225,7 @@ TEST(PermissionPolicyTest, rule_constructor) {
     PermissionPolicy::Rule rule;
     EXPECT_STREQ("*", rule.GetObjPath().c_str());
     EXPECT_STREQ("", rule.GetInterfaceName().c_str());
+    EXPECT_EQ(PermissionPolicy::Rule::SecurityLevel::PRIVILEGED, rule.GetRecommendedSecurityLevel());
     EXPECT_TRUE(NULL == rule.GetMembers());
 }
 
@@ -235,6 +241,16 @@ TEST(PermissionPolicyTest, rule_set_get_InterfaceName)
     PermissionPolicy::Rule rule;
     rule.SetInterfaceName("baz");
     EXPECT_STREQ("baz", rule.GetInterfaceName().c_str());
+}
+
+TEST(PermissionPolicyTest, rule_set_get_RecommendedSecurityLevel)
+{
+    PermissionPolicy::Rule rule;
+
+    ASSERT_NE(PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED, rule.GetRecommendedSecurityLevel());
+    rule.SetRecommendedSecurityLevel(PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED);
+
+    EXPECT_EQ(PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED, rule.GetRecommendedSecurityLevel());
 }
 
 TEST(PermissionPolicyTest, rule_set_get_members)
@@ -264,7 +280,7 @@ TEST(PermissionPolicyTest, rule_set_get_members)
 
 }
 
-TEST(PermissionPolicyTest, rule_ToString)
+TEST(PermissionPolicyTest, manifestOrPolicyRule_ToString)
 {
     PermissionPolicy::Rule::Member members[2];
     members[0].Set("foo", PermissionPolicy::Rule::Member::METHOD_CALL, PermissionPolicy::Rule::Member::ACTION_MODIFY);
@@ -274,21 +290,52 @@ TEST(PermissionPolicyTest, rule_ToString)
     rule.SetObjPath("/foo/bar");
     rule.SetInterfaceName("baz");
     rule.SetMembers(2, members);
+    rule.SetRuleType(PermissionPolicy::Rule::MANIFEST_POLICY_RULE);
 
-    const char* expected = "<rule>\n"
-                           "  <objPath>/foo/bar</objPath>\n"
-                           "  <interfaceName>baz</interfaceName>\n"
-                           "  <member>\n"
-                           "    <name>foo</name>\n"
-                           "    <type>method call</type>\n"
-                           "    <action>Modify</action>\n"
-                           "  </member>\n"
-                           "  <member>\n"
-                           "    <name>bar</name>\n"
-                           "    <type>signal</type>\n"
-                           "    <action>Observe</action>\n"
-                           "  </member>\n"
-                           "</rule>\n";
+    AJ_PCSTR expected = "<rule>\n"
+                        "  <objPath>/foo/bar</objPath>\n"
+                        "  <interfaceName>baz</interfaceName>\n"
+                        "  <member>\n"
+                        "    <name>foo</name>\n"
+                        "    <type>method call</type>\n"
+                        "    <action>Modify</action>\n"
+                        "  </member>\n"
+                        "  <member>\n"
+                        "    <name>bar</name>\n"
+                        "    <type>signal</type>\n"
+                        "    <action>Observe</action>\n"
+                        "  </member>\n"
+                        "</rule>\n";
+    EXPECT_STREQ(expected, rule.ToString().c_str());
+}
+
+TEST(PermissionPolicyTest, manifestTemplateRule_ToString)
+{
+    PermissionPolicy::Rule::Member members[2];
+    members[0].Set("foo", PermissionPolicy::Rule::Member::METHOD_CALL, PermissionPolicy::Rule::Member::ACTION_MODIFY);
+    members[1].Set("bar", PermissionPolicy::Rule::Member::SIGNAL, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+
+    PermissionPolicy::Rule rule;
+    rule.SetObjPath("/foo/bar");
+    rule.SetInterfaceName("baz");
+    rule.SetMembers(2, members);
+    rule.SetRuleType(PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE);
+
+    AJ_PCSTR expected = "<rule>\n"
+        "  <objPath>/foo/bar</objPath>\n"
+        "  <interfaceName>baz</interfaceName>\n"
+        "  <recommendedSecurityLevel>" PRIVILEGED_SECURITY_LEVEL "</recommendedSecurityLevel>\n"
+        "  <member>\n"
+        "    <name>foo</name>\n"
+        "    <type>method call</type>\n"
+        "    <action>Modify</action>\n"
+        "  </member>\n"
+        "  <member>\n"
+        "    <name>bar</name>\n"
+        "    <type>signal</type>\n"
+        "    <action>Observe</action>\n"
+        "  </member>\n"
+        "</rule>\n";
     EXPECT_STREQ(expected, rule.ToString().c_str());
 }
 
@@ -301,6 +348,7 @@ TEST(PermissionPolicyTest, rule_copy_assign)
     PermissionPolicy::Rule rule;
     rule.SetObjPath("/foo/bar");
     rule.SetInterfaceName("baz");
+    rule.SetRecommendedSecurityLevel(PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED);
     rule.SetMembers(2, members);
 
     PermissionPolicy::Rule ruleCopy(rule);
@@ -439,4 +487,53 @@ TEST(PermissionPolicyTest, set_get_Acls)
 
     EXPECT_EQ(acls[0], aclsOut[0]);
     EXPECT_EQ(acls[1], aclsOut[1]);
+}
+
+TEST(PermissionPolicyRulesTest, shouldSuccessfullyExportManifestOrPolicyRuleToMsgArg)
+{
+    PermissionPolicy::Rule exportedRule;
+    MsgArg msgArg;
+
+    EXPECT_EQ(ER_OK, exportedRule.ToMsgArg(msgArg));
+}
+
+class PermissionPolicyImportExportTest : public testing::Test {
+  public:
+
+    virtual void SetUp() {
+        XmlPoliciesConverter::FromXml(s_validAllTypePeer, m_initialPolicy);
+
+        ASSERT_EQ(1U, m_initialPolicy.GetAclsSize());
+        ASSERT_EQ(1U, m_initialPolicy.GetAcls()[0].GetRulesSize());
+        ASSERT_EQ(1U, m_initialPolicy.GetAcls()[0].GetPeersSize());
+    }
+
+  protected:
+
+    MsgArg m_msgArg;
+    PermissionPolicy m_initialPolicy;
+    PermissionPolicy m_importedPolicy;
+};
+
+TEST_F(PermissionPolicyImportExportTest, shouldSuccessfullyExportPolicy)
+{
+    EXPECT_EQ(ER_OK, m_initialPolicy.Export(m_msgArg));
+}
+
+TEST_F(PermissionPolicyImportExportTest, shouldSuccessfullyImportPolicy)
+{
+    ASSERT_EQ(ER_OK, m_initialPolicy.Export(m_msgArg));
+
+    EXPECT_EQ(ER_OK, m_importedPolicy.Import(PermissionPolicy::SPEC_VERSION, m_msgArg));
+}
+
+TEST_F(PermissionPolicyImportExportTest, shouldImportManifestPolicyRulesType)
+{
+    PermissionPolicy::Rule::SecurityLevel changedSecurityLevel = PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED;
+    PolicyOverwriteUtils::ChangeRecommendedSecurityLevel(changedSecurityLevel, m_initialPolicy);
+
+    ASSERT_EQ(ER_OK, m_initialPolicy.Export(m_msgArg));
+    ASSERT_EQ(ER_OK, m_importedPolicy.Import(PermissionPolicy::SPEC_VERSION, m_msgArg));
+
+    EXPECT_EQ(PermissionPolicy::Rule::MANIFEST_POLICY_RULE, m_importedPolicy.GetAcls()[0].GetRules()[0].GetRuleType());
 }

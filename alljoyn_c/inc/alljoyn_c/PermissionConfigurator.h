@@ -456,7 +456,8 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getdefaultpolicy(alljoyn_p
                                                                        AJ_PSTR* policyXml);
 
 /**
- * This method deallocates strings returned by a call to alljoyn_permissionconfigurator_getidentitycertificateid.
+ * This method deallocates strings returned by a call to alljoyn_permissionconfigurator_getdefaultpolicy
+ * and alljoyn_permissionconfigurator_getpolicy.
  *
  * @param[in]    policyXml                  A string containing a policy in XML format returned by a call to either
  *                                          alljoyn_permissionconfigurator_getpolicy or
