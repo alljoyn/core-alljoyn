@@ -85,8 +85,13 @@ XmlRulesValidator* XmlManifestTemplateConverter::GetValidator()
     return XmlManifestTemplateValidator::GetInstance();
 }
 
+PermissionPolicy::Rule::RuleType XmlManifestTemplateConverter::GetRuleType()
+{
+    return PermissionPolicy::Rule::RuleType::MANIFEST_TEMPLATE_RULE;
+}
+
 void XmlManifestTemplateConverter::BuildXmlInterfaceAnnotations(const PermissionPolicy::Rule& rule, XmlElement* interfaceElement)
 {
-    AddChildAnnotation(interfaceElement, SECURITY_LEVEL_ANNOTATION_NAME, s_inverseSecurityLevelMap.at(rule.GetSecurityLevel()).c_str());
+    AddChildAnnotation(interfaceElement, SECURITY_LEVEL_ANNOTATION_NAME, s_inverseSecurityLevelMap.at(rule.GetRecommendedSecurityLevel()).c_str());
 }
 }

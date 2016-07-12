@@ -628,6 +628,14 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldReturnErrorForNonWellFormedXm
     EXPECT_EQ(ER_EOF, XmlRulesConverter::GetInstance()->XmlToRules(s_nonWellFormedXml, m_rules));
 }
 
+TEST_F(XmlRulesConverterToRulesDetailedTest, shouldSetManifestPolicyRuleType)
+{
+    ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));
+    ASSERT_EQ((size_t)1, m_rules.size());
+
+    EXPECT_EQ(PermissionPolicy::Rule::MANIFEST_POLICY_RULE, m_rules[0].GetRuleType());
+}
+
 TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidMethodForValidNeedAllRules)
 {
     ASSERT_EQ(ER_OK, XmlRulesConverter::GetInstance()->XmlToRules(s_validNeedAllRulesXml, m_rules));

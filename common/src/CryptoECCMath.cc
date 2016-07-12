@@ -131,7 +131,7 @@ namespace qcc {
 
 /* define ECDSA to include ECDSA functions */
 #define ECDSA
-/* define ECC_TEST to rename the the exported symbols to avoid name collisions
+/* define ECC_TEST to rename the exported symbols to avoid name collisions
    with openSSL, and a few other things necessary for linking with the
    test program ecctest.c */
 /* define ARM7_ASM to use assembly code specially for the ARM7 processor */

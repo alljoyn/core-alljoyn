@@ -275,7 +275,7 @@ class BusObject : public MessageReceiver {
      * @see AboutObj::Announce()
      *
      * @param[in] iface InterfaceDescription for the interface you wish to set
-     *                  the the announce flag.
+     *                  the announce flag.
      * @param[in] isAnnounced This interface should be part of the Announce signal
      *                        UNANNOUNCED - this interface will not be part of the Announce
      *                                      signal

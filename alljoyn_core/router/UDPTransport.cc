@@ -130,7 +130,7 @@
  * Object consults the transports on the transport list (the UDP transport is
  * one of those) and eventually sends an advertisement request to each specified
  * transport by calling each transport's EnableAdvertisement() method.  We
- * transnslate this call to a call to the the IpNameService::AdvertiseName()
+ * transnslate this call to a call to the IpNameService::AdvertiseName()
  * method we call since we are an IP-based transport.  The IP name service will
  * multicast the advertisements to other daemons listening on our device's
  * connected networks.
