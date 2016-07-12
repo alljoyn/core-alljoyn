@@ -190,7 +190,7 @@ public interface AboutDataListener {
      *
      * @return ER_OK on successful
      */
-    public Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException;
+    Map<String, Variant> getAboutData(String language) throws ErrorReplyBusException;
 
     /**
      * Return a Dictionary containing the AboutData that
@@ -218,5 +218,5 @@ public interface AboutDataListener {
      *
      * @return a dictionary that contains the Announce data.
      */
-    public Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException;
+    Map<String, Variant> getAnnouncedAboutData() throws ErrorReplyBusException;
 }
