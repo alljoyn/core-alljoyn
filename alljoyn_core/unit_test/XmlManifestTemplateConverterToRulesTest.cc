@@ -233,6 +233,15 @@ class XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest : public te
     }
 };
 
+TEST(XmlManifestTemplateConverterTest, shouldSetManifestTemplateRuleType)
+{
+    vector<PermissionPolicy::Rule> rules;
+    ASSERT_EQ(ER_OK, XmlManifestTemplateConverter::GetInstance()->XmlToRules(s_validDefaultSecurityLevelAnnotation, rules));
+    ASSERT_EQ((size_t)1, rules.size());
+
+    EXPECT_EQ(PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE, rules[0].GetRuleType());
+}
+
 INSTANTIATE_TEST_CASE_P(XmlManifestTemplateConverterToRulesSecurityLevelAnnotations,
                         XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest,
                         ::testing::Values(SecurityLevelParams(s_validDefaultSecurityLevelAnnotation, PermissionPolicy::Rule::SecurityLevel::PRIVILEGED),

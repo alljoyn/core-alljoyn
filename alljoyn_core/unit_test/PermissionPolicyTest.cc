@@ -489,7 +489,7 @@ TEST_F(PermissionPolicyImportExportTest, shouldSuccessfullyImportPolicy)
     EXPECT_EQ(ER_OK, m_importedPolicy.Import(PermissionPolicy::SPEC_VERSION, m_msgArg));
 }
 
-TEST_F(PermissionPolicyImportExportTest, shouldImportExportedRecommendedSecurityLevel)
+TEST_F(PermissionPolicyImportExportTest, shouldImportManifestPolicyRulesType)
 {
     PermissionPolicy::Rule::SecurityLevel changedSecurityLevel = PermissionPolicy::Rule::SecurityLevel::UNAUTHORIZED;
     PolicyOverwriteUtils::ChangeRecommendedSecurityLevel(changedSecurityLevel, m_initialPolicy);
@@ -497,5 +497,5 @@ TEST_F(PermissionPolicyImportExportTest, shouldImportExportedRecommendedSecurity
     ASSERT_EQ(ER_OK, m_initialPolicy.Export(m_msgArg));
     ASSERT_EQ(ER_OK, m_importedPolicy.Import(PermissionPolicy::SPEC_VERSION, m_msgArg));
 
-    EXPECT_EQ(changedSecurityLevel, m_importedPolicy.GetAcls()[0].GetRules()[0].GetRecommendedSecurityLevel());
+    EXPECT_EQ(PermissionPolicy::Rule::MANIFEST_POLICY_RULE, m_importedPolicy.GetAcls()[0].GetRules()[0].GetRuleType());
 }

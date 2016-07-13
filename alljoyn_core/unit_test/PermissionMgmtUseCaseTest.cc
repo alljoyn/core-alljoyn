@@ -2150,13 +2150,14 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
     void SetManifestTemplateOnServiceProvider()
     {
 
-        PermissionPolicy::Rule* rules = NULL;
+        PermissionPolicy::Rule* rules = nullptr;
         size_t count = 0;
         QStatus status = GenerateManifestTemplate(&rules, &count);
         EXPECT_EQ(ER_OK, status) << "  SetPermissionManifestTemplate GenerateManifest failed.  Actual Status: " << QCC_StatusText(status);
         PermissionConfigurator& pc = serviceBus.GetPermissionConfigurator();
         status = pc.SetPermissionManifestTemplate(rules, count);
         EXPECT_EQ(ER_OK, status) << "  SetPermissionManifestTemplate SetPermissionManifestTemplate failed.  Actual Status: " << QCC_StatusText(status);
+        delete[] rules;
 
         SecurityApplicationProxy saProxy(adminBus, serviceBus.GetUniqueName().c_str());
         MsgArg arg;
@@ -2164,14 +2165,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         size_t retrievedCount = arg.v_array.GetNumElements();
         ASSERT_EQ(count, retrievedCount) << "Install manifest template size is different than original.";
         if (retrievedCount == 0) {
-            delete [] rules;
             return;
         }
 
-        PermissionPolicy::Rule* retrievedRules = new PermissionPolicy::Rule[count];
-        EXPECT_EQ(ER_OK, SecurityApplicationProxy::MsgArgToRules(arg, retrievedRules, count)) << "SecurityApplicationProxy::MsgArgToRules failed.";
-        delete [] rules;
-        delete [] retrievedRules;
+        vector<PermissionPolicy::Rule> retrievedRules;
+        EXPECT_EQ(ER_OK, PermissionPolicy::MsgArgToManifestTemplate(arg, retrievedRules)) << "PermissionPolicy::MsgArgToManifestTemplate failed.";
 
         /* retrieve the manifest template digest */
         uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
