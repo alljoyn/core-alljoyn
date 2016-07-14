@@ -18,6 +18,7 @@
 #import "AJNObject.h"
 #import "AJNStatus.h"
 #import "AJNSessionOptions.h"
+#import "AJNInterfaceMember.h"
 #import "AJNMessage.h"
 #import "AJNTranslator.h"
 
@@ -44,6 +45,11 @@
  * @return Last component of object path.
  */
 @property (nonatomic, readonly) NSString *name;
+
+/**
+ * Get a list of the interfaces that are added to this BusObject that will be announced.
+ */
+@property (nonatomic, readonly) NSArray *announcedInterfaces;
 
 /**
  * Indicates if this object is secure.
@@ -87,6 +93,146 @@ typedef enum AJNAnnounceFlag{
  * @param sessionId     ID of the session we broadcast the signal to (0 for all)
  */
 - (void)emitPropertyWithName:(NSString *)propertyName onInterfaceWithName:(NSString *)interfaceName changedToValue:(AJNMessageArgument *)value inSession:(AJNSessionId)sessionId;
+
+/**
+ * Emit PropertiesChanged to signal the bus that this property has been updated
+ *
+ *
+ * @param propertyName  The name of the property being changed
+ * @param interfaceName The name of the interface
+ * @param value         The new value of the property
+ * @param sessionId     ID of the session we broadcast the signal to (0 for all)
+ * @param flags         Flags to be added to the signal.
+ */
+- (void)emitPropertyWithName:(NSString *)propertyName onInterfaceWithName:(NSString *)interfaceName changedToValue:(AJNMessageArgument *)value inSession:(AJNSessionId)sessionId withFlags:(uint8_t)flags;
+
+/**
+ * Emit PropertiesChanged to signal the bus that these properties have been updated
+ *
+ *  BusObject must be registered before calling this method.
+ *
+ * @param propNames An array with the names of the properties being changed
+ * @param ifcName   The name of the interface
+ * @param id        ID of the session we broadcast the signal to (0 for all)
+ * @param flags     Flags to be added to the signal.
+ *
+ * @return   ER_OK if successful.
+ */
+- (QStatus)emitPropertiesWithNames:(NSArray*)propNames onInterfaceWithName:(NSString*)ifcName inSession:(AJNSessionId)sessionId withFlags:(uint8_t)flags;
+
+/**
+ * Send a signal.
+ *
+ * When using session-cast signals in a multi-point session, all members of
+ * the session will see the signal.
+ *
+ * When using security and session-cast signals in a multipoint session all
+ * members must be in an established trust relationship or a specific
+ * destination specified. Otherwise the signal will not been seen by any peers.
+ *
+ * When using security with policy and manifest (aka security 2.0) if the
+ * destination is not specified only the receiving peers policy will be used
+ * when deciding to trust the signal. The sending peer will not check its
+ * policy before sending the signal.
+ *
+ * There is no way to securely transmit sessionless signals since there is
+ * no way to establish a trust relationship between sending and receiving
+ * peers
+ *
+ * @param destination  The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
+ * @param sessionId    A unique SessionId for this AllJoyn session instance. The session this message is for.
+ *                     Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
+ *                     For broadcast or sessionless signals, the sessionId must be 0.
+ * @param signal       Interface member of signal being emitted.
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
+ *      - An error status otherwise
+ */
+- (QStatus)signal:(NSString*)destination inSession:(AJNSessionId)sessionId withSignal:(AJNInterfaceMember*)signalMmbr;
+
+/**
+ * Send a signal.
+ *
+ * When using session-cast signals in a multi-point session, all members of
+ * the session will see the signal.
+ *
+ * When using security and session-cast signals in a multipoint session all
+ * members must be in an established trust relationship or a specific
+ * destination specified. Otherwise the signal will not been seen by any peers.
+ *
+ * When using security with policy and manifest (aka security 2.0) if the
+ * destination is not specified only the receiving peers policy will be used
+ * when deciding to trust the signal. The sending peer will not check its
+ * policy before sending the signal.
+ *
+ * There is no way to securely transmit sessionless signals since there is
+ * no way to establish a trust relationship between sending and receiving
+ * peers
+ *
+ * @param destination  The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
+ * @param sessionId    A unique SessionId for this AllJoyn session instance. The session this message is for.
+ *                     Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
+ *                     For broadcast or sessionless signals, the sessionId must be 0.
+ * @param signal       Interface member of signal being emitted.
+ * @param args         The arguments for the signal (can be NULL)
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
+ *      - An error status otherwise
+ */
+- (QStatus)signal:(NSString*)destination inSession:(AJNSessionId)sessionId withSignal:(AJNInterfaceMember*)signalMmbr withArgs:(NSArray*)args;
+
+/**
+ * Send a signal.
+ *
+ * When using session-cast signals in a multi-point session, all members of
+ * the session will see the signal.
+ *
+ * When using security and session-cast signals in a multipoint session all
+ * members must be in an established trust relationship or a specific
+ * destination specified. Otherwise the signal will not been seen by any peers.
+ *
+ * When using security with policy and manifest (aka security 2.0) if the
+ * destination is not specified only the receiving peers policy will be used
+ * when deciding to trust the signal. The sending peer will not check its
+ * policy before sending the signal.
+ *
+ * There is no way to securely transmit sessionless signals since there is
+ * no way to establish a trust relationship between sending and receiving
+ * peers
+ *
+ * @param destination  The unique or well-known bus name or the signal recipient (NULL for broadcast signals)
+ * @param sessionId    A unique SessionId for this AllJoyn session instance. The session this message is for.
+ *                     Use SESSION_ID_ALL_HOSTED to emit on all sessions hosted by this BusObject's BusAttachment.
+ *                     For broadcast or sessionless signals, the sessionId must be 0.
+ * @param signal       Interface member of signal being emitted.
+ * @param args         The arguments for the signal (can be NULL)
+ * @param numArgs      The number of arguments
+ * @param timeToLive   If non-zero this specifies the useful lifetime for this signal.
+ *                     For sessionless signals the units are seconds.
+ *                     For all other signals the units are milliseconds.
+ *                     If delivery of the signal is delayed beyond the timeToLive due to
+ *                     network congestion or other factors the signal may be discarded. There is
+ *                     no guarantee that expired signals will not still be delivered.
+ * @param flags        Logical OR of the message flags for this signals. The following flags apply to signals:
+ *                     - If ::ALLJOYN_FLAG_GLOBAL_BROADCAST is set broadcast signal (null destination) will be
+ *                       forwarded to all Routing Nodes in the system.
+ *                     - If ::ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is
+ *                       encrypted.
+ *                     - If ::ALLJOYN_FLAG_SESSIONLESS is set the signal will be sent as a Sessionless Signal. NOTE:
+ *                       if this flag and the GLOBAL_BROADCAST flags are set it could result in the same signal
+ *                       being received twice.
+ *
+ * @param msg          [OUT] If non-null, the sent signal message is returned to the caller.
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_OBJECT_NOT_REGISTERED if bus object has not yet been registered
+ *      - An error status otherwise
+ */
+- (QStatus)signal:(NSString*)destination inSession:(AJNSessionId)sessionId withSignal:(AJNInterfaceMember*)signalMmbr withArgs:(NSArray*)args ttl:(uint16_t)timeToLive withFlags:(uint8_t)flags withMsg:(AJNMessage**)msg;
 
 /**
  * Remove sessionless message sent from this object from local daemon's
