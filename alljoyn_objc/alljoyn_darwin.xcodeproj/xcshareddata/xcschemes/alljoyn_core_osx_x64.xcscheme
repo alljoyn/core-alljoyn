@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "5B2CB73B1D36CF38005DA7F2"
-               BuildableName = "alljoyn_core_ios_armv7s"
-               BlueprintName = "alljoyn_core_ios_armv7s"
+               BlueprintIdentifier = "5B88F9BE1D340C67002DCB1E"
+               BuildableName = "alljoyn_core_osx_x64"
+               BlueprintName = "alljoyn_core_osx_x64"
                ReferencedContainer = "container:alljoyn_darwin.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -39,18 +39,56 @@
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
-      debugDocumentVersioning = "YES"
+      debugDocumentVersioning = "NO"
       debugServiceExtension = "internal"
       allowLocationSimulation = "YES">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5B2CB73B1D36CF38005DA7F2"
-            BuildableName = "alljoyn_core_ios_armv7s"
-            BlueprintName = "alljoyn_core_ios_armv7s"
+            BlueprintIdentifier = "5B88F9BE1D340C67002DCB1E"
+            BuildableName = "alljoyn_core_osx_x64"
+            BlueprintName = "alljoyn_core_osx_x64"
             ReferencedContainer = "container:alljoyn_darwin.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
+      <CommandLineArguments>
+         <CommandLineArgument
+            argument = "-os"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-oc"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-s"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-n com.boobaroo"
+            isEnabled = "YES">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-l"
+            isEnabled = "NO">
+         </CommandLineArgument>
+         <CommandLineArgument
+            argument = "-t 2"
+            isEnabled = "NO">
+         </CommandLineArgument>
+      </CommandLineArguments>
+      <EnvironmentVariables>
+         <EnvironmentVariable
+            key = "ER_DEBUG_NS"
+            value = "15"
+            isEnabled = "YES">
+         </EnvironmentVariable>
+         <EnvironmentVariable
+            key = "ER_DEBUG_ALL"
+            value = "15"
+            isEnabled = "NO">
+         </EnvironmentVariable>
+      </EnvironmentVariables>
       <AdditionalOptions>
       </AdditionalOptions>
    </LaunchAction>
@@ -63,9 +101,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "5B2CB73B1D36CF38005DA7F2"
-            BuildableName = "alljoyn_core_ios_armv7s"
-            BlueprintName = "alljoyn_core_ios_armv7s"
+            BlueprintIdentifier = "5B88F9BE1D340C67002DCB1E"
+            BuildableName = "alljoyn_core_osx_x64"
+            BlueprintName = "alljoyn_core_osx_x64"
             ReferencedContainer = "container:alljoyn_darwin.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
