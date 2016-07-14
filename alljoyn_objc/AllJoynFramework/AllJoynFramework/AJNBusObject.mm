@@ -42,6 +42,27 @@ using namespace ajn;
 
 @end
 
+using namespace ajn;
+
+@interface AJNBusAttachment(Private)
+
+@property (nonatomic, readonly) BusAttachment *busAttachment;
+
+@end
+
+
+@interface AJNInterfaceMember(Private)
+
+@property (nonatomic, readonly) ajn::InterfaceDescription::Member *member;
+
+@end
+
+@interface AJNInterfaceProperty(Private)
+
+@property (nonatomic, readonly) ajn::InterfaceDescription::Property *property;
+
+@end
+
 @implementation AJNBusObject
 
 @synthesize bus = _bus;
@@ -97,6 +118,25 @@ using namespace ajn;
     self.busObject->EmitPropChanged([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg, sessionId);
 }
 
+- (void)emitPropertyWithName:(NSString *)propertyName onInterfaceWithName:(NSString *)interfaceName changedToValue:(AJNMessageArgument *)value inSession:(AJNSessionId)sessionId withFlags:(uint8_t)flags
+{
+    self.busObject->EmitPropChanged([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg, sessionId, flags);
+}
+
+- (QStatus)emitPropertiesWithNames:(NSArray*)propNames onInterfaceWithName:(NSString*)ifcName inSession:(AJNSessionId)sessionId withFlags:(uint8_t)flags
+{
+    QStatus status = ER_OK;
+    const char **properties = new const char*[propNames.count];
+    for (int i = 0; i < propNames.count; i++) {
+        properties[i] = [[propNames objectAtIndex:i] UTF8String];
+    }
+    status = self.busObject->EmitPropChanged([ifcName UTF8String], properties, propNames.count, sessionId, flags);
+    
+    delete[] properties;
+    
+    return status;
+}
+
 - (QStatus)cancelSessionlessMessageWithSerial:(uint32_t)serialNumber
 {
     return self.busObject->CancelSessionlessMessage(serialNumber);
@@ -110,6 +150,43 @@ using namespace ajn;
 - (void)setDescription:(NSString *)description inLanguage:(NSString *)language
 {
     [self busObject]->SetDescription([language UTF8String], [description UTF8String]);
+}
+
+- (QStatus)signal:(NSString *)destination inSession:(AJNSessionId)sessionId withSignal:(AJNInterfaceMember *)signalMmbr
+{
+    ajn::InterfaceDescription::Member ifcMember = *(signalMmbr.member);
+    return self.busObject->Signal([destination UTF8String], sessionId, ifcMember);
+}
+
+- (QStatus)signal:(NSString*)destination inSession:(AJNSessionId)sessionId withSignal:(AJNInterfaceMember*)signalMmbr withArgs:(NSArray*)args
+{
+    QStatus status = ER_OK;
+    ajn::InterfaceDescription::Member ifcMember = *(signalMmbr.member);
+    MsgArg * pArgs = new MsgArg[args.count];
+    
+    for (int i = 0; i < args.count; i++) {
+        pArgs[i] = *[[args objectAtIndex:i] msgArg];
+    }
+    status = self.busObject->Signal([destination UTF8String], sessionId, ifcMember, pArgs);
+    delete [] pArgs;
+    return status;
+}
+
+
+- (QStatus)signal:(NSString *)destination inSession:(AJNSessionId)sessionId withSignal:(AJNInterfaceMember *)signalMmbr withArgs:(NSArray *)args ttl:(uint16_t)timeToLive withFlags:(uint8_t)flags withMsg:(AJNMessage **)msg
+{
+    QStatus status = ER_OK;
+    ajn::InterfaceDescription::Member ifcMember = *(signalMmbr.member);
+    MsgArg * pArgs = new MsgArg[args.count];
+    
+    for (int i = 0; i < args.count; i++) {
+        pArgs[i] = *[[args objectAtIndex:i] msgArg];
+    }
+    Message *replyMsg = new Message(*self.bus.busAttachment);
+    status = self.busObject->Signal([destination UTF8String], sessionId, ifcMember, pArgs, args.count, timeToLive, flags, replyMsg);
+    delete [] pArgs;
+    *msg = [[AJNMessage alloc] initWithHandle:replyMsg];
+    return status;
 }
 
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator
