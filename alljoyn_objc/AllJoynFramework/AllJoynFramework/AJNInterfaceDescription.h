@@ -55,6 +55,12 @@
 /** An XML description of the interface */
 @property (readonly, nonatomic) NSString *xmlDescription;
 
+/** Get the language tag for the introspection descriptions of this InterfaceDescription */
+@property (readonly, nonatomic) NSString *language;
+
+/** Get the Translator that provies this InterfaceDescription's introspection descprition in multiple lanauges */
+@property (readonly, nonatomic) id<AJNTranslator> translator;
+
 /**
  * Indicates if this interface is secure. Secure interfaces require end-to-end authentication.
  * The arguments for methods calls made to secure interfaces and signals emitted by secure
@@ -69,6 +75,14 @@
  * @return  true if interface has any properties.
  */
 @property (readonly, nonatomic) BOOL hasProperties;
+
+/**
+ * Check for existence of any cacheable properties.
+ */
+@property (readonly, nonatomic) BOOL hasCacheableProperties;
+
+/** Does this interface have at least one description on an element. */
+@property (readonly, nonatomic) BOOL hasDescription;
 
 @property (nonatomic) AJNBusAttachment *bus;
 
@@ -96,6 +110,38 @@ typedef enum AJNInterfaceSecurityPolicy{
 
 - (id)initWithHandle:(AJNHandle)handle;
 - (id)initWithHandle:(AJNHandle)handle shouldDeleteHandleOnDealloc:(BOOL)deletionFlag;
+
+/**
+ * Add a member to the interface.
+ *
+ * @param type        Message type.
+ * @param name        Name of member.
+ * @param inputSig    Signature of input parameters or NULL for none.
+ * @param outSig      Signature of output parameters or NULL for none.
+ * @param argNames    Comma separated list of input and then output arg names used in annotation XML.
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
+ */
+- (QStatus)addMember:(AJNMessageType)type name:(NSString*)name inputSig:(NSString*)inputSig outSig:(NSString*)outSig argNames:(NSString*)argNames;
+
+/**
+ * Add a member to the interface.
+ *
+ * @param type        Message type.
+ * @param name        Name of member.
+ * @param inputSig    Signature of input parameters or NULL for none.
+ * @param outSig      Signature of output parameters or NULL for none.
+ * @param argNames    Comma separated list of input and then output arg names used in annotation XML.
+ * @param annotation  Annotation flags.
+ * @param accessPerms Required permissions to invoke this call
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
+ */
+- (QStatus)addMember:(AJNMessageType)type name:(NSString*)name inputSig:(NSString*)inputSig outSig:(NSString*)outSig argNames:(NSString*)argNames annotation:(uint8_t)annotation accessPerms:(NSString*)accessPerms;
 
 
 
@@ -151,7 +197,17 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (AJNInterfaceMember *)methodWithName:(NSString *)methodName;
 
 /**
- * Add a signal member to the interface.
+ * Add a signal member to the interface. (Deprecated)
+ *
+ * @param name              Name of method call member.
+ *
+ * @return  - ER_OK if successful
+ *          - ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
+ */
+- (QStatus)addSignalWithName:(NSString *)name;
+
+/**
+ * Add a signal member to the interface. (Deprecated)
  *
  * @param name              Name of method call member.
  * @param inputSignature    Signature of parameters or NULL for none.
@@ -161,19 +217,6 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
  */
 - (QStatus)addSignalWithName:(NSString *)name inputSignature:(NSString *)inputSignature argumentNames:(NSArray *)arguments;
-
-/**
- * Add a signal member to the interface.
- *
- * @param name              Name of method call member.
- * @param inputSignature    Signature of parameters or NULL for none.
- * @param arguments         Comma separated list of arg names used in annotation XML.
- * @param annotation        Annotation flags.
- *
- * @return  - ER_OK if successful
- *          - ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
- */
-- (QStatus)addSignalWithName:(NSString *)name inputSignature:(NSString *)inputSignature argumentNames:(NSArray *)arguments annotation:(AJNInterfaceAnnotationFlags)annotation;
 
 /**
  * Add a signal member to the interface.
@@ -203,16 +246,6 @@ typedef enum AJNInterfaceSecurityPolicy{
  *
  * @param name          Name of property.
  * @param signature     Property type.
- * @return  - ER_OK if successful.
- *          - ER_BUS_PROPERTY_ALREADY_EXISTS if the property can not be added because it already exists.
- */
-- (QStatus)addPropertyWithName:(NSString*)name signature:(NSString*)signature;
-
-/**
- * Add a property to the interface.
- *
- * @param name          Name of property.
- * @param signature     Property type.
  * @param permissions   Access permission - Read Only, Read/Write, or Write Only
  * @return  - ER_OK if successful.
  *          - ER_BUS_PROPERTY_ALREADY_EXISTS if the property can not be added because it already exists.
@@ -220,12 +253,20 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)addPropertyWithName:(NSString *)name signature:(NSString *)signature accessPermissions:(AJNInterfacePropertyAccessPermissionsFlags)permissions;
 
 /**
- * Check for existence of a property.
+ * Lookup a property description by name.
  *
  * @param propertyName       Name of the property to lookup
  * @return An object representing the property if the property exists, otherwise nil.
  */
 - (AJNInterfaceProperty *)propertyWithName:(NSString *)propertyName;
+
+/**
+ * Check for existence of a property.
+ *
+ * @param propertyName       Name of the property to lookup
+ * @return true if the property exists.
+ */
+- (BOOL)hasPropertyWithName:(NSString*)propertyName;
 
 /**
  * Lookup a member description by name
@@ -257,7 +298,7 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue;
 
 /**
- * Get the annotation value for a member (signal or method).
+ * Get annotation to an existing member (signal or method).
  *
  * @param annotationName    Name of annotation
  * @param memberName        Name of member
@@ -265,10 +306,10 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return  - string value of annotation if found
  *          - nil if annotation not found
  */
-- (NSString *)annotationWithName:(NSString *)annotationName forMemberWithName:(NSString *)memberName;
+- (NSString *)memberAnnotationWithName:(NSString *)annotationName forMemberWithName:(NSString *)memberName;
 
 /**
- * Add an annotation to a member (signal or method).
+ * Add an annotation to an exisiting member (signal or method).
  *
  * @param annotationName    Name of annotation
  * @param annotationValue   Value of annotation
@@ -277,7 +318,7 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return  - ER_OK if successful
  *          - ER_BUS_MEMBER_ALREADY_EXISTS if annotation already exists
  */
-- (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forMemberWithName:(NSString *)memberName;
+- (QStatus)addMemberAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forMemberWithName:(NSString *)memberName;
 
 /**
  * Get the annotation value for a property.
@@ -291,7 +332,7 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (NSString *)annotationWithName:(NSString *)annotationName forPropertyWithName:(NSString *)propertyName;
 
 /**
- * Add an annotation to a property.
+ * Add annotation to an existing property.
  *
  * @param annotationName    Name of annotation
  * @param annotationValue   Value of annotation
@@ -300,24 +341,36 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return  - ER_OK if successful
  *          - ER_BUS_MEMBER_ALREADY_EXISTS if annotation already exists
  */
-- (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forPropertyWithName:(NSString *)propertyName;
+- (QStatus)addPropertyAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forPropertyWithName:(NSString *)propertyName;
 
 /**
- * Set the description language for this Interface
+ * Set the language tag for the introspection descriptions of this InterfaceDescription.
  *
  * @param language the language of this Interface's descriptions
  */
 - (void)setDescriptionLanguage:(NSString *)language;
 
 /**
- * Set this Interface's description
- * 
+ * Set the introspection description for this InterfaceDescription.
+ *
  * @param description This Interface's description
  */
 - (void)setDescription:(NSString *)description;
 
 /**
- * Set a description for a method or signal of this Interface
+ * Set the introspection description for "member" of this InterfaceDescription.
+ *
+ * @param description The description of the method or signal
+ * @param member The name of the method or signal
+ *
+ * @return  - ER_OK if successful
+ *          - ER_BUS_INTERFACE_NO_SUCH_MEMBER if the method or signal does not exist
+ *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
+ */
+- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member;
+
+/**
+ * Set the introspection description for "member" of this InterfaceDescription.
  *
  * @param description The description of the method or signal
  * @param member The name of the method or signal
@@ -330,7 +383,7 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless;
 
 /**
- * Set a description for a property of this Interface
+ * Set the introspection description for "property" of this InterfaceDescription.
  *
  * @param description The description of the property
  * @param propName The name of the property
@@ -342,7 +395,7 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName;
 
 /**
- * Set a description for an argument of a method or signal of this Interface
+ * Set the introspection description for the argument "arg of member" of this InterfaceDescription.
  *
  * @param description The description of the argument
  * @param argName The name of the argument
@@ -355,8 +408,8 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member;
 
 /**
- * Set this Interface's AJNTransalator
- * 
+ * Set the Translator that provides this InterfaceDescription's introspection description in multiple lauanges.
+ *
  * @param translator The AJNTranslator
  */
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
@@ -374,6 +427,34 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return TRUE if the member name exists, otherwise returns FALSE.
  */
 - (BOOL)hasMemberWithName:(NSString *)name inputSignature:(NSString *)inputs outputSignature:(NSString *)outputs;
+
+/**
+ * Add an annotation to an existing argument.
+ *
+ * @param member     Name of member.
+ * @param arg        Name of the argument.
+ * @param name       Name of annotation.
+ * @param value      Value for the annotation.
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_ANNOTATION_ALREADY_EXISTS if annotation already exists
+ */
+- (QStatus)addArgAnnotationWithName:(NSString*)member arg:(NSString*)arg name:(NSString*)name value:(NSString*)value;
+
+/**
+ * Get annotation from an existing argument.
+ *
+ * @param member     Name of member.
+ * @param arg        Name of the argument.
+ * @param name       Name of annotation.
+ * @param value      Output value for the annotation.
+ *
+ * @return
+ *      - annotaiton value if found
+ *      - nil if annotation not found
+ */
+- (NSString*)getArgAnnotationWithName:(NSString*)member arg:(NSString*)arg name:(NSString*)name;
 
 /**
  * Activate this interface. An interface must be activated before it can be used. Activating an
