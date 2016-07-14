@@ -77,6 +77,11 @@ const AJNMessageFlag kAJNMessageFlagEncrypted           = 0x80;
     return self.message->IsGlobalBroadcast();
 }
 
+- (BOOL)isSessionless
+{
+    return self.message->IsSessionless();
+}
+
 - (AJNMessageFlag)flags
 {
     return self.message->GetFlags();
@@ -126,12 +131,24 @@ const AJNMessageFlag kAJNMessageFlagEncrypted           = 0x80;
     return arguments;
 }
 
+- (NSArray*)referenceArguments
+{
+    size_t argCount;
+    const MsgArg * args;
+    self.message->GetRefArgs(argCount, args);
+    NSMutableArray *arguments = [[NSMutableArray alloc] initWithCapacity:argCount];
+    for (int i = 0; i < argCount; i++) {
+        [arguments addObject:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&(args[i])]];
+    }
+    return arguments;
+}
+
 - (uint32_t)callSerialNumber
 {
     return self.message->GetCallSerial();
 }
 
-- (AJNMessageHeaderFields *)headerFields 
+- (AJNMessageHeaderFields *)headerFields
 {
     return [[AJNMessageHeaderFields alloc] initWithHandle:(AJNHandle)(&(self.message->GetHeaderFields()))];
 }
@@ -211,6 +228,17 @@ const AJNMessageFlag kAJNMessageFlagEncrypted           = 0x80;
 - (uint32_t)timeStamp
 {
     return self.message->GetTimeStamp();
+}
+
+- (int32_t)authVersion
+{
+    return self.message->GetAuthVersion();
+}
+
+- (AJNMessageArgument*)arg:(size_t)withIndex
+{
+    const MsgArg* ajArg = self.message->GetArg(withIndex);
+    return [[AJNMessageArgument alloc] initWithHandle:(AJNHandle)ajArg];
 }
 
 - (void)dealloc
