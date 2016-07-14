@@ -31,9 +31,9 @@
  * org.alljoyn.About.GetAboutData. The returned MsgArg must contain the
  * AboutData dictionary for the Language specified.
  *
- * The Dictionary will contain the signature key value pairs where the key is a string 
- * value a AJNMessageArgument. The value should not be a variant since the bindings 
- * currently do not support variants. Instead providing an exact type for the message 
+ * The Dictionary will contain the signature key value pairs where the key is a string
+ * value a AJNMessageArgument. The value should not be a variant since the bindings
+ * currently do not support variants. Instead providing an exact type for the message
  * argument would work
  *
  * TODO add more documentation for the Key/Value pair requirements here.
