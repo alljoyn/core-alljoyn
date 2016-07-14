@@ -41,10 +41,10 @@
         // create the internal C++ bus object
         //
         AJNCBusObjectImpl *busObject = new AJNCBusObjectImpl(*((ajn::BusAttachment*)busAttachment.handle), [path UTF8String], self);
-        
+
         self.handle = busObject;
     }
-    
+
     return self;
 }
 
@@ -61,11 +61,11 @@
     if (self.session.identifier != sessionId) {
         return;
     }
-    
+
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     [formatter setTimeStyle:NSDateFormatterMediumStyle];
     [formatter setDateStyle:NSDateFormatterShortStyle];
-    
+
     AJNCMessage *chatMessage = [[AJNCMessage alloc] initWithText:message fromSender:sender atDateTime:[formatter stringFromDate:[NSDate date]]];
     [self.session.messages addObject:chatMessage];
 
