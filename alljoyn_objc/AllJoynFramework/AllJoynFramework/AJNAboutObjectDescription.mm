@@ -81,55 +81,46 @@ using namespace ajn;
     return self.aboutObjectDescription->CreateFromMsgArg(*msgArg.msgArg);
 }
 
-- (size_t)getPaths:(NSMutableArray **)path withSize:(size_t)numOfPaths
+- (NSArray*)paths
 {
     size_t pathCount = self.aboutObjectDescription->GetPaths(NULL, 0);
-    if (path == nil && numOfPaths == 0) {
-        return pathCount;
+    const char** ajPaths = new const char*[pathCount];
+    NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:pathCount];
+    self.aboutObjectDescription->GetPaths(ajPaths, 0);
+    for (int i=0 ; i < pathCount ; i++) {
+        NSString *objPath = [[NSString alloc] initWithUTF8String:ajPaths[i]];
+        [paths addObject:objPath];
     }
-    numOfPaths = (pathCount < numOfPaths) ? pathCount : numOfPaths;
-    const char** paths = new const char*[numOfPaths];
-    pathCount = self.aboutObjectDescription->GetPaths(paths, numOfPaths);
-    for (int i=0 ; i < numOfPaths ; i++) {
-        NSString *objPath = [[NSString alloc] initWithUTF8String:paths[i]];
-        [*path addObject:objPath];
-    }
-    delete []paths;
-    return pathCount;
+    delete []ajPaths;
+    return paths;
 }
 
-- (size_t)getInterfacesForPath:(NSString *)path interfaces:(NSMutableArray **)interfaces numOfInterfaces:(size_t)numOfInterfaces
+- (NSMutableArray*)getInterfacesForPath:(NSString *)path
 {
     size_t interfaceCount = self.aboutObjectDescription->GetInterfaces([path UTF8String], NULL, 0);
-    if (interfaces == nil && numOfInterfaces == 0) {
-        return interfaceCount;
-    }
-    numOfInterfaces = (interfaceCount < numOfInterfaces) ? interfaceCount : numOfInterfaces;
-    const char** ifaces = new const char*[numOfInterfaces];
-    interfaceCount = self.aboutObjectDescription->GetInterfaces([path UTF8String], ifaces, numOfInterfaces);
-    for (int i=0 ; i < numOfInterfaces ; i++) {
+    const char** ifaces = new const char*[interfaceCount];
+    NSMutableArray *interfaces = [[NSMutableArray alloc] initWithCapacity:interfaceCount];
+    self.aboutObjectDescription->GetInterfaces([path UTF8String], ifaces, interfaceCount);
+    for (int i=0 ; i < interfaceCount ; i++) {
         NSString *ifacePath = [[NSString alloc] initWithUTF8String:ifaces[i]];
-        [*interfaces addObject:ifacePath];
+        [interfaces addObject:ifacePath];
     }
     delete []ifaces;
-    return interfaceCount;
+    return interfaces;
 }
 
-- (size_t)getInterfacePathsForInterface:(NSString *)interface paths:(NSMutableArray **)paths numOfPaths:(size_t)numOfPaths
+- (NSMutableArray*)getInterfacePathsForInterface:(NSString *)interface
 {
     size_t pathCount = self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], NULL, 0);
-    if (paths == nil && numOfPaths == 0) {
-        return pathCount;
-    }
-    numOfPaths = (pathCount < numOfPaths) ? pathCount : numOfPaths;
-    const char** interfacePaths = new const char*[numOfPaths];
-    pathCount = self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], interfacePaths, numOfPaths);
-    for (int i=0 ; i < numOfPaths ; i++) {
+    const char** interfacePaths = new const char*[pathCount];
+    NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:pathCount];
+    self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], interfacePaths, 0);
+    for (int i=0 ; i < pathCount ; i++) {
         NSString *objPath = [[NSString alloc] initWithUTF8String:interfacePaths[i]];
-        [*paths addObject:objPath];
+        [paths addObject:objPath];
     }
     delete []interfacePaths;
-    return pathCount;
+    return paths;
 }
 
 - (void)clear
@@ -137,19 +128,19 @@ using namespace ajn;
     return self.aboutObjectDescription->Clear();
 }
 
-- (BOOL)hasPath:(const char *)path
+- (BOOL)hasPath:(NSString*)path
 {
-    return self.aboutObjectDescription->HasPath(path) ? YES : NO;
+    return self.aboutObjectDescription->HasPath([path UTF8String]) ? YES : NO;
 }
 
-- (BOOL)hasInterface:(const char *)interface
+- (BOOL)hasInterface:(NSString*)interface
 {
-    return self.aboutObjectDescription->HasInterface(interface) ? YES : NO;
+    return self.aboutObjectDescription->HasInterface([interface UTF8String]) ? YES : NO;
 }
 
-- (BOOL)hasInterface:(const char *)interface withPath:(const char *)path
+- (BOOL)hasInterface:(NSString*)interface withPath:(NSString*)path
 {
-    return self.aboutObjectDescription->HasInterface(path, interface) ? YES : NO;
+    return self.aboutObjectDescription->HasInterface([path UTF8String], [interface UTF8String]) ? YES : NO;
 }
 
 - (QStatus)getMsgArg:(AJNMessageArgument *)msgArg
