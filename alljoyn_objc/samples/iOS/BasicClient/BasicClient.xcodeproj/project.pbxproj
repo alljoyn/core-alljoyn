@@ -17,7 +17,6 @@
 		7DCBED811A25407800A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBED791A25407800A53A83 /* AJNAboutProxy.mm */; };
 		7DCBED841A25408900A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBED831A25408900A53A83 /* AJNPasswordManager.mm */; };
 		7DCEFD451A97CD6200A09710 /* AJNInit.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCEFD441A97CD6200A09710 /* AJNInit.mm */; };
-		7DEA2F4A1AC46F4A007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F491AC46F4A007ECE82 /* libc++.dylib */; };
 		83672413193B123B0008070C /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83672412193B123B0008070C /* AJNTranslatorImpl.mm */; };
 		ACB2C6B9160B7CF200D7E3A6 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB2C6B8160B7CF200D7E3A6 /* UIKit.framework */; };
 		ACB2C6BB160B7CF200D7E3A6 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB2C6BA160B7CF200D7E3A6 /* Foundation.framework */; };
@@ -84,7 +83,6 @@
 		7DCBED831A25408900A53A83 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
 		7DCEFD431A97CD6200A09710 /* AJNInit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNInit.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNInit.h; sourceTree = "<group>"; };
 		7DCEFD441A97CD6200A09710 /* AJNInit.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNInit.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNInit.mm; sourceTree = "<group>"; };
-		7DEA2F491AC46F4A007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		83672410193B123B0008070C /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		83672411193B123B0008070C /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		83672412193B123B0008070C /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -176,7 +174,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7DEA2F4A1AC46F4A007ECE82 /* libc++.dylib in Frameworks */,
 				ACB2C754160B8FE800D7E3A6 /* SystemConfiguration.framework in Frameworks */,
 				ACB2C752160B8FDC00D7E3A6 /* libstdc++.6.dylib in Frameworks */,
 				ACB2C6B9160B7CF200D7E3A6 /* UIKit.framework in Frameworks */,
@@ -209,7 +206,6 @@
 		ACB2C6B7160B7CF200D7E3A6 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				7DEA2F491AC46F4A007ECE82 /* libc++.dylib */,
 				ACB2C751160B8FDC00D7E3A6 /* libstdc++.6.dylib */,
 				ACB2C74F160B8FAB00D7E3A6 /* libstdc++.dylib */,
 				ACB2C753160B8FE800D7E3A6 /* SystemConfiguration.framework */,
@@ -367,7 +363,7 @@
 		ACB2C6AB160B7CF100D7E3A6 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastUpgradeCheck = 0450;
+				LastUpgradeCheck = 0730;
 				ORGANIZATIONNAME = "AllSeen Alliance.";
 			};
 			buildConfigurationList = ACB2C6AE160B7CF100D7E3A6 /* Build configuration list for PBXProject "BasicClient" */;
@@ -485,10 +481,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -496,6 +488,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
+				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
@@ -518,10 +511,6 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
 				CLANG_CXX_LIBRARY = "libc++";
 				CLANG_ENABLE_OBJC_ARC = YES;
@@ -545,7 +534,6 @@
 		ACB2C6DC160B7CF200D7E3A6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
 				ENABLE_BITCODE = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
@@ -559,7 +547,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)\"",
 					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
@@ -570,9 +557,8 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -581,7 +567,6 @@
 		ACB2C6DD160B7CF200D7E3A6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = "$(ARCHS_STANDARD)";
 				ENABLE_BITCODE = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
@@ -595,7 +580,6 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)\"",
 					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
@@ -607,9 +591,8 @@
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};

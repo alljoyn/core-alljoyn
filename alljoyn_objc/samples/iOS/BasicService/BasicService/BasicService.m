@@ -262,7 +262,7 @@ static const AJNSessionPort kBasicServicePort = 25;
 {
     NSLog(@"AJNSessionPortListener::didJoin:%@ inSessionWithId:%u onSessionPort:%u withSessionOptions:", joiner, sessionId, sessionPort);
     [self.bus enableConcurrentCallbacks];
-    [self.bus bindSessionListener:self toSession:sessionId];
+    [self.bus setSessionListener:self toSession:sessionId];
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"%@ successfully joined session %u on port %d.\n", joiner, sessionId, sessionPort]];
     
 }
