@@ -297,6 +297,8 @@ static AJ_PCSTR s_validSameKeyCaAndWithPublicKey =
     "</acl>"
     "</acls>"
     "</policy>";
+
+// Valid only until ASACORE-2985 is resolved.
 static AJ_PCSTR s_validNoRulesElement =
     "<policy>"
     "<policyVersion>1</policyVersion>"

@@ -16,8 +16,9 @@
 
     <xs:element name="node">
         <xs:complexType>
-            <xs:sequence maxOccurs="unbounded">
-                <xs:element ref="interface"/>
+            <xs:sequence>
+                <xs:element name="annotation" type="recommendedSecurityLevelAnnotation" minOccurs="0"/>
+                <xs:element ref="interface" maxOccurs="unbounded"/>
             </xs:sequence>
             <xs:attribute name="name" use="optional" default="*">
                 <xs:simpleType>
@@ -35,12 +36,15 @@
 
     <xs:element name="interface">
         <xs:complexType>
-            <xs:choice maxOccurs="unbounded">
-                <xs:element ref="method"/>
-                <xs:element ref="property"/>
-                <xs:element ref="signal"/>
-                <xs:element ref="any"/>
-            </xs:choice>
+            <xs:sequence>
+                <xs:element name="annotation" type="recommendedSecurityLevelAnnotation" minOccurs="0"/>
+                <xs:choice maxOccurs="unbounded">
+                    <xs:element ref="method"/>
+                    <xs:element ref="property"/>
+                    <xs:element ref="signal"/>
+                    <xs:element ref="any"/>
+                </xs:choice>
+            </xs:sequence>
             <xs:attribute name="name" use="optional" default="*">
                 <xs:simpleType>
                     <xs:restriction base="xs:string">
@@ -140,7 +144,7 @@
     </xs:simpleType>
 
     <xs:complexType name="methodAnnotation">
-        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="name" type="actionAnnotationName" use="required"/>
         <xs:attribute name="value" use="required">
             <xs:simpleType>
                 <xs:restriction base="xs:string">
@@ -153,7 +157,7 @@
     </xs:complexType>
 
     <xs:complexType name="propertyAnnotation">
-        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="name" type="actionAnnotationName" use="required"/>
         <xs:attribute name="value" use="required">
             <xs:simpleType>
                 <xs:restriction base="xs:string">
@@ -167,7 +171,7 @@
     </xs:complexType>
 
     <xs:complexType name="signalAnnotation">
-        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="name" type="actionAnnotationName" use="required"/>
         <xs:attribute name="value" use="required">
             <xs:simpleType>
                 <xs:restriction base="xs:string">
@@ -180,7 +184,7 @@
     </xs:complexType>
 
     <xs:complexType name="anyAnnotation">
-        <xs:attribute name="name" type="annotationName" use="required"/>
+        <xs:attribute name="name" type="actionAnnotationName" use="required"/>
         <xs:attribute name="value" use="required">
             <xs:simpleType>
                 <xs:restriction base="xs:string">
@@ -193,9 +197,28 @@
         </xs:attribute>
     </xs:complexType>
 
-    <xs:simpleType name="annotationName">
+    <xs:simpleType name="actionAnnotationName">
         <xs:restriction base="xs:string">
             <xs:enumeration value="org.alljoyn.Bus.Action"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="recommendedSecurityLevelAnnotation">
+        <xs:attribute name="name" type="recommendedSecurityLevelAnnotationName" use="required"/>
+        <xs:attribute name="value" type="recommendedSecurityLevelAnnotationValue" use="required"/>
+    </xs:complexType>
+
+    <xs:simpleType name="recommendedSecurityLevelAnnotationName">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="org.alljoyn.Security.Level"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="recommendedSecurityLevelAnnotationValue">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Privileged"/>
+            <xs:enumeration value="NonPrivileged"/>
+            <xs:enumeration value="Unauthorized"/>
         </xs:restriction>
     </xs:simpleType>
 </xs:schema>

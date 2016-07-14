@@ -21,7 +21,7 @@
         </xs:simpleType>
     </xs:element>
 
-    <xs:element name="serialNumber" type="xs:positiveInteger"/>
+    <xs:element name="serialNumber" type="xs:nonNegativeInteger"/>
 
     <xs:element name="acls">
         <xs:complexType>
@@ -35,7 +35,8 @@
         <xs:complexType>
             <xs:sequence>
                 <xs:element ref="peers"/>
-                <xs:element ref="rules"/>
+                <!-- "minOccurs" valid only until ASACORE-2985 is resolved. -->
+                <xs:element ref="rules" minOccurs="0"/>
             </xs:sequence>
         </xs:complexType>
     </xs:element>
@@ -104,7 +105,6 @@
         </xs:unique>
     </xs:element>
 
-    <!-- Everything below is the same as in "manifest_template.xsd". -->
     <xs:element name="node">
         <xs:complexType>
             <xs:sequence maxOccurs="unbounded">
