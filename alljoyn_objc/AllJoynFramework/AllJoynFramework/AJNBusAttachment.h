@@ -47,7 +47,7 @@ typedef void (^ AJNJoinSessionBlock)(QStatus status, AJNSessionId sessionId, AJN
 /**
  * Delegate used to receive notifications when joining a session asynchronously
  */
-@protocol AJNSessionDelegate <NSObject>
+@protocol AJNJoinSessionDelegate <NSObject>
 
 /** Called when joinSessionAsync completes.
  * @param sessionId         The identifier of the session that was joined.
@@ -111,6 +111,84 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 
 @end
 
+/**
+ * Block definition for adding a match asynchronously
+ */
+typedef void (^ AJNAddMatchBlock)(QStatus status, void *context);
+
+/*
+ * Delegate used to receive notification when adding a match asynchronously
+ */
+@protocol AJNAddMatchDelegate <NSObject>
+
+/**
+ * Called when addMatchAsyncCB() completes.
+ *
+ * @param status   ER_OK if successful
+ * @param context  User defined context which will be passed as-is to callback
+ */
+- (void)didAddMatch:(QStatus)status context:(void*)context;
+
+@end
+
+/**
+ * Block definition for removing a match asynchronously
+ */
+typedef void (^ AJNRemoveMatchBlock)(QStatus status, void *context);
+
+/**
+ * Delegate used to receive notifications when we remove a match asynchronously
+ */
+@protocol AJNRemoveMatchDelegate <NSObject>
+
+/**
+ * Called when removeMatchAsync completes.
+ *
+ * @param status    ER_OK if successful
+ * @param context   User defined context which will be passed as-is to callback
+ */
+- (void)didRemoveMatch:(QStatus)status context:(void*)context;
+@end
+
+/**
+ * Block definition for getting a name owner asynchronously
+ */
+typedef void (^ AJNGetNameOwnerBlock)(QStatus status, NSString* uniqueName, void *context);
+
+/*
+ * Delegate used to receive notification when getting a name owner asynchronously
+ */
+@protocol AJNGetNameOwnerDelegate <NSObject>
+
+/**
+ * Called when getNameOwnerAsync() completes
+ *
+ * @param status        ER_OK if successful
+ * @param uniqueName    Unique name that owns the requested alias.
+ * @param context       User defined context which will be passed as-is to callback.
+ */
+- (void)didGetNameOwner:(QStatus)status uniqueName:(NSString*)uniqueName context:(void*)context;
+@end
+
+/**
+ * Block definition for leaving a session asynchronously
+ */
+typedef void (^ AJNLeaveSessionBlock)(QStatus status, void *context);
+
+/**
+ * Delegate used to receive notifications when leave a session asynchronously
+ */
+@protocol AJNLeaveSessionDelegate <NSObject>
+
+/**
+ * Called when leaveSessionAsync() or any of its variants completes.
+ *
+ * @param status     ER_OK if successful
+ * @param context    User defined context which will be passed as-is to callback.
+ */
+- (void)didLeaveSession:(QStatus)status context:(void*)context;
+
+@end
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -174,6 +252,13 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 @property (nonatomic, readonly) NSUInteger concurrency;
 
 /**
+ * Get the connect spec used by the BusAttachment.
+ *
+ * @return The string representing the connect spec used by the BusAttachment
+ */
+@property (nonatomic, readonly) NSString *connectSpec;
+
+/**
  * Get the org.freedesktop.DBus proxy object.
  *
  * @return org.freedesktop.DBus proxy object
@@ -222,32 +307,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 - (void)destroy;
 
 /**
- * Create an interface description with a given name.
- *
- * Typically, interfaces that are implemented by BusObjects are created here.
- * Interfaces that are implemented by remote objects are added automatically by
- * the bus if they are not already present via AJNProxyBusObject::introspectRemoteObject.
- *
- * Because interfaces are added both explicitly (via this method) and implicitly
- * (via AJNProxyBusObject::introspectRemoteObject), there is the possibility that creating
- * an interface here will fail because the interface already exists. If this happens, the
- * ER_BUS_IFACE_ALREADY_EXISTS will be returned and NULL will be returned in the iface [OUT]
- * parameter.
- *
- * Interfaces created with this method need to be activated using AJNInterfaceDescription::activate
- * once all of the methods, signals, etc have been added to the interface. The interface will
- * be unaccessible (via AJNBusAttachment::interfaceWithName) until
- * it is activated.
- *
- * @param interfaceName             The requested interface name.
- *
- * @return  - Interface description
- *          - nil if cannot be created.
- */
-- (AJNInterfaceDescription *)createInterfaceWithName:(NSString *)interfaceName;
-
-/**
- * Create an interface description with a given name.
+ * Deprecated API for creating an interface description with a given name.
  *
  * Typically, interfaces that are implemented by BusObjects are created here.
  * Interfaces that are implemented by remote objects are added automatically by
@@ -312,18 +372,6 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *          - nil if interface doesn't exist
  */
 - (AJNInterfaceDescription *)interfaceWithName:(NSString *)interfaceName;
-
-/**
- * Delete an interface description with a given name.
- *
- * Deleting an interface is only allowed if that interface has never been activated.
- *
- * @param interfaceName  The name of the un-activated interface to be deleted.
- *
- * @return  - ER_OK if deletion was successful
- *          - ER_BUS_NO_SUCH_INTERFACE if interface was not found
- */
-- (QStatus)deleteInterfaceWithName:(NSString *)interfaceName;
 
 /**
  * Delete an interface description with a given name.
@@ -620,12 +668,27 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *
  * @param connectionArguments  The transport connection spec used to connect.
  *
+ * @deprecated When bundled router is enabled and in-use, the connectionArguments
+ * will be ignored and the bundled router connectionArguments will be used.  Use
+ * Disconnect() instead which will use correct connectionArguments.
  * @return  - ER_OK if successful
  *          - ER_BUS_BUS_NOT_STARTED if the bus is not started
  *          - ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
  *          - Other error status codes indicating a failure
  */
 - (QStatus)disconnectWithArguments:(NSString *)connectionArguments;
+
+
+/**
+ * Disconnect the BusAttachment from the remote bus.
+ *
+ * @return
+ *          - #ER_OK if successful
+ *          - #ER_BUS_BUS_NOT_STARTED if the bus is not started
+ *          - #ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
+ *          - Other error status codes indicating a failure
+ */
+- (QStatus)disconnect;
 
 /**
  * Request a well-known name.
@@ -727,7 +790,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @return  - A valid session port number iff daemon response was received and the bind operation was successful.
  *          - kAJNSessionPortAny is returned if there was any error.
  */
-- (AJNSessionPort)bindSessionOnAnyPortWithOptions:(AJNSessionOptions *)options withDelegate:(id<AJNSessionPortListener>)delegate;
+- (AJNSessionPort)bindSessionOnAnyPort:(AJNSessionOptions *)options withDelegate:(id<AJNSessionPortListener>)delegate;
 
 /**
  * Cancel an existing port binding.
@@ -774,7 +837,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *          - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *          - Other error status codes indicating a failure.
  */
-- (QStatus)joinSessionAsyncWithName:(NSString *)sessionName onPort:(AJNSessionPort)sessionPort withDelegate:(id<AJNSessionListener>)delegate options:(AJNSessionOptions *)options joinCompletedDelegate:(id<AJNSessionDelegate>)completionDelegate context:(AJNHandle)context;
+- (QStatus)joinSessionAsyncWithName:(NSString *)sessionName onPort:(AJNSessionPort)sessionPort withDelegate:(id<AJNSessionListener>)delegate options:(AJNSessionOptions *)options joinCompletedDelegate:(id<AJNJoinSessionDelegate>)completionDelegate context:(AJNHandle)context;
 
 
 /**
@@ -809,7 +872,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @return  - ER_OK if successful.
  *          - ER_BUS_NO_SESSION if session did not exist
  */
-- (QStatus)bindSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
+- (QStatus)setSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
 
 /**
  * Set the SessionListener for an existing sessionId on the joiner side.
@@ -821,7 +884,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @return  - ER_OK if successful.
  *          - ER_BUS_NO_SESSION if session did not exist or if not host side of the session
  */
-- (QStatus)bindJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
+- (QStatus)setJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
 
 /**
  * Set the SessionListener for an existing sessionId on the host side.
@@ -833,7 +896,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @return  - ER_OK if successful.
  *          - ER_BUS_NO_SESSION if session did not exist or if not host side of the session
  */
-- (QStatus)bindHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
+- (QStatus)setHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId;
 
 /**
  * Leave an existing session.
@@ -851,6 +914,25 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 - (QStatus)leaveSession:(AJNSessionId)sessionId;
 
 /**
+ * Leave an existing session.
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveSession method call to the local router
+ * and interprets the response.
+ * This method cannot be called on self-joined session.
+ *
+ * This call executes asynchronously. When the LeaveSession response is received, the callback will be called.
+ *
+ * @param[in]  sessionId     Session id.
+ * @param[in]  callback      Called when LeaveSession response is received.
+ * @param[in]  context       User defined context which will be passed as-is to callback.
+ *
+ * @return
+ *      - #ER_OK iff method call to local router response was successful.
+ *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *      - Other error status codes indicating a failure.
+ */
+- (QStatus)leaveSessionAsync:(AJNSessionId)sessionId callback:(id<AJNLeaveSessionDelegate>)leaveSessionDelegate context:(AJNHandle)context;
+
+/**
  * Leave an existing session as joiner. This function will fail if you were not the joiner.
  * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
  * and interprets the response.
@@ -865,6 +947,24 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 - (QStatus)leaveJoinedSession:(AJNSessionId)sessionId;
 
 /**
+ * Leave an existing session as joiner. This function will fail if you were not the joiner.
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveJoinedSession method call to the local router
+ * and interprets the response.
+ *
+ * This call executes asynchronously. When the LeaveJoinedSession response is received, the callback will be called.
+ *
+ * @param[in]  sessionId     Session id.
+ * @param[in]  callback      Called when LeaveJoinedSession response is received.
+ * @param[in]  context       User defined context which will be passed as-is to callback.
+ *
+ * @return
+ *      - #ER_OK iff method call to local router response was successful.
+ *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *      - Other error status codes indicating a failure.
+ */
+- (QStatus)leaveJoinedSessionAsync:(AJNSessionId)sessionId callback:(id<AJNLeaveSessionDelegate>)leaveSessionDelegate context:(AJNHandle)context;
+
+/**
  * Leave an existing session as host. This function will fail if you were not the host.
  * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router
  * and interprets the response.
@@ -877,6 +977,24 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *         - Other error status codes indicating a failure.
  */
 - (QStatus)leaveHostedSession:(AJNSessionId)sessionId;
+
+/**
+ * Leave an existing session as host. This function will fail if you were not the host.
+ * This method is a shortcut/helper that issues an org.alljoyn.Bus.LeaveHostedSession method call to the local router
+ * and interprets the response.
+ *
+ * This call executes asynchronously. When the LeaveHostedSession response is received, the callback will be called.
+ *
+ * @param[in]  sessionId     Session id.
+ * @param[in]  callback      Called when LeaveHostedSession response is received.
+ * @param[in]  context       User defined context which will be passed as-is to callback.
+ *
+ * @return
+ *      - #ER_OK iff method call to local router response was successful.
+ *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *      - Other error status codes indicating a failure.
+ */
+- (QStatus)leaveHostedSessionAsync:(AJNSessionId)sessionId callback:(id<AJNLeaveSessionDelegate>)leaveSessionDelegate context:(void*)context;
 
 /**
  * Remove a member from an existing multipoint session.
@@ -970,6 +1088,50 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *          - Other error status codes indicating a failure.
  */
 - (QStatus)setLinkTimeoutAsync:(uint32_t)timeout forSession:(AJNSessionId)sessionId completionBlock:(AJNLinkTimeoutBlock) block context:(void *)context;
+
+/**
+ * Explicitly secure the connection to the remote peer. Peer-to-peer
+ * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+ * attachment. If the peer-to-peer connection is already secure this
+ * function does nothing. Note that peer-to-peer connections are automatically secured when a
+ * method call requiring encryption is sent.
+ *
+ * This call causes messages to be sent on the bus, therefore it cannot be called within AllJoyn
+ * callbacks (method/signal/reply handlers or ObjectRegistered callbacks, etc.)
+ *
+ * @param[in]  name       The unique name of the remote peer or NULL to secure the connections to all peers
+ *                        this BusAttachment is in session with.
+ * @param[in]  forceAuth  If true, forces re-authentication even if the peer connection is already
+ *                        authenticated.
+ *
+ * @return
+ *          - #ER_OK if the connection was secured or an error status indicating that the
+ *            connection could not be secured.
+ *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called.
+ *          - #ER_AUTH_FAIL if the attempt(s) to authenticate the peer failed.
+ *          - Other error status codes indicating a failure.
+ */
+- (QStatus)secureConnection:(NSString*)name withForcedAuth:(BOOL)forceAuth;
+
+/**
+ * Asynchronously secure the connection to the remote peer. Peer-to-peer connections can only
+ * be secured if enablePeerSecurity() was previously called on the bus attachment.
+ * If the peer-to-peer connection is already secure this function does nothing.
+ * Note that peer-to-peer connections are automatically secured when a
+ * method call requiring encryption is sent.
+ *
+ * Notification of success or failure is via the AuthListener passed to enablePeerSecurity().
+ *
+ * @param[in]  name      The unique name of the remote peer or NULL to secure the connections to all peers
+ *                       this BusAttachment is in session with.
+ * @param[in] forceAuth  If true, forces re-authentication even if the peer connection is already
+ *                       authenticated.
+ * @return
+ *          - #ER_OK if securing could begin.
+ *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called.
+ *          - Other error status codes indicating a failure.
+ */
+- (QStatus)secureConnectionAsync:(NSString*)name forceAuth:(BOOL)forceAuth;
 
 /**
  * Get the file descriptor for a raw (non-message based) session.
@@ -1074,13 +1236,45 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * Add a DBus match rule.
  * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local daemon.
  *
- * @param  matchRule  Match rule to be added (see DBus specification for format of this string).
+ * @param  rule  Match rule to be added (see DBus specification for format of this string).
  *
  * @return  - ER_OK if the AddMatch request was successful.
  *          - ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
  *          - Other error status codes indicating a failure.
  */
-- (QStatus)addMatchRule:(NSString *)matchRule;
+- (QStatus)addMatchRule:(NSString *)rule;
+
+/**
+ * Add a DBus match rule.
+ *
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
+ * In contrast with the regular AddMatch, this method does not wait for a reply from the local router. That makes
+ * the call non-blocking, and hence useful in cases where deadlocks might occur otherwise.
+ *
+ * @param[in]  rule  Match rule to be added (see DBus specification for format of this string).
+ *
+ * @return
+ *      - #ER_OK if the AddMatch request was successful.
+ *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *      - Other error status codes indicating a failure.
+ */
+- (QStatus)addMatchRuleNonBlocking:(NSString*)rule;
+
+/**
+ * Add a DBus match rule asynchronously.
+ *
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.AddMatch method call to the local router.
+ *
+ * @param[in]  rule     Match rule to be added (see DBus specification for format of this string).
+ * @param[in]  callback The object to be called when AddMatchAsync completes.
+ * @param[in]  context  User-defined context that will be returned to the reply handler
+ *
+ * @return
+ *      - #ER_OK if the AddMatch request was successful.
+ *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *      - Other error status codes indicating a failure.
+ */
+- (QStatus)addMatchRuleAsync:(NSString*)rule callback:(id<AJNAddMatchDelegate>)addMatchDelegate context:(AJNHandle)context;
 
 /**
  * Remove a DBus match rule.
@@ -1093,6 +1287,37 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *          - Other error status codes indicating a failure.
  */
 - (QStatus)removeMatchRule:(NSString *)matchRule;
+
+/**
+ * Remove a DBus match rule.
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
+ *
+ * @param[in]  rule     Match rule to be removed (see DBus specification for format of this string).
+ * @param[in]  callback The object to be called when RemoveMatchAsync completes.
+ * @param[in]  context  User-defined context that will be returned to the reply handler
+ *
+ * @return
+ *      - #ER_OK if the RemoveMatch request was successful.
+ *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *      - Other error status codes indicating a failure.
+ */
+- (QStatus)removeMatchAsync:(NSString*)rule callback:(id<AJNRemoveMatchDelegate>)removeMatchDelegate context:(void*)context;
+
+/**
+ * Remove a DBus match rule.
+ *
+ * This method is a shortcut/helper that issues an org.freedesktop.DBus.RemoveMatch method call to the local router.
+ * In contrast with the regular RemoveMatch, this method does not wait for a reply from the local router. That makes
+ * the call non-blocking, and hence useful in cases where deadlocks might occur otherwise.
+ *
+ * @param[in]  rule  Match rule to be removed (see DBus specification for format of this string).
+ *
+ * @return
+ *      - #ER_OK if the RemoveMatch request was successful.
+ *      - #ER_BUS_NOT_CONNECTED if a connection has not been made with a local bus.
+ *      - Other error status codes indicating a failure.
+ */
+- (QStatus)removeMatchRuleNonBlocking:(NSString *)rule;
 
 /**
  * Adds a logon entry string for the requested authentication mechanism to the key store. This
@@ -1112,7 +1337,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *          - ER_BAD_ARG_3 indicates a null string was used as the password.
  *          - Other error status codes indicating a failure
  */
-- (QStatus)addLogonEntryToKeyStoreWithAuthenticationMechanism:(NSString *)authenticationMechanism userName:(NSString *)userName password:(NSString *)password;
+- (QStatus)addLogonEntry:(NSString *)authenticationMechanism userName:(NSString *)userName password:(NSString *)password;
 
 /**
  * Enable peer-to-peer security. This function must be called by applications that want to use
@@ -1170,6 +1395,15 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 - (QStatus)registerKeyStoreListener:(id<AJNKeyStoreListener>)listener;
 
 /**
+ * Unregister a previously registered KeyStore. This will return control for
+ * load and store requests to the default internal keystore listener.
+ *
+ * @return
+ *      - #ER_OK if the key store Unregistered
+ */
+- (QStatus)unregisterKeyStoreListener;
+
+/**
  * Reloads the key store for this bus attachment. This function would normally only be called in
  * the case where a single key store is shared between multiple bus attachments, possibly by different
  * applications. It is up to the applications to coordinate how and when the shared key store is
@@ -1197,7 +1431,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *          - ER_UNKNOWN_GUID if there is no peer with the specified GUID
  *          - Other errors
  */
-- (QStatus)clearKeysForRemotePeerWithId:(NSString *)peerId;
+- (QStatus)clearKeys:(NSString *)peerId;
 
 /**
  * Get the expiration time on keys associated with a specific authenticated remote peer as
@@ -1226,6 +1460,28 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *          - Other errors
  */
 - (QStatus)setKeyExpiration:(uint32_t)timeout forRemotePeerId:(NSString *)peerId;
+
+/**
+ * Get the unique name of specified alias.
+ *
+ * @param alias Alias name to lookup.
+ *
+ * @return The unique name of the alias.
+ */
+- (NSString*)getNameOwner:(NSString*)alias;
+
+/**
+ * Get the unique name of specified alias asyncronously
+ *
+ * @param[in] alias    Alias name to lookup.
+ * @param[in] callback pointer to function that is called with the results
+ *                     of the `GetNameOwner` method call.
+ * @param[in] context  User defined context which will be passed as-is to
+ *                     the callback.
+ *
+ * @return status code from sending the message to the local routing node.
+ */
+- (QStatus)getNameOwnerAsync:(NSString**)alias callback:(id<AJNGetNameOwnerDelegate>)getNameOwnerDelegate context:(void*)context;
 
 /**
  * Get the peer GUID for this peer of the local peer or an authenticated remote peer. The bus
@@ -1289,7 +1545,7 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *   - ER_OK the name is present and responding
  *   - ER_ALLJOYN_PING_REPLY_UNREACHABLE the name is no longer present
  *
- *   The following return values indicate that the router cannot determine if the 
+ *   The following return values indicate that the router cannot determine if the
  *   remote name is present and responding:
  *   - ER_ALLJOYN_PING_REPLY_TIMEOUT Ping call timed out
  *   - ER_ALLJOYN_PING_REPLY_UNKNOWN_NAME name not found currently or not part of any known session
@@ -1426,11 +1682,25 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @param[in] implementsInterfaces a list of interfaces that the Announce
  *               signal reports as implemented. NULL to receive all Announce
  *               signals regardless of interfaces
- * @param[in] numberInterfaces the number of interfaces in the
- *               implementsInterfaces list
  * @return status
  */
-- (QStatus)whoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterfaces;
+- (QStatus)whoImplementsInterfaces:(NSArray *)interfaces;
+
+/**
+ * Non-blocking variant of WhoImplements
+ * @see WhoImplements(const char**, size_t)
+ *
+ * @param[in] implementsInterfaces a list of interfaces that the Announce
+ *               signal reports as implemented. NULL to receive all Announce
+ *               signals regardless of interfaces
+ * @param[in] numberInterfaces the number of interfaces in the
+ *               implementsInterfaces list
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+- (QStatus)whoImplementsInterfacesNonBlocking:(NSArray*)interfaces;
+
 
 /**
  * List an interface your application is interested in.  If a remote device
@@ -1451,6 +1721,18 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
 - (QStatus)whoImplementsInterface:(NSString*)interface;
 
 /**
+ * Non-blocking variant of WhoImplements
+ * @see WhoImplements(const char**, size_t)
+ *
+ * @param[in] iface     interface that the remote user must implement to
+ *                          receive the announce signal.
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+- (QStatus)whoImplementsInterfaceNonBlocking:(NSString*)interface;
+
+/**
  * Stop showing interest in the listed interfaces. Stop recieving announce
  * signals from the devices with the listed interfaces.
  *
@@ -1460,13 +1742,26 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  * @param[in] implementsInterfaces a list of interfaces that the Announce
  *               signal reports as implemented. NULL to receive all Announce
  *               signals regardless of interfaces
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+- (QStatus)cancelWhoImplementsInterfaces:(NSArray *)interfaces;
+
+/**
+ * Non-blocking variant of CancelWhoImplements.
+ *
+ * @see CancelWhoImplements(const char**, size_t)
+ * @param[in] implementsInterfaces a list of interfaces. The list must match the
+ *                                 list previously passed to the WhoImplements
+ *                                 member function
  * @param[in] numberInterfaces the number of interfaces in the
  *               implementsInterfaces list
  * @return
  *    - #ER_OK on success
  *    - An error status otherwise
  */
-- (QStatus)cancelWhoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterfaces;
+- (QStatus)cancelWhoImplementsInterfacesNonBlocking:(NSArray *)interfaces;
 
 /**
  * Stop showing interest in the listed interfaces. Stop recieving announce
@@ -1483,6 +1778,18 @@ typedef void (^ AJNPingPeerBlock)(QStatus status, void *context);
  *    - #ER_OK on success
  *    - An error status otherwise
  */
--(QStatus)cancelWhoImplements:(NSString *)interface;
+-(QStatus)cancelWhoImplementsInterface:(NSString *)interface;
+
+/**
+ * Non-blocking variant of cancelWhoImplements.
+ *
+ * @param[in] implementsInterfaces a list of interfaces. The list must match the
+ *                                 list previously passed to the WhoImplements
+ *                                 member function
+ * @return
+ *    - #ER_OK on success
+ *    - An error status otherwise
+ */
+- (QStatus)cancelWhoImplementsNonBlocking:(NSString *)interface;
 
 @end
