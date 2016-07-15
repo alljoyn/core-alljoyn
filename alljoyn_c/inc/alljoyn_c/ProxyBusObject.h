@@ -715,7 +715,7 @@ extern AJ_API const alljoyn_interfacedescription AJ_CALL alljoyn_proxybusobject_
  *                   of interfaces available.
  * @param numIfaces  The size of the InterfaceDescription array. If this value is smaller than the total
  *                   number of interfaces only numIfaces will be returned.
- *                   (DEFAULT) if numInterfaces is 0 then an array of all the interfaces will be returned.
+ *                   (DEFAULT) if numInterfaces is 0 then no interfaces will be returned.
  *
  * @return  The number of interfaces returned or the total number of interfaces if ifaces is NULL.
  */
