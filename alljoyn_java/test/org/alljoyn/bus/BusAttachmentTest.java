@@ -587,6 +587,35 @@ public class BusAttachmentTest extends TestCase {
         otherBus = null;
     }
 
+    public void testBasicSecureConnection() throws Exception {
+        bus = new BusAttachment(getClass().getName());
+        Status status = bus.connect();
+        assertEquals(status, Status.OK);
+
+        BusAttachment otherBus = new BusAttachment(getClass().getName());
+        status = otherBus.connect();
+        assertEquals(status, Status.OK);
+
+        status = bus.secureConnection(otherBus.getUniqueName(), false);
+        assertEquals(status, Status.BUS_SECURITY_NOT_ENABLED);
+
+        status = bus.registerAuthListener("ALLJOYN_SRP_KEYX", authListener);
+        assertEquals(Status.OK, status);
+
+        status = bus.secureConnection(otherBus.getUniqueName(), false);
+        assertEquals(status, Status.AUTH_FAIL);
+
+        status = otherBus.registerAuthListener("ALLJOYN_SRP_KEYX", authListener);
+        assertEquals(Status.OK, status);
+
+        status = bus.secureConnection(otherBus.getUniqueName(), false);
+        assertEquals(status, Status.OK);
+
+        otherBus.disconnect();
+        otherBus.release();
+        otherBus = null;
+    }
+
     public void testGetUniqueName() throws Exception {
         bus = new BusAttachment(getClass().getName());
         Status status = bus.connect();

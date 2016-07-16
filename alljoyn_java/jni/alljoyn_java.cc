@@ -6832,6 +6832,65 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_removeSessionMember
     return JStatus(status);
 }
 
+/**
+ * Explicitly secure the connection to the remote peer. Peer-to-peer
+ * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+ * attachment. If the peer-to-peer connection is already secure this
+ * function does nothing. Note that peer-to-peer connections are automatically secured when a
+ * method call requiring encryption is sent.
+ *
+ * This call causes messages to be sent on the bus, therefore it cannot be called within AllJoyn
+ * callbacks (method/signal/reply handlers or ObjectRegistered callbacks, etc.)
+ *
+ * @param  name       The unique name of the remote peer or NULL to secure the connections to all peers
+ *                        this BusAttachment is in session with.
+ * @param  forceAuth  If true, forces re-authentication even if the peer connection is already
+ *                        authenticated.
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_secureConnection(JNIEnv* env, jobject thiz, jstring name, jboolean forceAuth)
+{
+
+    QCC_DbgPrintf(("BusAttachment_secureConnection()"));
+
+    JString busname(name);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): Exception on getting name"));
+        return NULL;
+    }
+
+    if (strcmp("", busname.c_str()) == 0) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): null or empty bus name"));
+        Throw("java/lang/NullPointerException", "null or empty bus name");
+        return NULL;
+    }
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): Exception on getting Bus Attachment"));
+        return NULL;
+    }
+
+    /*
+     * We don't want to force the user to constantly check for NULL return
+     * codes, so if we have a problem, we throw an exception.
+     */
+    if (busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): NULL bus pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    QCC_DbgPrintf(("BusAttachment_secureConnection(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    QStatus status = busPtr->SecureConnection(busname.c_str(), forceAuth);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): SecureConnection call Exception"));
+        return NULL;
+    } else {
+        return JStatus(status);
+    }
+}
+
 static jobject setGenericSessionListener(JNIEnv* env, jobject thiz,
                                          jint jsessionId, jobject jlistener,
                                          BusAttachmentSessionListenerIndex index)
