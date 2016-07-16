@@ -1100,7 +1100,7 @@ public class BusAttachment {
     private native void nativeDisconnect();
 
     private native Status enablePeerSecurity(String authMechanisms,
-            AuthListenerInternal busAuthListener, String keyStoreFileName, Boolean isShared);
+            AuthListenerInternal busAuthListener, String keyStoreFileName, boolean isShared);
 
     private native Status registerBusObject(String objPath, BusObject busObj,
             InterfaceDescription[] busInterfaces, boolean secure,
@@ -1718,6 +1718,32 @@ public class BusAttachment {
      * </ul>
      */
     public native Status reloadKeyStore();
+
+    /**
+     * Explicitly secure the connection to the remote peer. Peer-to-peer
+     * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+     * attachment. If the peer-to-peer connection is already secure this
+     * function does nothing. Note that peer-to-peer connections are automatically secured when a
+     * method call requiring encryption is sent.
+     *
+     * This call causes messages to be sent on the bus, therefore it cannot be called within AllJoyn
+     * callbacks (method/signal/reply handlers or ObjectRegistered callbacks, etc.)
+     *
+     * @param  name       The unique name of the remote peer or NULL to secure the connections to all peers
+     *                        this BusAttachment is in session with.
+     * @param  forceAuth  If true, forces re-authentication even if the peer connection is already
+     *                        authenticated.
+     *
+     * @return
+     * <ul>
+     * <li>         - OK if the connection was secured or an error status indicating that the </li>
+     * <li>           connection could not be secured. </li>
+     * <li>         - BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called. </li>
+     * <li>         - AUTH_FAIL if the attempt(s) to authenticate the peer failed. </li>
+     * <li>         - Other error status codes indicating a failure. </li>
+     * </ul>
+     */
+    public native Status secureConnection(String name, boolean forceAuth);
 
     /**
      * Registers a user-defined authentication listener class with a specific
