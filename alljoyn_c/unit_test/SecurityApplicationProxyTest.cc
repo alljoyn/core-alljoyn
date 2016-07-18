@@ -547,7 +547,8 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
   public:
     SecurityApplicationProxyFullSetupTest() : SecurityApplicationProxyPostClaimTest(),
         m_oldPolicy(nullptr),
-        m_newPolicy(nullptr)
+        m_newPolicy(nullptr),
+        m_retrievedPolicy(nullptr)
     { }
 
     virtual void SetUp()
@@ -562,6 +563,7 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
     {
         DestroyStringCopy(m_newPolicy);
         DestroyStringCopy(m_oldPolicy);
+        DestroyStringCopy(m_retrievedPolicy);
 
         SecurityApplicationProxyPostClaimTest::TearDown();
     }
@@ -570,6 +572,7 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
 
     AJ_PSTR m_oldPolicy;
     AJ_PSTR m_newPolicy;
+    AJ_PSTR m_retrievedPolicy;
 
     void ModifyManagedAppIdentityCertAndManifests()
     {
@@ -1277,4 +1280,14 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldNotResetAppToClaimableStateA
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getapplicationstate(m_managedAppSecurityApplicationProxy, &m_retrievedManagedAppApplicationState));
 
     EXPECT_EQ(CLAIMED, m_retrievedManagedAppApplicationState);
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicy(m_managedAppSecurityApplicationProxy, &m_retrievedPolicy));
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetDefaultPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getdefaultpolicy(m_managedAppSecurityApplicationProxy, &m_retrievedPolicy));
 }
