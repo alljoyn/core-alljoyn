@@ -1278,3 +1278,13 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldNotResetAppToClaimableStateA
 
     EXPECT_EQ(CLAIMED, m_retrievedManagedAppApplicationState);
 }
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicy(m_managedAppSecurityApplicationProxy, &m_newPolicy));
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetDefaultPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getdefaultpolicy(m_managedAppSecurityApplicationProxy, &m_newPolicy));
+}

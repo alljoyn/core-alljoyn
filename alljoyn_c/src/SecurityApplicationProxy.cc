@@ -57,6 +57,9 @@ static QStatus BuildSignedManifest(const IdentityCertificate& identityCertificat
                                    AJ_PCSTR unsignedManifestXml,
                                    Manifest& manifest);
 
+/* Helper function implemented in PermissionConfigurator.cc. */
+extern QStatus PolicyToString(const PermissionPolicy& policy, AJ_PSTR* policyXml);
+
 alljoyn_sessionport AJ_CALL alljoyn_securityapplicationproxy_getpermissionmanagementsessionport()
 {
     return ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
@@ -176,6 +179,42 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilitiesadditionali
     return status;
 }
 
+QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicy(alljoyn_securityapplicationproxy proxy, AJ_PSTR* policyXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    PermissionPolicy policy;
+    QStatus status = ((SecurityApplicationProxy*)proxy)->GetPolicy(policy);
+
+    if (ER_OK != status) {
+        *policyXml = nullptr;
+        return status;
+    }
+
+    return PolicyToString(policy, policyXml);
+}
+
+QStatus AJ_CALL alljoyn_securityapplicationproxy_getdefaultpolicy(alljoyn_securityapplicationproxy proxy, AJ_PSTR* policyXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    PermissionPolicy policy;
+    QStatus status = ((SecurityApplicationProxy*)proxy)->GetDefaultPolicy(policy);
+
+    if (ER_OK != status) {
+        *policyXml = nullptr;
+        return status;
+    }
+
+    return PolicyToString(policy, policyXml);
+}
+
+void AJ_CALL alljoyn_securityapplicationproxy_policy_destroy(AJ_PSTR policyXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    DestroyStringCopy(policyXml);
+}
+
 QStatus AJ_CALL alljoyn_securityapplicationproxy_updatepolicy(alljoyn_securityapplicationproxy proxy, AJ_PCSTR policyXml)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
@@ -282,6 +321,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_geteccpublickey(alljoyn_securit
 
 void AJ_CALL alljoyn_securityapplicationproxy_eccpublickey_destroy(AJ_PSTR eccPublicKey)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     DestroyStringCopy(eccPublicKey);
 }
 
@@ -290,6 +330,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedM
                                                               AJ_PCSTR signingPrivateKeyPem,
                                                               AJ_PSTR* signedManifest)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     QStatus status;
     IdentityCertificate identityCertificate;
     ECCPrivateKey privateKey;
@@ -309,6 +350,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedM
 
 void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     DestroyStringCopy(signedManifestXml);
 }
 
@@ -320,6 +362,7 @@ QStatus SignManifest(const IdentityCertificate& identityCertificate,
                      AJ_PCSTR unsignedManifestXml,
                      AJ_PSTR* signedManifestXml)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     string signedManifest;
     Manifest manifest;
     QStatus status = BuildSignedManifest(identityCertificate,
@@ -347,6 +390,7 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
                             AJ_PCSTR unsignedManifestXml,
                             Manifest& manifest)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     vector<PermissionPolicy::Rule> rules;
     QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
 
@@ -366,6 +410,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_computemanifestdigest(AJ_PCSTR 
                                                                        uint8_t** digest,
                                                                        size_t* digestSize)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     CertificateX509 identityCertificate;
     Manifest manifest;
     vector<PermissionPolicy::Rule> rules;
@@ -409,6 +454,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_computemanifestdigest(AJ_PCSTR 
 
 void AJ_CALL alljoyn_securityapplicationproxy_digest_destroy(uint8_t* digest)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     delete[] digest;
 }
 
@@ -418,6 +464,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_PCSTR u
                                                                       size_t signatureSize,
                                                                       AJ_PSTR* signedManifestXml)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     if ((2 * ECC_COORDINATE_SZ) != signatureSize) {
         return ER_BAD_ARG_4;
     }
