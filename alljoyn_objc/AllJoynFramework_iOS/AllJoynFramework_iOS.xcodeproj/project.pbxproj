@@ -21,6 +21,8 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		03F29D931D36B03600A27375 /* AJNAboutData.mm in Sources */ = {isa = PBXBuildFile; fileRef = 03F29D8D1D36B03600A27375 /* AJNAboutData.mm */; };
+		03F29D981D36B03600A27375 /* AJNAboutData.h in Headers */ = {isa = PBXBuildFile; fileRef = 03F29D921D36B03600A27375 /* AJNAboutData.h */; };
 		1987CB001935CCA90020729E /* AJNTranslator.h in Headers */ = {isa = PBXBuildFile; fileRef = 1987CAFD1935CCA90020729E /* AJNTranslator.h */; };
 		1987CB011935CCA90020729E /* AJNTranslatorImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 1987CAFE1935CCA90020729E /* AJNTranslatorImpl.h */; };
 		1987CB021935CCA90020729E /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 1987CAFF1935CCA90020729E /* AJNTranslatorImpl.mm */; };
@@ -103,6 +105,7 @@
 		AC10312C156EC85100D2853A /* AJNVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = AC1030FE156EC85100D2853A /* AJNVersion.h */; };
 		AC10312D156EC85100D2853A /* AJNVersion.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC1030FF156EC85100D2853A /* AJNVersion.mm */; };
 		AC10312E156EC85100D2853A /* AllJoynFramework-Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = AC103100156EC85100D2853A /* AllJoynFramework-Prefix.pch */; };
+		AC103144156ECB0B00D2853A /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC103143156ECB0B00D2853A /* libc++.dylib */; };
 		AC103146156ECB1E00D2853A /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC103145156ECB1E00D2853A /* libstdc++.dylib */; };
 		AC103154156ECD1900D2853A /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC10314E156ECD1900D2853A /* UIKit.framework */; };
 		AC103158156ECE1E00D2853A /* libc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC103157156ECE1E00D2853A /* libc.dylib */; };
@@ -150,6 +153,8 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		03F29D8D1D36B03600A27375 /* AJNAboutData.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutData.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutData.mm; sourceTree = "<group>"; };
+		03F29D921D36B03600A27375 /* AJNAboutData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAboutData.h; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutData.h; sourceTree = "<group>"; };
 		1987CAFD1935CCA90020729E /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		1987CAFE1935CCA90020729E /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		1987CAFF1935CCA90020729E /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -238,6 +243,7 @@
 		AC1030FF156EC85100D2853A /* AJNVersion.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNVersion.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNVersion.mm; sourceTree = "<group>"; };
 		AC103100156EC85100D2853A /* AllJoynFramework-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "AllJoynFramework-Prefix.pch"; path = "../../AllJoynFramework/AllJoynFramework/AllJoynFramework-Prefix.pch"; sourceTree = "<group>"; };
 		AC103101156EC85100D2853A /* SConscript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = SConscript; path = ../../AllJoynFramework/AllJoynFramework/SConscript; sourceTree = "<group>"; };
+		AC103143156ECB0B00D2853A /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		AC103145156ECB1E00D2853A /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
 		AC10314E156ECD1900D2853A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		AC103157156ECE1E00D2853A /* libc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libc.dylib; path = usr/lib/libc.dylib; sourceTree = SDKROOT; };
@@ -284,6 +290,7 @@
 				AC103158156ECE1E00D2853A /* libc.dylib in Frameworks */,
 				AC103154156ECD1900D2853A /* UIKit.framework in Frameworks */,
 				AC103146156ECB1E00D2853A /* libstdc++.dylib in Frameworks */,
+				AC103144156ECB0B00D2853A /* libc++.dylib in Frameworks */,
 				AC1030BA156EC82300D2853A /* SenTestingKit.framework in Frameworks */,
 				AC1030BD156EC82300D2853A /* Foundation.framework in Frameworks */,
 			);
@@ -316,6 +323,7 @@
 			children = (
 				AC103157156ECE1E00D2853A /* libc.dylib */,
 				AC103145156ECB1E00D2853A /* libstdc++.dylib */,
+				AC103143156ECB0B00D2853A /* libc++.dylib */,
 				ACD7FEBC15E406270021F8A1 /* SystemConfiguration.framework */,
 				AC10314E156ECD1900D2853A /* UIKit.framework */,
 				AC1030AB156EC82300D2853A /* Foundation.framework */,
@@ -330,6 +338,8 @@
 				89BCFD601AC01133004CAAFD /* AJNInit.mm */,
 				89BCFD611AC01133004CAAFD /* AJNInit.h */,
 				89E26B891AB860AF0030629B /* AJNObserver.h */,
+				03F29D8D1D36B03600A27375 /* AJNAboutData.mm */,
+				03F29D921D36B03600A27375 /* AJNAboutData.h */,
 				89E26B8A1AB860AF0030629B /* AJNObserver.mm */,
 				89E26B8B1AB860AF0030629B /* AJNObserverListener.h */,
 				7DC6D47C1A02867500764C73 /* AJNAboutIconObject.mm */,
@@ -487,6 +497,7 @@
 				AC103110156EC85100D2853A /* AJNInterfaceMember.h in Headers */,
 				7DC6D4851A02867500764C73 /* AJNAboutIconProxy.h in Headers */,
 				AC103112156EC85100D2853A /* AJNInterfaceProperty.h in Headers */,
+				03F29D981D36B03600A27375 /* AJNAboutData.h in Headers */,
 				AC103114156EC85100D2853A /* AJNMessage.h in Headers */,
 				AC103116156EC85100D2853A /* AJNMessageArgument.h in Headers */,
 				AC103118156EC85100D2853A /* AJNObject.h in Headers */,
@@ -564,6 +575,7 @@
 		AC10309F156EC82300D2853A /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
+				LastTestingUpgradeCheck = 0730;
 				LastUpgradeCheck = 0430;
 				ORGANIZATIONNAME = "AllSeen Alliance.";
 			};
@@ -624,6 +636,7 @@
 				AC103108156EC85100D2853A /* AJNBusListenerImpl.mm in Sources */,
 				7DC6D4861A02867500764C73 /* AJNAboutIcon.mm in Sources */,
 				AC10310A156EC85100D2853A /* AJNBusObject.mm in Sources */,
+				03F29D931D36B03600A27375 /* AJNAboutData.mm in Sources */,
 				AC10310C156EC85100D2853A /* AJNBusObjectImpl.mm in Sources */,
 				AC10310F156EC85100D2853A /* AJNInterfaceDescription.mm in Sources */,
 				AC103111156EC85100D2853A /* AJNInterfaceMember.mm in Sources */,
@@ -846,6 +859,7 @@
 				INFOPLIST_FILE = "AllJoynFramework_iOSTests/AllJoynFramework_iOSTests-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
+					"\"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)\"",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = NO;
@@ -857,6 +871,8 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
+					"-lssl",
+					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
@@ -887,6 +903,7 @@
 				INFOPLIST_FILE = "AllJoynFramework_iOSTests/AllJoynFramework_iOSTests-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
+					"\"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)\"",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = NO;
@@ -898,6 +915,8 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
+					"-lssl",
+					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;

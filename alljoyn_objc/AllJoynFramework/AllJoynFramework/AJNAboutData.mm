@@ -1,10 +1,22 @@
-//
-//  AJNAboutData.m
-//  AllJoynFramework_iOS
-//
-//  Created by Mindscape on 7/4/16.
-//  Copyright © 2016 AllSeen Alliance. All rights reserved.
-//
+/******************************************************************************
+ * @file AJNAboutData.m
+ * This contains the AboutData class responsible for holding the org.alljoyn.About
+ * interface data fields.
+ *
+ * Copyright AllSeen Alliance. All rights reserved.
+ *
+ *    Permission to use, copy, modify, and/or distribute this software for any
+ *    purpose with or without fee is hereby granted, provided that the above
+ *    copyright notice and this permission notice appear in all copies.
+ *
+ *    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+ *    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+ *    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ *    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+ *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+ *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+ ******************************************************************************/
 
 #import "AJNAboutData.h"
 #import <alljoyn/AboutData.h>
@@ -12,24 +24,11 @@
 using namespace ajn;
 
 #pragma mark-
+
 @interface AJNAboutData()
-@property (nonatomic, readonly) AboutData *aboutData;
-
-/*
- *private Set<String> supportedLanguages;
- *private Map<String, AJNMessageArgument> propertyStore;
- *private Map<String, Map<String, AJNMessageArgument>> localizedPropertyStore;
- *private Map<String, FieldDetails> aboutFields;
-*/
-@property (nonatomic, strong) NSMutableDictionary *propertyStore;
-@property (nonatomic, strong) NSMutableDictionary *localizedPropertyStore;
-@property (nonatomic, strong) NSMutableDictionary *aboutFields;
-@property (nonatomic, strong) NSSet *supportedLanguages;
-
-
-
-- (void)initializeFieldDetails;
-
+{
+    AboutData *aboutData;
+}
 @end
 
 
@@ -105,10 +104,16 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     if (self) {
         self.handle = new AboutData();
         self.shouldDeleteHandleOnDealloc = YES;
-        self.propertyStore = [[NSMutableDictionary alloc] init];
-        self.localizedPropertyStore = [[NSMutableDictionary alloc] init];
-        self.aboutFields = [[NSMutableDictionary alloc] init];
-        [self initializeFieldDetails];
+    }
+    return self;
+}
+
+- (id)initWithLanguage: (NSString*)language
+{
+    self = [super init];
+    if (self) {
+        self.handle = new AboutData([ language UTF8String]);
+        self.shouldDeleteHandleOnDealloc = YES;
     }
     return self;
 }
@@ -117,7 +122,7 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 {
     self = [super init];
     if (self) {
-        self.handle = new AboutData(*msgArg.msgArg,NULL);
+        self.handle = new AboutData(*msgArg.msgArg,[ language UTF8String]);
         self.shouldDeleteHandleOnDealloc = YES;
     }
     return self;
@@ -139,7 +144,6 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
             (c >= 'a' && c <= 'f'));
 }
 
-
 - (QStatus)createFromXml:(NSString*)aboutXmlData
 {
     return self.aboutData->CreateFromXml(aboutXmlData.UTF8String);
@@ -151,131 +155,33 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 }
 
 - (QStatus)getField:(NSString*)name messageArg:(AJNMessageArgument*)msgArg language:(NSString*)language{
-    QStatus status = ER_OK;
-    if (![self isFieldLocalized:name]) {
-        msgArg = self.propertyStore[name];
-    }else{
-        if (language == nil || language.length == 0) {
-            msgArg = self.propertyStore[kDEFAULT_LANGUAGE];
-            status = [msgArg value:self.aboutFields[kDEFAULT_LANGUAGE]];
-            if (status != ER_OK) {
-                return status;
-            }
-        }
-    }
+    QStatus status;
+    MsgArg* arg = msgArg.msgArg;
+    status = self.aboutData->GetField(name.UTF8String, arg, language.UTF8String);
     return status;
 }
 
 - (QStatus)setField:(NSString*)name msgArg:(AJNMessageArgument*)msgArg andLanguage:(NSString*)language{
-    QStatus status = ER_OK;
-    // The user is adding an OEM specific field.
-    // At this time OEM specific fields are added as
-    //    not required
-    //    not announced
-    //    can be localized
-    if(![self.aboutFields.allKeys containsObject:name]){
-        if(msgArg.signature == nil){
-            [NSException raise:NSGenericException format:@"Unable to find Variant signature."];
-        }else if([msgArg.signature isEqualToString:@"s"]){
-            [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:LOCALIZED
-                                                                   andSignature:msgArg.signature]
-                                 forKey:name];
-        }else{
-            [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:EMPTY_MASK
-                                                                   andSignature:msgArg.signature]
-                                 forKey:name];
-        }
-    }
-    
-    if([self isFieldLocalized:name]){
-        if(language == nil || language == 0){
-            if([self.propertyStore.allKeys containsObject:kDEFAULT_LANGUAGE]){
-                AJNMessageArgument *arg = self.propertyStore[kDEFAULT_LANGUAGE];
-                language = arg.signature;
-            }else{
-                [NSException raise:NSGenericException format:@"Specified language tag not found."];
-            }
-        }
-    }else{
-        [self.propertyStore setObject:msgArg forKey:name];
-    }
-    
-    //TODO:: KISHORE :: incomplete implementation11
-    return status;
+     return self.aboutData->SetField(name.UTF8String, *msgArg.msgArg, language.UTF8String );
 }
 
 - (BOOL)isValid{
+    
     return [self isValid:nil];
 }
 
 - (BOOL)isValid:(NSString*)language{
+    BOOL test;
     if (language == nil || language.length == 0) {
-        @try {
-            AJNMessageArgument *arg = self.propertyStore[kDEFAULT_LANGUAGE];
-            language = arg.signature;
-        } @catch (NSException *exception) {
-            return NO;
-        }
-    }else{
-        if(![self.supportedLanguages containsObject:language]){
-            return NO;
-        }
-        
-        for(NSString *lang in self.aboutFields.allKeys){
-            if ([self isFieldRequired:lang]) {
-                if ([self isFieldLocalized:lang]) {
-                    NSDictionary *propertyObj = self.localizedPropertyStore[lang];
-                    if (![self.localizedPropertyStore.allKeys containsObject:lang] || ![propertyObj.allKeys containsObject:language]) {
-                        return NO;
-                    }else{
-                        if (![self.propertyStore.allKeys containsObject:lang]) {
-                            return NO;
-                        }
-                    }
-                }
-            }
-        }
+        test = self.aboutData->IsValid();
+        return test;
     }
-    return YES;
+    return self.aboutData->IsValid( [language UTF8String]);
 }
 
-- (void)initializeFieldDetails{
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"ay"]
-                         forKey:kAPP_ID];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kDEFAULT_LANGUAGE];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kDEVICE_NAME];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kDEVICE_ID];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kAPP_NAME];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kMANUFACTURER];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kMODEL_NUMBER];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"as"]
-                         forKey:kSUPPORTED_LANGUAGES];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kDESCRIPTION];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kDATE_OF_MANUFACTURE];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kSOFTWARE_VERSION];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kAJ_SOFTWARE_VERSION];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kHARDWARE_VERSION];
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:REQUIRED|ANNOUNCED andSignature:@"s"]
-                         forKey:kSUPPORT_URL];
-}
 
 - (void)setNewFieldDetails:(NSString*)fieldName mask:(AJNAboutFieldMask)aboutFieldMask andSignature:(NSString*)signature{
-    
-    NSAssert1(fieldName == nil || [fieldName isEqualToString:@""], @"field name should not be nil oe empty", fieldName);
-    
-    [self.aboutFields setObject:[[FieldDetails alloc] initWithFieldMask:aboutFieldMask andSignature:signature]
-                         forKey:fieldName];
+// TODO : Believe method is deprecated in C++
 }
 
 - (QStatus)setField:(NSString*)name msgArg:(AJNMessageArgument*)msgArg{
@@ -287,328 +193,266 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 }
 
 - (NSString*)getFieldSignature:(NSString*)fieldName{
-    FieldDetails *fieldDetails = self.aboutFields[fieldName];
-    if (fieldDetails == nil) {
-        return nil;
-    }else{
-        return fieldDetails.signature;
-    }
+    const char *fieldSignature = self.aboutData->GetFieldSignature([fieldName UTF8String]);
+    return [NSString stringWithCString:fieldSignature encoding:NSUTF8StringEncoding ];
+
 }
 
 - (BOOL)isFieldLocalized:(NSString*)fieldName{
-    FieldDetails *fieldDetails = self.aboutFields[fieldName];
-    if (fieldDetails == nil) {
-        return NO;
-    }else{
-        return (fieldDetails.fieldMask  & LOCALIZED) == LOCALIZED;
-    }
+    return self.aboutData->IsFieldLocalized([fieldName UTF8String]);
+
 }
 
 - (BOOL)isFieldAnnounced:(NSString*)fieldName{
-    FieldDetails *fieldDetails = self.aboutFields[fieldName];
-    if (fieldDetails == nil) {
-        return NO;
-    }else{
-        return (fieldDetails.fieldMask  & ANNOUNCED) == ANNOUNCED;
-    }
+    return self.aboutData->IsFieldAnnounced([fieldName UTF8String]);
+
 }
 
 - (BOOL)isFieldRequired:(NSString*)fieldName{
-    FieldDetails *fieldDetails = self.aboutFields[fieldName];
-    if (fieldDetails == nil) {
-        return NO;
-    }else{
-        return (fieldDetails.fieldMask  & REQUIRED) == REQUIRED;
-    }
-}
-
-- (NSSet*)getFields{
-    return [NSSet setWithArray:self.aboutFields.allKeys];
+    return self.aboutData->IsFieldRequired([fieldName UTF8String]);
 }
 
 - (QStatus)setAppId:(uint8_t[])appId{
-    QStatus status = ER_OK;
+    return self.aboutData->SetAppId(appId);
+
+}
+
+- (QStatus)getDefaultLanguage:(NSString*)defaultLanguage
+{
+    QStatus status;
+    char **defaultLanguageOut = NULL;
+    status = self.aboutData->GetDeviceId(defaultLanguageOut);
     
-//    uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
-//        0x1E, 0x82, 0x11, 0xE4,
-//        0x86, 0x51, 0xD1, 0x56,
-//        0x1D, 0x5D, 0x46, 0xB0 };
-
-    AJNMessageArgument *args = [[AJNMessageArgument alloc] init];
-    [args setValue:@"ay",sizeof(appId) / sizeof(appId[0]),appId];
-    [args stabilize];
-    
-    status = [self setField:kAPP_ID msgArg:args];
+    defaultLanguage = [NSString stringWithCString:*defaultLanguageOut encoding:NSUTF8StringEncoding ];
     
     return status;
 }
 
-- (QStatus)getDefaultLanguage:(NSString*)defaultLanguage{
+- (QStatus)setDeviceName:(NSString*)deviceName andLanguage:(NSString*)language
+{
+    return self.aboutData->SetDeviceName([deviceName UTF8String], language.UTF8String);
+}
+
+- (QStatus)getDeviceName:(NSString*)deviceName andLanguage:(NSString*)language
+{
+    char** deviceNameOut = NULL;
+    const char *languageIn = [language UTF8String];
+    
     QStatus status;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kDEFAULT_LANGUAGE messageArg:msgArg language:defaultLanguage];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kDEFAULT_LANGUAGE],&defaultLanguage];
+    
+    status = self.aboutData->GetDeviceName(deviceNameOut, languageIn);
+    
+    deviceName = [NSString stringWithCString:*deviceNameOut encoding:NSUTF8StringEncoding ];
     return status;
 }
 
-- (QStatus)setDeviceName:(NSString*)deviceName andLanguage:(NSString*)language{
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [msgArg setValue:self.aboutFields[kDEVICE_NAME],&deviceName];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [self setField:kDEVICE_NAME msgArg:msgArg];
-    return status;
+- (QStatus)setDeviceId:(NSString*)deviceId
+{
+    return self.aboutData->SetDeviceId([deviceId UTF8String]);
+
 }
 
-- (QStatus)getDeviceName:(NSString*)deviceName andLanguage:(NSString*)language{
+- (QStatus)getDeviceId:(NSString*)deviceId
+{
     QStatus status;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kDEVICE_NAME messageArg:msgArg language:language];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kDEVICE_NAME],&deviceName];
+    char **deviceIdOut = NULL;
+    status = self.aboutData->GetDeviceId(deviceIdOut);
+    
+    deviceId = [NSString stringWithCString:*deviceIdOut encoding:NSUTF8StringEncoding ];
+    
     return status;
 }
 
-- (QStatus)setDeviceId:(NSString*)deviceId{
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [msgArg setValue:self.aboutFields[kDEVICE_ID],&deviceId];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [self setField:kDEVICE_ID msgArg:msgArg];
-    return status;
+- (QStatus)setAppName:(NSString*)appName andLanguage:(NSString*)language
+{
+    return self.aboutData->SetAppName([appName UTF8String], [language UTF8String]);
+
 }
 
-- (QStatus)getDeviceId:(NSString*)deviceId{
+- (QStatus)getAppName:(NSString*)appName andLanguage:(NSString*)language
+{
+    char** appNameOut = NULL;
+    const char *languageIn = [language UTF8String];
+
     QStatus status;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kDEVICE_ID messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kDEVICE_ID],&deviceId];
+    
+    status = self.aboutData->GetAppName(appNameOut, languageIn);
+    
+    appName = [NSString stringWithCString:*appNameOut encoding:NSUTF8StringEncoding ];
     return status;
 }
 
-- (QStatus)setAppName:(NSString*)appName andLanguage:(NSString*)language{
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [msgArg setValue:self.aboutFields[kAPP_NAME],&appName];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [self setField:kAPP_NAME msgArg:msgArg andLanguage:language];
-    return status;
+- (QStatus)setManufacturer:(NSString*)manufacturer andLanguage:(NSString*)language
+{
+    return self.aboutData->SetManufacturer([manufacturer UTF8String], [language UTF8String]);
+
 }
 
-- (QStatus)getAppName:(NSString*)appName andLanguage:(NSString*)language{
+- (QStatus)getManufacturer:(NSString*)manufacturer andLanguage:(NSString*)language
+{
+    char** manufacturerOut = NULL;
     QStatus status;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kDEVICE_ID messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kAPP_NAME],&appName];
+    
+    status = self.aboutData->GetManufacturer(manufacturerOut, [language UTF8String]);
+
+    manufacturer = [NSString stringWithCString:*manufacturerOut encoding:NSUTF8StringEncoding ];
     return status;
 }
 
-- (QStatus)setManufacturer:(NSString*)manufacturer andLanguage:(NSString*)language{
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [msgArg setValue:self.aboutFields[kAPP_NAME],&manufacturer];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [self setField:kAPP_NAME msgArg:msgArg andLanguage:language];
-    return status;
+- (QStatus)setModelNumber:(NSString*)modelNumber
+{
+    return self.aboutData->SetModelNumber([modelNumber UTF8String]);
 }
 
-- (QStatus)getManufacturer:(NSString*)manufacturer andLanguage:(NSString*)language{
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kMANUFACTURER messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kMANUFACTURER],&manufacturer];
-    return status;
-}
-
-- (QStatus)setModelNumber:(NSString*)modelNumber{
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [msgArg setValue:self.aboutFields[kMODEL_NUMBER],&modelNumber];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [self setField:kMODEL_NUMBER msgArg:msgArg];
-    return status;
-}
-
-- (QStatus)getModelNumber:(NSString*)modelNumber{
+- (QStatus)getModelNumber:(NSString*)modelNumber
+{
     QStatus status;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kMODEL_NUMBER messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kMODEL_NUMBER],&modelNumber];
+    char **modelNumberOut = NULL;
+    status = self.aboutData->GetModelNumber(modelNumberOut);
+    
+    modelNumber = [NSString stringWithCString:*modelNumberOut encoding:NSUTF8StringEncoding ];
+    
     return status;
 }
 
-- (QStatus)setSupportedLanguage:(NSString*)language{
-    //TODO:: KISHORE
-    //TODO add in logic to check information about the tag all of the tags must
-    //     conform to the RFC5646 there is currently nothing to make sure the
-    //     tags conform to this RFC
-   // bool added = false;
-   // TODO -  QStatus status = [self.translatorDelegate addTargetLanguage:language withFlag:added];
-    return ER_OK;
+- (QStatus)setSupportedLanguage:(NSString*)language
+{
+    return self.aboutData->SetSupportedLanguage([language UTF8String]);
 }
 
-- (size_t)getSupportedLanguages:(NSString*)languageTags num:(size_t)num{
-    //TODO:: KISHORE
-    return 0;
+- (size_t)getSupportedLanguages:(NSString*)languageTags num:(size_t)num
+{
+    const char** languageTagsOut = NULL;
+    size_t numOut = 0;
+
+    num = self.aboutData->GetSupportedLanguages(languageTagsOut, numOut);
+    return num;
 }
 
-- (QStatus)setDescription:(NSString*)description andLanguage:(NSString*)language{
-    QStatus status = ER_OK;
-    AJNMessageArgument *arg = [[AJNMessageArgument alloc] init];
-    status = [arg setValue:self.aboutFields[kDESCRIPTION],&language];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [self setField:kDESCRIPTION msgArg:arg andLanguage:language];
-    return status;
+- (QStatus)setDescription:(NSString*)description andLanguage:(NSString*)language
+{
+    return self.aboutData->SetDescription([description UTF8String], [language UTF8String]);
 }
 
-- (QStatus)getDescription:(NSString*)description language:(NSString*)language{
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kDESCRIPTION messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kDESCRIPTION],&description];
+- (QStatus)getDescription:(NSString*)description language:(NSString*)language
+{
+    QStatus status;
+    char **descriptionOut = NULL;
+    const char *languageIn = [language UTF8String];
+    
+    status = self.aboutData->GetDescription(descriptionOut, languageIn);
+    description = [NSString stringWithCString:*descriptionOut encoding:NSUTF8StringEncoding ];
+    
     return status;
 }
 
 
 - (QStatus)setDateOfManufacture:(NSString*)dateOfManufacture
 {
-    //TODO check that the dateOfManufacture string is of the correct format YYYY-MM-DD
-    QStatus status;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kDATE_OF_MANUFACTURE messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kDATE_OF_MANUFACTURE],&dateOfManufacture];
-    return status;
+    return self.aboutData->SetDateOfManufacture([dateOfManufacture UTF8String]);
+
 }
 
 - (QStatus)getDateOfManufacture:(NSString*)dateOfManufacture
 {
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kDATE_OF_MANUFACTURE messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kDATE_OF_MANUFACTURE],&dateOfManufacture];
+    char** dateOfManufactureOut = NULL;
+    QStatus status;
+    
+    status = self.aboutData->GetDateOfManufacture(dateOfManufactureOut);
+    
+    dateOfManufacture = [NSString stringWithCString:*dateOfManufactureOut encoding:NSUTF8StringEncoding ];
+    
     return status;
 }
 
 - (QStatus)setSoftwareVersion:(NSString*)softwareVersion
 {
-    QStatus status;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kSOFTWARE_VERSION messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kSOFTWARE_VERSION],&softwareVersion];
-    return status;
+    return self.aboutData->SetSoftwareVersion([softwareVersion UTF8String]);
+
 }
 
 - (QStatus)getSoftwareVersion:(NSString*)softwareVersion
 {
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kSOFTWARE_VERSION messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kSOFTWARE_VERSION],&softwareVersion];
+    char** softwareVersionOut = NULL;
+    QStatus status;
+    
+    status = self.aboutData->GetSoftwareVersion(softwareVersionOut);
+    
+    softwareVersion = [NSString stringWithCString:*softwareVersionOut encoding:NSUTF8StringEncoding ];
+    
     return status;
 }
 
 - (QStatus)getAJSoftwareVersion:(NSString*)ajSoftwareVersion
 {
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kAJ_SOFTWARE_VERSION messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kAJ_SOFTWARE_VERSION],&ajSoftwareVersion];
+    char** ajSoftwareVersionOut = NULL;
+    QStatus status;
+    
+    status = self.aboutData->GetAJSoftwareVersion(ajSoftwareVersionOut);
+    
+    ajSoftwareVersion = [NSString stringWithCString:*ajSoftwareVersionOut encoding:NSUTF8StringEncoding ];
+    
     return status;
 }
 
 - (QStatus)setHardwareVersion:(NSString*)hardwareVersion
 {
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kHARDWARE_VERSION messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kHARDWARE_VERSION],&hardwareVersion];
-    return status;
+    return self.aboutData->SetHardwareVersion([hardwareVersion UTF8String]);
 }
 
 - (QStatus)getHardwareVersion:(NSString*)hardwareVersion
 {
-    QStatus status = ER_OK;
-    AJNMessageArgument *msgArg = [[AJNMessageArgument alloc] init];
-    status = [self getField:kHARDWARE_VERSION messageArg:msgArg language:nil];
-    if (status != ER_OK) {
-        return status;
-    }
-    status = [msgArg value:self.aboutFields[kHARDWARE_VERSION],&hardwareVersion];
+    char** hardwareVersionOut = NULL;
+    QStatus status;
+    
+    status = self.aboutData->GetHardwareVersion(hardwareVersionOut);
+    
+    hardwareVersion = [NSString stringWithCString:*hardwareVersionOut encoding:NSUTF8StringEncoding ];
+    
     return status;
 }
 
 - (QStatus)setSupportUrl:(NSString*)supportUrl
 {
-    //TODO:: KISHORE
-    return ER_OK;
+    return self.aboutData->SetSupportUrl([supportUrl UTF8String]);
 }
 
 - (QStatus)getSupportUrl:(NSString*)supportUrl
 {
-    //TODO:: KISHORE
-    return ER_OK;
+    char** supportUrlOut = NULL;
+    QStatus status;
+    
+    status = self.aboutData->GetSupportUrl(supportUrlOut);
+    
+    supportUrl = [NSString stringWithCString:*supportUrlOut encoding:NSUTF8StringEncoding ];
+    
+    return status;
 }
-
 
 #pragma mark- AJNAboutDataListener
-- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary *__autoreleasing *)aboutData{
-    //TODO:: KISHORE
-    return ER_FAIL;
+- (QStatus)getAboutData:(AJNMessageArgument**)msgArg withLanguage:(NSString*)language
+{
+    QStatus status = ER_OK;
+    MsgArg *messageArg = new MsgArg;
+    
+    status = self.aboutData->GetAboutData(messageArg, [language UTF8String]);
+    
+    *msgArg = [[AJNMessageArgument alloc]initWithHandle:messageArg ];
+    
+    return status;
+    
 }
 
-- (QStatus)getDefaultAnnounceData:(NSMutableDictionary *__autoreleasing *)aboutData{
-    //TODO:: KISHORE
-    return ER_FAIL;
+- (QStatus)getAnnouncedAboutData:(AJNMessageArgument**)msgArg
+{
+    QStatus status = ER_OK;
+    MsgArg *messageArg = new MsgArg;
+    
+    status = self.aboutData->GetAnnouncedAboutData(messageArg);
+    
+    *msgArg = [[AJNMessageArgument alloc]initWithHandle:messageArg ];
+    
+    return status;
 }
 
 @end

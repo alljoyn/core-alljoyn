@@ -22,6 +22,7 @@
 #import "AJNAboutObject.h"
 #import "AJNVersion.h"
 #import "BasicObject.h"
+#import "AJNAboutData.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -40,7 +41,7 @@ static const AJNSessionPort kAboutServicePort = 900;
 // Basic Service private interface
 //
 
-@interface AboutService() <AJNBusListener, AJNSessionPortListener, AJNSessionListener, AJNAboutDataListener>
+@interface AboutService() <AJNBusListener, AJNSessionPortListener, AJNSessionListener>
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic, strong) BasicObject *basicObject;
@@ -157,11 +158,57 @@ static const AJNSessionPort kAboutServicePort = 900;
         NSLog(@"ERROR: Could not bind session on port (%d)", kAboutServicePort);
     }
     
-    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kAboutServicePort withAboutDataListener:self];
-    if (ER_OK != status) {
-        NSLog(@"Error");
+    
+        
+    // Setup the about data
+    // The default language is specified in the constructor. If the default language
+    // is not specified any Field that should be localized will return an error
+    AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
+    
+    //AppId is a 128bit uuid
+    uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
+        0x1E, 0x82, 0x11, 0xE4,
+        0x86, 0x51, 0xD1, 0x56,
+        0x1D, 0x5D, 0x46, 0xB0 };
+    status = [aboutData setAppId:appId];
+    status = [aboutData setDeviceName:@"iPhone" andLanguage:@"en"];
+    //DeviceId is a string encoded 128bit UUID
+    status = [aboutData setDeviceId:@"93c06771-c725-48c2-b1ff-6a2a59d445b8"];
+    status = [aboutData setAppName:@"Application" andLanguage:@"en"];
+    status = [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
+    status = [aboutData setModelNumber:@"123456"];
+    status = [aboutData setDescription:@"A poetic description of this application" andLanguage:@"en"];
+    status = [aboutData setDateOfManufacture:@"14/07/2016"];
+    status = [aboutData setSoftwareVersion:@"0.1.2"];
+    status = [aboutData setHardwareVersion:@"0.0.1"];
+    status = [aboutData setSupportUrl:@"http://www.example.org"];
+    
+    // The default language is automatically added to the `SupportedLanguages`
+    // Users don't have to specify the AJSoftwareVersion its automatically added
+    // to the AboutData
+    
+    // Adding Spanish Localization values to the AboutData. All strings MUST be
+    // UTF-8 encoded.
+    status = [aboutData setDeviceName:@"Mi dispositivo Nombre" andLanguage:@"es"];
+    status = [aboutData setAppName:@"aplicación" andLanguage:@"es"];
+    status = [aboutData setManufacturer:@"fabricante" andLanguage:@"es"];
+    status = [aboutData setDescription:@"Una descripción poética de esta aplicación" andLanguage:@"es"];
+    
+    // Check to see if the aboutData is valid before sending the About Announcement
+    if (![aboutData isValid]) {
+        printf("failed to setup about data.\n");
     }
+
+    AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
+    status = [aboutObj announceForSessionPort:kAboutServicePort withAboutDataListener:aboutData];
+    if (ER_OK == status) {
+        printf("AboutObj Announce Succeeded.\n");
+    } else {
+        printf("AboutObj Announce failed (%s)\n", QCC_StatusText(status));
+        exit(1);
+    }
+
+    
     [self.delegate didReceiveStatusUpdateMessage:@"-------------\n"];
     [self.delegate didReceiveStatusUpdateMessage:@"Announce sent\n"];
     [self.delegate didReceiveStatusUpdateMessage:@"-------------\n"];
