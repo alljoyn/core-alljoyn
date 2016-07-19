@@ -21,6 +21,8 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		032690F41D2D8E7F00444567 /* AJNAboutData.h in Headers */ = {isa = PBXBuildFile; fileRef = 032690F21D2D8E7F00444567 /* AJNAboutData.h */; };
+		032690F51D2D8E7F00444567 /* AJNAboutData.mm in Sources */ = {isa = PBXBuildFile; fileRef = 032690F31D2D8E7F00444567 /* AJNAboutData.mm */; };
 		7D027E2B1A0020EE00100D98 /* AJNAboutIcon.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D027E2A1A0020EE00100D98 /* AJNAboutIcon.h */; };
 		7D027E2D1A002E5500100D98 /* AJNAboutIcon.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D027E2C1A002E5500100D98 /* AJNAboutIcon.mm */; };
 		7D027E2F1A0041BE00100D98 /* AJNAboutIconProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D027E2E1A0041BE00100D98 /* AJNAboutIconProxy.h */; };
@@ -46,6 +48,7 @@
 		7DBACA2419EB8444007DF927 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DBACA2319EB8444007DF927 /* AJNAboutProxy.mm */; };
 		7DC6D4791A0205E000764C73 /* AJNAboutIconObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 7DC6D4781A0205E000764C73 /* AJNAboutIconObject.h */; };
 		7DC6D47B1A02075C00764C73 /* AJNAboutIconObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DC6D47A1A02075C00764C73 /* AJNAboutIconObject.mm */; };
+		7DEA2F311AC40225007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F2C1AC3EFFB007ECE82 /* libc++.dylib */; };
 		8341BF0A193B10650009B66E /* AJNTranslator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF07193B10650009B66E /* AJNTranslator.h */; };
 		8341BF0B193B10650009B66E /* AJNTranslatorImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF08193B10650009B66E /* AJNTranslatorImpl.h */; };
 		8341BF0C193B10650009B66E /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */; };
@@ -75,6 +78,8 @@
 		AC77324715A3452B00C7A9A4 /* TestAuthenticationListener.m in Sources */ = {isa = PBXBuildFile; fileRef = AC77324615A3452B00C7A9A4 /* TestAuthenticationListener.m */; };
 		AC77FEA2154B0D9600D39DFE /* InterfaceDescriptionTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AC77FEA1154B0D9600D39DFE /* InterfaceDescriptionTests.m */; };
 		AC77FEBD154B285400D39DFE /* AJNType.h in Headers */ = {isa = PBXBuildFile; fileRef = AC77FEBB154B285200D39DFE /* AJNType.h */; };
+		AC9FD2C915E44939003BAE7C /* libcrypto.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC9FD2C815E44939003BAE7C /* libcrypto.0.9.8.dylib */; };
+		AC9FD2CB15E4494B003BAE7C /* libssl.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC9FD2CA15E4494B003BAE7C /* libssl.0.9.8.dylib */; };
 		ACB44E5615485F3E00FF7DBC /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB44E5515485F3E00FF7DBC /* Cocoa.framework */; };
 		ACB44E6915485F3E00FF7DBC /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB44E5515485F3E00FF7DBC /* Cocoa.framework */; };
 		ACB44E6C15485F3E00FF7DBC /* libAllJoynFramework.a in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB44E5215485F3E00FF7DBC /* libAllJoynFramework.a */; };
@@ -137,6 +142,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		032690F21D2D8E7F00444567 /* AJNAboutData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutData.h; sourceTree = "<group>"; };
+		032690F31D2D8E7F00444567 /* AJNAboutData.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutData.mm; sourceTree = "<group>"; };
 		7D027E2A1A0020EE00100D98 /* AJNAboutIcon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIcon.h; sourceTree = "<group>"; };
 		7D027E2C1A002E5500100D98 /* AJNAboutIcon.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutIcon.mm; sourceTree = "<group>"; };
 		7D027E2E1A0041BE00100D98 /* AJNAboutIconProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIconProxy.h; sourceTree = "<group>"; };
@@ -165,6 +172,7 @@
 		7DBACA2319EB8444007DF927 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutProxy.mm; sourceTree = "<group>"; };
 		7DC6D4781A0205E000764C73 /* AJNAboutIconObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIconObject.h; sourceTree = "<group>"; };
 		7DC6D47A1A02075C00764C73 /* AJNAboutIconObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutIconObject.mm; sourceTree = "<group>"; };
+		7DEA2F2C1AC3EFFB007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		8341BF07193B10650009B66E /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslator.h; sourceTree = "<group>"; };
 		8341BF08193B10650009B66E /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -204,6 +212,8 @@
 		AC77FEA1154B0D9600D39DFE /* InterfaceDescriptionTests.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = InterfaceDescriptionTests.m; sourceTree = "<group>"; };
 		AC77FEBB154B285200D39DFE /* AJNType.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNType.h; sourceTree = "<group>"; };
 		AC799DEE1558554900BBDDBC /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
+		AC9FD2C815E44939003BAE7C /* libcrypto.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.0.9.8.dylib; path = usr/lib/libcrypto.0.9.8.dylib; sourceTree = SDKROOT; };
+		AC9FD2CA15E4494B003BAE7C /* libssl.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.0.9.8.dylib; path = usr/lib/libssl.0.9.8.dylib; sourceTree = SDKROOT; };
 		ACB44E5215485F3E00FF7DBC /* libAllJoynFramework.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libAllJoynFramework.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACB44E5515485F3E00FF7DBC /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		ACB44E5815485F3E00FF7DBC /* AppKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AppKit.framework; path = System/Library/Frameworks/AppKit.framework; sourceTree = SDKROOT; };
@@ -277,6 +287,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7DEA2F311AC40225007ECE82 /* libc++.dylib in Frameworks */,
+				AC9FD2CB15E4494B003BAE7C /* libssl.0.9.8.dylib in Frameworks */,
+				AC9FD2C915E44939003BAE7C /* libcrypto.0.9.8.dylib in Frameworks */,
 				AC5C55EC1548BED400C13A0B /* libobjc.dylib in Frameworks */,
 				AC5C55DA1548B53D00C13A0B /* libajrouter.a in Frameworks */,
 				AC5C55E41548B6BF00C13A0B /* liballjoyn.a in Frameworks */,
@@ -312,6 +325,9 @@
 		ACB44E5415485F3E00FF7DBC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				7DEA2F2C1AC3EFFB007ECE82 /* libc++.dylib */,
+				AC9FD2CA15E4494B003BAE7C /* libssl.0.9.8.dylib */,
+				AC9FD2C815E44939003BAE7C /* libcrypto.0.9.8.dylib */,
 				AC5C55EB1548BED400C13A0B /* libobjc.dylib */,
 				AC5C55E71548B75B00C13A0B /* libpthread.dylib */,
 				AC5C55E01548B65800C13A0B /* libstdc++.dylib */,
@@ -337,24 +353,24 @@
 		ACB44E5B15485F3E00FF7DBC /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
-				7D74A7A819E711870055CD21 /* AJNAboutDataListener.h */,
-				7D74A7A719E711870055CD21 /* AJNAboutDataListenerImpl.h */,
-				7D74A7A619E711870055CD21 /* AJNAboutDataListenerImpl.mm */,
-				7D027E2A1A0020EE00100D98 /* AJNAboutIcon.h */,
-				7D027E2C1A002E5500100D98 /* AJNAboutIcon.mm */,
-				7DC6D4781A0205E000764C73 /* AJNAboutIconObject.h */,
-				7DC6D47A1A02075C00764C73 /* AJNAboutIconObject.mm */,
-				7D027E2E1A0041BE00100D98 /* AJNAboutIconProxy.h */,
-				7D027E301A0048C700100D98 /* AJNAboutIconProxy.mm */,
-				7D74A7AB19E711870055CD21 /* AJNAboutListener.h */,
-				7D74A7AA19E711870055CD21 /* AJNAboutListenerImpl.h */,
-				7D74A7A919E711870055CD21 /* AJNAboutListenerImpl.mm */,
+				89153DE01AADB332009DB2EA /* AJNObserver.h */,
+				89153DE11AADB332009DB2EA /* AJNObserver.mm */,
+				89153DE21AADB332009DB2EA /* AJNObserverListener.h */,
 				7D74A7A519E711870055CD21 /* AJNAboutObject.h */,
 				7D5C090819E88CDD00214D48 /* AJNAboutObject.mm */,
-				7D0474E319EC801000EE34BA /* AJNAboutObjectDescription.h */,
-				7D0474E519EC8D3700EE34BA /* AJNAboutObjectDescription.mm */,
-				7D91B93D19E744AE00FA4C8B /* AJNAboutProxy.h */,
-				7DBACA2319EB8444007DF927 /* AJNAboutProxy.mm */,
+				7D74A7A619E711870055CD21 /* AJNAboutDataListenerImpl.mm */,
+				7D74A7A719E711870055CD21 /* AJNAboutDataListenerImpl.h */,
+				7D74A7A819E711870055CD21 /* AJNAboutDataListener.h */,
+				032690F21D2D8E7F00444567 /* AJNAboutData.h */,
+				032690F31D2D8E7F00444567 /* AJNAboutData.mm */,
+				7D74A7A919E711870055CD21 /* AJNAboutListenerImpl.mm */,
+				7D74A7AA19E711870055CD21 /* AJNAboutListenerImpl.h */,
+				7D74A7AB19E711870055CD21 /* AJNAboutListener.h */,
+				8341BF07193B10650009B66E /* AJNTranslator.h */,
+				8341BF08193B10650009B66E /* AJNTranslatorImpl.h */,
+				8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */,
+				7D89F7A01716280A00C372A5 /* AJNPasswordManager.h */,
+				7D89F7A11716280B00C372A5 /* AJNPasswordManager.mm */,
 				AC3A98461577D5E300CFF856 /* AJNAuthenticationListener.h */,
 				AC3A98481577D60400CFF856 /* AJNAuthenticationListenerImpl.h */,
 				AC3A98491577D60500CFF856 /* AJNAuthenticationListenerImpl.mm */,
@@ -371,8 +387,6 @@
 				ACB44E8815485F7800FF7DBC /* AJNBusObjectImpl.h */,
 				ACB44E8915485F7800FF7DBC /* AJNBusObjectImpl.mm */,
 				ACB44E8A15485F7800FF7DBC /* AJNHandle.h */,
-				7DAADABC1A97C77D000D18F9 /* AJNInit.h */,
-				7DAADABE1A97C787000D18F9 /* AJNInit.mm */,
 				ACB44E8B15485F7800FF7DBC /* AJNInterfaceDescription.h */,
 				ACB44E8C15485F7800FF7DBC /* AJNInterfaceDescription.mm */,
 				ACB44E8D15485F7800FF7DBC /* AJNInterfaceMember.h */,
@@ -390,11 +404,6 @@
 				AC700F0615A754A8000C8862 /* AJNMessageHeaderFields.mm */,
 				ACB44E9315485F7800FF7DBC /* AJNObject.h */,
 				ACB44E9415485F7800FF7DBC /* AJNObject.m */,
-				89153DE01AADB332009DB2EA /* AJNObserver.h */,
-				89153DE11AADB332009DB2EA /* AJNObserver.mm */,
-				89153DE21AADB332009DB2EA /* AJNObserverListener.h */,
-				7D89F7A01716280A00C372A5 /* AJNPasswordManager.h */,
-				7D89F7A11716280B00C372A5 /* AJNPasswordManager.mm */,
 				ACB44E9515485F7800FF7DBC /* AJNProxyBusObject.h */,
 				ACB44E9615485F7800FF7DBC /* AJNProxyBusObject.mm */,
 				AC3A984C1577DE2700CFF856 /* AJNSecurityCredentials.h */,
@@ -412,14 +421,23 @@
 				ACB44EA115485F7800FF7DBC /* AJNSignalHandlerImpl.mm */,
 				ACB44EA215485F7800FF7DBC /* AJNStatus.h */,
 				ACB44EA315485F7800FF7DBC /* AJNStatus.m */,
-				8341BF07193B10650009B66E /* AJNTranslator.h */,
-				8341BF08193B10650009B66E /* AJNTranslatorImpl.h */,
-				8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */,
 				ACB44EA415485F7800FF7DBC /* AJNTransportMask.h */,
 				ACB44EA515485F7800FF7DBC /* AJNTransportMask.m */,
 				AC77FEBB154B285200D39DFE /* AJNType.h */,
 				ACB44EA615485F7800FF7DBC /* AJNVersion.h */,
+				7D91B93D19E744AE00FA4C8B /* AJNAboutProxy.h */,
+				7DBACA2319EB8444007DF927 /* AJNAboutProxy.mm */,
+				7D0474E319EC801000EE34BA /* AJNAboutObjectDescription.h */,
+				7D0474E519EC8D3700EE34BA /* AJNAboutObjectDescription.mm */,
 				ACB44EA715485F7800FF7DBC /* AJNVersion.mm */,
+				7D027E2A1A0020EE00100D98 /* AJNAboutIcon.h */,
+				7D027E2C1A002E5500100D98 /* AJNAboutIcon.mm */,
+				7D027E2E1A0041BE00100D98 /* AJNAboutIconProxy.h */,
+				7D027E301A0048C700100D98 /* AJNAboutIconProxy.mm */,
+				7DC6D4781A0205E000764C73 /* AJNAboutIconObject.h */,
+				7DC6D47A1A02075C00764C73 /* AJNAboutIconObject.mm */,
+				7DAADABC1A97C77D000D18F9 /* AJNInit.h */,
+				7DAADABE1A97C787000D18F9 /* AJNInit.mm */,
 				ACB44E5C15485F3E00FF7DBC /* Supporting Files */,
 			);
 			path = AllJoynFramework;
@@ -485,6 +503,7 @@
 			files = (
 				ACB44EA815485F7800FF7DBC /* AJNBus.h in Headers */,
 				ACB44EAA15485F7800FF7DBC /* AJNBusAttachment.h in Headers */,
+				032690F41D2D8E7F00444567 /* AJNAboutData.h in Headers */,
 				7DC6D4791A0205E000764C73 /* AJNAboutIconObject.h in Headers */,
 				ACB44EAC15485F7800FF7DBC /* AJNBusInterface.h in Headers */,
 				89153DE51AADB332009DB2EA /* AJNObserverListener.h in Headers */,
@@ -578,7 +597,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastTestingUpgradeCheck = 0510;
-				LastUpgradeCheck = 0730;
+				LastUpgradeCheck = 0440;
 				ORGANIZATIONNAME = "AllSeen Alliance.";
 			};
 			buildConfigurationList = ACB44E4C15485F3E00FF7DBC /* Build configuration list for PBXProject "AllJoynFramework" */;
@@ -638,6 +657,7 @@
 				ACB44EA915485F7800FF7DBC /* AJNBus.m in Sources */,
 				ACB44EAB15485F7800FF7DBC /* AJNBusAttachment.mm in Sources */,
 				ACB44EAF15485F7800FF7DBC /* AJNBusListenerImpl.mm in Sources */,
+				032690F51D2D8E7F00444567 /* AJNAboutData.mm in Sources */,
 				7DAADABF1A97C787000D18F9 /* AJNInit.mm in Sources */,
 				ACB44EB115485F7800FF7DBC /* AJNBusObject.mm in Sources */,
 				ACB44EB315485F7800FF7DBC /* AJNBusObjectImpl.mm in Sources */,
@@ -735,21 +755,12 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"DEBUG=1",
@@ -759,9 +770,7 @@
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
@@ -773,26 +782,16 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = "$(ARCHS_STANDARD)";
 				CLANG_ENABLE_OBJC_ARC = YES;
-				CLANG_WARN_BOOL_CONVERSION = YES;
-				CLANG_WARN_CONSTANT_CONVERSION = YES;
-				CLANG_WARN_EMPTY_BODY = YES;
-				CLANG_WARN_ENUM_CONVERSION = YES;
-				CLANG_WARN_INT_CONVERSION = YES;
-				CLANG_WARN_UNREACHABLE_CODE = YES;
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
-				GCC_WARN_UNDECLARED_SELECTOR = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
-				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				SDKROOT = macosx;
@@ -824,7 +823,6 @@
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
-				V = s;
 			};
 			name = Debug;
 		};
@@ -853,7 +851,6 @@
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
-				V = s;
 			};
 			name = Release;
 		};
@@ -881,7 +878,6 @@
 					"-DQCC_OS_DARWIN",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
 			};
@@ -912,7 +908,6 @@
 					"-DQCC_OS_DARWIN",
 				);
 				OTHER_LDFLAGS = "$(inherited)";
-				PRODUCT_BUNDLE_IDENTIFIER = "org.alljoyn.${PRODUCT_NAME:rfc1034identifier}";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
 			};
