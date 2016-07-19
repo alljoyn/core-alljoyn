@@ -78,6 +78,21 @@
 #endif
 #endif
 
+ /**
+ * Hitting _ASSERTE or a regular assert would display a UI window and prevent us
+ * from creating automatic memory dumps in Jenkins for Windows builds. This version
+ * of QCC_ASSERT forces a dereference of a null pointer, which does not display
+ * the UI window, but immediately skips to the default debugger.
+ */
+#if defined(QCC_CRASH_DUMP_SUPPORT) && !defined(NDEBUG)
+#define QCC_ASSERT(expr) ((void) (                                                                                  \
+                              (!!(expr)) ||                                                                         \
+                              (printf("%s(%d) : Assertion failed for expression: %s.", __FILE__, __LINE__, # expr), \
+                               fflush(stdout),                                                                      \
+                               *((volatile int*)0))                                                                 \
+                              ))
+#endif
+
 /**
  * Map QCC_ASSERT to _ASSERTE if not already defined.
  *
