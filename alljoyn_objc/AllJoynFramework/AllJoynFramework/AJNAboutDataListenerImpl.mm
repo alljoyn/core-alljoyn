@@ -17,6 +17,7 @@
 #import "AJNAboutDataListenerImpl.h"
 #import "AJNMessageArgument.h"
 #import "AJNHandle.h"
+#import "AJNAboutData.h"
 
 using namespace ajn;
 
@@ -25,6 +26,8 @@ using namespace ajn;
 @property (nonatomic, readonly) MsgArg *msgArg;
 
 @end
+
+
 
 const char * AJNAboutDataListenerImpl::AJN_ABOUT_DATA_LISTENER_DISPATCH_QUEUE_NAME = "org.alljoyn.about-data-listener.queue";
 
@@ -70,31 +73,26 @@ AJNAboutDataListenerImpl::~AJNAboutDataListenerImpl()
 QStatus AJNAboutDataListenerImpl::GetAboutData(MsgArg* msgArg, const char* language)
 {
     QStatus status = ER_OK;
-    NSMutableDictionary *aboutData;
     AJNMessageArgument *ajnMsgArgContent;
     NSString *nsLang;
-    int i = 0;
-    size_t numEntries;
-    MsgArg* dictEntries;
+    
     
     if (language != nil) {
         nsLang = [NSString stringWithCString:language encoding:NSUTF8StringEncoding ];
     } else {
         nsLang = nil;
     }
-    if ([m_delegate respondsToSelector:@selector(getAboutDataForLanguage:usingDictionary:)]) {
-        status = [m_delegate getAboutDataForLanguage:nsLang usingDictionary:&aboutData];
-        numEntries = aboutData.count;
-        dictEntries = new MsgArg[numEntries];
-        for (NSString *key in aboutData) {
-            ajnMsgArgContent = aboutData[key];
-            dictEntries[i].Set("{sv}",[key UTF8String],ajnMsgArgContent.msgArg);
-            i++;
-        }
-        msgArg->Set("a{sv}", numEntries, dictEntries);
-        msgArg->Stabilize();
+        
+    if ([m_delegate respondsToSelector:@selector(getAboutData:withLanguage:)]) {
+        status = [m_delegate getAboutData:&ajnMsgArgContent withLanguage:nsLang];
+        
+
     } else {
         status = ER_FAIL;
+    }
+    
+    if(status == ER_OK){
+        *msgArg = *ajnMsgArgContent.msgArg;
     }
     return status;
 }
@@ -102,26 +100,19 @@ QStatus AJNAboutDataListenerImpl::GetAboutData(MsgArg* msgArg, const char* langu
 QStatus AJNAboutDataListenerImpl::GetAnnouncedAboutData(MsgArg* msgArg)
 {
     QStatus status = ER_OK;
-    NSMutableDictionary *aboutData;
     AJNMessageArgument *ajnMsgArgContent;
-    int i = 0;
-    size_t numEntries;
-    MsgArg* dictEntries;
 
-    if([m_delegate respondsToSelector:@selector(getDefaultAnnounceData:)]) {
-        status = [m_delegate getDefaultAnnounceData:&aboutData];
-        numEntries = aboutData.count;
-        dictEntries = new MsgArg[numEntries];
-        for (NSString *key in aboutData) {
-            ajnMsgArgContent = aboutData[key];
-            dictEntries[i].Set("{sv}",[key UTF8String],ajnMsgArgContent.msgArg);
-            i++;
-        }
-        msgArg->Set("a{sv}", numEntries, dictEntries);
-        msgArg->Stabilize();
+    if([m_delegate respondsToSelector:@selector(getAnnouncedAboutData:)]) {
+        status = [m_delegate getAnnouncedAboutData:&ajnMsgArgContent ];
+
     } else {
         status = ER_FAIL;
     }
+    
+    if(status == ER_OK){
+        *msgArg = *ajnMsgArgContent.msgArg;
+    }
+    
     return status;
 }
 
