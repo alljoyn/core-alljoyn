@@ -51,6 +51,7 @@ class AboutListenerTest : public testing::Test {
         serviceBus = NULL;
         port = 25;
         aboutData = alljoyn_aboutdata_create("en");
+        listener = nullptr;
     }
 
     virtual void SetUp() {
@@ -100,10 +101,8 @@ class AboutListenerTest : public testing::Test {
             alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE,
                                        ALLJOYN_PROXIMITY_ANY,
                                        ALLJOYN_TRANSPORT_ANY);
-        alljoyn_sessionportlistener listener =
-            alljoyn_sessionportlistener_create(&callbacks, NULL);
-        status =
-            alljoyn_busattachment_bindsessionport(serviceBus, &port, opts, listener);
+        listener = alljoyn_sessionportlistener_create(&callbacks, NULL);
+        status = alljoyn_busattachment_bindsessionport(serviceBus, &port, opts, listener);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -118,8 +117,14 @@ class AboutListenerTest : public testing::Test {
             alljoyn_aboutdata_destroy(aboutData);
             aboutData = NULL;
         }
+
+        if (listener) {
+            alljoyn_sessionportlistener_destroy(listener);
+            listener = nullptr;
+        }
     }
 
+    alljoyn_sessionportlistener listener;
     alljoyn_busattachment serviceBus;
     alljoyn_aboutdata aboutData;
     alljoyn_sessionport port;
