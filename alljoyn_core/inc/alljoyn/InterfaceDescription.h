@@ -978,6 +978,29 @@ class InterfaceDescription {
      */
     InterfaceDescription& operator=(const InterfaceDescription& other);
 
+    /**
+     * @internal
+     * Sets the name for the interface.
+     *
+     * @param[in] name The name to be set.
+     *
+     */
+    void SetName(const qcc::String& name);
+
+
+    /**
+     * @internal
+     * Sets the security policy for the interface.
+     *
+     * @note When called on an interface which is not a standard DBus interface,
+     * the method will add "org.alljoyn.Bus.Secure" annotation to the interface,
+     * set to "true" or "off", depending on the set policy.
+     *
+     * @param[in] secPolicy The policy to be set.
+     *
+     */
+    void SetSecurityPolicy(InterfaceSecurityPolicy secPolicy);
+
     void AppendDescriptionToAnnotations(AnnotationsMap& annotations, const char* description, Translator* translator) const;
 
     void AppendDescriptionToArgAnnotations(ArgumentAnnotations& argAnnotations, const char* argName, const char* description, Translator* translator) const;

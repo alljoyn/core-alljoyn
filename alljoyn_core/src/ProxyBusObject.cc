@@ -34,7 +34,6 @@
 #include <qcc/String.h>
 #include <qcc/StringSource.h>
 #include <qcc/Util.h>
-#include <qcc/XmlElement.h>
 
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/BusAttachment.h>
@@ -1855,7 +1854,179 @@ QStatus ProxyBusObject::IntrospectRemoteObject(uint32_t timeout)
         }
         ident += " : ";
         ident += reply->GetObjectPath();
-        status = ParseXml(reply->GetArg(0)->v_string.str, ident.c_str());
+
+        const char* introspectionXml = reply->GetArg(0)->v_string.str;
+        if (IsLegacyXml(introspectionXml)) {
+            /* Introspect() output from a legacy node will not contain descriptions.
+             * We need to get XMLs with descriptions by calling IntrospectWithDescriptions()
+             * for this node. See also documentation for the below method.
+             */
+            status = ParseLegacyXml(introspectionXml, ident.c_str());
+        } else {
+            /* Introspect() called on a 16.04+ node will contain descriptions.
+             * No need for additional requests or processing.
+             */
+            status = ParseXml(introspectionXml, ident.c_str());
+        }
+    }
+    return status;
+}
+
+bool ProxyBusObject::IsLegacyXml(const qcc::String& xml) const
+{
+    /* This function checks if the given introspection XML comes from a pre-16.04 node
+     * (such a node and such an XML are called "legacy" here).
+     * XMLs created by 16.04+ nodes, both TCL and SCL, will contain the 1.1 DTD
+     * (see the org::allseen::Introspectable::IntrospectDocType string).
+     * XMLs created by legacy SCL nodes will contain a DTD, such as
+     * org::allseen::Introspectable::IntrospectDocType, but with version set to 1.0
+     * instead of 1.1.
+     * XMLs created by legacy TCL nodes do not contain the DTD at all.
+     * Therefore, each XML which does not contain the 1.1 DTD is considered legacy here.
+     */
+    return xml.find(org::allseen::Introspectable::IntrospectDocType) == qcc::String::npos;
+}
+
+QStatus ProxyBusObject::ParseLegacyXml(const char* xml, const char* ident)
+{
+    QStatus status;
+    XmlToLanguageMap descriptions;
+    status = GetXmlsWithDescriptions(&descriptions);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to retrieve XMLs with descriptions for legacy node"));
+        return status;
+    }
+
+    return ParseXmlAndDescriptions(xml, &descriptions, ident);
+}
+
+QStatus ProxyBusObject::GetXmlsWithDescriptions(XmlToLanguageMap* xmls)
+{
+    QStatus status = ER_OK;
+
+    std::set<qcc::String> languages;
+    status = GetDescriptionLanguagesForLegacyNode(languages);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to retrieve list of available description languages for legacy node"));
+        return status;
+    }
+    for (std::set<qcc::String>::const_iterator itL = languages.begin(); itL != languages.end(); itL++) {
+        qcc::String xml;
+        status = GetDescriptionXmlForLanguage(xml, *itL);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to obtain introspection XML for language %s", itL->c_str()));
+            return status;
+        }
+        status = AddDescriptionXmlToMap(xml, *itL, xmls);
+        if (status != ER_OK) {
+            return status;
+        }
+    }
+
+    return status;
+}
+
+QStatus ProxyBusObject::GetDescriptionLanguagesForLegacyNode(std::set<qcc::String>& languages)
+{
+    QStatus status = ER_OK;
+
+    const InterfaceDescription* introspectableIntf = GetInterface(org::allseen::Introspectable::InterfaceName);
+    if (introspectableIntf == nullptr) {
+        introspectableIntf = internal->bus->GetInterface(org::allseen::Introspectable::InterfaceName);
+        QCC_ASSERT(introspectableIntf != nullptr);
+        AddInterface(*introspectableIntf);
+    }
+
+    const InterfaceDescription::Member* getLanguagesIntf = introspectableIntf->GetMember("GetDescriptionLanguages");
+    QCC_ASSERT(getLanguagesIntf != nullptr);
+    Message reply(*internal->bus);
+    status = MethodCall(*getLanguagesIntf, nullptr, 0, reply, DefaultCallTimeout);
+    if (status != ER_OK) {
+        GetReplyErrorStatus(reply, status);
+        QCC_LogError(status, ("Failed to call GetDescriptionLanguages on remote legacy object"));
+        return status;
+    }
+
+    MsgArg* retrievedLanguages;
+    size_t numRetrievedLanguages;
+    status = reply->GetArg(0)->Get("as", &numRetrievedLanguages, &retrievedLanguages);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to retrieve available languages from response"));
+        return status;
+    }
+
+    for (size_t i = 0; i < numRetrievedLanguages; ++i) {
+        char* language;
+        status = retrievedLanguages[i].Get("s", &language);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to retrieve language tag from response"));
+            return status;
+        }
+        languages.insert(language);
+    }
+
+    return status;
+}
+
+QStatus ProxyBusObject::GetDescriptionXmlForLanguage(qcc::String& xml, const qcc::String& languageTag)
+{
+    QStatus status = ER_OK;
+
+    const InterfaceDescription* introspectableIntf = GetInterface(org::allseen::Introspectable::InterfaceName);
+    if (introspectableIntf == nullptr) {
+        introspectableIntf = internal->bus->GetInterface(org::allseen::Introspectable::InterfaceName);
+        QCC_ASSERT(introspectableIntf != nullptr);
+        AddInterface(*introspectableIntf);
+    }
+
+    const InterfaceDescription::Member* introspectWithDescriptionIntf = introspectableIntf->GetMember("IntrospectWithDescription");
+    QCC_ASSERT(introspectWithDescriptionIntf != nullptr);
+    MsgArg msgArg("s", languageTag.c_str());
+    Message reply(*internal->bus);
+    status = MethodCall(*introspectWithDescriptionIntf, &msgArg, 1, reply, DefaultCallTimeout);
+    if (status != ER_OK) {
+        GetReplyErrorStatus(reply, status);
+        QCC_LogError(status, ("Failed to call IntrospectRemoteObject on remote legacy object"));
+        return status;
+    }
+
+    char* introspectionXml = NULL;
+    const MsgArg* replyArg = reply->GetArg(0);
+    status = replyArg->Get("s", &introspectionXml);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to parse introspection XML from response"));
+        return status;
+    }
+
+    xml.assign(introspectionXml);
+    return status;
+}
+
+QStatus ProxyBusObject::AddDescriptionXmlToMap(const qcc::String& xml, const qcc::String& languageTag, XmlToLanguageMap* xmls) const
+{
+    QStatus status = ER_OK;
+
+    StringSource source(xml);
+    std::unique_ptr<XmlParseContext> xmlParseContext(new XmlParseContext(source));
+    status = XmlElement::Parse(*xmlParseContext);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Error when parsing introspection XML"));
+        return ER_BUS_BAD_XML;
+    }
+
+    xmls->insert(std::make_pair(languageTag, std::move(xmlParseContext)));
+    return status;
+}
+
+QStatus ProxyBusObject::ParseXmlAndDescriptions(const char* xml, const XmlToLanguageMap* xmlsWithDescriptions, const char* ident)
+{
+    StringSource source(xml);
+    XmlParseContext pc(source);
+
+    QStatus status = XmlElement::Parse(pc);
+    if (status == ER_OK) {
+        XmlHelper xmlHelper(internal->bus, ident ? ident : internal->path.c_str());
+        status = xmlHelper.AddProxyObjects(*this, pc.GetRoot(), xmlsWithDescriptions);
     }
     return status;
 }
@@ -1907,7 +2078,18 @@ void ProxyBusObject::IntrospectMethodCB(Message& msg, void* context)
             }
             ident += " : ";
             ident += msg->GetObjectPath();
-            status = ParseXml(xml, ident.c_str());
+            if (IsLegacyXml(xml)) {
+                /* Introspect() output from a legacy node will not contain descriptions.
+                 * We need to get XMLs with descriptions by calling IntrospectWithDescriptions()
+                 * for this node. See also documentation for the below method.
+                 */
+                status = ParseLegacyXml(xml, ident.c_str());
+            } else {
+                /* Introspect() called on a 16.04+ node will contain descriptions.
+                 * No need for additional requests and processing.
+                 */
+                status = ParseXml(xml, ident.c_str());
+            }
         }
     } else if (msg->GetErrorName() != NULL && ::strcmp("org.freedesktop.DBus.Error.ServiceUnknown", msg->GetErrorName()) == 0) {
         status = ER_BUS_NO_SUCH_SERVICE;
