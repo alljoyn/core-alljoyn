@@ -432,6 +432,13 @@ bool InterfaceDescription::Property::GetAnnotation(const qcc::String& annotation
     return (it != annotations->end() ? value = it->second, true : false);
 }
 
+InterfaceDescription::InterfaceDescription() :
+    defs(new Definitions),
+    isActivated(false),
+    secPolicy(AJ_IFC_SECURITY_INHERIT)
+{
+}
+
 InterfaceDescription::InterfaceDescription(const char* name, InterfaceSecurityPolicy secPolicy) :
     defs(new Definitions),
     name(name),
@@ -482,6 +489,29 @@ InterfaceDescription& InterfaceDescription::operator=(const InterfaceDescription
         }
     }
     return *this;
+}
+
+void InterfaceDescription::SetName(const qcc::String& name)
+{
+    this->name = name;
+}
+
+QStatus InterfaceDescription::SetSecurityPolicy(InterfaceSecurityPolicy secPolicy)
+{
+    this->secPolicy = secPolicy;
+    if (secPolicy != AJ_IFC_SECURITY_INHERIT) {
+        /*
+         * We don't allow a secure annotation on the standard DBus Interfaces.
+         */
+        if ((name != org::freedesktop::DBus::Introspectable::InterfaceName) &&
+            (name != org::freedesktop::DBus::Peer::InterfaceName) &&
+            (name != org::freedesktop::DBus::Properties::InterfaceName)) {
+            qcc::String annotationValue = ((secPolicy == AJ_IFC_SECURITY_REQUIRED) ? "true" : "off");
+            return AddAnnotation(org::alljoyn::Bus::Secure, annotationValue);
+        }
+    }
+
+    return ER_OK;
 }
 
 qcc::String InterfaceDescription::Introspect(size_t indent, const char* languageTag, Translator* translator) const
