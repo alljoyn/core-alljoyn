@@ -26,10 +26,10 @@
 // Constants
 //
 
-static NSString* kBasicClientInterfaceName = @"org.alljoyn.sample.sessionless";
-static NSString* kBasicClientServiceName = @"org.alljoyn.sample.sessionless";
-static NSString* kBasicClientServicePath = @"/sessionless";
-static const AJNSessionPort kBasicClientServicePort = 900;
+static NSString* kBasicClientInterfaceName = @"org.alljoyn.Bus.sample";
+static NSString* kBasicClientServiceName = @"org.alljoyn.Bus.sample";
+static NSString* kBasicClientServicePath = @"/sample";
+static const AJNSessionPort kBasicClientServicePort = 25;
 
 ////////////////////////////////////////////////////////////////////////////////
 
