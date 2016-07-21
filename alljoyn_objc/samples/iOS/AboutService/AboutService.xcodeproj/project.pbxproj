@@ -368,6 +368,16 @@
 			attributes = {
 				LastUpgradeCheck = 0450;
 				ORGANIZATIONNAME = "AllSeen Alliance.";
+				TargetAttributes = {
+					ACB2C760160B976000D7E3A6 = {
+						DevelopmentTeam = LHK5UCWG92;
+						SystemCapabilities = {
+							com.apple.BackgroundModes = {
+								enabled = 1;
+							};
+						};
+					};
+				};
 			};
 			buildConfigurationList = ACB2C75B160B976000D7E3A6 /* Build configuration list for PBXProject "AboutService" */;
 			compatibilityVersion = "Xcode 3.2";
