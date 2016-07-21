@@ -428,7 +428,7 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_updatepolicy(alljoyn_permissionco
     return ((PermissionConfigurator*)configurator)->UpdatePolicy(policy);
 }
 
-static QStatus PolicyToString(const PermissionPolicy& policy, AJ_PSTR* policyXml)
+QStatus PolicyToString(const PermissionPolicy& policy, AJ_PSTR* policyXml)
 {
     std::string policyString;
     QStatus status = XmlPoliciesConverter::ToXml(policy, policyString);

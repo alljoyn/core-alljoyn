@@ -160,6 +160,42 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilities(all
 AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilitiesadditionalinfo(alljoyn_securityapplicationproxy proxy, alljoyn_claimcapabilitiesadditionalinfo* additionalInfo);
 
 /**
+ * This method allows the admin to retrieve the active policy from an application.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   policyXml                  The active policy in XML format. This string must be freed using
+ *                                          alljoyn_securityapplicationproxy_policy_destroy.
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicy(alljoyn_securityapplicationproxy proxy,
+                                                                  AJ_PSTR* policyXml);
+
+/**
+ * This method allows the admin to retrieve the default policy from an application.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   policyXml                  The default policy in XML format. This string must be freed using
+ *                                          alljoyn_securityapplicationproxy_policy_destroy.
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getdefaultpolicy(alljoyn_securityapplicationproxy proxy,
+                                                                         AJ_PSTR* policyXml);
+
+/**
+ * This method deallocates strings returned by a call to alljoyn_securityapplicationproxy_getpolicy or
+ * alljoyn_securityapplicationproxy_getdefaultpolicy.
+ *
+ * @param[in]    policyXml                  A string containing a policy in XML format returned by a call to either
+ *                                          alljoyn_securityapplicationproxy_getpolicy or
+ *                                          alljoyn_securityapplicationproxy_getdefaultpolicy.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_policy_destroy(AJ_PSTR policyXml);
+
+/**
  * This method allows an admin to install the permission policy to the
  * application. Any existing policy will be replaced if the new policy version
  * number is greater than the existing policy's version number.
