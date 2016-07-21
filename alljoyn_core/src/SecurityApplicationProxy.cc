@@ -30,6 +30,8 @@
 
 #define QCC_MODULE "ALLJOYN_SECURITY"
 
+using namespace std;
+
 namespace ajn {
 SecurityApplicationProxy::SecurityApplicationProxy(BusAttachment& bus, const char* busName, SessionId sessionId) :
     ProxyBusObject(bus, busName, org::alljoyn::Bus::Security::ObjectPath, sessionId)
@@ -692,26 +694,6 @@ QStatus SecurityApplicationProxy::MsgArgToCertificateIds(const MsgArg& arg, qcc:
     return status;
 }
 
-QStatus SecurityApplicationProxy::MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize)
-{
-    PermissionPolicy::Rule* localRules = NULL;
-    size_t count = 0;
-    QStatus status = PermissionPolicy::ParseRules(arg, &localRules, &count);
-    if (ER_OK != status) {
-        goto Exit;
-    }
-    if (count != expectedSize) {
-        status = ER_BAD_ARG_3;
-        goto Exit;
-    }
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        rules[cnt] = localRules[cnt];
-    }
-Exit:
-    delete [] localRules;
-    return status;
-}
-
 QStatus SecurityApplicationProxy::GetIdentity(MsgArg& identityCertificate)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -774,19 +756,18 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateX
 
     QStatus status;
     MsgArg argManifestTemplate;
-    PermissionPolicy::Rule* rules = nullptr;
-    size_t rulesCount = 0;
+    vector<PermissionPolicy::Rule> rules;
     std::string manifestTemplate;
 
     *manifestTemplateXml = nullptr;
     status = GetManifestTemplate(argManifestTemplate);
 
     if (ER_OK == status) {
-        status = PermissionPolicy::ParseRules(argManifestTemplate, &rules, &rulesCount);
+        status = PermissionPolicy::MsgArgToManifestTemplate(argManifestTemplate, rules);
     }
 
     if (ER_OK == status) {
-        status = XmlManifestTemplateConverter::GetInstance()->RulesToXml(rules, rulesCount, manifestTemplate);
+        status = XmlManifestTemplateConverter::GetInstance()->RulesToXml(rules.data(), rules.size(), manifestTemplate);
     }
 
     if (ER_OK == status) {
@@ -796,8 +777,6 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateX
             status = ER_OUT_OF_MEMORY;
         }
     }
-
-    delete[] rules;
 
     return status;
 }

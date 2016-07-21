@@ -114,8 +114,8 @@ static void CDECL_CALL SigIntHandler(int sig)
 }
 
 /*
- * get a line of input from the the file pointer (most likely stdin).
- * This will capture the the num-1 characters or till a newline character is
+ * get a line of input from the file pointer (most likely stdin).
+ * This will capture the num-1 characters or till a newline character is
  * entered.
  *
  * @param[out] str a pointer to a character array that will hold the user input

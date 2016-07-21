@@ -142,6 +142,13 @@ class XmlRulesConverter {
      */
     void AddChildAnnotation(qcc::XmlElement* parent, AJ_PCSTR annotationName, AJ_PCSTR annotationValue);
 
+    /**
+     * Returns the current converter's rule type.
+     *
+     * @return   Converter rule type.
+     */
+    virtual PermissionPolicy::Rule::RuleType GetRuleType();
+
   private:
 
     /**

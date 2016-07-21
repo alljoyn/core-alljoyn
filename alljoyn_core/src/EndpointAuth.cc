@@ -304,7 +304,7 @@ QStatus EndpointAuth::WaitHello(qcc::String& authUsed)
          * redirection error response. The only way we can tell if the socket is closed is by
          * attempting to read or write to it. We do a read with a timeout. If we actually read data
          * or the timeout expires it means the socket wasn't closed by the other end so we assume
-         * the the redirection failed.
+         * the redirection failed.
          */
         uint8_t buf[1];
         size_t sz;

@@ -385,6 +385,14 @@ QStatus SignManifest(const IdentityCertificate& identityCertificate,
     return status;
 }
 
+QStatus SetManifestRules(vector<PermissionPolicy::Rule>& rules, Manifest& manifest)
+{
+    for (auto& rule : rules) {
+        rule.SetRuleType(PermissionPolicy::Rule::MANIFEST_POLICY_RULE);
+    }
+    return manifest->SetRules(rules.data(), rules.size());
+}
+
 QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
                             const ECCPrivateKey& privateKey,
                             AJ_PCSTR unsignedManifestXml,
@@ -395,7 +403,7 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
     QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
 
     if (ER_OK == status) {
-        status = manifest->SetRules(rules.data(), rules.size());
+        status = SetManifestRules(rules, manifest);
     }
 
     if (ER_OK == status) {
@@ -421,7 +429,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_computemanifestdigest(AJ_PCSTR 
         return status;
     }
 
-    status = manifest->SetRules(rules.data(), rules.size());
+    status = SetManifestRules(rules, manifest);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not set manifest rules"));
         return status;
