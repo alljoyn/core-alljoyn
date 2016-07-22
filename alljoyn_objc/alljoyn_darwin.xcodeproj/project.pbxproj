@@ -83,20 +83,6 @@
 			passBuildSettingsInEnvironment = 1;
 			productName = alljoyn_core_arm64;
 		};
-		AC0DC84C151A46F0000E302F /* alljoyn_core_ios */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=arm BR=on BINDINGS=\"cpp\" SERVICES=\"\"  CRYPTO=builtin WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
-			buildConfigurationList = AC0DC84D151A46F0000E302F /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios" */;
-			buildPhases = (
-			);
-			buildToolPath = scons;
-			buildWorkingDirectory = ../.;
-			dependencies = (
-			);
-			name = alljoyn_core_ios;
-			passBuildSettingsInEnvironment = 1;
-			productName = alljoyn_core_ios;
-		};
 		AC8D8CFE161376FE00361742 /* alljoyn_c_ios */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "$(SCONSFLAGS) -u OS=darwin CPU=arm BR=on BINDINGS=c CRYPTO=builtin WS=off VARIANT=$(CONFIGURATION) --$(ACTION)";
@@ -179,7 +165,6 @@
 			targets = (
 				5B88F9BE1D340C67002DCB1E /* alljoyn_core_osx_x64 */,
 				ACB4AFB6150E631F0054D964 /* alljoyn_core_osx */,
-				AC0DC84C151A46F0000E302F /* alljoyn_core_ios */,
 				ACB2C74B160B8EFF00D7E3A6 /* alljoyn_core_ios_armv7 */,
 				AC9C2C6E15FA9B4C00C60607 /* alljoyn_c_osx */,
 				AC8D8CFE161376FE00361742 /* alljoyn_c_ios */,
@@ -380,33 +365,6 @@
 				OTHER_LDFLAGS = "";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = iphoneos;
-			};
-			name = Release;
-		};
-		AC0DC84E151A46F0000E302F /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				DEBUGGING_SYMBOLS = YES;
-				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				VARIANT = "'debug'";
-			};
-			name = Debug;
-		};
-		AC0DC84F151A46F0000E302F /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = iphoneos;
-				VARIANT = "'release'";
 			};
 			name = Release;
 		};
@@ -619,15 +577,6 @@
 			buildConfigurations = (
 				7D80B0551A8967D7008DFF80 /* Debug */,
 				7D80B0561A8967D7008DFF80 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
-		AC0DC84D151A46F0000E302F /* Build configuration list for PBXLegacyTarget "alljoyn_core_ios" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				AC0DC84E151A46F0000E302F /* Debug */,
-				AC0DC84F151A46F0000E302F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
