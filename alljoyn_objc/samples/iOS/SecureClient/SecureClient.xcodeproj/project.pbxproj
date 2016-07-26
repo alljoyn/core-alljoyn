@@ -585,11 +585,19 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "SecureClient/SecureClient-Prefix.pch";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"";
+				HEADER_SEARCH_PATHS = (
+				    "\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+				    "\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+				    "\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+				    "\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+				);
 				INFOPLIST_FILE = "SecureClient/SecureClient-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
 					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = YES;
@@ -620,12 +628,20 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "SecureClient/SecureClient-Prefix.pch";
-				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/inc\"";
+				HEADER_SEARCH_PATHS = (
+				    "\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+				    "\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+				    "\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+				    "\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+				);
 				INFOPLIST_FILE = "SecureClient/SecureClient-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (

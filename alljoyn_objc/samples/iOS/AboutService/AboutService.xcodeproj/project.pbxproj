@@ -555,16 +555,19 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicService/AboutService-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/debug/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
 				);
 				INFOPLIST_FILE = "BasicService/AboutService-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(OPENSSL_ROOT)/build/debug-$(PLATFORM_NAME)\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -592,16 +595,19 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicService/AboutService-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/inc/\"",
 				);
 				INFOPLIST_FILE = "BasicService/AboutService-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)\"",
-					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
