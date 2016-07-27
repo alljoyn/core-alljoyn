@@ -41,8 +41,14 @@
 
 #define QCC_MODULE  "UTIL"
 
-static uint32_t s_uid = 0;
-static uint32_t s_gid = 0;
+/**
+ * These are dummy number with no specific meaning.
+ * They should not be used for security-related decissions
+ * inside PolicyDb (and anywhere else), since these numbers
+ * are returned by the app itself and can be manipulated.
+ */
+static const uint32_t s_dummyWindowsUid = 0xABCD1234;
+static const uint32_t s_dummyWindowsGid = 0x4321DCBA;
 
 void qcc::ClearMemory(void* s, size_t n)
 {
@@ -67,14 +73,12 @@ static uint32_t ComputeId(const char* buf, size_t len)
 
 uint32_t qcc::GetUid()
 {
-    QCC_ASSERT(s_uid != 0);
-    return s_uid;
+    return s_dummyWindowsUid;
 }
 
 uint32_t qcc::GetGid()
 {
-    QCC_ASSERT(s_gid != 0);
-    return s_gid;
+    return s_dummyWindowsGid;
 }
 
 uint32_t qcc::GetUsersUid(const char* name)
@@ -235,42 +239,41 @@ QStatus qcc::ResolveHostName(qcc::String hostname, uint8_t addr[], size_t addrSi
     return (new ResolverThread(hostname, addr, &addrLen))->Get(timeoutMs);
 }
 
-void WindowsUtilInit()
+/**
+ * Non-standard/non-compliant snprintf implementation, based on _vsnprintf.
+ *
+ * @remark This function always adds a zero character string terminator,
+ *         even when the output is truncated due to the output buffer
+ *         being too small. However, it is non-compliant - mainly because
+ *         it returns -1 when the output buffer is too small, rather than
+ *         returning the required length of the output buffer as required
+ *         by the C99 standard.
+ *
+ * @param[out] buffer    Storage location for the output.
+ * @param[in]  count     Maximum number of characters to store.
+ * @param[in]  format    Format-control string.
+ * @param[in]  ...       String format parameters.
+ *
+ * @return
+ *      - The length of the output buffer, not including the zero terminator, on success
+ *      - Value -1 if the output has been truncated
+ */
+int32_t AJ_snprintf(char* buffer, size_t count, const char* format, ...)
 {
-    static const char nobody[] = "nobody";
-    static const char nogroup[] = "nogroup";
-
-    char buf[UNLEN + 1] = { 0 };
-
-    /*
-     * UID and GID: Windows can use GetTokenInformation instead of getuid and getgid but for simplicity here we use
-     * hashes of the user name (as UID) and user's domain name (as GID) respectively.
-     */
-
-    ULONG len = UNLEN;
-    if (GetUserNameExA(NameUniqueId, buf, &len)) {
-        s_uid = ComputeId(buf, len);
-    } else {
+    /* These three values are invalid when calling _vsnprintf */
+    if ((buffer == nullptr) || (count == 0) || (format == nullptr)) {
         QCC_ASSERT(false);
-        s_uid = ComputeId(nobody, strlen(nobody));
+        return -1;
     }
-    QCC_ASSERT(s_uid != 0);
 
-    len = UNLEN;
-    if (GetUserNameExA(NameDnsDomain, buf, &len)) {
-        qcc::String gp((char*)buf, len);
-        size_t pos = gp.find_first_of('\\');
-        if (pos != qcc::String::npos) {
-            gp.erase(pos);
-        }
-        s_gid = ComputeId(gp.c_str(), gp.size());
-    } else {
-        QCC_ASSERT(false);
-        s_gid = ComputeId(nogroup, strlen(nogroup));
+    va_list argp;
+    va_start(argp, format);
+    int32_t length = _vsnprintf(buffer, count, format, argp);
+    QCC_ASSERT(length >= -1);
+
+    if (length == -1) {
+        buffer[count - 1] = '\0';
     }
-    QCC_ASSERT(s_gid != 0);
-}
 
-void WindowsUtilShutdown()
-{
+    return length;
 }

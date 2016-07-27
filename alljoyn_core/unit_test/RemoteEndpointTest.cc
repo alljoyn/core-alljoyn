@@ -21,6 +21,9 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#define ENDPOINT_TEST_WAIT_TIME (500 * s_globalTimerMultiplier)
+#define ENDPOINT_TEST_JOIN_TIMEOUT (40 * 1000 * s_globalTimerMultiplier)
+
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -103,7 +106,7 @@ TEST_F(RemoteEndpointTest, OrderlyReleaseWhenTxQueueIsEmpty)
 {
     EXPECT_EQ(ER_OK, rep->Stop());
     ts.sourceEvent.SetEvent();
-    EXPECT_EQ(ER_OK, rep->Join(40 * 1000));
+    EXPECT_EQ(ER_OK, rep->Join(ENDPOINT_TEST_JOIN_TIMEOUT));
 
     /* Verify that we got an orderly release and that the txQueue is empty */
     EXPECT_TRUE(ts.shutdown);
@@ -123,7 +126,7 @@ TEST_F(RemoteEndpointTest, OrderlyReleaseWhenTxQueueIsNotEmpty)
     EXPECT_EQ(ER_OK, rep->Stop());
     ts.sinkEvent.SetEvent();
     ts.sourceEvent.SetEvent();
-    EXPECT_EQ(ER_OK, rep->Join(40 * 1000));
+    EXPECT_EQ(ER_OK, rep->Join(ENDPOINT_TEST_JOIN_TIMEOUT));
 
     /* Verify that we got an orderly release and that the txQueue is empty */
     EXPECT_TRUE(ts.shutdown);
@@ -144,7 +147,7 @@ TEST_F(RemoteEndpointTest, AbortiveRelease)
 TEST_F(RemoteEndpointTest, RxTimeout)
 {
     EXPECT_EQ(ER_OK, rep->SetLinkTimeout(1, 1, 1));
-    EXPECT_EQ(ER_OK, rep->Join(40 * 1000));
+    EXPECT_EQ(ER_OK, rep->Join(ENDPOINT_TEST_JOIN_TIMEOUT));
 }
 
 class TxTestStream : public TestStream {
@@ -171,7 +174,7 @@ TEST_F(RemoteEndpointTest, TxTimeout)
     EXPECT_EQ(ER_OK, trep->PushMessage(m));
     tts.status = ER_TIMEOUT;
     tts.sinkEvent.SetEvent();
-    EXPECT_EQ(ER_OK, trep->Join(40 * 1000));
+    EXPECT_EQ(ER_OK, trep->Join(ENDPOINT_TEST_JOIN_TIMEOUT));
 
     /* Verify that we got an abortive release */
     EXPECT_FALSE(tts.shutdown);
@@ -190,7 +193,7 @@ TEST_F(RemoteEndpointTest, TxFail)
     EXPECT_EQ(ER_OK, trep->PushMessage(m));
     tts.status = ER_FAIL;
     tts.sinkEvent.SetEvent();
-    EXPECT_EQ(ER_OK, trep->Join(40 * 1000));
+    EXPECT_EQ(ER_OK, trep->Join(ENDPOINT_TEST_JOIN_TIMEOUT));
 
     /* Verify that we got an abortive release */
     EXPECT_FALSE(tts.shutdown);
@@ -244,11 +247,11 @@ TEST_F(RemoteEndpointTest, TxQueueIsFull)
 {
     Thread pmThread("PushMessages", PushMessages);
     EXPECT_EQ(ER_OK, pmThread.Start(reinterpret_cast<void*>(this)));
-    qcc::Sleep(500); /* Wait for PushMessages thread to block */
+    qcc::Sleep(ENDPOINT_TEST_WAIT_TIME); /* Wait for PushMessages thread to block */
     EXPECT_EQ(ER_OK, rep->Stop());
     ts.sinkEvent.SetEvent();
     ts.sourceEvent.SetEvent();
-    EXPECT_EQ(ER_OK, rep->Join(40 * 1000));
+    EXPECT_EQ(ER_OK, rep->Join(ENDPOINT_TEST_JOIN_TIMEOUT));
     EXPECT_EQ(ER_OK, pmThread.Join());
     /* Test passes if both PushMessage() calls succeed. */
 }

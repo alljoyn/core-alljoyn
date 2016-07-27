@@ -453,7 +453,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             if ((tag != ASN_BITS) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
             } else {
-                if (len == 0) {
+                if (len < 2) {
                     status = ER_FAIL;
                     continue;
                 }
@@ -463,7 +463,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 } else {
                     --len;
                     val = va_arg(argp, qcc::String*);
-                    val->assign((char*)asn, len);
+                    val->assign_std((char*)asn, len);
                     asn += len;
                     *va_arg(argp, size_t*) = len * 8 - unusedBits;
                 }
@@ -554,10 +554,10 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     continue;
                 }
                 if ((ASN_CONTEXT_SPECIFIC != (tag & ASN_CONTEXT_SPECIFIC)) ||
-                    ((uint8_t) (tag & 0x1F) != v) || !DecodeLen(asn, eod, len)) {
+                    ((uint8_t) (tag & 0x1F) != v) ||
+                    !DecodeLen(asn, eod, len)) {
                     status = ER_FAIL;
                 } else if (ASN_CONSTRUCTED_ENCODING == (tag & ASN_CONSTRUCTED_ENCODING)) {
-                    qcc::String seq;
                     status = DecodeV(syntax, asn, len, &argp);
                     if (*syntax++ != ')') {
                         status = ER_FAIL;
@@ -566,17 +566,17 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     }
                 } else {
                     /* primitive content */
-                    while (*syntax && (*syntax != ')')) {
-                        syntax++;
+                    if ((*syntax++ == '.') && (*syntax++ == ')')) {
+                        /*
+                         * Output len bytes as a String, by jumping to the common code path
+                         * at the end of the switch/case statement.
+                         */
+                        break;
                     }
-                    if (*syntax == ')') {
-                        /* skip to the end of the c(...) block */
-                        status = ER_OK;
-                        syntax++;
-                        break; /* no more parsing */
-                    } else {
-                        status = ER_FAIL;
-                    }
+
+                    QCC_LogError(status, ("Mismatched tag %#x and syntax character '%c'", (uint32_t)tag, *(syntax - 1)));
+                    status = ER_FAIL;
+                    continue;
                 }
             }
             continue;
@@ -602,7 +602,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     asn += len;
                     val = va_arg(argp, qcc::String*);
                     if (val) {
-                        val->assign((char*)start, asn - start);
+                        val->assign_std((char*)start, asn - start);
                     }
                 }
             }
@@ -625,9 +625,9 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 len = eod - start;
                 val = va_arg(argp, qcc::String*);
                 if (val) {
-                    val->assign((char*)start, len);
+                    val->assign_std((char*)start, len);
                 }
-                asn = eod; /* every thing is consumed */
+                asn = eod; /* everything has been consumed */
                 continue;
             }
 
@@ -636,23 +636,26 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             QCC_LogError(status, ("Invalid syntax character \'%c\'", *(syntax - 1)));
         }
         // Shared code for all cases that fall through here
-        if (status == ER_OK) {
+        if ((status == ER_OK) && (len > 0)) {
             val = va_arg(argp, qcc::String*);
-            val->assign((char*)asn, len);
+            val->assign_std((char*)asn, len);
             asn += len;
         }
     }
-    // Consume wildcard if we ran out of data
-    if (*syntax == '*') {
-        ++syntax;
-    } else if (*syntax == '/') {
-        // Optional arg was not present
-        val = va_arg(argp, qcc::String*);
-        val->clear();
-        if (syntax[1]) {
-            syntax += 2;
-        } else {
-            status = ER_BAD_ARG_1;
+
+    if (status == ER_OK) {
+        // Consume wildcard if we ran out of data
+        if (*syntax == '*') {
+            ++syntax;
+        } else if (*syntax == '/') {
+            // Optional arg was not present
+            val = va_arg(argp, qcc::String*);
+            val->clear();
+            if (syntax[1]) {
+                syntax += 2;
+            } else {
+                status = ER_BAD_ARG_1;
+            }
         }
     }
     return status;

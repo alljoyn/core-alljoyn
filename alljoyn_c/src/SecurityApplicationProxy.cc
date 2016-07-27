@@ -29,32 +29,41 @@
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/PermissionConfigurator.h>
 #include <alljoyn_c/SecurityApplicationProxy.h>
-#include <qcc/CertificateHelper.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/KeyInfoECC.h>
+#include <qcc/StringUtil.h>
 #include "KeyInfoHelper.h"
-#include "XmlRulesConverter.h"
 #include "XmlManifestConverter.h"
+#include "XmlManifestTemplateConverter.h"
+#include "CertificateUtilities.h"
 
 #define QCC_MODULE "ALLJOYN_C"
 
 using namespace qcc;
 using namespace ajn;
+using namespace std;
 
-static QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, CertificateX509** certs);
+/*
+ * The "signedManifestXml" variable must be freed by the caller using delete[].
+ */
 static QStatus SignManifest(const IdentityCertificate& identityCertificate,
                             const ECCPrivateKey& privateKey,
                             AJ_PCSTR unsignedManifestXml,
                             AJ_PSTR* signedManifestXml);
+
 static QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
                                    const ECCPrivateKey& privateKey,
                                    AJ_PCSTR unsignedManifestXml,
                                    Manifest& manifest);
-static QStatus GetGroupId(const uint8_t* groupId, size_t groupSize, GUID128& extractedId);
-static void String2CString(const String& stdString, AJ_PSTR* resultString);
 
-const alljoyn_sessionport PERMISSION_MANAGEMENT_SESSION_PORT = ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
+/* Helper function implemented in PermissionConfigurator.cc. */
+extern QStatus PolicyToString(const PermissionPolicy& policy, AJ_PSTR* policyXml);
+
+alljoyn_sessionport AJ_CALL alljoyn_securityapplicationproxy_getpermissionmanagementsessionport()
+{
+    return ALLJOYN_SESSIONPORT_PERMISSION_MGMT;
+}
 
 alljoyn_securityapplicationproxy AJ_CALL alljoyn_securityapplicationproxy_create(alljoyn_busattachment bus,
                                                                                  AJ_PCSTR appBusName,
@@ -123,9 +132,9 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplate(alljoyn_sec
     return ((SecurityApplicationProxy*)proxy)->GetManifestTemplate(manifestXml);
 }
 
-AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestXml)
+void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestXml)
 {
-    delete[] manifestXml;
+    SecurityApplicationProxy::DestroyManifestTemplate(manifestXml);
 }
 
 QStatus AJ_CALL alljoyn_securityapplicationproxy_getapplicationstate(alljoyn_securityapplicationproxy proxy, alljoyn_applicationstate* applicationState)
@@ -168,6 +177,42 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilitiesadditionali
     }
 
     return status;
+}
+
+QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicy(alljoyn_securityapplicationproxy proxy, AJ_PSTR* policyXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    PermissionPolicy policy;
+    QStatus status = ((SecurityApplicationProxy*)proxy)->GetPolicy(policy);
+
+    if (ER_OK != status) {
+        *policyXml = nullptr;
+        return status;
+    }
+
+    return PolicyToString(policy, policyXml);
+}
+
+QStatus AJ_CALL alljoyn_securityapplicationproxy_getdefaultpolicy(alljoyn_securityapplicationproxy proxy, AJ_PSTR* policyXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    PermissionPolicy policy;
+    QStatus status = ((SecurityApplicationProxy*)proxy)->GetDefaultPolicy(policy);
+
+    if (ER_OK != status) {
+        *policyXml = nullptr;
+        return status;
+    }
+
+    return PolicyToString(policy, policyXml);
+}
+
+void AJ_CALL alljoyn_securityapplicationproxy_policy_destroy(AJ_PSTR policyXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    DestroyStringCopy(policyXml);
 }
 
 QStatus AJ_CALL alljoyn_securityapplicationproxy_updatepolicy(alljoyn_securityapplicationproxy proxy, AJ_PCSTR policyXml)
@@ -264,15 +309,20 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_geteccpublickey(alljoyn_securit
     }
 
     if (ER_OK == status) {
-        String2CString(publicKeyString, eccPublicKey);
+        *eccPublicKey = CreateStringCopy(publicKeyString);
+
+        if (nullptr == *eccPublicKey) {
+            status = ER_OUT_OF_MEMORY;
+        }
     }
 
     return status;
 }
 
-AJ_API void AJ_CALL alljoyn_securityapplicationproxy_eccpublickey_destroy(AJ_PSTR eccPublicKey)
+void AJ_CALL alljoyn_securityapplicationproxy_eccpublickey_destroy(AJ_PSTR eccPublicKey)
 {
-    delete[] eccPublicKey;
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    DestroyStringCopy(eccPublicKey);
 }
 
 QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedManifestXml,
@@ -280,6 +330,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedM
                                                               AJ_PCSTR signingPrivateKeyPem,
                                                               AJ_PSTR* signedManifest)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
     QStatus status;
     IdentityCertificate identityCertificate;
     ECCPrivateKey privateKey;
@@ -297,39 +348,22 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR unsignedM
     return status;
 }
 
-AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml)
+void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml)
 {
-    delete[] signedManifestXml;
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    DestroyStringCopy(signedManifestXml);
 }
 
-QStatus ExtractCertificates(AJ_PCSTR identCertChain, size_t* certCount, CertificateX509** certs)
-{
-    QStatus status = CertificateHelper::GetCertCount(identCertChain, certCount);
-    *certs = nullptr;
-
-    if ((ER_OK == status) &&
-        (*certCount == 0)) {
-        status = ER_INVALID_DATA;
-    }
-
-    if (ER_OK == status) {
-        *certs = new CertificateX509[*certCount];
-        status = CertificateX509::DecodeCertChainPEM(identCertChain, *certs, *certCount);
-    }
-
-    if (ER_OK != status) {
-        delete[] *certs;
-        *certs = nullptr;
-    }
-
-    return status;
-}
-
+/*
+ * The "signedManifestXml" variable must be freed by the caller using delete[].
+ */
 QStatus SignManifest(const IdentityCertificate& identityCertificate,
                      const ECCPrivateKey& privateKey,
                      AJ_PCSTR unsignedManifestXml,
                      AJ_PSTR* signedManifestXml)
 {
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    string signedManifest;
     Manifest manifest;
     QStatus status = BuildSignedManifest(identityCertificate,
                                          privateKey,
@@ -337,10 +371,26 @@ QStatus SignManifest(const IdentityCertificate& identityCertificate,
                                          manifest);
 
     if (ER_OK == status) {
-        status = XmlManifestConverter::ManifestToXml(manifest, signedManifestXml);
+        status = XmlManifestConverter::ManifestToXml(manifest, signedManifest);
+    }
+
+    if (ER_OK == status) {
+        *signedManifestXml = CreateStringCopy(signedManifest);
+
+        if (nullptr == *signedManifestXml) {
+            status = ER_OUT_OF_MEMORY;
+        }
     }
 
     return status;
+}
+
+QStatus SetManifestRules(vector<PermissionPolicy::Rule>& rules, Manifest& manifest)
+{
+    for (auto& rule : rules) {
+        rule.SetRuleType(PermissionPolicy::Rule::MANIFEST_POLICY_RULE);
+    }
+    return manifest->SetRules(rules.data(), rules.size());
 }
 
 QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
@@ -348,11 +398,12 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
                             AJ_PCSTR unsignedManifestXml,
                             Manifest& manifest)
 {
-    std::vector<PermissionPolicy::Rule> rules;
-    QStatus status = XmlRulesConverter::XmlToRules(unsignedManifestXml, rules);
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    vector<PermissionPolicy::Rule> rules;
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
 
     if (ER_OK == status) {
-        status = manifest->SetRules(rules.data(), rules.size());
+        status = SetManifestRules(rules, manifest);
     }
 
     if (ER_OK == status) {
@@ -362,20 +413,123 @@ QStatus BuildSignedManifest(const IdentityCertificate& identityCertificate,
     return status;
 }
 
-QStatus GetGroupId(const uint8_t* groupId, size_t groupSize, GUID128& extractedId)
+QStatus AJ_CALL alljoyn_securityapplicationproxy_computemanifestdigest(AJ_PCSTR unsignedManifestXml,
+                                                                       AJ_PCSTR identityCertificatePem,
+                                                                       uint8_t** digest,
+                                                                       size_t* digestSize)
 {
-    if (GUID128::SIZE != groupSize) {
-        return ER_INVALID_GUID;
-    } else {
-        extractedId.SetBytes(groupId);
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    CertificateX509 identityCertificate;
+    Manifest manifest;
+    vector<PermissionPolicy::Rule> rules;
+
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not convert manifest XML to rules"));
+        return status;
     }
+
+    status = SetManifestRules(rules, manifest);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set manifest rules"));
+        return status;
+    }
+
+    status = identityCertificate.LoadPEM(identityCertificatePem);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not load identity certificate"));
+        return status;
+    }
+
+    vector<uint8_t> digestVector;
+    status = manifest->ComputeThumbprintAndDigest(identityCertificate, digestVector);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not ComputeThumbprintAndDigest"));
+        return status;
+    }
+
+    *digest = new (std::nothrow) uint8_t[digestVector.size()];
+    if (nullptr == *digest) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Out of memory allocating digest"));
+        return ER_OUT_OF_MEMORY;
+    }
+
+    memcpy(*digest, digestVector.data(), digestVector.size());
+    *digestSize = digestVector.size();
 
     return ER_OK;
 }
 
-void String2CString(const String& qccString, AJ_PSTR* resultString)
+void AJ_CALL alljoyn_securityapplicationproxy_digest_destroy(uint8_t* digest)
 {
-    size_t stringSize = qccString.size() + 1;
-    *resultString = new char[stringSize];
-    strcpy(*resultString, qccString.c_str());
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    delete[] digest;
+}
+
+QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_PCSTR unsignedManifestXml,
+                                                                      AJ_PCSTR identityCertificatePem,
+                                                                      const uint8_t* signature,
+                                                                      size_t signatureSize,
+                                                                      AJ_PSTR* signedManifestXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    if ((2 * ECC_COORDINATE_SZ) != signatureSize) {
+        return ER_BAD_ARG_4;
+    }
+
+    CertificateX509 identityCertificate;
+    Manifest manifest;
+    vector<PermissionPolicy::Rule> rules;
+
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not convert manifest XML to rules"));
+        return status;
+    }
+
+    status = manifest->SetRules(rules.data(), rules.size());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set manifest rules"));
+        return status;
+    }
+
+    status = identityCertificate.LoadPEM(identityCertificatePem);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not load identity certificate"));
+        return status;
+    }
+
+    status = manifest->SetSubjectThumbprint(identityCertificate);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set subject thumbprint"));
+        return status;
+    }
+
+    ECCSignature eccSig;
+    /* TODO ASACORE-3006: Need Import/Export methods for ECCSignature */
+    memcpy(eccSig.r, signature, ECC_COORDINATE_SZ);
+    memcpy(eccSig.s, signature + ECC_COORDINATE_SZ, ECC_COORDINATE_SZ);
+
+    status = manifest->SetSignature(eccSig);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set manifest signature"));
+        return status;
+    }
+
+    std::string signedManifest;
+
+    status = XmlManifestConverter::ManifestToXml(manifest, signedManifest);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not convert signed manifest to XML"));
+        return status;
+    }
+
+    *signedManifestXml = CreateStringCopy(signedManifest);
+
+    if (nullptr == *signedManifestXml) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Out of memory copying manifest XML"));
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return ER_OK;
 }

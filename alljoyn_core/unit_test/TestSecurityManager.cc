@@ -31,6 +31,7 @@ using namespace ajn;
 using namespace qcc;
 
 #define QCC_MODULE "SECURITY_TEST"
+#define TEST_LEAVE_SESSION_WAIT_TIME (1000 * s_globalTimerMultiplier)
 
 static QStatus GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
 {
@@ -417,7 +418,7 @@ QStatus TestSecurityManager::UpdatePolicy(const BusAttachment& peerBus, const Pe
      * In an attempt to mitigate the problems described above, sleep for a little while,
      * hoping that the peer app gets a chance to finish updating its ConnectedPeers.
      */
-    qcc::Sleep(1000);
+    qcc::Sleep(TEST_LEAVE_SESSION_WAIT_TIME);
 
     return status;
 }

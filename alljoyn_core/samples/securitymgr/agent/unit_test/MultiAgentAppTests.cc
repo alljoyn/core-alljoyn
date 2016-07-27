@@ -178,8 +178,11 @@ class MultiAgentAppTests :
  *       -# Let the security agents start unclaiming claimed
  *          applications.
  *       -# Verify that all applications have changed state to CLAIMABLE
+ *
+ * Temporarily disabled due to ASACORE-2874.
+ *
  **/
-TEST_F(MultiAgentAppTests, SuccessfulClaimAndUnclaimManyApps) {
+TEST_F(MultiAgentAppTests, DISABLED_SuccessfulClaimAndUnclaimManyApps) {
     vector<OnlineApplication> agent2Apps;
     ASSERT_EQ(ER_OK, agent2->GetApplications(agent2Apps));
     ASSERT_EQ(apps.size(), agent2Apps.size());

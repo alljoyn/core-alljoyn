@@ -53,7 +53,7 @@ using namespace ajn;
 
 #define PATH_PREFIX "/test/"
 
-#define MAX_WAIT_MS 6000
+#define MAX_WAIT_MS (6000 * s_globalTimerMultiplier)
 
 #define STRESS_FACTOR 5
 
@@ -147,7 +147,7 @@ class Participant : public SessionPortListener, public SessionListener {
         /* create interfaces */
         InterfaceDescription* intf = NULL;
         status = bus.CreateInterface(INTF_A, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
-                                     AJ_IFC_SECURITY_INHERIT);
+                                     AJ_IFC_SECURITY_OFF);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -156,7 +156,7 @@ class Participant : public SessionPortListener, public SessionListener {
 
         intf = NULL;
         status = bus.CreateInterface(INTF_B, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
-                                     AJ_IFC_SECURITY_INHERIT);
+                                     AJ_IFC_SECURITY_OFF);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -190,6 +190,8 @@ class Participant : public SessionPortListener, public SessionListener {
     }
 
     void Fini() {
+        ASSERT_EQ(ER_OK, aboutObj.Unannounce());
+
         ObjectMap::iterator it;
         for (it = objects.begin(); it != objects.end(); ++it) {
             if (it->second.second) {
@@ -460,13 +462,33 @@ class ObserverListener : public Observer::Listener {
             EXPECT_TRUE(proxy.ImplementsInterface(INTF_B));
         }
 
+        EXPECT_EQ(proxy.IsSecure(), false);
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
-                    (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
+
+        // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
+        if (!((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
+              (status == ER_PERMISSION_DENIED))) {
+            qcc::String errorMessage = "";
+            const char* errorNameTemp = reply->GetErrorName(&errorMessage);
+            qcc::String errorName = (errorNameTemp == nullptr) ? "" : errorNameTemp;
+            printf("MethodCall failed with status %s\nError %s: %s", QCC_StatusText(status), errorName.c_str(), errorMessage.c_str());
+            QCC_ASSERT(false);
+        }
 
         bus.EnableConcurrentCallbacks();
+
+        EXPECT_EQ(proxy.IsSecure(), false);
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
+
+        // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
+        if (!((status == ER_OK) || (status == ER_PERMISSION_DENIED))) {
+            qcc::String errorMessage = "";
+            const char* errorNameTemp = reply->GetErrorName(&errorMessage);
+            qcc::String errorName = (errorNameTemp == nullptr) ? "" : errorNameTemp;
+            printf("MethodCall failed with status %s\nError %s: %s", QCC_StatusText(status), errorName.c_str(), errorMessage.c_str());
+            QCC_ASSERT(false);
+        }
+
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
             if (strict) {
@@ -492,7 +514,9 @@ class ObserverListener : public Observer::Listener {
     virtual void ObjectLost(ProxyBusObject& proxy) {
         ProxyVector::iterator it = FindProxy(proxy);
         EXPECT_NE(it, proxies.end()) << "Lost a not-discovered object";
-        proxies.erase(it);
+        if (it != proxies.end()) {
+            proxies.erase(it);
+        }
         if (--counter == 0) {
             event.SetEvent();
         }
@@ -571,6 +595,7 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     provider.RegisterObject("justA");
     provider.RegisterObject("justB");
     provider.RegisterObject("both");
+
     EXPECT_TRUE(WaitForAll(allEvents));
 
     /* remove justA from the bus */
@@ -617,7 +642,7 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
             CountProxies(obsAB) == 1) {
             break;
         }
-        qcc::Sleep(20);
+        qcc::Sleep(WAIT_TIME_20);
     }
     EXPECT_EQ(2, CountProxies(obsA));
     EXPECT_EQ(1, CountProxies(obsB));
@@ -727,9 +752,10 @@ TEST_F(ObserverTest, Rejection)
     EXPECT_TRUE(WaitForAll(events));
 
     /* now let doubtful kill the connection */
-    qcc::Sleep(100); // This sleep is necessary to make sure the provider
-                     // knows it has a session. Otherwise, CloseSession
-                     // sporadically fails.
+    // This sleep is necessary to make sure the provider
+    // knows it has a session. Otherwise, CloseSession
+    // sporadically fails.
+    qcc::Sleep(WAIT_TIME_100);
     listener.ExpectInvocations(1);
     doubtful.CloseSession(consumer);
     EXPECT_TRUE(WaitForAll(events));
@@ -1374,7 +1400,7 @@ TEST_F(ObserverTest, StressNumPartObjects) {
         }
         observers[i]->RegisterListener(*(listeners[i]));
 
-        qcc::Sleep(20);
+        qcc::Sleep(WAIT_TIME_20);
     }
 
     EXPECT_TRUE(WaitForAll(events, MAX_WAIT_MS * (1 + STRESS_FACTOR / 2)));

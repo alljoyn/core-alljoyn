@@ -91,18 +91,36 @@ class DeferredCallback {
 
     virtual ~DeferredCallback() { }
 
+    /**
+     * Static initialization routine called by alljoyn_init.
+     */
+    static void AJ_CALL Init()
+    {
+        QCC_ASSERT(sCallbackListLock == nullptr);
+        sCallbackListLock = new qcc::Mutex();
+    }
+
+    /**
+     * Static cleanup routine called by alljoyn_shutdown.
+     */
+    static void AJ_CALL Shutdown()
+    {
+        delete sCallbackListLock;
+        sCallbackListLock = nullptr;
+    }
+
     static int TriggerCallbacks()
     {
         int ret = 0;
         while (!sPendingCallbacks.empty()) {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             if (sPendingCallbacks.empty()) {
-                sCallbackListLock.Unlock(MUTEX_CONTEXT);
+                sCallbackListLock->Unlock(MUTEX_CONTEXT);
                 break;
             }
             DeferredCallback* cb = sPendingCallbacks.front();
             sPendingCallbacks.pop_front();
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             cb->runCallbackNow();
             while (!cb->finished)
                 qcc::Sleep(1);
@@ -141,7 +159,7 @@ class DeferredCallback {
     volatile sig_atomic_t finished;
     static std::list<DeferredCallback*> sPendingCallbacks;
     static qcc::Thread* sMainThread;
-    static qcc::Mutex sCallbackListLock;
+    static qcc::Mutex* sCallbackListLock;
 
     volatile sig_atomic_t executeNow;
   private:
@@ -167,9 +185,9 @@ class DeferredCallback_1 : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -204,9 +222,9 @@ class DeferredCallback_1<void, T> : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -238,9 +256,9 @@ class DeferredCallback_2 : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -276,9 +294,9 @@ class DeferredCallback_2<void, T, U> : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -312,9 +330,9 @@ class DeferredCallback_3 : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -352,9 +370,9 @@ class DeferredCallback_3<void, T, U, V> : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -389,9 +407,9 @@ class DeferredCallback_4 : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -432,9 +450,9 @@ class DeferredCallback_4<void, T, U, V, W> : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -468,9 +486,9 @@ class DeferredCallback_6 : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }
@@ -509,9 +527,9 @@ class DeferredCallback_6<void, T, U, V, W, X, Y> : public DeferredCallback {
         if (!sMainThreadCallbacksOnly) {
             runCallbackNow();
         } else {
-            sCallbackListLock.Lock(MUTEX_CONTEXT);
+            sCallbackListLock->Lock(MUTEX_CONTEXT);
             sPendingCallbacks.push_back(this);
-            sCallbackListLock.Unlock(MUTEX_CONTEXT);
+            sCallbackListLock->Unlock(MUTEX_CONTEXT);
             if (!IsMainThread()) {
                 Wait();
             }

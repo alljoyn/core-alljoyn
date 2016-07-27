@@ -35,13 +35,13 @@ namespace qcc {
 class IODispatch;
 
 /* Different types of callbacks possible:
- * IO_READ: A source event has occured indicating that data is available.
- * IO_WRITE: A sink event has occured indicating that data can be written to the FD.
+ * IO_READ: A source event has occurred indicating that data is available.
+ * IO_WRITE: A sink event has occurred indicating that data can be written to the FD.
  * IO_READ_TIMEOUT: A read timeout callback which will take place if a timeout was specified
- *                  while enabling the read. If a source event has not occured within the
+ *                  while enabling the read. If a source event has not occurred within the
  *                  specified timeout, the read callback will be made.
  * IO_WRITE_TIMEOUT: A write timeout callback which will take place if a timeout was specified
- *                  while enabling the write. If a source event has not occured within the
+ *                  while enabling the write. If a source event has not occurred within the
  *                  specified timeout, the write callback will be made.
  */
 enum CallbackType {

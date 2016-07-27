@@ -466,7 +466,7 @@ class MsgArg {
      *       - #ER_BUS_TRUNCATED if the signature was longer than expected.
      *       - Other error status codes indicating a failure.
      */
-    static QStatus AJ_CALL Set(MsgArg* args, size_t& numArgs, const char* signature, ...);
+    static QStatus CDECL_CALL Set(MsgArg* args, size_t& numArgs, const char* signature, ...);
 
     /**
      * Matches a signature to the MsArg and if the signature matches unpacks the component values of a MsgArg. Note that the values
@@ -577,7 +577,7 @@ class MsgArg {
      *      - #ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
      *      - Other error status codes indicating a failure.
      */
-    static QStatus AJ_CALL Get(const MsgArg* args, size_t numArgs, const char* signature, ...);
+    static QStatus CDECL_CALL Get(const MsgArg* args, size_t numArgs, const char* signature, ...);
 
     /**
      * Helper function for accessing dictionary elements. The MsgArg must be an array of dictionary

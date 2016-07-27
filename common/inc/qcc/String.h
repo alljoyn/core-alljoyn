@@ -114,15 +114,24 @@ class String {
      *
      * @param str  Value to assign to string.
      * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
-    std::string assign(const char* str, size_type len);
+    QCC_DEPRECATED_ON(std::string assign(const char* str, size_type len), 16.10);
+
+    /**
+     * Assign a value to a string. Behaves like std::string version but returns by value.
+     *
+     * @param str  Value to assign to string.
+     * @param len  Number of characters to assign or 0 to insert up to first nul byte in str.
+     * @return  New std::string object.
+     */
+    std::string assign_std(const char* str, size_type len) { return s.assign(str, len); }
 
     /**
      * Assign a nul-terminated string value to a string
      *
      * @param str  Value to assign to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string assign(const char* str);
 
@@ -195,7 +204,7 @@ class String {
      *
      * @param str  Value to append to string.
      * @param len  Number of characters to append or 0 to insert up to first nul byte in str.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string append(const char* str, size_type len);
     std::string append(const char* str);
@@ -204,7 +213,7 @@ class String {
      * Append a string to another to string.
      *
      * @param str  Value to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string append(const String& str) { return s.append(str.s); }
 
@@ -213,7 +222,7 @@ class String {
      *
      * @param n  Number of copies of 'c' to append.
      * @param c  Character to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string append(size_type n, char c) { return s.append(n, c); }
 
@@ -221,7 +230,7 @@ class String {
      * Append a single character to string.
      *
      * @param c Character to append to string.
-     * @return  Reference to this string.
+     * @return  New String object.
      */
     QCC_DEPRECATED_ON(String append(const char c), 16.04) { return s.append(1, c); }
 
@@ -230,7 +239,7 @@ class String {
      *
      * @param pos    Offset first char to erase.
      * @param n      Number of chars to erase.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string erase(size_type pos = 0, size_type n = npos) { return s.erase(pos, n); }
 
@@ -261,7 +270,7 @@ class String {
      * Append a character.
      *
      * @param c Character to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string operator+=(const char c) { return s += c; }
 
@@ -269,7 +278,7 @@ class String {
      * Append to string.
      *
      * @param str  Value to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string operator+=(const char* str) { return append(str); }
 
@@ -277,7 +286,7 @@ class String {
      * Append to string.
      *
      * @param str  Value to append to string.
-     * @return  Reference to this string.
+     * @return  New std::string object.
      */
     std::string operator+=(const String& str) { return s += str.s; }
 
@@ -289,7 +298,7 @@ class String {
      * @param pos   Insert position.
      * @param str   Character string to insert.
      * @param len   Optional number of chars to insert.
-     * @return  Reference to the string.
+     * @return  New std::string object.
      */
     std::string insert(size_type pos, const char* str, size_type len);
 

@@ -24,7 +24,6 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/PermissionConfigurator.h>
-#include <qcc/Crypto.h>
 #include <qcc/CertificateECC.h>
 
 namespace ajn {
@@ -139,15 +138,22 @@ class SecurityApplicationProxy : public ProxyBusObject {
 
     /**
      * Returns the XML version of the manifest template. The returned value
-     * is managed by the caller and has to be freed using delete[].
+     * is managed by the caller and has to be freed using DestroyManifestTemplate.
      *
-     * @param[out] manifestTemplate The manifest temaplte in XML format.
+     * @param[out] manifestTemplateXml  The manifest template in XML format.
      *
      * @return
      *  - #ER_OK if successful.
      *  - An error status indicating failure.
      */
     QStatus GetManifestTemplate(AJ_PSTR* manifestTemplateXml);
+
+    /**
+     * Destroys the manifest template XML created by GetManifestTemplate.
+     *
+     * @param[in] manifestTemplateXml    The manifest temaplte in XML format.
+     */
+    static void DestroyManifestTemplate(AJ_PSTR manifestTemplateXml);
 
     /**
      * The authentication mechanisms the application supports for the claim process.
@@ -621,34 +627,6 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     static QStatus MsgArgToCertificateIds(const MsgArg& arg, qcc::String* serials, qcc::KeyInfoNISTP256* issuerKeyInfos, size_t expectedSize);
-
-    /**
-     * Populate the array of rules certificates with data from the msg arg
-     * @param arg the message arg with signature a(ssa(syy)
-     * @param[in,out] rules the array of rules
-     * @param expectedSize the size of the array of rules
-     * @return
-     *  - #ER_OK if successful
-     *  - an error status indicating failure
-     */
-    static QStatus MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize);
-
-  private:
-
-    /**
-     * Extracts a vector of Manifest objects from an array of signed
-     * manifests in XML format.
-     *
-     * @param[in]    manifestsXmls   An array of signed manifests in XML format.
-     * @param[in]    manifestsCount  Count of the "manifestsXmls" array elements.
-     * @param[out]   manifests       Output vector containing the Manifest objects.
-     *
-     * @return
-     *  - #ER_OK             If successful
-     *  - #ER_XML_MALFORMED  If one of the signed manifests was in an invalid format.
-     *  - Some other error status indicating failure.
-     */
-    QStatus ExtractManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests);
 };
 }
 

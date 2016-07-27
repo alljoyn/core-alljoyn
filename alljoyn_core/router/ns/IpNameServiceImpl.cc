@@ -7596,10 +7596,11 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
         if (isAt.GetReliableIPv6Flag()) {
             snprintf(reliableAddr6Buf, sizeof(reliableAddr6Buf), ",addr=%s,port=%d",
                      isAt.GetReliableIPv6Address().c_str(), isAt.GetReliableIPv6Port());
+
             if (needComma) {
-                strncat(reliableAddrBuf, &reliableAddr6Buf[0], sizeof(reliableAddr6Buf));
+                strncat(reliableAddrBuf, &reliableAddr6Buf[0], sizeof(reliableAddrBuf) - strlen(reliableAddrBuf) - 1);
             } else {
-                strncat(reliableAddrBuf, &reliableAddr6Buf[1], sizeof(reliableAddr6Buf));
+                strncat(reliableAddrBuf, &reliableAddr6Buf[1], sizeof(reliableAddrBuf) - strlen(reliableAddrBuf) - 1);
             }
         }
 
@@ -7607,9 +7608,9 @@ void IpNameServiceImpl::HandleProtocolAnswer(IsAt isAt, uint32_t timer, const qc
             snprintf(unreliableAddr6Buf, sizeof(unreliableAddr6Buf), ",addr=%s,port=%d",
                      isAt.GetUnreliableIPv6Address().c_str(), isAt.GetUnreliableIPv6Port());
             if (needComma) {
-                strncat(unreliableAddrBuf, &unreliableAddr6Buf[0], sizeof(unreliableAddr6Buf));
+                strncat(unreliableAddrBuf, &unreliableAddr6Buf[0], sizeof(unreliableAddrBuf) - strlen(unreliableAddrBuf) - 1);
             } else {
-                strncat(unreliableAddrBuf, &unreliableAddr6Buf[1], sizeof(unreliableAddr6Buf));
+                strncat(unreliableAddrBuf, &unreliableAddr6Buf[1], sizeof(unreliableAddrBuf) - strlen(unreliableAddrBuf) - 1);
             }
         }
 
@@ -8169,6 +8170,7 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket,
             snprintf(busAddressTcp, sizeof(busAddressTcp), "addr=%s,port=%d", r4.addr.ToString().c_str(), r4.port);
             needComma = true;
         }
+
         if (r6.port != 0 && r6.addr != IPAddress()) {
             if (needComma) {
                 snprintf(addr6buf, sizeof(addr6buf), ",addr=%s,port=%d", r6.addr.ToString().c_str(), r6.port);
@@ -8176,9 +8178,9 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket,
 
                 snprintf(addr6buf, sizeof(addr6buf), "addr=%s,port=%d", r6.addr.ToString().c_str(), r6.port);
             }
-            strncat(busAddressTcp, &addr6buf[0], sizeof(addr6buf));
-
+            strncat(busAddressTcp, &addr6buf[0], sizeof(busAddressTcp) - strlen(busAddressTcp) - 1);
         }
+
         needComma = false;
         if (u4.port != 0 && u4.addr != IPAddress()) {
 
@@ -8193,8 +8195,7 @@ bool IpNameServiceImpl::HandleAdvertiseResponse(MDNSPacket mdnsPacket,
 
                 snprintf(addr6buf, sizeof(addr6buf), "addr=%s,port=%d", u6.addr.ToString().c_str(), u6.port);
             }
-            strncat(busAddressUdp, &addr6buf[0], sizeof(addr6buf));
-
+            strncat(busAddressUdp, &addr6buf[0], sizeof(busAddressUdp) - strlen(busAddressUdp) - 1);
         }
 
         if ((namesUdp.size() > 0) && m_callback[TRANSPORT_INDEX_UDP]) {
@@ -8630,10 +8631,12 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
         uint32_t numSearch = searchRData->GetNumSearchCriteria();
         for (uint32_t k = 0; k < numSearch; k++) {
             String crit = searchRData->GetSearchCriterion(k);
+            /* Remove the search criterion out of the query if it is not one we're interested in getting a reply for. */
             if (std::find(set_union_tcp_udp.begin(), set_union_tcp_udp.end(), crit) == set_union_tcp_udp.end()) {
-                searchRData->RemoveSearchCriterion(k);
-                k--;
-                numSearch = searchRData->GetNumSearchCriteria();
+                if (searchRData->RemoveSearchCriterion(k)) {
+                    k--;
+                    numSearch = searchRData->GetNumSearchCriteria();
+                }
             }
         }
 

@@ -53,7 +53,7 @@ static DebugControl* dbgControl = NULL;
 static bool initialized = false;
 static bool dbgUseEpoch = false;
 
-int AJ_CALL QCC_SyncPrintf(const char* fmt, ...)
+int CDECL_CALL QCC_SyncPrintf(const char* fmt, ...)
 {
     int ret = 0;
     va_list ap;
@@ -410,7 +410,7 @@ void QCC_InitializeDebugControl(void)
     // Initialized in static data
 }
 
-void* AJ_CALL _QCC_DbgPrintContext(const char* fmt, ...)
+void* CDECL_CALL _QCC_DbgPrintContext(const char* fmt, ...)
 {
     DebugContext* context = new DebugContext();
     va_list ap;
@@ -422,7 +422,7 @@ void* AJ_CALL _QCC_DbgPrintContext(const char* fmt, ...)
 }
 
 
-void AJ_CALL _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...)
+void CDECL_CALL _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...)
 {
     DebugContext* context = reinterpret_cast<DebugContext*>(ctx);
     va_list ap;

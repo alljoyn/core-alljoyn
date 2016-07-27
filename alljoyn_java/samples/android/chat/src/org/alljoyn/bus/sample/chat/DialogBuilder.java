@@ -49,11 +49,9 @@ public class DialogBuilder {
 
         List<String> channels = application.getFoundChannels();
         for (String channel : channels) {
-            int lastDot = channel.lastIndexOf('.');
-            if (lastDot < 0) {
-                continue;
+            if (channel.length() > AllJoynService.NAME_PREFIX.length() + 1) {
+                channelListAdapter.add(channel.substring(AllJoynService.NAME_PREFIX.length() + 1));
             }
-            channelListAdapter.add(channel.substring(lastDot + 1));
         }
         channelListAdapter.notifyDataSetChanged();
 

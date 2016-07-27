@@ -138,6 +138,10 @@ if env['VARIANT'] == 'debug':
    env.Append(CXXFLAGS=['/MDd', '/Od', '/Ob1', '/W4', '/WX'])
    env.Append(LINKFLAGS=['/debug'])
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
+
+   # Define needed to do automatic memory dumps for Jenkins builds
+   if os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
+      env.Append(CPPDEFINES=['ALLJOYN_CRASH_DUMP_SUPPORT'])
 else:
    # MSVC 2010 and newer require _ITERATOR_DEBUG_LEVEL specified
    env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])

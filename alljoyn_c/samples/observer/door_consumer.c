@@ -327,7 +327,7 @@ static const char* door_intf_props[] = {
     "IsOpen", "Location", "KeyCode"
 };
 
-static void properties_changed(alljoyn_proxybusobject proxy, const char* intf, const alljoyn_msgarg changed, const alljoyn_msgarg invalidated, void* context)
+static void AJ_CALL properties_changed(alljoyn_proxybusobject proxy, const char* intf, const alljoyn_msgarg changed, const alljoyn_msgarg invalidated, void* context)
 {
     QStatus status;
     size_t nelem;
@@ -423,7 +423,7 @@ static void print_door_state(const alljoyn_proxybusobject proxy) {
     fflush(stdout);
 }
 
-static void object_discovered(const void* context, alljoyn_proxybusobject_ref proxyref)
+static void AJ_CALL object_discovered(const void* context, alljoyn_proxybusobject_ref proxyref)
 {
     QStatus status;
 
@@ -448,7 +448,7 @@ static void object_discovered(const void* context, alljoyn_proxybusobject_ref pr
     print_door_state(proxy);
 }
 
-static void object_lost(const void* context, alljoyn_proxybusobject_ref proxyref)
+static void AJ_CALL object_lost(const void* context, alljoyn_proxybusobject_ref proxyref)
 {
     alljoyn_proxybusobject proxy = alljoyn_proxybusobject_ref_get(proxyref);
     QCC_UNUSED(context);
@@ -460,7 +460,7 @@ static void object_lost(const void* context, alljoyn_proxybusobject_ref proxyref
 static alljoyn_observerlistener_callback listener_cbs = { object_discovered, object_lost };
 
 /** the PersonPassedThrough signal handler */
-static void person_passed_through(const alljoyn_interfacedescription_member* member, const char* path, alljoyn_message message)
+static void AJ_CALL person_passed_through(const alljoyn_interfacedescription_member* member, const char* path, alljoyn_message message)
 {
     struct _listener_ctx* ctx = &listener_ctx; //alljoyn_c caveat: no way to pass a cookie into signal handlers.
     alljoyn_proxybusobject_ref proxyref = alljoyn_observer_get(ctx->observer, alljoyn_message_getsender(message), path);

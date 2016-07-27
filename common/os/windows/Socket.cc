@@ -386,7 +386,7 @@ QStatus GetLocalAddress(SocketFd sockfd, IPAddress& addr, uint16_t& port)
 
     if (ret == SOCKET_ERROR) {
         status = ER_OS_ERROR;
-        QCC_LogError(status, ("Geting Local Address: %s", GetLastErrorString().c_str()));
+        QCC_LogError(status, ("Getting Local Address: %s", GetLastErrorString().c_str()));
     } else {
         QCC_DbgPrintf(("ret = %d  addrBuf.ss_family = %d  addrLen = %d", ret, addrBuf.ss_family, addrLen));
         if (addrBuf.ss_family == AF_INET) {

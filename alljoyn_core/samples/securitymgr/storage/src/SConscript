@@ -38,4 +38,10 @@ if lib_env.get('LIBTYPE', 'static') != 'static':
     shobjs = lib_env.SharedObject(srcs)
     libs.append(lib_env.SharedLibrary('ajsecstorage', shobjs))
 
+# Files for SDK
+if lib_env['OS_GROUP'] in ['windows']:
+    lib_env.Install('$CPP_DISTDIR/samples/securitymgr/storage/src', lib_env.Glob('*.cc'))
+    lib_env.Install('$CPP_DISTDIR/samples/securitymgr/storage/src', lib_env.Glob('*.h'))
+    lib_env.Install('$CPP_DISTDIR/samples/securitymgr/storage/inc/alljoyn/securitymgr/storage', lib_env.Glob('../inc/alljoyn/securitymgr/storage/*.h'))
+
 Return ('libs')

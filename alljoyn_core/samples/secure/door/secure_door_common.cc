@@ -16,7 +16,6 @@
 
 #include "secure_door_common.h"
 
-#include <qcc/Thread.h>
 #include <alljoyn/PermissionPolicy.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -37,7 +36,12 @@ void DoorCommonPCL::PolicyChanged()
     PermissionConfigurator::ApplicationState appState;
     if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState))) {
         if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
-            qcc::Sleep(250); // Allow SecurityMgmtObj to send method reply (see ASACORE-2331)
+#if defined(QCC_OS_GROUP_WINDOWS)
+            Sleep(250);
+#else
+            usleep(250 * 1000);
+#endif
+
             // Upon a policy update, existing connections are invalidated
             // and one needs to make them valid again.
             if (ER_OK != (status = ba.SecureConnectionAsync(nullptr, true))) {
@@ -359,9 +363,9 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
         manifestRule.SetMembers(1, &member);
     }
 
-    status = ba->GetPermissionConfigurator().SetPermissionManifest(&manifestRule, 1);
+    status = ba->GetPermissionConfigurator().SetPermissionManifestTemplate(&manifestRule, 1);
     if (ER_OK != status) {
-        fprintf(stderr, "Failed to SetPermissionManifest - status (%s)\n", QCC_StatusText(status));
+        fprintf(stderr, "Failed to SetPermissionManifestTemplate - status (%s)\n", QCC_StatusText(status));
         return status;
     }
 
@@ -387,9 +391,9 @@ QStatus DoorCommon::UpdateManifest(const PermissionPolicy::Acl& manifest)
 {
     PermissionPolicy::Rule* rules = const_cast<PermissionPolicy::Rule*> (manifest.GetRules());
 
-    QStatus status = ba->GetPermissionConfigurator().SetPermissionManifest(rules, manifest.GetRulesSize());
+    QStatus status = ba->GetPermissionConfigurator().SetPermissionManifestTemplate(rules, manifest.GetRulesSize());
     if (ER_OK != status) {
-        fprintf(stderr, "Failed to SetPermissionManifest - status (%s)\n", QCC_StatusText(status));
+        fprintf(stderr, "Failed to SetPermissionManifestTemplate - status (%s)\n", QCC_StatusText(status));
         return status;
     }
 

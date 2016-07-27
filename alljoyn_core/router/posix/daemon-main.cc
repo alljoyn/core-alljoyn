@@ -64,9 +64,12 @@
 #if !defined(ROUTER_LIB)
 
 #if defined(QCC_OS_LINUX)
+
 #include <sys/prctl.h>
 #include <sys/capability.h>
+
 #elif defined(QCC_OS_ANDROID)
+
 #include <linux/capability.h>
 extern "C" {
 extern int capset(cap_user_header_t hdrp, const cap_user_data_t datap);

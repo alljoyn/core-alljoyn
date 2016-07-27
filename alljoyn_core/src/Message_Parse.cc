@@ -646,7 +646,7 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
         }
         QCC_ASSERT(0 <= authVersion);
 
-        QCC_DbgHLPrintf(("Decrypting messge from %s", GetSender()));
+        QCC_DbgHLPrintf(("Decrypting message from %s", GetSender()));
         /*
          * Decryption will  make the body length  smaller because the encryption
          * algorithm appends data to the end of the encrypted data.
@@ -1124,7 +1124,7 @@ QStatus _Message::Read(RemoteEndpoint& endpoint, bool checkSender, bool pedantic
     readState = MESSAGE_NEW;
 
     /* Keep pulling bytes until the message is incomplete and
-     * no error has occured.
+     * no error has occurred.
      */
     while (readState != MESSAGE_COMPLETE && status == ER_OK) {
         status = PullBytes(endpoint, checkSender, pedantic, PULL_TIMEOUT(countRead));
@@ -1147,13 +1147,18 @@ QStatus _Message::Unmarshal(qcc::String& endpointName, bool handlePassing, bool 
 {
     QCC_UNUSED(timeout);
 
-    QStatus status;
-
-    uint8_t* endOfHdr;
-    MsgArg* senderField = &hdrFields.field[ALLJOYN_HDR_FIELD_SENDER];
     if (!bus->IsStarted()) {
         return ER_BUS_BUS_NOT_STARTED;
     }
+
+    return Unmarshal(bus->GetInternal().GetPeerStateTable(), endpointName, handlePassing, checkSender, pedantic);
+}
+
+QStatus _Message::Unmarshal(PeerStateTable* peerStateTable, qcc::String& endpointName, bool handlePassing, bool checkSender, bool pedantic)
+{
+    QStatus status;
+    uint8_t* endOfHdr;
+    MsgArg* senderField = &hdrFields.field[ALLJOYN_HDR_FIELD_SENDER];
     bufPos = (uint8_t*)msgBuf + sizeof(msgHeader);
     endOfHdr = bufPos + msgHeader.headerLen;
     rcvEndpointName = endpointName;
@@ -1267,8 +1272,7 @@ QStatus _Message::Unmarshal(qcc::String& endpointName, bool handlePassing, bool 
      * session.
      */
     if (senderField->typeId != ALLJOYN_INVALID) {
-        PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(senderField->v_string.str,
-                                                                                   (msgHeader.flags & ALLJOYN_FLAG_SESSIONLESS) == 0);
+        PeerState peerState = peerStateTable->GetPeerState(senderField->v_string.str, (msgHeader.flags & ALLJOYN_FLAG_SESSIONLESS) == 0);
         bool unreliable = hdrFields.field[ALLJOYN_HDR_FIELD_TIME_TO_LIVE].typeId != ALLJOYN_INVALID;
         bool secure = (msgHeader.flags & ALLJOYN_FLAG_ENCRYPTED) != 0;
         if ((msgHeader.flags & ALLJOYN_FLAG_SESSIONLESS) == 0) {

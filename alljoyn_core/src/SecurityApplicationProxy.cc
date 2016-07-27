@@ -18,15 +18,19 @@
 #include <alljoyn/SecurityApplicationProxy.h>
 #include <qcc/Debug.h>
 #include <qcc/String.h>
+#include <qcc/StringUtil.h>
 #include <qcc/KeyInfoECC.h>
 #include <qcc/Util.h>
+#include <string>
 #include "PermissionMgmtObj.h"
 #include "KeyInfoHelper.h"
 #include "XmlManifestConverter.h"
-#include "XmlRulesConverter.h"
+#include "XmlManifestTemplateConverter.h"
 #include "XmlPoliciesConverter.h"
 
 #define QCC_MODULE "ALLJOYN_SECURITY"
+
+using namespace std;
 
 namespace ajn {
 SecurityApplicationProxy::SecurityApplicationProxy(BusAttachment& bus, const char* busName, SessionId sessionId) :
@@ -330,7 +334,7 @@ QStatus SecurityApplicationProxy::Claim(const qcc::KeyInfoNISTP256& certificateA
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
 
     std::vector<Manifest> manifests;
-    QStatus status = ExtractManifests(manifestsXmls, manifestsCount, manifests);
+    QStatus status = XmlManifestConverter::XmlArrayToManifests(manifestsXmls, manifestsCount, manifests);
 
     if (ER_OK == status) {
         status = Claim(certificateAuthority,
@@ -435,7 +439,7 @@ QStatus SecurityApplicationProxy::UpdateIdentity(const qcc::CertificateX509* ide
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
 
     std::vector<Manifest> manifests;
-    QStatus status = ExtractManifests(manifestsXmls, manifestsCount, manifests);
+    QStatus status = XmlManifestConverter::XmlArrayToManifests(manifestsXmls, manifestsCount, manifests);
 
     if (ER_OK == status) {
         status = UpdateIdentity(identityCertificateChain, identityCertificateChainCount,
@@ -678,31 +682,15 @@ QStatus SecurityApplicationProxy::MsgArgToCertificateIds(const MsgArg& arg, qcc:
             return ER_INVALID_DATA;
         }
         qcc::ECCPublicKey publicKey;
-        publicKey.Import(xCoord, publicKey.GetCoordinateSize(), yCoord, publicKey.GetCoordinateSize());
+        status = publicKey.Import(xCoord, publicKey.GetCoordinateSize(), yCoord, publicKey.GetCoordinateSize());
+        if (status != ER_OK) {
+            QCC_LogError(status, ("%s Failed to import public key", __FUNCTION__));
+            return status;
+        }
         issuerKeyInfos[cnt].SetPublicKey(&publicKey);
         issuerKeyInfos[cnt].SetKeyId(akiVal, akiLen);
-        serials[cnt].assign((const char*) serialVal, serialLen);
+        serials[cnt].assign_std((const char*) serialVal, serialLen);
     }
-    return status;
-}
-
-QStatus SecurityApplicationProxy::MsgArgToRules(const MsgArg& arg, PermissionPolicy::Rule* rules, size_t expectedSize)
-{
-    PermissionPolicy::Rule* localRules = NULL;
-    size_t count = 0;
-    QStatus status = PermissionPolicy::ParseRules(arg, &localRules, &count);
-    if (ER_OK != status) {
-        goto Exit;
-    }
-    if (count != expectedSize) {
-        status = ER_BAD_ARG_3;
-        goto Exit;
-    }
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        rules[cnt] = localRules[cnt];
-    }
-Exit:
-    delete [] localRules;
     return status;
 }
 
@@ -768,23 +756,34 @@ QStatus SecurityApplicationProxy::GetManifestTemplate(AJ_PSTR* manifestTemplateX
 
     QStatus status;
     MsgArg argManifestTemplate;
-    PermissionPolicy::Rule* rules = nullptr;
-    size_t rulesCount = 0;
+    vector<PermissionPolicy::Rule> rules;
+    std::string manifestTemplate;
 
     *manifestTemplateXml = nullptr;
     status = GetManifestTemplate(argManifestTemplate);
 
     if (ER_OK == status) {
-        status = PermissionPolicy::ParseRules(argManifestTemplate, &rules, &rulesCount);
+        status = PermissionPolicy::MsgArgToManifestTemplate(argManifestTemplate, rules);
     }
 
     if (ER_OK == status) {
-        status = XmlRulesConverter::RulesToXml(rules, rulesCount, manifestTemplateXml);
+        status = XmlManifestTemplateConverter::GetInstance()->RulesToXml(rules.data(), rules.size(), manifestTemplate);
     }
 
-    delete[] rules;
+    if (ER_OK == status) {
+        *manifestTemplateXml = qcc::CreateStringCopy(manifestTemplate);
+
+        if (nullptr == *manifestTemplateXml) {
+            status = ER_OUT_OF_MEMORY;
+        }
+    }
 
     return status;
+}
+
+void SecurityApplicationProxy::DestroyManifestTemplate(AJ_PSTR manifestTemplateXml)
+{
+    qcc::DestroyStringCopy(manifestTemplateXml);
 }
 
 QStatus SecurityApplicationProxy::GetIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo)
@@ -825,14 +824,18 @@ QStatus SecurityApplicationProxy::GetIdentityCertificateId(qcc::String& serial, 
             return ER_INVALID_DATA;
         }
         qcc::ECCPublicKey publicKey;
-        publicKey.Import(xCoord, publicKey.GetCoordinateSize(), yCoord, publicKey.GetCoordinateSize());
+        status = publicKey.Import(xCoord, publicKey.GetCoordinateSize(), yCoord, publicKey.GetCoordinateSize());
+        if (status != ER_OK) {
+            QCC_LogError(status, ("%s Failed to import public key", __FUNCTION__));
+            return status;
+        }
         issuerKeyInfo.SetPublicKey(&publicKey);
         issuerKeyInfo.SetKeyId(akiVal, akiLen);
 
         if (serialLen == 0) {
             serial = qcc::String::Empty;
         } else {
-            serial.assign((const char*)serialVal, serialLen);
+            serial.assign_std((const char*)serialVal, serialLen);
         }
     }
 
@@ -923,27 +926,6 @@ QStatus SecurityApplicationProxy::EndManagement()
             QCC_LogError(status, ("SecurityApplicationProxy::%s error %s", __FUNCTION__, reply->GetErrorDescription().c_str()));
         }
     }
-    return status;
-}
-
-QStatus SecurityApplicationProxy::ExtractManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests)
-{
-    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
-
-    QStatus status = ER_OK;
-
-    for (size_t index = 0; index < manifestsCount; index++) {
-        Manifest manifest;
-
-        status = XmlManifestConverter::XmlToManifest(manifestsXmls[index], manifest);
-
-        if (ER_OK != status) {
-            break;
-        }
-
-        manifests.push_back(manifest);
-    }
-
     return status;
 }
 

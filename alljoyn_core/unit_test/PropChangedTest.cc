@@ -43,16 +43,16 @@ using namespace qcc;
 using namespace std;
 
 /* client/service synchronization time-out */
-#define TIMEOUT 5000
+#define SYNCH_TIMEOUT (5000 * s_globalTimerMultiplier)
 
 /* time-out before emitting signal */
-#define TIMEOUT_BEFORE_SIGNAL 100
+#define TIMEOUT_BEFORE_SIGNAL (100 * s_globalTimerMultiplier)
 
 /* time-out to be used for tests that expect to time-out */
-#define TIMEOUT_EXPECTED 500
+#define TIMEOUT_EXPECTED (500 * s_globalTimerMultiplier)
 
 /* time to wait for the property cache to become fully enabled */
-#define WAIT_CACHE_ENABLED_MS   500
+#define WAIT_CACHE_ENABLED_MS (500 * s_globalTimerMultiplier)
 
 /* constants */
 static SessionPort SERVICE_PORT = 12345;
@@ -598,7 +598,7 @@ class ClientBusAttachment :
 
     void WaitForSession()
     {
-        status = sessionSema.TimedWait(TIMEOUT);
+        status = sessionSema.TimedWait(SYNCH_TIMEOUT);
         EXPECT_EQ(ER_OK, status);
     }
 
@@ -736,7 +736,7 @@ class PropChangedTestProxyBusObject :
     void WaitForSignals(const TestParameters& testParameters,
                         uint32_t expectTimeout = 0)
     {
-        uint32_t timeout = expectTimeout ? expectTimeout : TIMEOUT;
+        uint32_t timeout = expectTimeout ? expectTimeout : SYNCH_TIMEOUT;
         QStatus expStatus = expectTimeout ? ER_TIMEOUT : ER_OK;
 
         /* wait for signals for all interfaces on all listeners */
@@ -1178,8 +1178,8 @@ TEST_F(PropChangedTest, MultiSession)
     store.Clear();
     EXPECT_EQ((size_t)0, store.proxySamples.size());
     bobA.EmitSignal(tp, tp.intfParams[0], clientBus.id);
-    qcc::Sleep(500);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    qcc::Sleep(WAIT_TIME_500);
+    // status = store.TimedWait(SYNCH_TIMEOUT); // wait for property changed signal
     // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
     EXPECT_TRUE(pb1.iden(store.proxySamples[0]));
@@ -1188,10 +1188,10 @@ TEST_F(PropChangedTest, MultiSession)
     store.Clear();
     EXPECT_EQ((size_t)0, store.proxySamples.size());
     bobA.EmitSignal(tp, tp.intfParams[0], clientBus2.id);
-    qcc::Sleep(500);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    qcc::Sleep(WAIT_TIME_500);
+    // status = store.TimedWait(SYNCH_TIMEOUT); // wait for property changed signal
     // EXPECT_EQ(ER_OK, status);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    // status = store.TimedWait(SYNCH_TIMEOUT); // wait for property changed signal
     // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)2, store.proxySamples.size());
     EXPECT_TRUE(pb2.iden(store.proxySamples[0]));
@@ -1201,8 +1201,8 @@ TEST_F(PropChangedTest, MultiSession)
     store.Clear();
     EXPECT_EQ((size_t)0, store.proxySamples.size());
     bobB.EmitSignal(tp, tp.intfParams[0], clientBus.id);
-    qcc::Sleep(500);
-    // status = store.TimedWait(TIMEOUT); // wait for property changed signal
+    qcc::Sleep(WAIT_TIME_500);
+    // status = store.TimedWait(SYNCH_TIMEOUT); // wait for property changed signal
     // EXPECT_EQ(ER_OK, status);
     EXPECT_EQ((size_t)1, store.proxySamples.size());
     EXPECT_TRUE(pb3.iden(store.proxySamples[0]));
@@ -1449,7 +1449,7 @@ TEST_F(PropChangedTest, ListenerNotCalled_PropertyEmitOneProp)
     // emit
     obj->EmitSignals(tp);
     // wait for a single signal
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
     // remove L2 from TestParameters because nothing is expected on it
     tp.rangePropListenExp.pop_back();
@@ -1474,7 +1474,7 @@ TEST_F(PropChangedTest, ListenerNotCalled_PropertyEmitOneIntf)
     // emit
     obj->EmitSignal(tp, tp.intfParams[0]);
     // wait for a single signal
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_TIMEOUT, proxy->signalSema.TimedWait(TIMEOUT_EXPECTED));
     // validate signal for I1 was seen
     proxy->ValidateSignals(tp, tp.intfParams[0]);
@@ -1520,15 +1520,15 @@ TEST_F(PropChangedTest, Copy)
     PropChangedTestProxyBusObject* copy = new PropChangedTestProxyBusObject(*proxy);
 
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
-    EXPECT_EQ(ER_OK, copy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
+    EXPECT_EQ(ER_OK, copy->signalSema.TimedWait(SYNCH_TIMEOUT));
     copy->Clear();
 
     delete proxy;
     proxy = NULL;
 
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, copy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, copy->signalSema.TimedWait(SYNCH_TIMEOUT));
 
     delete copy;
 }
@@ -1573,7 +1573,7 @@ TEST_F(PropChangedTest, PropertyCache_updating)
     EXPECT_EQ(1, intval);
     /* send update signal, see if the cache got updated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &intval));
     EXPECT_EQ(101, intval);
@@ -1607,7 +1607,7 @@ TEST_F(PropChangedTest, PropertyCache_updating)
     EXPECT_EQ(101, intval);
     /* send update signal, see if the cache got updated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_OK, proxy->GetAllProperties(INTERFACE_NAME "1", value));
     EXPECT_EQ(ER_OK, value.Get("a{sv}", &numprops, &props));
     EXPECT_EQ(1, (int)numprops);
@@ -1649,7 +1649,7 @@ TEST_F(PropChangedTest, PropertyCache_invalidating)
     EXPECT_EQ(1, intval);
     /* send update signal, see if the cache got updated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &intval));
     EXPECT_EQ(101, intval);
@@ -1683,7 +1683,7 @@ TEST_F(PropChangedTest, PropertyCache_invalidating)
     EXPECT_EQ(101, intval);
     /* send update signal, see if the cache got invalidated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_OK, proxy->GetAllProperties(INTERFACE_NAME "1", value));
     EXPECT_EQ(ER_OK, value.Get("a{sv}", &numprops, &props));
     EXPECT_EQ(1, (int)numprops);
@@ -1890,7 +1890,7 @@ TEST_F(PropChangedTest, PropertyCache_copy)
 
     /* emit the signal and verify that the original proxy has its cache updated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &intval));
     EXPECT_EQ(101, intval);
@@ -1908,8 +1908,8 @@ TEST_F(PropChangedTest, PropertyCache_copy)
 
     /* emit the signal and verify that both proxies have their caches updated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
-    qcc::Sleep(50); //wait a while longer to make sure copy got its update too
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
+    qcc::Sleep(WAIT_TIME_50); //wait a while longer to make sure copy got its update too
     EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &intval));
     EXPECT_EQ(201, intval);
@@ -1928,7 +1928,7 @@ TEST_F(PropChangedTest, PropertyCache_copy)
     EXPECT_EQ(201, intval);
     /* do we still respond to updates? */
     obj->EmitSignals(tpService);
-    qcc::Sleep(400); //wait a while to make sure copy got its update
+    qcc::Sleep(WAIT_TIME_400); //wait a while to make sure copy got its update
     EXPECT_EQ(ER_OK, copy.GetProperty(INTERFACE_NAME "1", "P1", value));
     EXPECT_EQ(ER_OK, value.Get("i", &intval));
     EXPECT_EQ(301, intval);
@@ -1968,10 +1968,10 @@ TEST_F(PropChangedTest, PropertyCache_nolistener)
     EXPECT_EQ(1, intval);
     /* send update signal, see if the cache got updated */
     obj->EmitSignals(tpService);
-    /* busy-wait for max 5 seconds */
+    /* busy-wait */
     int count = 0;
     while (intval != 101 && count++ < 500) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
         EXPECT_EQ(ER_OK, value.Get("i", &intval));
     }
@@ -2018,8 +2018,8 @@ TEST_F(PropChangedTest, PropertyCache_async)
     /* initial value is 1 */
     EXPECT_EQ(ER_OK, proxy->GetPropertyAsync(INTERFACE_NAME "1", "P1", &gpl,
                                              static_cast<ProxyBusObject::Listener::GetPropertyCB>(&GetPropertyListener::GetPropCallback),
-                                             NULL, TIMEOUT));
-    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, TIMEOUT));
+                                             NULL, SYNCH_TIMEOUT));
+    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, SYNCH_TIMEOUT));
     gpl.ev.ResetEvent();
     EXPECT_EQ(ER_OK, gpl.val.Get("i", &intval));
     EXPECT_EQ(1, intval);
@@ -2030,18 +2030,18 @@ TEST_F(PropChangedTest, PropertyCache_async)
      * client does not know the value has changed */
     EXPECT_EQ(ER_OK, proxy->GetPropertyAsync(INTERFACE_NAME "1", "P1", &gpl,
                                              static_cast<ProxyBusObject::Listener::GetPropertyCB>(&GetPropertyListener::GetPropCallback),
-                                             NULL, TIMEOUT));
-    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, TIMEOUT));
+                                             NULL, SYNCH_TIMEOUT));
+    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, SYNCH_TIMEOUT));
     gpl.ev.ResetEvent();
     EXPECT_EQ(ER_OK, gpl.val.Get("i", &intval));
     EXPECT_EQ(1, intval);
     /* send update signal, see if the cache got updated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_OK, proxy->GetPropertyAsync(INTERFACE_NAME "1", "P1", &gpl,
                                              static_cast<ProxyBusObject::Listener::GetPropertyCB>(&GetPropertyListener::GetPropCallback),
-                                             NULL, TIMEOUT));
-    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, TIMEOUT));
+                                             NULL, SYNCH_TIMEOUT));
+    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, SYNCH_TIMEOUT));
     gpl.ev.ResetEvent();
     EXPECT_EQ(ER_OK, gpl.val.Get("i", &intval));
     EXPECT_EQ(101, intval);
@@ -2056,8 +2056,8 @@ TEST_F(PropChangedTest, PropertyCache_async)
 
     EXPECT_EQ(ER_OK, proxy->GetAllPropertiesAsync(INTERFACE_NAME "1", &gpl,
                                                   static_cast<ProxyBusObject::Listener::GetAllPropertiesCB>(&GetPropertyListener::GetPropCallback),
-                                                  NULL, TIMEOUT));
-    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, TIMEOUT));
+                                                  NULL, SYNCH_TIMEOUT));
+    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, SYNCH_TIMEOUT));
     gpl.ev.ResetEvent();
     EXPECT_EQ(ER_OK, gpl.val.Get("a{sv}", &numprops, &props));
     EXPECT_EQ(1, (int)numprops);
@@ -2072,8 +2072,8 @@ TEST_F(PropChangedTest, PropertyCache_async)
      * client does not know the value has changed */
     EXPECT_EQ(ER_OK, proxy->GetAllPropertiesAsync(INTERFACE_NAME "1", &gpl,
                                                   static_cast<ProxyBusObject::Listener::GetAllPropertiesCB>(&GetPropertyListener::GetPropCallback),
-                                                  NULL, TIMEOUT));
-    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, TIMEOUT));
+                                                  NULL, SYNCH_TIMEOUT));
+    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, SYNCH_TIMEOUT));
     gpl.ev.ResetEvent();
     EXPECT_EQ(ER_OK, gpl.val.Get("a{sv}", &numprops, &props));
     EXPECT_EQ(1, (int)numprops);
@@ -2083,11 +2083,11 @@ TEST_F(PropChangedTest, PropertyCache_async)
     EXPECT_EQ(101, intval);
     /* send update signal, see if the cache got updated */
     obj->EmitSignals(tpService);
-    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, proxy->signalSema.TimedWait(SYNCH_TIMEOUT));
     EXPECT_EQ(ER_OK, proxy->GetAllPropertiesAsync(INTERFACE_NAME "1", &gpl,
                                                   static_cast<ProxyBusObject::Listener::GetAllPropertiesCB>(&GetPropertyListener::GetPropCallback),
-                                                  NULL, TIMEOUT));
-    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, TIMEOUT));
+                                                  NULL, SYNCH_TIMEOUT));
+    EXPECT_EQ(ER_OK, Event::Wait(gpl.ev, SYNCH_TIMEOUT));
     gpl.ev.ResetEvent();
     EXPECT_EQ(ER_OK, gpl.val.Get("a{sv}", &numprops, &props));
     EXPECT_EQ(1, (int)numprops);
@@ -2212,14 +2212,14 @@ class PropCacheUpdatedConcurrentCallbackTestListener :
             busObj->ChangePropertyValues(*tpService, expectedNewPropValue - 1); // second parameter is an offset
             busObj->EmitSignals(*tpService);
 
-            for (int i = 0; i < (TIMEOUT - 1000) / 10; ++i) {
+            for (size_t i = 0; i < (SYNCH_TIMEOUT - 1000) / 10; ++i) {
                 mutex.Lock();
                 int32_t count = propChangedCallbackCount;
                 mutex.Unlock();
                 if (count >= unblockFirstAfterNCallbacks) {
                     break;
                 }
-                qcc::Sleep(10);
+                qcc::Sleep(WAIT_TIME_10);
             }
 
             EXPECT_TRUE(propChangedCallbackCount >= unblockFirstAfterNCallbacks);
@@ -2362,7 +2362,7 @@ TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallback)
     obj->ChangePropertyValues(tpService, 100); // second argument is the offset - now we have 101
     obj->EmitSignals(tpService);
 
-    EXPECT_EQ(ER_OK, events.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, events.TimedWait(SYNCH_TIMEOUT));
 
     /* expected value is expectedNewPropValue */
     EXPECT_EQ(ER_OK, proxy->GetProperty(INTERFACE_NAME "1", "P1", value));
@@ -2427,7 +2427,7 @@ TEST_F(PropChangedTest, PropertyCache_consistentWithConcurrentCallbackMultiProxy
     obj->ChangePropertyValues(tpService, 100); // second argument is the offset - now we have 101
     obj->EmitSignals(tpService);
 
-    EXPECT_EQ(ER_OK, events.TimedWait(TIMEOUT));
+    EXPECT_EQ(ER_OK, events.TimedWait(SYNCH_TIMEOUT));
 
     /* expected value is expectedNewPropValue */
     val = 0;
@@ -2512,7 +2512,7 @@ class SecPropChangedTest :
         if (ER_OK != status) {
             cout << "Failed to send event" << __FILE__ << "@" << __LINE__ << endl;
         } else {
-            condition.TimedWait(lock, 5000);
+            condition.TimedWait(lock, SYNCH_TIMEOUT);
             status = evented ? ER_OK : ER_FAIL;
             evented = false;
         }
@@ -2523,7 +2523,7 @@ class SecPropChangedTest :
     QStatus GetProperty()
     {
         MsgArg arg;
-        return proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+        return proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, METHOD_CALL_TIMEOUT);
     }
 
     QStatus GetAllProperties(size_t expected = 2)
@@ -2580,7 +2580,7 @@ class SecPropChangedTest :
     QStatus CheckProperty(bool expected)
     {
         MsgArg arg;
-        QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, 5000);
+        QStatus status = proxy->GetProperty(TEST_INTERFACE, TEST_PROP_NAME, arg, METHOD_CALL_TIMEOUT);
         EXPECT_EQ(ER_OK, status) << "Failed to GetProperty";
         if (ER_OK != status) {
             return status;
@@ -2627,7 +2627,7 @@ TEST_F(SecPropChangedTest, PropertyCache_NotAllowedByProviderPolicy)
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_PROVIDE));
     ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
     // We should not get an event. Sleep for a while and see if we got one
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_FALSE(evented);
     ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
     ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
@@ -2646,7 +2646,7 @@ TEST_F(SecPropChangedTest, PropertyCache_DefaultProviderPolicy)
     ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
     // We should not get an event. Sleep for a while and see if we got one
     // The default policy of the provider does not allow to observe properties
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_FALSE(evented);
     ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
     ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
@@ -2663,7 +2663,7 @@ TEST_F(SecPropChangedTest, PropertyCache_DefaultConsumerPolicy)
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_MODIFY));
     ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
     // We should not get an event. Sleep for a while and see if we got one
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_FALSE(evented);
     // Default policy of consumer should allow the outgoing message
     ASSERT_EQ(ER_OK, CheckProperty(true));
@@ -2685,7 +2685,7 @@ TEST_F(SecPropChangedTest, PropertyCache_NotAllowedByConsumerPolicy)
 
     ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
     // We should not get an event. Sleep for a while and see if we got one
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_FALSE(evented);
     ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
     ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());
@@ -2703,7 +2703,7 @@ TEST_F(SecPropChangedTest, PropertyCache_WrongInterfaceName)
     ASSERT_EQ(ER_OK, prov.SetAnyTrustedUserPolicy(tsm, PermissionPolicy::Rule::Member::ACTION_OBSERVE, "wrong.interface"));
     ASSERT_EQ(ER_OK, prov.UpdateTestProperty(true));
     // We should not get an event. Sleep for a while and see if we got one
-    qcc::Sleep(500);
+    qcc::Sleep(WAIT_TIME_500);
     ASSERT_FALSE(evented);
     ASSERT_EQ(ER_PERMISSION_DENIED, GetProperty());
     ASSERT_EQ(0, prov.GetCurrentGetPropertyCount());

@@ -312,7 +312,7 @@ int CDECL_CALL main(int argc, char** argv)
     printf("g_user == %d.\n", g_user);
     printf("g_localport == %s\n", g_localport);
     printf("g_foreignport == %s\n", g_foreignport);
-    printf("g_addresss == %s\n", g_address);
+    printf("g_address == %s\n", g_address);
 
     signal(SIGINT, SigIntHandler);
 

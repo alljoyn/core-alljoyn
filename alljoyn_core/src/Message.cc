@@ -331,6 +331,7 @@ void _Message::Init(BusAttachment& busAttachment)
     numMsgArgs = 0;
     refMsgArgs = NULL;
     numRefMsgArgs = 0;
+    bufSize = 0;
     ttl = 0;
     handles = NULL;
     numHandles = 0;

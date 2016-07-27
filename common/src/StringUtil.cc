@@ -28,6 +28,7 @@
 
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
+#include <qcc/SecureAllocator.h>
 
 using namespace std;
 using namespace qcc;
@@ -501,7 +502,7 @@ qcc::String AJ_CALL qcc::StringVectorToString(const vector<qcc::String>* list, c
 }
 
 
-void AJ_CALL qcc::AppendStringToVector(const qcc::String& str, vector<uint8_t, SecureAllocator<uint8_t> >& v)
+void AJ_CALL qcc::AppendStringToSecureVector(const qcc::String& str, vector<uint8_t, SecureAllocator<uint8_t> >& v)
 {
     auto begin = reinterpret_cast<const uint8_t*>(str.data());
     auto end = begin + str.size();
@@ -571,4 +572,20 @@ char AJ_CALL qcc::U8ToChar(uint8_t d)
         return (char)(d - 0xa + 'a');
     }
     return '\0';
+}
+
+AJ_PSTR AJ_CALL qcc::CreateStringCopy(const std::string& input)
+{
+    AJ_PSTR result = new (std::nothrow) char[input.size() + 1];
+    if (nullptr == result) {
+        return nullptr;
+    }
+    memcpy(result, input.data(), input.size());
+    result[input.size()] = '\0';
+    return result;
+}
+
+void AJ_CALL qcc::DestroyStringCopy(AJ_PSTR input)
+{
+    delete[] input;
 }

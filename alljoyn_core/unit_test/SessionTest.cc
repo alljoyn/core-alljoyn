@@ -204,7 +204,7 @@ TEST_F(SessionTest, TwoMultipointSessions)
      * session, not two.  This asserts that there are in fact two different sessions created above.
      */
     ASSERT_NE(outIdA, outIdB);
-    qcc::Sleep(100); /* Let all callbacks come before stopping */
+    qcc::Sleep(WAIT_TIME_100); /* Let all callbacks come before stopping */
 
     /* Remove the session port listeners allocated on the stack, before they get destroyed */
     ASSERT_EQ(ER_OK, busA.UnbindSessionPort(portA));
@@ -338,12 +338,12 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
     BindMemberSessionListenerB sessionListenerB;
     status = busB.JoinSessionAsync(wkns[&busA].c_str(), port, &sessionListenerB, opts, &joinSessionCB);
 
-    //Wait up to 5 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 500; ++i) {
         if (sessionJoinedCBFlag && sessionJoinedFlag) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionJoinedCBFlag);
@@ -352,14 +352,14 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
     status = busA.SetSessionListener(bindMemberSessionId, &sessionListenerA);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait up to 5 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 500; ++i) {
         if (sessionMemberAddedFlagB &&
             sessionJoinerAcceptedFlag &&
             sessionJoinedFlag) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
@@ -377,17 +377,17 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
     status = busC.JoinSessionAsync(wkns[&busA].c_str(), port, &sessionListenerC, opts, &joinSessionCB);
 
 
-    //Wait up to 5 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 500; ++i) {
         if (sessionJoinedCBFlag) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_EQ(multipointSessionId, bindMemberSessionId);
 
-    //Wait up to 5 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 500; ++i) {
         if (sessionMemberAddedFlagA &&
             sessionMemberAddedFlagB &&
@@ -396,7 +396,7 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
             sessionJoinedFlag) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionMemberAddedFlagA);
@@ -408,12 +408,12 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
     status = busB.LeaveSession(bindMemberSessionId);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait up to 5 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 500; ++i) {
         if (sessionMemberRemovedFlagA && sessionMemberRemovedFlagC) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionMemberRemovedFlagA);
@@ -427,12 +427,12 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
     status = busC.LeaveSession(bindMemberSessionId);
     EXPECT_EQ(ER_OK, status);
 
-    //Wait up to 5 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 500; ++i) {
         if (sessionMemberRemovedFlagA) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionMemberRemovedFlagA);
@@ -443,9 +443,9 @@ TEST_F(SessionTest, BindMemberAddedRemoved) {
         if (sessionLostFlag) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
-    qcc::Sleep(10);
+    qcc::Sleep(WAIT_TIME_10);
 
     //Remove the session port listener allocated on the stack, before it gets destroyed
     EXPECT_EQ(ER_OK, busA.UnbindSessionPort(port));
@@ -598,14 +598,14 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
     EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
-    //Wait up to 3 seconds for all callbacks and listeners to be called.
+    //Wait all callbacks and listeners to be called.
     for (int i = 0; i < 300; ++i) {
         if (sessionJoinedFlag) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
-    qcc::Sleep(10);
+    qcc::Sleep(WAIT_TIME_10);
 
 
     EXPECT_TRUE(sessionJoinedFlag);
@@ -626,14 +626,14 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
         " should be the same as " << busJoiner.GetUniqueName().c_str();
 
     testobjects[&busHost]->SendSignal(sessionId);
-    //Wait up to 1 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 100; ++i) {
         if (signalobjects[&busJoiner]->signalReceived > 0) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
-    qcc::Sleep(10);
+    qcc::Sleep(WAIT_TIME_10);
 
     EXPECT_EQ(1U, signalobjects[&busJoiner]->signalReceived);
     if (&busHost == &busJoiner) {
@@ -675,7 +675,7 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
         sessionLostReason = SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION;
     }
 
-    qcc::Sleep(100); /* not sure if this is needed */
+    qcc::Sleep(WAIT_TIME_100); /* not sure if this is needed */
     EXPECT_EQ(sessionId, signalledListener->lastSessionId);
     EXPECT_EQ(1U, signalledListener->sessionLostCalled);
     EXPECT_EQ(sessionLostReason, signalledListener->lastReason);
@@ -698,7 +698,7 @@ static bool SessionJoinLeaveTest(BusAttachment& busHost, BusAttachment& busJoine
         EXPECT_STREQ("", notSignalledListener->sessionMemberRemovedUniqueName.c_str());
     }
 
-    qcc::Sleep(200);         /* let all callbacks finish */
+    qcc::Sleep(WAIT_TIME_200);         /* let all callbacks finish */
 
     /* Remove the session port listener allocated on the stack, before it gets destroyed */
     EXPECT_EQ(ER_OK, busHost.UnbindSessionPort(port));
@@ -851,12 +851,12 @@ TEST_F(SessionTest, RemoveSessionMember) {
     EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
-    //Wait up to 3 seconds for all callbacks and listeners to be called.
+    //Wait all callbacks and listeners to be called.
     for (int i = 0; i < 300; ++i) {
         if (sessionJoinedFlag && sessionMemberAddedFlagA && sessionMemberAddedFlagB) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionJoinedFlag);
@@ -875,12 +875,12 @@ TEST_F(SessionTest, RemoveSessionMember) {
     status = busA.RemoveSessionMember(sessionId, busB.GetUniqueName());
     EXPECT_EQ(ER_OK, status);
 
-    //Wait up to 2 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 200; ++i) {
         if (sessionLostFlagA && sessionLostFlagB && sessionMemberRemovedFlagA && sessionMemberRemovedFlagB) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionLostFlagA);
@@ -1088,14 +1088,14 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
-    //Wait up to 6 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 600; ++i) {
         if (MPJoinAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner)) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
-    qcc::Sleep(10);
+    qcc::Sleep(WAIT_TIME_10);
 
     EXPECT_TRUE(sessionJoinedFlag);
     EXPECT_EQ(sessionId, bindMemberSessionId);
@@ -1117,14 +1117,14 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     EXPECT_EQ(ER_OK, status);
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
-    //Wait up to 3 seconds for all callbacks and listeners to be called.
+    //Wait all callbacks and listeners to be called.
     for (int i = 0; i < 300; ++i) {
         if (MPJoinAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner2)) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
-    qcc::Sleep(100);
+    qcc::Sleep(WAIT_TIME_100);
     EXPECT_TRUE(sessionJoinedFlag);
     EXPECT_EQ(sessionId, bindMemberSessionId);
     EXPECT_TRUE(MPJoinAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner2));
@@ -1138,14 +1138,14 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
      * EMIT SIGNAL                     *
      ***********************************/
     testobjects[&busHost]->SendSignal(sessionId);
-    //Wait up to 3 seconds for all callbacks and listeners to be called.
+    //Wait all callbacks and listeners to be called.
     for (int i = 0; i < 300; ++i) {
         if (signalobjects[&busJoiner]->signalReceived > 0 && signalobjects[&busJoiner2]->signalReceived > 0) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
-    qcc::Sleep(10);
+    qcc::Sleep(WAIT_TIME_10);
     EXPECT_EQ(1U, signalobjects[&busJoiner]->signalReceived);
     EXPECT_EQ(1U, signalobjects[&busJoiner2]->signalReceived);
     if (&busHost != &busJoiner && &busHost != &busJoiner2) {     /* other join case */
@@ -1178,7 +1178,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     if (MPHostLeavesAllNotificationsDone(&sessionListenerHost, joiners)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
                 EXPECT_TRUE(MPHostLeavesAllNotificationsDone(&sessionListenerHost, joiners));
             }
@@ -1197,7 +1197,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     if (MPJoinerLeavesAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner, true)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner, true));
             }
@@ -1216,7 +1216,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     if (MPJoinerLeavesAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner2, true)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(&sessionListenerHost, joiners, &sessionListenerJoiner2, true));
             }
@@ -1235,7 +1235,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     if (MPJoinerLeavesAllNotificationsDone(hostListener, joiners, &sessionListenerJoiner, false)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(hostListener, joiners, &sessionListenerJoiner, false));
             }
@@ -1254,7 +1254,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
                     if (MPJoinerLeavesAllNotificationsDone(hostListener, joiners, &sessionListenerJoiner2, false)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
                 EXPECT_TRUE(MPJoinerLeavesAllNotificationsDone(hostListener, joiners, &sessionListenerJoiner2, false));
             }
@@ -1267,14 +1267,14 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
 
             if (sessionHostInSession) {
                 testobjects[&busHost]->SendSignal(sessionId);
-                //Wait up to 1 seconds for all callbacks and listeners to be called.
+                //Wait for all callbacks and listeners to be called.
                 for (int i = 0; i < 300; ++i) {
                     if ((!sessionJoinerInSession || signalobjects[&busJoiner]->signalReceived > 0) && (!sessionJoiner2InSession || signalobjects[&busJoiner2]->signalReceived > 0)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
-                qcc::Sleep(10);
+                qcc::Sleep(WAIT_TIME_10);
 
 
                 if (sessionJoinerInSession) {
@@ -1297,14 +1297,14 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
 
             if (sessionJoinerInSession) {
                 testobjects[&busJoiner]->SendSignal(sessionId);
-                //Wait up to 1 seconds for all callbacks and listeners to be called.
+                //Wait for all callbacks and listeners to be called.
                 for (int i = 0; i < 300; ++i) {
                     if ((!sessionHostInSession || signalobjects[&busHost]->signalReceived > 0) && (!sessionJoiner2InSession || signalobjects[&busJoiner2]->signalReceived > 0)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
-                qcc::Sleep(10);
+                qcc::Sleep(WAIT_TIME_10);
 
 
                 if (sessionHostInSession) {
@@ -1328,14 +1328,14 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
 
             if (sessionJoiner2InSession) {
                 testobjects[&busJoiner2]->SendSignal(sessionId);
-                //Wait up to 1 seconds for all callbacks and listeners to be called.
+                //Wait for all callbacks and listeners to be called.
                 for (int i = 0; i < 300; ++i) {
                     if ((!sessionHostInSession || signalobjects[&busHost]->signalReceived > 0) && (!sessionJoinerInSession || signalobjects[&busJoiner]->signalReceived > 0)) {
                         break;
                     }
-                    qcc::Sleep(10);
+                    qcc::Sleep(WAIT_TIME_10);
                 }
-                qcc::Sleep(10);
+                qcc::Sleep(WAIT_TIME_10);
 
 
                 if (sessionHostInSession) {
@@ -1364,7 +1364,7 @@ static void MultipointMultipeerTest(BusAttachment& busHost, BusAttachment& busJo
     busJoiner.LeaveSession(sessionId);
     busJoiner2.LeaveSession(sessionId);
 
-    qcc::Sleep(100);         /* let all callbacks finish */
+    qcc::Sleep(WAIT_TIME_100);         /* let all callbacks finish */
 
     /* Remove the session port listener allocated on the stack, before it gets destroyed */
     EXPECT_EQ(ER_OK, busHost.UnbindSessionPort(port));
@@ -1398,12 +1398,12 @@ TEST_F(SessionTest, MultipointSelfJoinRemoveMember) {
 
     EXPECT_TRUE(sessionJoinerAcceptedFlag);
 
-    //Wait up to 3 seconds for all callbacks and listeners to be called.
+    //Wait all callbacks and listeners to be called.
     for (int i = 0; i < 300; ++i) {
         if (sessionJoinedFlag && sessionMemberAddedFlagA) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionJoinedFlag);
@@ -1415,12 +1415,12 @@ TEST_F(SessionTest, MultipointSelfJoinRemoveMember) {
     status = busA.RemoveSessionMember(sessionId, busA.GetUniqueName());
     EXPECT_EQ(ER_OK, status);
 
-    //Wait up to 2 seconds for all callbacks and listeners to be called.
+    //Wait for all callbacks and listeners to be called.
     for (int i = 0; i < 200; ++i) {
         if (sessionLostFlagA && sessionMemberRemovedFlagA) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     EXPECT_TRUE(sessionLostFlagA);
@@ -1512,7 +1512,7 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
 
     /* We only fork B */
     if ((child = fork()) == 0) {
-        qcc::Sleep(50);     /* without sleep the builtin router would often emit problems */
+        qcc::Sleep(WAIT_TIME_50);     /* without sleep the builtin router would often emit problems */
         /* child */
         /* joiner2 */
         BusAttachment busB("test", true);
@@ -1527,17 +1527,17 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
         status = busB.FindAdvertisedName(wkn);
         ASSERT_EQ(ER_OK, status);
 
-        qcc::Sleep(50);     /* Wait some time to join */
+        qcc::Sleep(WAIT_TIME_50);     /* Wait some time to join */
 
         status = busB.JoinSession(wkn, port, &sessionListenerJoiner2, sessionId, opts);
         ASSERT_EQ(ER_OK, status);
 
-        //Wait up to 3 seconds for all callbacks and listeners to be called.
+        //Wait all callbacks and listeners to be called.
         for (int i = 0; i < 300; ++i) {
             if (sessionListenerJoiner2.sessionMemberAddedCalled == 1) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
         }
 
         ASSERT_EQ(1U, sessionListenerJoiner2.sessionMemberAddedCalled);
@@ -1548,7 +1548,7 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
             if (sessionListenerJoiner2.sessionMemberRemovedCalled == 1) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
         }
         ASSERT_EQ(1U, sessionListenerJoiner2.sessionMemberRemovedCalled);
         ASSERT_EQ(1U, sessionListenerJoiner2.sessionLostCalled);
@@ -1588,12 +1588,12 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
         EXPECT_EQ(ER_OK, status);
 
         EXPECT_TRUE(sessionJoinerAcceptedFlag);
-        //Wait up to 50 seconds for all callbacks and listeners to be called.
+        //Wait for all callbacks and listeners to be called.
         for (int i = 0; i < 500; ++i) {
             if (sessionJoinedCounter == 2) {
                 break;
             }
-            qcc::Sleep(100);
+            qcc::Sleep(WAIT_TIME_100);
         }
 
         EXPECT_TRUE(sessionJoinedFlag);
@@ -1615,13 +1615,13 @@ TEST(SessionSystemTest, DISABLED_MultipointExtended_AA_B_2ndJoiner_A_removes_A_a
         status = busA.RemoveSessionMember(sessionId, busA.GetUniqueName());
         EXPECT_EQ(ER_OK, status);
 
-        //Wait up to 1 seconds for all callbacks and listeners to be called.
+        //Wait for all callbacks and listeners to be called.
         for (int i = 0; i < 100; ++i) {
             if (sessionListenerHost.sessionMemberRemovedCalled == 1 &&
                 sessionListenerJoiner.sessionMemberRemovedCalled == 2) {
                 break;
             }
-            qcc::Sleep(10);
+            qcc::Sleep(WAIT_TIME_10);
         }
 
         EXPECT_EQ(1U, sessionListenerHost.sessionMemberRemovedCalled);

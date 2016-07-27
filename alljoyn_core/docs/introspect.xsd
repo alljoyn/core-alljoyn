@@ -134,7 +134,6 @@
       <xs:choice maxOccurs="unbounded" minOccurs="1">
         <xs:element maxOccurs="unbounded" ref="interface"/>
         <xs:element maxOccurs="unbounded" name="node" type="nested_node"/>
-        <xs:element maxOccurs="unbounded" minOccurs="0" ref="annotation"/>
       </xs:choice>
       <xs:attribute ref="name"/>
     </xs:complexType>

@@ -357,22 +357,30 @@ TEST_F(ApplicationUpdaterTests, UpdateAll) {
  * @test Make sure resetting of an application fails, and check if a sync error
  *       of type SYNC_ER_RESET is triggered.
  *       -# Claim the remote application.
- *       -# Update the policy with a different admin group.
+ *       -# Update the policy to remove admin access.
  *       -# Stop the remote application.
  *       -# Remove the application from the CA.
  *       -# Restart the remote application.
  *       -# Check if a sync error of type SYNC_ER_RESET is triggered.
  **/
 TEST_F(ApplicationUpdaterTests, SyncErReset) {
-    // install invalid policy
-    GroupInfo invalidAdminGroup;
-    PolicyGenerator invalidPolicyGenerator(invalidAdminGroup);
+
+    /**
+     * Create an invalid policy by removing ACLs from current policy.
+     * We want to keep the peers section of the policy intact so that it does
+     * not become trivially invalid and fail to be installed. E.g., creating
+     * a default policy here for an invalid admin group would have an empty
+     * public key field, and UpdatePolicy would fail.
+     */
     PermissionPolicy invalidPolicy;
-    vector<GroupInfo> invalidGuilds;
-    invalidPolicyGenerator.DefaultPolicy(invalidGuilds, invalidPolicy);
+    storage->GetPolicy(testAppInfo, invalidPolicy);
+    invalidPolicy.SetAcls(0, nullptr);
+
+    // install the invalid policy
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(testAppInfo, invalidPolicy));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
+
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());
 
@@ -382,7 +390,7 @@ TEST_F(ApplicationUpdaterTests, SyncErReset) {
 
     // restart the remote application
     ASSERT_EQ(ER_OK, testApp.Start());
-    ASSERT_TRUE(WaitForSyncError(SYNC_ER_RESET, ER_AUTH_FAIL));
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_RESET, ER_PERMISSION_DENIED));
 
     // check remote state
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_WILL_RESET));
