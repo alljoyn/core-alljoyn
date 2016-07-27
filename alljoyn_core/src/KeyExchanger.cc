@@ -1426,10 +1426,10 @@ static void ExtractIssuerPublicKeys(const CertificateX509* certs, size_t numCert
  */
 static void CalculateSecretExpiration(const CertificateX509& cert, uint32_t& expiry)
 {
-    uint64_t currentTime = GetEpochTimestamp() / 1000;
+    time_t currentTime = GetEpochTimestamp() / 1000;
     if (cert.GetValidity()->validTo < currentTime) {
         expiry = 0;
-    } else if ((cert.GetValidity()->validTo - currentTime) < expiry) {
+    } else if (static_cast<uint32_t>(cert.GetValidity()->validTo - currentTime) < expiry) {
         expiry = cert.GetValidity()->validTo - currentTime;
     }
 }

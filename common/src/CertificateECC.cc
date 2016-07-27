@@ -399,7 +399,7 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, const Certificat
     return ER_OK;
 }
 
-static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
+static QStatus DecodeTime(time_t& epoch, const qcc::String& t)
 {
     struct tm tm;
 
@@ -434,12 +434,12 @@ static QStatus DecodeTime(uint64_t& epoch, const qcc::String& t)
     /* Compute the GMT time from struct tm.
         Can't use timegm since it is not available in some platforms like Android and Windows */
 
-    int64_t localTime = ConvertStructureToTime(&tm);
+    time_t localTime = ConvertStructureToTime(&tm);
     if (localTime < 0) {
         return ER_FAIL;
     }
     struct tm gtm;
-    if (ER_OK != ConvertTimeToStructure(&localTime, &gtm)) {
+    if (ER_OK != ConvertTimeToStructure(localTime, &gtm)) {
         return ER_FAIL;
     }
     /* figure the time zone offset */
@@ -509,10 +509,10 @@ QStatus CertificateX509::DecodeCertificateTime(const qcc::String& time)
     return ER_OK;
 }
 
-static QStatus EncodeTime(uint64_t epoch, qcc::String& t)
+static QStatus EncodeTime(time_t epoch, qcc::String& t)
 {
     struct tm ptm;
-    if (ER_OK != ConvertTimeToStructure((int64_t*)&epoch, &ptm)) {
+    if (ER_OK != ConvertTimeToStructure(epoch, &ptm)) {
         return ER_FAIL;
     }
     /**
@@ -1148,7 +1148,7 @@ QStatus CertificateX509::EncodeCertificatePEM(qcc::String& pem) const
 
 QStatus CertificateX509::VerifyValidity() const
 {
-    uint64_t currentTime = GetEpochTimestamp() / 1000;
+    time_t currentTime = GetEpochTimestamp() / 1000;
 
     if ((validity.validFrom > currentTime) || (validity.validTo < currentTime)) {
         return ER_FAIL;

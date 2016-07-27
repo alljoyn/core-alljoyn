@@ -1114,7 +1114,7 @@ TEST_F(SecurityX509Test, Test10) {
     EXPECT_FALSE(x509ValidateOnClient.IsCA());
 
     const CertificateX509::ValidPeriod* client_get_validity = x509ValidateOnClient.GetValidity();
-    EXPECT_EQ((long unsigned int)365 * 24 * 3600, (client_get_validity->validTo - client_get_validity->validFrom));
+    EXPECT_EQ((time_t)365 * 24 * 3600, (client_get_validity->validTo - client_get_validity->validFrom));
 
     const ECCPublicKey* client_get_public_key = x509ValidateOnClient.GetSubjectPublicKey();
     String client_get_public_key_PEM;
