@@ -39,11 +39,17 @@ public class Client {
     private static PropertiesInterface mPropertiesInterface;
     private static Properties mProperties;
 
+    private static boolean isJoining = false;
     private static boolean isJoined = false;
 
     static class MyBusListener extends BusListener {
         public void foundAdvertisedName(String name, short transport, String namePrefix) {
             System.out.println(String.format("BusListener.foundAdvertisedName(%s, %d, %s)", name, transport, namePrefix));
+
+            if (isJoined || isJoining) {
+                return;
+            }
+
             short contactPort = CONTACT_PORT;
             SessionOpts sessionOpts = new SessionOpts();
             sessionOpts.traffic = SessionOpts.TRAFFIC_MESSAGES;
@@ -52,9 +58,11 @@ public class Client {
             sessionOpts.transports = SessionOpts.TRANSPORT_ANY;
 
             Mutable.IntegerValue sessionId = new Mutable.IntegerValue();
+            isJoining = true;
             mBus.enableConcurrentCallbacks();
             Status status = mBus.joinSession(name, contactPort, sessionId, sessionOpts,    new SessionListener());
             if (status != Status.OK) {
+                isJoining = false;
                 return;
             }
             System.out.println(String.format("BusAttachement.joinSession successful sessionId = %d", sessionId.value));
@@ -68,6 +76,7 @@ public class Client {
             mPropertiesInterface = mProxyObj.getInterface(PropertiesInterface.class);
             mProperties = mProxyObj.getInterface(Properties.class);
             isJoined = true;
+            isJoining = false;
 
         }
         public void nameOwnerChanged(String busName, String previousOwner, String newOwner){

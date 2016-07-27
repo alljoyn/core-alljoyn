@@ -1190,7 +1190,7 @@ class AllJoynObj : public BusObject, public NameListener, public TransportListen
      * Utility function used to clean up the session map when a session participant.
      * leaves a session.
      *
-     * @param endpoint          Endpoint (virtual or remote) that has left(or is being removed from) the session.
+     * @param epName            Endpoint (virtual or remote) that has left(or is being removed from) the session.
      * @param id                Session id.
      * @param sendSessionLost   Whether to send a SessionLost to this endpoint.
      *                          Set to true if this endpoint is being forcefully removed from the session by the binder.

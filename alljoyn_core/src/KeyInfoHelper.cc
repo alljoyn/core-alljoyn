@@ -129,7 +129,11 @@ QStatus KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(const MsgArg& msgArg, KeyIn
         return ER_INVALID_DATA;
     }
     ECCPublicKey publicKey;
-    publicKey.Import(xCoord, xLen, yCoord, yLen);
+    status = publicKey.Import(xCoord, xLen, yCoord, yLen);
+    if (status != ER_OK) {
+        return status;
+    }
+
     keyInfo.SetPublicKey(&publicKey);
     if (retrieveKeyId) {
         keyInfo.SetKeyId(id, idLen);
@@ -185,6 +189,18 @@ QStatus KeyInfoHelper::PEMToKeyInfoNISTP256(AJ_PCSTR pemKey, qcc::KeyInfoNISTP25
     }
 
     return status;
+}
+
+QStatus KeyInfoHelper::KeyInfoNISTP256ToPEM(const qcc::KeyInfoNISTP256& key, String& pemStr)
+{
+    return qcc::CertificateX509::EncodePublicKeyPEM(key.GetPublicKey(), pemStr);
+}
+
+QStatus KeyInfoHelper::KeyInfoNISTP256ExtractAki(const qcc::KeyInfoNISTP256& key, String& aki)
+{
+    aki.assign_std((const char*)key.GetKeyId(), key.GetKeyIdLen());
+
+    return ER_OK;
 }
 
 }

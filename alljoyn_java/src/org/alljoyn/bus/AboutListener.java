@@ -33,5 +33,5 @@ public interface AboutListener {
      * @param objectDescriptions a list of object paths and interfaces in the announcement
      * @param aboutData a dictionary of key/value pairs of the AboutData
      */
-    public void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
+    void announced(String busName, int version, short port, AboutObjectDescription[] objectDescriptions, Map<String, Variant> aboutData);
 }

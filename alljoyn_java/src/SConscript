@@ -26,21 +26,22 @@ JavaStatus('org/alljoyn/bus/Status')
 # AllJoyn Java binding
 if env['OS'] == 'android':
     main_classes = env.Java('$CLASSDIR', source = ['.'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
+    alljoyn_javah = env.JavaH(target = File('../jni/alljoyn_java.h'), source = [main_classes])
 
-    if env['OS'] == 'android':
-        if env.get('ANDROID_SDK', '') == '':
-            print 'ANDROID_SDK must be set'
-            if not GetOption('help'):
-                Exit(1)
+    if env.get('ANDROID_SDK', '') == '':
+        print 'ANDROID_SDK must be set'
+        if not GetOption('help'):
+            Exit(1)
 
-        env.Append(JAVACLASSPATH = os.pathsep + env.subst('$ANDROID_SDK/platforms/android-$ANDROID_API_LEVEL/android.jar'))
-        main_classes += env.Java('$CLASSDIR', source = ['../helper/org/alljoyn/bus/alljoyn/DaemonInit.java'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
+    env.Append(JAVACLASSPATH = os.pathsep + env.subst('$ANDROID_SDK/platforms/android-$ANDROID_API_LEVEL/android.jar'))
+    main_classes += env.Java('$CLASSDIR', source = ['../helper/org/alljoyn/bus/alljoyn/DaemonInit.java'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
 
     alljoyn_jar = env.Jar('$JARDIR/alljoyn.jar', source = [main_classes])
 
 elif (env['OS'] == 'linux' or env['OS_GROUP'] == 'windows' or env['OS'] == 'darwin'):
     main_classes = env.Java('$CLASSDIR', source = ['.'], JAVACLASSPATH = env.subst('$JAVACLASSPATH'))
     alljoyn_jar = env.Jar('$JARDIR/alljoyn.jar', source = [main_classes])
+    alljoyn_javah = env.JavaH(target = File('../jni/alljoyn_java.h'), source = [main_classes])
 
 if env['VARIANT'] == 'debug' :
     # get a listing of the sources

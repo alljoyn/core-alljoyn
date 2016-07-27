@@ -29,6 +29,8 @@
 #include <alljoyn/PermissionPolicy.h>
 #include <alljoyn/BusAttachment.h>
 #include "KeyInfoHelper.h"
+#include "PeerState.h"
+#include "XmlManifestTemplateValidator.h"
 #include <memory>
 
 #define QCC_MODULE "PERMISSION_MGMT"
@@ -36,7 +38,274 @@
 using namespace std;
 using namespace qcc;
 
+const String securityLevelToString[] {
+    PRIVILEGED_SECURITY_LEVEL,
+    NON_PRIVILEGED_SECURITY_LEVEL,
+    UNAUTHENTICATED_SECURITY_LEVEL
+};
+
 namespace ajn {
+
+static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers, size_t count)
+{
+    if (count == 0) {
+        *retArgs = nullptr;
+        return ER_OK;
+    }
+    *retArgs = new MsgArg[count];
+    QStatus status = ER_OK;
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        MsgArg* keyInfoArg = nullptr;
+        size_t keyInfoCount = 0;
+        if ((peers[cnt].GetType() != PermissionPolicy::Peer::PEER_ALL) &&
+            (peers[cnt].GetType() != PermissionPolicy::Peer::PEER_ANY_TRUSTED)) {
+            const KeyInfoNISTP256* keyInfo = peers[cnt].GetKeyInfo();
+            if (!keyInfo) {
+                status = ER_INVALID_DATA;
+                break;
+            }
+            if (!KeyInfoHelper::InstanceOfKeyInfoNISTP256(*keyInfo)) {
+                status = ER_NOT_IMPLEMENTED;
+                break;
+            }
+            KeyInfoNISTP256* keyInfoNISTP256 = (qcc::KeyInfoNISTP256*) keyInfo;
+            keyInfoCount = 1;
+            keyInfoArg = new MsgArg[keyInfoCount];
+            KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(*keyInfoNISTP256, keyInfoArg[0], true);      /* send the key id in addition to public key */
+        }
+        const uint8_t* securityGroupId = nullptr;
+        size_t securityGroupLen = 0;
+        if (peers[cnt].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+            securityGroupId = peers[cnt].GetSecurityGroupId().GetBytes();
+            securityGroupLen = GUID128::SIZE;
+        }
+        status = (*retArgs)[cnt].Set("(ya(yyayayay)ay)",
+                                     peers[cnt].GetType(), keyInfoCount, keyInfoArg,
+                                     securityGroupLen, securityGroupId);
+        if (ER_OK == status) {
+            (*retArgs)[cnt].Stabilize();
+        }
+        delete[] keyInfoArg;
+        if (ER_OK != status) {
+            break;
+        }
+    }
+    if (ER_OK != status) {
+        delete[] *retArgs;
+        *retArgs = nullptr;
+    }
+    return status;
+}
+
+static QStatus BuildPeersFromArg(MsgArg* arg, PermissionPolicy::Peer** peers, size_t count)
+{
+    if (count == 0) {
+        *peers = nullptr;
+        return ER_OK;
+    }
+    *peers = new PermissionPolicy::Peer[count];
+    QStatus status = ER_OK;
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        uint8_t peerType;
+        MsgArg* pubKeys;
+        size_t pubKeysCnt;
+        size_t sgIdLen;
+        uint8_t* sgId;
+        status = arg[cnt].Get("(ya(yyayayay)ay)", &peerType, &pubKeysCnt, &pubKeys, &sgIdLen, &sgId);
+        if (ER_OK != status) {
+            break;
+        }
+        if ((peerType >= PermissionPolicy::Peer::PEER_ALL) && (peerType <= PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP)) {
+            (*peers)[cnt].SetType((PermissionPolicy::Peer::PeerType) peerType);
+        } else {
+            status = ER_INVALID_DATA;
+            break;
+        }
+        if (peerType == PermissionPolicy::Peer::PEER_ALL) {
+            continue;
+        } else if (peerType == PermissionPolicy::Peer::PEER_ANY_TRUSTED) {
+            continue;
+        } else if (pubKeysCnt == 0) {
+            status = ER_INVALID_DATA;
+            break;
+        }
+        if ((peerType == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) &&
+            (sgIdLen != GUID128::SIZE)) {
+            status = ER_INVALID_DATA;
+            break;
+        }
+        KeyInfoNISTP256 keyInfo;
+        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(pubKeys[0], keyInfo, true);
+        if (ER_OK != status) {
+            break;
+        }
+        (*peers)[cnt].SetKeyInfo(&keyInfo);
+
+        if (peerType == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
+            GUID128 guid(0);
+            guid.SetBytes(sgId);
+            (*peers)[cnt].SetSecurityGroupId(guid);
+        }
+    }
+
+    if (ER_OK != status) {
+        delete[] *peers;
+        *peers = nullptr;
+    }
+    return status;
+}
+
+static QStatus GenerateMemberArgs(MsgArg* retArgs, const PermissionPolicy::Rule::Member* members, size_t count)
+{
+    if (count == 0) {
+        return ER_OK;
+    }
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        String memberName = members[cnt].GetMemberName();
+        QStatus status = retArgs[cnt].Set("(syy)",
+                                          memberName.c_str(), members[cnt].GetMemberType(),
+                                          members[cnt].GetActionMask());
+        if (ER_OK != status) {
+            return status;
+        }
+        retArgs[cnt].Stabilize();
+    }
+    return ER_OK;
+}
+
+void PermissionPolicy::ChangeRulesType(const vector<PermissionPolicy::Rule>& rules, PermissionPolicy::Rule::RuleType ruleType, vector<PermissionPolicy::Rule>& changedRules)
+{
+    changedRules.assign(rules.data(), rules.data() + rules.size());
+    for (auto& changedRule : changedRules) {
+        changedRule.SetRuleType(ruleType);
+    }
+}
+
+static QStatus GenerateRuleArgs(MsgArg** retArgs, const vector<PermissionPolicy::Rule>& rules, PermissionPolicy::Rule::RuleType ruleType)
+{
+    size_t count = rules.size();
+    vector<PermissionPolicy::Rule> changedRules;
+    if (count == 0) {
+        *retArgs = nullptr;
+        return ER_OK;
+    }
+
+    PermissionPolicy::ChangeRulesType(rules, ruleType, changedRules);
+
+    *retArgs = new MsgArg[count];
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        QStatus status = changedRules[cnt].ToMsgArg((*retArgs)[cnt]);
+        if (ER_OK != status) {
+            delete[] *retArgs;
+            *retArgs = nullptr;
+            return status;
+        }
+    }
+
+    return ER_OK;
+}
+
+static QStatus BuildMembersFromArg(const MsgArg* arg, PermissionPolicy::Rule::Member** members, size_t count)
+{
+    if (count == 0) {
+        *members = nullptr;
+        return ER_OK;
+    }
+    *members = new PermissionPolicy::Rule::Member[count];
+    QStatus status = ER_OK;
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        AJ_PSTR str;
+        uint8_t memberType;
+        uint8_t actionMask;
+        status = arg[cnt].Get("(syy)", &str, &memberType, &actionMask);
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("BuildMembersFromArg [%d] got status 0x%x\n", cnt, status));
+            break;
+        }
+        PermissionPolicy::Rule::Member* pr = &(*members)[cnt];
+        pr->SetMemberName(String(str));
+        if ((memberType >= PermissionPolicy::Rule::Member::NOT_SPECIFIED) && (memberType <= PermissionPolicy::Rule::Member::PROPERTY)) {
+            pr->SetMemberType((PermissionPolicy::Rule::Member::MemberType) memberType);
+        } else {
+            QCC_DbgPrintf(("BuildMembersFromArg [%d] got invalid member type %d\n", cnt, memberType));
+            status = ER_INVALID_DATA;
+            break;
+        }
+        pr->SetActionMask(actionMask);
+    }
+
+    if (ER_OK != status) {
+        delete[] *members;
+        *members = nullptr;
+    }
+    return status;
+}
+
+static QStatus BuildRulesFromArgArray(const MsgArg* args, size_t argCount, vector<PermissionPolicy::Rule>& rules, PermissionPolicy::Rule::RuleType ruleType)
+{
+    QStatus status = ER_OK;
+    rules.clear();
+    if (argCount == 0) {
+        return ER_OK;
+    }
+
+    rules.resize(argCount);
+    for (size_t index = 0; (index < argCount) && (ER_OK == status); index++) {
+        status = rules[index].FromMsgArg(args[index], ruleType);
+    }
+
+    if (ER_OK != status) {
+        rules.clear();
+    }
+
+    return status;
+}
+
+static QStatus BuildAclsFromArg(MsgArg* arg, PermissionPolicy::Acl** acls, size_t count)
+{
+    if (count == 0) {
+        *acls = nullptr;
+        return ER_OK;
+    }
+    QStatus status = ER_OK;
+    *acls = new PermissionPolicy::Acl[count];
+    for (size_t cnt = 0; cnt < count; cnt++) {
+        MsgArg* peersArgs;
+        size_t peersArgsCount = 0;
+        MsgArg* rulesArgs;
+        size_t rulesArgsCount = 0;
+        status = arg[cnt].Get("(a(ya(yyayayay)ay)a(ssa(syy)))", &peersArgsCount, &peersArgs, &rulesArgsCount, &rulesArgs);
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("BuildAclsFromArg [%d] got status 0x%x\n", cnt, status));
+            break;
+        }
+        if (peersArgsCount > 0) {
+            PermissionPolicy::Peer* peers = nullptr;
+            status = BuildPeersFromArg(peersArgs, &peers, peersArgsCount);
+            if (ER_OK != status) {
+                QCC_DbgPrintf(("BuildAclsFromArg [%d] got status 0x%x\n", cnt, status));
+                delete[] peers;
+                break;
+            }
+            (*acls)[cnt].SetPeers(peersArgsCount, peers);
+            delete[] peers;
+        }
+        if (rulesArgsCount > 0) {
+            vector<PermissionPolicy::Rule> rules;
+            status = BuildRulesFromArgArray(rulesArgs, rulesArgsCount, rules, PermissionPolicy::Rule::MANIFEST_POLICY_RULE);
+            if (ER_OK != status) {
+                QCC_DbgPrintf(("BuildProviderFromArg #6 [%d] got status 0x%x\n", cnt, status));
+                break;
+            }
+            (*acls)[cnt].SetRules(rulesArgsCount, rules.data());
+        }
+    }
+    if (ER_OK != status) {
+        delete[] *acls;
+        *acls = nullptr;
+    }
+    return status;
+}
 
 void PermissionPolicy::Rule::Member::Set(const qcc::String& memberName, PermissionPolicy::Rule::Member::MemberType memberType, uint8_t actionMask) {
     SetMemberName(memberName);
@@ -124,6 +393,120 @@ bool PermissionPolicy::Rule::Member::operator!=(const PermissionPolicy::Rule::Me
     return !(*this == other);
 }
 
+AJ_PCSTR PermissionPolicy::Rule::s_manifestOrPolicyRuleMsgArgSignature = "(ssa(syy))";
+AJ_PCSTR PermissionPolicy::Rule::s_manifestTemplateRuleMsgArgSignature = "(ssya(syy))";
+
+QStatus PermissionPolicy::Rule::ToMsgArg(MsgArg& msgArg) const
+{
+    QStatus status;
+    unique_ptr<MsgArg[]> ruleMembersArgs;
+
+    if (membersSize > 0) {
+        ruleMembersArgs.reset(new MsgArg[membersSize]);
+        status = GenerateMemberArgs(ruleMembersArgs.get(), members, membersSize);
+        if (ER_OK != status) {
+            return status;
+        }
+    }
+
+    if (MANIFEST_TEMPLATE_RULE == m_ruleType) {
+        status = msgArg.Set(s_manifestTemplateRuleMsgArgSignature,
+                            objPath.c_str(),
+                            interfaceName.c_str(),
+                            m_recommendedSecurityLevel,
+                            membersSize, ruleMembersArgs.get());
+    } else {
+        status = msgArg.Set(s_manifestOrPolicyRuleMsgArgSignature,
+                            objPath.c_str(),
+                            interfaceName.c_str(),
+                            membersSize, ruleMembersArgs.get());
+    }
+
+    if (ER_OK != status) {
+        msgArg.Clear();
+        return status;
+    }
+
+    /* make sure having own copy of the string and array args */
+    msgArg.Stabilize();
+
+    return ER_OK;
+}
+
+QStatus PermissionPolicy::Rule::FromMsgArg(const MsgArg& msgArg, RuleType ruleType)
+{
+    QStatus status = ER_OK;
+    AJ_PSTR localObjPath = nullptr;
+    AJ_PSTR localInterfaceName = nullptr;
+    uint8_t localRecommendedSecurityLevel = Rule::PRIVILEGED;
+    MsgArg* membersArgs = nullptr;
+    size_t membersArgsCount = 0;
+
+    m_ruleType = ruleType;
+    if (MANIFEST_TEMPLATE_RULE == ruleType) {
+        status = msgArg.Get(s_manifestTemplateRuleMsgArgSignature,
+                            &localObjPath,
+                            &localInterfaceName,
+                            &localRecommendedSecurityLevel,
+                            &membersArgsCount,
+                            &membersArgs);
+    } else {
+        status = msgArg.Get(s_manifestOrPolicyRuleMsgArgSignature,
+                            &localObjPath,
+                            &localInterfaceName,
+                            &membersArgsCount,
+                            &membersArgs);
+    }
+
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("%s got status 0x%x\n", __FUNCTION__, status));
+        return status;
+    }
+
+    objPath = localObjPath;
+    interfaceName = localInterfaceName;
+
+    if (membersArgsCount > 0) {
+        PermissionPolicy::Rule::Member* memberRules = nullptr;
+        status = BuildMembersFromArg(membersArgs, &memberRules, membersArgsCount);
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("%s got status 0x%x\n", __FUNCTION__, status));
+            delete[] memberRules;
+            return status;
+        }
+        SetMembers(membersArgsCount, memberRules);
+        delete[] memberRules;
+    }
+
+    if (localRecommendedSecurityLevel <= PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED) {
+        m_recommendedSecurityLevel = (PermissionPolicy::Rule::SecurityLevel)localRecommendedSecurityLevel;
+    } else {
+        QCC_DbgPrintf(("%s got invalid recommended security level %d\n", __FUNCTION__, localRecommendedSecurityLevel));
+        return ER_INVALID_DATA;
+    }
+
+    return ER_OK;
+}
+
+void PermissionPolicy::Rule::SetRuleType(RuleType ruleType)
+{
+    m_ruleType = ruleType;
+}
+
+PermissionPolicy::Rule::RuleType PermissionPolicy::Rule::GetRuleType() const
+{
+    return m_ruleType;
+}
+
+void PermissionPolicy::Rule::SetRecommendedSecurityLevel(SecurityLevel securityLevel)
+{
+    m_recommendedSecurityLevel = securityLevel;
+}
+
+PermissionPolicy::Rule::SecurityLevel PermissionPolicy::Rule::GetRecommendedSecurityLevel() const
+{
+    return m_recommendedSecurityLevel;
+}
 
 void PermissionPolicy::Rule::SetObjPath(const qcc::String& objPath)
 {
@@ -148,13 +531,13 @@ const qcc::String PermissionPolicy::Rule::GetInterfaceName() const
 void PermissionPolicy::Rule::SetMembers(size_t count, PermissionPolicy::Rule::Member* members)
 {
     delete [] this->members;
-    this->members = NULL;
+    this->members = nullptr;
     membersSize = 0;
     if (count == 0) {
         return;
     }
     this->members = new Member[count];
-    if (this->members == NULL) {
+    if (this->members == nullptr) {
         return;
     }
 
@@ -185,6 +568,9 @@ qcc::String PermissionPolicy::Rule::ToString(size_t indent) const
     if (interfaceName.length() > 0) {
         str += in + "  <interfaceName>" + interfaceName + "</interfaceName>\n";
     }
+    if (MANIFEST_TEMPLATE_RULE == m_ruleType) {
+        str += in + "  <recommendedSecurityLevel>" + securityLevelToString[m_recommendedSecurityLevel] + "</recommendedSecurityLevel>\n";
+    }
     for (size_t cnt = 0; cnt < GetMembersSize(); cnt++) {
         str += members[cnt].ToString(indent + 2);
     }
@@ -206,6 +592,14 @@ bool PermissionPolicy::Rule::operator==(const PermissionPolicy::Rule& other) con
         return false;
     }
 
+    if (m_ruleType != other.m_ruleType) {
+        return false;
+    }
+
+    if ((MANIFEST_TEMPLATE_RULE == m_ruleType) && (m_recommendedSecurityLevel != other.m_recommendedSecurityLevel)) {
+        return false;
+    }
+
     for (size_t i = 0; i < membersSize; i++) {
         if (!(members[i] == other.members[i])) {
             return false;
@@ -224,11 +618,13 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
     if (&other != this) {
         objPath = other.objPath;
         interfaceName = other.interfaceName;
+        m_ruleType = other.m_ruleType;
+        m_recommendedSecurityLevel = other.m_recommendedSecurityLevel;
         delete [] members;
-        members = NULL;
+        members = nullptr;
         if (other.membersSize > 0) {
             members = new Member[other.membersSize];
-            if (members == NULL) {
+            if (members == nullptr) {
                 return *this;
             }
             for (size_t i = 0; i < other.membersSize; i++) {
@@ -242,9 +638,12 @@ PermissionPolicy::Rule& PermissionPolicy::Rule::operator=(const PermissionPolicy
 
 PermissionPolicy::Rule::Rule(const PermissionPolicy::Rule& other) :
     objPath(other.objPath), interfaceName(other.interfaceName),
-    membersSize(other.membersSize) {
+    membersSize(other.membersSize),
+    m_ruleType(other.m_ruleType),
+    m_recommendedSecurityLevel(other.m_recommendedSecurityLevel)
+{
     members = new Member[membersSize];
-    if (members == NULL) {
+    if (members == nullptr) {
         return;
     }
     for (size_t i = 0; i < membersSize; i++) {
@@ -275,8 +674,8 @@ const qcc::GUID128& PermissionPolicy::Peer::GetSecurityGroupId() const
 void PermissionPolicy::Peer::SetKeyInfo(const qcc::KeyInfoNISTP256* keyInfo)
 {
     delete this->keyInfo;
-    this->keyInfo = NULL;
-    if (keyInfo != NULL) {
+    this->keyInfo = nullptr;
+    if (keyInfo != nullptr) {
         this->keyInfo = new qcc::KeyInfoNISTP256(*keyInfo);
     }
 }
@@ -327,7 +726,7 @@ bool PermissionPolicy::Peer::operator==(const Peer& other) const
             return false;
         }
     }
-    if (keyInfo == NULL || other.keyInfo == NULL) {
+    if (keyInfo == nullptr || other.keyInfo == nullptr) {
         return keyInfo == other.keyInfo;
     }
 
@@ -350,8 +749,8 @@ PermissionPolicy::Peer& PermissionPolicy::Peer::operator=(const PermissionPolicy
         type = other.type;
         securityGroupId = other.securityGroupId;
         delete keyInfo;
-        keyInfo = NULL;
-        if (other.keyInfo != NULL) {
+        keyInfo = nullptr;
+        if (other.keyInfo != nullptr) {
             keyInfo = new qcc::KeyInfoNISTP256(*other.keyInfo);
         }
     }
@@ -370,13 +769,13 @@ PermissionPolicy::Peer::Peer(const PermissionPolicy::Peer& other) :
 void PermissionPolicy::Acl::SetPeers(size_t count, const PermissionPolicy::Peer* peers)
 {
     delete [] this->peers;
-    this->peers = NULL;
+    this->peers = nullptr;
     peersSize = 0;
     if (count == 0) {
         return;
     }
     this->peers = new Peer[count];
-    if (this->peers == NULL) {
+    if (this->peers == nullptr) {
         return;
     }
 
@@ -399,13 +798,13 @@ const PermissionPolicy::Peer* PermissionPolicy::Acl::GetPeers() const
 void PermissionPolicy::Acl::SetRules(size_t count, const PermissionPolicy::Rule* rules)
 {
     delete [] this->rules;
-    this->rules = NULL;
+    this->rules = nullptr;
     rulesSize = 0;
     if (count == 0) {
         return;
     }
     this->rules = new Rule[count];
-    if (this->rules == NULL) {
+    if (this->rules == nullptr) {
         return;
     }
 
@@ -549,317 +948,14 @@ bool PermissionPolicy::operator!=(const PermissionPolicy& other) const
     return !(*this == other);
 }
 
-static QStatus GeneratePeerArgs(MsgArg** retArgs, PermissionPolicy::Peer* peers, size_t count)
-{
-    if (count == 0) {
-        *retArgs = NULL;
-        return ER_OK;
-    }
-    *retArgs = new MsgArg[count];
-    QStatus status = ER_OK;
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        MsgArg* keyInfoArg = NULL;
-        size_t keyInfoCount = 0;
-        if ((peers[cnt].GetType() != PermissionPolicy::Peer::PEER_ALL) &&
-            (peers[cnt].GetType() != PermissionPolicy::Peer::PEER_ANY_TRUSTED)) {
-            const KeyInfoNISTP256* keyInfo = peers[cnt].GetKeyInfo();
-            if (!keyInfo) {
-                status = ER_INVALID_DATA;
-                break;
-            }
-            if (!KeyInfoHelper::InstanceOfKeyInfoNISTP256(*keyInfo)) {
-                status = ER_NOT_IMPLEMENTED;
-                break;
-            }
-            KeyInfoNISTP256* keyInfoNISTP256 = (qcc::KeyInfoNISTP256*) keyInfo;
-            keyInfoCount = 1;
-            keyInfoArg = new MsgArg[keyInfoCount];
-            KeyInfoHelper::KeyInfoNISTP256PubKeyToMsgArg(*keyInfoNISTP256, keyInfoArg[0], true);  /* send the key id in addition to public key */
-        }
-        const uint8_t* securityGroupId = NULL;
-        size_t securityGroupLen = 0;
-        if (peers[cnt].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
-            securityGroupId = peers[cnt].GetSecurityGroupId().GetBytes();
-            securityGroupLen = GUID128::SIZE;
-        }
-        status = (*retArgs)[cnt].Set("(ya(yyayayay)ay)",
-                                     peers[cnt].GetType(), keyInfoCount, keyInfoArg,
-                                     securityGroupLen, securityGroupId);
-        if (ER_OK == status) {
-            (*retArgs)[cnt].Stabilize();
-        }
-        delete [] keyInfoArg;
-        if (ER_OK != status) {
-            break;
-        }
-    }
-    if (ER_OK != status) {
-        delete [] *retArgs;
-        *retArgs = NULL;
-    }
-    return status;
-}
-
-static QStatus BuildPeersFromArg(MsgArg* arg, PermissionPolicy::Peer** peers, size_t count)
-{
-    if (count == 0) {
-        *peers = NULL;
-        return ER_OK;
-    }
-    *peers = new PermissionPolicy::Peer[count];
-    QStatus status = ER_OK;
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        uint8_t peerType;
-        MsgArg* pubKeys;
-        size_t pubKeysCnt;
-        size_t sgIdLen;
-        uint8_t* sgId;
-        status = arg[cnt].Get("(ya(yyayayay)ay)", &peerType, &pubKeysCnt, &pubKeys, &sgIdLen, &sgId);
-        if (ER_OK != status) {
-            break;
-        }
-        if ((peerType >= PermissionPolicy::Peer::PEER_ALL) && (peerType <= PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP)) {
-            (*peers)[cnt].SetType((PermissionPolicy::Peer::PeerType) peerType);
-        } else {
-            status = ER_INVALID_DATA;
-            break;
-        }
-        if (peerType == PermissionPolicy::Peer::PEER_ALL) {
-            continue;
-        } else if (peerType == PermissionPolicy::Peer::PEER_ANY_TRUSTED) {
-            continue;
-        } else if (pubKeysCnt == 0) {
-            status = ER_INVALID_DATA;
-            break;
-        }
-        if ((peerType == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) &&
-            (sgIdLen != GUID128::SIZE)) {
-            status = ER_INVALID_DATA;
-            break;
-        }
-        KeyInfoNISTP256 keyInfo;
-        status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(pubKeys[0], keyInfo, true);
-        if (ER_OK != status) {
-            break;
-        }
-        (*peers)[cnt].SetKeyInfo(&keyInfo);
-
-        if (peerType == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
-            GUID128 guid(0);
-            guid.SetBytes(sgId);
-            (*peers)[cnt].SetSecurityGroupId(guid);
-        }
-    }
-
-    if (ER_OK != status) {
-        delete [] *peers;
-        *peers = NULL;
-    }
-    return status;
-}
-
-static QStatus GenerateMemberArgs(MsgArg* retArgs, const PermissionPolicy::Rule::Member* members, size_t count)
-{
-    if (count == 0) {
-        return ER_OK;
-    }
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        String memberName = members[cnt].GetMemberName();
-        QStatus status = retArgs[cnt].Set("(syy)",
-                                          memberName.c_str(), members[cnt].GetMemberType(),
-                                          members[cnt].GetActionMask());
-        if (ER_OK != status) {
-            return status;
-        }
-        retArgs[cnt].Stabilize();
-    }
-    return ER_OK;
-}
-
-static QStatus GenerateRuleArgs(MsgArg** retArgs, const PermissionPolicy::Rule* rules, size_t count)
-{
-    QStatus status = ER_OK;
-    if (count == 0) {
-        *retArgs = NULL;
-        return status;
-    }
-    *retArgs = new MsgArg[count];
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        MsgArg* ruleMembersArgs = NULL;
-        if (rules[cnt].GetMembersSize() > 0) {
-            ruleMembersArgs = new MsgArg[rules[cnt].GetMembersSize()];
-            status = GenerateMemberArgs(ruleMembersArgs, rules[cnt].GetMembers(), rules[cnt].GetMembersSize());
-            if (ER_OK != status) {
-                delete [] ruleMembersArgs;
-                goto exit;
-            }
-        }
-        String objPath = rules[cnt].GetObjPath();
-        String interfaceName = rules[cnt].GetInterfaceName();
-        status = (*retArgs)[cnt].Set("(ssa(syy))",
-                                     objPath.c_str(),
-                                     interfaceName.c_str(),
-                                     rules[cnt].GetMembersSize(), ruleMembersArgs);
-        if (ER_OK != status) {
-            delete [] ruleMembersArgs;
-            goto exit;
-        }
-        /* make sure having own copy of the string and array args */
-        (*retArgs)[cnt].Stabilize();
-        delete [] ruleMembersArgs;  /* clean memory since it has been copied */
-    }
-    return ER_OK;
-exit:
-    delete [] *retArgs;
-    *retArgs = NULL;
-    return status;
-}
-
-static QStatus BuildMembersFromArg(const MsgArg* arg, PermissionPolicy::Rule::Member** members, size_t count)
-{
-    if (count == 0) {
-        *members = NULL;
-        return ER_OK;
-    }
-    *members = new PermissionPolicy::Rule::Member[count];
-    QStatus status = ER_OK;
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        char* str;
-        uint8_t memberType;
-        uint8_t actionMask;
-        status = arg[cnt].Get("(syy)", &str, &memberType, &actionMask);
-        if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildMembersFromArg [%d] got status 0x%x\n", cnt, status));
-            break;
-        }
-        PermissionPolicy::Rule::Member* pr = &(*members)[cnt];
-        pr->SetMemberName(String(str));
-        if ((memberType >= PermissionPolicy::Rule::Member::NOT_SPECIFIED) && (memberType <= PermissionPolicy::Rule::Member::PROPERTY)) {
-            pr->SetMemberType((PermissionPolicy::Rule::Member::MemberType) memberType);
-        } else {
-            QCC_DbgPrintf(("BuildMembersFromArg [%d] got invalid member type %d\n", cnt, memberType));
-            status = ER_INVALID_DATA;
-            break;
-        }
-        pr->SetActionMask(actionMask);
-    }
-
-    if (ER_OK != status) {
-        delete [] *members;
-        *members = NULL;
-    }
-    return status;
-}
-
-static QStatus BuildRulesFromArgArray(const MsgArg* args, size_t argCount, PermissionPolicy::Rule** rules)
-{
-    if (argCount == 0) {
-        *rules = NULL;
-        return ER_OK;
-    }
-
-    *rules = new PermissionPolicy::Rule[argCount];
-    QStatus status = ER_OK;
-    for (size_t cnt = 0; cnt < argCount; cnt++) {
-        char* objPath;
-        char* interfaceName;
-        MsgArg* membersArgs = NULL;
-        size_t membersArgsCount = 0;
-        status = args[cnt].Get("(ssa(syy))", &objPath, &interfaceName, &membersArgsCount, &membersArgs);
-        if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildRulesFromArg [%d] got status 0x%x\n", cnt, status));
-            break;
-        }
-        (*rules)[cnt].SetObjPath(String(objPath));
-        (*rules)[cnt].SetInterfaceName(String(interfaceName));
-        if (membersArgsCount > 0) {
-            PermissionPolicy::Rule::Member* memberRules = NULL;
-            status = BuildMembersFromArg(membersArgs, &memberRules, membersArgsCount);
-            if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildRulesFromArg [%d] got status 0x%x\n", cnt, status));
-                delete [] memberRules;
-                break;
-            }
-            (*rules)[cnt].SetMembers(membersArgsCount, memberRules);
-            delete [] memberRules;
-        }
-    }
-
-    if (ER_OK != status) {
-        delete [] *rules;
-        *rules = NULL;
-    }
-    return status;
-}
-
-static QStatus BuildRulesFromArg(const MsgArg& msgArg, PermissionPolicy::Rule** rules, size_t* count)
-{
-    MsgArg* args;
-    size_t argCount;
-    QStatus status = msgArg.Get(_Manifest::s_TemplateMsgArgSignature, &argCount, &args);
-    if (ER_OK != status) {
-        return status;
-    }
-    *count = argCount;
-    return BuildRulesFromArgArray(args, argCount, rules);
-}
-
-static QStatus BuildAclsFromArg(MsgArg* arg, PermissionPolicy::Acl** acls, size_t count)
-{
-    if (count == 0) {
-        *acls = NULL;
-        return ER_OK;
-    }
-    QStatus status = ER_OK;
-    *acls = new PermissionPolicy::Acl[count];
-    for (size_t cnt = 0; cnt < count; cnt++) {
-        MsgArg* peersArgs;
-        size_t peersArgsCount = 0;
-        MsgArg* rulesArgs;
-        size_t rulesArgsCount = 0;
-        status = arg[cnt].Get("(a(ya(yyayayay)ay)a(ssa(syy)))", &peersArgsCount, &peersArgs, &rulesArgsCount, &rulesArgs);
-        if (ER_OK != status) {
-            QCC_DbgPrintf(("BuildAclsFromArg [%d] got status 0x%x\n", cnt, status));
-            break;
-        }
-        if (peersArgsCount > 0) {
-            PermissionPolicy::Peer* peers = NULL;
-            status = BuildPeersFromArg(peersArgs, &peers, peersArgsCount);
-            if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildAclsFromArg [%d] got status 0x%x\n", cnt, status));
-                delete [] peers;
-                break;
-            }
-            (*acls)[cnt].SetPeers(peersArgsCount, peers);
-            delete [] peers;
-        }
-        if (rulesArgsCount > 0) {
-            PermissionPolicy::Rule* rules = NULL;
-            status = BuildRulesFromArgArray(rulesArgs, rulesArgsCount, &rules);
-            if (ER_OK != status) {
-                QCC_DbgPrintf(("BuildProviderFromArg #6 [%d] got status 0x%x\n", cnt, status));
-                delete [] rules;
-                break;
-            }
-            (*acls)[cnt].SetRules(rulesArgsCount, rules);
-            delete [] rules;
-        }
-    }
-    if (ER_OK != status) {
-        delete [] *acls;
-        *acls = NULL;
-    }
-    return status;
-}
-
 QStatus PermissionPolicy::Export(MsgArg& msgArg) const
 {
     QStatus status = ER_OK;
-    MsgArg* aclsArgs = NULL;
+    MsgArg* aclsArgs = nullptr;
     if (acls) {
         aclsArgs = new MsgArg[GetAclsSize()];
         for (size_t cnt = 0; cnt < GetAclsSize(); cnt++) {
-            MsgArg* peersArgs = NULL;
+            MsgArg* peersArgs = nullptr;
             if (acls[cnt].GetPeers()) {
                 status = GeneratePeerArgs(&peersArgs, (PermissionPolicy::Peer*) acls[cnt].GetPeers(), acls[cnt].GetPeersSize());
                 if (ER_OK != status) {
@@ -867,9 +963,10 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg) const
                     break;
                 }
             }
-            MsgArg* rulesArgs = NULL;
+            MsgArg* rulesArgs = nullptr;
             if (acls[cnt].GetRules()) {
-                status = GenerateRuleArgs(&rulesArgs, (PermissionPolicy::Rule*) acls[cnt].GetRules(), acls[cnt].GetRulesSize());
+                vector<Rule> rules(acls[cnt].GetRules(), acls[cnt].GetRules() + acls[cnt].GetRulesSize());
+                status = GenerateRuleArgs(&rulesArgs, rules, Rule::MANIFEST_POLICY_RULE);
                 if (ER_OK != status) {
                     delete [] peersArgs;
                     delete [] rulesArgs;
@@ -900,6 +997,19 @@ QStatus PermissionPolicy::Export(MsgArg& msgArg) const
     return status;
 }
 
+QStatus PermissionPolicy::MsgArgToManifestTemplate(const MsgArg& msgArg, vector<Rule>& rules)
+{
+    MsgArg* args;
+    size_t argCount;
+    QStatus status = msgArg.Get(_Manifest::s_ManifestTemplateMsgArgSignature, &argCount, &args);
+
+    if (ER_OK == status) {
+        status = BuildRulesFromArgArray(args, argCount, rules, Rule::MANIFEST_TEMPLATE_RULE);
+    }
+
+    return status;
+}
+
 QStatus PermissionPolicy::Import(uint16_t expectedVersion, const MsgArg& msgArg)
 {
     uint16_t specVersion;
@@ -920,7 +1030,7 @@ QStatus PermissionPolicy::Import(uint16_t expectedVersion, const MsgArg& msgArg)
     SetVersion(policyVersion);
 
     if (aclsArgsCount > 0) {
-        PermissionPolicy::Acl* aclArray = NULL;
+        PermissionPolicy::Acl* aclArray = nullptr;
         status = BuildAclsFromArg(aclsArgs, &aclArray, aclsArgsCount);
         if (ER_OK != status) {
             QCC_DbgPrintf(("PermissionPolicy::Import #4 got status 0x%x\n", status));
@@ -941,33 +1051,35 @@ QStatus DefaultPolicyMarshaller::MarshalPrep(PermissionPolicy& policy)
     if (ER_OK != status) {
         return status;
     }
-    /**
-     * Use an error message as it is the simplest message without many validition rules.
-     * The ALLJOYN_FLAG_SESSIONLESS is set in order to skip the serial number
-     * check since the data can be stored for a long time*/
-    msg->ErrorMsg("/", 0);
-    MsgArg variant("v", &args);
-    return msg->MarshalMessage("v", "", "", MESSAGE_ERROR, &variant, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+
+    return SaveArgInErrorMessage(args);
 }
 
 QStatus DefaultPolicyMarshaller::MarshalPrep(const PermissionPolicy::Rule* rules, size_t count)
 {
     MsgArg msgArg;
-    QStatus status = PermissionPolicy::GenerateRules(rules, count, msgArg);
+    QStatus status = PermissionPolicy::ManifestTemplateToMsgArg(rules, count, msgArg);
     if (ER_OK != status) {
         return status;
     }
+
+    return SaveArgInErrorMessage(msgArg);
+}
+
+QStatus DefaultPolicyMarshaller::SaveArgInErrorMessage(const MsgArg& arg)
+{
     /**
      * Use an error message as it is the simplest message without many validation rules.
      * The ALLJOYN_FLAG_SESSIONLESS is set in order to skip the serial number
      * check since the data can be stored for a long time*/
     msg->ErrorMsg("/", 0);
-    return msg->MarshalMessage(_Manifest::s_TemplateMsgArgSignature, "", "", MESSAGE_ERROR, &msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
+    MsgArg variant("v", &arg);
+    return msg->MarshalMessage("v", "", "", MESSAGE_ERROR, &variant, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
 }
 
 QStatus DefaultPolicyMarshaller::Marshal(PermissionPolicy& policy, uint8_t** buf, size_t* size)
 {
-    *buf = NULL;
+    *buf = nullptr;
     *size = 0;
     QStatus status = MarshalPrep(policy);
     if (ER_OK != status) {
@@ -981,6 +1093,52 @@ QStatus DefaultPolicyMarshaller::Marshal(PermissionPolicy& policy, uint8_t** buf
     }
     memcpy(*buf, msg->GetBuffer(), *size);
     return ER_OK;
+}
+
+QStatus DefaultPolicyMarshaller::MarshalManifestTemplate(const PermissionPolicy::Rule* rules, size_t rulesCount, vector<uint8_t>& buf)
+{
+    buf.clear();
+    QStatus status = MarshalPrep(rules, rulesCount);
+    if (ER_OK != status) {
+        return status;
+    }
+    buf.resize(msg->GetBufferSize());
+    memcpy(buf.data(), msg->GetBuffer(), buf.size());
+    return ER_OK;
+}
+
+QStatus DefaultPolicyMarshaller::UnmarshalManifestTemplate(const uint8_t* buf, size_t size, vector<PermissionPolicy::Rule>& rules)
+{
+    QStatus status = msg->LoadBytes((uint8_t*)buf, size);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("%s (%d bytes) failed to load status 0x%x\n", __FUNCTION__, size, status));
+        return status;
+    }
+
+    qcc::String endpointName("local");
+    status = msg->Unmarshal(endpointName, false, false, false, 0);
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("%s failed to unmarshal message header 0x%x\n", __FUNCTION__, status));
+        return status;
+    }
+
+    status = msg->UnmarshalArgs("*");
+    if (ER_OK != status) {
+        QCC_DbgPrintf(("%s failed to unmarshal message arguments 0x%x\n", __FUNCTION__, status));
+        return status;
+    }
+
+    const MsgArg* arg = msg->GetArg(0);
+    if (nullptr != arg) {
+        MsgArg* variant;
+        status = arg->Get("v", &variant);
+        if (ER_OK != status) {
+            return status;
+        }
+        return PermissionPolicy::MsgArgToManifestTemplate(*variant, rules);
+    }
+
+    return ER_INVALID_DATA;
 }
 
 QStatus DefaultPolicyMarshaller::Unmarshal(PermissionPolicy& policy, const uint8_t* buf, size_t size)
@@ -1068,24 +1226,24 @@ QStatus PermissionPolicy::Import(Marshaller& marshaller, const uint8_t* buf, siz
     return marshaller.Unmarshal(*this, buf, size);
 }
 
-QStatus PermissionPolicy::GenerateRules(const Rule* rules, size_t count, MsgArg& msgArg)
+QStatus PermissionPolicy::ManifestTemplateToMsgArg(const Rule* rules, size_t count, MsgArg& msgArg)
 {
-    MsgArg* rulesArgs = NULL;
-    QStatus status = GenerateRuleArgs(&rulesArgs, rules, count);
+    QStatus status = ER_OK;
+    MsgArg* rulesArgs = nullptr;
+    vector<Rule> manifestTemplate;
+
+    manifestTemplate.assign(rules, rules + count);
+    status = GenerateRuleArgs(&rulesArgs, manifestTemplate, Rule::MANIFEST_TEMPLATE_RULE);
     if (ER_OK != status) {
         return status;
     }
-    status = msgArg.Set(_Manifest::s_TemplateMsgArgSignature, count, rulesArgs);
+
+    status = msgArg.Set(_Manifest::s_ManifestTemplateMsgArgSignature, count, rulesArgs);
     if (ER_OK != status) {
         return status;
     }
     msgArg.SetOwnershipFlags(MsgArg::OwnsArgs, true);
     return status;
-}
-
-QStatus PermissionPolicy::ParseRules(const MsgArg& msgArg, Rule** rules, size_t* count)
-{
-    return BuildRulesFromArg(msgArg, rules, count);
 }
 
 PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
@@ -1094,7 +1252,7 @@ PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
         version = other.version;
         aclsSize = other.aclsSize;
         delete [] acls;
-        acls = NULL;
+        acls = nullptr;
         if (aclsSize > 0) {
             acls = new Acl[aclsSize];
             for (size_t i = 0; i < aclsSize; i++) {
@@ -1108,7 +1266,7 @@ PermissionPolicy& PermissionPolicy::operator=(const PermissionPolicy& other) {
 PermissionPolicy::PermissionPolicy(const PermissionPolicy& other) :
     specificationVersion(other.specificationVersion), version(other.version),
     aclsSize(other.aclsSize) {
-    acls = NULL;
+    acls = nullptr;
     if (aclsSize > 0) {
         acls = new Acl[aclsSize];
         for (size_t i = 0; i < aclsSize; i++) {
@@ -1119,13 +1277,13 @@ PermissionPolicy::PermissionPolicy(const PermissionPolicy& other) :
 
 void PermissionPolicy::SetAcls(size_t count, const PermissionPolicy::Acl* acls) {
     delete [] this->acls;
-    this->acls = NULL;
+    this->acls = nullptr;
     aclsSize = 0;
     if (count == 0) {
         return;
     }
     this->acls = new Acl[count];
-    if (this->acls == NULL) {
+    if (this->acls == nullptr) {
         return;
     }
 
@@ -1142,9 +1300,49 @@ void PermissionPolicy::SetAcls(size_t count, const PermissionPolicy::Acl* acls) 
 AJ_PCSTR _Manifest::s_MsgArgArraySignature = "a(ua(ssa(syy))saysay)";
 AJ_PCSTR _Manifest::s_MsgArgSignature = "(ua(ssa(syy))saysay)";
 AJ_PCSTR _Manifest::s_MsgArgDigestSignature = "(ua(ssa(syy))says)";
-AJ_PCSTR _Manifest::s_TemplateMsgArgSignature = "a(ssa(syy))";
+AJ_PCSTR _Manifest::s_ManifestTemplateMsgArgSignature = "a(ssya(syy))";
 const uint32_t _Manifest::DefaultVersion = 1;
-static AJ_PCSTR TEMPORARY_BUS_ATTACHMENT_NAME = "TemporaryBusAttachment";
+
+/* Static objects used just to serialize/deserialize messages */
+static BusAttachment* s_serializeBus = nullptr;
+static qcc::String* s_serializeSender = nullptr;
+static PeerStateTable* s_serializePeerStateTable = nullptr;
+
+void PermissionPolicyInit()
+{
+    /*
+     * These objects might not be used by the current process, but they are small enough
+     * and therefore acceptable until a better way to serialize data will be designed
+     * (see ASACORE-2866).
+     */
+    s_serializeSender = new qcc::String("");
+    s_serializePeerStateTable = new PeerStateTable;
+}
+
+void PermissionPolicyShutdown()
+{
+    delete s_serializeSender;
+    s_serializeSender = nullptr;
+
+    delete s_serializePeerStateTable;
+    s_serializePeerStateTable = nullptr;
+
+    delete s_serializeBus;
+    s_serializeBus = nullptr;
+}
+
+static BusAttachment& GetStaticBusAttachment()
+{
+    /* Allocate s_serializeBus when it is needed, because it is relatively large & complex */
+    if (s_serializeBus == nullptr) {
+        BusAttachment* newBus = new BusAttachment("PermissionPolicyStaticBusAttachment");
+        if (!CompareAndExchangePointer((void* volatile*)&s_serializeBus, nullptr, newBus)) {
+            delete newBus;
+        }
+    }
+
+    return *s_serializeBus;
+}
 
 _Manifest::_Manifest() : m_version(DefaultVersion), m_rules(), m_thumbprintAlgorithmOid(), m_thumbprint(), m_signatureAlgorithmOid(), m_signature()
 {
@@ -1214,17 +1412,13 @@ QStatus _Manifest::SetFromMsgArg(const MsgArg& manifestArg)
         return ER_INVALID_DATA;
     }
 
-    PermissionPolicy::Rule* parsedRules = nullptr;
-    status = BuildRulesFromArgArray(inRulesArgs, inRuleCount, &parsedRules);
+    status = BuildRulesFromArgArray(inRulesArgs, inRuleCount, m_rules, PermissionPolicy::Rule::MANIFEST_POLICY_RULE);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not parse rules from rules MsgArg array"));
         return status;
     }
 
     m_version = inVersion;
-    /* BuildRulesFromArgArray allocates memory which we copy into the vector and then delete. */
-    m_rules.assign(parsedRules, parsedRules + inRuleCount);
-    delete[] parsedRules;
     m_thumbprintAlgorithmOid.assign(inThumbprintAlgorithmOid);
     m_thumbprint.assign(inThumbprint, inThumbprint + inThumbprintSize);
     m_signatureAlgorithmOid.assign(inSignatureAlgorithmOid);
@@ -1271,13 +1465,13 @@ QStatus _Manifest::GetMsgArg(ManifestPurpose manifestPurpose, MsgArg& outputArg)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
-    MsgArg* rulesArgsRaw = NULL;
-    QStatus status = GenerateRuleArgs(&rulesArgsRaw, m_rules.data(), m_rules.size());
+    MsgArg* rulesArgsRaw = nullptr;
+    QStatus status = GenerateRuleArgs(&rulesArgsRaw, m_rules, PermissionPolicy::Rule::MANIFEST_POLICY_RULE);
     if (ER_OK != status) {
         return status;
     }
     /* GenerateRuleArgs allocates memory; take ownership of it. */
-    std::unique_ptr<MsgArg[]> rulesArgs(rulesArgsRaw);
+    unique_ptr<MsgArg[]> rulesArgs(rulesArgsRaw);
     rulesArgsRaw = nullptr;
 
     switch (manifestPurpose) {
@@ -1325,7 +1519,21 @@ QStatus _Manifest::ComputeThumbprintAndSign(const CertificateX509& subjectCertif
     return Sign(m_thumbprint, issuerPrivateKey);
 }
 
-QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECCPrivateKey* issuerPrivateKey)
+QStatus _Manifest::ComputeThumbprintAndDigest(const qcc::CertificateX509& subjectCertificate, std::vector<uint8_t>& digest)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    m_thumbprint.resize(Crypto_SHA256::DIGEST_SIZE);
+    QStatus status = subjectCertificate.GetSHA256Thumbprint(m_thumbprint.data());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not compute certificate thumbprint"));
+        return status;
+    }
+
+    return ComputeDigest(m_thumbprint, digest);
+}
+
+QStatus _Manifest::ComputeDigest(const std::vector<uint8_t>& subjectThumbprint, std::vector<uint8_t>& digest)
 {
     if (&subjectThumbprint != &m_thumbprint) {
         m_thumbprint = subjectThumbprint;
@@ -1336,10 +1544,43 @@ QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECC
     /* Only ECDSA with SHA-256 is supported as the signature algorithm. */
     m_signatureAlgorithmOid.assign(qcc::OID_SIG_ECDSA_SHA256.c_str());
 
-    std::vector<uint8_t> digest(Crypto_SHA256::DIGEST_SIZE);
     QStatus status = GetDigest(digest);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not compute manifest digest"));
+        return status;
+    }
+
+    return ER_OK;
+}
+
+void _Manifest::SetSubjectThumbprint(const std::vector<uint8_t>& subjectThumbprint)
+{
+    if (&subjectThumbprint != &m_thumbprint) {
+        m_thumbprint = subjectThumbprint;
+    }
+}
+
+QStatus _Manifest::SetSubjectThumbprint(const CertificateX509& subjectCertificate)
+{
+    m_thumbprint.resize(Crypto_SHA256::DIGEST_SIZE);
+    return subjectCertificate.GetSHA256Thumbprint(m_thumbprint.data());
+}
+
+QStatus _Manifest::SetSignature(const ECCSignature& signature)
+{
+    /* Only SHA-256 is supported as the thumbprint algorithm. */
+    m_thumbprintAlgorithmOid.assign(qcc::OID_DIG_SHA256.c_str());
+    /* Only ECDSA with SHA-256 is supported as the signature algorithm. */
+    m_signatureAlgorithmOid.assign(qcc::OID_SIG_ECDSA_SHA256.c_str());
+
+    return SetECCSignature(signature);
+}
+
+QStatus _Manifest::Sign(const std::vector<uint8_t>& subjectThumbprint, const ECCPrivateKey* issuerPrivateKey)
+{
+    std::vector<uint8_t> digest(Crypto_SHA256::DIGEST_SIZE);
+    QStatus status = ComputeDigest(subjectThumbprint, digest);
+    if (ER_OK != status) {
         return status;
     }
 
@@ -1414,28 +1655,6 @@ QStatus _Manifest::Verify(const std::vector<uint8_t>& subjectThumbprint, const E
     }
 
     return status;
-}
-
-/**
- * Helper function for GetDigest which requires a BusAttachment to compute the manifest digest.
- * Try to stop and clean up the BusAttachment, which should never fail, but just in case, don't let
- * it get in the way of what we're doing. This BusAttachment shouldn't ever actually be connected
- * to anything, and is just needed to create a Message from which to serialize and hash a set of manifest
- * rules.
- */
-static void StopBusAttachment(BusAttachment& bus)
-{
-    QCC_DbgTrace(("%s", __FUNCTION__));
-    QStatus status = bus.Stop();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not stop temporary bus attachment"));
-    } else {
-        /* Only Join if we succeeded in Stopping; otherwise we'll sit forever. */
-        status = bus.Join();
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Could not join temporary bus attachment"));
-        }
-    }
 }
 
 QStatus _Manifest::GetDigest(std::vector<uint8_t>& digest) const
@@ -1554,28 +1773,25 @@ QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_
         return status;
     }
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-
     char savedEndian = _Message::outEndian;
     _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
-    Message tmpMsg(bus);
-    tmpMsg->ErrorMsg("/", 0);
+    Message tmpMsg(GetStaticBusAttachment());
+    tmpMsg->ErrorMsg(*s_serializeSender, "/", 0);
     status = tmpMsg->MarshalMessage(messageSignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not marshal message"));
         _Message::SetEndianess(savedEndian);
-        StopBusAttachment(bus);
         return status;
     }
 
     switch (manifestPurpose) {
     case MANIFEST_FULL:
-        /* Form for storing in the keystore: store the message headers as well. */
+        /*
+         * Form for storing in the keystore: store the message headers as well.
+         * Multiple Serialize() calls for the same manifest must return the same
+         * byte array, so reset the serial number value in the message header.
+         */
+        tmpMsg->SetSerialNumber(0);
         serializedForm.assign(tmpMsg->GetBuffer(), tmpMsg->GetBuffer() + tmpMsg->GetBufferSize());
         break;
 
@@ -1590,9 +1806,7 @@ QStatus _Manifest::Serialize(ManifestPurpose manifestPurpose, std::vector<uint8_
         break;
     }
 
-    StopBusAttachment(bus);
     _Message::SetEndianess(savedEndian);
-
     return status;
 }
 
@@ -1601,37 +1815,27 @@ QStatus _Manifest::Deserialize(const std::vector<uint8_t>& serializedForm)
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String endpointName("local");
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    QStatus status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-    Message tmpMsg(bus);
+    Message tmpMsg(GetStaticBusAttachment());
     std::vector<uint8_t> serializedFormCopy(serializedForm); /* LoadBytes doesn't take const. */
-    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
+    QStatus status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not populate Message object with serialized form"));
-        StopBusAttachment(bus);
         return status;
     }
 
-    status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
+    status = tmpMsg->Unmarshal(s_serializePeerStateTable, endpointName, false, false, false);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not Unmarshal"));
-        StopBusAttachment(bus);
         return status;
     }
 
-    status = tmpMsg->UnmarshalArgs("*");
+    status = tmpMsg->UnmarshalArgs(s_serializePeerStateTable, "*");
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not UnmarshalArgs"));
-        StopBusAttachment(bus);
         return status;
     }
 
     status = SetFromMsgArg(*tmpMsg->GetArg(0));
-    StopBusAttachment(bus);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not SetFromMsgArg"));
         return status;
@@ -1650,17 +1854,10 @@ QStatus _Manifest::SerializeArray(const std::vector<Manifest>& manifests, std::v
         return status;
     }
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-
     char savedEndian = _Message::outEndian;
     _Message::SetEndianess(ALLJOYN_LITTLE_ENDIAN);
-    Message tmpMsg(bus);
-    tmpMsg->ErrorMsg("/", 0);
+    Message tmpMsg(GetStaticBusAttachment());
+    tmpMsg->ErrorMsg(*s_serializeSender, "/", 0);
     status = tmpMsg->MarshalMessage(_Manifest::s_MsgArgArraySignature, "", "", MESSAGE_ERROR, msgArg, 1, ALLJOYN_FLAG_SESSIONLESS, 0);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not marshal message"));
@@ -1668,9 +1865,7 @@ QStatus _Manifest::SerializeArray(const std::vector<Manifest>& manifests, std::v
         serializedForm.assign(tmpMsg->GetBuffer(), tmpMsg->GetBuffer() + tmpMsg->GetBufferSize());
     }
 
-    StopBusAttachment(bus);
     _Message::SetEndianess(savedEndian);
-
     return status;
 }
 
@@ -1685,42 +1880,32 @@ QStatus _Manifest::DeserializeArray(const uint8_t* serializedForm, size_t serial
     QCC_DbgTrace(("%s", __FUNCTION__));
     qcc::String endpointName("local");
 
-    BusAttachment bus(TEMPORARY_BUS_ATTACHMENT_NAME);
-    QStatus status = bus.Start();
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Could not start temporary BusAttachment"));
-        return status;
-    }
-    Message tmpMsg(bus);
+    Message tmpMsg(GetStaticBusAttachment());
     std::vector<uint8_t> serializedFormCopy(serializedSize); /* LoadBytes doesn't take const. */
     serializedFormCopy.assign(serializedForm, serializedForm + serializedSize);
 
-    status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
+    QStatus status = tmpMsg->LoadBytes(serializedFormCopy.data(), serializedFormCopy.size());
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not populate Message object with serialized form"));
-        StopBusAttachment(bus);
         return status;
     }
 
-    status = tmpMsg->Unmarshal(endpointName, false, false, false, 0);
+    status = tmpMsg->Unmarshal(s_serializePeerStateTable, endpointName, false, false, false);
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not Unmarshal"));
-        StopBusAttachment(bus);
         return status;
     }
 
-    status = tmpMsg->UnmarshalArgs("*");
+    status = tmpMsg->UnmarshalArgs(s_serializePeerStateTable, "*");
     if (ER_OK != status) {
         QCC_LogError(status, ("Could not UnmarshalArgs"));
-        StopBusAttachment(bus);
         return status;
     }
 
     MsgArg* signedManifestArgs;
-    size_t signedManifestCount;
+    uint32_t signedManifestCount;
 
     status = tmpMsg->GetArg(0)->Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgs);
-    StopBusAttachment(bus);
     if (ER_OK != status) {
         return status;
     }
@@ -1728,7 +1913,7 @@ QStatus _Manifest::DeserializeArray(const uint8_t* serializedForm, size_t serial
         return ER_OK; /* nothing to do */
     }
 
-    for (size_t i = 0; i < signedManifestCount; i++) {
+    for (uint32_t i = 0; i < signedManifestCount; i++) {
         Manifest manifest;
         status = manifest->SetFromMsgArg(signedManifestArgs[i]);
         if (ER_OK != status) {

@@ -24,17 +24,13 @@
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
 #include "KeyStore.h"
+#include "ajTestCommon.h"
+
+#define TEN_MINS 600 // 600 secs is 10 mins
 
 using namespace ajn;
 using namespace qcc;
 using namespace std;
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_MSECS 5
-#define TEN_MINS 600 // 600 secs is 10 mins
 
 class SecurityManagement_ApplicationStateListener : public ApplicationStateListener {
   public:
@@ -338,11 +334,11 @@ class SecurityManagementPolicyTest : public testing::Test {
                                                  identityCertChainMaster, certChainSize,
                                                  manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(managerBus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         ECCPublicKey managerPublicKey;
@@ -371,11 +367,11 @@ class SecurityManagementPolicyTest : public testing::Test {
                                             identityCertChainPeer1, certChainSize,
                                             manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(peer1Bus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
@@ -396,11 +392,11 @@ class SecurityManagementPolicyTest : public testing::Test {
                                             identityCertChainPeer2, certChainSize,
                                             manifests, ArraySize(manifests)));
 
-        for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+        for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
             if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
                 break;
             }
-            qcc::Sleep(WAIT_MSECS);
+            qcc::Sleep(WAIT_TIME_5);
         }
 
 
@@ -425,6 +421,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         delete managerAuthListener;
         delete peer1AuthListener;
         delete peer2AuthListener;
+        delete peer3AuthListener;
     }
 
     void InstallMembershipOnManager() {
@@ -502,7 +499,7 @@ class SecurityManagementPolicyTest : public testing::Test {
         manifestTemplate[0].SetObjPath("*");
         manifestTemplate[0].SetInterfaceName("*");
         manifestTemplate[0].SetMembers(1, member);
-        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifest(manifestTemplate, manifestSize));
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifestTemplate(manifestTemplate, manifestSize));
     }
 
     static QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
@@ -1584,11 +1581,15 @@ TEST_F(SecurityManagementPolicyTest, DISABLED_remove_membership_succeeds)
     EXPECT_EQ(ER_OK, sapWithPeer2.GetMembershipSummaries(arg)) << "GetMembershipSummaries failed.";
     count = arg.v_array.GetNumElements();
     EXPECT_EQ((uint32_t)1, count);
+    delete [] serials;
+    delete [] keyInfos;
     serials = new String[count];
     keyInfos = new KeyInfoNISTP256[count];
     EXPECT_EQ(ER_OK, sapWithPeer2.MsgArgToCertificateIds(arg, serials, keyInfos, count));
     EXPECT_EQ(count, (uint32_t)1);
     EXPECT_STREQ(serials[0].c_str(), "5678");
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_serial_does_not_match)
@@ -1662,7 +1663,8 @@ TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_serial_does_not_
     // Call RemoveMembership
     String fakeSerial("333");
     EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, sapWithPeer2.RemoveMembership(fakeSerial, keyInfos[0]));
-
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_issuer_does_not_match)
@@ -1734,6 +1736,8 @@ TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_issuer_does_not_
 
     // Call RemoveMembership
     EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, sapWithPeer2.RemoveMembership(serials[0], peer2PublicKey));
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 
@@ -1936,6 +1940,7 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
     peer2Obj = ProxyBusObject(peer1Bus, org::alljoyn::Bus::InterfaceName, org::alljoyn::Bus::ObjectPath, peer1ToPeer2SessionId, false);
 
     EXPECT_EQ(ER_OK, peer2Obj.IntrospectRemoteObject());
+    delete caAuthListener;
 }
 
 
@@ -2094,6 +2099,7 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_memb
     EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
 
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 3));
+    delete caAuthListener;
 }
 
 
@@ -2203,6 +2209,7 @@ TEST_F(SecurityManagementPolicyTest, chained_membership_signed_upto_ca_fails)
     EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
 
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 3));
+    delete caAuthListener;
 }
 
 TEST_F(SecurityManagementPolicyTest, chained_membership_with_two_levels_fails)
@@ -2327,6 +2334,7 @@ TEST_F(SecurityManagementPolicyTest, chained_membership_with_two_levels_fails)
     EXPECT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener));
 
     EXPECT_EQ(ER_FAIL, sapWithPeer1.InstallMembership(membershipCertChain, 4));
+    delete caAuthListener;
 }
 
 TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegation_is_false)
@@ -2467,6 +2475,7 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
 
     //EXPECT_EQ(ER_OK, sapWithPeer1.Reset());
     EXPECT_EQ(ER_INVALID_CERTIFICATE, sapWithPeer1.InstallMembership(membershipCertChain, 2));
+    delete caAuthListener;
 }
 
 /*
@@ -2699,6 +2708,8 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
     EXPECT_EQ(PermissionConfigurator::CLAIMABLE, applicationState);
     EXPECT_FALSE(peer2ConfigurationListener.startManagementReceived);
     EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
+    delete [] serials;
+    delete [] keyInfos;
 }
 
 /*
@@ -3133,6 +3144,8 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
     EXPECT_FALSE(peer2ConfigurationListener.endManagementReceived);
 
     // Claim the target app again
+    delete managerAuthListener;
+    delete peer2AuthListener;
     managerAuthListener = new DefaultECDHEAuthListener();
     peer2AuthListener = new DefaultECDHEAuthListener();
     EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener, nullptr, false, &managerConfigurationListener));
@@ -3181,11 +3194,11 @@ TEST_F(SecurityManagementPolicyTest, end_management_after_reset)
                                         identityCertChainPeer2, certChainSize,
                                         manifests, ArraySize(manifests)));
 
-    for (int msec = 0; msec < 10000; msec += WAIT_MSECS) {
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (appStateListener.isClaimed(peer2Bus.GetUniqueName())) {
             break;
         }
-        qcc::Sleep(WAIT_MSECS);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer2Bus.GetUniqueName()]);

@@ -30,6 +30,7 @@
 #include <qcc/Log.h>
 #include "KeyStore.h"
 #include "InMemoryKeyStore.h"
+#include "ajTestCommon.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -579,7 +580,7 @@ class AuthListenerECDHETest : public BusObject, public testing::Test {
         proxyObj.AddInterface(*itf);
         Message reply(selectedClientBus);
 
-        return proxyObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
+        return proxyObj.MethodCall(ONOFF_IFC_NAME, "On", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     }
 
   private:

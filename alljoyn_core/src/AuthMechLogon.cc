@@ -80,8 +80,8 @@ void AuthMechLogon::ComputeMS()
      */
     vector<uint8_t, SecureAllocator<uint8_t> > seed;
     seed.reserve(clientRandom.size() + serverRandom.size());
-    AppendStringToVector(clientRandom, seed);
-    AppendStringToVector(serverRandom, seed);
+    AppendStringToSecureVector(clientRandom, seed);
+    AppendStringToSecureVector(serverRandom, seed);
     Crypto_PseudorandomFunction(pms, label, seed, keymatter, sizeof(keymatter));
     masterSecret.Set(keymatter, sizeof(keymatter), KeyBlob::GENERIC);
     masterSecret.SetExpiration(expiration);

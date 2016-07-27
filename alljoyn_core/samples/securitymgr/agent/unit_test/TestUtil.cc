@@ -219,7 +219,7 @@ QStatus BasicTest::CreateProxyObjectManager()
             PermissionPolicy::Rule::Member::ACTION_OBSERVE | PermissionPolicy::Rule::Member::ACTION_PROVIDE |
             PermissionPolicy::Rule::Member::ACTION_MODIFY);
         rule.SetMembers(1, &member);
-        ownBus->GetPermissionConfigurator().SetPermissionManifest(&rule, 1);
+        ownBus->GetPermissionConfigurator().SetPermissionManifestTemplate(&rule, 1);
         IdentityInfo id;
         id.name = "basictest";
         storage->StoreIdentity(id);
@@ -625,7 +625,7 @@ bool BasicTest::CheckIdentity(const OnlineApplication& app,
         return false;
     }
 
-    if (!remoteManifest.TemplateEquals(expectedManifest)) {
+    if (!storedManifest.TemplateEquals(expectedManifest)) {
         printf("mismatching stored manifest: expected %s, got %s\n",
                expectedManifest.ToString().c_str(),
                storedManifest.ToString().c_str());

@@ -31,6 +31,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/**
+ * Returns the size of a statically allocated array
+ */
+#define ArraySize(a)  (sizeof(a) / sizeof(a[0]))
+
 using namespace ajn;
 
 static volatile sig_atomic_t s_interrupt = QCC_FALSE;
@@ -44,10 +49,10 @@ static void CDECL_CALL sig_int_handler(int sig)
 static alljoyn_sessionport ASSIGNED_SESSION_PORT = 900;
 static const char INTERFACE_NAME[] = "com.example.about.feature.interface.sample";
 
-static void sessionportlistener_sessionjoined_cb(const void* context,
-                                                 alljoyn_sessionport sessionPort,
-                                                 alljoyn_sessionid id,
-                                                 const char* joiner)
+static void AJ_CALL sessionportlistener_sessionjoined_cb(const void* context,
+                                                         alljoyn_sessionport sessionPort,
+                                                         alljoyn_sessionid id,
+                                                         const char* joiner)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(sessionPort);
@@ -55,10 +60,10 @@ static void sessionportlistener_sessionjoined_cb(const void* context,
     printf("Session Joined SessionId = %u\n", id);
 }
 
-static QCC_BOOL sessionportlistener_acceptsessionjoiner_cb(const void* context,
-                                                           alljoyn_sessionport sessionPort,
-                                                           const char* joiner,
-                                                           const alljoyn_sessionopts opts)
+static QCC_BOOL AJ_CALL sessionportlistener_acceptsessionjoiner_cb(const void* context,
+                                                                   alljoyn_sessionport sessionPort,
+                                                                   const char* joiner,
+                                                                   const alljoyn_sessionopts opts)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(joiner);
@@ -85,9 +90,9 @@ static alljoyn_sessionportlistener create_my_alljoyn_sessionportlistener()
 /**
  * Respond to remote method call `Echo` by returning the string back to the sender
  */
-static void echo_cb(alljoyn_busobject object,
-                    const alljoyn_interfacedescription_member* member,
-                    alljoyn_message msg) {
+static void AJ_CALL echo_cb(alljoyn_busobject object,
+                            const alljoyn_interfacedescription_member* member,
+                            alljoyn_message msg) {
     alljoyn_msgarg arg = alljoyn_message_getarg(msg, 0);
     QCC_UNUSED(member);
     printf("Echo method called %s\n", ((ajn::MsgArg*)arg)->v_string.str);
@@ -228,14 +233,21 @@ int CDECL_CALL main(void)
     }
 
     char interface[256] = { 0 };
-    snprintf(interface, 256, "<node>"                                           \
-             "<interface name='%s'>"                                  \
-             "  <method name='Echo'>"                                 \
-             "    <arg name='out_arg' type='s' direction='in' />"     \
-             "    <arg name='return_arg' type='s' direction='out' />" \
-             "  </method>"                                            \
-             "</interface>"                                           \
-             "</node>", INTERFACE_NAME);
+
+#if defined(QCC_OS_GROUP_WINDOWS)
+    _snprintf(
+#else
+    snprintf(
+#endif
+        interface, ArraySize(interface), "<node>"                \
+        "<interface name='%s'>"                                  \
+        "  <method name='Echo'>"                                 \
+        "    <arg name='out_arg' type='s' direction='in' />"     \
+        "    <arg name='return_arg' type='s' direction='out' />" \
+        "  </method>"                                            \
+        "</interface>"                                           \
+        "</node>", INTERFACE_NAME);
+    interface[ArraySize(interface) - 1] = '\0';
 
     printf("Interface = %s\n", interface);
     status = alljoyn_busattachment_createinterfacesfromxml(bus, interface);
@@ -296,5 +308,5 @@ int CDECL_CALL main(void)
     alljoyn_routershutdown();
 #endif
     alljoyn_shutdown();
-    return 0;
+                     return 0;
 }

@@ -151,8 +151,8 @@ TEST(SRPTest, Basic_API) {
 
         vector<uint8_t, SecureAllocator<uint8_t> > seed;
         seed.reserve(clientRand.size() + serverRand.size());
-        AppendStringToVector(serverRand, seed);
-        AppendStringToVector(clientRand, seed);
+        AppendStringToSecureVector(serverRand, seed);
+        AppendStringToSecureVector(clientRand, seed);
         status = Crypto_PseudorandomFunction(serverPMS, "foobar", seed, masterSecret, sizeof(masterSecret));
         ASSERT_EQ(ER_OK, status)
             << " SRP ClientFinish failed\n"
@@ -203,8 +203,8 @@ TEST(SRPTest, Basic_API) {
 
         vector<uint8_t, SecureAllocator<uint8_t> > seed;
         seed.reserve(clientRand.size() + serverRand.size());
-        AppendStringToVector(serverRand, seed);
-        AppendStringToVector(clientRand, seed);
+        AppendStringToSecureVector(serverRand, seed);
+        AppendStringToSecureVector(clientRand, seed);
         status = Crypto_PseudorandomFunction(serverPMS, "foobar", seed, masterSecret, sizeof(masterSecret));
         ASSERT_EQ(ER_OK, status)
             << " SRP ClientFinish failed\n"

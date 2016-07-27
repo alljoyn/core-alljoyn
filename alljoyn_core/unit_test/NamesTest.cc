@@ -29,6 +29,8 @@
 #include <gtest/gtest.h>
 #include "ajTestCommon.h"
 
+#include "qcc/Util.h"
+
 using namespace ajn;
 
 TEST(NamesTest, Basic) {

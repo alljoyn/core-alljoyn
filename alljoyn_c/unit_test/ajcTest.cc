@@ -21,9 +21,32 @@
 #include <alljoyn_c/Init.h>
 #include <alljoyn/Status.h>
 
+/**
+ * Needed to allow automatic memory dumps for Windows Jenkins builds.
+ * For C++ exception the default exception filter will cause a UI
+ * prompt to appear instead of running the default debugger.
+ */
+#if defined(QCC_OS_GROUP_WINDOWS) && defined(ALLJOYN_CRASH_DUMP_SUPPORT)
+static LONG DummyExceptionFilter(LPEXCEPTION_POINTERS pointers) {
+    QCC_UNUSED(pointers);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+
+static void SetExceptionHandling() {
+    SetUnhandledExceptionFilter(DummyExceptionFilter);
+}
+#else
+static void SetExceptionHandling() {
+    return;
+}
+#endif
+
+
 /** Main entry point */
 int CDECL_CALL main(int argc, char**argv, char**)
 {
+    SetExceptionHandling();
+
     int status = 0;
 
     if (alljoyn_init() != ER_OK) {

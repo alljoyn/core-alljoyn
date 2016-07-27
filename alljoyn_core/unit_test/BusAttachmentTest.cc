@@ -249,9 +249,9 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    // Wait upto 8 seconds for the both found name signals to complete.
+    // Wait for the both found name signals to complete.
     for (int i = 0; i < 800; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (foundNameA && foundNameB) {
             break;
         }
@@ -277,9 +277,9 @@ TEST_F(BusAttachmentTest, find_multiple_names)
     status = otherBus.AdvertiseName(nameB.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    // Wait upto 2 seconds for the found name signal to complete.
+    // Wait for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (foundNameA) {
             break;
         }
@@ -363,9 +363,9 @@ TEST_F(BusAttachmentTest, find_names_by_transport)
     status = otherBus.AdvertiseName("name.z", TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    // Wait upto 2 seconds for the found name signal to complete.
+    // Wait for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (foundName2) {
             break;
         }
@@ -419,12 +419,12 @@ TEST_F(BusAttachmentTest, quiet_advertise_name)
     status = otherBus.FindAdvertisedName("org.alljoyn.BusNode.test");
     EXPECT_EQ(ER_OK, status);
 
-    // Wait upto 2 seconds for the found name signal to complete.
+    // Wait for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
         if (foundQuietAdvertisedName) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(foundQuietAdvertisedName);
 
@@ -434,12 +434,12 @@ TEST_F(BusAttachmentTest, quiet_advertise_name)
      * called.  The LostAdvertisedName sets the FountQuietAdvertisedName flag
      * to false.
      */
-    // Wait upto 2 seconds for the found name signal to complete.
+    // Wait for the found name signal to complete.
     for (int i = 0; i < 200; ++i) {
         if (!foundQuietAdvertisedName) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_FALSE(foundQuietAdvertisedName);
     otherBus.UnregisterBusListener(testBusListener);
@@ -587,7 +587,7 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
         if (found) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_TRUE(found);
@@ -596,7 +596,7 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
         if (sessionAccepted && sessionJoined && otherBusSessionId) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_EQ(ER_OK, joinSessionStatus);
@@ -611,7 +611,7 @@ TEST_F(BusAttachmentTest, JoinLeaveSession) {
         if (sessionLost) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
     EXPECT_TRUE(sessionLost);
     EXPECT_EQ(SessionListener::ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, sessionLostReason);
@@ -689,12 +689,11 @@ TEST_F(BusAttachmentTest, Ping_self_async) {
     const char* contextStr = "PingContextTestString";
     ASSERT_EQ(ER_OK, bus.PingAsync(bus.GetUniqueName().c_str(), 1000, &pingCB, (void*)contextStr));
 
-    // wait just over 1 seconds
-    for (size_t msecs = 0; msecs < 1100; msecs += 5) {
+    for (uint32_t msecs = 0; msecs < LOOP_END_1100; msecs += WAIT_TIME_5) {
         if (pingAsyncFlag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_EQ(ER_OK, pingCB.m_status);
@@ -715,12 +714,11 @@ TEST_F(BusAttachmentTest, PingAsync_other_on_same_bus) {
     const char* contextStr = "PingOtherContextTestString";
     ASSERT_EQ(ER_OK, bus.PingAsync(otherBus.GetUniqueName().c_str(), 1000,  &pingCB, (void*)contextStr));
 
-    // wait just over 1 seconds
-    for (size_t msecs = 0; msecs < 1100; msecs += 5) {
+    for (uint32_t msecs = 0; msecs < LOOP_END_1100; msecs += WAIT_TIME_5) {
         if (pingAsyncFlag) {
             break;
         }
-        qcc::Sleep(5);
+        qcc::Sleep(WAIT_TIME_5);
     }
 
     EXPECT_EQ(ER_OK, pingCB.m_status);
@@ -777,12 +775,12 @@ TEST_F(BusAttachmentTest, BasicSecureConnectionAsync)
 
     EXPECT_EQ(ER_OK, otherBus.SecureConnectionAsync(bus.GetUniqueName().c_str()));
 
-    // Wait upto 2 seconds for the authentication to complete.
+    // Wait for the authentication to complete.
     for (int i = 0; i < 200; ++i) {
         if (otherBusAuthListener.isComplete && busAuthListener.isComplete) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(otherBusAuthListener.isComplete);
     EXPECT_TRUE(busAuthListener.isComplete);

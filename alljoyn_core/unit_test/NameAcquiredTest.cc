@@ -68,12 +68,12 @@ TEST_F(NameAcquiredTest, NameAcquiredSignal_UniqueName) {
     testObj->RegisterForNameAcquiredSignals();
     status = g_msgBus->Connect(getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status);
-    // wait for signal upto 2 sec (10 * 200 ms)
+    // wait for signal
     for (int i = 0; i < 200; ++i) {
         if (testObj->getOutput() == SUCCESS) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     ASSERT_EQ(SUCCESS, testObj->getOutput());
 }
@@ -86,24 +86,24 @@ TEST_F(NameAcquiredTest, NameAcquiredSignal_WellKnownName) {
     ASSERT_EQ(ER_OK, status);
     status = g_msgBus->Connect(getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status);
-    // wait for unique name signal upto 1 sec (10 * 100 ms)
+    // wait for unique name signal
     for (int i = 0; i < 100; ++i) {
         if (testObj->getOutput() == SUCCESS) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     ASSERT_EQ(SUCCESS, testObj->getOutput());
     testObj->setOutput(0);
     ASSERT_EQ(ER_OK, status);
     status = g_msgBus->RequestName("com.cool", DBUS_NAME_FLAG_REPLACE_EXISTING | DBUS_NAME_FLAG_DO_NOT_QUEUE);
     ASSERT_EQ(ER_OK, status);
-    // wait for signal upto 1 sec (10 * 100 ms)
+    // wait for signal
     for (int i = 0; i < 100; ++i) {
         if (testObj->getOutput() == SUCCESS) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
 
     ASSERT_EQ(SUCCESS, testObj->getOutput());

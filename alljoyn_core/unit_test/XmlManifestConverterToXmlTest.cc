@@ -16,6 +16,8 @@
 #include <alljoyn/Status.h>
 #include <gtest/gtest.h>
 #include <qcc/platform.h>
+#include <qcc/Util.h>
+#include <string>
 
 #include "XmlManifestConverter.h"
 #include "XmlManifestConverterTest.h"
@@ -29,65 +31,79 @@ class XmlManifestConverterToXmlDetailedTest : public testing::Test {
 
     virtual void SetUp()
     {
-        ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(VALID_MANIFEST, validManifest));
+        ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(s_validManifest, m_validManifest));
     }
 
   protected:
-    AJ_PSTR retrievedManifestXml;
-    Manifest validManifest;
-    Manifest retrievedManifest;
+    string m_retrievedManifestXml;
+    Manifest m_validManifest;
+    Manifest m_retrievedManifest;
 };
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldFailForManifestWithNoRules)
 {
-    validManifest->SetRules(nullptr, 0);
-    EXPECT_EQ(ER_FAIL, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
+    m_validManifest->SetRules(nullptr, 0);
+    EXPECT_EQ(ER_FAIL, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldPassForValidManifest)
 {
-    EXPECT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
+    EXPECT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameRulesSizeAfterTwoConversions)
 {
-    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
-    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(m_retrievedManifestXml.c_str(), m_retrievedManifest));
 
-    EXPECT_EQ(1U, retrievedManifest->GetRules().size());
+    EXPECT_EQ(1U, m_retrievedManifest->GetRules().size());
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameRulesAfterTwoConversions)
 {
-    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
-    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
-    ASSERT_EQ(1U, retrievedManifest->GetRules().size());
+    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(m_retrievedManifestXml.c_str(), m_retrievedManifest));
+    ASSERT_EQ(1U, m_retrievedManifest->GetRules().size());
 
-    EXPECT_EQ(validManifest->GetRules()[0], retrievedManifest->GetRules()[0]);
+    EXPECT_EQ(m_validManifest->GetRules()[0], m_retrievedManifest->GetRules()[0]);
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameThumbprintAfterTwoConversions)
 {
-    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
-    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(m_retrievedManifestXml.c_str(), m_retrievedManifest));
 
-    EXPECT_EQ(validManifest->GetThumbprint(), retrievedManifest->GetThumbprint());
+    EXPECT_EQ(m_validManifest->GetThumbprint(), m_retrievedManifest->GetThumbprint());
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameSignatureAfterTwoConversions)
 {
-    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
-    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(m_retrievedManifestXml.c_str(), m_retrievedManifest));
 
-    EXPECT_EQ(validManifest->GetSignature(), retrievedManifest->GetSignature());
+    EXPECT_EQ(m_validManifest->GetSignature(), m_retrievedManifest->GetSignature());
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldGetSameXmlAfterTwoConversions)
 {
-    AJ_PSTR secondRetrievedManifestXml = nullptr;
-    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(validManifest, &retrievedManifestXml));
-    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(retrievedManifestXml, retrievedManifest));
-    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(retrievedManifest, &secondRetrievedManifestXml));
+    string secondRetrievedManifestXml;
+    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::XmlToManifest(m_retrievedManifestXml.c_str(), m_retrievedManifest));
+    ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestToXml(m_retrievedManifest, secondRetrievedManifestXml));
 
-    EXPECT_STREQ(retrievedManifestXml, secondRetrievedManifestXml);
+    EXPECT_EQ(m_retrievedManifestXml, secondRetrievedManifestXml);
+}
+
+TEST_F(XmlManifestConverterToXmlDetailedTest, shouldPassForValidManifestArray)
+{
+    Manifest manifests[10];
+
+    for (size_t i = 0; i < ArraySize(manifests); i++) {
+        manifests[i] = m_validManifest;
+    }
+
+    std::vector<std::string> xmls;
+
+    EXPECT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), xmls));
+    EXPECT_EQ(ArraySize(manifests), xmls.size());
 }

@@ -22,6 +22,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <stdlib.h>
 
 #if defined(QCC_OS_DARWIN)
 #include <machine/endian.h>

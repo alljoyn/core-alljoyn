@@ -141,7 +141,7 @@ QStatus AJ_CALL CertificateX509::EncodePrivateKeyPEM(const ECCPrivateKey* privat
         goto Exit;
     }
 
-    prv.assign((const char*)privateKeyBytes, privateKeyLength);
+    prv.assign_std((const char*)privateKeyBytes, privateKeyLength);
     status = Crypto_ASN1::Encode(der, "(ixc(o))", 1, &prv, 0, &oid);
     if (ER_OK != status) {
         QCC_LogError(status, ("Error encoding private key in PEM format"));
@@ -178,7 +178,7 @@ QStatus AJ_CALL CertificateX509::DecodePrivateKeyPEM(const String& encoded, ECCP
     if (ER_OK != status) {
         return status;
     }
-    uint32_t ver;
+    uint32_t ver = 0;
     qcc::String prv;
     qcc::String oid;
     qcc::String rem;
@@ -264,7 +264,7 @@ QStatus AJ_CALL CertificateX509::DecodePublicKeyPEM(const String& encoded, ECCPu
     qcc::String oid1;
     qcc::String oid2;
     qcc::String key;
-    size_t keylen;
+    size_t keylen = 0;
     status = Crypto_ASN1::Decode(der, "((oo)b)", &oid1, &oid2, &key, &keylen);
     if (ER_OK != status) {
         return status;
@@ -383,11 +383,11 @@ QStatus CertificateX509::EncodeCertificateName(qcc::String& dn, const Certificat
     qcc::String cn;
     if (name.ouLen > 0) {
         ouOID = OID_DN_OU;
-        ou.assign((const char*) name.ou, name.ouLen);
+        ou.assign_std((const char*) name.ou, name.ouLen);
     }
     if (name.cnLen > 0) {
         cnOID = OID_DN_CN;
-        cn.assign((const char*) name.cn, name.cnLen);
+        cn.assign_std((const char*) name.cn, name.cnLen);
     }
     if ((name.ouLen > 0) && (name.cnLen > 0)) {
         return Crypto_ASN1::Encode(dn, "{(ou)}{(ou)}", &ouOID, &ou, &cnOID, &cn);
@@ -558,7 +558,7 @@ QStatus CertificateX509::DecodeCertificatePub(const qcc::String& pub)
     qcc::String oid1;
     qcc::String oid2;
     qcc::String key;
-    size_t keylen;
+    size_t keylen = 0;
 
     status = Crypto_ASN1::Decode(pub, "(oo)b", &oid1, &oid2, &key, &keylen);
     if (ER_OK != status) {
@@ -847,7 +847,7 @@ QStatus CertificateX509::EncodeCertificateExt(qcc::String& ext) const
 QStatus CertificateX509::DecodeCertificateTBS()
 {
     QStatus status = ER_OK;
-    uint32_t x509Version;
+    uint32_t x509Version = 0;
     qcc::String oid;
     qcc::String iss;
     qcc::String sub;
@@ -931,7 +931,7 @@ QStatus CertificateX509::EncodeCertificateTBS()
     if (ER_OK != status) {
         return status;
     }
-    serialStr.assign((const char*)serial, serialLen);
+    serialStr.assign_std((const char*)serial, serialLen);
     tbs.clear(); //empty the tbs string.
     status = Crypto_ASN1::Encode(tbs, "(c(i)l(o)(R)(R)(R)(R)R)",
                                  0, x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext);
@@ -989,7 +989,7 @@ QStatus CertificateX509::DecodeCertificateDER(const qcc::String& der)
     qcc::String oid;
     qcc::String sig;
     qcc::String tmp;
-    size_t siglen;
+    size_t siglen = 0;
 
     status = Crypto_ASN1::Decode(der, "((.)(o)b)", &tmp, &oid, &sig, &siglen);
     if (ER_OK != status) {
@@ -1209,7 +1209,7 @@ QStatus AJ_CALL CertificateX509::GenerateAuthorityKeyId(const ECCPublicKey* issu
      */
     memcpy(keyId, &digest[Crypto_SHA256::DIGEST_SIZE - AUTHORITY_KEY_ID_SZ], AUTHORITY_KEY_ID_SZ);
     keyId[0] = 0x40 | (keyId[0] & 0xF);
-    authorityKeyId.assign((const char*) keyId, sizeof(keyId));
+    authorityKeyId.assign_std((const char*) keyId, sizeof(keyId));
     return ER_OK;
 }
 
@@ -1434,6 +1434,40 @@ QStatus CertificateX509::GetSHA256Thumbprint(uint8_t* thumbprint) const
     }
 
     return hash.GetDigest(thumbprint, false);
+}
+
+static const size_t SERIAL_NUMBER_LENGTH = 20; /* RFC 5280 4.1.2.2 */
+
+QStatus CertificateX509::GenerateRandomSerial()
+{
+    uint8_t serialNumber[SERIAL_NUMBER_LENGTH];
+
+    QStatus status = Crypto_GetRandomBytes(serialNumber, sizeof(serialNumber));
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not generate random serial number"));
+        return status;
+    }
+
+    /* Clear the high order bit to avoid that leading zero when ASN.1-encoded. */
+    serialNumber[0] &= 0x7F;
+
+    SetSerial(serialNumber, sizeof(serialNumber));
+
+    return ER_OK;
+}
+
+QStatus CertificateX509::EncodeCertificateTBS(String& tbsder)
+{
+    QStatus status = EncodeCertificateTBS();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not generate certificate's TBS"));
+        return status;
+    }
+
+    /* This does a deep copy of the contents. */
+    tbsder = tbs;
+
+    return ER_OK;
 }
 
 }

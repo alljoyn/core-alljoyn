@@ -29,6 +29,9 @@
 #include <qcc/Thread.h>
 #include "KeyStore.h"
 
+#define PBO_TEST_TIMEOUT_100 (100 * s_globalTimerMultiplier)
+#define PBO_TEST_TIMEOUT_1000 (1000 * s_globalTimerMultiplier)
+
 using namespace ajn;
 using namespace qcc;
 
@@ -175,7 +178,7 @@ class ProxyBusObjectTest : public testing::Test {
             if (buslistener.name_owner_changed_flag) {
                 break;
             }
-            qcc::Sleep(5);
+            qcc::Sleep(WAIT_TIME_5);
         }
         EXPECT_TRUE(buslistener.name_owner_changed_flag);
     }
@@ -382,7 +385,7 @@ TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
         if (auth_complete_listener1_flag && auth_complete_listener2_flag) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     EXPECT_TRUE(auth_complete_listener1_flag);
     EXPECT_TRUE(auth_complete_listener2_flag);
@@ -635,7 +638,7 @@ class UnregisterThread : public Thread {
                 }
             }
             if (wait) {
-                status = testCond.TimedWait(testLock, 1000);
+                status = testCond.TimedWait(testLock, PBO_TEST_TIMEOUT_1000);
             }
         }
         testLock.Unlock();
@@ -697,7 +700,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest1) {
     status = ER_OK;
     /* First wait for at least one listener to run. */
     while (!removeListener1.didRun && !removeListener2.didRun) {
-        status = cond.TimedWait(lock, 1000);  // Should not timeout
+        status = cond.TimedWait(lock, PBO_TEST_TIMEOUT_1000);  // Should not timeout
         if (status != ER_OK) {
             break;
         }
@@ -709,7 +712,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest1) {
      * that it did not.
      */
     if (!(removeListener1.didRun && removeListener2.didRun)) {
-        status = cond.TimedWait(lock, 100);  // Should timeout
+        status = cond.TimedWait(lock, PBO_TEST_TIMEOUT_100);  // Should timeout
         EXPECT_EQ(ER_TIMEOUT, status) << "Second listener still called.";
     }
     lock.Unlock();
@@ -800,7 +803,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest2) {
     status = ER_OK;
     /* Wait for at least one listener to complete. */
     while (!waitListener1.didRun && !waitListener2.didRun) {
-        status = cond.TimedWait(lock, 1000);  // Should not timeout
+        status = cond.TimedWait(lock, PBO_TEST_TIMEOUT_1000);  // Should not timeout
         if (status != ER_OK) {
             break;
         }
@@ -809,7 +812,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest2) {
 
     /* Make sure the second listener did not run. */
     if (!(waitListener1.didRun && waitListener2.didRun)) {
-        status = cond.TimedWait(lock, 100);  // Should timeout
+        status = cond.TimedWait(lock, PBO_TEST_TIMEOUT_100);  // Should timeout
         EXPECT_EQ(ER_TIMEOUT, status) << "Second listener still called.";
     }
     lock.Unlock();
@@ -865,7 +868,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest3) {
     lock.Lock();
     /* Wait for the listener to run. */
     while (!failListener.didRun) {
-        status = cond.TimedWait(lock, 1000);  // Should not timeout
+        status = cond.TimedWait(lock, PBO_TEST_TIMEOUT_1000);  // Should not timeout
         if (status != ER_OK) {
             break;
         }
@@ -923,7 +926,7 @@ TEST_F(ProxyBusObjectTest, UnregisterPropertiesChangedListenerRaceTest4) {
     lock.Lock();
     /* Wait for the listener to be called (which should not happen). */
     while (!neverCalledListener.didRun) {
-        status = cond.TimedWait(lock, 100);  // Should timeout
+        status = cond.TimedWait(lock, PBO_TEST_TIMEOUT_100);  // Should timeout
         if (status != ER_OK) {
             break;
         }

@@ -28,6 +28,9 @@
 /* Header files included for Google Test Framework */
 #include <gtest/gtest.h>
 
+#define DISCOVERY_WAIT_TIME_3000 (3000 * s_globalTimerMultiplier)
+#define DISCOVERY_WAIT_TIME_5000 (5000 * s_globalTimerMultiplier)
+
 /** Client Listener to receive advertisements  */
 class ClientBusListener : public BusListener {
   public:
@@ -275,7 +278,7 @@ TEST_F(PerfTest, ErrorMsg_Error_no_such_object) {
     Message reply(*test_msgBus);
     const InterfaceDescription::Member* introMember = introIntf->GetMember("Introspect");
     ASSERT_TRUE(introMember);
-    status = remoteObj.MethodCall(*introMember, NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(*introMember, NULL, 0, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
 
     String errMsg;
@@ -306,7 +309,7 @@ TEST_F(PerfTest, ErrorMsg_does_not_exist_interface) {
     Message reply(*test_msgBus);
     const InterfaceDescription::Member* introMember = introIntf->GetMember("Introspect");
     ASSERT_TRUE(introMember);
-    status = remoteObj.MethodCall(*introMember, NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(*introMember, NULL, 0, reply, METHOD_CALL_TIMEOUT);
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
 
     if (status == ER_BUS_REPLY_IS_ERROR_MESSAGE) {
@@ -328,7 +331,7 @@ TEST_F(PerfTest, ErrorMsg_MethodCallOnNonExistantMethod) {
 
     Message reply(*test_msgBus);
     MsgArg pingStr("s", "Test Ping");
-    status = remoteObj.MethodCall(testclient.getClientInterfaceName(), "my_unknown", &pingStr, 1, reply, 5000);
+    status = remoteObj.MethodCall(testclient.getClientInterfaceName(), "my_unknown", &pingStr, 1, reply, METHOD_CALL_TIMEOUT);
     EXPECT_EQ(ER_BUS_INTERFACE_NO_SUCH_MEMBER, status);
 }
 
@@ -399,7 +402,7 @@ TEST_F(PerfTest, Properties_SettingNoSuchProperty) {
     const InterfaceDescription* propIface = test_msgBus->GetInterface(ajn::org::freedesktop::DBus::Properties::InterfaceName);
     ASSERT_TRUE(propIface != NULL);
 
-    status = remoteObj.MethodCall(*(propIface->GetMember("Set")), inArgs, numArgs, reply, 5000, 0);
+    status = remoteObj.MethodCall(*(propIface->GetMember("Set")), inArgs, numArgs, reply, METHOD_CALL_TIMEOUT, 0);
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     String errMsg;
     reply->GetErrorName(&errMsg);
@@ -424,7 +427,7 @@ TEST_F(PerfTest, Properties_SettingReadOnlyProperty) {
     const InterfaceDescription* propIface = test_msgBus->GetInterface(ajn::org::freedesktop::DBus::Properties::InterfaceName);
     ASSERT_TRUE(propIface != NULL);
 
-    status = remoteObj.MethodCall(*(propIface->GetMember("Set")), inArgs, numArgs, reply, 5000, 0);
+    status = remoteObj.MethodCall(*(propIface->GetMember("Set")), inArgs, numArgs, reply, METHOD_CALL_TIMEOUT, 0);
     EXPECT_EQ(ER_BUS_REPLY_IS_ERROR_MESSAGE, status);
     String errMsg;
     reply->GetErrorName(&errMsg);
@@ -437,9 +440,9 @@ TEST_F(PerfTest, Signals_With_Two_Parameters) {
     testclient.setSignalFlag(0);
     QStatus status = testclient.SignalHandler(0, 1);
     ASSERT_EQ(ER_OK, status);
-    //Wait upto 2 seconds for the signal to complete.
+    //Wait for the signal to complete.
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (testclient.getSignalFlag() != 0) {
             break;
         }
@@ -454,9 +457,9 @@ TEST_F(PerfTest, Signals_With_Huge_String_Param) {
 
     testclient.setSignalFlag(0);
     QCC_StatusText(testclient.SignalHandler(0, 2));
-    //Wait upto 2 seconds for the signal to complete.
+    //Wait for the signal to complete.
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
         if (testclient.getSignalFlag() != 0) {
             break;
         }
@@ -474,9 +477,9 @@ TEST_F(PerfTest, AsyncMethodCallTest_SimpleCall) {
     testclient.setSignalFlag(0);
     QStatus status = testclient.AsyncMethodCall(1000, 1);
     ASSERT_EQ(ER_OK, status);
-    //Wait upto 2 seconds for the AsyncMethodCalls to complete;
+    //Wait for the AsyncMethodCalls to complete;
     for (int i = 0; i < 200; ++i) {
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_100);
         if (testclient.getSignalFlag() == 1000) {
             break;
         }
@@ -588,7 +591,7 @@ TEST_F(PerfTest, Marshal_ByteArrayTest) {
     MsgArg arg;
     status = arg.Set("ay", max_array_size, big);
     ASSERT_EQ(ER_OK, status);
-    status = remoteObj.MethodCall("org.alljoyn.service_test.Interface", "ByteArrayTest", &arg, 1, reply, 500000);
+    status = remoteObj.MethodCall("org.alljoyn.service_test.Interface", "ByteArrayTest", &arg, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     int res = memcmp(big, (uint8_t*)reply->GetArg(0)->v_string.str, max_array_size);
 
@@ -602,7 +605,7 @@ TEST_F(PerfTest, Marshal_ByteArrayTest) {
     EXPECT_EQ(ER_OK, status);
     status = remoteObj.IntrospectRemoteObject();
     EXPECT_EQ(ER_OK, status);
-    status = remoteObj.MethodCall("org.alljoyn.service_test.Interface", "DoubleArrayTest", &arg1, 1, reply, 500000);
+    status = remoteObj.MethodCall("org.alljoyn.service_test.Interface", "DoubleArrayTest", &arg1, 1, reply, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_BUS_BAD_BODY_LEN, status);
 
     delete [] bigd;
@@ -626,7 +629,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchAll_Success)
     status = client_msgBus->FindAdvertisedName("");
     ASSERT_EQ(ER_OK, status);
 
-    status = Event::Wait(discoverEvent, 5000);
+    status = Event::Wait(discoverEvent, DISCOVERY_WAIT_TIME_5000);
     ASSERT_EQ(ER_OK, status);
 }
 
@@ -652,7 +655,7 @@ TEST_F(PerfTest, FindAdvertisedName_MatchExactName_Success)
     status = client_msgBus->FindAdvertisedName(myService->getAlljoynWellKnownName());
     ASSERT_EQ(ER_OK, status);
 
-    status = Event::Wait(discoverEvent, 5000);
+    status = Event::Wait(discoverEvent, DISCOVERY_WAIT_TIME_5000);
     ASSERT_EQ(ER_OK, status);
 
     //GetTimeNow(&endTime);
@@ -677,8 +680,8 @@ TEST_F(PerfTest, FindAdvertisedName_InvalidName_Fail)
     status = client_msgBus->FindAdvertisedName("org.alljoyn.test_invalid");
     ASSERT_EQ(ER_OK, status);
 
-    QCC_SyncPrintf("Waiting FoundAdvertisedName 3 seconds...\n");
-    status = Event::Wait(discoverEvent, 3000);
+    QCC_SyncPrintf("Waiting for FoundAdvertisedName...\n");
+    status = Event::Wait(discoverEvent, DISCOVERY_WAIT_TIME_3000);
     ASSERT_EQ(ER_TIMEOUT, status);
 }
 
@@ -768,7 +771,7 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
     status = client_msgBus->FindAdvertisedName(myService->getAlljoynWellKnownName());
     ASSERT_EQ(ER_OK, status);
 
-    status = Event::Wait(discoverEvent, 5000);
+    status = Event::Wait(discoverEvent, DISCOVERY_WAIT_TIME_5000);
     ASSERT_EQ(ER_OK, status);
 
     /* Join the session */
@@ -789,11 +792,11 @@ TEST_F(PerfTest, ClientTest_BasicDiscovery) {
 
     Message replyc(*client_msgBus);
     MsgArg pingStr("s", "Hello World");
-    status = remoteObj.MethodCall("org.alljoyn.test_services.Interface", "my_ping", &pingStr, 1, replyc, 5000);
+    status = remoteObj.MethodCall("org.alljoyn.test_services.Interface", "my_ping", &pingStr, 1, replyc, METHOD_CALL_TIMEOUT);
     ASSERT_EQ(ER_OK, status);
     ASSERT_STREQ("Hello World", replyc->GetArg(0)->v_string.str);
 
     Message replyd(*client_msgBus);
-    status = remoteObj.MethodCall("org.alljoyn.test_services.Interface", "my_ping", &pingStr, 1, replyd, 5000, ALLJOYN_FLAG_NO_REPLY_EXPECTED);
+    status = remoteObj.MethodCall("org.alljoyn.test_services.Interface", "my_ping", &pingStr, 1, replyd, METHOD_CALL_TIMEOUT, ALLJOYN_FLAG_NO_REPLY_EXPECTED);
     ASSERT_EQ(ER_OK, status);
 }

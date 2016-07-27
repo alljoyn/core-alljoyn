@@ -109,21 +109,30 @@ class PermissionConfigurator {
     virtual ~PermissionConfigurator();
 
     /**
-     * Set the permission manifest for the application.
+     * Set the permission manifest template for the application.
      * @param rules the permission rules.
      * @param count the number of permission rules
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count);
+    QStatus SetPermissionManifestTemplate(PermissionPolicy::Rule* rules, size_t count);
+
+    /**
+     * Get the manifest template for the application as XML.
+     *
+     * @param[out] manifestTemplateXml std::string to receive the manifest template as XML.
+     *
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus GetManifestTemplateAsXml(std::string& manifestTemplateXml);
 
     /**
      * Set the manifest template for the application from an XML.
      *
-     * @params manifestXml XML containing the manifest template.
+     * @param[in] manifestTemplateXml XML containing the manifest template.
      *
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus SetManifestTemplateFromXml(AJ_PCSTR manifestXml);
+    QStatus SetManifestTemplateFromXml(AJ_PCSTR manifestTemplateXml);
 
     /**
      * Retrieve the state of the application.
@@ -159,6 +168,32 @@ class PermissionConfigurator {
      * @return ER_OK if successful; otherwise, an error code.
      */
     QStatus SignCertificate(qcc::CertificateX509& cert);
+
+    /**
+     * Sign a manifest using the signing key, and bind the manifest to a particular identity
+     * certificate by providing its thumbprint. For this manifest to be valid when later used,
+     * the signing key of this PermissionConfigurator must be the signing key that issued the
+     * certificate. Callers must ensure the correct key is used.
+     *
+     * @param[in] subjectThumbprint Identity certificate thumbprint to use the manifest
+     * @param[in,out] manifest Manifest to sign
+     * @return ER_OK of successful; otherwise, an error code.
+     */
+    QStatus SignManifest(const std::vector<uint8_t>& subjectThumbprint, Manifest& manifest);
+
+    /**
+     * Sign a manifest using the signing key, and bind the manifest to a particular identity
+     * certificate by providing the certificate. For this manifest to be valid when later used,
+     * the signing key of this PermissionConfigurator must be the signing key that issued the
+     * certificate. Callers must ensure the correct key is used; this method does not verify
+     * the signing key was used to issue the provided certificate.
+     *
+     * @param[in] subjectCertificate Certificate to use the manifest. Certificate must already be
+     *                               signed in order to encode its identity correctly in the manifest.
+     * @param[in,out] manifest       Manifest to sign
+     * @return ER_OK if successful; otherwise, an error code.
+     */
+    QStatus ComputeThumbprintAndSignManifest(const qcc::CertificateX509& subjectCertificate, Manifest& manifest);
 
     /**
      * Reset the permission settings by removing the manifest all the
@@ -234,6 +269,223 @@ class PermissionConfigurator {
      *  - an error status indicating failure
      */
     QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const;
+
+    /**
+     * Perform claiming of this app locally/offline.
+     *
+     * @param[in] certificateAuthority Certificate authority public key
+     * @param[in] adminGroupGuid Admin group GUID
+     * @param[in] adminGroupAuthority Admin group authority public key
+     * @param[in] identityCertChain Identity cert chain
+     * @param[in] identityCertChainCount Count of certs array
+     * @param[in] manifestsXmls Signed manifests in XML format
+     * @param[in] manifestsCount Number of manifests in the manifestsXmls array
+     *
+     * @return
+     *    - #ER_OK if the app was successfully claimed
+     *    - #ER_FAIL if the app could not be claimed, but could not then be reset back to original state.
+     *               App will be in unknown state in this case.
+     *    - other error code indicating failure, but app is returned to reset state
+     */
+    QStatus Claim(
+        const qcc::KeyInfoNISTP256& certificateAuthority,
+        const qcc::GUID128& adminGroupGuid,
+        const qcc::KeyInfoNISTP256& adminGroupAuthority,
+        const qcc::CertificateX509* identityCertChain,
+        size_t identityCertChainCount,
+        AJ_PCSTR* manifestsXmls,
+        size_t manifestsCount);
+
+    /**
+     * Perform a local UpdateIdentity to replace the identity certificate chain and
+     * the signed manifests. If successful, already-installed certificates and signed
+     * manifests are cleared; on failure, the state of both are unchanged.
+     *
+     * @param[in] certs Identity cert chain to be installed
+     * @param[in] certCount Number of certificates in certs array
+     * @param[in] manifestsXmls Signed manifests to be installed
+     * @param[in] manifestsCount Number of signed manifests in manifestsXmls array
+     *
+     * @return
+     *    - #ER_OK if the identity was successfully updated
+     *    - other error code indicating failure
+     */
+    QStatus UpdateIdentity(
+        const qcc::CertificateX509* certs,
+        size_t certCount,
+        AJ_PCSTR* manifestsXmls,
+        size_t manifestsCount);
+
+    /**
+     * Retrieve the local app's identity certificate chain.
+     *
+     * @param[out] certChain A vector containing the identity certificate chain
+     *
+     * @return
+     *    - #ER_OK if the chain is successfully stored in certChain
+     *    - other error indicating failure
+     */
+    QStatus GetIdentity(std::vector<qcc::CertificateX509>& certChain);
+
+    /**
+     * Retrieve the local app's signed manifests.
+     *
+     * @param[out] manifests A vector containing the signed manifests
+     *
+     * @return
+     *    - #ER_OK if the signed manifests are successfully retrieved
+     *    - #ER_MANIFEST_NOT_FOUND if no manifests have been installed into the keystore
+     *    - other error indicating failure
+     */
+    QStatus GetManifests(std::vector<Manifest>& manifests);
+
+    /**
+     * Retrieve the local app's identity certificate information.
+     *
+     * @param[out] serial Identity certificate's serial
+     * @param[out] keyInfo Identity certificate's KeyInfoNISTP256 structure
+     *
+     * @return
+     *    - #ER_OK if the identity certificate information is placed in the parameters
+     *    - #ER_CERTIFICATE_NOT_FOUND if no identity certificate is installed
+     *    - other error code indicating failure
+     */
+    QStatus GetIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
+
+    /**
+     * Update the local app's active policy. Unlike the UpdatePolicy method of the Managed
+     * application interface, this method WILL allow you to install a policy with a lesser version
+     * number. Caller is responsible for getting the current policy and checking its version number
+     * first if only installing policy with a higher version number is desired.
+     *
+     * @see PermissionConfigurator::GetPolicy(PermissionPolicy&)
+     *
+     * @param[in] policy Policy to install
+     *
+     * @return
+     *    - #ER_OK if the policy is successfully updated
+     *    - other error code indicating failure. Policy is unchanged.
+     */
+    QStatus UpdatePolicy(const PermissionPolicy& policy);
+
+    /**
+     * Get the local app's active policy.
+     *
+     * @param[out] policy The active policy
+     *
+     * @return
+     *    - #ER_OK if the policy is successfully retrieved
+     *    - other error code indicating failure
+     */
+    QStatus GetPolicy(PermissionPolicy& policy);
+
+    /**
+     * Get the local app's default policy.
+     *
+     * @param[out] policy The default policy
+     *
+     * @return
+     *    - #ER_OK if the default policy is successfully retrieved
+     *    - other error code indicating failure
+     */
+    QStatus GetDefaultPolicy(PermissionPolicy& policy);
+
+    /**
+     * Reset the local app's policy to the default policy.
+     *
+     * @return
+     *    - #ER_OK if the policy was successfully reset
+     *    - other error code indicating failure
+     */
+    QStatus ResetPolicy();
+
+    /**
+     * Get the membership certificate summaries.
+     *
+     * @param[out] serials A vector of String to receive all the serial numbers
+     * @param[out] keyInfos A vector of KeyInfoNISTP256 to receive all the issuer key information structures
+     *
+     * @remarks Existing contents of serials and keyInfos will be overwritten. If this method fails, or
+     *          there are no membership certificates installed, both will be returned empty.
+     *
+     * @return
+     *    - #ER_OK if the membership summaries are successfully retrieved
+     *    - other error indicating failure
+     */
+    QStatus GetMembershipSummaries(std::vector<qcc::String>& serials, std::vector<qcc::KeyInfoNISTP256>& keyInfos);
+
+    /**
+     * Install a membership certificate chain.
+     *
+     * @param[in] certChain Certificate chain
+     * @param[in] certCount Number of certificates in certChain
+     *
+     * @return
+     *    - #ER_OK if the membership certificate chain is successfully installed
+     *    - other error code indicating failure
+     */
+    QStatus InstallMembership(const qcc::CertificateX509* certChain, size_t certCount);
+
+    /**
+     * Remove a membership certificate chain.
+     *
+     * @param[in] serial Serial number of the certificate
+     * @param[in] issuerPubKey Pointer to certificate issuer's public key
+     * @param[in] issuerAki Certificate issuer's AKI
+     *
+     * @return
+     *    - #ER_OK if the certificate was found and removed
+     *    - #ER_CERTIFICATE_NOT_FOUND if the certificate was not found
+     *    - other error code indicating failure
+     */
+    QStatus RemoveMembership(const qcc::String& serial, const qcc::ECCPublicKey* issuerPubKey, const qcc::String& issuerAki);
+
+    /**
+     * Remove a membership certificate chain.
+     *
+     * @param[in] serial Serial number of the certificate
+     * @param[in] issuerKeyInfo KeyInfoNISTP256 object containing the issuer info
+     *
+     * @return
+     *    - #ER_OK if the certificate was found and removed
+     *    - #ER_CERTIFICATE_NOT_FOUND if the certificate was not found
+     *    - other error code indicating failure
+     */
+    QStatus RemoveMembership(const qcc::String& serial, const qcc::KeyInfoNISTP256& issuerKeyInfo);
+
+    /**
+     * Signal the app locally that management is starting.
+     *
+     * @return
+     *    - #ER_OK if the start management signal was sent
+     *    - #ER_MANAGEMENT_ALREADY_STARTED if the app is already in this state
+     */
+    QStatus StartManagement();
+
+    /**
+     * Signal the app locally that management is ending.
+     *
+     * @return
+     *    - #ER_OK if the start management signal was sent
+     *    - #ER_MANAGEMENT_NOT_STARTED if the app was not in the management state
+     */
+    QStatus EndManagement();
+
+    /**
+     * Install signed manifests to the local app.
+     *
+     * @param[in] manifestsXmls An array of signed manifests to install in XML format
+     * @param[in] manifestsCount The number of manifests in the manifests array
+     * @param[in] append True to append the manifests to any already installed, or false to clear manifests out first
+     *
+     * On failure, the installed set of manifests is unchanged.
+     *
+     * @return
+     *    - #ER_OK if manifests are successfully installed
+     *    - #ER_DIGEST_MISMATCH if none of the manifests have been signed
+     *    - other error code indicating failure
+     */
+    QStatus InstallManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, bool append);
 
   private:
     /**

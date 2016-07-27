@@ -38,9 +38,12 @@
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
 #include "BusInternal.h"
+#include <vector>
+#include <string>
 
 using namespace ajn;
 using namespace qcc;
+using namespace std;
 
 const char* BasePermissionMgmtTest::INTERFACE_NAME = "org.allseen.Security.PermissionMgmt";
 const char* BasePermissionMgmtTest::ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
@@ -154,12 +157,19 @@ QStatus PermissionMgmtTestHelper::CreateAllInclusiveManifest(Manifest& manifest)
     manifestRules[0].SetObjPath("*");
     manifestRules[0].SetInterfaceName("*");
     {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+        PermissionPolicy::Rule::Member member[3];
+        member[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        member[1].Set("*", PermissionPolicy::Rule::Member::SIGNAL,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        member[2].Set("*", PermissionPolicy::Rule::Member::PROPERTY,
                       PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                       PermissionPolicy::Rule::Member::ACTION_MODIFY |
                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifestRules[0].SetMembers(1, member);
+
+        manifestRules[0].SetMembers(ArraySize(member), member);
     }
     return manifest->SetRules(manifestRules, manifestSize);
 }
@@ -178,26 +188,12 @@ QStatus PermissionMgmtTestHelper::SignManifests(BusAttachment& issuerBus, const 
 
 QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const qcc::CertificateX509& subjectCertificate, Manifest& manifest)
 {
-    CredentialAccessor ca(issuerBus);
-    ECCPrivateKey privateKey;
-    QStatus status = ca.GetDSAPrivateKey(privateKey);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    return manifest->ComputeThumbprintAndSign(subjectCertificate, &privateKey);
+    return issuerBus.GetPermissionConfigurator().ComputeThumbprintAndSignManifest(subjectCertificate, manifest);
 }
 
 QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const std::vector<uint8_t>& subjectThumbprint, Manifest& manifest)
 {
-    CredentialAccessor ca(issuerBus);
-    ECCPrivateKey privateKey;
-    QStatus status = ca.GetDSAPrivateKey(privateKey);
-    if (ER_OK != status) {
-        return status;
-    }
-
-    return manifest->Sign(subjectThumbprint, &privateKey);
+    return issuerBus.GetPermissionConfigurator().SignManifest(subjectThumbprint, manifest);
 }
 
 QStatus PermissionMgmtTestHelper::CreateIdentityCert(BusAttachment& issuerBus, const qcc::String& serial, const qcc::String& subject, const ECCPublicKey* subjectPubKey, const qcc::String& alias, uint32_t expiredInSecs, qcc::IdentityCertificate& cert, bool setEmptyAKI)
@@ -271,6 +267,12 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, Bus
 {
     qcc::GUID128 issuer(0);
     GetGUID(signingBus, issuer);
+
+    if (subject.empty()) {
+        /* Produce log output for the test run. */
+        EXPECT_TRUE(false) << "TEST BUG: Subject given to CreateMembershipCert cannot be empty";
+        return ER_BAD_ARG_3;
+    }
 
     cert.SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
     String issuerStr = issuer.ToString();
@@ -688,12 +690,12 @@ QStatus BasePermissionMgmtTest::TeardownBus(BusAttachment& bus)
 
 void BasePermissionMgmtTest::DetermineStateSignalReachable()
 {
-    /* sleep a max of 1 second to see whether the ApplicationState signal is received */
+    /* sleep to see whether the ApplicationState signal is received */
     for (int cnt = 0; cnt < 100; cnt++) {
         if (GetApplicationStateSignalReceived()) {
             break;
         }
-        qcc::Sleep(10);
+        qcc::Sleep(WAIT_TIME_10);
     }
     canTestStateSignalReception = GetApplicationStateSignalReceived();
     SetApplicationStateSignalReceived(false);
@@ -883,7 +885,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject&
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -899,7 +901,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOff(BusAttachment& bus, ProxyBusObject
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -915,7 +917,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVUp(BusAttachment& bus, ProxyBusObjec
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -972,7 +974,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVDown(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -988,7 +990,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVChannel(BusAttachment& bus, ProxyBus
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1004,7 +1006,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVMute(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1020,7 +1022,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVInputSource(BusAttachment& bus, Prox
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, 5000);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1040,7 +1042,7 @@ QStatus PermissionMgmtTestHelper::JoinPeerSession(BusAttachment& initiator, BusA
             return status;
         }
         /* sleep a few seconds since the responder may not yet setup the listener port */
-        qcc::Sleep(100);
+        qcc::Sleep(WAIT_TIME_100);
     }
     return status;
 }
@@ -1053,11 +1055,11 @@ QStatus BasePermissionMgmtTest::JoinSessionWithService(BusAttachment& initiator,
     if (ER_OK != status) {
         return status;
     }
-    for (int msecs = 0; msecs < 3000; msecs += 100) {
+    for (uint32_t msecs = 0; msecs < LOOP_END_3000; msecs += WAIT_TIME_100) {
         if (servicePortListener.lastJoiner == initiator.GetUniqueName()) {
             return ER_OK;
         }
-        qcc::Sleep(100);
+        qcc::Sleep(WAIT_TIME_100);
     }
     return ER_TIMEOUT;
 }
@@ -1132,4 +1134,12 @@ void PermissionMgmtTestHelper::CallDeprecatedSetPSK(DefaultECDHEAuthListener* au
 #pragma GCC diagnostic pop
 #endif
 
+}
+
+void PermissionMgmtTestHelper::UnwrapStrings(const vector<string>& strings, vector<AJ_PCSTR>& unwrapped)
+{
+    unwrapped.resize(strings.size());
+    for (vector<string>::size_type i = 0; i < strings.size(); i++) {
+        unwrapped[i] = strings[i].c_str();
+    }
 }

@@ -73,7 +73,7 @@ uint64_t qcc::Rand64()
     return r;
 }
 
-qcc::String qcc::RandHexString(size_t len, bool toLower)
+qcc::String AJ_CALL qcc::RandHexString(size_t len, bool toLower)
 {
     uint8_t* bytes = new uint8_t[len];
     qcc::Crypto_GetRandomBytes(bytes, len);

@@ -33,7 +33,7 @@ openssl req -new -key srveckey.pem -out srvcsr.pem -sha256 -batch \
 # Paste and format srvcert.pem into serviceecdsaCertChainX509PEM
 openssl x509 -req -in srvcsr.pem -out srvcert.pem -days 365 \
 -signkey srveckey.pem -set_serial 0x270F \
--extfile openssl-ajekus.cnf -extensions identity
+-extfile openssl-ajekus-service.cnf -extensions identity
 
 #### TEST11
 

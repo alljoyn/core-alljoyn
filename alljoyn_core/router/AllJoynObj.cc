@@ -279,6 +279,8 @@ QStatus AllJoynObj::Stop()
         ++it;
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
+
+    timer.Stop();
     return ER_OK;
 }
 
@@ -292,6 +294,8 @@ QStatus AllJoynObj::Join()
         joinSessionThreadsLock.Lock(MUTEX_CONTEXT);
     }
     joinSessionThreadsLock.Unlock(MUTEX_CONTEXT);
+
+    timer.Join();
     return ER_OK;
 }
 
@@ -953,11 +957,15 @@ ThreadReturn STDCALL AllJoynObj::JoinSessionThread::RunJoin()
                     }
                     /* Re-acquire locks */
                     ajObj.AcquireLocks();
-                    QCC_DbgPrintf(("JoinSessionThread::RunJoin(): FindEndpoint(\"%s\")", sessionHost));
-                    ajObj.FindEndpoint(sessionHost, vSessionEp);
-                    if (!vSessionEp->IsValid()) {
-                        replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
-                        QCC_LogError(ER_BUS_NO_ENDPOINT, ("SessionHost endpoint (%s) not found", sessionHost));
+                    if (replyCode == ALLJOYN_JOINSESSION_REPLY_REJECTED) {
+                        QCC_LogError(ER_ALLJOYN_JOINSESSION_REPLY_REJECTED, ("SessionHost (%s) rejected the session joiner", sessionHost));
+                    } else {
+                        QCC_DbgPrintf(("JoinSessionThread::RunJoin(): FindEndpoint(\"%s\")", sessionHost));
+                        ajObj.FindEndpoint(sessionHost, vSessionEp);
+                        if (!vSessionEp->IsValid()) {
+                            replyCode = ALLJOYN_JOINSESSION_REPLY_FAILED;
+                            QCC_LogError(ER_BUS_NO_ENDPOINT, ("SessionHost endpoint (%s) not found", sessionHost));
+                        }
                     }
                 }
 
@@ -2640,6 +2648,8 @@ void AllJoynObj::RemoveSessionRefs(const String& vepName, const String& b2bEpNam
                 SessionMapEntry tsme = it->second;
                 pair<String, SessionId> key = it->first;
                 if (!it->second.isInitializing) {
+                    BusEndpoint ep = router.FindEndpoint(it->first.first);
+                    ep->UnregisterSessionId(it->first.second);
                     sessionMap.erase(it++);
                     sessionsLost.push_back(tsme);
                 } else {
@@ -3648,7 +3658,7 @@ QStatus AllJoynObj::ProcCancelAdvertise(const qcc::String& sender, const qcc::St
     }
 
     /* Remove advertisement from local nameMap so local discoverers are notified of advertisement going away */
-    if ((status == ER_OK) && (transports & TRANSPORT_LOCAL)) {
+    if (status == ER_OK) {
         vector<String> names;
         names.push_back(advertiseName);
         FoundNames("local:", bus.GetGlobalGUIDString(), TRANSPORT_LOCAL, &names, 0);
@@ -5795,7 +5805,7 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
         return false;
     }
 
-    QCC_DbgPrintf(("Recieved a ping response for name %s", pingRData->GetWellKnownName().c_str()));
+    QCC_DbgPrintf(("Received a ping response for name %s", pingRData->GetWellKnownName().c_str()));
     const String& name = pingRData->GetWellKnownName();
     uint32_t replyCode;
     if (pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS") {

@@ -21,6 +21,36 @@
 #include <qcc/String.h>
 #include <alljoyn/BusAttachment.h>
 #include "BusEndpoint.h"
+
+/* Defined in ajTest.cc */
+extern uint32_t s_globalTimerMultiplier;
+
+#define METHOD_CALL_TIMEOUT (5000 * s_globalTimerMultiplier)
+
+/*
+ * The unit tests use many busy wait loops.  The busy wait loops were chosen
+ * over thread sleeps because of the ease of understanding the busy wait loops.
+ * Also busy wait loops do not require any platform specific threading code.
+ */
+#define WAIT_TIME_5 (5 * s_globalTimerMultiplier)
+#define WAIT_TIME_10 (10 * s_globalTimerMultiplier)
+#define WAIT_TIME_20 (20 * s_globalTimerMultiplier)
+#define WAIT_TIME_40 (40 * s_globalTimerMultiplier)
+#define WAIT_TIME_50 (50 * s_globalTimerMultiplier)
+#define WAIT_TIME_100 (100 * s_globalTimerMultiplier)
+#define WAIT_TIME_200 (200 * s_globalTimerMultiplier)
+#define WAIT_TIME_400 (400 * s_globalTimerMultiplier)
+#define WAIT_TIME_500 (500 * s_globalTimerMultiplier)
+#define WAIT_TIME_1000 (1000 * s_globalTimerMultiplier)
+#define WAIT_TIME_2000 (2000 * s_globalTimerMultiplier)
+#define WAIT_TIME_3000 (3000 * s_globalTimerMultiplier)
+#define WAIT_TIME_5000 (5000 * s_globalTimerMultiplier)
+#define LOOP_END_1100 (1100 * s_globalTimerMultiplier)
+#define LOOP_END_2000 (2000 * s_globalTimerMultiplier)
+#define LOOP_END_3000 (3000 * s_globalTimerMultiplier)
+#define LOOP_END_5000 (5000 * s_globalTimerMultiplier)
+#define LOOP_END_10000 (10000 * s_globalTimerMultiplier)
+
 /*
  * this header file contains a functions that can be used to replace common
  * actions in the test code.

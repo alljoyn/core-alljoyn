@@ -403,11 +403,11 @@ QStatus AutoPingerInternal::AddDestination(const qcc::String& group, const qcc::
             PingDestination(group, destination, AutoPingerInternal::UNKNOWN, it->second->pingListener);
         } else {
             dit->second++;
-            QCC_DbgPrintf(("AutoPingerInternal: destination: '%s' already present in group: %u; increasing refcount", destination.c_str(), group.c_str()));
+            QCC_DbgPrintf(("AutoPingerInternal: destination: '%s' already present in group: %s; increasing refcount", destination.c_str(), group.c_str()));
         }
     } else {
         status = ER_BUS_PING_GROUP_NOT_FOUND;
-        QCC_LogError(status, ("AutoPingerInternal: cannot add destination: '%s' to non-existing group: %u", destination.c_str(), group.c_str()));
+        QCC_LogError(status, ("AutoPingerInternal: cannot add destination: '%s' to non-existing group: %s", destination.c_str(), group.c_str()));
     }
     globalPingerLock->Unlock(MUTEX_CONTEXT);
 
@@ -439,6 +439,9 @@ QStatus AutoPingerInternal::RemoveDestination(const qcc::String& group, const qc
                 it->second->destinations.erase(dit);
             }
         }
+    } else {
+        status = ER_BUS_PING_GROUP_NOT_FOUND;
+        QCC_LogError(status, ("AutoPingerInternal: cannot remove destination: '%s' from non-existing group: %s", destination.c_str(), group.c_str()));
     }
     globalPingerLock->Unlock(MUTEX_CONTEXT);
 

@@ -473,6 +473,62 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
     }
 }
 
+QStatus BusObject::GetPropAccessibility(vector<bool>& readable, vector<bool>& allowed, Message& msg)
+{
+    QStatus status = ER_OK;
+    const MsgArg* iface = msg->GetArg(0);
+    const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
+
+    if (ifc == nullptr) {
+        status = ER_BUS_UNKNOWN_INTERFACE;
+    }
+
+    if (status == ER_OK) {
+        bool encrypted = msg->IsEncrypted();
+
+        if (!encrypted && SecurityApplies(this, ifc)) {
+            status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
+            QCC_LogError(status, ("Attempt to get properties from a secure %s", isSecure ? "object" : "interface"));
+        }
+
+        if (status == ER_OK) {
+            size_t numProps = ifc->GetProperties();
+            readable.resize(numProps);
+            allowed.resize(numProps);
+
+            if (numProps != 0) {
+                const InterfaceDescription::Property** props = new const InterfaceDescription::Property*[numProps];
+                QCC_VERIFY(ifc->GetProperties(props, numProps) == numProps);
+
+                PeerState peerState;
+                qcc::String objectPath;
+                qcc::String interfaceName;
+
+                if (encrypted) {
+                    peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
+                    objectPath = msg->GetObjectPath();
+                    interfaceName = ifc->GetName();
+                }
+
+                for (size_t i = 0; i < numProps; ++i) {
+                    readable[i] = ((props[i]->access & PROP_ACCESS_READ) != 0);
+
+                    if (encrypted) {
+                        allowed[i] = (ER_OK == bus->GetInternal().GetPermissionManager().AuthorizeGetProperty(objectPath.c_str(), interfaceName.c_str(), props[i]->name.c_str(), peerState));
+                    } else {
+                        allowed[i] = true;
+                    }
+                }
+
+                delete [] props;
+            }
+        }
+    }
+
+    return status;
+}
+
+
 void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message& msg)
 {
     String errorName;
@@ -488,79 +544,55 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
     QStatus status = ER_OK;
     const MsgArg* iface = msg->GetArg(0);
     MsgArg vals;
+
+    vector<bool> readable;
+    vector<bool> allowed;
     const InterfaceDescription::Property** props = NULL;
 
-    /* Check interface exists and has properties */
-    const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
-    if (ifc) {
-        /*
-         * If the object or interface is secure the message must be encrypted
-         */
-        if (!msg->IsEncrypted() && SecurityApplies(this, ifc)) {
-            status = ER_BUS_MESSAGE_NOT_ENCRYPTED;
-            QCC_LogError(status, ("Attempt to get properties from a secure %s", isSecure ? "object" : "interface"));
-        } else {
+    status = GetPropAccessibility(readable, allowed, msg);
+    if (status == ER_OK) {
+        size_t readableAndAllowedCount = 0;
+        for (size_t i = 0; i < readable.size(); ++i) {
+            if (readable[i] && allowed[i]) {
+                ++readableAndAllowedCount;
+            }
+        }
+
+        MsgArg* dict = NULL;
+        if (readableAndAllowedCount > 0) {
+            dict = new MsgArg[readableAndAllowedCount];
+            const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
             size_t numProps = ifc->GetProperties();
             props = new const InterfaceDescription::Property*[numProps];
             ifc->GetProperties(props, numProps);
-            bool* allowed = new bool[numProps];
-            for (size_t i = 0; i < numProps; i++) {
-                allowed[i] = true;
-            }
-            size_t readable = 0;
-            /* Count readable properties */
-            if (msg->IsEncrypted()) {
-                PeerState peerState = bus->GetInternal().GetPeerStateTable()->GetPeerState(msg->GetSender());
-                for (size_t i = 0; i < numProps; i++) {
-                    if (props[i]->access & PROP_ACCESS_READ) {
-                        if (ER_OK == bus->GetInternal().GetPermissionManager().AuthorizeGetProperty(msg->GetObjectPath(), ifc->GetName(), props[i]->name.c_str(), peerState)) {
-                            readable++;
-                        } else {
-                            /* mark the property as not allowed because of permission denied */
-                            allowed[i] = false;
-                        }
-                    }
-                }
-            } else {
-                for (size_t i = 0; i < numProps; i++) {
-                    if (props[i]->access & PROP_ACCESS_READ) {
-                        readable++;
-                    }
-                }
-            }
+            MsgArg* entry = dict;
 
-            MsgArg* dict = NULL;
-            if (readable > 0) {
-                dict = new MsgArg[readable];
-                MsgArg* entry = dict;
-                /* Get readable properties */
-                for (size_t i = 0; i < numProps; i++) {
-                    if ((props[i]->access & PROP_ACCESS_READ) && allowed[i]) {
-                        MsgArg* val = new MsgArg();
-                        status = Get(iface->v_string.str, props[i]->name.c_str(), *val, errorName, errorMessage);
-                        if (status != ER_OK) {
-                            delete val;
-                            break;
-                        }
-                        entry->Set("{sv}", props[i]->name.c_str(), val);
-                        entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
-                        entry++;
+            // Get readable and accessible properties
+            for (size_t i = 0; i < numProps; ++i) {
+                if (readable[i] && allowed[i]) {
+                    MsgArg* val = new MsgArg();
+                    status = Get(iface->v_string.str, props[i]->name.c_str(), *val, errorName, errorMessage);
+                    if (status != ER_OK) {
+                        delete val;
+                        break;
                     }
+                    entry->Set("{sv}", props[i]->name.c_str(), val);
+                    entry->v_dictEntry.val->SetOwnershipFlags(MsgArg::OwnsArgs, false);
+                    entry++;
                 }
             }
-            vals.Set("a{sv}", readable, dict);
-            vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
-            delete [] allowed;
         }
-    } else {
-        status = ER_BUS_UNKNOWN_INTERFACE;
+        vals.Set("a{sv}", readableAndAllowedCount, dict);
+        vals.SetOwnershipFlags(MsgArg::OwnsArgs, false);
     }
+
     QCC_DbgPrintf(("Properties.GetAll %s", QCC_StatusText(status)));
     if (status == ER_OK) {
         MethodReply(msg, &vals, 1);
     } else {
         MethodReply(msg, status, errorName.c_str(), errorMessage.c_str());
     }
+
     delete [] props;
 }
 
@@ -1323,17 +1355,11 @@ void BusObject::GetDescriptionLanguages(const InterfaceDescription::Member* memb
             continue;
         }
 
-        hasDescription = true;
-
-        const char* lang = (itIf->first)->GetDescriptionLanguage();
-        if (lang && lang[0]) {
-            langs.insert(qcc::String(lang));
-        }
-
-        Translator* ifTranslator = (itIf->first)->GetDescriptionTranslator();
-        if (ifTranslator) {
-            mergeTranslationLanguages(ifTranslator, langs);
-        } else if (!someoneHasNoTranslator) {
+        std::set<qcc::String> ifLangs = itIf->first->GetDescriptionLanguages();
+        if (ifLangs.size() > 0) {
+            hasDescription = true;
+            std::copy(ifLangs.begin(), ifLangs.end(), inserter(langs, langs.begin()));
+        } else {
             someoneHasNoTranslator = true;
         }
     }

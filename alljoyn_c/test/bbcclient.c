@@ -14,7 +14,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #ifndef _WIN32
-#define _BSD_SOURCE /* usleep */
+ #define _DEFAULT_SOURCE /* usleep, glibc >=2.20 */
+ #define _BSD_SOURCE /* usleep */
 #endif
 #include <alljoyn_c/AjAPI.h>
 
@@ -31,6 +32,11 @@
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/version.h>
 #include <alljoyn_c/Status.h>
+
+/**
+ * Returns the size of a statically allocated array
+ */
+#define ArraySize(a)  (sizeof(a) / sizeof(a[0]))
 
 /*constants*/
 static const char* INTERFACE_NAME = "org.alljoyn.alljoyn_test";
@@ -634,7 +640,13 @@ int CDECL_CALL main(int argc, char** argv)
             if (roundtrip) {
                 //TODO - Implement later. Get time of day.
             } else {
-                snprintf(buf, 80, "Ping String %u", (unsigned int)(++cnt));
+#if defined(QCC_OS_GROUP_WINDOWS)
+                _snprintf(buf, ArraySize(buf), "Ping String %u", (unsigned int)(++cnt));
+                buf[ArraySize(buf) - 1] = '\0';
+#else
+                snprintf(buf, ArraySize(buf), "Ping String %u", (unsigned int)(++cnt));
+#endif
+
                 status = alljoyn_msgarg_array_set(pingArgs, &numArgs, "su", buf, pingDelay);
                 if (status != ER_OK) {
                     printf("Could not set arguments because of %s. \n", QCC_StatusText(status));

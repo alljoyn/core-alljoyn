@@ -1238,7 +1238,7 @@ QStatus MsgArgUtils::SetV(MsgArg* args, size_t& numArgs, const char* signature, 
     return status;
 }
 
-QStatus AJ_CALL MsgArg::Set(MsgArg* args, size_t& numArgs, const char* signature, ...)
+QStatus CDECL_CALL MsgArg::Set(MsgArg* args, size_t& numArgs, const char* signature, ...)
 {
     va_list argp;
     va_start(argp, signature);
@@ -1247,7 +1247,7 @@ QStatus AJ_CALL MsgArg::Set(MsgArg* args, size_t& numArgs, const char* signature
     return status;
 }
 
-QStatus AJ_CALL MsgArg::Get(const MsgArg* args, size_t numArgs, const char* signature, ...)
+QStatus CDECL_CALL MsgArg::Get(const MsgArg* args, size_t numArgs, const char* signature, ...)
 {
     if (!args) {
         return ER_BAD_ARG_1;

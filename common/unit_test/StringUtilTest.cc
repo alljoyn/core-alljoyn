@@ -321,3 +321,18 @@ TEST(StringUtilTest, string_to_double_conversion) {
             double_string.c_str() << "\".";
     }
 }
+
+TEST(StringUtilTest, shouldPassWhenDestroyingNullCopy)
+{
+    DestroyStringCopy(nullptr);
+}
+
+TEST(StringUtilTest, shouldCreateStringCopy)
+{
+    std::string someString = "someString";
+
+    AJ_PSTR copiedString = CreateStringCopy(someString);
+
+    EXPECT_STREQ(someString.c_str(), copiedString);
+    DestroyStringCopy(copiedString);
+}

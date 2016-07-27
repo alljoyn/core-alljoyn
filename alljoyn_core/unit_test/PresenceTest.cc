@@ -36,13 +36,6 @@
 #include <alljoyn/version.h>
 #include <alljoyn/Status.h>
 
-/*
- * The unit test use many busy wait loops.  The busy wait loops were chosen
- * over thread sleeps because of the ease of understanding the busy wait loops.
- * Also busy wait loops do not require any platform specific threading code.
- */
-#define WAIT_TIME 5
-
 using namespace std;
 using namespace qcc;
 using namespace ajn;
@@ -179,12 +172,12 @@ TEST_F(PresenceTest, PresenceWellKnownNames) {
     status = bus.AdvertiseName(wellKnownNameReqAdvLocalOnly.c_str(), TRANSPORT_ANY);
     EXPECT_EQ(ER_OK, status);
 
-    // wait for up to 10 seconds to find name
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    // wait to find name
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (presenceFoundAdvReq && presenceFoundAdvNotReq && presenceFoundNotAdvReq && presenceFoundReqAdvLocalOnly) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
     ASSERT_TRUE(presenceFoundAdvReq) << "failed to find advertised name: " << wellKnownNameAdvReq.c_str();
     ASSERT_TRUE(presenceFoundAdvNotReq) << "failed to find advertised name: " << wellKnownNameAdvNotReq.c_str();
@@ -379,12 +372,12 @@ TEST_F(PresenceTest, PingSessionNames) {
     status = otherBus.FindAdvertisedName(getUniqueNamePrefix(bus).c_str());
     EXPECT_EQ(ER_OK, status);
 
-    // wait for up to 10 seconds to find name
-    for (int msec = 0; msec < 10000; msec += WAIT_TIME) {
+    // wait to find name
+    for (uint32_t msec = 0; msec < LOOP_END_10000; msec += WAIT_TIME_5) {
         if (presenceFoundAdvReq) {
             break;
         }
-        qcc::Sleep(WAIT_TIME);
+        qcc::Sleep(WAIT_TIME_5);
     }
     ASSERT_TRUE(presenceFoundAdvReq) << "failed to find advertised name: " << wellKnownNameAdvReq.c_str();
 

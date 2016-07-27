@@ -17,7 +17,6 @@
 		7DCBEEF61A254EA800A53A83 /* AJNAboutListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEEEC1A254EA800A53A83 /* AJNAboutListenerImpl.mm */; };
 		7DCBEEF71A254EA800A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEEEF1A254EA800A53A83 /* AJNAboutProxy.mm */; };
 		7DCBEEFA1A254EB500A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEEF91A254EB500A53A83 /* AJNPasswordManager.mm */; };
-		7DEA2F3A1AC40374007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F391AC40374007ECE82 /* libc++.dylib */; };
 		839CD955193B14C60061C03D /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 839CD954193B14C60061C03D /* AJNTranslatorImpl.mm */; };
 		ACD90EFB1667D43600AB8C99 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90EFA1667D43600AB8C99 /* Cocoa.framework */; };
 		ACD90F051667D43600AB8C99 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = ACD90F031667D43600AB8C99 /* InfoPlist.strings */; };
@@ -55,8 +54,6 @@
 		ACD90FA21667F62B00AB8C99 /* AJNTransportMask.m in Sources */ = {isa = PBXBuildFile; fileRef = ACD90F871667F62B00AB8C99 /* AJNTransportMask.m */; };
 		ACD90FA31667F62B00AB8C99 /* AJNVersion.mm in Sources */ = {isa = PBXBuildFile; fileRef = ACD90F8A1667F62B00AB8C99 /* AJNVersion.mm */; };
 		ACD90FA91667F75700AB8C99 /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90FA81667F75700AB8C99 /* SystemConfiguration.framework */; };
-		ACD90FAB1667F75E00AB8C99 /* libcrypto.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90FAA1667F75E00AB8C99 /* libcrypto.0.9.8.dylib */; };
-		ACD90FAD1667F76300AB8C99 /* libssl.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90FAC1667F76300AB8C99 /* libssl.0.9.8.dylib */; };
 		ACD90FAF1667F76900AB8C99 /* libstdc++.6.0.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = ACD90FAE1667F76900AB8C99 /* libstdc++.6.0.9.dylib */; };
 		ACD90FBD1667F9E100AB8C99 /* ViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = ACD90FBC1667F9E100AB8C99 /* ViewController.m */; };
 /* End PBXBuildFile section */
@@ -84,7 +81,6 @@
 		7DCBEEEF1A254EA800A53A83 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
 		7DCBEEF81A254EB500A53A83 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
 		7DCBEEF91A254EB500A53A83 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
-		7DEA2F391AC40374007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		839CD952193B14C60061C03D /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		839CD953193B14C60061C03D /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		839CD954193B14C60061C03D /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -170,8 +166,6 @@
 		ACD90F891667F62B00AB8C99 /* AJNVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNVersion.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNVersion.h; sourceTree = "<group>"; };
 		ACD90F8A1667F62B00AB8C99 /* AJNVersion.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNVersion.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNVersion.mm; sourceTree = "<group>"; };
 		ACD90FA81667F75700AB8C99 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
-		ACD90FAA1667F75E00AB8C99 /* libcrypto.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.0.9.8.dylib; path = usr/lib/libcrypto.0.9.8.dylib; sourceTree = SDKROOT; };
-		ACD90FAC1667F76300AB8C99 /* libssl.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.0.9.8.dylib; path = usr/lib/libssl.0.9.8.dylib; sourceTree = SDKROOT; };
 		ACD90FAE1667F76900AB8C99 /* libstdc++.6.0.9.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.6.0.9.dylib"; path = "usr/lib/libstdc++.6.0.9.dylib"; sourceTree = SDKROOT; };
 		ACD90FBB1667F9E100AB8C99 /* ViewController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		ACD90FBC1667F9E100AB8C99 /* ViewController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = ViewController.m; sourceTree = "<group>"; };
@@ -182,10 +176,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7DEA2F3A1AC40374007ECE82 /* libc++.dylib in Frameworks */,
 				ACD90FAF1667F76900AB8C99 /* libstdc++.6.0.9.dylib in Frameworks */,
-				ACD90FAD1667F76300AB8C99 /* libssl.0.9.8.dylib in Frameworks */,
-				ACD90FAB1667F75E00AB8C99 /* libcrypto.0.9.8.dylib in Frameworks */,
 				ACD90FA91667F75700AB8C99 /* SystemConfiguration.framework in Frameworks */,
 				ACD90EFB1667D43600AB8C99 /* Cocoa.framework in Frameworks */,
 			);
@@ -214,10 +205,7 @@
 		ACD90EF91667D43600AB8C99 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				7DEA2F391AC40374007ECE82 /* libc++.dylib */,
 				ACD90FAE1667F76900AB8C99 /* libstdc++.6.0.9.dylib */,
-				ACD90FAC1667F76300AB8C99 /* libssl.0.9.8.dylib */,
-				ACD90FAA1667F75E00AB8C99 /* libcrypto.0.9.8.dylib */,
 				ACD90FA81667F75700AB8C99 /* SystemConfiguration.framework */,
 				ACD90EFA1667D43600AB8C99 /* Cocoa.framework */,
 				ACD90EFC1667D43600AB8C99 /* Other Frameworks */,

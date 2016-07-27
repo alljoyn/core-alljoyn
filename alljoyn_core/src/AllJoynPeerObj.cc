@@ -533,7 +533,7 @@ void AllJoynPeerObj::GenSessionKey(const InterfaceDescription::Member* member, M
         vector<uint8_t, SecureAllocator<uint8_t> > seed;
         seed.reserve(len + nonce.size());
         seed.insert(seed.end(), str, str + len);
-        AppendStringToVector(nonce, seed);
+        AppendStringToSecureVector(nonce, seed);
         status = KeyGen(peerState, seed, verifier, KeyBlob::RESPONDER);
         if (status == ER_OK) {
             QCC_DbgHLPrintf(("GenSessionKey succeeds for peer %s", msg->GetSender()));
@@ -1272,7 +1272,7 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
                 auto len = replyMsg->GetArg(0)->v_string.len;
                 vector<uint8_t, SecureAllocator<uint8_t> > seed;
                 seed.reserve(len + nonce.size());
-                AppendStringToVector(nonce, seed);
+                AppendStringToSecureVector(nonce, seed);
                 seed.insert(seed.end(), str, str + len);
                 status = KeyGen(peerState, seed, verifier, KeyBlob::INITIATOR);
                 QCC_DbgHLPrintf(("Initiator KeyGen after receiving response from sender %s status %x", busName.c_str(), status));

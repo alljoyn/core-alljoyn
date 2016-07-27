@@ -180,7 +180,10 @@ qcc::String AJ_CALL XmlElement::UnescapeXml(const qcc::String& str) {
 /* Finalize and return true if element ends the root Xml element */
 void XmlElement::FinalizeElement(XmlParseContext& ctx)
 {
-    /* Sanity check */
+    /* Sanity checks */
+    if (ctx.curElem == nullptr) {
+        return;
+    }
     qcc::String cookedContent = Trim(UnescapeXml(ctx.rawContent));
     if ((0 < cookedContent.size()) && (0 < ctx.curElem->GetChildren().size())) {
         QCC_DbgPrintf(("XML Element <%s> has both children and content", ctx.curElem->GetName().c_str()));

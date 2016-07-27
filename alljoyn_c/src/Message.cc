@@ -118,7 +118,7 @@ const alljoyn_msgarg AJ_CALL alljoyn_message_getarg(alljoyn_message msg, size_t 
     return (alljoyn_msgarg)msg->msg->GetArg(argN);
 }
 
-QStatus AJ_CALL alljoyn_message_parseargs(alljoyn_message msg, const char* signature, ...)
+QStatus CDECL_CALL alljoyn_message_parseargs(alljoyn_message msg, const char* signature, ...)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     size_t sigLen = (signature ? strlen(signature) : 0);

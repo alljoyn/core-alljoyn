@@ -25,6 +25,7 @@
 #include <qcc/XmlElement.h>
 #include <qcc/StringSource.h>
 #include <qcc/String.h>
+#include <qcc/Util.h>
 #include <list>
 
 #include <string>

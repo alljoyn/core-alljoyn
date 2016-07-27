@@ -28,7 +28,6 @@
 #include <vector>
 
 #include <qcc/platform.h>
-#include <qcc/SecureAllocator.h>
 #include <qcc/String.h>
 
 namespace qcc {
@@ -207,14 +206,6 @@ qcc::String AJ_CALL LineBreak(const qcc::String& inStr, size_t maxLen = 64, size
 qcc::String AJ_CALL StringVectorToString(const std::vector<qcc::String>* list, const char* sep = "");
 
 /**
- * Append the contents of a string to a vector<uint8_t, SecureAllocator<uint8_t> >.
- *
- * @param str   String to be added.
- * @param v     Vector to be added to.
- */
-void AJ_CALL AppendStringToVector(const qcc::String& str, std::vector<uint8_t, SecureAllocator<uint8_t> >& v);
-
-/**
  * Convert a character digit to its non-ascii value
  *
  * @param c            Character to convert.
@@ -277,6 +268,22 @@ bool AJ_CALL IsOctalDigit(char c);
  * @return true iff digit is valid base 16.
  */
 bool AJ_CALL IsHexDigit(char c);
+
+/**
+ * Copies the contents of the std::string object into a C string.
+ *
+ * @param[in]    input   String to copy.
+ *
+ * @return Copied C string. Caller must free it using DestroyStringCopy.
+ */
+AJ_PSTR AJ_CALL CreateStringCopy(const std::string& input);
+
+/**
+ * Destroys the string created by CreateStringCopy.
+ *
+ * @param[in]    input   String to be destroyed.
+ */
+void AJ_CALL DestroyStringCopy(AJ_PSTR input);
 
 }   /* End namespace */
 

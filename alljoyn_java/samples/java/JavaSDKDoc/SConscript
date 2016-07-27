@@ -11,13 +11,14 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('env')
 
 # The return value is the collection of files installed in the build destination.
 returnValue = env.SConscript('JavaSDKDocAboutClient/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocAboutService/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocAutoPingerSample/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocMethodsClient/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocMethodsService/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocPropertiesClient/SConscript', exports = ['env'])

@@ -50,8 +50,6 @@ using namespace qcc;
 
 namespace ajn {
 
-#define SESSION_SELF_JOIN 0x02
-
 DaemonRouter::DaemonRouter()
     : ruleTable(), nameTable(), busController(NULL), alljoynObj(NULL), sessionlessObj(NULL),
     m_Lock(LOCK_LEVEL_DAEMONROUTER_MLOCK)
@@ -405,9 +403,19 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
          * Do the policy rules allow for the message to be delivered?  (The
          * check for sending is kept separate from the check for receiving to
          * allow for easier changes should they be necessary in the future.)
+         *
+         * Skip checking if sender (send) or destination (receive) is the
+         * router's local endpoint.
+         * This is related to changes introduced by fix for ASACORE-1532.
          */
-        add = add && policyDB->OKToSend(nmh, dest);
-        add = add && policyDB->OKToReceive(nmh, dest);
+
+        if (src != lep) {
+            add = add && policyDB->OKToSend(nmh, dest);
+        }
+        if (dest != lep) {
+            add = add && policyDB->OKToReceive(nmh, dest);
+        }
+
         if (!add) {
             QCC_DbgPrintf(("    policy rejected"));
             policyRejected = true;

@@ -29,6 +29,7 @@
 #include "XmlRulesValidator.h"
 
 using namespace qcc;
+using namespace std;
 
 namespace ajn {
 
@@ -52,17 +53,43 @@ QStatus XmlManifestConverter::XmlToManifest(AJ_PCSTR manifestXml, Manifest& mani
     return status;
 }
 
-QStatus XmlManifestConverter::ManifestToXml(const Manifest& manifest, AJ_PSTR* manifestXml)
+QStatus XmlManifestConverter::ManifestToXml(const Manifest& manifest, string& manifestXml)
 {
-    QCC_ASSERT(nullptr != manifestXml);
-
-    QStatus status = XmlRulesValidator::ValidateRules(manifest->GetRules().data(), manifest->GetRules().size());
+    QStatus status = XmlRulesValidator::GetInstance()->ValidateRules(manifest->GetRules().data(), manifest->GetRules().size());
 
     if (ER_OK == status) {
         BuildManifest(manifest, manifestXml);
     }
 
     return status;
+}
+
+QStatus XmlManifestConverter::XmlArrayToManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, vector<Manifest>& manifests)
+{
+    manifests.resize(manifestsCount);
+    for (size_t i = 0; i < manifestsCount; i++) {
+        QStatus status = XmlToManifest(manifestsXmls[i], manifests[i]);
+        if (ER_OK != status) {
+            manifests.clear();
+            return status;
+        }
+    }
+
+    return ER_OK;
+}
+
+QStatus XmlManifestConverter::ManifestsToXmlArray(const Manifest* manifests, size_t manifestsCount, vector<string>& manifestsXmls)
+{
+    manifestsXmls.resize(manifestsCount);
+    for (size_t i = 0; i < manifestsCount; i++) {
+        QStatus status = ManifestToXml(manifests[i], manifestsXmls[i]);
+        if (ER_OK != status) {
+            manifestsXmls.clear();
+            return status;
+        }
+    }
+
+    return ER_OK;
 }
 
 void XmlManifestConverter::BuildManifest(const XmlElement* root, Manifest& manifest)
@@ -74,9 +101,9 @@ void XmlManifestConverter::BuildManifest(const XmlElement* root, Manifest& manif
 
 void XmlManifestConverter::SetRules(const XmlElement* rulesXml, Manifest& manifest)
 {
-    std::vector<PermissionPolicy::Rule> rules;
+    vector<PermissionPolicy::Rule> rules;
 
-    QCC_VERIFY(ER_OK == XmlRulesConverter::XmlToRules(rulesXml->Generate().c_str(), rules));
+    QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->XmlToRules(rulesXml->Generate().c_str(), rules));
 
     manifest->SetRules(rules.data(), rules.size());
 }
@@ -117,12 +144,12 @@ void XmlManifestConverter::SetSignatureValue(const XmlElement* signatureXml, Man
     QCC_VERIFY(ER_OK == Crypto_ASN1::DecodeBase64(signatureValue, manifest->m_signature));
 }
 
-void XmlManifestConverter::BuildManifest(const Manifest& manifest, AJ_PSTR* manifestXml)
+void XmlManifestConverter::BuildManifest(const Manifest& manifest, string& manifestXml)
 {
     XmlElement* root = new XmlElement(MANIFEST_XML_ELEMENT);
 
     BuildXmlManifestContents(manifest, root);
-    *manifestXml = root->ToString();
+    manifestXml = root->Generate();
 
     delete root;
 }
@@ -143,10 +170,9 @@ void XmlManifestConverter::BuildVersion(const Manifest& manifest, XmlElement* ma
 void XmlManifestConverter::BuildRules(const Manifest& manifest, XmlElement* manifestElement)
 {
     XmlElement* rulesXml = nullptr;
-    QCC_VERIFY(ER_OK == XmlRulesConverter::RulesToXml(manifest->GetRules().data(),
-                                                      manifest->GetRules().size(),
-                                                      &rulesXml,
-                                                      RULES_XML_ELEMENT));
+    QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->RulesToXml(manifest->GetRules().data(),
+                                                                     manifest->GetRules().size(),
+                                                                     &rulesXml));
     manifestElement->AddChild(rulesXml);
 }
 
@@ -176,7 +202,7 @@ void XmlManifestConverter::BuildSignatureContent(const Manifest& manifest, XmlEl
     BuildValue(manifest->GetSignature(), signatureElement);
 }
 
-void XmlManifestConverter::BuildValue(const std::vector<uint8_t>& binaryValue, XmlElement* xmlElement)
+void XmlManifestConverter::BuildValue(const vector<uint8_t>& binaryValue, XmlElement* xmlElement)
 {
     String base64Value;
 
