@@ -2963,8 +2963,9 @@ class MDNSSearchRData : public MDNSTextRData {
      * @internal
      * @brief Remove the search criterion at a certain index in this Search RData.
      * @param index     The index at which the search criterion is to be removed
+     * @return True if something got removed
      */
-    void RemoveSearchCriterion(int index);
+    bool RemoveSearchCriterion(int index);
 
 };
 
