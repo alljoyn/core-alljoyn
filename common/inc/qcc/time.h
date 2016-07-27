@@ -151,7 +151,7 @@ uint64_t GetTimestamp64();
  *
  * @return The time in milliseconds.
  */
-uint64_t GetEpochTimestamp();
+time_t GetEpochTimestamp();
 
 /**
  * Returns a formatted string for current UTC date and time. Format conforms to
@@ -166,7 +166,7 @@ qcc::String UTCTime();
  *
  * @return The time in seconds.
  */
-int64_t ConvertStructureToTime(struct tm* timeptr);
+time_t ConvertStructureToTime(struct tm* timeptr);
 
 /**
  * Wrapper for gmtime.
@@ -176,7 +176,7 @@ int64_t ConvertStructureToTime(struct tm* timeptr);
  *
  * @return ER_OK if success else ER_FAIL.
  */
-QStatus ConvertTimeToStructure(const int64_t* timer, struct tm* tm);
+QStatus ConvertTimeToStructure(time_t t, struct tm* tm);
 
 /**
  * Wrapper for localtime
@@ -186,7 +186,7 @@ QStatus ConvertTimeToStructure(const int64_t* timer, struct tm* tm);
  *
  * @return ER_OK if success else ER_FAIL.
  */
-QStatus ConvertToLocalTime(const int64_t* timer, struct tm* tm);
+QStatus ConvertToLocalTime(time_t t, struct tm* tm);
 
 /**
  * Wrapper for strftime
