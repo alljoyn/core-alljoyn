@@ -89,15 +89,15 @@ uint64_t qcc::GetTimestamp64(void)
     return ret_val;
 }
 
-uint64_t qcc::GetEpochTimestamp(void)
+time_t qcc::GetEpochTimestamp(void)
 {
     struct timespec ts;
-    uint64_t ret_val;
+    time_t ret_val;
 
     platform_gettime(&ts, false);
 
-    ret_val = ((uint64_t)(ts.tv_sec)) * 1000;
-    ret_val += (uint64_t)ts.tv_nsec / 1000000;
+    ret_val = ts.tv_sec * 1000;
+    ret_val += ts.tv_nsec / 1000000;
 
     return ret_val;
 }
@@ -131,22 +131,20 @@ qcc::String qcc::UTCTime()
     return buf;
 }
 
-int64_t qcc::ConvertStructureToTime(struct tm* timeptr)
+time_t qcc::ConvertStructureToTime(struct tm* timeptr)
 {
     return mktime(timeptr);
 }
 
-QStatus qcc::ConvertTimeToStructure(const int64_t* timer, struct tm* tm) {
-    time_t t = static_cast<time_t>(*timer);
-    if (gmtime_r(&t, tm)) {
+QStatus qcc::ConvertTimeToStructure(time_t timer, struct tm* tm) {
+    if (gmtime_r(&timer, tm)) {
         return ER_OK;
     }
     return ER_FAIL;
 }
 
-QStatus qcc::ConvertToLocalTime(const int64_t* timer, struct tm* tm) {
-    time_t t = static_cast<time_t>(*timer);
-    if (localtime_r(&t, tm)) {
+QStatus qcc::ConvertToLocalTime(time_t timer, struct tm* tm) {
+    if (localtime_r(&timer, tm)) {
         return ER_OK;
     }
     return ER_FAIL;

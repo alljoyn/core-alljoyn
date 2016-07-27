@@ -107,9 +107,9 @@ class CertificateX509 {
      * The validity period
      */
     struct ValidPeriod {
-        uint64_t validFrom; /**< the date time when the cert becomes valid
+        time_t validFrom; /**< the date time when the cert becomes valid
                                 expressed in the number of seconds in EPOCH Jan 1, 1970 */
-        uint64_t validTo;  /**< the date time after which the cert becomes invalid
+        time_t validTo;  /**< the date time after which the cert becomes invalid
                                 expressed in the number of seconds in EPOCH Jan 1, 1970 */
     };
 

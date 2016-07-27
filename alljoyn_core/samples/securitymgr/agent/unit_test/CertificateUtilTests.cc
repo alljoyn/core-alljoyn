@@ -55,7 +55,7 @@ TEST_F(CertificateUtilTests, ToMembershipCertificate) {
 
     GroupInfo groupInfo;
     MembershipCertificate membership;
-    uint64_t validityPeriod = 3600 * 24 * 10 * 365;
+    time_t validityPeriod = 3600 * 24 * 10 * 365;
     ASSERT_EQ(ER_OK, CertificateUtil::ToMembershipCertificate(app, groupInfo, validityPeriod, membership));
 
     ASSERT_EQ(groupInfo.guid, membership.GetGuild());
@@ -67,7 +67,7 @@ TEST_F(CertificateUtilTests, ToMembershipCertificate) {
     const qcc::CertificateX509::ValidPeriod* validity = membership.GetValidity();
     ASSERT_EQ(validity->validTo, (validity->validFrom) + validityPeriod + 3600); // 3600 for drift correction
 
-    uint64_t currentTime = GetEpochTimestamp() / 1000;
+    time_t currentTime = GetEpochTimestamp() / 1000;
     ASSERT_TRUE(validity->validTo >= currentTime);
     ASSERT_TRUE(validity->validFrom <= currentTime);
     qcc::String der;
@@ -96,7 +96,7 @@ TEST_F(CertificateUtilTests, ToIdentityCertificate) {
     IdentityInfo identityInfo;
     IdentityCertificate identity;
     identityInfo.name = "My Identity";
-    uint64_t validityPeriod = 3600 * 24 * 10 * 365;
+    time_t validityPeriod = 3600 * 24 * 10 * 365;
     ASSERT_EQ(ER_OK, CertificateUtil::ToIdentityCertificate(app, identityInfo, validityPeriod, identity));
 
     ASSERT_EQ(identityInfo.guid.ToString(), identity.GetAlias());
@@ -109,7 +109,7 @@ TEST_F(CertificateUtilTests, ToIdentityCertificate) {
 
     const qcc::CertificateX509::ValidPeriod* validity = identity.GetValidity();
     ASSERT_EQ(validity->validTo, (validity->validFrom) + validityPeriod + 3600); // 3600 for drift correction
-    uint64_t currentTime = GetEpochTimestamp() / 1000;
+    time_t currentTime = GetEpochTimestamp() / 1000;
     ASSERT_TRUE(validity->validTo >= currentTime);
     ASSERT_TRUE(validity->validFrom <= currentTime);
 
