@@ -43,12 +43,12 @@ uint64_t qcc::GetTimestamp64(void)
     return (current_count - base_count);
 }
 
-uint64_t qcc::GetEpochTimestamp(void)
+time_t qcc::GetEpochTimestamp(void)
 {
     struct __timeb64 time_buffer;
     _ftime64(&time_buffer);
 
-    uint64_t ret_val = time_buffer.time * (uint64_t)1000;
+    time_t ret_val = time_buffer.time * 1000;
     ret_val += time_buffer.millitm;
 
     return ret_val;
@@ -81,20 +81,20 @@ qcc::String qcc::UTCTime()
     return buf;
 }
 
-int64_t qcc::ConvertStructureToTime(struct tm* timeptr)
+time_t qcc::ConvertStructureToTime(struct tm* timeptr)
 {
     return _mktime64(timeptr);
 }
 
-QStatus qcc::ConvertTimeToStructure(const int64_t* timer, struct tm* tm) {
-    if (_gmtime64_s(tm, (__time64_t*)timer) == 0) {
+QStatus qcc::ConvertTimeToStructure(time_t timer, struct tm* tm) {
+    if (_gmtime64_s(tm, &timer) == 0) {
         return ER_OK;
     }
     return ER_FAIL;
 }
 
-QStatus qcc::ConvertToLocalTime(const int64_t* timer, struct tm* tm) {
-    if (_localtime64_s(tm, (__time64_t*)timer) == 0) {
+QStatus qcc::ConvertToLocalTime(time_t timer, struct tm* tm) {
+    if (_localtime64_s(tm, &timer) == 0) {
         return ER_OK;
     }
     return ER_FAIL;
