@@ -29,6 +29,7 @@
 #define SECURITY_WIN32
 #include <security.h>
 #include <secext.h>
+#include <shlobj.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 
@@ -93,10 +94,41 @@ uint32_t qcc::GetUsersGid(const char* name)
 
 qcc::String qcc::GetHomeDir()
 {
-    qcc::String homeDir = Environ::GetAppEnviron()->Find("LOCALAPPDATA");
+    qcc::String homeDir;
+
+    /* First choice is the KnownFolder FOLDERID_LocalAppData. */
+    PWSTR widePath = nullptr;
+    HRESULT hr = SHGetKnownFolderPath(FOLDERID_LocalAppData, KF_FLAG_DEFAULT, nullptr, &widePath);
+    if (SUCCEEDED(hr)) {
+        const size_t pathSize = wcslen(widePath) + 1;
+        char* path = new char[pathSize];
+        const int n = snprintf(path, pathSize, "%ls", widePath);
+        if ((n > 0) && (static_cast<size_t>(n) < pathSize)) {
+            homeDir = path;
+            if (!homeDir.empty()) {
+                QCC_DbgPrintf(("GetHomeDir retrieved from SHGetKnownFolderPath() as %s", homeDir.c_str()));
+            }
+        }
+        delete[] path;
+        CoTaskMemFree(widePath);
+    }
+
+    /* Second choice for home directory is %LOCALAPPDATA%. */
+    if (homeDir.empty()) {
+        homeDir = Environ::GetAppEnviron()->Find("LOCALAPPDATA");
+        if (!homeDir.empty()) {
+            QCC_DbgPrintf(("GetHomeDir retrieved from LOCALAPPDATA as %s", homeDir.c_str()));
+        }
+    }
+
+    /* Third choice for home directory is %USERPROFILE%. */
     if (homeDir.empty()) {
         homeDir = Environ::GetAppEnviron()->Find("USERPROFILE");
+        if (!homeDir.empty()) {
+            QCC_DbgPrintf(("GetHomeDir retrieved from USERPROFILE as %s", homeDir.c_str()));
+        }
     }
+
     return homeDir;
 }
 
