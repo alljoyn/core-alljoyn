@@ -38,7 +38,7 @@
 using namespace std;
 using namespace qcc;
 
-const String securityLevelToString[] {
+const String securityLevelToString[] = {
     PRIVILEGED_SECURITY_LEVEL,
     NON_PRIVILEGED_SECURITY_LEVEL,
     UNAUTHENTICATED_SECURITY_LEVEL
