@@ -1526,7 +1526,7 @@ TEST_F(ObserverTest, SecurityDifferentToSameRoT) {
     EXPECT_EQ(ER_AUTH_FAIL, status);
 
     ASSERT_EQ(ER_OK, secMgrA.Reset(provider.bus));
-    provider.EnableSecurity("ALLJOYN_ECDHE_NULL");
+    provider.EnableSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA");
     ASSERT_EQ(ER_OK, secMgrB.Claim(provider.bus, manifest));
     provider.EnableSecurity("ALLJOYN_ECDHE_ECDSA");
     ASSERT_EQ(ER_OK, secMgrB.UpdatePolicy(provider.bus, policyAB));

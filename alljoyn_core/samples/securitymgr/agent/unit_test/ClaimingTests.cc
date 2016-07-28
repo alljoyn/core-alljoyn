@@ -340,13 +340,13 @@ TEST_F(ClaimingTests, OOBSuccessfulClaiming) {
 
     ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_EQ(string("ALLJOYN_ECDHE_PSK"), testApp.GetLastAuthMechanism());
+    ASSERT_EQ(string("ALLJOYN_ECDHE_ECDSA"), testApp.GetLastAuthMechanism());
 
     ASSERT_EQ(ER_OK, storage->ResetApplication(app));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMABLE));
     ASSERT_EQ(ER_OK, secMgr->Claim(app, idInfo));
     ASSERT_TRUE(WaitForState(app, PermissionConfigurator::CLAIMED, SYNC_OK));
-    ASSERT_EQ(string("ALLJOYN_ECDHE_PSK"), testApp.GetLastAuthMechanism());
+    ASSERT_EQ(string("ALLJOYN_ECDHE_ECDSA"), testApp.GetLastAuthMechanism());
 }
 
 class BadPSKClaimListener :

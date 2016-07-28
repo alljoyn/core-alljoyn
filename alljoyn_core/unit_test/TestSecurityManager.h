@@ -74,12 +74,15 @@ class TestSecurityManager :
     virtual void SessionLost(SessionId sessionId,
                              SessionLostReason reason);
 
+    QStatus EndManagement(BusAttachment& peerBus);
+
+    QStatus InstallAdminMembership();
+
     void IssueCertificate(const ECCPublicKey& appPubKey,
                           CertificateX509& cert,
                           bool isCA = false);
 
     void GenerateIdentityCertificate(const ECCPublicKey& appPubKey,
-                                     const PermissionPolicy::Acl& manifest,
                                      IdentityCertificate& cert);
 
     void GenerateMembershipCertificate(const ECCPublicKey& appPubKey,

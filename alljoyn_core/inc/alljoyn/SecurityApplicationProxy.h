@@ -151,7 +151,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
     /**
      * Destroys the manifest template XML created by GetManifestTemplate.
      *
-     * @param[in] manifestTemplateXml    The manifest temaplte in XML format.
+     * @param[in] manifestTemplateXml    The manifest template in XML format.
      */
     static void DestroyManifestTemplate(AJ_PSTR manifestTemplateXml);
 
@@ -200,6 +200,9 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * Extended Key Usage (EKU) is set. The remaining certificates in the chain can be
      * of this or the base CertificateX509 type.
      *
+     * Note: After this call the remote application should wait for the "EndManagement"
+     * call before it can begin regular operation.
+     *
      * Access restriction: None if the app is not yet claimed. An error will be
      * raised if the app has already been claimed.
      *
@@ -234,6 +237,9 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * Claim the app using a manifests in XML format. This will make
      * the claimer the admin and certificate authority. The KeyInfo
      * object description is shown below.
+     *
+     * Note: After this call the remote application should wait for the "EndManagement"
+     * call before it can begin regular operation.
      *
      * Access restriction: None if the app is not yet claimed. An error will be
      * raised if the app has already been claimed.
@@ -283,13 +289,16 @@ class SecurityApplicationProxy : public ProxyBusObject {
 
     /**
      * This method allows an admin to reset the application to its original state
-     * prior to claim.  The application's security 2.0 related configuration is
-     * discarded.  The application is no longer claimed.
+     * prior to claim. The application's security 2.0 related configuration is
+     * discarded. The application is no longer claimed.
      *
      * If the keystore is cleared by the BusAttachment::ClearKeyStore() call, this
      * Reset() method call is not required.  The Configuration service's
      * FactoryReset() call in fact clears the keystore, so this Reset() call is not
      * required in that scenario.
+     *
+     * Note: After this call the remote application will automatically call
+     * "EndManagement" on itself.
      *
      * @return
      *  - #ER_OK if successful
@@ -627,6 +636,63 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     static QStatus MsgArgToCertificateIds(const MsgArg& arg, qcc::String* serials, qcc::KeyInfoNISTP256* issuerKeyInfos, size_t expectedSize);
+
+    /**
+     * Adds an identity certificate thumbprint to and signs the manifest XML.
+     *
+     * @param[in]    identityCertificate The identity certificate of the remote application that will
+     *                                   use the signed manifest.
+     * @param[in]    privateKey          The signing key. It must be the same one used to sign the
+     *                                   identity certificate.
+     * @param[in]    unsignedManifestXml The unsigned manifest in XML format. The XML schema can be found
+     *                                   under alljoyn_core/docs/manifest_template.xsd.
+     * @param[out]   signedManifestXml   The signed manifest in XML format.
+     *                                   The string is managed by the caller and must be later destroyed
+     *                                   using DestroySignedManifest.
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    static QStatus SignManifest(const qcc::CertificateX509& identityCertificate,
+                                const qcc::ECCPrivateKey& privateKey,
+                                AJ_PCSTR unsignedManifestXml,
+                                AJ_PSTR* signedManifestXml);
+
+    /**
+     * Destroys the signed manifest XML created by SignManifest.
+     *
+     * @param[in]    signedManifestXml  The signed manifest in XML format.
+     */
+    static void DestroySignedManifest(AJ_PSTR signedManifestXml);
+
+    /**
+     * Adds an identity certificate thumbprint and retrieves the digest of the manifest XML for signing.
+     *
+     * @param[in]    unsignedManifestXml    The unsigned manifest in XML format. The XML schema can be found
+     *                                      under alljoyn_core/docs/manifest_template.xsd.
+     * @param[in]    identityCertificate    The identity certificate of the remote application that will use
+     *                                      the signed manifest.
+     * @param[out]   digest                 Pointer to receive the byte array containing the digest to be
+     *                                      signed with ECDSA-SHA256. This array is managed by the caller and must
+     *                                      be later destroyed using DestroyManifestDigest.
+     * @param[out]   digestSize             size_t to receive the size of the digest array.
+     *
+     * @return
+     *          - #ER_OK            If successful.
+     *          - #ER_XML_MALFORMED If the unsigned manifest is not compliant with the required format.
+     *          - Other error status indicating failure.
+     */
+    static QStatus ComputeManifestDigest(AJ_PCSTR unsignedManifestXml,
+                                         const qcc::CertificateX509& identityCertificate,
+                                         uint8_t** digest,
+                                         size_t* digestSize);
+
+    /**
+     * Destroys a digest buffer returned by a call to ComputeManifestDigest.
+     *
+     * @param[in]   digest  Digest array returned by alljoyn_securityapplicationproxy_computemanifestdigest.
+     */
+    static void DestroyManifestDigest(uint8_t* digest);
 };
 }
 
