@@ -124,6 +124,7 @@ QStatus ProxyObjectManager::ManagedProxyObject::Claim(KeyInfoNISTP256& certifica
 
     delete[] identityCertChainArray;
     identityCertChainArray = nullptr;
+    needReAuth = true;
 
     return status;
 }
@@ -318,6 +319,28 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetPublicKey(ECCPublicKey& publi
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetPublicKey"));
     }
+    return status;
+}
+
+QStatus ProxyObjectManager::ManagedProxyObject::StartManagement()
+{
+    CheckReAuthenticate();
+    QStatus status = remoteObj->StartManagement();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to StartManagement"));
+    }
+
+    return status;
+}
+
+QStatus ProxyObjectManager::ManagedProxyObject::EndManagement()
+{
+    CheckReAuthenticate();
+    QStatus status = remoteObj->EndManagement();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to EndManagement"));
+    }
+
     return status;
 }
 

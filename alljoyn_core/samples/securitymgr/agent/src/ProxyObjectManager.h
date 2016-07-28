@@ -105,6 +105,10 @@ class ProxyObjectManager :
 
         QStatus GetPublicKey(ECCPublicKey& publicKey);
 
+        QStatus StartManagement();
+
+        QStatus EndManagement();
+
         const OnlineApplication& GetApplication()
         {
             return remoteApp;

@@ -35,6 +35,20 @@ using namespace std;
 
 namespace ajn {
 namespace securitymgr {
+
+static AJ_PCSTR s_selfClaimManifestXml =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+
 const PermissionConfigurator::ClaimCapabilities ClaimContext::CLAIM_TYPE_NOT_SET = 0;
 
 class ClaimContextImpl :
@@ -95,120 +109,54 @@ class ClaimContextImpl :
 
 QStatus SecurityAgentImpl::ClaimSelf()
 {
-    QStatus status = ER_FAIL;
-
-    KeyInfoNISTP256 caPublicKey;
-    status = caStorage->GetCaPublicKeyInfo(caPublicKey);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to retrieve CA public key."));
-        return status;
-    }
-
-    // Manifest
-    PermissionPolicy::Rule manifestRules[1];
-    manifestRules[0].SetInterfaceName("*");
-    PermissionPolicy::Rule::Member mfPrms[1];
-    mfPrms[0].SetMemberName("*");
-    mfPrms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                            PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                            PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-    manifestRules[0].SetMembers(1, mfPrms);
-    Manifest mf;
-    mf.SetFromRules(manifestRules, 1);
-
-    string ownBusName = busAttachment->GetUniqueName().c_str();
-    OnlineApplication ownAppInfo;
-    ownAppInfo.busName = ownBusName;
-    // Get public key, identity and membership certificates
-    ECCPublicKey ownPublicKey;
-    {   // Open new scope to shorten life-time of the proxy object.
-        ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
-        status = proxyObjectManager->GetProxyObject(me, ProxyObjectManager::ECDHE_NULL);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to connect to self"));
-            return status;
-        }
-
-        status = me.GetPublicKey(ownPublicKey);
-    }
-
+    QStatus status;
     IdentityCertificateChain idCerts;
     vector<MembershipCertificateChain> memberships;
-
     GroupInfo adminGroup;
     KeyInfoNISTP256 agentKeyInfo;
-    agentKeyInfo.SetPublicKey(&ownPublicKey);
     String ownPubKeyID;
-    if (ER_OK != (status = CertificateX509::GenerateAuthorityKeyId(&ownPublicKey, ownPubKeyID))) {
-        QCC_LogError(status, ("Failed to generate public key ID."));
-        return status;
-    }
-    // Obliged to cast bcz of GenerateAuthorityKeyId String key ID output.
-    agentKeyInfo.SetKeyId((const uint8_t*)ownPubKeyID.c_str(), ownPubKeyID.size());
+    string signedManifestXml;
+    AJ_PCSTR signedManifestXmlC;
+    PermissionConfigurator& configurator = busAttachment->GetPermissionConfigurator();
 
-    ajn::Manifest signedManifest;
-
-    status = caStorage->RegisterAgent(agentKeyInfo, mf, adminGroup, idCerts, signedManifest, memberships);
+    // Get public key, identity and membership certificates
+    configurator.GetSigningPublicKey(agentKeyInfo);
+    status = caStorage->RegisterAgent(agentKeyInfo,
+                                      s_selfClaimManifestXml,
+                                      adminGroup,
+                                      idCerts,
+                                      signedManifestXml,
+                                      memberships);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to register agent"));
         return status;
     }
+    signedManifestXmlC = signedManifestXml.c_str();
 
     // Go into claimable state by setting up a manifest.
-    status = busAttachment->GetPermissionConfigurator().SetPermissionManifestTemplate(manifestRules, 1);
+    status = configurator.SetManifestTemplateFromXml(s_selfClaimManifestXml);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to set the Manifest"));
         return status;
     }
 
     // Claim
-    {   // Open new scope to shorten life-time of local variables.
-        GUID128 psk;
-
-        /*
-         * DefaultECDHEAuthListener constructor that takes a PSK is deprecated.
-         * These stanzas suppress the deprecation warning.
-         */
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#if defined(QCC_OS_GROUP_WINDOWS)
-#pragma warning(push)
-#pragma warning(disable: 4996)
-#endif
-        DefaultECDHEAuthListener el(psk.GetBytes(), GUID128::SIZE);
-#if defined(QCC_OS_GROUP_WINDOWS)
-#pragma warning(pop)
-#endif
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-        ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
-        status = proxyObjectManager->GetProxyObject(me, ProxyObjectManager::ECDHE_PSK, &el);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to connect to self"));
-            return status;
-        }
-
-        status = me.Claim(publicKeyInfo, adminGroup, idCerts, signedManifest);
-    }
+    status = configurator.Claim(publicKeyInfo,
+                                adminGroup.guid,
+                                adminGroup.authority,
+                                idCerts.data(),
+                                idCerts.size(),
+                                &signedManifestXmlC,
+                                1);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to Claim"));
         return status;
     }
 
-    ProxyObjectManager::ManagedProxyObject me(ownAppInfo);
-    status = proxyObjectManager->GetProxyObject(me);
-    if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to connect to self over DSA"));
-        return status;
-    }
-
-    for (size_t i = 0; i < memberships.size(); i++) {
-        status = me.InstallMembership(memberships[i]);
+    for (size_t index = 0; index < memberships.size(); index++) {
+        status = configurator.InstallMembership(memberships[index].data(), memberships[index].size());
         if (ER_OK != status) {
-            QCC_LogError(status, ("Failed to install membership certificate chain[%u]", i));
+            QCC_LogError(status, ("Failed to install membership certificate chain[%u]", index));
             return status;
         }
     }
@@ -525,19 +473,38 @@ QStatus SecurityAgentImpl::Claim(const OnlineApplication& app, const IdentityInf
     if (status != ER_OK) {
         return status;
     }
+
     {   // Open scope limit the lifetime of the proxy object
         ProxyObjectManager::ManagedProxyObject mngdProxy(_app);
         status = proxyObjectManager->GetProxyObject(mngdProxy, ctx.GetSessionType(), &ctx);
         if (ER_OK != status) {
             QCC_LogError(status, ("Could not connect to application"));
-            return status;
         }
 
-        status = mngdProxy.Claim(CAKeyInfo, adminGroup, idCertificate, signedManifest);
-        if (ER_OK != status) {
-            QCC_LogError(status, ("Could not claim application"));
+        if (ER_OK == status) {
+            status = mngdProxy.Claim(CAKeyInfo, adminGroup, idCertificate, signedManifest);
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Could not claim application"));
+            }
         }
     }
+
+    if (ER_OK == status) {
+        ProxyObjectManager::ManagedProxyObject mngdProxy(_app);
+        status = proxyObjectManager->GetProxyObject(mngdProxy, ProxyObjectManager::SessionType::ECDHE_DSA, &ctx);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not connect to application"));
+        }
+
+        if (ER_OK == status) {
+            /* "StartManagement" already called inside "Claim". */
+            status = mngdProxy.EndManagement();
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Could not end management after claiming"));
+            }
+        }
+    }
+
     QStatus finiStatus = caStorage->FinishApplicationClaiming(_app, status);
     if (ER_OK != finiStatus) {
         QCC_LogError(finiStatus, ("Failed to finalize claiming attempt"));

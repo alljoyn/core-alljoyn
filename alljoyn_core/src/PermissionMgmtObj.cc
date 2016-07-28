@@ -525,7 +525,8 @@ QStatus PermissionMgmtObj::Claim(
     const CertificateX509* certs,
     size_t certCount,
     const Manifest* manifests,
-    size_t manifestCount)
+    size_t manifestCount,
+    bool startManagement)
 {
     QStatus status = ClaimInternal(
         certificateAuthority,
@@ -533,7 +534,8 @@ QStatus PermissionMgmtObj::Claim(
         certs,
         certCount,
         manifests,
-        manifestCount);
+        manifestCount,
+        startManagement);
 
     if (ER_OK != status) {
         QStatus aStatus = PerformReset(true);
@@ -553,7 +555,8 @@ QStatus PermissionMgmtObj::ClaimInternal(
     const CertificateX509* certs,
     size_t certCount,
     const Manifest* manifests,
-    size_t manifestCount)
+    size_t manifestCount,
+    bool startManagement)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -587,8 +590,17 @@ QStatus PermissionMgmtObj::ClaimInternal(
         return ER_BAD_ARG_5;
     }
 
+    if (startManagement) {
+        /* Calling "StartManagement" is impossible remotely before claiming. */
+        status = StartManagement();
+        if (ER_OK != status) {
+            QCC_DbgPrintf(("%s: Error while calling StartManagement %s.", __FUNCTION__, QCC_StatusText(status)));
+            return status;
+        }
+    }
+
     /* clear most of the key entries with the exception of the DSA keys and manifest */
-    status = PerformReset(true);
+    status = PerformReset(true, false);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to PerformReset during claim"));
         return status;
@@ -2535,7 +2547,7 @@ QStatus PermissionMgmtObj::SetApplicationState(PermissionConfigurator::Applicati
     return status;
 }
 
-QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
+QStatus PermissionMgmtObj::PerformReset(bool keepForClaim, bool endManagement)
 {
     bus.GetInternal().GetKeyStore().Reload();
     KeyStore::Key key;
@@ -2606,10 +2618,22 @@ QStatus PermissionMgmtObj::PerformReset(bool keepForClaim)
 
     applicationState = PermissionConfigurator::CLAIMABLE;
     policyVersion = 0;
+
+    if (endManagement) {
+        /* After Reset it's impossible to call "EndManagement" remotely.
+         * Failure here shouldn't break the reset - it only means
+         * "StartManagement" wasn't called beforehand.
+         */
+        QStatus endStatus = EndManagement();
+        if (ER_OK != endStatus) {
+            QCC_DbgPrintf(("%s: StartManagement not ran before reset. Skipping EndManagement. Status: %s.", __FUNCTION__, QCC_StatusText(endStatus)));
+        }
+    }
+
     return status;
 }
 
-QStatus PermissionMgmtObj::Reset()
+QStatus PermissionMgmtObj::Reset(bool endManagement)
 {
     /* First call out to the application to give it a chance to reset
      * any of its own persisted state, to avoid it leaking out to others.
@@ -2620,7 +2644,7 @@ QStatus PermissionMgmtObj::Reset()
     }
 
     /* Reset the security configuration. */
-    status = PerformReset(true);
+    status = PerformReset(true, endManagement);
     if (ER_OK == status) {
         PolicyChanged(NULL);
         StateChanged();

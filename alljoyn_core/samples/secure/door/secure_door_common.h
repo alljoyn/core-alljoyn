@@ -61,7 +61,9 @@ class DoorCommonPCL : public PermissionConfigurationListener {
   public:
     DoorCommonPCL(BusAttachment& _ba) : ba(_ba) { }
 
-    void PolicyChanged();
+    void StartManagement();
+
+    void EndManagement();
 
     QStatus WaitForClaimedState();
 

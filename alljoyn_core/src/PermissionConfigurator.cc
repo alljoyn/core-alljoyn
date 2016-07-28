@@ -145,7 +145,7 @@ QStatus PermissionConfigurator::Reset()
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
         return ER_FEATURE_NOT_AVAILABLE;
     }
-    return permissionMgmtObj->Reset();
+    return permissionMgmtObj->Reset(false);
 }
 
 QStatus PermissionConfigurator::GetSigningPublicKey(KeyInfoECC& keyInfo)
@@ -288,7 +288,8 @@ QStatus PermissionConfigurator::Claim(
             identityCertChain,
             identityCertChainCount,
             manifests.data(),
-            manifests.size());
+            manifests.size(),
+            false);
     } else {
         return status;
     }

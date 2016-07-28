@@ -317,6 +317,26 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
     QCC_DbgPrintf(("Started transaction %llu for %s", transactionID,
                    secInfo.busName.c_str()));
 
+    {
+        ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+        status = proxyObjectManager->GetProxyObject(mngdProxy);
+        if (ER_OK != status) {
+            if (ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
+                QCC_LogError(status, ("Failed to connect to application"));
+                SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
+                securityAgentImpl->NotifyApplicationListeners(error);
+            }
+            return status;
+        }
+
+        if (ER_OK == status) {
+            status = mngdProxy.StartManagement();
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Could not start management before updates"));
+            }
+        }
+    }
+
     do {
         switch (managedApp.syncState) {
         case SYNC_WILL_RESET:
@@ -388,6 +408,7 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                 if (ER_OK != (status = UpdatePolicy(mngdProxy, persistedPolicy))) {
                     break;
                 }
+
                 managedApp.syncState = SYNC_OK;
             } while (0);
         }
@@ -399,6 +420,10 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
         QStatus storageStatus =
             storage->UpdatesCompleted(managedApp, transactionID);
 
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Update failed."));
+        }
+
         if ((ER_OK == storageStatus) && (currentTransactionID != transactionID)) {
             // restart updates
             QCC_DbgPrintf(("Restarted transaction %llu for %s", transactionID,
@@ -408,6 +433,24 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
             break;
         }
     } while (1);
+
+    // Call "EndManagement" after updates except for after the application has been reset.
+    if (SYNC_RESET != managedApp.syncState) {
+        ProxyObjectManager::ManagedProxyObject mngdProxy(app);
+        status = proxyObjectManager->GetProxyObject(mngdProxy);
+        if (ER_OK != status) {
+            if (ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
+                QCC_LogError(status, ("Failed to connect to application"));
+                SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
+                securityAgentImpl->NotifyApplicationListeners(error);
+            }
+        } else {
+            status = mngdProxy.EndManagement();
+            if (ER_OK != status) {
+                QCC_LogError(status, ("Could not end management after updates"));
+            }
+        }
+    }
 
     return status;
 }
