@@ -30,6 +30,19 @@ using namespace std;
 using namespace ajn;
 using namespace qcc;
 
+static AJ_PCSTR s_defaultManifestTemplateXml =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+
 #define QCC_MODULE "SECURITY_TEST"
 #define TEST_LEAVE_SESSION_WAIT_TIME (1000 * s_globalTimerMultiplier)
 
@@ -84,7 +97,7 @@ QStatus TestSecurityManager::Init() {
         return status;
     }
 
-    return InstallMembership(bus, adminGroup);
+    return InstallAdminMembership();
 }
 
 TestSecurityManager::~TestSecurityManager()
@@ -104,20 +117,46 @@ void TestSecurityManager::SessionLost(SessionId sessionId,
 
 QStatus TestSecurityManager::ClaimSelf()
 {
-    PermissionPolicy::Rule::Member members[1];
-    members[0].SetMemberName("*");
-    members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                             PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                             PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+    QStatus status = ER_FAIL;
 
-    PermissionPolicy::Rule rules[1];
-    rules[0].SetInterfaceName("*");
-    rules[0].SetMembers(1, members);
+    PermissionConfigurator& configurator = bus.GetPermissionConfigurator();
+    EXPECT_EQ(ER_OK, (status = configurator.SetManifestTemplateFromXml(s_defaultManifestTemplateXml)));
+    if (ER_OK != status) {
+        return status;
+    }
 
-    PermissionPolicy::Acl manifest;
-    manifest.SetRules(1, rules);
+    KeyInfoNISTP256 publicKey;
+    EXPECT_EQ(ER_OK, (status = configurator.GetSigningPublicKey(publicKey)));
+    if (ER_OK != status) {
+        return status;
+    }
 
-    return Claim(bus, manifest);
+    IdentityCertificate identityCert;
+    CertificateX509 identityCertChain[2];
+    GenerateIdentityCertificate(*publicKey.GetPublicKey(), identityCert);
+
+    identityCertChain[0] = identityCert;
+    identityCertChain[1] = caCertificate;
+
+    AJ_PSTR signedManifestXml = nullptr;
+    EXPECT_EQ(ER_OK, (status = SecurityApplicationProxy::SignManifest(identityCert, *caKeyPair.GetDSAPrivateKey(), s_defaultManifestTemplateXml, &signedManifestXml)));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    EXPECT_EQ(ER_OK, (status = configurator.Claim(
+                          caPublicKeyInfo,
+                          adminGroup,
+                          caPublicKeyInfo,
+                          identityCertChain, ArraySize(identityCertChain),
+                          (AJ_PCSTR*)&signedManifestXml,
+                          1)));
+    SecurityApplicationProxy::DestroySignedManifest(signedManifestXml);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener);
 }
 
 void TestSecurityManager::IssueCertificate(const ECCPublicKey& appPubKey,
@@ -145,10 +184,8 @@ void TestSecurityManager::IssueCertificate(const ECCPublicKey& appPubKey,
 }
 
 void TestSecurityManager::GenerateIdentityCertificate(const ECCPublicKey& appPubKey,
-                                                      const PermissionPolicy::Acl& manifest,
                                                       IdentityCertificate& cert)
 {
-    QCC_UNUSED(manifest);
     cert.SetAlias(identityGuid.ToString());
     cert.SetSubjectOU((const uint8_t*)identityName.data(), identityName.size());
 
@@ -225,7 +262,7 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
 
     IdentityCertificate identityCert;
     CertificateX509 identityCertChain[2];
-    GenerateIdentityCertificate(appPublicKey, manifest, identityCert);
+    GenerateIdentityCertificate(appPublicKey, identityCert);
 
     identityCertChain[0] = identityCert;
     identityCertChain[1] = caCertificate;
@@ -255,7 +292,59 @@ QStatus TestSecurityManager::Claim(BusAttachment& peerBus, const PermissionPolic
         status = ER_OK;
     }
 
+    return EndManagement(peerBus);
+}
+
+QStatus TestSecurityManager::EndManagement(BusAttachment& peerBus)
+{
+    QStatus status = ER_FAIL;
+
+    SessionId sessionId;
+    qcc::String peerBusName = peerBus.GetUniqueName();
+
+    EXPECT_EQ(ER_OK, (status = bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", &authListener)));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    EXPECT_EQ(ER_OK, (status = bus.JoinSession(peerBusName.c_str(), ALLJOYN_SESSIONPORT_PERMISSION_MGMT, this, sessionId, opts)));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
+    EXPECT_EQ(ER_OK, (status = peerProxy.EndManagement()));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    // returns ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION during EndManagement
+    status = bus.LeaveSession(sessionId);
+    EXPECT_TRUE((ER_OK == status) || (ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION == status));
+    if (ER_ALLJOYN_LEAVESESSION_REPLY_NO_SESSION == status) {
+        status = ER_OK;
+    }
+
     return status;
+}
+
+QStatus TestSecurityManager::InstallAdminMembership()
+{
+    KeyInfoNISTP256 publicKey;
+    QStatus status = ER_OK;
+
+    EXPECT_EQ(ER_OK, (status = bus.GetPermissionConfigurator().GetSigningPublicKey(publicKey)));
+    if (ER_OK != status) {
+        return status;
+    }
+
+    CertificateX509 membershipCertChain[2];
+    MembershipCertificate membershipCert;
+    GenerateMembershipCertificate(*publicKey.GetPublicKey(), adminGroup, membershipCert);
+    membershipCertChain[0] = membershipCert;
+    membershipCertChain[1] = caCertificate;
+
+    return bus.GetPermissionConfigurator().InstallMembership(membershipCertChain, ArraySize(membershipCertChain));
 }
 
 QStatus TestSecurityManager::UpdateIdentity(BusAttachment& peerBus,
@@ -287,7 +376,7 @@ QStatus TestSecurityManager::UpdateIdentity(BusAttachment& peerBus,
 
     IdentityCertificate identityCert;
     CertificateX509 identityCertChain[2];
-    GenerateIdentityCertificate(appPublicKey, manifest, identityCert);
+    GenerateIdentityCertificate(appPublicKey, identityCert);
     identityCertChain[0] = identityCert;
     identityCertChain[1] = caCertificate;
 

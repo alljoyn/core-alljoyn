@@ -56,7 +56,7 @@ QStatus ProxyObjectManager::GetProxyObject(ManagedProxyObject& managedProxy,
     if (sessionType == ECDHE_NULL) {
         bus->EnablePeerSecurity(KEYX_ECDHE_NULL, &listener);
     } else if (sessionType == ECDHE_DSA) {
-        bus->EnablePeerSecurity(ECDHE_KEYX, &listener);
+        bus->EnablePeerSecurity(KEYX_ECDHE_ECDSA, &listener);
     } else if (sessionType == ECDHE_PSK) {
         bus->EnablePeerSecurity(KEYX_ECDHE_PSK, authListener ? authListener : &listener);
     }
@@ -318,6 +318,28 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetPublicKey(ECCPublicKey& publi
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetPublicKey"));
     }
+    return status;
+}
+
+QStatus ProxyObjectManager::ManagedProxyObject::StartManagement()
+{
+    CheckReAuthenticate();
+    QStatus status = remoteObj->StartManagement();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to StartManagement"));
+    }
+
+    return status;
+}
+
+QStatus ProxyObjectManager::ManagedProxyObject::EndManagement()
+{
+    CheckReAuthenticate();
+    QStatus status = remoteObj->EndManagement();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to EndManagement"));
+    }
+
     return status;
 }
 

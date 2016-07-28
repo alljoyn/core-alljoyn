@@ -30,6 +30,7 @@
 #include <alljoyn/BusAttachment.h>
 #include "KeyInfoHelper.h"
 #include "PeerState.h"
+#include "XmlManifestTemplateConverter.h"
 #include "XmlManifestTemplateValidator.h"
 #include <memory>
 
@@ -1739,6 +1740,20 @@ QStatus _Manifest::SetRules(const PermissionPolicy::Rule* rules, size_t rulesCou
     }
 
     return ER_OK;
+}
+
+QStatus _Manifest::SetRules(AJ_PCSTR manifestTemplateXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    vector<PermissionPolicy::Rule> rules;
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(manifestTemplateXml, rules);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return SetRules(rules.data(), rules.size());
 }
 
 QStatus _Manifest::Serialize(std::vector<uint8_t>& serializedForm) const

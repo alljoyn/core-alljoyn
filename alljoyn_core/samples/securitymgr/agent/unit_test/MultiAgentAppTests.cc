@@ -136,7 +136,7 @@ class MultiAgentAppTests :
         cout << __FILE__ << ".TearDown: " << "stopping agent 2" << endl;
         agent2 = nullptr;
         DefaultECDHEAuthListener dal;
-        ba2.EnablePeerSecurity(ECDHE_KEYX, &dal); //keep bus2 available
+        ba2.EnablePeerSecurity(KEYX_ECDHE_ECDSA, &dal); //keep bus2 available
         cout << __FILE__ << ".TearDown: " << "stopping main agent" << endl;
         RemoveSecAgent();
         cout << __FILE__ << ".TearDown: " << "Cleaning up ba2" << endl;

@@ -86,11 +86,29 @@ typedef struct {
 
     /**
      * Notification provided before Security Manager is starting to change settings for this application.
+     *
+     * NOTE: The application must assume any kind of possible Security 2.0
+     * configuration changes, including a full reset. It is strongly advised
+     * to put all current actions on hold and close all open sessions as they
+     * might need to be reauthenticated or security policies might change.
+     * The application should wait for "end_management" to be called before
+     * attempting to start or continue its operation. The caller will wait
+     * for this call to return until a regular method call timeout is hit.
+     * It is thus advised to return from this callback as quickly as possible.
      */
     alljoyn_permissionconfigurationlistener_startmanagement_ptr start_management;
 
     /**
      * Notification provided after Security Manager finished changing settings for this application.
+     * The caller will wait for this call to return until a regular method call timeout is hit.
+     * It is thus advised to return from this callback as quickly as possible.
+     * At this point the application may conclude one of two things has occurred,
+     * depending on its current state:
+     *
+     * CLAIMED state - all Security 2.0-related provisioning
+     * has finished and it's safe to resume or begin regular operation.
+     * CLAIMABLE state - the application has been reset and cannot establish any
+     * sessions to claimed applications until it is claimed once more.
      */
     alljoyn_permissionconfigurationlistener_endmanagement_ptr end_management;
 } alljoyn_permissionconfigurationlistener_callbacks;

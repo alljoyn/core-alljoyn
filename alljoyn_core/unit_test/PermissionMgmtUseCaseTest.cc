@@ -1374,7 +1374,7 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(ER_OK, pc.GetApplicationState(applicationState));
         EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationState) << "  ApplicationState is not UNCLAIMABLE";
 
-        /* try claiming with state unclaimable.  Exptect to fail */
+        /* try claiming with state unclaimable.  Expect to fail */
         EXPECT_EQ(ER_PERMISSION_DENIED, InvokeClaim(true, adminBus, serviceBus, "2020202", "Service Provider", true, &adminBus)) << " InvokeClaim is not supposed to succeed.";
 
         /* now switch it back to claimable */
@@ -2334,7 +2334,7 @@ class PermissionMgmtRecommendedSecurityLevelsTest : public PermissionMgmtUseCase
     virtual void TearDown()
     {
         delete m_saProxy;
-        delete[] m_manifestTemplate;
+        SecurityApplicationProxy::DestroyManifestTemplate(m_manifestTemplate);
 
         PermissionMgmtUseCaseTest::TearDown();
     }
