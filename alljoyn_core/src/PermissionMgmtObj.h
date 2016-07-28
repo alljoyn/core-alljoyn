@@ -134,7 +134,7 @@ class PermissionMgmtObj : public BusObject {
      * For the SendMemberships call, the app sends one cert chain at time since
      * thin client peer may not be able to handle large amount of data.  The app
      * reads back the membership cert chain from the peer.  It keeps looping until
-     * both sides exchanged all the relevant membership cert chains.
+     * both sides exchanged all the membership cert chains.
      * A send code of
      *     SEND_MEMBERSHIP_NONE indicates the peer does not have any membership
      *          cert chain or already sent all of its membership cert chain in
@@ -829,7 +829,6 @@ class PermissionMgmtObj : public BusObject {
     QStatus StoreApplicationState();
     QStatus LoadManifestTemplate(std::vector<PermissionPolicy::Rule>& manifestTemplate);
     bool HasDefaultPolicy();
-    bool IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
     QStatus LookForManifestTemplate(bool& exist);
 
     /* Bind to an exclusive port for PermissionMgmt object */
