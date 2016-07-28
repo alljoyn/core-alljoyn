@@ -54,7 +54,6 @@ static qcc::String GetDefaultKeyStoreFileName(const char* application, const cha
     return path;
 }
 
-/* Note: this function is used by test code. */
 QStatus DeleteDefaultKeyStoreFile(const qcc::String& application, const char* fname)
 {
     QStatus status = ER_OK;

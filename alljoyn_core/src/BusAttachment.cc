@@ -966,6 +966,11 @@ void BusAttachment::ClearKeyStore()
     busInternal->keyStore.Clear();
 }
 
+QStatus BusAttachment::DeleteDefaultKeyStore(const char* applicationName)
+{
+    return DeleteDefaultKeyStoreFile(applicationName, nullptr);
+}
+
 const qcc::String BusAttachment::GetUniqueName() const
 {
     /*

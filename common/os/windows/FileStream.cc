@@ -41,7 +41,14 @@ QStatus qcc::DeleteFile(qcc::String fileName)
     if (::DeleteFileA(fileName.c_str())) {
         return ER_OK;
     } else {
-        return ER_OS_ERROR;
+        DWORD error = GetLastError();
+        if (ERROR_FILE_NOT_FOUND == error) {
+            QCC_DbgTrace(("DeleteFile(%s) returned ERROR_FILE_NOT_FOUND, treating as success", fileName.c_str()));
+            return ER_OK;
+        } else {
+            QCC_LogError(ER_OS_ERROR, ("DeleteFile(%s) failed (%#x)", fileName.c_str(), error));
+            return ER_OS_ERROR;
+        }
     }
 }
 

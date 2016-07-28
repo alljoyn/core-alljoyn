@@ -66,6 +66,7 @@ typedef void (AJ_CALL * alljoyn_busattachment_joinsessioncb_ptr)(QStatus status,
  * @param context      User defined context which will be passed as-is to callback.
  */
 typedef void (AJ_CALL * alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus status, uint32_t timeout, void* context);
+
 /**
  * Allocate an alljoyn_busattachment.
  *
@@ -103,7 +104,6 @@ extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(const c
  * @return the allocated alljoyn_busattachment
  */
 extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(const char* applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrency);
-
 
 /**
  * Free an allocated alljoyn_busattachment.
@@ -1548,6 +1548,20 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registerapplicationstatelist
  */
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregisterapplicationstatelistener(alljoyn_busattachment bus,
                                                                                        alljoyn_applicationstatelistener listener);
+
+/*
+ * Calculates the path to the default key store file corresponding to the application parameter, and then deletes that file.
+ *
+ * @note To avoid errors, app should only call this function after all instances of alljoyn_busattachment are destroyed.
+ *
+ * @param application the application name used when constructing a BusAttachment
+ *
+ * @return
+ *      - #ER_OK if the file was not present, or if it has been deleted successfully
+ *      - #ER_OS_ERROR if the OS fails to delete the key store
+ *      - An error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_deletedefaultkeystore(const char* applicationName);
 
 #ifdef __cplusplus
 } /* extern "C" */
