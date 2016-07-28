@@ -212,7 +212,7 @@ static void BinaryConversionTest(size_t iteration)
     EXPECT_EQ(ER_OK, Crypto_GetRandomBytes((uint8_t*) &a_len, sizeof(size_t))) << "Crypto_GetRandomBytes failed at iteration " << iteration;
     EXPECT_EQ(ER_OK, Crypto_GetRandomBytes((uint8_t*) &b_len, sizeof(size_t))) << "Crypto_GetRandomBytes failed at iteration " << iteration;
 
-    /* decide wether to do full or tight testing based on MSB */
+    /* decide whether to do full or tight testing based on MSB */
     full_a = a_len & 0x80000000;
     full_b = b_len & 0x80000000;
     /* always generate postive values */

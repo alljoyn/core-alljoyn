@@ -47,17 +47,21 @@ QStatus ApplicationUpdater::ResetApplication(const OnlineApplication& app)
             status = proxyObjectManager->GetProxyObject(mngdProxy);
             if (ER_OK != status) {
                 if (ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
-                    SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
-                    securityAgentImpl->NotifyApplicationListeners(error);
+                    NotifyAboutSyncError(app, status, SYNC_ER_REMOTE);
                 }
                 break;
             }
-            status = mngdProxy.Reset();
-            QCC_DbgPrintf(("Resetting application returned %s",
-                           QCC_StatusText(status)));
+
+            status = mngdProxy.StartManagement();
             if (ER_OK != status) {
-                SyncError* error = new SyncError(app, status, SYNC_ER_RESET);
-                securityAgentImpl->NotifyApplicationListeners(error);
+                NotifyAboutSyncError(app, status, SYNC_ER_RESET);
+                break;
+            }
+
+            status = mngdProxy.Reset();
+            QCC_DbgPrintf(("Resetting application returned %s", QCC_StatusText(status)));
+            if (ER_OK != status) {
+                NotifyAboutSyncError(app, status, SYNC_ER_RESET);
             }
         }
         break;
@@ -78,8 +82,7 @@ QStatus ApplicationUpdater::UpdatePolicy(ProxyObjectManager::ManagedProxyObject&
     QStatus status = mngdProxy.GetPolicyVersion(remoteVersion);
     if (ER_OK != status) {
         QCC_DbgPrintf(("Failed to get remote policy version"));
-        SyncError* error = new SyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
-        securityAgentImpl->NotifyApplicationListeners(error);
+        NotifyAboutSyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
         return status;
     }
     QCC_DbgPrintf(("Remote policy version is %i", remoteVersion));
@@ -93,8 +96,7 @@ QStatus ApplicationUpdater::UpdatePolicy(ProxyObjectManager::ManagedProxyObject&
             status = mngdProxy.ResetPolicy();
             if (ER_OK != status) {
                 QCC_DbgPrintf(("Failed to reset policy"));
-                SyncError* error = new SyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
-                securityAgentImpl->NotifyApplicationListeners(error);
+                NotifyAboutSyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
                 return status;
             }
             QCC_DbgPrintf(("Policy reset successfully"));
@@ -188,8 +190,7 @@ QStatus ApplicationUpdater::RemoveRedundantMemberships(ProxyObjectManager::Manag
                            remoteSerial.c_str(), status));
             if (ER_OK != status) {
                 QCC_LogError(status, ("Failed to RemoveMembership"));
-                SyncError* error = new SyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
-                securityAgentImpl->NotifyApplicationListeners(error);
+                NotifyAboutSyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
                 break;
             }
         }
@@ -209,8 +210,7 @@ QStatus ApplicationUpdater::UpdateMemberships(ProxyObjectManager::ManagedProxyOb
     status = mngdProxy.GetMembershipSummaries(remote);
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetMembershipSummaries"));
-        SyncError* error = new SyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
-        securityAgentImpl->NotifyApplicationListeners(error);
+        NotifyAboutSyncError(mngdProxy.GetApplication(), status, SYNC_ER_REMOTE);
         return status;
     }
     QCC_DbgPrintf(("Retrieved %i membership summaries", remote.size()));
@@ -308,8 +308,7 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
         QCC_DbgPrintf(("Failed to start transaction for %s (%s)",
                        secInfo.busName.c_str(),  QCC_StatusText(status)));
         if (ER_END_OF_DATA != status) {
-            SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
-            securityAgentImpl->NotifyApplicationListeners(error);
+            NotifyAboutSyncError(app, status, SYNC_ER_STORAGE);
         }
         return status;
     }
@@ -333,8 +332,7 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                     QCC_DbgPrintf(("Unexpected applicationState %s",
                                    PermissionConfigurator::ToString(app.applicationState)));
                     status = ER_FAIL;
-                    SyncError* error = new SyncError(app, status, SYNC_ER_UNEXPECTED_STATE);
-                    securityAgentImpl->NotifyApplicationListeners(error);
+                    NotifyAboutSyncError(app, status, SYNC_ER_UNEXPECTED_STATE);
                     return status;
                 }
 
@@ -342,8 +340,7 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                 vector<MembershipCertificateChain> persistedMembershipCerts;
                 if (ER_OK != (status = storage->GetMembershipCertificates(app, persistedMembershipCerts))) {
                     QCC_DbgPrintf(("Failed to GetMembershipCertificates"));
-                    SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
-                    securityAgentImpl->NotifyApplicationListeners(error);
+                    NotifyAboutSyncError(app, status, SYNC_ER_STORAGE);
                     return status;
                 }
                 QCC_DbgPrintf(("Found %i local membership certificates", persistedMembershipCerts.size()));
@@ -351,9 +348,8 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                 IdentityCertificateChain persistedIdCerts;
                 Manifest mf;
                 if (ER_OK != (status = storage->GetIdentityCertificatesAndManifest(app, persistedIdCerts, mf))) {
-                    SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
                     QCC_LogError(status, ("Could not get identity certificate from storage"));
-                    securityAgentImpl->NotifyApplicationListeners(error);
+                    NotifyAboutSyncError(app, status, SYNC_ER_STORAGE);
                     return status;
                 }
 
@@ -361,10 +357,10 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                 status = storage->GetPolicy(app, policy);
                 if (ER_OK != status && ER_END_OF_DATA != status) {
                     QCC_LogError(status, ("Failed to retrieve local policy"));
-                    SyncError* error = new SyncError(app, status, SYNC_ER_STORAGE);
-                    securityAgentImpl->NotifyApplicationListeners(error);
+                    NotifyAboutSyncError(app, status, SYNC_ER_STORAGE);
                     return status;
                 }
+
                 QCC_DbgPrintf(("GetPolicy from storage returned %i", status));
                 PermissionPolicy* persistedPolicy = status == ER_OK ? &policy : nullptr;
                 //Connect to remote app
@@ -373,10 +369,15 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                 if (ER_OK != status) {
                     if (ER_ALLJOYN_JOINSESSION_REPLY_FAILED != status) {
                         QCC_LogError(status, ("Failed to connect to application"));
-                        SyncError* error = new SyncError(app, status, SYNC_ER_REMOTE);
-                        securityAgentImpl->NotifyApplicationListeners(error);
+                        NotifyAboutSyncError(app, status, SYNC_ER_REMOTE);
                     }
                     return status;
+                }
+
+                if (ER_OK != (status = mngdProxy.StartManagement())) {
+                    QCC_LogError(status, ("Could not start management before updates"));
+                    NotifyAboutSyncError(app, status, SYNC_ER_REMOTE);
+                    break;
                 }
 
                 if (ER_OK != (status = UpdateMemberships(mngdProxy, persistedMembershipCerts))) {
@@ -388,6 +389,14 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
                 if (ER_OK != (status = UpdatePolicy(mngdProxy, persistedPolicy))) {
                     break;
                 }
+
+                // Call "EndManagement" after updates except for after the application has been reset.
+                if (ER_OK != (status = mngdProxy.EndManagement())) {
+                    QCC_LogError(status, ("Could not end management after updates"));
+                    NotifyAboutSyncError(app, status, SYNC_ER_REMOTE);
+                    break;
+                }
+
                 managedApp.syncState = SYNC_OK;
             } while (0);
         }
@@ -399,12 +408,15 @@ QStatus ApplicationUpdater::UpdateApplication(const OnlineApplication& app,
         QStatus storageStatus =
             storage->UpdatesCompleted(managedApp, transactionID);
 
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Update failed."));
+        }
+
         if ((ER_OK == storageStatus) && (currentTransactionID != transactionID)) {
             // restart updates
             QCC_DbgPrintf(("Restarted transaction %llu for %s", transactionID,
                            secInfo.busName.c_str()));
         } else {
-            // we're done !!
             break;
         }
     } while (1);
@@ -454,6 +466,12 @@ void ApplicationUpdater::OnPendingChanges(vector<Application>& apps)
             }
         }
     }
+}
+
+void ApplicationUpdater::NotifyAboutSyncError(const OnlineApplication & app, QStatus errorStatus, SyncErrorType errorType)
+{
+    SyncError* error = new SyncError(app, errorStatus, errorType);
+    securityAgentImpl->NotifyApplicationListeners(error);
 }
 
 void ApplicationUpdater::OnSecurityStateChange(const SecurityInfo* oldSecInfo,

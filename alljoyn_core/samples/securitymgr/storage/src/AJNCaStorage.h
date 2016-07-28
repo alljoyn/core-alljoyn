@@ -81,6 +81,13 @@ class AJNCaStorage :
                                   ajn::Manifest& signedManifest,
                                   vector<MembershipCertificateChain>& adminGroupMemberships);
 
+    virtual QStatus RegisterAgent(const KeyInfoNISTP256& agentKey,
+                                  AJ_PCSTR unsignedManifestXml,
+                                  GroupInfo& adminGroup,
+                                  IdentityCertificateChain& identityCertificates,
+                                  std::string& signedManifestXml,
+                                  vector<MembershipCertificateChain>& adminGroupMemberships);
+
     virtual QStatus FinishApplicationClaiming(const Application& app,
                                               QStatus status);
 
@@ -132,6 +139,10 @@ class AJNCaStorage :
     QStatus GenerateSignedManifest(const qcc::CertificateX509& idCert,
                                    const Manifest& manifest,
                                    ajn::Manifest& signedManifest);
+
+    QStatus GenerateSignedManifest(const qcc::CertificateX509& idCert,
+                                   AJ_PCSTR unsignedManifestXml,
+                                   std::string& signedManifestXml);
 
     virtual QStatus GetPolicy(const Application& app,
                               PermissionPolicy& policy) const;

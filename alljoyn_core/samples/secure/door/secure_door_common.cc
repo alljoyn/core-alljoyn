@@ -29,26 +29,22 @@ namespace sample {
 namespace secure {
 namespace door {
 
-void DoorCommonPCL::PolicyChanged()
+void DoorCommonPCL::StartManagement()
 {
+    printf("StartManagement called.\n");
+}
+
+void DoorCommonPCL::EndManagement()
+{
+    printf("EndManagement called.\n");
     lock.Lock();
     QStatus status;
     PermissionConfigurator::ApplicationState appState;
     if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState))) {
         if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
-#if defined(QCC_OS_GROUP_WINDOWS)
-            Sleep(250);
-#else
-            usleep(250 * 1000);
-#endif
-
-            // Upon a policy update, existing connections are invalidated
-            // and one needs to make them valid again.
-            if (ER_OK != (status = ba.SecureConnectionAsync(nullptr, true))) {
-                fprintf(stderr, "Attempt to secure the connection - status (%s)\n",
-                        QCC_StatusText(status));
-            }
             sem.Signal();
+        } else {
+            fprintf(stderr, "App not claimed after management finished. Continuing to wait.\n");
         }
     } else {
         fprintf(stderr, "Failed to GetApplicationState - status (%s)\n", QCC_StatusText(status));

@@ -102,7 +102,7 @@ QStatus MPSecurityMngr::Start(int nrOfPeers)
 
     pomngr = shared_ptr<ProxyObjectManager>(new ProxyObjectManager(&validatorBus));
     status =
-        validatorBus.EnablePeerSecurity(KEYX_ECDHE_NULL " " ECDHE_KEYX, &pomngr->listener, nullptr, true);
+        validatorBus.EnablePeerSecurity(KEYX_ECDHE_NULL " " KEYX_ECDHE_ECDSA, &pomngr->listener, nullptr, true);
     if (status != ER_OK) {
         cerr << "Failed to enable Peer security on local bus" << endl;
         return status;
