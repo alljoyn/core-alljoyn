@@ -39,10 +39,16 @@ using namespace qcc;
 
 QStatus qcc::DeleteFile(qcc::String fileName)
 {
-    if (unlink(fileName.c_str())) {
-        return ER_OS_ERROR;
-    } else {
+    int result = unlink(fileName.c_str());
+    switch (result) {
+    case 0:
         return ER_OK;
+    case ENOENT:
+        QCC_DbgTrace(("unlink(%s) returned ENOENT, converting to ER_EOF", fileName.c_str()));
+        return ER_EOF;
+    default:
+        QCC_LogError(ER_OS_ERROR, ("unlink(%s) failed (%d)", fileName.c_str(), result));
+        return ER_OS_ERROR;
     }
 }
 
