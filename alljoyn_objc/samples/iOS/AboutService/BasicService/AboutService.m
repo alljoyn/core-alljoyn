@@ -252,12 +252,12 @@ static const AJNSessionPort kAboutServicePort = 900;
     [*aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
     
     AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "14.12"];
+    [ajSoftwareVersion setValue:@"s", "16.04.00a"];
     [ajSoftwareVersion stabilize];
     [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
     
     AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "14.12"];
+    [hwSoftwareVersion setValue:@"s", "16.04.00a"];
     [hwSoftwareVersion stabilize];
     [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
     
@@ -334,12 +334,12 @@ static const AJNSessionPort kAboutServicePort = 900;
     [*aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
     
     AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "14.12"];
+    [ajSoftwareVersion setValue:@"s", "16.04.00a"];
     [ajSoftwareVersion stabilize];
     [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
     
     AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "14.12"];
+    [hwSoftwareVersion setValue:@"s", "16.04.00a"];
     [hwSoftwareVersion stabilize];
     [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
     
