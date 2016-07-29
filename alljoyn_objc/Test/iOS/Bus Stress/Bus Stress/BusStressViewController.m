@@ -43,6 +43,7 @@
     if (self) {
         // Custom initialization
     }
+    self.hasTestStarted = NO;
     return self;
 }
 
@@ -161,18 +162,26 @@
 
 - (IBAction)didTouchStartButton:(id)sender
 {
-    [BusStressManager runStress:(NSInteger)self.numberOfIterationsSlider.value threadCount:(NSInteger)self.numberOfThreadsSlider.value deleteBusFlag:self.deleteBusAttachmentsSwitch.isOn stopThreadsFlag:self.stopThreadsBeforeJoinSwitch.isOn operationMode:self.operationModeSegmentedControl.selectedSegmentIndex delegate:self];
-    self.startButton.hidden = YES;
-    self.stopButton.hidden = NO;
-    [self.stressTestActivityIndicatorView startAnimating];
+    if (self.hasTestStarted == NO) {
+        [BusStressManager runStress:(NSInteger)self.numberOfIterationsSlider.value threadCount:(NSInteger)self.numberOfThreadsSlider.value deleteBusFlag:self.deleteBusAttachmentsSwitch.isOn stopThreadsFlag:self.stopThreadsBeforeJoinSwitch.isOn operationMode:self.operationModeSegmentedControl.selectedSegmentIndex delegate:self];
+        self.startButton.hidden = YES;
+        self.stopButton.hidden = NO;
+        [self.stressTestActivityIndicatorView startAnimating];
+        self.hasTestStarted = YES;
+    }
+
+
 }
 
 - (IBAction)didTouchStopButton:(id)sender
 {
-    [BusStressManager stopStress];
-    self.startButton.hidden = NO;
-    self.stopButton.hidden = YES;
-    [self.stressTestActivityIndicatorView stopAnimating];
+    if (self.hasTestStarted == YES) {
+        [BusStressManager stopStress];
+        self.startButton.hidden = NO;
+        self.stopButton.hidden = YES;
+        [self.stressTestActivityIndicatorView stopAnimating];
+        self.hasTestStarted = NO;
+    }
 }
 
 - (IBAction)numberOfIterationsValueChanged:(id)sender
