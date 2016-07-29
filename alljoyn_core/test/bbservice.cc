@@ -95,25 +95,25 @@ static void CDECL_CALL SigIntHandler(int sig)
 
 /* Same keys and certs as alljoyn_core/unit_test/AuthListenerECDHETest.cc */
 static const char ecdsaPrivateKeyPEM[] = {
-    "-----BEGIN EC PRIVATE KEY-----\n"
-    "MDECAQEEICCRJMbxSiWUqj4Zs7jFQRXDJdBRPWX6fIVqE1BaXd08oAoGCCqGSM49\n"
-    "AwEH\n"
-    "-----END EC PRIVATE KEY-----\n"
+        "-----BEGIN EC PRIVATE KEY-----\n"
+        "MDECAQEEII9KTdqfje8CzLnQ0asUaVdW1hmjQrP1AINRd03fdTAloAoGCCqGSM49\n"
+        "AwEH\n"
+        "-----END EC PRIVATE KEY-----"
 };
 
 static const char ecdsaCertChainX509PEM[] = {
-    "-----BEGIN CERTIFICATE-----\n"
-    "MIIBuDCCAV2gAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjBCMRUwEwYDVQQLDAxv\n"
-    "cmdhbml6YXRpb24xKTAnBgNVBAMMIDgxM2FkZDFmMWNiOTljZTk2ZmY5MTVmNTVk\n"
-    "MzQ4MjA2MB4XDTE1MDcyMjIxMDYxNFoXDTE2MDcyMTIxMDYxNFowQjEVMBMGA1UE\n"
-    "CwwMb3JnYW5pemF0aW9uMSkwJwYDVQQDDCAzOWIxZGNmMjBmZDJlNTNiZGYzMDU3\n"
-    "NzMzMjBlY2RjMzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABGJ/9F4xHn3Klw7z\n"
-    "6LREmHJgzu8yJ4i09b4EWX6a5MgUpQoGKJcjWgYGWb86bzbciMCFpmKzfZ42Hg+k\n"
-    "BJs2ZWajPjA8MAwGA1UdEwQFMAMBAf8wFQYDVR0lBA4wDAYKKwYBBAGC3nwBATAV\n"
-    "BgNVHSMEDjAMoAoECELxjRK/fVhaMAoGCCqGSM49BAMCA0kAMEYCIQDixoulcO7S\n"
-    "df6Iz6lvt2CDy0sjt/bfuYVW3GeMLNK1LAIhALNklms9SP8ZmTkhCKdpC+/fuwn0\n"
-    "+7RX8CMop11eWCih\n"
-    "-----END CERTIFICATE-----\n"
+        "-----BEGIN CERTIFICATE-----\n"
+        "MIIBtTCCAVugAwIBAgIHMTAxMDEwMTAKBggqhkjOPQQDAjBCMRUwEwYDVQQLDAxv\n"
+        "cmdhbml6YXRpb24xKTAnBgNVBAMMIDAyMzRjYjFhMmRlYmY5OTBmZGQ0NGJmZjlh\n"
+        "MjhjZDUxMB4XDTE1MDgyMTIyMjEwNloXDTI1MDgxODIyMjEwNlowQjEVMBMGA1UE\n"
+        "CwwMb3JnYW5pemF0aW9uMSkwJwYDVQQDDCBjN2UzYmRmNzhlOWRmNmRkOTk3N2Q4\n"
+        "NGUwMTE0MDYwMzBZMBMGByqGSM49AgEGCCqGSM49AwEHA0IABEjL84d4YPMMH5g9\n"
+        "kq5ErdTO4ouaGWLz7ikerB+HLPAu+aTekMxoA7uIejr5iekcWXxryJIxFwsdGh34\n"
+        "hl9YQKGjPDA6MAwGA1UdEwQFMAMBAf8wFQYDVR0lBA4wDAYKKwYBBAGC3nwBATAT\n"
+        "BgNVHSMEDDAKoAhCmX6GR09OkTAKBggqhkjOPQQDAgNIADBFAiEA026qDcGfTife\n"
+        "D75dbuT6MFz+sT8xuEkYNxyshK8vBMECIAa5lvbBATlTHSrb0FHg+jwFnQ2yYUE/\n"
+        "aFFhPrtFbwHn\n"
+        "-----END CERTIFICATE-----"
 };
 
 class MyAuthListener : public AuthListener {
