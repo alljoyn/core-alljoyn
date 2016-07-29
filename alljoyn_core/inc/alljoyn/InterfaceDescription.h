@@ -608,16 +608,22 @@ class InterfaceDescription {
     /**
      * Set the language tag for the introspection descriptions of this InterfaceDescription
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use SetDescriptionForLanguage() instead.
+     *
      * @param language The language tag
      */
-    void SetDescriptionLanguage(const char* language);
+    QCC_DEPRECATED_ON(void SetDescriptionLanguage(const char* language), 16.10);
 
     /**
      * Get the language tag for the introspection descriptions of this InterfaceDescription
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use GetDescriptionLanguages() or GetDescriptionForLanguage() instead.
+     *
      * @return The langauge tag
      */
-    const char* GetDescriptionLanguage() const;
+    QCC_DEPRECATED_ON(const char* GetDescriptionLanguage() const, 16.10);
 
     /**
      * Get the set of all available description languages.
@@ -632,6 +638,9 @@ class InterfaceDescription {
     /**
      * Set the introspection description for this InterfaceDescription
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use SetDescriptionForLanguage() instead.
+     *
      * Note that when SetDescriptionTranslator is used the text in this method may
      * actually be a "lookup key". When generating the introspection the "text" is first
      * passed to the Translator where the key should be used to lookup the actual
@@ -639,7 +648,7 @@ class InterfaceDescription {
      *
      * @param description The introspection description
      */
-    void SetDescription(const char* description);
+    QCC_DEPRECATED_ON(void SetDescription(const char* description), 16.10);
 
     /**
      * Set the introspection description for this InterfaceDescription in the given language.
@@ -690,6 +699,9 @@ class InterfaceDescription {
     /**
      * Set the introspection description for "member" of this InterfaceDescription
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use SetMemberDescriptionForLanguage() instead.
+     *
      * @param member The name of the member
      * @param description The introspection description
      * @return
@@ -697,7 +709,7 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
      *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
-    QStatus SetMemberDescription(const char* member, const char* description);
+    QCC_DEPRECATED_ON(QStatus SetMemberDescription(const char* member, const char* description), 16.10);
 
     /**
      * Set the introspection description for member "memberName" of this InterfaceDescription
@@ -772,6 +784,9 @@ class InterfaceDescription {
     /**
      * Set the introspection description for the argument "arg of "member" of this InterfaceDescription
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use SetArgDescriptionForLanguage() instead.
+     *
      * @param member The name of the member
      * @param arg The name of the argument
      * @param description The introspection description
@@ -780,7 +795,7 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
      *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
-    QStatus SetArgDescription(const char* member, const char* arg, const char* description);
+    QCC_DEPRECATED_ON(QStatus SetArgDescription(const char* member, const char* arg, const char* description), 16.10);
 
     /**
      * Set the introspection description for the argument "argName" of the member "memberName"
@@ -841,6 +856,9 @@ class InterfaceDescription {
     /**
      * Set the introspection description for "property" of this InterfaceDescription
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use SetPropertyDescriptionForLanguage() instead.
+     *
      * @param name The name of the property
      * @param description The introspection description
      * @return
@@ -848,7 +866,7 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
      *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found
      */
-    QStatus SetPropertyDescription(const char* name, const char* description);
+    QCC_DEPRECATED_ON(QStatus SetPropertyDescription(const char* name, const char* description), 16.10);
 
     /**
      * Set the introspection description for the interface property "propertyName"
@@ -906,17 +924,23 @@ class InterfaceDescription {
      * Set the Translator that provides this InterfaceDescription's
      * introspection description in multiple languages.
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use SetDescriptionForLanguage() instead.
+     *
      * @param translator The Translator instance.
      */
-    void SetDescriptionTranslator(Translator* translator);
+    QCC_DEPRECATED_ON(void SetDescriptionTranslator(Translator * translator), 16.10);
 
     /**
      * Get the Translator that provides this InterfaceDescription's
      * introspection description in multiple languages.
      *
+     * @deprecated Using a single description and an optional translator for interface descriptions
+     * has been deprecated, please use GetDescriptionForLanguage() instead.
+     *
      * @return The Translator instance.
      */
-    Translator* GetDescriptionTranslator() const;
+    QCC_DEPRECATED_ON(Translator * GetDescriptionTranslator() const, 16.10);
 
     /**
      * Does this interface have at least one description on an element

@@ -68,14 +68,6 @@ static void CDECL_CALL SigIntHandler(int sig)
 static const char* tags[] = { "en", "de" };
 static const char* objId = "obj";
 static const char* objDescription[] =  { "This is the object", "DE: This is the object" };
-static const char* ifcId = "ifc";
-static const char* ifcDescription[] =  { "This is the interface", "DE: This is the interface" };
-static const char* nameChangedId = "nameChanged";
-static const char* nameChangedDescription[] =  { "Emitted when the name changes", "DE: Emitted whent he name changes" };
-static const char* argId = "arg";
-static const char* nameChangedArgDescription[] =  { "This is the new name", "DE: This is the new name" };
-static const char* propId = "prop";
-static const char* namePropDescription[] =  { "This is the actual name", "DE: This is the actual name" };
 
 class MyTranslator : public Translator {
   public:
@@ -101,19 +93,8 @@ class MyTranslator : public Translator {
         if (0 == strcmp(source, objId)) {
             return objDescription[i];
         }
-        if (0 == strcmp(source, ifcId)) {
-            return ifcDescription[i];
-        }
-        if (0 == strcmp(source, nameChangedId)) {
-            return nameChangedDescription[i];
-        }
-        if (0 == strcmp(source, argId)) {
-            return nameChangedArgDescription[i];
-        }
-        if (0 == strcmp(source, propId)) {
-            return namePropDescription[i];
-        }
-        return NULL;
+
+        return nullptr;
     }
 
 };
@@ -132,13 +113,14 @@ class BasicSampleObject : public BusObject {
             intf->AddSignal("nameChanged", "s", "newName", 0);
             intf->AddProperty("name", "s", PROP_ACCESS_RW);
 
-            intf->SetDescriptionLanguage("");
-            intf->SetDescription(ifcId);
-            intf->SetMemberDescription("nameChanged", nameChangedId);
-            intf->SetArgDescription("nameChanged", "newName", argId);
-            intf->SetPropertyDescription("name", propId);
-
-            intf->SetDescriptionTranslator(&translator);
+            intf->SetDescriptionForLanguage("This is the interface", "en");
+            intf->SetDescriptionForLanguage("DE: This is the interface", "de");
+            intf->SetMemberDescriptionForLanguage("nameChanged", "Emitted when the name changes", "en");
+            intf->SetMemberDescriptionForLanguage("nameChanged", "DE: Emitted when the name changes", "de");
+            intf->SetArgDescriptionForLanguage("nameChanged", "newName", "This is the new name", "en");
+            intf->SetArgDescriptionForLanguage("nameChanged", "newName", "DE: This is the new name", "de");
+            intf->SetPropertyDescriptionForLanguage("name", "This is the actual name", "en");
+            intf->SetPropertyDescriptionForLanguage("name", "DE: This is the actual name", "de");
 
             intf->Activate();
         } else {
