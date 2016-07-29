@@ -23,7 +23,7 @@
  * @fileOverview
  *
  * AllJoyn&trade; JavaScript API Reference Manual
- * @version 00.00.01
+ * @version 16.04.00a
  * @description
  * Type coercion between DBus and JavaScript types is done according to the following table.
  * <table>

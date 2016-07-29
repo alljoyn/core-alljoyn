@@ -117,7 +117,7 @@ NP_EXPORT(char*) NP_GetPluginVersion()
 {
     Initialize();
     QCC_DbgPrintf(("%s", __FUNCTION__));
-    return const_cast<char*>("00.00.01");
+    return const_cast<char*>("16.04.00a");
 }
 
 NP_EXPORT(char*) NP_GetMIMEDescription()
