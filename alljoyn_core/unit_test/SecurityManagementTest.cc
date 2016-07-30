@@ -1745,7 +1745,7 @@ TEST_F(SecurityManagementPolicyTest, remove_membership_fails_if_issuer_does_not_
 TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_membership_installation)
 {
     BusAttachment busUsedAsCA("caBus");
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("caBus"));
+    EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("caBus"));
     busUsedAsCA.Start();
     busUsedAsCA.Connect();
 
@@ -1947,7 +1947,7 @@ TEST_F(SecurityManagementPolicyTest, successful_method_call_after_chained_member
 TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_membership_installation)
 {
     BusAttachment busUsedAsCA("caBus");
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("caBus"));
+    EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("caBus"));
     busUsedAsCA.Start();
     busUsedAsCA.Connect();
 
@@ -2106,7 +2106,7 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_after_chained_memb
 TEST_F(SecurityManagementPolicyTest, chained_membership_signed_upto_ca_fails)
 {
     BusAttachment busUsedAsCA("caBus");
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("caBus"));
+    EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("caBus"));
     busUsedAsCA.Start();
     busUsedAsCA.Connect();
 
@@ -2215,7 +2215,7 @@ TEST_F(SecurityManagementPolicyTest, chained_membership_signed_upto_ca_fails)
 TEST_F(SecurityManagementPolicyTest, chained_membership_with_two_levels_fails)
 {
     BusAttachment busUsedAsCA("caBus");
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("caBus"));
+    EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("caBus"));
     busUsedAsCA.Start();
     busUsedAsCA.Connect();
 
@@ -2340,7 +2340,7 @@ TEST_F(SecurityManagementPolicyTest, chained_membership_with_two_levels_fails)
 TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegation_is_false)
 {
     BusAttachment busUsedAsCA("caBus");
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("caBus"));
+    EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("caBus"));
     busUsedAsCA.Start();
     busUsedAsCA.Connect();
 
