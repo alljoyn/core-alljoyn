@@ -24,7 +24,6 @@
 #include <alljoyn/DBusStd.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
-#include "KeyStore.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -159,8 +158,8 @@ class ObjectSecurityTest : public testing::Test, public AuthListener {
         servicebus("ObjectSecurityTestService", false),
         authComplete(false)
     {
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("ObjectSecurityTestClient"));
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("ObjectSecurityTestService"));
+        EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("ObjectSecurityTestClient"));
+        EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("ObjectSecurityTestService"));
     };
 
     virtual void SetUp() {

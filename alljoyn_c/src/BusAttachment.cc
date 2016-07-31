@@ -21,6 +21,7 @@
 
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn/InterfaceDescription.h>
+#include <alljoyn/BusAttachment.h>
 #include "BusAttachmentC.h"
 #include <qcc/Debug.h>
 
@@ -622,4 +623,10 @@ QStatus AJ_CALL alljoyn_busattachment_unregisterapplicationstatelistener(alljoyn
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     return ((ajn::BusAttachmentC*)bus)->UnregisterApplicationStateListener((*(ajn::ApplicationStateListener*)listener));
+}
+
+QStatus AJ_CALL alljoyn_busattachment_deletedefaultkeystore(const char* applicationName)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    return ajn::BusAttachment::DeleteDefaultKeyStore(applicationName);
 }
