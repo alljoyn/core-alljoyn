@@ -71,7 +71,6 @@ static qcc::String GetDefaultKeyStoreFileName(const char* application, const cha
     return path;
 }
 
-/* Note: this function is used by test code. */
 QStatus DeleteDefaultKeyStoreFile(const qcc::String& application, const char* fname)
 {
     QStatus status = ER_OK;
@@ -79,7 +78,10 @@ QStatus DeleteDefaultKeyStoreFile(const qcc::String& application, const char* fn
 
     if (qcc::FileExists(path) == ER_OK) {
         status = qcc::DeleteFile(path);
-        if (status != ER_OK) {
+        if (status == ER_EOF) {
+            /* qcc::DeleteFile could return ER_EOF if the file is not found, treat this as success. */
+            status = ER_OK;
+        } else if (status != ER_OK) {
             QCC_LogError(status, ("DeleteFile(%s) failed", path.c_str()));
         }
     }

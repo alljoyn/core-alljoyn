@@ -313,7 +313,7 @@ TEST(BusAttachmentTest, createinterface) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.BusAttachment", &testIntf);
@@ -325,7 +325,7 @@ TEST(BusAttachmentTest, deleteinterface) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.BusAttachment", &testIntf);
@@ -339,7 +339,7 @@ TEST(BusAttachmentTest, start_stop_join) {
     QStatus status = ER_FAIL;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_busattachment_stop(bus);
@@ -353,7 +353,7 @@ TEST(BusAttachmentTest, isstarted_isstopping) {
     QStatus status = ER_FAIL;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
     EXPECT_EQ(QCC_FALSE, alljoyn_busattachment_isstarted(bus));
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -377,7 +377,7 @@ TEST(BusAttachmentTest, getconcurrency) {
     alljoyn_busattachment bus = NULL;
     unsigned int concurrency = (unsigned int)-1;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
     concurrency = alljoyn_busattachment_getconcurrency(bus);
     //The default value for getconcurrency is 4
@@ -389,7 +389,7 @@ TEST(BusAttachmentTest, getconcurrency) {
     concurrency = (unsigned int)-1;
 
     bus = alljoyn_busattachment_create_concurrency(s_busAttachmentTestName, QCC_TRUE, 8);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
     concurrency = alljoyn_busattachment_getconcurrency(bus);
     //The default value for getconcurrency is 8
@@ -411,7 +411,7 @@ TEST(BusAttachmentTest, isconnected)
         bus = NULL;
 
         bus = alljoyn_busattachment_create(s_busAttachmentTestName, allow_remote[i]);
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+        EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
         status = alljoyn_busattachment_start(bus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -451,7 +451,7 @@ TEST(BusAttachmentTest, disconnect)
         bus = NULL;
 
         bus = alljoyn_busattachment_create(s_busAttachmentTestName, allow_remote[i]);
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+        EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
         status = alljoyn_busattachment_disconnect(bus, NULL);
         EXPECT_EQ(ER_BUS_BUS_NOT_STARTED, status);
@@ -490,7 +490,7 @@ TEST(BusAttachmentTest, connect_null)
 
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -538,7 +538,7 @@ TEST(BusAttachmentTest, getconnectspec)
 
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -568,7 +568,7 @@ TEST(BusAttachmentTest, getdbusobject) {
 
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -604,7 +604,7 @@ TEST(BusAttachmentTest, ping_self) {
     QStatus status;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -620,7 +620,7 @@ TEST(BusAttachmentTest, ping_other_on_same_bus) {
     QStatus status;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
 
     status = alljoyn_busattachment_start(bus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -629,7 +629,7 @@ TEST(BusAttachmentTest, ping_other_on_same_bus) {
 
     alljoyn_busattachment otherbus = NULL;
     otherbus = alljoyn_busattachment_create(s_otherBusAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_otherBusAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_otherBusAttachmentTestName));
 
     status = alljoyn_busattachment_start(otherbus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -688,7 +688,7 @@ TEST(BusAttachmentTest, BasicSecureConnection)
 {
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnection(bus, "busname", false));
 
     QStatus status = alljoyn_busattachment_start(bus);
@@ -700,7 +700,7 @@ TEST(BusAttachmentTest, BasicSecureConnection)
 
     alljoyn_busattachment otherbus = NULL;
     otherbus = alljoyn_busattachment_create(s_otherBusAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_otherBusAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_otherBusAttachmentTestName));
 
     status = alljoyn_busattachment_start(otherbus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -741,7 +741,7 @@ TEST(BusAttachmentTest, BasicSecureConnectionAsync)
 {
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create(s_busAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_busAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_busAttachmentTestName));
     ASSERT_EQ(ER_BUS_NOT_CONNECTED, alljoyn_busattachment_secureconnectionasync(bus, "busname", false));
 
     QStatus status = alljoyn_busattachment_start(bus);
@@ -753,7 +753,7 @@ TEST(BusAttachmentTest, BasicSecureConnectionAsync)
 
     alljoyn_busattachment otherbus = NULL;
     otherbus = alljoyn_busattachment_create(s_otherBusAttachmentTestName, QCC_TRUE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(s_otherBusAttachmentTestName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(s_otherBusAttachmentTestName));
 
     status = alljoyn_busattachment_start(otherbus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
