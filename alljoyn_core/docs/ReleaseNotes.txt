@@ -68,7 +68,7 @@ ASACORE-2955 C binding for InterfaceDescription relies on qcc::String reference
 ASACORE-3106 Add BusAttachment::SecureConnection API to Java Binding
 
 For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20issuetype%20%3D%20Bug%20AND%20status%20in%20%28Closed%2C%20Resolved%29%20AND%20resolution%20%3D%20Fixed%20AND%20fixVersion%20in%20%2816.04%29%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20issuetype%20%3D%20Bug%20AND%20status%20in%20(Closed%2C%20Resolved)%20AND%20resolution%20%3D%20Fixed%20AND%20fixVersion%20in%20(16.04a%2C%2016.04)%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
 
 
 Known Issues in Version 16.04a
