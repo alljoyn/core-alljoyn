@@ -25,6 +25,11 @@
 
 @interface AJNAboutObjectDescription : AJNObject
 
+/**
+ * Get a list of the paths that are added to this AboutObjectDescription.
+ * @return paths found in the AboutObjectDescription
+ */
+@property (nonatomic, readonly) NSArray *paths;
 
 /**
  * Fill in the ObjectDescription fields using a MsgArg
@@ -58,27 +63,6 @@
 - (QStatus)createFromMsgArg:(AJNMessageArgument *)msgArg;
 
 /**
- * Get a list of the paths that are added to this AboutObjectDescription.
- *
- * usage example
- * @code
- * size_t numPaths = [aboutObjectDescription getPaths:nil withSize:0];
- * NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:numPaths];
- * [aboutObjectDescription getPaths:&paths withSize:numPaths]
- * @endcode
- *
- * @param[out] paths a pointer to NSMutableArray containing the paths
- * @param[in]  numPaths the size of the char* array
- *
- * @return
- *    The total number of paths found in the AboutObjectDescription.  If this
- *    number is larger than `numPaths` then only `numPaths` of paths will be
- *    returned in the `paths` array.
- *
- */
-- (size_t)getPaths:(NSMutableArray **)path withSize:(size_t)numOfPaths;
-
-/**
  * Get a list of interfaces advertised at the given path that are part of
  * this AboutObjectDescription.
  *
@@ -99,7 +83,7 @@
  *    then only `numInterfaces` of interfaces will be returned in the
  *    `interfaces` array.
  */
-- (size_t)getInterfacesForPath:(NSString *)path interfaces:(NSMutableArray **)interfaces numOfInterfaces:(size_t)numOfInterfaces;
+- (NSMutableArray*)getInterfacesForPath:(NSString *)path;
 
 /**
  * Get a list of the paths for a given interface. Its possible to have the
@@ -123,7 +107,7 @@
  *    array
  *
  */
-- (size_t)getInterfacePathsForInterface:(NSString *)interface paths:(NSMutableArray **)paths numOfPaths:(size_t)numOfPaths;
+- (NSMutableArray*)getInterfacePathsForInterface:(NSString *)interface;
 
 /**
  * Clear all the contents of this AboutObjectDescription
@@ -139,7 +123,7 @@
  *
  * @return true if the path is found
  */
-- (BOOL)hasPath:(const char *)path;
+- (BOOL)hasPath:(NSString*)path;
 
 /**
  * Returns true if the given interface name is found in any path
@@ -148,7 +132,7 @@
  *
  * @return true if the interface is found
  */
-- (BOOL)hasInterface:(const char *)interface;
+- (BOOL)hasInterface:(NSString*)interface;
 
 /**
  * Returns true if the given interface name is found at the given path
@@ -157,7 +141,7 @@
  *
  * @return true if the interface is found at the given path
  */
-- (BOOL)hasInterface:(const char *)interface withPath:(const char *)path;
+- (BOOL)hasInterface:(NSString*)interface withPath:(NSString*)path;
 
 /**
  * @param[out] msgArg containing a signature a(oas)

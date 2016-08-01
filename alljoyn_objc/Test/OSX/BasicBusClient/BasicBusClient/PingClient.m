@@ -107,7 +107,7 @@ static PingClient *s_sharedInstance;
     
     // disconnect the bus
     //
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     if (status != ER_OK) {
         [self.delegate receivedStatusMessage:[NSString stringWithFormat:@"Failed to disconnect from bus. %@",[AJNStatus descriptionForStatusCode:status]]];
         @throw [NSException exceptionWithName:@"PingClient::stop: Failed" reason:@"Failed to disconnect from bus" userInfo:nil];
@@ -165,7 +165,7 @@ static PingClient *s_sharedInstance;
         // we found the name of the service we are looking for, so attempt to
         // connect to the service and establish a session
         //
-        AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:self.delegate.transportType];
+        AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
         
         NSString *message = [NSString stringWithFormat:@"Attempting to join session with service %@ using transport %@...", name, @"Any"];
         
@@ -207,8 +207,7 @@ static PingClient *s_sharedInstance;
             // we are done so let the client know it should do a disconnect
             //
             [self.delegate shouldDisconnectFromService:name];
-        }
-        else {
+        } else {
             [self.delegate receivedStatusMessage:@"ERROR: Failed to join session with service."];
             NSLog(@"%@", @"ERROR: Failed to join session with service.");
         }

@@ -40,13 +40,13 @@ private:
 public:
     /** Constructors */
     AJNProxyBusObjectAsyncCallbackImpl(id<AJNProxyBusObjectDelegate> delegate) : m_delegate(delegate) { }
-    
+
     /** Destructor */
-    virtual ~AJNProxyBusObjectAsyncCallbackImpl() 
-    { 
+    virtual ~AJNProxyBusObjectAsyncCallbackImpl()
+    {
         m_delegate = nil;
     }
-    
+
     /**
      * Callback registered with IntrospectRemoteObjectAsync()
      *
@@ -57,13 +57,13 @@ public:
     void IntrospectionCallback(QStatus status, ProxyBusObject* obj, void* context)
     {
         if ([m_delegate respondsToSelector:@selector(didCompleteIntrospectionOfObject:context:withStatus:)]) {
-            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;            
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate didCompleteIntrospectionOfObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] context:context withStatus:status];
             });
         }
-        
-        delete this;        
+
+        delete this;
     }
 
     /**
@@ -76,15 +76,15 @@ public:
     void ReplyHandler(Message& message, void* context)
     {
         if ([m_delegate respondsToSelector:@selector(didReceiveMethodReply:context:)]) {
-            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;            
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate didReceiveMethodReply:[[AJNMessage alloc] initWithHandle:(AJNHandle)&message] context:context];
             });
         }
-        
-        delete this;        
+
+        delete this;
     }
-    
+
     /**
      * Callback registered with GetPropertyAsync()
      *
@@ -99,7 +99,7 @@ public:
     void GetPropertyCallback(QStatus status, ProxyBusObject* obj, const MsgArg& value, void* context)
     {
         if ([m_delegate respondsToSelector:@selector(didReceiveValueForProperty:ofObject:completionStatus:context:)]) {
-            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;            
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate didReceiveValueForProperty:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&value] ofObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context];
             });
@@ -107,7 +107,7 @@ public:
 
         delete this;
     }
-    
+
     /**
      * Callback registered with GetAllPropertiesAsync()
      *
@@ -121,14 +121,14 @@ public:
     void GetAllPropertiesCallback(QStatus status, ProxyBusObject* obj, const MsgArg& values, void* context)
     {
         if ([m_delegate respondsToSelector:@selector(didReceiveValuesForAllProperties:ofObject:completionStatus:context:)]) {
-            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;            
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate didReceiveValuesForAllProperties:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&values] ofObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context];
             });
         }
         delete this;
     }
-    
+
     /**
      * Callback registered with SetPropertyAsync()
      *
@@ -142,13 +142,24 @@ public:
     void SetPropertyCallback(QStatus status, ProxyBusObject* obj, void* context)
     {
         if ([m_delegate respondsToSelector:@selector(didComleteSetPropertyOnObject:completionStatus:context:)]) {
-            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;            
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate didComleteSetPropertyOnObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context];
             });
         }
         delete this;
     }
+};
+
+class AJNPropertiesChangedListenerImpl : public ajn::ProxyBusObject::PropertiesChangedListener {
+    public:
+        AJNPropertiesChangedListenerImpl(id<AJNPropertiesChangedDelegate> delegate): m_delegate(delegate) {}
+        void PropertiesChanged(ajn::ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
+        {
+        
+        }
+    private:
+        __weak id<AJNPropertiesChangedDelegate> m_delegate;
 };
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -170,6 +181,12 @@ using namespace ajn;
 @interface AJNInterfaceMember(Private)
 
 @property (nonatomic, readonly) ajn::InterfaceDescription::Member *member;
+
+@end
+
+@interface AJNMessage(Private)
+
+@property (nonatomic, readonly) _Message *message;
 
 @end
 
@@ -216,7 +233,7 @@ using namespace ajn;
         [interfaces addObject:[[AJNInterfaceDescription alloc] initWithHandle:(AJNHandle)interface]];
     }
     delete [] pInterfaces;
-    return interfaces;    
+    return interfaces;
 }
 
 -(NSArray *)children
@@ -230,7 +247,7 @@ using namespace ajn;
         [children addObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)child]];
     }
     delete [] pChildProxies;
-    return children;    
+    return children;
 }
 
 - (BOOL)isValid
@@ -300,7 +317,7 @@ using namespace ajn;
         status = self.proxyBusObject->AddInterface(*((InterfaceDescription*)interfaceDescription.handle));
     }
     return status;
-    
+
 }
 
 - (AJNInterfaceDescription*)interfaceWithName:(NSString*)name
@@ -331,10 +348,10 @@ using namespace ajn;
 
 - (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)arguments methodReply:(AJNMessage**)reply
 {
-    return [self callMethod:method withArguments:arguments methodReply:reply timeout:ajn::ProxyBusObject::DefaultCallTimeout flags:0];
+    return [self callMethod:method withArguments:arguments methodReply:reply timeout:ajn::ProxyBusObject::DefaultCallTimeout flags:0 msg:nil];
 }
 
-- (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)arguments methodReply:(AJNMessage**)reply timeout:(uint32_t)timeout flags:(uint8_t)flags
+- (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)arguments methodReply:(AJNMessage**)reply timeout:(uint32_t)timeout flags:(uint8_t)flags msg:(AJNMessage**)callMsg
 {
     QStatus status;
     MsgArg * pArgs = new MsgArg[arguments.count];
@@ -342,11 +359,38 @@ using namespace ajn;
         pArgs[i] = *[[arguments objectAtIndex:i] msgArg];
     }
     Message *replyMsg = new Message(*self.bus.busAttachment);
-    status = self.proxyBusObject->MethodCall(*(method.member), pArgs, arguments.count, *replyMsg, timeout, flags);
+    Message *methodCallMsg = new Message(*self.bus.busAttachment);
+    status = self.proxyBusObject->MethodCall(*(method.member), pArgs, arguments.count, *replyMsg, timeout, flags, methodCallMsg);
     delete [] pArgs;
     *reply = [[AJNMessage alloc] initWithHandle:replyMsg];
+    *callMsg = [[AJNMessage alloc] initWithHandle:methodCallMsg];
     return status;
 }
+
+- (QStatus)callMethod:(NSString*)ifaceName method:(NSString*)methodName withArguments:(NSArray*)args flags:(uint8_t)flags
+{
+    QStatus status = ER_OK;
+    MsgArg * pArgs = new MsgArg[args.count];
+    for (int i = 0; i < args.count; i++) {
+        pArgs[i] = *[[args objectAtIndex:i] msgArg];
+    }
+    status = self.proxyBusObject->MethodCall([ifaceName UTF8String], [methodName UTF8String], pArgs, args.count, flags);
+    delete [] pArgs;
+    return status;
+}
+
+- (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)args flags:(uint8_t)flags
+{
+    QStatus status = ER_OK;
+    MsgArg * pArgs = new MsgArg[args.count];
+    for (int i = 0; i < args.count; i++) {
+        pArgs[i] = *[[args objectAtIndex:i] msgArg];
+    }
+    status = self.proxyBusObject->MethodCall(*(method.member), pArgs, args.count, flags);
+    delete [] pArgs;
+    return status;
+}
+
 
 - (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)arguments methodReplyDelegate:(id<AJNProxyBusObjectDelegate>)replyDelegate context:(AJNHandle)context timeout:(uint32_t)timeout flags:(uint8_t)flags
 {
@@ -358,9 +402,8 @@ using namespace ajn;
     }
     status = self.proxyBusObject->MethodCallAsync(*(method.member), callbackImpl, (MessageReceiver::ReplyHandler)(&AJNProxyBusObjectAsyncCallbackImpl::ReplyHandler), pArgs, arguments.count, context, timeout, flags);
     delete [] pArgs;
-    return status;    
+    return status;
 }
-
 
 - (QStatus)callMethodWithName:(NSString*)methodName onInterfaceWithName:(NSString*)interfaceName withArguments:(NSArray*)arguments methodReply:(AJNMessage**)reply
 {
@@ -378,7 +421,7 @@ using namespace ajn;
     status = self.proxyBusObject->MethodCall([interfaceName UTF8String], [methodName UTF8String], pArgs, arguments.count, *replyMsg, timeout, flags);
     delete [] pArgs;
     *reply = [[AJNMessage alloc] initWithHandle:replyMsg shouldDeleteHandleOnDealloc:YES];
-    return status;    
+    return status;
 }
 
 - (QStatus)callMethodWithName:(NSString*)methodName onInterfaceWithName:(NSString*)interfaceName withArguments:(NSArray*)arguments methodReplyDelegate:(id<AJNProxyBusObjectDelegate>)replyDelegate context:(AJNHandle)context timeout:(uint32_t)timeout flags:(uint8_t)flags
@@ -391,7 +434,7 @@ using namespace ajn;
     }
     status = self.proxyBusObject->MethodCallAsync([interfaceName UTF8String], [methodName UTF8String], callbackImpl, (MessageReceiver::ReplyHandler)(&AJNProxyBusObjectAsyncCallbackImpl::ReplyHandler), pArgs, arguments.count, context, timeout, flags);
     delete [] pArgs;
-    return status;    
+    return status;
 }
 
 - (QStatus)introspectRemoteObject
@@ -399,12 +442,25 @@ using namespace ajn;
     return self.proxyBusObject->IntrospectRemoteObject();
 }
 
+- (QStatus)introspectRemoteObject:(uint32_t)timeout
+{
+    return self.proxyBusObject->IntrospectRemoteObject(timeout);
+}
+
 - (QStatus)introspectRemoteObject:(id<AJNProxyBusObjectDelegate>)completionHandler context:(AJNHandle)context
 {
     QStatus status;
     AJNProxyBusObjectAsyncCallbackImpl *callbackImpl = new AJNProxyBusObjectAsyncCallbackImpl(completionHandler);
     status = self.proxyBusObject->IntrospectRemoteObjectAsync(callbackImpl, (ProxyBusObject::Listener::IntrospectCB)(&AJNProxyBusObjectAsyncCallbackImpl::IntrospectionCallback), context);
-    return status;        
+    return status;
+}
+
+- (QStatus)introspectRemoteObject:(id<AJNProxyBusObjectDelegate>)completionHandler context:(AJNHandle)context timeout:(uint32_t)timeout
+{
+    QStatus status;
+    AJNProxyBusObjectAsyncCallbackImpl *callbackImpl = new AJNProxyBusObjectAsyncCallbackImpl(completionHandler);
+    status = self.proxyBusObject->IntrospectRemoteObjectAsync(callbackImpl, (ProxyBusObject::Listener::IntrospectCB)(&AJNProxyBusObjectAsyncCallbackImpl::IntrospectionCallback), context, timeout);
+    return status;
 }
 
 - (QStatus)buildFromXml:(NSString*)xmlProxyObjectDescription errorLogId:(NSString*)identifier
@@ -416,6 +472,16 @@ using namespace ajn;
 {
     MsgArg *pArg = new MsgArg;
     QStatus status = self.proxyBusObject->GetProperty([interfaceName UTF8String], [propertyName UTF8String], *pArg);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNProxyBusObject::propertyWithName:forInterfaceName: failed. %@.", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return [[AJNMessageArgument alloc] initWithHandle:pArg];
+}
+
+- (AJNMessageArgument*)propertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName fetchTimeout:(uint32_t)timeout
+{
+    MsgArg *pArg = new MsgArg;
+    QStatus status = self.proxyBusObject->GetProperty([interfaceName UTF8String], [propertyName UTF8String], *pArg, timeout);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNProxyBusObject::propertyWithName:forInterfaceName: failed. %@.", [AJNStatus descriptionForStatusCode:status]);
     }
@@ -449,12 +515,17 @@ using namespace ajn;
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNProxyBusObject::propertyValuesForInterfaceWithName:completionDelegate:context:timeout: failed. %@.", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toValue:(AJNMessageArgument*)value
 {
     return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg);
+}
+
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toValue:(AJNMessageArgument*)value setTimeout:(uint32_t)timeout
+{
+    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg, timeout);
 }
 
 - (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout
@@ -465,17 +536,34 @@ using namespace ajn;
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNProxyBusObject::propertyValuesForInterfaceWithName:completionDelegate:context:timeout: failed. %@.", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toIntValue:(NSInteger)value
 {
-    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], (int32_t)value);    
+    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], (int32_t)value);
 }
 
 - (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toStringValue:(NSString*)value
 {
-    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], [value UTF8String]);    
+    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], [value UTF8String]);
+}
+
+- (QStatus)registerPropertiesChangedListener:(NSString*)iface properties:(NSArray*)properties delegate:(id<AJNPropertiesChangedDelegate>)listener context:(AJNHandle*)context
+{
+    AJNPropertiesChangedListenerImpl *impl = new AJNPropertiesChangedListenerImpl(listener);
+    const char **propArray = new const char*[properties.count];
+    for (int i = 0; i < properties.count; i++) {
+        NSString *tmp = [properties objectAtIndex:i];
+        propArray[i] = [tmp UTF8String];
+    }
+    return self.proxyBusObject->RegisterPropertiesChangedListener([iface UTF8String], propArray, properties.count, *impl, context);
+}
+
+- (QStatus)unregisterPropertiesChangedListener:(NSString*)iface delegate:(id<AJNPropertiesChangedDelegate>)listener;
+{
+    AJNPropertiesChangedListenerImpl *impl = new AJNPropertiesChangedListenerImpl(listener);
+    return self.proxyBusObject->UnregisterPropertiesChangedListener([iface UTF8String], *impl);
 }
 
 - (QStatus)secureConnection:(BOOL)forceAuthentication

@@ -53,23 +53,23 @@ private:
     /** The objective-c delegate to communicate with whenever PingAsyncCB is called.
      */
     __weak id<AJNPingPeerDelegate> m_delegate;
-    
+
     /** The objective-c block to call when PingAsyncCB is called.
      */
     AJNPingPeerBlock m_block;
 public:
     /** Constructors */
     AJNPingPeerAsyncCallbackImpl(id<AJNPingPeerDelegate> delegate) : m_delegate(delegate) { }
-    
+
     AJNPingPeerAsyncCallbackImpl(AJNPingPeerBlock block) : m_block(block), m_delegate(nil) { }
-    
+
     /** Destructor */
     virtual ~AJNPingPeerAsyncCallbackImpl()
     {
         m_delegate = nil;
         m_block = nil;
     }
-    
+
     /**
      * Called whenPingAsync() completes.
      *
@@ -80,7 +80,7 @@ public:
     {
         if (m_delegate != nil) {
             __block id<AJNPingPeerDelegate> theDelegate = m_delegate;
-            
+
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate pingPeerHasStatus:status context:context];
                 delete this;
@@ -93,7 +93,7 @@ public:
             });
         }
     }
-    
+
 };
 
 
@@ -121,8 +121,8 @@ public:
     AJNSetLinkTimeoutAsyncCallbackImpl(AJNLinkTimeoutBlock block) : m_block(block) { }
 
     /** Destructor */
-    virtual ~AJNSetLinkTimeoutAsyncCallbackImpl() 
-    { 
+    virtual ~AJNSetLinkTimeoutAsyncCallbackImpl()
+    {
         m_delegate = nil;
         m_block = nil;
     }
@@ -138,10 +138,10 @@ public:
     {
         if (m_delegate != nil) {
             __block id<AJNLinkTimeoutDelegate> theDelegate = m_delegate;
-            
+
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate didSetLinkTimeoutTo:timeout status:status context:context];
-                delete this;                
+                delete this;
             });
         }
         else {
@@ -153,6 +153,233 @@ public:
     }
 
 };
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  Asynchronous add match callback implementation
+//
+
+/** Internal class to manage asynchronous addMatch callbacks
+*/
+class AJNAddMatchAsyncCallbackImpl : public ajn::BusAttachment::AddMatchAsyncCB
+{
+    private:
+        /**
+         * The objective-c delegate to communicate with whenever AddMatch is called.
+         */
+        __weak id<AJNAddMatchDelegate> m_delegate;
+
+        /**
+         * The objective-c block to call when AddMatch is called.
+         */
+        AJNAddMatchBlock m_block;
+    public:
+        /** Constructors */
+        AJNAddMatchAsyncCallbackImpl(id<AJNAddMatchDelegate> delegate) : m_delegate(delegate) { }
+
+        AJNAddMatchAsyncCallbackImpl(AJNAddMatchBlock block) : m_block(block), m_delegate(nil) { }
+
+        /** Destructor */
+        virtual ~AJNAddMatchAsyncCallbackImpl()
+        {
+            m_delegate = nil;
+            m_block = nil;
+        }
+
+        /**
+         * Called addMatch() completes.
+         *
+         * @param status       ER_OK if successful
+         * @param context      User defined context which will be passed as-is to callback.
+         */
+        virtual void AddMatchCB(QStatus status, void* context)
+        {
+            if (m_delegate != nil) {
+                __block id<AJNAddMatchDelegate> theDelegate = m_delegate;
+
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        [theDelegate didAddMatch:status context:context];
+                        delete this;
+                        });
+            }
+            else {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        m_block(status, context);
+                        delete this;
+                        });
+            }
+        }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  Asynchronous remove match callback implementation
+//
+
+/**
+ * Internal class to manage asynchronous removeMatch callbacks
+ */
+class AJNRemoveMatchAsyncCallbackImpl : public ajn::BusAttachment::RemoveMatchAsyncCB
+{
+    private:
+        /**
+         * The objective-c delegate to communicate with whenever RemoveMatch is called.
+         */
+        __weak id<AJNRemoveMatchDelegate> m_delegate;
+
+        /**
+         * The objective-c block to call when RemoveMatch is called.
+         */
+        AJNRemoveMatchBlock m_block;
+    public:
+        /** Constructors */
+        AJNRemoveMatchAsyncCallbackImpl(id<AJNRemoveMatchDelegate> delegate) : m_delegate(delegate) { }
+
+        AJNRemoveMatchAsyncCallbackImpl(AJNAddMatchBlock block) : m_block(block), m_delegate(nil) { }
+
+        /** Destructor */
+        virtual ~AJNRemoveMatchAsyncCallbackImpl()
+        {
+            m_delegate = nil;
+            m_block = nil;
+        }
+
+        /**
+         * Called removeMatch() completes.
+         *
+         * @param status       ER_OK if successful
+         * @param context      User defined context which will be passed as-is to callback.
+         */
+        virtual void RemoveMatchCB(QStatus status, void* context)
+        {
+            if (m_delegate != nil) {
+                __block id<AJNRemoveMatchDelegate> theDelegate = m_delegate;
+
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        [theDelegate didRemoveMatch:status context:context];
+                        delete this;
+                        });
+            }
+            else {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        m_block(status, context);
+                        delete this;
+                        });
+            }
+        }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+//
+//  Asynchronous get name owner callback implementation
+//
+
+/**
+ * Internal class to manage asynchronous getNameOwner callbacks
+ */
+class AJNGetNameOwnerAsyncCallbackImpl : public ajn::BusAttachment::GetNameOwnerAsyncCB
+{
+    private:
+        /** The objective-c delegate to communicate with whenever GetNameOwner is called.
+        */
+        __weak id<AJNGetNameOwnerDelegate> m_delegate;
+
+        /** The objective-c block to call when GetNameOwner is called.
+        */
+        AJNGetNameOwnerBlock m_block;
+    public:
+        /** Constructors */
+        AJNGetNameOwnerAsyncCallbackImpl(id<AJNGetNameOwnerDelegate> delegate) : m_delegate(delegate) { }
+
+        AJNGetNameOwnerAsyncCallbackImpl(AJNGetNameOwnerBlock block) : m_block(block), m_delegate(nil) { }
+
+        /** Destructor */
+        virtual ~AJNGetNameOwnerAsyncCallbackImpl()
+        {
+            m_delegate = nil;
+            m_block = nil;
+        }
+
+        /**
+         * Called GetNameOwner() completes.
+         *
+         * @param status       ER_OK if successful
+         * @param uniqueName   Unique name that owns the requested alias.
+         * @param context      User defined context which will be passed as-is to callback.
+         */
+        virtual void GetNameOwnerCB(QStatus status, const char* uniqueName, void* context)
+        {
+            if (m_delegate != nil) {
+                __block id<AJNGetNameOwnerDelegate> theDelegate = m_delegate;
+
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        [theDelegate didGetNameOwner:status uniqueName:[NSString stringWithCString:uniqueName encoding:NSUTF8StringEncoding] context:context];
+                        delete this;
+                        });
+            }
+            else {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        m_block(status, [NSString stringWithCString:uniqueName encoding:NSUTF8StringEncoding], context);
+                        delete this;
+                        });
+            }
+        }
+};
+
+////////////////////////////////////////////////////////////////////////////////
+
+
+/** Internal class to manage asynchronous leave session callbacks
+*/
+class AJNLeaveSessionAsyncCallbackImpl : public ajn::BusAttachment::LeaveSessionAsyncCB
+{
+    private:
+        /** The objective-c delegate to communicate with whenever LeaveSession() is called.
+        */
+        __weak id<AJNLeaveSessionDelegate> m_delegate;
+
+        /** The objective-c block to call when LeaveSession() is called.
+        */
+        AJNLeaveSessionBlock m_block;
+    public:
+        /** Constructors */
+        AJNLeaveSessionAsyncCallbackImpl(id<AJNLeaveSessionDelegate> delegate) : m_delegate(delegate) { }
+
+        AJNLeaveSessionAsyncCallbackImpl(AJNLeaveSessionBlock block) : m_block(block) { }
+
+        /** Destructor */
+        virtual ~AJNLeaveSessionAsyncCallbackImpl()
+        {
+            m_delegate = nil;
+            m_block = nil;
+        }
+
+        /**
+         * Called when LeaveSessionAsync() completes.
+         *
+         * @param status       ER_OK if successful
+         * @param context      User defined context which will be passed as-is to callback.
+         */
+        virtual void LeaveSessionCB(QStatus status, void* context)
+        {
+            if (m_delegate != nil) {
+                __block id<AJNLeaveSessionDelegate> theDelegate = m_delegate;
+
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        [theDelegate didLeaveSession:status context:context];
+                        delete this;
+                        });
+            }
+            else {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                        m_block(status, context);
+                        delete this;
+                        });
+            }
+        }
+};
+
+
 ////////////////////////////////////////////////////////////////////////////////
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -167,20 +394,20 @@ class AJNJoinSessionAsyncCallbackImpl : public ajn::BusAttachment::JoinSessionAs
 private:
     /** The objective-c delegate to communicate with whenever JoinSessionCB is called.
      */
-    __weak id<AJNSessionDelegate> m_delegate;
+    __weak id<AJNJoinSessionDelegate> m_delegate;
 
     /** The objective-c block to call when JoinSessionCB is called.
      */
     AJNJoinSessionBlock m_block;
 public:
     /** Constructors */
-    AJNJoinSessionAsyncCallbackImpl(id<AJNSessionDelegate> delegate) : m_delegate(delegate) { }
+    AJNJoinSessionAsyncCallbackImpl(id<AJNJoinSessionDelegate> delegate) : m_delegate(delegate) { }
 
     AJNJoinSessionAsyncCallbackImpl(AJNJoinSessionBlock block) : m_block(block) { }
 
     /** Destructor */
-    virtual ~AJNJoinSessionAsyncCallbackImpl() 
-    { 
+    virtual ~AJNJoinSessionAsyncCallbackImpl()
+    {
         m_delegate = nil;
         m_block = nil;
     }
@@ -196,11 +423,11 @@ public:
     virtual void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context)
     {
         if (m_delegate != nil) {
-            __block id<AJNSessionDelegate> theDelegate = m_delegate;
-            
+            __block id<AJNJoinSessionDelegate> theDelegate = m_delegate;
+
             dispatch_async(dispatch_get_main_queue(), ^{
                 [theDelegate didJoinSession:sessionId status:status sessionOptions:[[AJNSessionOptions alloc] initWithHandle:(AJNHandle)&opts] context:context];
-                delete this;                
+                delete this;
             });
         }
         else {
@@ -333,6 +560,11 @@ public:
     return self.busAttachment->GetConcurrency();
 }
 
+- (NSString *)connectSpec
+{
+    return [NSString stringWithCString:self.busAttachment->GetConnectSpec().c_str() encoding:NSUTF8StringEncoding];
+}
+
 - (NSString*)uniqueName
 {
     return [NSString stringWithCString:self.busAttachment->GetUniqueName().c_str() encoding:NSUTF8StringEncoding];
@@ -395,7 +627,7 @@ public:
     if (self) {
         self.handle = new ajn::BusAttachment([applicationName UTF8String], allowRemoteMessages, maximumConcurrentOperations);
     }
-    return self;    
+    return self;
 }
 
 - (void)destroy
@@ -404,7 +636,7 @@ public:
     if (ptr) {
         delete ptr;
     }
-    self.handle = NULL;    
+    self.handle = NULL;
 }
 
 /** Destroys all C++ API objects that are maintained in association with this bus attachment
@@ -460,7 +692,7 @@ public:
         }
         [self.translatorImpls removeAllObjects];
     }
-    
+
     @synchronized(self.aboutListeners) {
         for (NSValue *ptrValue in self.aboutListeners) {
             AJNAboutListenerImpl * aboutListenerImpl = (AJNAboutListenerImpl*)[ptrValue pointerValue];
@@ -531,17 +763,12 @@ public:
     return interfaceDescription;
 }
 
-- (QStatus)deleteInterfaceWithName:(NSString*)interfaceName
-{
-    return [self deleteInterface:[self interfaceWithName:interfaceName]];
-}
-
 - (QStatus)deleteInterface:(AJNInterfaceDescription*)interfaceDescription
 {
     QStatus status = self.busAttachment->DeleteInterface(*static_cast<InterfaceDescription*>(interfaceDescription.handle));
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::deleteInterface failed. %@", [AJNStatus descriptionForStatusCode:status]);
-    }    
+    }
     return status;
 }
 
@@ -550,7 +777,7 @@ public:
     QStatus status = self.busAttachment->CreateInterfacesFromXml([xmlString UTF8String]);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::createInterfacesFromXml failed. %@", [AJNStatus descriptionForStatusCode:status]);
-    }        
+    }
     return status;
 }
 
@@ -559,7 +786,7 @@ public:
     AJNBusListenerImpl * busListenerImpl = new AJNBusListenerImpl(self, delegate);
     @synchronized(self.busListeners) {
         [self.busListeners addObject:[NSValue valueWithPointer:busListenerImpl]];
-        self.busAttachment->RegisterBusListener(*busListenerImpl);        
+        self.busAttachment->RegisterBusListener(*busListenerImpl);
     }
 }
 
@@ -573,7 +800,7 @@ public:
                 break;
             }
         }
-    }    
+    }
 }
 
 - (void)destroyBusListener:(id<AJNBusListener>)delegate
@@ -589,7 +816,7 @@ public:
             }
         }
         [self.busListeners removeObject:ptrToRemove];
-    }    
+    }
 }
 
 - (void)registerSignalHandler:(id<AJNSignalHandler>)delegate
@@ -598,7 +825,7 @@ public:
         [self.signalHandlers addObject:delegate];
     }
 
-    static_cast<AJNSignalHandlerImpl*>(delegate.handle)->RegisterSignalHandler(*self.busAttachment);    
+    static_cast<AJNSignalHandlerImpl*>(delegate.handle)->RegisterSignalHandler(*self.busAttachment);
 }
 
 - (void)unregisterSignalHandler:(id<AJNSignalHandler>)delegate
@@ -606,9 +833,9 @@ public:
     @synchronized(self.signalHandlers) {
         if ([self.signalHandlers containsObject:delegate]) {
             static_cast<AJNSignalHandlerImpl*>(delegate.handle)->UnregisterSignalHandler(*self.busAttachment);
-            [self.signalHandlers removeObject:delegate];            
+            [self.signalHandlers removeObject:delegate];
         }
-    }        
+    }
 }
 
 - (void)unregisterAllHandlersForReceiver:(id<AJNHandle>)receiver
@@ -672,7 +899,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::waitUntilStopCompleted failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (void)enableConcurrentCallbacks
@@ -698,13 +925,18 @@ public:
     return status;
 }
 
+- (QStatus)disconnect
+{
+    return self.busAttachment->Disconnect();
+}
+
 - (QStatus)requestWellKnownName:(NSString *)name withFlags:(AJNBusNameFlag)flags
 {
     QStatus status = self.busAttachment->RequestName([name UTF8String], flags);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::requestWellKnownName failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)releaseWellKnownName:(NSString *)name
@@ -713,12 +945,12 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::releaseWellKnownName failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (BOOL)doesWellKnownNameHaveOwner:(NSString*)name
 {
-    bool hasOwner = false;    
+    bool hasOwner = false;
     QStatus status = self.busAttachment->NameHasOwner([name UTF8String], hasOwner);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::doesWellKnownNameHaveOwner: failed. %@", [AJNStatus descriptionForStatusCode:status]);
@@ -739,7 +971,7 @@ public:
     return status;
 }
 
-- (AJNSessionPort)bindSessionOnAnyPortWithOptions:(AJNSessionOptions*)options withDelegate:(id<AJNSessionPortListener>)delegate
+- (AJNSessionPort)bindSessionOnAnyPort:(AJNSessionOptions*)options withDelegate:(id<AJNSessionPortListener>)delegate
 {
     AJNSessionPortListenerImpl *listenerImpl = new AJNSessionPortListenerImpl(self, delegate);
     AJNSessionPort sessionPort = kAJNSessionPortAny;
@@ -750,7 +982,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::bindSessionOnPort:withOptions:withDelegate: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return sessionPort;    
+    return sessionPort;
 }
 
 
@@ -777,10 +1009,10 @@ public:
             sessionId = 0;
         }
     }
-    return sessionId;    
+    return sessionId;
 }
 
-- (QStatus)joinSessionAsyncWithName:(NSString*)sessionName onPort:(AJNSessionPort)sessionPort withDelegate:(id<AJNSessionListener>)delegate options:(AJNSessionOptions*)options joinCompletedDelegate:(id<AJNSessionDelegate>)completionDelegate context:(AJNHandle)context;
+- (QStatus)joinSessionAsyncWithName:(NSString*)sessionName onPort:(AJNSessionPort)sessionPort withDelegate:(id<AJNSessionListener>)delegate options:(AJNSessionOptions*)options joinCompletedDelegate:(id<AJNJoinSessionDelegate>)completionDelegate context:(AJNHandle)context;
 {
     AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
     AJNJoinSessionAsyncCallbackImpl *callbackImpl = new AJNJoinSessionAsyncCallbackImpl(completionDelegate);
@@ -791,7 +1023,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::joinSessionAsyncWithName:onPort:withDelegate:options:completedDelegate:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)joinSessionAsyncWithName:(NSString*)sessionName onPort:(AJNSessionPort)sessionPort withDelegate:(id<AJNSessionListener>)delegate options:(AJNSessionOptions*)options joinCompletedBlock:(AJNJoinSessionBlock)completionBlock context:(AJNHandle)context;
@@ -805,10 +1037,10 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::joinSessionAsyncWithName:onPort:withDelegate:options:completedBlock:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
-- (QStatus)bindSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
+- (QStatus)setSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
 {
     AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
     QStatus status = self.busAttachment->SetSessionListener(sessionId, listenerImpl);
@@ -818,10 +1050,10 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::bindSessionListener:toSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;        
+    return status;
 }
 
-- (QStatus)bindJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
+- (QStatus)setJoinedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
 {
     AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
     QStatus status = self.busAttachment->SetJoinedSessionListener(sessionId, listenerImpl);
@@ -831,11 +1063,11 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::bindJoinedSessionListener:toSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    
+
     return status;
 }
 
-- (QStatus)bindHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
+- (QStatus)setHostedSessionListener:(id<AJNSessionListener>)delegate toSession:(AJNSessionId)sessionId
 {
     AJNSessionListenerImpl *listenerImpl = new AJNSessionListenerImpl(self, delegate);
     QStatus status = self.busAttachment->SetHostedSessionListener(sessionId, listenerImpl);
@@ -845,7 +1077,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::bindHostedSessionListener:toSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    
+
     return status;
 }
 
@@ -855,7 +1087,17 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::leaveSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
+}
+
+- (QStatus)leaveSessionAsync:(AJNSessionId)sessionId callback:(id<AJNLeaveSessionDelegate>)leaveSessionDelegate context:(AJNHandle)context
+{
+    AJNLeaveSessionAsyncCallbackImpl *callbackImpl = new AJNLeaveSessionAsyncCallbackImpl(leaveSessionDelegate);
+    QStatus status = self.busAttachment->LeaveSessionAsync(sessionId, callbackImpl, context);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveSessionAsync:sessionId:callback:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
 }
 
 - (QStatus)leaveJoinedSession:(AJNSessionId)sessionId
@@ -867,11 +1109,31 @@ public:
     return status;
 }
 
+- (QStatus)leaveJoinedSessionAsync:(AJNSessionId)sessionId callback:(id<AJNLeaveSessionDelegate>)leaveSessionDelegate context:(AJNHandle)context
+{
+    AJNLeaveSessionAsyncCallbackImpl *callbackImpl = new AJNLeaveSessionAsyncCallbackImpl(leaveSessionDelegate);
+    QStatus status = self.busAttachment->LeaveJoinedSessionAsync(sessionId, callbackImpl, context);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveSessionAsync:sessionId:callback:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
 - (QStatus)leaveHostedSession:(AJNSessionId)sessionId
 {
     QStatus status = self.busAttachment->LeaveHostedSession(sessionId);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::leaveHostedSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)leaveHostedSessionAsync:(AJNSessionId)sessionId callback:(id<AJNLeaveSessionDelegate>)leaveSessionDelegate context:(void *)context
+{
+    AJNLeaveSessionAsyncCallbackImpl *callbackImpl = new AJNLeaveSessionAsyncCallbackImpl(leaveSessionDelegate);
+    QStatus status = self.busAttachment->LeaveHostedSessionAsync(sessionId, callbackImpl, context);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveSessionAsync:sessionId:callback:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
     return status;
 }
@@ -901,7 +1163,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::setLinkTimeoutAsync:forSession:completionBlock:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)setLinkTimeoutAsync:(uint32_t)timeout forSession:(AJNSessionId)sessionId completionDelegate:(id<AJNLinkTimeoutDelegate>)delegate context:(void *)context
@@ -911,7 +1173,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::setLinkTimeoutAsync:forSession:completionDelegate:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)pingPeerAsync:(NSString *)name withTimeout:(uint32_t)timeout completionDelegate:(id<AJNPingPeerDelegate>)delegate context:(void *)context
@@ -934,6 +1196,15 @@ public:
     return status;
 }
 
+- (QStatus)secureConnection:(NSString *)name withForcedAuth:(BOOL)forceAuth
+{
+    return self.busAttachment->SecureConnection([name UTF8String], forceAuth ? true : false);
+}
+
+- (QStatus)secureConnectionAsync:(NSString *)name forceAuth:(BOOL)forceAuth
+{
+    return self.busAttachment->SecureConnectionAsync([name UTF8String], forceAuth ? true : false);
+}
 
 - (AJNHandle)socketFileDescriptorForSession:(AJNSessionId)sessionId
 {
@@ -942,7 +1213,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::socketFileDescriptorForSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return (AJNHandle)fd;    
+    return (AJNHandle)fd;
 }
 
 - (QStatus)advertiseName:(NSString*)name withTransportMask:(AJNTransportMask)mask
@@ -960,7 +1231,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttacment::cancelAdvertisedName:withTransportMask failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)findAdvertisedName:(NSString *)name
@@ -988,7 +1259,7 @@ public:
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttacment::cancelFindAdvertisedName failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return status;    
+    return status;
 }
 
 - (QStatus)cancelFindAdvertisedName:(NSString*)name byTransport:(AJNTransportMask)transports
@@ -1001,11 +1272,30 @@ public:
 }
 
 
-- (QStatus)addMatchRule:(NSString*)matchRule
+- (QStatus)addMatchRule:(NSString*)rule
 {
-    QStatus status = self.busAttachment->AddMatch([matchRule UTF8String]);
+    QStatus status = self.busAttachment->AddMatch([rule UTF8String]);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttacment::addMatchRule failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)addMatchRuleNonBlocking:(NSString *)rule
+{
+    QStatus status = self.busAttachment->AddMatchNonBlocking([rule UTF8String]);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttacment::addMatchRuleNonBlocking failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)addMatchRuleAsync:(NSString *)rule callback:(id<AJNAddMatchDelegate>)addMatchDelegate context:(AJNHandle)context
+{
+    AJNAddMatchAsyncCallbackImpl *callbackImpl = new AJNAddMatchAsyncCallbackImpl(addMatchDelegate);
+    QStatus status = self.busAttachment->AddMatchAsync([rule UTF8String], callbackImpl, context);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveSessionAsync:sessionId:callback:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
     return status;
 }
@@ -1019,7 +1309,26 @@ public:
     return status;
 }
 
-- (QStatus)addLogonEntryToKeyStoreWithAuthenticationMechanism:(NSString *)authenticationMechanism userName:(NSString *)userName password:(NSString *)password
+- (QStatus)removeMatchRuleNonBlocking:(NSString *)rule
+{
+    QStatus status = self.busAttachment->RemoveMatchNonBlocking([rule UTF8String]);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttacment::removeMatchRuleNonBlocking failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)removeMatchAsync:(NSString *)rule callback:(id<AJNRemoveMatchDelegate>)removeMatchDelegate context:(void *)context
+{
+    AJNRemoveMatchAsyncCallbackImpl *callbackImpl = new AJNRemoveMatchAsyncCallbackImpl(removeMatchDelegate);
+    QStatus status = self.busAttachment->RemoveMatchAsync([rule UTF8String], callbackImpl, context);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::leaveSessionAsync:sessionId:callback:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+- (QStatus)addLogonEntry:(NSString *)authenticationMechanism userName:(NSString *)userName password:(NSString *)password
 {
     return self.busAttachment->AddLogonEntry([authenticationMechanism UTF8String], [userName UTF8String], [password UTF8String]);
 }
@@ -1044,9 +1353,14 @@ public:
     QStatus status=ER_NONE;
     @synchronized(self.keyStoreListeners) {
         [self.keyStoreListeners addObject:[NSValue valueWithPointer:listenerImpl]];
-        status = self.busAttachment->RegisterKeyStoreListener(*listenerImpl);        
+        status = self.busAttachment->RegisterKeyStoreListener(*listenerImpl);
     }
     return status;
+}
+
+- (QStatus)unregisterKeyStoreListener
+{
+    return self.busAttachment->UnregisterKeyStoreListener();
 }
 
 - (QStatus)reloadKeyStore
@@ -1059,7 +1373,7 @@ public:
     self.busAttachment->ClearKeyStore();
 }
 
-- (QStatus)clearKeysForRemotePeerWithId:(NSString*)peerId
+- (QStatus)clearKeys:(NSString*)peerId
 {
     return self.busAttachment->ClearKeys([peerId UTF8String]);
 }
@@ -1072,6 +1386,23 @@ public:
 - (QStatus)setKeyExpiration:(uint32_t)timeout forRemotePeerId:(NSString*)peerId
 {
     return self.busAttachment->SetKeyExpiration([peerId UTF8String], timeout);
+}
+
+- (NSString *)getNameOwner:(NSString *)alias
+{
+    return [[NSString alloc] initWithCString:self.busAttachment->GetNameOwner([alias UTF8String]).c_str() encoding:NSUTF8StringEncoding];
+}
+
+- (QStatus)getNameOwnerAsync:(NSString **)alias callback:(id<AJNGetNameOwnerDelegate>)getNameOwnerDelegate context:(void *)context
+{
+    AJNGetNameOwnerAsyncCallbackImpl *callbackImpl = new AJNGetNameOwnerAsyncCallbackImpl(getNameOwnerDelegate);
+    qcc::String nameOwner;
+    QStatus status = self.busAttachment->GetNameOwnerAsync(nameOwner, callbackImpl, context);
+    *alias = [[NSString alloc] initWithCString:nameOwner.c_str() encoding:NSUTF8StringEncoding];
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNBusAttachment::getNameOwnerAsync:alias:callback:context: failed. %@", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
 }
 
 - (NSString*)guidForPeerNamed:(NSString*)peerName
@@ -1144,17 +1475,29 @@ public:
     self.busAttachment->UnregisterAllAboutListeners();
 }
 
-- (QStatus)whoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterface
+- (QStatus)whoImplementsInterfaces:(NSArray *)interfaces
 {
-    unsigned long lengthOfArray = [interfaces count];
-    const char **listInterfaces = new const char*[lengthOfArray];
-    for (int i = 0; i < lengthOfArray ; i++) {
+    unsigned long interfaceCount = [interfaces count];
+    const char **listInterfaces = new const char*[interfaceCount];
+    for (int i = 0; i < interfaceCount ; i++) {
         NSString *interfaceName = [interfaces objectAtIndex:i];
         listInterfaces[i] = [interfaceName UTF8String];
     }
-    QStatus status = self.busAttachment->WhoImplements(listInterfaces, lengthOfArray);
+    QStatus status = self.busAttachment->WhoImplements(listInterfaces, interfaceCount);
     delete [] listInterfaces;
-    listInterfaces = NULL;
+    return status;
+}
+
+- (QStatus)whoImplementsInterfacesNonBlocking:(NSArray *)interfaces
+{
+    unsigned long interfaceCount = [interfaces count];
+    const char **listInterfaces = new const char*[interfaceCount];
+    for (int i = 0; i < interfaceCount ; i++) {
+        NSString *interfaceName = [interfaces objectAtIndex:i];
+        listInterfaces[i] = [interfaceName UTF8String];
+    }
+    QStatus status = self.busAttachment->WhoImplementsNonBlocking(listInterfaces, interfaceCount);
+    delete [] listInterfaces;
     return status;
 }
 
@@ -1163,23 +1506,45 @@ public:
     return self.busAttachment->WhoImplements([interface UTF8String]);
 }
 
-- (QStatus)cancelWhoImplementsInterfaces:(NSArray *)interfaces numberOfInterfaces:(size_t)numberInterfaces
+- (QStatus)whoImplementsInterfaceNonBlocking:(NSString *)interface
 {
-    unsigned long lengthOfArray = [interfaces count];
-    const char **listInterfaces = new const char*[lengthOfArray];
-    for (int i = 0; i < lengthOfArray ; i++) {
+    return self.busAttachment->WhoImplementsNonBlocking([interface UTF8String]);
+}
+
+- (QStatus)cancelWhoImplementsInterfaces:(NSArray *)interfaces
+{
+    unsigned long interfaceCount = [interfaces count];
+    const char **listInterfaces = new const char*[interfaceCount];
+    for (int i = 0; i < interfaceCount ; i++) {
         NSString *interfaceName = [interfaces objectAtIndex:i];
         listInterfaces[i] = [interfaceName UTF8String];
     }
-    QStatus status = self.busAttachment->CancelWhoImplements(listInterfaces, lengthOfArray);
+    QStatus status = self.busAttachment->CancelWhoImplements(listInterfaces, interfaceCount);
     delete [] listInterfaces;
-    listInterfaces = NULL;
     return status;
 }
 
--(QStatus)cancelWhoImplements:(NSString *)interface
+- (QStatus)cancelWhoImplementsInterfacesNonBlocking:(NSArray *)interfaces
+{
+    unsigned long interfaceCount = [interfaces count];
+    const char **listInterfaces = new const char*[interfaceCount];
+    for (int i = 0; i < interfaceCount ; i++) {
+        NSString *interfaceName = [interfaces objectAtIndex:i];
+        listInterfaces[i] = [interfaceName UTF8String];
+    }
+    QStatus status = self.busAttachment->CancelWhoImplementsNonBlocking(listInterfaces, interfaceCount);
+    delete [] listInterfaces;
+    return status;
+}
+
+-(QStatus)cancelWhoImplementsInterface:(NSString *)interface
 {
     return self.busAttachment->CancelWhoImplements([interface UTF8String]);
+}
+
+-(QStatus)cancelWhoImplementsNonBlocking:(NSString *)interface
+{
+    return self.busAttachment->CancelWhoImplementsNonBlocking([interface UTF8String]);
 }
 
 @end
