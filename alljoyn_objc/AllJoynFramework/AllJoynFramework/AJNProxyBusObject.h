@@ -90,6 +90,24 @@
 
 @end
 
+/*
+ * Delegate used to receive notification when adding a match asynchronously
+ */
+@protocol AJNPropertiesChangedDelegate <NSObject>
+
+/**
+ * Callback to receive property changed events.
+ *
+ * @param obj           Remote bus object that owns the property that changed.
+ * @param ifaceName     Name of the interface that defines the property.
+ * @param changed       Property values that changed as an array of dictionary entries, signature "a{sv}".
+ * @param invalidated   Properties whose values have been invalidated, signature "as".
+ * @param context       Caller provided context passed in to RegisterPropertiesChangedListener
+ */
+- (void)didPropertiesChanged:(AJNProxyBusObject*)obj inteface:(NSString*)ifaceName changedMsg:(AJNMessage*)changed invalidatedMsg:(AJNMessage*)invalidated context:(AJNHandle*)context;
+
+@end
+
 ////////////////////////////////////////////////////////////////////////////////
 
 /**
@@ -315,12 +333,48 @@
  * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
  *                     - If ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
  *                     - If ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
+ * @param callMsg      Pointer to a Message object to recieve a copy of the sent call message (can be nil if not needed)
  *
  *
  * @return  - ER_OK if the method call succeeded and the reply message type is MESSAGE_METHOD_RET
  *          - ER_BUS_REPLY_IS_ERROR_MESSAGE if the reply message type is MESSAGE_ERROR
  */
-- (QStatus)callMethod:(AJNInterfaceMember *)method withArguments:(NSArray *)arguments methodReply:(AJNMessage **)reply timeout:(uint32_t)timeout flags:(uint8_t)flags;
+- (QStatus)callMethod:(AJNInterfaceMember *)method withArguments:(NSArray *)arguments methodReply:(AJNMessage **)reply timeout:(uint32_t)timeout flags:(uint8_t)flags msg:(AJNMessage**)callMsg;
+
+/**
+ * Make a fire-and-forget method call from this object. The caller will not be able to tell if
+ * the method call was successful or not. This is equivalent to calling MethodCall() with
+ * flags == ALLJOYN_FLAG_NO_REPLY_EXPECTED. Because this call doesn't block it can be made from
+ * within a signal handler.
+ *
+ * @param ifaceName    Name of interface.
+ * @param methodName   Name of method.
+ * @param args         The arguments for the method call (can be NULL)
+ * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
+ *                     - If #ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
+ *                     - If #ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
+ *
+ * @return
+ *      - #ER_OK if the method call succeeded
+ */
+- (QStatus)callMethod:(NSString*)ifaceName method:(NSString*)methodName withArguments:(NSArray*)args flags:(uint8_t)flags;
+
+/**
+ * Make a fire-and-forget method call from this object. The caller will not be able to tell if
+ * the method call was successful or not. This is equivalent to calling MethodCall() with
+ * flags == ALLJOYN_FLAG_NO_REPLY_EXPECTED. Because this call doesn't block it can be made from
+ * within a signal handler.
+ *
+ * @param method       Method being invoked.
+ * @param args         The arguments for the method call (can be NULL)
+ * @param flags        Logical OR of the message flags for this method call. The following flags apply to method calls:
+ *                     - If #ALLJOYN_FLAG_ENCRYPTED is set the message is authenticated and the payload if any is encrypted.
+ *                     - If #ALLJOYN_FLAG_AUTO_START is set the bus will attempt to start a service if it is not running.
+ *
+ * @return
+ *      - #ER_OK if the method call succeeded and the reply message type is #MESSAGE_METHOD_RET
+ */
+- (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)args flags:(uint8_t)flags;
 
 /**
  * Make an asynchronous method call from this object
@@ -401,6 +455,22 @@
 
 /**
  * Query the remote object on the bus to determine the interfaces and
+ * children that exist. Use this information to populate this proxy's
+ * interfaces and children.
+ *
+ * This call causes messages to be send on the bus, therefore it cannot
+ * be called within AllJoyn callbacks (method/signal/reply handlers or
+ * ObjectRegistered callbacks, etc.)
+ *
+ * @param timeout   Timeout specified in milliseconds to wait for a reply
+ *
+ * @return  - ER_OK if successful
+ *          - An error status otherwise
+ */
+- (QStatus)introspectRemoteObject:(uint32_t)timeout;
+
+/**
+ * Query the remote object on the bus to determine the interfaces and
  * children that exist. Use this information to populate this object's
  * interfaces and children.
  *
@@ -418,6 +488,27 @@
  *          - An error status otherwise
  */
 - (QStatus)introspectRemoteObject:(id<AJNProxyBusObjectDelegate>)completionHandler context:(AJNHandle)context;
+
+/**
+ * Query the remote object on the bus to determine the interfaces and
+ * children that exist. Use this information to populate this object's
+ * interfaces and children.
+ *
+ * This call executes asynchronously. When the introspection response
+ * is received from the actual remote object, this ProxyBusObject will
+ * be updated and the callback will be called.
+ *
+ * This call exists primarily to allow introspection of remote objects
+ * to be done inside AllJoyn method/signal/reply handlers and ObjectRegistered
+ * callbacks.
+ *
+ * @param completionHandler Pointer to the delegate object that will receive the callback.
+ * @param context           User defined context which will be passed as-is to callback.
+ * @param timeout           Tiemout specified in milliseconds to wait for reply.
+ * @return  - ER_OK if successful.
+ *          - An error status otherwise
+ */
+- (QStatus)introspectRemoteObject:(id<AJNProxyBusObjectDelegate>)completionHandler context:(AJNHandle)context timeout:(uint32_t)timeout;
 
 /**
  * Initialize this proxy object from an XML string. Calling this method does several things:
@@ -453,6 +544,17 @@
  * @return The property's value wrapped in an AJNMessageArgument object if successful. Otherwise, the return value is nil.
  */
 - (AJNMessageArgument *)propertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName;
+
+/**
+ * Get a property from an interface on the remote object.
+ *
+ * @param propertyName    The name of the property to get.
+ * @param interfaceName   Name of interface to retrieve property from.
+ * @param timeout         Timeout specified in milliseconds to wait for reply
+ *
+ * @return The property's value wrapped in an AJNMessageArgument object if successful. Otherwise, the return value is nil.
+ */
+- (AJNMessageArgument *)propertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName fetchTimeout:(uint32_t)timeout;
 
 /**
  * Make an asynchronous request to get a property from an interface on the remote object.
@@ -509,6 +611,20 @@
 - (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value;
 
 /**
+ * Set a property on an interface on the remote object.
+ *
+ * @param propertyName  The name of the property to set
+ * @param interfaceName Interface that holds the property
+ * @param value         The value to set
+ * @param timeout       Timeout specified in milliseconds to wait for a reply
+ *
+ * @return  - ER_OK if the property was set
+ *          - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+ *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value setTimeout:(uint32_t)timeout;
+
+/**
  * Make an asynchronous request to set a property on an interface on the remote object.
  * A callback function reports the success or failure of ther operation.
  *
@@ -549,6 +665,42 @@
  *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
 - (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toStringValue:(NSString *)value;
+
+/**
+ * Function to register a handler for property change events.
+ * Note that registering the same handler callback for the same
+ * interface will overwrite the previous registration.  The same
+ * handler callback may be registered for several different
+ * interfaces simultaneously.
+ *
+ * Note that this makes method calls under the hood.  If this is
+ * called from a message handler or other AllJoyn callback, you
+ * must call BusAttachment::EnableConcurrentCallbacks().
+ *
+ * @param iface             Remote object's interface on which the property is defined.
+ * @param properties        The name of the properties to monitor (NULL for all).
+ * @param propertiesSize    Number of properties to monitor.
+ * @param listener          Reference to the object that will receive the callback.
+ * @param context           User defined context which will be passed as-is to callback.
+ *
+ * @return
+ *      - #ER_OK if the handler was registered successfully
+ *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)registerPropertiesChangedListener:(NSString*)iface properties:(NSArray*)properties delegate:(id<AJNPropertiesChangedDelegate>)listener context:(AJNHandle*)context;
+
+/**
+ * Function to unregister a handler for property change events.
+ *
+ * @param iface     Remote object's interface on which the property is defined.
+ * @param listener  Reference to the object that used to receive the callback.
+ *
+ * @return
+ *      - #ER_OK if the handler was registered successfully
+ *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ */
+- (QStatus)unregisterPropertiesChangedListener:(NSString*)iface delegate:(id<AJNPropertiesChangedDelegate>)listener;
 
 /**
  * Explicitly secure the connection to the remote peer for this proxy object. Peer-to-peer

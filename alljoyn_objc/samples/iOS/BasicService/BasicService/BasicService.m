@@ -42,7 +42,7 @@ static const AJNSessionPort kBasicServicePort = 25;
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic, strong) BasicObject *basicObject;
-@property (nonatomic, strong) NSCondition *lostSessionCondition;
+@property (nonatomic, strong) NSCondition *waitCondition;
 
 - (void)run;
 
@@ -59,7 +59,7 @@ static const AJNSessionPort kBasicServicePort = 25;
 
 @synthesize bus = _bus;
 @synthesize basicObject = _basicObject;
-@synthesize lostSessionCondition = _lostSessionCondition;
+@synthesize waitCondition = _waitCondition;
 @synthesize delegate = _delegate;
 
 - (void)startService
@@ -89,8 +89,8 @@ static const AJNSessionPort kBasicServicePort = 25;
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"BasicService" allowRemoteMessages:YES];
     
-    self.lostSessionCondition = [[NSCondition alloc] init];
-    [self.lostSessionCondition lock];
+    self.waitCondition = [[NSCondition alloc] init];
+    [self.waitCondition lock];
     
     // register a bus listener
     //
@@ -164,13 +164,13 @@ static const AJNSessionPort kBasicServicePort = 25;
     
     // wait until the client leaves before tearing down the service
     //
-    [self.lostSessionCondition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:60]];
+    [self.waitCondition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:600]];
     
     // clean up
     //
     [self.bus unregisterBusObject:self.basicObject];
     
-    [self.lostSessionCondition unlock];
+    [self.waitCondition unlock];
     
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Destroying bus attachment                                                               +");
@@ -223,19 +223,12 @@ static const AJNSessionPort kBasicServicePort = 25;
 - (void)sessionWasLost:(AJNSessionId)sessionId
 {
     NSLog(@"AJNBusListener::sessionWasLost %u", sessionId);
-    
-    [self.lostSessionCondition lock];
-    [self.lostSessionCondition signal];
-    [self.lostSessionCondition unlock];
 }
 
 
 - (void)sessionWasLost:(AJNSessionId)sessionId forReason:(AJNSessionLostReason)reason
 {
     NSLog(@"AJNBusListener::sessionWasLost %u forReason:%u", sessionId, reason);
-    [self.lostSessionCondition lock];
-    [self.lostSessionCondition signal];
-    [self.lostSessionCondition unlock];
 }
 
 - (void)didAddMemberNamed:(NSString*)memberName toSession:(AJNSessionId)sessionId
@@ -262,7 +255,7 @@ static const AJNSessionPort kBasicServicePort = 25;
 {
     NSLog(@"AJNSessionPortListener::didJoin:%@ inSessionWithId:%u onSessionPort:%u withSessionOptions:", joiner, sessionId, sessionPort);
     [self.bus enableConcurrentCallbacks];
-    [self.bus bindSessionListener:self toSession:sessionId];
+    [self.bus setSessionListener:self toSession:sessionId];
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"%@ successfully joined session %u on port %d.\n", joiner, sessionId, sessionPort]];
     
 }
