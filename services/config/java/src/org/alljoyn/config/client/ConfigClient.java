@@ -21,6 +21,7 @@ import java.util.Map;
 import org.alljoyn.about.AboutKeys;
 import org.alljoyn.bus.BusException;
 import org.alljoyn.services.common.ClientBase;
+import org.alljoyn.bus.Variant;
 
 /**
  * An interface for retrieval and setting of remote IoE device's Config data.
@@ -35,7 +36,7 @@ public interface ConfigClient extends ClientBase
 	 * @throws BusException. If a language tag is not supported by the device, Alljoyn error org.alljoyn.Error.LanguageNotSupported is returned.
 	 * @see AboutKeys
 	 */
-	public Map <String, Object> getConfig(String languageTag) throws BusException;
+	public Map <String, Variant> getConfig(String languageTag) throws BusException;
 	
 	/**
 	 * Update the configuration data with the given map.  Only the fields listed in the map will be updated.  
@@ -44,7 +45,7 @@ public interface ConfigClient extends ClientBase
 	 * @param languageTag IETF language tags specified by  RFC 5646
 	 * @throws BusException. If a language tag is not supported by the device, Alljoyn error org.alljoyn.Error.LanguageNotSupported is returned. Whenever there is an error, the AllJoyn error code org.alljoyn.Error.InvalidValue will be returned
 	 */
-	public void setConfig(Map <String, Object> config ,String languageTag) throws BusException;
+	public void setConfig(Map <String, Variant> config ,String languageTag) throws BusException;
 	
 	/**
 	 * Change the passphrase.  The passcode is used for secure interfaces.  Both fields are user-entered.
@@ -52,7 +53,7 @@ public interface ConfigClient extends ClientBase
 	 * @param newPasscode the new passcode
 	 * @throws BusException. If this feature is not allowed by the OEM, the AllJoyn error code org.alljoyn.Error.FeatureNotAvailable will be returned.
 	 */
-	public void setPasscode(String daemonRealm, char[] newPasscode) throws BusException;
+	public void setPasscode(String daemonRealm, byte[] newPasscode) throws BusException;
 	
 	/**
 	 * This method restarts or power cycles the device.

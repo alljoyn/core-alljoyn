@@ -26,6 +26,6 @@ public interface SetPasswordHandler {
 	 * @param peerName
 	 * @param password
 	 */
-	public void setPassword(String peerName, char[] password);
+	public void setPassword(String peerName, byte[] password);
 
 }

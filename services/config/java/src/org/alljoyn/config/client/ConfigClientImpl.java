@@ -25,7 +25,6 @@ import org.alljoyn.bus.Variant;
 import org.alljoyn.config.transport.ConfigTransport;
 import org.alljoyn.services.common.ClientBaseImpl;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
-import org.alljoyn.services.common.utils.TransportUtil;
 
 /**
  * A default implementation of the ConfigClient interface
@@ -48,32 +47,31 @@ public class ConfigClientImpl extends ClientBaseImpl implements ConfigClient
 	}
 
 	@Override
-	public Map<String, Object> getConfig(String languageTag) throws BusException
+	public Map<String, Variant> getConfig(String languageTag) throws BusException
 	{
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
 		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
-		Map<String, Variant> configMap = configTransport.GetConfigurations(languageTag);
-		return TransportUtil.fromVariantMap(configMap);
+		return configTransport.GetConfigurations(languageTag);
 	}
 
 	@Override
-	public void setConfig(Map<String, Object> config, String languageTag) throws BusException
+	public void setConfig(Map<String, Variant> config, String languageTag) throws BusException
 	{
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
 		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
-		configTransport.UpdateConfigurations(languageTag, TransportUtil.toVariantMap(config));
+		configTransport.UpdateConfigurations(languageTag, config);
 	}
 
 	@Override
-	public void setPasscode(String daemonRealm, char[] newPasscode)
+	public void setPasscode(String daemonRealm, byte[] newPasscode)
 			throws BusException
 	{
 		ProxyBusObject proxyObj = getProxyObject();
 		// We make calls to the methods of the AllJoyn object through one of its interfaces. */
 		ConfigTransport configTransport =  proxyObj.getInterface(ConfigTransport.class);
-		configTransport.SetPasscode(daemonRealm, TransportUtil.toByteArray(newPasscode));
+		configTransport.SetPasscode(daemonRealm, newPasscode);
 	}
 
 	@Override

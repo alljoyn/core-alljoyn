@@ -39,7 +39,6 @@ import org.alljoyn.services.common.BusObjectDescription;
 import org.alljoyn.services.common.LanguageNotSupportedException;
 import org.alljoyn.services.common.ServiceAvailabilityListener;
 import org.alljoyn.services.common.ServiceCommonImpl;
-import org.alljoyn.services.common.utils.TransportUtil;
 
 /**
  * An implementation of the ConfigService interface
@@ -151,15 +150,14 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
 
         @Override
         public Map<String, Variant> GetConfigurations(String languageTag) throws BusException {
-            Map<String, Object> persistedConfiguration = new HashMap<String, Object>();
+            Map<String, Variant> persistedConfiguration = new HashMap<String, Variant>();
 
             Status status = m_configDataStore.readAll(languageTag, ConfigDataStore.Filter.WRITE, persistedConfiguration);
             if (status == Status.LANGUAGE_NOT_SUPPORTED) {
                 throw new LanguageNotSupportedException();
             }
 
-            Map<String, Variant> configuration = TransportUtil.toVariantMap(persistedConfiguration);
-            return configuration;
+            return persistedConfiguration;
         }
 
         @Override
@@ -177,12 +175,10 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         @Override
         public void UpdateConfigurations(String languageTag, Map<String, Variant> configuration) throws BusException {
 
-            Map<String, Object> toObjectMap = TransportUtil.fromVariantMap(configuration);
-
             // notify application
             if (m_configDataStore != null) {
-                for (Entry<String, Object> entry : toObjectMap.entrySet()) {
-                    Status status = m_configDataStore.update(entry.getKey(), languageTag, entry.getValue());
+                for (Entry<String, Variant> entry : configuration.entrySet()) {
+                    Status status = m_configDataStore.update(entry.getKey(), languageTag, entry.getValue().getObject(Object.class));
                     if (status == Status.LANGUAGE_NOT_SUPPORTED) {
                         throw new LanguageNotSupportedException();
                     } else if (status == Status.INVALID_VALUE) {
@@ -199,7 +195,7 @@ public class ConfigServiceImpl extends ServiceCommonImpl implements ConfigServic
         @Override
         public void SetPasscode(String daemonRealm, byte[] passphrase) throws BusException {
             if (m_setPasswordHandler != null) {
-                m_setPasswordHandler.setPassword(daemonRealm, TransportUtil.toCharArray(passphrase));
+                m_setPasswordHandler.setPassword(daemonRealm, passphrase);
             }
 
             if (m_passphraseChangeListener != null) {

@@ -18,6 +18,7 @@ package org.alljoyn.config;
 import java.util.Map;
 import org.alljoyn.bus.AboutDataListener;
 import org.alljoyn.bus.Status;
+import org.alljoyn.bus.Variant;
 
 public interface ConfigDataStore extends AboutDataListener {
 
@@ -53,7 +54,7 @@ public interface ConfigDataStore extends AboutDataListener {
      *               for get-about, for get-config
      * @param dataMap the map to fill
      */
-    Status readAll(String languageTag, Filter filter, Map<String, Object> dataMap);
+    Status readAll(String languageTag, Filter filter, Map<String, Variant> dataMap);
 
     /**
      * Update a property value for a given language.
