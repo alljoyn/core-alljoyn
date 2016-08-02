@@ -216,7 +216,7 @@ QStatus PerformanceObjectImpl::SendSendPacket(int32_t packetIndex,MsgArg* byteAr
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.test.perf.both"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.test.perf.both" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
         
     
         // add the methods to the interface description
