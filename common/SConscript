@@ -1,4 +1,4 @@
-# Copyright AllSeen Alliance. All rights reserved.
+ Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
 #    purpose with or without fee is hereby granted, provided that the above
@@ -56,6 +56,8 @@ hdrs = { 'qcc': commonenv.File(['inc/qcc/Log.h',
 
 if commonenv['OS_GROUP'] == 'windows':
     hdrs['qcc/${OS_GROUP}'] += commonenv.File(['inc/qcc/${OS_GROUP}/mapping.h'])
+        
+env['INCDIR_COMMON'] = env.Dir('inc')
 
 # under normal build conditions the Status.xml found in alljoyn_core is used to
 # build Status.h and Status.cc.  If we are building the code in common independent
