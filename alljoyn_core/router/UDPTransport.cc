@@ -10416,8 +10416,9 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
      * service can properly distinguish between various cases, we fail any
      * request to listen on an IPv6 address.
      */
-    /*
-       if (key == "addr") {
+
+#if 0
+    if (key == "addr") {
         IPAddress ipAddress;
         status = ipAddress.SetAddress(argMap["addr"].c_str());
         if (ipAddress.IsIPv6()) {
@@ -10426,8 +10427,9 @@ QStatus UDPTransport::StartListen(const char* listenSpec)
             DecrementAndFetch(&m_refCount);
             return status;
         }
-       }
-     */
+    }
+#endif
+
     QCC_DbgPrintf(("UDPTransport::StartListen(): %s = \"%s\", port = \"%s\"",
                    key.c_str(), argMap[key].c_str(), argMap["port"].c_str()));
 
