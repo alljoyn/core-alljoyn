@@ -17,3 +17,6 @@ Import('env')
 
 # Sample Programs
 env.Program('DeskTopSharedKSClientC',  ['DeskTopSharedKSClientC.c']),
+
+# Door Sample
+env.SConscript('door/SConscript', exports = {'env': env})

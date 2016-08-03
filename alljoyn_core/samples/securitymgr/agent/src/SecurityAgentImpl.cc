@@ -155,7 +155,7 @@ QStatus SecurityAgentImpl::ClaimSelf()
     }
 
     // Go into claimable state by setting up a manifest.
-    status = busAttachment->GetPermissionConfigurator().SetPermissionManifest(manifestRules, 1);
+    status = busAttachment->GetPermissionConfigurator().SetPermissionManifestTemplate(manifestRules, 1);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to set the Manifest"));
         return status;

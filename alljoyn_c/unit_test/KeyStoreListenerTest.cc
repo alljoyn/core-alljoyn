@@ -39,6 +39,8 @@ static QCC_BOOL authenticationcomplete_client_flag = QCC_FALSE;
 
 static QCC_BOOL keystorelistener_loadrequest_flag = QCC_FALSE;
 static QCC_BOOL keystorelistener_storerequest_flag = QCC_FALSE;
+static QCC_BOOL keystorelistener_acquireexclusivelock_flag = QCC_FALSE;
+static QCC_BOOL keystorelistener_releaseexclusivelock_flag = QCC_FALSE;
 
 /* NameOwnerChanged callback */
 static void AJ_CALL name_owner_changed(const void* context, const char* busName, const char* previousOwner, const char* newOwner)
@@ -99,6 +101,25 @@ static QStatus AJ_CALL alljoyn_keystorelistener_storerequest(const void* context
     return status;
 }
 
+static QStatus AJ_CALL alljoyn_keystorelistener_acquireexclusivelock(const void* context, alljoyn_keystorelistener listener)
+{
+    /* No logic here for inMemoryKeystore. */
+    QCC_UNUSED(context);
+    QCC_UNUSED(listener);
+
+    keystorelistener_acquireexclusivelock_flag = QCC_TRUE;
+    return ER_OK;
+}
+
+static void AJ_CALL alljoyn_keystorelistener_releaseexclusivelock(const void* context, alljoyn_keystorelistener listener)
+{
+    /* No logic here for inMemoryKeystore. */
+    QCC_UNUSED(context);
+    QCC_UNUSED(listener);
+
+    keystorelistener_releaseexclusivelock_flag = QCC_TRUE;
+}
+
 class KeyStoreListenerTest : public testing::Test {
   public:
     virtual void SetUp() {
@@ -112,7 +133,7 @@ class KeyStoreListenerTest : public testing::Test {
 
         /* set up the service bus */
         servicebus = alljoyn_busattachment_create("AuthListenerAsyncTestService", false);
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("AuthListenerAsyncTestService"));
+        EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("AuthListenerAsyncTestService"));
         status = alljoyn_busattachment_start(servicebus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_busattachment_connect(servicebus, ajn::getConnectArg().c_str());
@@ -127,7 +148,7 @@ class KeyStoreListenerTest : public testing::Test {
         alljoyn_interfacedescription_activate(service_intf);
 
         clientbus = alljoyn_busattachment_create("AuthListenerAsyncTestClient", false);
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("AuthListenerAsyncTestClient"));
+        EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("AuthListenerAsyncTestClient"));
         status = alljoyn_busattachment_start(clientbus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_busattachment_connect(clientbus, ajn::getConnectArg().c_str());
@@ -237,6 +258,8 @@ class KeyStoreListenerTest : public testing::Test {
 
         keystorelistener_loadrequest_flag = QCC_FALSE;
         keystorelistener_storerequest_flag = QCC_FALSE;
+        keystorelistener_acquireexclusivelock_flag = QCC_FALSE;
+        keystorelistener_releaseexclusivelock_flag = QCC_FALSE;
     }
     QStatus status;
     alljoyn_busattachment servicebus;
@@ -315,12 +338,14 @@ TEST_F(KeyStoreListenerTest, register_keystore) {
 
     /* set up the service */
 
-    alljoyn_keystorelistener_callbacks keystore_cb = {
+    alljoyn_keystorelistener_with_synchronization_callbacks keystore_cb = {
         &alljoyn_keystorelistener_loadrequest,
-        &alljoyn_keystorelistener_storerequest
+        &alljoyn_keystorelistener_storerequest,
+        &alljoyn_keystorelistener_acquireexclusivelock,
+        &alljoyn_keystorelistener_releaseexclusivelock
     };
 
-    alljoyn_keystorelistener keystorelistener = alljoyn_keystorelistener_create(&keystore_cb, &keystorelistener);
+    alljoyn_keystorelistener keystorelistener = alljoyn_keystorelistener_with_synchronization_create(&keystore_cb, &keystorelistener);
     status = alljoyn_busattachment_registerkeystorelistener(servicebus, keystorelistener);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -365,6 +390,8 @@ TEST_F(KeyStoreListenerTest, register_keystore) {
 
     EXPECT_TRUE(keystorelistener_loadrequest_flag);
     EXPECT_TRUE(keystorelistener_storerequest_flag);
+    EXPECT_TRUE(keystorelistener_acquireexclusivelock_flag);
+    EXPECT_TRUE(keystorelistener_releaseexclusivelock_flag);
 
     alljoyn_keystorelistener_destroy(keystorelistener);
     alljoyn_authlistenerasync_destroy(serviceauthlistener);

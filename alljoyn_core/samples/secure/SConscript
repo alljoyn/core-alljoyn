@@ -15,6 +15,14 @@
 
 Import('env')
 clientDistDir = '$CPP_DISTDIR/samples/secure'
+
+if env['OS_GROUP'] == 'windows':
+    os_src = 'windows/ExclusiveFile.cc'
+else:
+    os_src = 'posix/ExclusiveFile.cc'
+
+common_objs = [env.Object('ExclusiveFile', os_src), env.Object('CustomKeyStoreListener', 'CustomKeyStoreListener.cc')]
+
 env1 = env.Clone();
 env2 = env.Clone();
 env1.Append(CPPDEFINES=[('CLIENT=1')])
@@ -24,12 +32,12 @@ obj = env2.Object('DeskTopSharedKSClient2',  ['DeskTopSharedKSClient.cc'])
 
 # Sample Programs
 progs = [
-    env1.Program('DeskTopSharedKSClient1',  ['DeskTopSharedKSClient.cc']),
-    env2.Program('DeskTopSharedKSClient2',  [obj]),
-    env.Program('DeskTopSharedKSService', ['DeskTopSharedKSService.cc']),
+    env.Program('DeskTopSharedKSService', [common_objs, 'DeskTopSharedKSService.cc']),
     env.Program('SampleServiceECDHE', ['SampleServiceECDHE.cc', 'SampleCertificateChainEngine.cc']),
     env.Program('SampleClientECDHE', ['SampleClientECDHE.cc', 'SampleCertificateChainEngine.cc']),
-    env.Program('SampleCertificateUtility', ['SampleCertificateUtility.cc'])
+    env.Program('SampleCertificateUtility', ['SampleCertificateUtility.cc']),
+    env1.Program('DeskTopSharedKSClient1',  [common_objs, 'DeskTopSharedKSClient.cc']),
+    env2.Program('DeskTopSharedKSClient2',  [common_objs, obj])
     ]
 
 # Door Sample

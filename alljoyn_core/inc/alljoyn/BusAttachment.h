@@ -815,6 +815,8 @@ class BusAttachment : public MessageReceiver {
      * @param isShared             This parameter is not used as of 16.04. It is ignored internally (always shared).
      * @param permissionConfigurationListener   Passes security 2.0 callbacks to the application.
      *
+     * @remark                     The application must Join the bus attachment before destroying the @p authListener.
+     *
      * @return
      *      - #ER_OK if peer security was enabled.
      *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
@@ -849,6 +851,11 @@ class BusAttachment : public MessageReceiver {
     /**
      * Set a key store listener to listen for key store load and store requests.
      * This overrides the internal key store listener.
+     *
+     * @remarks
+     *  It is an application who owns the @p listener. Once registered, it can be released when security has been
+     *  disabled or when matching UnregisterKeyStoreListener() was called for every bus attachment which was using
+     *  this @p listener, or on the application shutdown when the @p listener is no longer referenced by the Alljoyn.
      *
      * @param listener  The key store listener to set.
      *
@@ -885,6 +892,18 @@ class BusAttachment : public MessageReceiver {
      * when establishing secure peer connections.
      */
     void ClearKeyStore();
+
+    /**
+     * Deletes the key store of the specified application.
+     * To avoid errors, app should only call this function after all instances of BusAttachment are deleted.
+     *
+     * @param[in] applicationName Name of the application specified in BusAttachment constructor.
+     *
+     * @return  - ER_OK if the file was not present, or if it has been deleted successfully
+     *          - ER_OS_ERROR if the OS fails to delete the key store
+     *          - Other errors
+     */
+    static QStatus DeleteDefaultKeyStore(const char* applicationName);
 
     /**
      * Clear the keys associated with a specific remote peer as identified by its peer GUID. The

@@ -33,6 +33,10 @@
 #include <qcc/CryptoECC.h>
 #include <qcc/CertificateECC.h>
 
+#include "XmlManifestTemplateValidator.h"
+
+#define SECURITY_LEVEL_ANNOTATION(level) "<annotation name=\"" SECURITY_LEVEL_ANNOTATION_NAME "\" value=\"" level "\"/>"
+
 namespace ajn {
 
 class SecurityApplicationProxyTestHelper {
@@ -45,6 +49,12 @@ class SecurityApplicationProxyTestHelper {
                                    alljoyn_busattachment receiverBus,
                                    AJ_PSTR* certificatePem,
                                    bool delegate = true);
+    static void CreateMembershipCert(alljoyn_busattachment signingBus,
+                                     alljoyn_busattachment memberBus,
+                                     const uint8_t* groupId,
+                                     bool delegate,
+                                     const std::string& subject,
+                                     AJ_PSTR* membershipCertificatePem);
     static void CreateMembershipCert(alljoyn_busattachment signingBus,
                                      alljoyn_busattachment memberBus,
                                      const uint8_t* groupId,

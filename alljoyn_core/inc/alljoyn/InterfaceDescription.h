@@ -620,6 +620,16 @@ class InterfaceDescription {
     const char* GetDescriptionLanguage() const;
 
     /**
+     * Get the set of all available description languages.
+     *
+     * The set will contain the sum of the language tags for the interface description,
+     * interface property, interface member and member argument descriptions.
+     *
+     * @return All available description languages.
+     */
+    std::set<qcc::String> GetDescriptionLanguages() const;
+
+    /**
      * Set the introspection description for this InterfaceDescription
      *
      * Note that when SetDescriptionTranslator is used the text in this method may
@@ -632,6 +642,52 @@ class InterfaceDescription {
     void SetDescription(const char* description);
 
     /**
+     * Set the introspection description for this InterfaceDescription in the given language.
+     *
+     * The set description can be retrieved by calling GetDescriptionForLanguage() OR GetAnnotation()
+     * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g., "org.alljoyn.Bus.DocString.en").
+     * For example, a description set by calling
+     * SetDescriptionForLanguage("This is the interface", "en") can be retrieved by calling:
+     *      - GetDescriptionForLanguage(description, "en") OR
+     *      - GetAnnotation("org.alljoyn.Bus.DocString.en", description).
+     *
+     * @param[in] description The introspection description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+     *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface already has a description.
+     */
+    QStatus SetDescriptionForLanguage(const qcc::String& description,
+                                      const qcc::String& languageTag);
+
+    /**
+     * Get the introspection description for this InterfaceDescription in the given language.
+     *
+     * To obtain the description, the method searches for the best match of the given language tag
+     * using the lookup algorithm in RFC 4647 section 3.4.
+     * For example, if GetDescriptionForLanguage(description, "en-US") is called, the method will:
+     *       - Search for a description with the same language tag ("en-US"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Search for a description with a less specific language tag ("en"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Return false and write an empty string to the description argument.
+     *
+     * The method will also provide descriptions which have been set as description annotations
+     * (set by calling AddAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+     * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+     *
+     * @param[out] description The description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - True if the interface has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetDescriptionForLanguage(qcc::String& description,
+                                   const qcc::String& languageTag) const;
+
+    /**
      * Set the introspection description for "member" of this InterfaceDescription
      *
      * @param member The name of the member
@@ -642,6 +698,30 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
     QStatus SetMemberDescription(const char* member, const char* description);
+
+    /**
+     * Set the introspection description for member "memberName" of this InterfaceDescription
+     * in the given language.
+     *
+     * The set description can be retrieved by calling GetMemberDescriptionForLanguage() OR GetMemberAnnotation()
+     * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g., "org.alljoyn.Bus.DocString.en").
+     * For example, a description set by calling
+     * SetMemberDescriptionForLanguage("MethodName", "This is the method", "en") can be retrieved by calling:
+     *      - GetMemberDescriptionForLanguage("MethodName", description, "en") OR
+     *      - GetMemberAnnotation("MethodName", "org.alljoyn.Bus.DocString.en", description).
+     *
+     * @param[in] memberName The name of the member.
+     * @param[in] description The introspection description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+     *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface member already has a description.
+     */
+    QStatus SetMemberDescriptionForLanguage(const qcc::String& memberName,
+                                            const qcc::String& description,
+                                            const qcc::String& languageTag);
 
     /**
      * Set the introspection description for "member" of this InterfaceDescription
@@ -662,6 +742,34 @@ class InterfaceDescription {
                                                 bool isSessionlessSignal));
 
     /**
+     * Get the introspection description for the member "member" of this InterfaceDescription
+     * in the given language.
+     *
+     * To obtain the description, the method searches for the best match of the given language tag
+     * using the lookup algorithm in RFC 4647 section 3.4.
+     * For example, if GetMemberDescriptionForLanguage("MethodName", description, "en-US") is called, the method will:
+     *       - Search for a description with the same language tag ("en-US"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Search for a description with a less specific language tag ("en"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Return false and write an empty string to the description argument.
+     *
+     * The method will also provide descriptions which have been set as description annotations
+     * (set by calling AddMemberAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+     * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+     *
+     * @param[in] memberName The name of the member.
+     * @param[out] description The description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - True if the interface has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetMemberDescriptionForLanguage(const qcc::String& memberName,
+                                         qcc::String& description,
+                                         const qcc::String& languageTag) const;
+
+    /**
      * Set the introspection description for the argument "arg of "member" of this InterfaceDescription
      *
      * @param member The name of the member
@@ -675,6 +783,62 @@ class InterfaceDescription {
     QStatus SetArgDescription(const char* member, const char* arg, const char* description);
 
     /**
+     * Set the introspection description for the argument "argName" of the member "memberName"
+     * of this InterfaceDescription in the given language.
+     *
+     * The set description can be retrieved by calling GetArgDescriptionForLanguage() OR GetArgAnnotation()
+     * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g., "org.alljoyn.Bus.DocString.en").
+     * For example, a description set by calling
+     * SetArgDescriptionForLanguage("MethodName", "ArgName", "This is the argument", "en") can be retrieved by calling:
+     *      - GetArgDescriptionForLanguage("MethodName", "ArgName", description, "en") OR
+     *      - GetArgAnnotation("MethodName", "ArgName", "org.alljoyn.Bus.DocString.en", description).
+     *
+     * @param[in] memberName The name of the member.
+     * @param[in] argName The name of the argument.
+     * @param[in] description The introspection description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+     *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface member argument already has a description.
+     */
+    QStatus SetArgDescriptionForLanguage(const qcc::String& memberName,
+                                         const qcc::String& argName,
+                                         const qcc::String& description,
+                                         const qcc::String& languageTag);
+
+    /**
+     * Get the introspection description for the argument "argName" of the member "memberName"
+     * of this InterfaceDescription in the given language.
+     *
+     * To obtain the description, the method searches for the best match of the given language tag
+     * using the lookup algorithm in RFC 4647 section 3.4.
+     * For example, if GetArgDescriptionForLanguage("MethodName", "ArgName", description, "en-US") is called, the method will:
+     *       - Search for a description with the same language tag ("en-US"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Search for a description with a less specific language tag ("en"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Return false and write an empty string to the description argument.
+     *
+     * The method will also provide descriptions which have been set as description annotations
+     * (set by calling AddArgAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+     * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+     *
+     * @param[in] memberName The name of the member.
+     * @param[in] argName The name of the argument.
+     * @param[out] description The description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - True if the interface has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetArgDescriptionForLanguage(const qcc::String& memberName,
+                                      const qcc::String& argName,
+                                      qcc::String& description,
+                                      const qcc::String& languageTag) const;
+
+    /**
      * Set the introspection description for "property" of this InterfaceDescription
      *
      * @param name The name of the property
@@ -685,6 +849,58 @@ class InterfaceDescription {
      *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found
      */
     QStatus SetPropertyDescription(const char* name, const char* description);
+
+    /**
+     * Set the introspection description for the interface property "propertyName"
+     * of this InterfaceDescription in the given language.
+     *
+     * The set description can be retrieved by calling GetPropertyDescription() OR GetPropertyAnnotation()
+     * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+     * (e.g., "org.alljoyn.Bus.DocString.en").
+     * For example, a description set by calling
+     * SetPropertyDescriptionForLanguage("PropertyName", "This is the property", "en") can be retrieved by calling:
+     *      - GetPropertyDescriptionForLanguage("PropertyName", description, "en") OR
+     *      - GetPropertyAnnotation("PropertyName", "org.alljoyn.Bus.DocString.en", description).
+     *
+     * @param[in] propertyName The name of the property.
+     * @param[in] description The introspection description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - #ER_OK if successful.
+     *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+     *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface property already has a description.
+     */
+    QStatus SetPropertyDescriptionForLanguage(const qcc::String& propertyName,
+                                              const qcc::String& description,
+                                              const qcc::String& languageTag);
+
+    /**
+     * Get the introspection description for for the property "propertyName"
+     * of this InterfaceDescription in the given language.
+     *
+     * To obtain the description, the method searches for the best match of the given language tag
+     * using the lookup algorithm in RFC 4647 section 3.4.
+     * For example, if GetPropertyDescriptionForLanguage("PropertyName", description, "en-US") is called, the method will:
+     *       - Search for a description with the same language tag ("en-US"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Search for a description with a less specific language tag ("en"), return true and
+     *       write that description to the description argument if such a description is found; else:
+     *       - Return false and write an empty string to the description argument.
+     *
+     * The method will also provide descriptions which have been set as description annotations
+     * (set by calling AddPropertyAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+     * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+     *
+     * @param[in] propertyName The name of the property.
+     * @param[out] description The description.
+     * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+     * @return
+     *      - True if the interface has a description - available in the description argument.
+     *      - False otherwise.
+     */
+    bool GetPropertyDescriptionForLanguage(const qcc::String& propertyName,
+                                           qcc::String& description,
+                                           const qcc::String& languageTag) const;
 
     /**
      * Set the Translator that provides this InterfaceDescription's
@@ -762,15 +978,38 @@ class InterfaceDescription {
      */
     InterfaceDescription& operator=(const InterfaceDescription& other);
 
+    /**
+     * @internal
+     * Sets the name for the interface.
+     *
+     * @param[in] name The name to be set.
+     *
+     */
+    void SetName(const qcc::String& name);
+
+
+    /**
+     * @internal
+     * Sets the security policy for the interface.
+     *
+     * @note When called on an interface which is not a standard DBus interface,
+     * the method will add "org.alljoyn.Bus.Secure" annotation to the interface,
+     * set to "true" or "off", depending on the set policy.
+     *
+     * @param[in] secPolicy The policy to be set.
+     *
+     */
+    QStatus SetSecurityPolicy(InterfaceSecurityPolicy secPolicy);
+
     void AppendDescriptionToAnnotations(AnnotationsMap& annotations, const char* description, Translator* translator) const;
 
     void AppendDescriptionToArgAnnotations(ArgumentAnnotations& argAnnotations, const char* argName, const char* description, Translator* translator) const;
 
     void AppendDescriptionXml(qcc::String& xml,
                               const char* language,
-                              const char* localDescription,
+                              const char* legacyDescription,
                               Translator* translator,
-                              const char* languageDescription,
+                              const char* annotationDescription,
                               qcc::String const& indent) const;
 
     qcc::String NextArg(const char*& signature,
@@ -783,6 +1022,25 @@ class InterfaceDescription {
                         Translator* translator) const;
 
     const char* Translate(const char* toLanguage, const char* text, qcc::String& buffer, Translator* translator) const;
+
+    qcc::String GenerateDocString(const qcc::String& languageTag) const;
+
+    bool GetMoreGeneralLanguageTag(const qcc::String& languageTag, qcc::String& moreGeneralLanguageTag) const;
+
+    bool GetDescriptionAnnotation(const qcc::String& languageTag, qcc::String& value) const;
+    bool GetMemberDescriptionAnnotation(const qcc::String& memberName, const qcc::String& languageTag, qcc::String& value) const;
+    bool GetPropertyDescriptionAnnotation(const qcc::String& propertyName, const qcc::String& languageTag, qcc::String& value) const;
+    bool GetArgDescriptionAnnotation(const qcc::String& memberName, const qcc::String& argName, const qcc::String& languageTag, qcc::String& value) const;
+
+    size_t GetAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    size_t GetLegacyDescriptionLanguages(std::set<qcc::String>& languages) const;
+
+    size_t GetInterfaceAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    size_t GetMemberAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    size_t GetPropertyAnnotationDescriptionLanguages(std::set<qcc::String>& languages) const;
+    bool GetDescriptionAnnotationLanguage(const qcc::String& annotationName, qcc::String& language) const;
+
+    bool IsDescriptionAnnotation(const qcc::String& annotationName) const;
 
     struct Definitions;
     Definitions* defs;   /**< The definitions for this interface */

@@ -38,9 +38,12 @@
 #include "PermissionMgmtObj.h"
 #include "PermissionMgmtTest.h"
 #include "BusInternal.h"
+#include <vector>
+#include <string>
 
 using namespace ajn;
 using namespace qcc;
+using namespace std;
 
 const char* BasePermissionMgmtTest::INTERFACE_NAME = "org.allseen.Security.PermissionMgmt";
 const char* BasePermissionMgmtTest::ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
@@ -154,12 +157,19 @@ QStatus PermissionMgmtTestHelper::CreateAllInclusiveManifest(Manifest& manifest)
     manifestRules[0].SetObjPath("*");
     manifestRules[0].SetInterfaceName("*");
     {
-        PermissionPolicy::Rule::Member member[1];
-        member[0].Set("*", PermissionPolicy::Rule::Member::NOT_SPECIFIED,
+        PermissionPolicy::Rule::Member member[3];
+        member[0].Set("*", PermissionPolicy::Rule::Member::METHOD_CALL,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_MODIFY);
+        member[1].Set("*", PermissionPolicy::Rule::Member::SIGNAL,
+                      PermissionPolicy::Rule::Member::ACTION_PROVIDE |
+                      PermissionPolicy::Rule::Member::ACTION_OBSERVE);
+        member[2].Set("*", PermissionPolicy::Rule::Member::PROPERTY,
                       PermissionPolicy::Rule::Member::ACTION_PROVIDE |
                       PermissionPolicy::Rule::Member::ACTION_MODIFY |
                       PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        manifestRules[0].SetMembers(1, member);
+
+        manifestRules[0].SetMembers(ArraySize(member), member);
     }
     return manifest->SetRules(manifestRules, manifestSize);
 }
@@ -257,6 +267,12 @@ QStatus PermissionMgmtTestHelper::CreateMembershipCert(const String& serial, Bus
 {
     qcc::GUID128 issuer(0);
     GetGUID(signingBus, issuer);
+
+    if (subject.empty()) {
+        /* Produce log output for the test run. */
+        EXPECT_TRUE(false) << "TEST BUG: Subject given to CreateMembershipCert cannot be empty";
+        return ER_BAD_ARG_3;
+    }
 
     cert.SetSerial(reinterpret_cast<const uint8_t*>(serial.data()), serial.size());
     String issuerStr = issuer.ToString();
@@ -1118,4 +1134,12 @@ void PermissionMgmtTestHelper::CallDeprecatedSetPSK(DefaultECDHEAuthListener* au
 #pragma GCC diagnostic pop
 #endif
 
+}
+
+void PermissionMgmtTestHelper::UnwrapStrings(const vector<string>& strings, vector<AJ_PCSTR>& unwrapped)
+{
+    unwrapped.resize(strings.size());
+    for (vector<string>::size_type i = 0; i < strings.size(); i++) {
+        unwrapped[i] = strings[i].c_str();
+    }
 }

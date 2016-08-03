@@ -43,7 +43,7 @@ public interface About
      * @throws BusException indicating failure to read Version property
      */
     @BusProperty(signature="q")
-    public short getVersion() throws BusException;
+    short getVersion() throws BusException;
 
 
     /**
@@ -55,7 +55,7 @@ public interface About
      * @throws BusException indicating failure to calling the remote GetAboutData method
      */
     @BusMethod(name = "GetAboutData", signature = "s", replySignature="a{sv}")
-    public Map<String, Variant> getAboutData(String languageTag) throws BusException;
+    Map<String, Variant> getAboutData(String languageTag) throws BusException;
 
     /**
      * Return the array of object paths and the list of all interfaces available
@@ -65,7 +65,7 @@ public interface About
      * @throws BusException indicating failure when calling the remote GetObjectDescription method
      */
     @BusMethod(name = "GetObjectDescription", replySignature="a(oas)")
-    public AboutObjectDescription[] getObjectDescription() throws BusException;
+    AboutObjectDescription[] getObjectDescription() throws BusException;
 
     /**
      * This signal is used to announce the list of all interfaces available at
@@ -80,5 +80,5 @@ public interface About
      *                        potential consumers) "a{sv}"
      */
     @BusSignal (name = "Announce", signature="qqa(oas)a{sv}")
-    public void announce(short version, short port, AboutObjectDescription[] objectDescriptions, Map<String,Variant> serviceMetadata);
+    void announce(short version, short port, AboutObjectDescription[] objectDescriptions, Map<String,Variant> serviceMetadata);
 }

@@ -273,9 +273,14 @@ QStatus Manifest::Difference(const Manifest& rhs,
 
 bool Manifest::TemplateEquals(const Manifest& other) const {
     ajn::Manifest otherManifest = other.manifest;
+    vector<PermissionPolicy::Rule> manifestTemplateRules;
+    vector<PermissionPolicy::Rule> otherManifestTemplateRules;
+
+    PermissionPolicy::ChangeRulesType(manifest->GetRules(), PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE, manifestTemplateRules);
+    PermissionPolicy::ChangeRulesType(otherManifest->GetRules(), PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE, otherManifestTemplateRules);
 
     return ((manifest->GetVersion() == otherManifest->GetVersion()) &&
-            (manifest->GetRules() == otherManifest->GetRules()));
+            (manifestTemplateRules == otherManifestTemplateRules));
 }
 
 ajn::Manifest Manifest::GetManifest() const

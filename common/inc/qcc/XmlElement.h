@@ -209,9 +209,9 @@ class XmlElement {
     /**
      * Get all elements that have the specified path relative to the current element. The path is a
      * series of tag names separated by '/' with an optional attribute specified by an '@' character
-     * followed by the the attribute name.
+     * followed by the attribute name.
      *
-     * Given the XML below GetPath("foo/bar/value@first") will return the the <value> element
+     * Given the XML below GetPath("foo/bar/value@first") will return the <value> element
      * containing "hello" and GetPath("foo/bar/value@second") will return the <value> element
      * containing "world". GetPath("foo/bar/value") will return both <value> elements.
      *
@@ -298,7 +298,7 @@ struct XmlParseContext {
      * Return a const pointer to the current root. The root will become invalid when the context is
      * freed.
      */
-    const XmlElement* GetRoot() {
+    const XmlElement* GetRoot() const {
         return root;
     }
 

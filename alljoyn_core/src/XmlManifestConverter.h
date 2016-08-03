@@ -30,6 +30,7 @@
 #include <qcc/platform.h>
 #include <qcc/XmlElement.h>
 #include <string>
+#include <vector>
 
 namespace ajn {
 
@@ -58,6 +59,30 @@ class XmlManifestConverter {
      *           #ER_FAIL if the manifest contains incorrect data.
      */
     static QStatus ManifestToXml(const Manifest& manifest, std::string& manifestXml);
+
+    /**
+     * Extract an array of manifests from an array of XML strings.
+     *
+     * @param[in]    manifestsXmls  Array of manifests in XML format.
+     * @param[in]    manifestsCount Number of elements in manifestsXmls array.
+     * @param[out]   manifests      Vector to receive converted manifests. On failure, this will be empty.
+     *
+     * @return   #ER_OK if extracted correctly.
+     *           #ER_FAIL if one of the XMLs contains incorrect data.
+     */
+    static QStatus XmlArrayToManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests);
+
+    /**
+     * Extract an array of XML strings from an array of manifests.
+     *
+     * @param[in]    manifests      Array containing manifests to be converted.
+     * @param[in]    manifestsCount Number of manifests in manifests array.
+     * @param[out]   manifestsXmls  Vector to receive XML strings. On failure, this will be empty.
+     *
+     * @return   #ER_OK if extracted correctly.
+     *           #ER_FAIL if one of the XMLs contains incorrect data.
+     */
+    static QStatus ManifestsToXmlArray(const Manifest* manifests, size_t manifestsCount, std::vector<std::string>& manifestsXmls);
 
   private:
 

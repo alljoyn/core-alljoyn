@@ -8802,10 +8802,12 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
         uint32_t numSearch = searchRData->GetNumSearchCriteria();
         for (uint32_t k = 0; k < numSearch; k++) {
             String crit = searchRData->GetSearchCriterion(k);
+            /* Remove the search criterion out of the query if it is not one we're interested in getting a reply for. */
             if (std::find(set_union_tcp_udp.begin(), set_union_tcp_udp.end(), crit) == set_union_tcp_udp.end()) {
-                searchRData->RemoveSearchCriterion(k);
-                k--;
-                numSearch = searchRData->GetNumSearchCriteria();
+                if (searchRData->RemoveSearchCriterion(k)) {
+                    k--;
+                    numSearch = searchRData->GetNumSearchCriteria();
+                }
             }
         }
 

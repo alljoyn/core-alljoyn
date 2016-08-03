@@ -26,7 +26,7 @@ import org.alljoyn.bus.annotation.BusSignal;
 
 /**
  * The standard org.freedesktop.DBus.Properties interface that can be
- * implemented by bus objects to expose a generic "setter/getter" inteface for
+ * implemented by bus objects to expose a generic "setter/getter" interface for
  * user-defined properties on DBus.
  */
 @BusInterface(name = "org.freedesktop.DBus.Properties")

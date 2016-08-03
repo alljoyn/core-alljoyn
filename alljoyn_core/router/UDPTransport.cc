@@ -129,7 +129,7 @@
  * Object consults the transports on the transport list (the UDP transport is
  * one of those) and eventually sends an advertisement request to each specified
  * transport by calling each transport's EnableAdvertisement() method.  We
- * transnslate this call to a call to the the IpNameService::AdvertiseName()
+ * transnslate this call to a call to the IpNameService::AdvertiseName()
  * method we call since we are an IP-based transport.  The IP name service will
  * multicast the advertisements to other daemons listening on our device's
  * connected networks.
@@ -4425,8 +4425,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_connLock(LOCK_LEVEL_UDPTRANSPORT_CONNLOCK), m_dynamicScoreUpdater(*this),
     /* Workaround for known deadlock prediction break ASACORE-2678 */
     m_ardpLock(LOCK_LEVEL_CHECKING_DISABLED),
-    /* Workaround for known deadlock ASACORE-2094 */
-    m_cbLock(LOCK_LEVEL_CHECKING_DISABLED),
+    m_cbLock(LOCK_LEVEL_UDPTRANSPORT_CBLOCK),
     m_handle(NULL), m_dispatcher(NULL), m_exitDispatcher(NULL),
     m_workerCommandQueue(), m_workerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_WORKERCOMMANDQUEUELOCK),
     m_exitWorkerCommandQueue(), m_exitWorkerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_EXITWORKERCOMMANDQUEUELOCK)
@@ -5074,7 +5073,7 @@ QStatus UDPTransport::Start()
      * variable that allows us to only release the singleton on the first transport
      * Join()
      */
-    QCC_DbgPrintf(("UDPTransport::Start(): Aquire instance of NS"));
+    QCC_DbgPrintf(("UDPTransport::Start(): Acquire instance of NS"));
     m_nsReleaseCount = 0;
     IpNameService::Instance().Acquire(guidStr);
 
@@ -6286,9 +6285,10 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
              * take the endpoint state change lock and hold it while we consider
              * makeing state changes to prevent possible inconsistencies.
              *
-             * Lock order is always endpointListLock then stateLock.  We have
-             * the endpointListLock so we are okay.
+             * Lock order is always endpointListLock, cbLock, then stateLock.  We
+             * already have the endpointListLock so we are okay.
              */
+            m_cbLock.Lock(MUTEX_CONTEXT);
             ep->StateLock(MUTEX_CONTEXT);
             if (ep->IsEpStopping()) {
                 if (ep->IsEpWaitEnabled()) {
@@ -6413,6 +6413,8 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
 
             }
             ep->StateUnlock(MUTEX_CONTEXT);
+            m_cbLock.Unlock(MUTEX_CONTEXT);
+
 
             /*
              * If we are in EP_STOPPING state then we have 1) either
@@ -7106,7 +7108,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
     /*
      * The Function HelloReply creates and marshals the BusHello reply for the
      * remote side.  Once it is marshaled, there is a buffer associated with the
-     * message that contains the on-the-wire version of the messsage.  The ARDP
+     * message that contains the on-the-wire version of the message.  The ARDP
      * code copies this data in to deal with the possibility of having to
      * retransmit it; So we need to remember to deal with freeing the buffer.
      */
@@ -9893,7 +9895,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         for (uint32_t i = 0; i < entries.size(); ++i) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Checking interface %s", entries[i].m_name.c_str()));
             if (entries[i].m_flags & qcc::IfConfigEntry::UP) {
-                QCC_DbgPrintf(("UDPTransport::Connect(): Interface UP with addresss %s", entries[i].m_addr.c_str()));
+                QCC_DbgPrintf(("UDPTransport::Connect(): Interface UP with address %s", entries[i].m_addr.c_str()));
                 IPAddress foundAddr(entries[i].m_addr);
                 if (foundAddr == ipAddr) {
                     QCC_DbgPrintf(("UDPTransport::Connect(): Attempted connection to self; exiting"));
@@ -10085,7 +10087,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     /*
      * The Function HelloMessage creates and marshals the BusHello Message for
      * the remote side.  Once it is marshaled, there is a buffer associated with
-     * the message that contains the on-the-wire version of the messsage.
+     * the message that contains the on-the-wire version of the message.
      */
     size_t buflen = hello->GetBufferSize();
 #ifndef NDEBUG
@@ -11375,8 +11377,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 
         /*
          * We have the name service work out of the way, so we can now create the
-         * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
-         * to wait for four minutes to relaunch the daemon if it crashes.
+         * UDP listener socket.
          */
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Setting up socket"));
 
@@ -11396,6 +11397,19 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 
 
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Socket(): listenFd=%d.", listenFd));
+
+        /*
+         * Listener sockets get closed every once in a while - see the DoStopListen code path.
+         * Allow Bind to succeed later on, by enabling SO_REUSEADDR or SO_REUSEPORT.
+         */
+        status = qcc::SetReusePort(listenFd, true);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("%s: SetReusePort() failed", __FUNCTION__));
+            if (status != ER_NOT_IMPLEMENTED) {
+                qcc::Close(listenFd);
+                continue;
+            }
+        }
 
         /*
          * ARDP expects us to use select and non-blocking sockets.

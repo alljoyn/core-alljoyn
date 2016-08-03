@@ -147,7 +147,7 @@ class Participant : public SessionPortListener, public SessionListener {
         /* create interfaces */
         InterfaceDescription* intf = NULL;
         status = bus.CreateInterface(INTF_A, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
-                                     AJ_IFC_SECURITY_INHERIT);
+                                     AJ_IFC_SECURITY_OFF);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -156,7 +156,7 @@ class Participant : public SessionPortListener, public SessionListener {
 
         intf = NULL;
         status = bus.CreateInterface(INTF_B, intf, secure ? AJ_IFC_SECURITY_REQUIRED :
-                                     AJ_IFC_SECURITY_INHERIT);
+                                     AJ_IFC_SECURITY_OFF);
         ASSERT_EQ(ER_OK, status);
         ASSERT_TRUE(intf != NULL);
         status = intf->AddMethod(METHOD, "", "ss", "busname,path");
@@ -462,13 +462,33 @@ class ObserverListener : public Observer::Listener {
             EXPECT_TRUE(proxy.ImplementsInterface(INTF_B));
         }
 
+        EXPECT_EQ(proxy.IsSecure(), false);
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
-                    (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
+
+        // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
+        if (!((status == ER_OK) || (status == ER_BUS_BLOCKING_CALL_NOT_ALLOWED) ||
+              (status == ER_PERMISSION_DENIED))) {
+            qcc::String errorMessage = "";
+            const char* errorNameTemp = reply->GetErrorName(&errorMessage);
+            qcc::String errorName = (errorNameTemp == nullptr) ? "" : errorNameTemp;
+            printf("MethodCall failed with status %s\nError %s: %s", QCC_StatusText(status), errorName.c_str(), errorMessage.c_str());
+            QCC_ASSERT(false);
+        }
 
         bus.EnableConcurrentCallbacks();
+
+        EXPECT_EQ(proxy.IsSecure(), false);
         status = proxy.MethodCall(intfname, METHOD, NULL, 0, reply);
-        EXPECT_TRUE((status == ER_OK) || (status == ER_PERMISSION_DENIED)) << "Actual Status: " << QCC_StatusText(status);
+
+        // ASACORE-2845: Crash on failure (for now) to generate a core dump for further analysis
+        if (!((status == ER_OK) || (status == ER_PERMISSION_DENIED))) {
+            qcc::String errorMessage = "";
+            const char* errorNameTemp = reply->GetErrorName(&errorMessage);
+            qcc::String errorName = (errorNameTemp == nullptr) ? "" : errorNameTemp;
+            printf("MethodCall failed with status %s\nError %s: %s", QCC_StatusText(status), errorName.c_str(), errorMessage.c_str());
+            QCC_ASSERT(false);
+        }
+
         if (ER_OK == status) {
             String ubn(reply->GetArg(0)->v_string.str), path(reply->GetArg(1)->v_string.str);
             if (strict) {
@@ -575,6 +595,7 @@ void ObserverTest::SimpleScenario(Participant& provider, Participant& consumer)
     provider.RegisterObject("justA");
     provider.RegisterObject("justB");
     provider.RegisterObject("both");
+
     EXPECT_TRUE(WaitForAll(allEvents));
 
     /* remove justA from the bus */

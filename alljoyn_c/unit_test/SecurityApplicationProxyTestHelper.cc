@@ -93,6 +93,11 @@ void SecurityApplicationProxyTestHelper::ReplaceString(string& original, AJ_PCST
 
 void SecurityApplicationProxyTestHelper::CreateMembershipCert(alljoyn_busattachment signingBus, alljoyn_busattachment memberBus, const uint8_t* groupId, bool delegate, AJ_PSTR* membershipCertificatePem)
 {
+    CreateMembershipCert(signingBus, memberBus, groupId, delegate, ((BusAttachment*)memberBus)->GetUniqueName(), membershipCertificatePem);
+}
+
+void SecurityApplicationProxyTestHelper::CreateMembershipCert(alljoyn_busattachment signingBus, alljoyn_busattachment memberBus, const uint8_t* groupId, bool delegate, const string& subject, AJ_PSTR* membershipCertificatePem)
+{
     string certificate;
     GUID128 certificateGuid;
     ECCPublicKey memberPublicKey;
@@ -103,7 +108,7 @@ void SecurityApplicationProxyTestHelper::CreateMembershipCert(alljoyn_busattachm
     ASSERT_EQ(ER_OK, RetrieveDSAPublicKeyFromKeyStore(member, memberPublicKey));
     ASSERT_EQ(ER_OK, CreateMembershipCert("1",
                                           *signer,
-                                          member->GetUniqueName(),
+                                          subject,
                                           &memberPublicKey,
                                           certificateGuid,
                                           delegate,

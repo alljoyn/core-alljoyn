@@ -1,18 +1,9 @@
 #ifndef _ALLJOYN_XML_RULES_VALIDATOR_H
 #define _ALLJOYN_XML_RULES_VALIDATOR_H
 
-/*
- * Workaround for ASACORE-2712
- */
-#if !defined(__GNUC__) || \
-    ((__GNUC__ >= 4) && \
-    (__GNUC_MINOR__ >= 9))
-#define REGEX_SUPPORTED
-#endif
-
 /**
  * @file
- * This file defines the validator for manifests and manifest templates in XML format
+ * This file defines the validator for rule sets in XML format
  */
 
 /******************************************************************************
@@ -41,26 +32,20 @@
 #include <qcc/XmlElement.h>
 #include "XmlValidator.h"
 
-#ifdef REGEX_SUPPORTED
-#include <regex>
-#endif /* REGEX_SUPPORTED */
-
 namespace ajn {
 
-#define MANIFEST_XML_ELEMENT "manifest"
 #define NODE_XML_ELEMENT "node"
 #define INTERFACE_XML_ELEMENT "interface"
 #define ANNOTATION_XML_ELEMENT "annotation"
-#define NAME_XML_ATTRIBUTE "name"
 #define VALUE_XML_ATTRIBUTE "value"
 #define METHOD_MEMBER_TYPE "method"
 #define PROPERTY_MEMBER_TYPE "property"
 #define SIGNAL_MEMBER_TYPE "signal"
+#define NOT_SPECIFIED_MEMBER_TYPE "any"
 #define DENY_MEMBER_MASK "Deny"
 #define OBSERVE_MEMBER_MASK "Observe"
 #define PROVIDE_MEMBER_MASK "Provide"
 #define MODIFY_MEMBER_MASK "Modify"
-#define WILDCARD_XML_VALUE "*"
 #define ACTION_ANNOTATION_NAME "org.alljoyn.Bus.Action"
 #define MAX_INTERFACE_NAME_LENGTH 255
 #define MAX_MEMBER_NAME_LENGTH 255
@@ -73,15 +58,25 @@ class XmlRulesValidator : public XmlValidator {
      */
     static std::unordered_map<std::string, PermissionPolicy::Rule::Member::MemberType> s_memberTypeMap;
 
-    /*
+    /**
      * Initializes the static members.
      */
     static void Init();
 
     /**
+     * Performs the static members cleanup.
+     */
+    static void Shutdown();
+
+    /**
+     * Retrieves the singleton instance of the validator.
+     */
+    static XmlRulesValidator* GetInstance();
+
+    /**
      * Validates the set of rules map to an XML that is valid according
-     * to the schema for manifest/manifest template/policy rules XMLs.
-     * The schema is available under alljoyn_core/docs/manifest_template.xsd.
+     * to the schema for manifest/policy rules XMLs.
+     * The schema is available under alljoyn_core/docs/manifest.xsd.
      *
      * @param[in]   rules       Array of rules representing the manifest.
      * @param[in]   rulesCount  Number of rules in the array.
@@ -90,11 +85,11 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_FAIL if the rules are not following the schema.
      */
-    static QStatus ValidateRules(const PermissionPolicy::Rule* rules, const size_t rulesCount);
+    QStatus ValidateRules(const PermissionPolicy::Rule* rules, const size_t rulesCount);
 
     /**
      * Validates the root containts a collection of qcc::XmlElements
-     * representing valid "node" elements according to the manifest template schema.
+     * representing valid "node" elements according to the policy/manifest schema.
      *
      * @param[in]   rootElement  Root element containing "node" elements.
      *
@@ -102,23 +97,13 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_XML_MALFORMED if the XML is not following the schema.
      */
-    static QStatus Validate(const qcc::XmlElement* rootElement);
+    QStatus Validate(const qcc::XmlElement* rootElement);
 
     /**
      * Default destructor.
      */
     virtual ~XmlRulesValidator()
     { }
-
-    /**
-     * Helper method to extract an attribute from qcc::XmlElement or
-     * a wildcard "*" if the argument is not present.
-     *
-     * @param[in]   xmlElement       XML element to extract the attribute from.
-     * @param[in]   attributeName    Name of the extracted attribute.
-     * @param[out]  attribute        The extracted attribute value.
-     */
-    static void ExtractAttributeOrWildcard(const qcc::XmlElement* xmlElement, AJ_PCSTR attributeName, std::string* attribute);
 
     /**
      * Helper method to group rules according to their object path.
@@ -131,9 +116,14 @@ class XmlRulesValidator : public XmlValidator {
                                      const size_t rulesCount,
                                      std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
 
-  private:
+  protected:
 
     class MemberValidatorFactory;
+
+    /**
+     * Static validator instance. Required to enable method overwriting.
+     */
+    static XmlRulesValidator* s_validator;
 
 #ifdef REGEX_SUPPORTED
 
@@ -160,8 +150,21 @@ class XmlRulesValidator : public XmlValidator {
     static void MemberTypeMapInit();
 
     /**
+     * User shouldn't be able to create their own instance of the validator.
+     */
+    XmlRulesValidator()
+    { }
+
+    /**
+     * Retrieves the root element name valid for the converted XML.
+     *
+     * @return   Root element name.
+     */
+    virtual std::string GetRootElementName();
+
+    /**
      * Validates the qcc::XmlElement represents a valid "node"
-     * elements according to the manifest template schema.
+     * elements according to the policy/manifest schema.
      *
      * @param[in]   node         A XML "node" element.
      * @param[in]   nodeNames    A collection of names for already verified nodes.
@@ -170,23 +173,47 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_XML_MALFORMED if the XML is not following the schema.
      */
-    static QStatus ValidateNode(const qcc::XmlElement* node, std::unordered_set<std::string>& nodeNames);
+    QStatus ValidateNode(const qcc::XmlElement* node, std::unordered_set<std::string>& nodeNames);
 
     /**
-     * Validates the qcc::XmlElement contains valid "interface"
-     * elements according to the manifest template schema.
+     * Validates that the qcc::XmlElement contains valid "node"
+     * components common to policies, manifests and manifest templates.
      *
-     * @param[in]   node  A "node" XML element.
+     * @param[in]   node         A XML "node" element.
+     * @param[in]   nodeNames    A collection of names for already verified nodes.
      *
      * @return
      *            #ER_OK if the input is correct.
      *            #ER_XML_MALFORMED if the XML is not following the schema.
      */
-    static QStatus ValidateInterfaces(const qcc::XmlElement* node);
+    QStatus ValidateNodeCommon(const qcc::XmlElement* node, std::unordered_set<std::string>& nodeNames);
+
+    /**
+     * Validates that the XML "node" element's annotations are valid.
+     *
+     * @param[in]   annotations  XML "annotation" elements inside the "node" element.
+     *
+     * @return
+     *            #ER_OK if the input is correct.
+     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     */
+    virtual QStatus ValidateNodeAnnotations(const std::vector<qcc::XmlElement*>& annotations);
+
+    /**
+     * Validates that the "interface" elements are valid
+     * according to the policy/manifest schema.
+     *
+     * @param[in]   interfaces  A vector of "interface" XML elements.
+     *
+     * @return
+     *            #ER_OK if the input is correct.
+     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     */
+    QStatus ValidateInterfaces(const std::vector<qcc::XmlElement*>& interfaces);
 
     /**
      * Validates the qcc::XmlElement represent a valid "interface"
-     * elements according to the manifest template schema.
+     * elements according to the policy/manifest schema.
      *
      * @param[in]   singleInterface  A XML "interface" element.
      * @param[in]   interfaceNames   A collection of names for already verified interfaces.
@@ -195,23 +222,47 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_XML_MALFORMED if the XML is not following the schema.
      */
-    static QStatus ValidateInterface(const qcc::XmlElement* singleInterface, std::unordered_set<std::string>& interfaceNames);
+    QStatus ValidateInterface(const qcc::XmlElement* singleInterface, std::unordered_set<std::string>& interfaceNames);
 
     /**
-     * Validates the qcc::XmlElement contains valid members (method/property/signal)
-     * elements according to the manifest template schema.
+     * Validates that the qcc::XmlElement contains valid "interface"
+     * components common to policies, manifests and manifest templates.
      *
-     * @param[in]   singleInterface  A XML "interface" element
+     * @param[in]   singleInterface  A XML "interface" element.
+     * @param[in]   interfaceNames   A collection of names for already verified interfaces.
      *
      * @return
      *            #ER_OK if the input is correct.
      *            #ER_XML_MALFORMED if the XML is not following the schema.
      */
-    static QStatus ValidateMembers(const qcc::XmlElement* singleInterface);
+    QStatus ValidateInterfaceCommon(const qcc::XmlElement* singleInterface, std::unordered_set<std::string>& interfaceNames);
+
+    /**
+     * Validates that the XML "interface" element's annotations are valid.
+     *
+     * @param[in]   annotations  XML "annotation" elements inside the "interface" element.
+     *
+     * @return
+     *            #ER_OK if the input is correct.
+     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     */
+    virtual QStatus ValidateInterfaceAnnotations(const std::vector<qcc::XmlElement*>& annotations);
+
+    /**
+     * Validates the qcc::XmlElement contains valid members (method/property/signal)
+     * elements according to the policy/manifest schema.
+     *
+     * @param[in]   members  A collection of XML member elements
+     *
+     * @return
+     *            #ER_OK if the input is correct.
+     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     */
+    QStatus ValidateMembers(const std::vector<qcc::XmlElement*>& members);
 
     /**
      * Validates the qcc::XmlElement represents a valid member.
-     * elements according to the manifest template schema.
+     * elements according to the policy/manifest/manifest template schema.
      *
      * @param[in]   member                   A XML "member" element.
      * @param[in]   memberValidatorFactory   A member validator factory.
@@ -220,11 +271,11 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_XML_MALFORMED if the XML is not following the schema.
      */
-    static QStatus ValidateMember(const qcc::XmlElement* member, MemberValidatorFactory& memberValidatorFactory);
+    QStatus ValidateMember(const qcc::XmlElement* member, MemberValidatorFactory& memberValidatorFactory);
 
     /**
      * Validates the collection of PermissionPolicy::Rules for a specific object
-     * path represent a valid "node" element according to the manifest template schema.
+     * path represent a valid "node" element according to the policy/manifest/manifest template schema.
      *
      * @param[in]   objectToRulesMap A mapping between object paths and a collection of rules.
      *
@@ -232,11 +283,11 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_FAIL otherwise.
      */
-    static QStatus ValidateObject(const std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
+    QStatus ValidateObject(const std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
 
     /**
      * Validates the collection of PermissionPolicy::Rule represent a valid
-     * "node" element according to the manifest template schema.
+     * "node" element according to the policy/manifest/manifest template schema.
      *
      * @param[in]   rules       Collection of rules mapping to one "node" element.
      *
@@ -244,11 +295,11 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_FAIL otherwise.
      */
-    static QStatus ValidateRules(const std::vector<PermissionPolicy::Rule>& rules);
+    QStatus ValidateRules(const std::vector<PermissionPolicy::Rule>& rules);
 
     /**
      * Validates a single PermissionPolicy::Rule represents a valid
-     * "interface" element according to the manifest template schema.
+     * "interface" element according to the policy/manifest/manifest template schema.
      *
      * @param[in]   rule             Single PermissionPolicy::Rule representing an "interface" element.
      * @param[in]   interfaceNames   Collection of interface names for already verified rules.
@@ -257,7 +308,7 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_FAIL otherwise.
      */
-    static QStatus ValidateRule(const PermissionPolicy::Rule& rule, std::unordered_set<std::string>& interfaceNames);
+    QStatus ValidateRule(const PermissionPolicy::Rule& rule, std::unordered_set<std::string>& interfaceNames);
 
     /**
      * Validates the collection of PermissionPolicy::Rule::Members represent
@@ -270,66 +321,7 @@ class XmlRulesValidator : public XmlValidator {
      *            #ER_OK if the input is correct.
      *            #ER_FAIL otherwise.
      */
-    static QStatus ValidateMembers(const PermissionPolicy::Rule& rule);
-
-    /**
-     * Validates the qcc::XmlElement's attribute is unique in the given set.
-     *
-     * @param[in]    xmlElement      Xml element being verified.
-     * @param[in]    valuesSet       A set to validated against.
-     * @param[in]    attributeName   The attribute, which uniqueness will be checked.
-     *
-     * @return
-     *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
-     */
-    static QStatus ValidateAttributeValueUnique(const qcc::XmlElement* xmlElement,
-                                                std::unordered_set<std::string>& valuesSet,
-                                                AJ_PCSTR attributeName = NAME_XML_ATTRIBUTE);
-
-#ifdef REGEX_SUPPORTED
-
-    /**
-     * Validates the qcc::XmlElement's name attribute exists,
-     * follows the correct pattern and is of correct size.
-     *
-     * @param[in]    xmlElement      Xml element being verified.
-     * @param[in]    namePattern     Pattern the attribute must follow.
-     * @param[in]    maxNameLength   Maximum lenght of the attribute.
-     *
-     * @return
-     *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
-     */
-    static QStatus ValidateNameAttributeValue(const qcc::XmlElement* xmlElement, const std::regex& namePattern, size_t maxNameLength = SIZE_MAX);
-
-    /**
-     * Validates the string exists, follows the correct pattern and is of correct size.
-     *
-     * @param[in]    input       Validated string.
-     * @param[in]    pattern     Pattern the string must follow.
-     * @param[in]    maxLength   Maximum lenght of the string.
-     *
-     * @return
-     *            #ER_OK if the input is correct.
-     *            #ER_FAIL otherwise.
-     */
-    static QStatus ValidateString(std::string input, const std::regex& pattern, size_t maxLength = SIZE_MAX);
-
-#endif // REGEX_SUPPORTED
-
-    /**
-     * Validates the qcc::XmlElement's name attribute exists
-     * and is equal to the expected value.
-     *
-     * @param[in]    xmlElement  Xml element being verified.
-     * @param[in]    name        Expected name attribute value.
-     *
-     * @return
-     *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
-     */
-    static QStatus ValidateNameAttributeValue(const qcc::XmlElement* xmlElement, AJ_PCSTR name);
+    QStatus ValidateMembers(const PermissionPolicy::Rule& rule);
 
     /*
      * Class for validating interface members (method/property/signal) both in qcc::XmlElement
@@ -405,7 +397,7 @@ class XmlRulesValidator : public XmlValidator {
          *            #ER_OK if the input is correct.
          *            #ER_XML_MALFORMED otherwise.
          */
-        QStatus ValidateAnnotations(const qcc::XmlElement* member);
+        QStatus ValidateMemberAnnotations(const qcc::XmlElement* member);
 
         /**
          * Validates a single "annotation" XML element inside the member element.
@@ -549,6 +541,7 @@ class XmlRulesValidator : public XmlValidator {
             m_validators[PermissionPolicy::Rule::Member::MemberType::METHOD_CALL] = new MethodsValidator();
             m_validators[PermissionPolicy::Rule::Member::MemberType::PROPERTY] = new PropertiesValidator();
             m_validators[PermissionPolicy::Rule::Member::MemberType::SIGNAL] = new SignalsValidator();
+            m_validators[PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED] = new PropertiesValidator();
         }
 
         ~MemberValidatorFactory()

@@ -23,11 +23,13 @@
 #include <qcc/KeyInfoECC.h>
 #include <qcc/StringUtil.h>
 #include <alljoyn/PermissionConfigurator.h>
+#include <alljoyn/SecurityApplicationProxy.h>
 #include "PermissionMgmtObj.h"
 #include "BusInternal.h"
 #include "CredentialAccessor.h"
 #include "KeyInfoHelper.h"
-#include "XmlRulesConverter.h"
+#include "XmlManifestConverter.h"
+#include "XmlManifestTemplateConverter.h"
 
 #define QCC_MODULE "PERMISSION_MGMT"
 
@@ -77,11 +79,28 @@ PermissionConfigurator::~PermissionConfigurator()
     m_internal = nullptr;
 }
 
-QStatus PermissionConfigurator::SetPermissionManifest(PermissionPolicy::Rule* rules, size_t count)
+QStatus PermissionConfigurator::GetManifestTemplateAsXml(string& manifestTemplateXml)
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
     if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
-        QCC_DbgPrintf(("PermissionConfigurator::SetPermissionManifest does not have PermissionMgmtObj initialized"));
+        QCC_DbgPrintf(("PermissionConfigurator::SetPermissionManifestTemplate does not have PermissionMgmtObj initialized"));
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+
+    vector<PermissionPolicy::Rule> manifestTemplate;
+    QStatus status = permissionMgmtObj->GetManifestTemplate(manifestTemplate);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    return XmlManifestTemplateConverter::GetInstance()->RulesToXml(manifestTemplate.data(), manifestTemplate.size(), manifestTemplateXml);
+}
+
+QStatus PermissionConfigurator::SetPermissionManifestTemplate(PermissionPolicy::Rule* rules, size_t count)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        QCC_DbgPrintf(("PermissionConfigurator::SetPermissionManifestTemplate does not have PermissionMgmtObj initialized"));
         return ER_FEATURE_NOT_AVAILABLE;
     }
     return permissionMgmtObj->SetManifestTemplate(rules, count);
@@ -92,10 +111,10 @@ QStatus PermissionConfigurator::SetManifestTemplateFromXml(AJ_PCSTR manifestXml)
     QStatus status;
     std::vector<PermissionPolicy::Rule> rules;
 
-    status = XmlRulesConverter::XmlToRules(manifestXml, rules);
+    status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(manifestXml, rules);
 
     if (ER_OK == status) {
-        status = SetPermissionManifest(rules.data(), rules.size());
+        status = SetPermissionManifestTemplate(rules.data(), rules.size());
     }
 
     return status;
@@ -240,5 +259,213 @@ QStatus PermissionConfigurator::GetClaimCapabilityAdditionalInfo(PermissionConfi
     }
     return permissionMgmtObj->GetClaimCapabilityAdditionalInfo(additionalInfo);
 }
+
+QStatus PermissionConfigurator::Claim(
+    const KeyInfoNISTP256& certificateAuthority,
+    const qcc::GUID128& adminGroupGuid,
+    const KeyInfoNISTP256& adminGroupAuthority,
+    const qcc::CertificateX509* identityCertChain,
+    size_t identityCertChainCount,
+    AJ_PCSTR* manifestsXmls,
+    size_t manifestsCount)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+
+    std::vector<Manifest> manifests;
+    QStatus status = XmlManifestConverter::XmlArrayToManifests(manifestsXmls, manifestsCount, manifests);
+
+    if (ER_OK == status) {
+        PermissionMgmtObj::TrustAnchor caTrustAnchor(PermissionMgmtObj::TRUST_ANCHOR_CA, certificateAuthority);
+        PermissionMgmtObj::TrustAnchor adminGroupAnchor(PermissionMgmtObj::TRUST_ANCHOR_SG_AUTHORITY, adminGroupAuthority);
+        adminGroupAnchor.securityGroupId = adminGroupGuid;
+
+        return permissionMgmtObj->Claim(
+            caTrustAnchor,
+            adminGroupAnchor,
+            identityCertChain,
+            identityCertChainCount,
+            manifests.data(),
+            manifests.size());
+    } else {
+        return status;
+    }
+}
+
+QStatus PermissionConfigurator::UpdateIdentity(
+    const qcc::CertificateX509* certs,
+    size_t certCount,
+    AJ_PCSTR* manifestsXmls,
+    size_t manifestsCount)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+
+    std::vector<Manifest> manifests;
+    QStatus status = XmlManifestConverter::XmlArrayToManifests(manifestsXmls, manifestsCount, manifests);
+
+    if (ER_OK == status) {
+        return permissionMgmtObj->UpdateIdentity(certs, certCount, manifests.data(), manifests.size());
+    } else {
+        return status;
+    }
+}
+
+QStatus PermissionConfigurator::GetIdentity(std::vector<qcc::CertificateX509>& certChain)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->GetIdentity(certChain);
+}
+
+QStatus PermissionConfigurator::GetManifests(std::vector<Manifest>& manifests)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->RetrieveManifests(manifests);
+}
+
+QStatus PermissionConfigurator::GetIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->RetrieveIdentityCertificateId(serial, issuerKeyInfo);
+}
+
+QStatus PermissionConfigurator::UpdatePolicy(const PermissionPolicy& policy)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->InstallPolicy(policy);
+}
+
+QStatus PermissionConfigurator::GetPolicy(PermissionPolicy& policy)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->RetrievePolicy(policy, false);
+}
+
+QStatus PermissionConfigurator::GetDefaultPolicy(PermissionPolicy& policy)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->RetrievePolicy(policy, true);
+}
+
+QStatus PermissionConfigurator::ResetPolicy()
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->ResetPolicy();
+}
+
+QStatus PermissionConfigurator::GetMembershipSummaries(std::vector<String>& serials, std::vector<KeyInfoNISTP256>& keyInfos)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        serials.clear();
+        keyInfos.clear();
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+
+    MsgArg arg;
+    QStatus status = permissionMgmtObj->GetMembershipSummaries(arg);
+    if (ER_OK != status) {
+        serials.clear();
+        keyInfos.clear();
+        return status;
+    }
+
+    size_t count = arg.v_array.GetNumElements();
+    serials.resize(count);
+    keyInfos.resize(count);
+    status = SecurityApplicationProxy::MsgArgToCertificateIds(arg, serials.data(), keyInfos.data(), count);
+
+    if (ER_OK != status) {
+        serials.clear();
+        keyInfos.clear();
+    }
+
+    return status;
+}
+
+QStatus PermissionConfigurator::InstallMembership(const qcc::CertificateX509* certChain, size_t certCount)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->StoreMembership(certChain, certCount);
+}
+
+QStatus PermissionConfigurator::RemoveMembership(const qcc::String& serial, const qcc::ECCPublicKey* issuerPubKey, const qcc::String& issuerAki)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->RemoveMembership(serial, issuerPubKey, issuerAki);
+}
+
+QStatus PermissionConfigurator::RemoveMembership(const qcc::String& serial, const qcc::KeyInfoNISTP256& issuerKeyInfo)
+{
+    String issuerAki((const char*)issuerKeyInfo.GetKeyId(), issuerKeyInfo.GetKeyIdLen());
+
+    return RemoveMembership(serial, issuerKeyInfo.GetPublicKey(), issuerAki);
+}
+
+QStatus PermissionConfigurator::StartManagement()
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->StartManagement();
+}
+
+QStatus PermissionConfigurator::EndManagement()
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    return permissionMgmtObj->EndManagement();
+}
+
+QStatus PermissionConfigurator::InstallManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, bool append)
+{
+    PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
+    if (!permissionMgmtObj || !permissionMgmtObj->IsReady()) {
+        return ER_FEATURE_NOT_AVAILABLE;
+    }
+    std::vector<Manifest> manifests;
+    QStatus status = XmlManifestConverter::XmlArrayToManifests(manifestsXmls, manifestsCount, manifests);
+
+    if (ER_OK == status) {
+        return permissionMgmtObj->StoreManifests(manifests.size(), manifests.data(), append);
+    } else {
+        return status;
+    }
+}
+
 
 }

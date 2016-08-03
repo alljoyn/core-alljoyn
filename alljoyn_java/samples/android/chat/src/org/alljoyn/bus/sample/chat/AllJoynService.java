@@ -622,7 +622,7 @@ public class AllJoynService extends Service implements Observer {
      * the well-known name a hosting bus attachment will request and
      * advertise.
      */
-    private static final String NAME_PREFIX = "org.alljoyn.bus.samples.chat";
+    protected static final String NAME_PREFIX = "org.alljoyn.bus.samples.chat";
 
     /**
      * The well-known session port used as the contact port for the chat service.

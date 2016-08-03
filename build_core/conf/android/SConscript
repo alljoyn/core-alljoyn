@@ -64,7 +64,10 @@ if env.get('ANDROID_SDK', '') != '':
    # It should be pretty safe always to compile with the latest one.
    # This should not be done for minSdkVersion or targetSdkVersion!
    api_levels = [ level
-                  for level in set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_SDK'] + '/platforms') ])
+                  for level in set([ 
+                      int(d.split('-')[-1]) 
+                      for d in os.listdir(env['ANDROID_SDK'] + '/platforms') 
+                      if (d.split('-')[-1]).isdigit() ])
                   if level >= min_api_level ]
 
    api_levels.sort()
@@ -73,6 +76,7 @@ if env.get('ANDROID_SDK', '') != '':
    vars2.Add('ANDROID_API_LEVEL', 'Android API level', os.environ.get('ANDROID_API_LEVEL', str(api_levels[-1])))
    vars2.Update(env)
    Help(vars2.GenerateHelpText(env))
+   print "ANDROID_API_LEVEL is " + env.subst('$ANDROID_API_LEVEL')
 
 #take ndk_level same as SDK level
 ndk_platform_path = env['ANDROID_NDK'] + '/platforms/android-' + str(ndk_level)

@@ -103,7 +103,6 @@
 		AC10312C156EC85100D2853A /* AJNVersion.h in Headers */ = {isa = PBXBuildFile; fileRef = AC1030FE156EC85100D2853A /* AJNVersion.h */; };
 		AC10312D156EC85100D2853A /* AJNVersion.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC1030FF156EC85100D2853A /* AJNVersion.mm */; };
 		AC10312E156EC85100D2853A /* AllJoynFramework-Prefix.pch in Headers */ = {isa = PBXBuildFile; fileRef = AC103100156EC85100D2853A /* AllJoynFramework-Prefix.pch */; };
-		AC103144156ECB0B00D2853A /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC103143156ECB0B00D2853A /* libc++.dylib */; };
 		AC103146156ECB1E00D2853A /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC103145156ECB1E00D2853A /* libstdc++.dylib */; };
 		AC103154156ECD1900D2853A /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC10314E156ECD1900D2853A /* UIKit.framework */; };
 		AC103158156ECE1E00D2853A /* libc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC103157156ECE1E00D2853A /* libc.dylib */; };
@@ -239,7 +238,6 @@
 		AC1030FF156EC85100D2853A /* AJNVersion.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNVersion.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNVersion.mm; sourceTree = "<group>"; };
 		AC103100156EC85100D2853A /* AllJoynFramework-Prefix.pch */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "AllJoynFramework-Prefix.pch"; path = "../../AllJoynFramework/AllJoynFramework/AllJoynFramework-Prefix.pch"; sourceTree = "<group>"; };
 		AC103101156EC85100D2853A /* SConscript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = SConscript; path = ../../AllJoynFramework/AllJoynFramework/SConscript; sourceTree = "<group>"; };
-		AC103143156ECB0B00D2853A /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		AC103145156ECB1E00D2853A /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
 		AC10314E156ECD1900D2853A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		AC103157156ECE1E00D2853A /* libc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libc.dylib; path = usr/lib/libc.dylib; sourceTree = SDKROOT; };
@@ -286,7 +284,6 @@
 				AC103158156ECE1E00D2853A /* libc.dylib in Frameworks */,
 				AC103154156ECD1900D2853A /* UIKit.framework in Frameworks */,
 				AC103146156ECB1E00D2853A /* libstdc++.dylib in Frameworks */,
-				AC103144156ECB0B00D2853A /* libc++.dylib in Frameworks */,
 				AC1030BA156EC82300D2853A /* SenTestingKit.framework in Frameworks */,
 				AC1030BD156EC82300D2853A /* Foundation.framework in Frameworks */,
 			);
@@ -319,7 +316,6 @@
 			children = (
 				AC103157156ECE1E00D2853A /* libc.dylib */,
 				AC103145156ECB1E00D2853A /* libstdc++.dylib */,
-				AC103143156ECB0B00D2853A /* libc++.dylib */,
 				ACD7FEBC15E406270021F8A1 /* SystemConfiguration.framework */,
 				AC10314E156ECD1900D2853A /* UIKit.framework */,
 				AC1030AB156EC82300D2853A /* Foundation.framework */,
@@ -850,7 +846,6 @@
 				INFOPLIST_FILE = "AllJoynFramework_iOSTests/AllJoynFramework_iOSTests-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)\"",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = NO;
@@ -862,8 +857,6 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
@@ -894,7 +887,6 @@
 				INFOPLIST_FILE = "AllJoynFramework_iOSTests/AllJoynFramework_iOSTests-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(OPENSSL_ROOT)/build/$(CONFIGURATION)-$(PLATFORM_NAME)\"",
 					"\"$(SRCROOT)/../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = NO;
@@ -906,8 +898,6 @@
 					"-ObjC",
 					"-lalljoyn",
 					"-lajrouter",
-					"-lssl",
-					"-lcrypto",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				QCC_ALLJOYN_CORE_DIR = ../../alljoyn_core;
