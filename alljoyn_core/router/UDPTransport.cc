@@ -11387,11 +11387,12 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         if (family == QCC_AF_INET6) {
             struct addrinfo* resp;
             qcc::String tmpaddr = qcc::IPAddress::IPv6ToString(listenAddr.GetIPv6Reference()) + "%" + interface;
-            if (getaddrinfo(tmpaddr.c_str(), NULL, NULL, &resp) > -1) {
+            if (getaddrinfo(tmpaddr.c_str(), NULL, NULL, &resp) == 0) {
                 listenAddrScopeId = ((struct sockaddr_in6*)resp->ai_addr)->sin6_scope_id;
+            } else {
+                QCC_LogError(ER_FAIL, ("UDPTransport::HandleNetworkEventInstance(): getaddrinfo() failed for node '%s'", tmpaddr.c_str()));
             }
         }
-
 
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Socket(): listenFd=%d.", listenFd));
 
