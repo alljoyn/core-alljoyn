@@ -25,7 +25,7 @@
  * For C++ exception the default exception filter will cause a UI
  * prompt to appear instead of running the default debugger.
  */
-#if defined(QCC_OS_GROUP_WINDOWS) && defined(QCC_CRASH_DUMP_SUPPORT)
+#if defined(QCC_OS_GROUP_WINDOWS) && defined(ALLJOYN_CRASH_DUMP_SUPPORT)
 static LONG DummyExceptionFilter(LPEXCEPTION_POINTERS pointers) {
     QCC_UNUSED(pointers);
     return EXCEPTION_CONTINUE_SEARCH;

@@ -25,6 +25,7 @@
 #define _QCC_DEBUG_H
 
 #include <qcc/platform.h>
+#include <alljoyn/Status.h>
 
 #include <stdio.h>
 
@@ -227,7 +228,7 @@ extern "C" {
  *
  * @return  Number of characters printed.  Negative value indicates an error.
  */
-int AJ_CALL QCC_SyncPrintf(const char* fmt, ...);
+int CDECL_CALL QCC_SyncPrintf(const char* fmt, ...);
 
 
 /**
@@ -295,7 +296,7 @@ void AJ_CALL QCC_RegisterOutputFile(FILE* file);
  *
  * @param fmt  A printf() style format specification.
  */
-void* AJ_CALL _QCC_DbgPrintContext(const char* fmt, ...);
+void* CDECL_CALL _QCC_DbgPrintContext(const char* fmt, ...);
 
 /**
  * @internal
@@ -304,7 +305,7 @@ void* AJ_CALL _QCC_DbgPrintContext(const char* fmt, ...);
  * @param ctx  Debug context created by _QCC_DbgPrintContext.
  * @param fmt  A printf() style format specification.
  */
-void AJ_CALL _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...);
+void CDECL_CALL _QCC_DbgPrintAppend(void* ctx, const char* fmt, ...);
 
 /**
  * @internal

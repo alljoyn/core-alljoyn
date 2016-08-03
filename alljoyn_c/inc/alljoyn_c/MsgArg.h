@@ -108,7 +108,7 @@ extern AJ_API alljoyn_msgarg AJ_CALL alljoyn_msgarg_create();
  *
  * @return the created alljoyn_msgarg
  */
-extern AJ_API alljoyn_msgarg AJ_CALL alljoyn_msgarg_create_and_set(const char* signature, ...);
+extern AJ_API alljoyn_msgarg CDECL_CALL alljoyn_msgarg_create_and_set(const char* signature, ...);
 
 /**
  * Destroy a message argument.
@@ -246,7 +246,7 @@ extern AJ_API alljoyn_msgarg AJ_CALL alljoyn_msgarg_array_element(alljoyn_msgarg
  *      - #ER_OK if the alljoyn_msgarg was successfully set
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_set(alljoyn_msgarg arg, const char* signature, ...);
 
 /**
  * Matches a signature to the alljoyn_msgarg and if the signature matches unpacks the component
@@ -345,7 +345,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_msgarg_set(alljoyn_msgarg arg, const char*
  *      - #ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_msgarg_get(alljoyn_msgarg arg, const char* signature, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_get(alljoyn_msgarg arg, const char* signature, ...);
 
 /**
  * create a copy of a message argument.  This will create a new alljoyn_msgarg and
@@ -394,7 +394,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_msgarg_equal(alljoyn_msgarg lhv, alljoyn_
  *       - #ER_BUS_TRUNCATED if the signature was longer than expected.
  *       - Other error status codes indicating a failure.
  */
-extern AJ_API QStatus AJ_CALL alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, const char* signature, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_array_set(alljoyn_msgarg args, size_t* numArgs, const char* signature, ...);
 
 /**
  * Unpack an array of alljoyn_msgargs by applying the alljoyn_msgarg_get() function to each alljoyn_msgarg in turn.
@@ -409,7 +409,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_msgarg_array_set(alljoyn_msgarg args, size
  *      - #ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
  *      - Other error status codes indicating a failure.
  */
-extern AJ_API QStatus AJ_CALL alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numArgs, const char* signature, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_array_get(const alljoyn_msgarg args, size_t numArgs, const char* signature, ...);
 
 /**
  * Returns an XML string representation of this type
@@ -515,7 +515,7 @@ extern AJ_API QCC_BOOL AJ_CALL alljoyn_msgarg_hassignature(alljoyn_msgarg arg, c
  *      - #ER_BUS_ELEMENT_NOT_FOUND if the key was not found in the dictionary.
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_msgarg_getdictelement(alljoyn_msgarg arg, const char* elemSig, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_getdictelement(alljoyn_msgarg arg, const char* elemSig, ...);
 
 /**
  * Get the alljoyn_typeid of the alljoyn_msgarg
@@ -571,7 +571,7 @@ extern AJ_API void AJ_CALL alljoyn_msgarg_stabilize(alljoyn_msgarg arg);
  *       - #ER_BUS_TRUNCATED if the signature was longer than expected.
  *       - Other error status codes indicating a failure.
  */
-extern AJ_API QStatus AJ_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, size_t* numArgs, const char* signature, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg args, size_t argOffset, size_t* numArgs, const char* signature, ...);
 
 /**
  * This function is identical to alljoyn_msgarg_set except after the values
@@ -587,7 +587,7 @@ extern AJ_API QStatus AJ_CALL alljoyn_msgarg_array_set_offset(alljoyn_msgarg arg
  *      - #ER_OK if the alljoyn_msgarg was successfully set
  *      - An error status otherwise
  */
-extern AJ_API QStatus AJ_CALL alljoyn_msgarg_set_and_stabilize(alljoyn_msgarg arg, const char* signature, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_msgarg_set_and_stabilize(alljoyn_msgarg arg, const char* signature, ...);
 /*******************************************************************************
  * MsgArg set functions for each of the basic data types
  *******************************************************************************/

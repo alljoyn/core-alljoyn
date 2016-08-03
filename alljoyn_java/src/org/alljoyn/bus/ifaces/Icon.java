@@ -35,21 +35,21 @@ public interface Icon
      * @throws BusException indicating failure to retrieve Version property
      */
     @BusProperty(signature="q")
-    public short getVersion() throws BusException;
+    short getVersion() throws BusException;
 
     /**
      * @return Mime type for the icon
      * @throws BusException indicating failure to retrieve MimeType property
      */
     @BusProperty(signature="s")
-    public String getMimeType() throws BusException;
+    String getMimeType() throws BusException;
 
     /**
      * @return Size of the icon
      * @throws BusException indicating failure to retrieve Size property
      */
     @BusProperty(signature="u")
-    public int getSize() throws BusException;
+    int getSize() throws BusException;
 
     /**
      * Returns the URL if the icon is hosted on the cloud
@@ -57,7 +57,7 @@ public interface Icon
      * @throws BusException indicating failure to make GetUrl method call
      */
     @BusMethod(name="GetUrl", replySignature="s")
-    public String getUrl() throws BusException;
+    String getUrl() throws BusException;
 
     /**
      * Returns binary content for the icon
@@ -65,5 +65,5 @@ public interface Icon
      * @throws BusException indicating failure to make GetContent method call
      */
     @BusMethod(name="GetContent", replySignature="ay")
-    public byte[] getContent() throws BusException;
+    byte[] getContent() throws BusException;
 }

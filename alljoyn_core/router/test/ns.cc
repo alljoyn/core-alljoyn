@@ -264,20 +264,20 @@ int CDECL_CALL main(int argc, char** argv)
     // big-time and allows us to get down into the guts of the IP name
     // service.
     //
-    IpNameServiceImpl ns;
+    IpNameServiceImpl* ns = new IpNameServiceImpl();
 
     //
     // Initialize to a random quid, and talk to ourselves.  We don't have a
     // daemon config, so we expect to get the defalt setting for disabling
     // broadcasts, which is false.
     //
-    status = ns.Init(qcc::GUID128().ToString(), true);
+    status = ns->Init(qcc::GUID128().ToString(), true);
     if (status != ER_OK) {
         QCC_LogError(status, ("Init failed"));
         ERROR_EXIT;
     }
 
-    status = ns.Start();
+    status = ns->Start();
     if (status != ER_OK) {
         QCC_LogError(status, ("Start failed"));
         ERROR_EXIT;
@@ -314,7 +314,7 @@ int CDECL_CALL main(int argc, char** argv)
                 // Tell the name service to talk and listen over the interface we chose
                 // above.
                 //
-                status = ns.OpenInterface(TRANSPORT_TCP, entries[i].m_name);
+                status = ns->OpenInterface(TRANSPORT_TCP, entries[i].m_name);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("OpenInterface failed"));
                     ERROR_EXIT;
@@ -340,7 +340,7 @@ int CDECL_CALL main(int argc, char** argv)
     //
     std::map<qcc::String, uint16_t> portMap;
     portMap["*"] = port;
-    status = ns.Enable(TRANSPORT_TCP, portMap, port, portMap, port, true, true, true, true);
+    status = ns->Enable(TRANSPORT_TCP, portMap, port, portMap, port, true, true, true, true);
 
     if (status != ER_OK) {
         QCC_LogError(status, ("Enable failed"));
@@ -349,15 +349,15 @@ int CDECL_CALL main(int argc, char** argv)
 
     Finder finder;
 
-    ns.SetCallback(TRANSPORT_TCP, new CallbackImpl<Finder, void, const qcc::String&, const qcc::String&,
-                                                   std::vector<qcc::String>&, uint32_t>(&finder, &Finder::Callback));
+    ns->SetCallback(TRANSPORT_TCP, new CallbackImpl<Finder, void, const qcc::String&, const qcc::String&,
+                                                    std::vector<qcc::String>&, uint32_t>(&finder, &Finder::Callback));
 
     if (wildcard) {
         //
         // Enable discovery on all of the test names in one go.
         //
         printf("FindAdvertisement org.randomteststring.*\n");
-        status = ns.FindAdvertisement(TRANSPORT_TCP, "name='org.randomteststring.*'", IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
+        status = ns->FindAdvertisement(TRANSPORT_TCP, "name='org.randomteststring.*'", IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
         if (status != ER_OK) {
             QCC_LogError(status, ("FindAdvertisedName failed"));
             ERROR_EXIT;
@@ -370,7 +370,7 @@ int CDECL_CALL main(int argc, char** argv)
             printf("FindAdvertisement %s\n", g_names[i]);
 
             qcc::String matching = qcc::String("name='") + g_names[i] + "'";
-            status = ns.FindAdvertisement(TRANSPORT_TCP, matching, IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
+            status = ns->FindAdvertisement(TRANSPORT_TCP, matching, IpNameServiceImpl::ALWAYS_RETRY, TRANSPORT_TCP);
             if (status != ER_OK) {
                 QCC_LogError(status, ("FindAdvertisedName failed"));
                 ERROR_EXIT;
@@ -381,7 +381,7 @@ int CDECL_CALL main(int argc, char** argv)
     if (longnames) {
         for (uint32_t i = 0; i < g_numberLongnames; ++i) {
             char const* wkn = g_longnames[i];
-            status = ns.AdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
+            status = ns->AdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
             printf("Advertised %s\n", wkn);
         }
     }
@@ -390,10 +390,10 @@ int CDECL_CALL main(int argc, char** argv)
     qcc::String wknStr = "org.alljoyn.BusNode.abc" + qcc::U32ToString(suffix, 16);
 
     // ComputeStaticScore using power_source, mobility, availability and node_type values
-    uint32_t powerSource = 3;
-    uint32_t mobility = 4;
-    uint32_t availability = 8;
-    uint32_t nodeType = 1;
+    uint32_t powerSource = IpNameServiceImpl::ROUTER_POWER_SOURCE_MAX;
+    uint32_t mobility = IpNameServiceImpl::ROUTER_MOBILITY_MAX;
+    uint32_t availability = IpNameServiceImpl::ROUTER_AVAILABILITY_MAX;
+    uint32_t nodeType = IpNameServiceImpl::ROUTER_NODE_CONNECTION_MAX;
     uint32_t staticScore = 0;
     status = IpNameServiceImpl::ComputeStaticScore(powerSource, mobility, availability, nodeType, &staticScore);
     if (ER_OK != status) {
@@ -422,13 +422,13 @@ int CDECL_CALL main(int argc, char** argv)
     printf("Priority computed from static score=%d and dynamic score=%d is %d\n", staticScore, dynamicScore, priorityValue);
 
     // Update the dynamic parameters
-    ns.UpdateDynamicScore(TRANSPORT_TCP, 5, 100, 10, 50);
+    ns->UpdateDynamicScore(TRANSPORT_TCP, 5, 100, 10, 50);
 
     // Get the current priority value
-    uint16_t priority = ns.GetCurrentPriority();
+    uint16_t priority = ns->GetCurrentPriority();
     printf("Current value for priority is %d\n", priority);
 
-    ns.AdvertiseName(TRANSPORT_TCP, wknStr.c_str(), true, TRANSPORT_TCP);
+    ns->AdvertiseName(TRANSPORT_TCP, wknStr.c_str(), true, TRANSPORT_TCP);
     //
     // Hang around and mess with advertisements for a while.
     //
@@ -446,7 +446,7 @@ int CDECL_CALL main(int argc, char** argv)
             uint32_t nameIndex = rand() % g_numberNames;
             char const* wkn = g_names[nameIndex];
 
-            status = ns.AdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
+            status = ns->AdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
             printf("Advertised %s\n", wkn);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Advertise failed"));
@@ -456,7 +456,7 @@ int CDECL_CALL main(int argc, char** argv)
             nameIndex = rand() % g_numberNames;
             wkn = g_names[nameIndex];
 
-            status = ns.CancelAdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
+            status = ns->CancelAdvertiseName(TRANSPORT_TCP, wkn, false, TRANSPORT_TCP);
             printf("Cancelled %s\n", wkn);
             if (status != ER_OK) {
                 QCC_LogError(status, ("Cancel failed"));
@@ -465,6 +465,7 @@ int CDECL_CALL main(int argc, char** argv)
         }
     }
 
+    delete ns;
     AllJoynRouterShutdown();
     AllJoynShutdown();
     return 0;

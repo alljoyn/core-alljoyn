@@ -55,13 +55,41 @@ QStatus XmlManifestConverter::XmlToManifest(AJ_PCSTR manifestXml, Manifest& mani
 
 QStatus XmlManifestConverter::ManifestToXml(const Manifest& manifest, string& manifestXml)
 {
-    QStatus status = XmlRulesValidator::ValidateRules(manifest->GetRules().data(), manifest->GetRules().size());
+    QStatus status = XmlRulesValidator::GetInstance()->ValidateRules(manifest->GetRules().data(), manifest->GetRules().size());
 
     if (ER_OK == status) {
         BuildManifest(manifest, manifestXml);
     }
 
     return status;
+}
+
+QStatus XmlManifestConverter::XmlArrayToManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, vector<Manifest>& manifests)
+{
+    manifests.resize(manifestsCount);
+    for (size_t i = 0; i < manifestsCount; i++) {
+        QStatus status = XmlToManifest(manifestsXmls[i], manifests[i]);
+        if (ER_OK != status) {
+            manifests.clear();
+            return status;
+        }
+    }
+
+    return ER_OK;
+}
+
+QStatus XmlManifestConverter::ManifestsToXmlArray(const Manifest* manifests, size_t manifestsCount, vector<string>& manifestsXmls)
+{
+    manifestsXmls.resize(manifestsCount);
+    for (size_t i = 0; i < manifestsCount; i++) {
+        QStatus status = ManifestToXml(manifests[i], manifestsXmls[i]);
+        if (ER_OK != status) {
+            manifestsXmls.clear();
+            return status;
+        }
+    }
+
+    return ER_OK;
 }
 
 void XmlManifestConverter::BuildManifest(const XmlElement* root, Manifest& manifest)
@@ -75,7 +103,7 @@ void XmlManifestConverter::SetRules(const XmlElement* rulesXml, Manifest& manife
 {
     vector<PermissionPolicy::Rule> rules;
 
-    QCC_VERIFY(ER_OK == XmlRulesConverter::XmlToRules(rulesXml->Generate().c_str(), rules));
+    QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->XmlToRules(rulesXml->Generate().c_str(), rules));
 
     manifest->SetRules(rules.data(), rules.size());
 }
@@ -142,10 +170,9 @@ void XmlManifestConverter::BuildVersion(const Manifest& manifest, XmlElement* ma
 void XmlManifestConverter::BuildRules(const Manifest& manifest, XmlElement* manifestElement)
 {
     XmlElement* rulesXml = nullptr;
-    QCC_VERIFY(ER_OK == XmlRulesConverter::RulesToXml(manifest->GetRules().data(),
-                                                      manifest->GetRules().size(),
-                                                      &rulesXml,
-                                                      RULES_XML_ELEMENT));
+    QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->RulesToXml(manifest->GetRules().data(),
+                                                                     manifest->GetRules().size(),
+                                                                     &rulesXml));
     manifestElement->AddChild(rulesXml);
 }
 

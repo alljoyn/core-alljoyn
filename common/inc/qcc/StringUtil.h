@@ -276,14 +276,14 @@ bool AJ_CALL IsHexDigit(char c);
  *
  * @return Copied C string. Caller must free it using DestroyStringCopy.
  */
-AJ_PSTR CreateStringCopy(const std::string& input);
+AJ_PSTR AJ_CALL CreateStringCopy(const std::string& input);
 
 /**
  * Destroys the string created by CreateStringCopy.
  *
  * @param[in]    input   String to be destroyed.
  */
-void DestroyStringCopy(AJ_PSTR input);
+void AJ_CALL DestroyStringCopy(AJ_PSTR input);
 
 }   /* End namespace */
 

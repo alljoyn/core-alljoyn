@@ -49,10 +49,10 @@ static void CDECL_CALL sig_int_handler(int sig)
 static alljoyn_sessionport ASSIGNED_SESSION_PORT = 900;
 static const char INTERFACE_NAME[] = "com.example.about.feature.interface.sample";
 
-static void sessionportlistener_sessionjoined_cb(const void* context,
-                                                 alljoyn_sessionport sessionPort,
-                                                 alljoyn_sessionid id,
-                                                 const char* joiner)
+static void AJ_CALL sessionportlistener_sessionjoined_cb(const void* context,
+                                                         alljoyn_sessionport sessionPort,
+                                                         alljoyn_sessionid id,
+                                                         const char* joiner)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(sessionPort);
@@ -60,10 +60,10 @@ static void sessionportlistener_sessionjoined_cb(const void* context,
     printf("Session Joined SessionId = %u\n", id);
 }
 
-static QCC_BOOL sessionportlistener_acceptsessionjoiner_cb(const void* context,
-                                                           alljoyn_sessionport sessionPort,
-                                                           const char* joiner,
-                                                           const alljoyn_sessionopts opts)
+static QCC_BOOL AJ_CALL sessionportlistener_acceptsessionjoiner_cb(const void* context,
+                                                                   alljoyn_sessionport sessionPort,
+                                                                   const char* joiner,
+                                                                   const alljoyn_sessionopts opts)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(joiner);
@@ -90,9 +90,9 @@ static alljoyn_sessionportlistener create_my_alljoyn_sessionportlistener()
 /**
  * Respond to remote method call `Echo` by returning the string back to the sender
  */
-static void echo_cb(alljoyn_busobject object,
-                    const alljoyn_interfacedescription_member* member,
-                    alljoyn_message msg) {
+static void AJ_CALL echo_cb(alljoyn_busobject object,
+                            const alljoyn_interfacedescription_member* member,
+                            alljoyn_message msg) {
     alljoyn_msgarg arg = alljoyn_message_getarg(msg, 0);
     QCC_UNUSED(member);
     printf("Echo method called %s\n", ((ajn::MsgArg*)arg)->v_string.str);

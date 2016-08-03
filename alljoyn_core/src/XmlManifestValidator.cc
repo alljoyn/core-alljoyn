@@ -79,7 +79,7 @@ QStatus XmlManifestValidator::ValidateRules(const XmlElement* rules)
     QStatus status = ValidateElementName(rules, RULES_XML_ELEMENT);
 
     if (ER_OK == status) {
-        status = XmlRulesValidator::Validate(rules);
+        status = XmlRulesValidator::GetInstance()->Validate(rules);
     }
 
     return status;

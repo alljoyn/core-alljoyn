@@ -301,4 +301,5 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER" value="0x9141" comment="Application state listener does not exist."/>
   <status name="ER_MANAGEMENT_ALREADY_STARTED" value="0x9142" comment="StartManagement has been called already. The app will not receive a second StartManagement callback."/>
   <status name="ER_MANAGEMENT_NOT_STARTED" value="0x9143" comment="EndManagement has been called without a previous StartManagement. The app will not receive a second EndManagement callback."/>
+  <status name="ER_BUS_DESCRIPTION_ALREADY_EXISTS" value="0x9144" comment="Attempt to add a description which already exists."/>
 </status_block>

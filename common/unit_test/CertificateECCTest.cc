@@ -1714,3 +1714,54 @@ TEST_F(CertificateECCTest, InvalidASN1Test4)
     String pemStr(invalidASN1);
     EXPECT_EQ(ER_FAIL, cert.LoadPEM(pemStr)) << " invalid certificate (invalid ASN.1) accepted.";
 }
+
+TEST_F(CertificateECCTest, GenerateCertAndAssignRandomSerialNumber)
+{
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    qcc::GUID128 subject0;
+    CertificateX509 cert0;
+
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 3600;
+
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject0, "organization", ecc0.GetDSAPrivateKey(), ecc0.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    EXPECT_EQ(ER_OK, cert0.GenerateRandomSerial());
+
+    qcc::String serial((const char*)cert0.GetSerial(), cert0.GetSerialLen());
+    EXPECT_STRNE("serial0", serial.c_str());
+}
+
+TEST_F(CertificateECCTest, EncodeCertificateTBSSucceeds)
+{
+    Crypto_ECC ecc0;
+    ecc0.GenerateDSAKeyPair();
+    qcc::GUID128 subject0;
+    CertificateX509 cert0;
+
+    CertificateX509::ValidPeriod validity;
+    validity.validFrom = qcc::GetEpochTimestamp() / 1000;
+    validity.validTo = validity.validFrom + 3600;
+
+    ASSERT_EQ(ER_OK, CreateCert("serial0", subject0, "organization", ecc0.GetDSAPrivateKey(), ecc0.GetDSAPublicKey(), subject0, ecc0.GetDSAPublicKey(), validity, cert0)) << " GenKeyAndCreateCert failed.";
+
+    qcc::String tbs;
+
+    EXPECT_EQ(ER_OK, cert0.EncodeCertificateTBS(tbs));
+    EXPECT_FALSE(tbs.empty());
+
+    /* Attempt to decode the outermost structure of the TBS to confirm it's valid. */
+    uint32_t x509Version = 0;
+    qcc::String oid;
+    qcc::String iss;
+    qcc::String sub;
+    qcc::String time;
+    qcc::String pub;
+    qcc::String ext;
+    qcc::String serialStr;
+
+    EXPECT_EQ(ER_OK, Crypto_ASN1::Decode(tbs, "(c(i)l(o)(.)(.)(.)(.).)",
+                                         0, &x509Version, &serialStr, &oid, &iss, &time, &sub, &pub, &ext));
+}

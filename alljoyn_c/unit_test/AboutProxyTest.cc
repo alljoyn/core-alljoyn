@@ -151,10 +151,10 @@ static int destroy_lang_data(lang_data* data)
     return 0;
 }
 
-static QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
-                                                           alljoyn_sessionport sessionPort,
-                                                           const char* joiner,
-                                                           const alljoyn_sessionopts opts)
+static QCC_BOOL AJ_CALL my_sessionportlistener_acceptsessionjoiner(const void* context,
+                                                                   alljoyn_sessionport sessionPort,
+                                                                   const char* joiner,
+                                                                   const alljoyn_sessionopts opts)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(sessionPort);
@@ -163,12 +163,12 @@ static QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
     return QCC_TRUE;
 }
 
-static void about_obj_test_about_listener_announced_cb(const void* context,
-                                                       const char* busName,
-                                                       uint16_t version,
-                                                       alljoyn_sessionport port,
-                                                       const alljoyn_msgarg objectDescriptionArg,
-                                                       const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL about_obj_test_about_listener_announced_cb(const void* context,
+                                                               const char* busName,
+                                                               uint16_t version,
+                                                               alljoyn_sessionport port,
+                                                               const alljoyn_msgarg objectDescriptionArg,
+                                                               const alljoyn_msgarg aboutDataArg)
 {
     QCC_UNUSED(objectDescriptionArg);
     QCC_UNUSED(aboutDataArg);

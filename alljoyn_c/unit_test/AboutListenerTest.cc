@@ -33,10 +33,10 @@
 extern QCC_BOOL announceListenerFlags[];
 
 static
-QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
-                                                    alljoyn_sessionport sessionPort,
-                                                    const char* joiner,
-                                                    const alljoyn_sessionopts opts)
+QCC_BOOL AJ_CALL my_sessionportlistener_acceptsessionjoiner(const void* context,
+                                                            alljoyn_sessionport sessionPort,
+                                                            const char* joiner,
+                                                            const alljoyn_sessionopts opts)
 {
     QCC_UNUSED(context);
     QCC_UNUSED(sessionPort);
@@ -48,9 +48,10 @@ QCC_BOOL my_sessionportlistener_acceptsessionjoiner(const void* context,
 class AboutListenerTest : public testing::Test {
   public:
     AboutListenerTest() {
-        serviceBus = NULL;
+        serviceBus = nullptr;
         port = 25;
         aboutData = alljoyn_aboutdata_create("en");
+        listener = nullptr;
     }
 
     virtual void SetUp() {
@@ -59,7 +60,7 @@ class AboutListenerTest : public testing::Test {
         serviceBus = alljoyn_busattachment_create("AnnounceListenerTest", QCC_TRUE);
         status = alljoyn_busattachment_start(serviceBus);
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = alljoyn_busattachment_connect(serviceBus, NULL);
+        status = alljoyn_busattachment_connect(serviceBus, nullptr);
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
         /* Setup the about data */
@@ -100,10 +101,8 @@ class AboutListenerTest : public testing::Test {
             alljoyn_sessionopts_create(ALLJOYN_TRAFFIC_TYPE_MESSAGES, QCC_FALSE,
                                        ALLJOYN_PROXIMITY_ANY,
                                        ALLJOYN_TRANSPORT_ANY);
-        alljoyn_sessionportlistener listener =
-            alljoyn_sessionportlistener_create(&callbacks, NULL);
-        status =
-            alljoyn_busattachment_bindsessionport(serviceBus, &port, opts, listener);
+        listener = alljoyn_sessionportlistener_create(&callbacks, nullptr);
+        status = alljoyn_busattachment_bindsessionport(serviceBus, &port, opts, listener);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 
@@ -112,14 +111,20 @@ class AboutListenerTest : public testing::Test {
             alljoyn_busattachment_stop(serviceBus);
             alljoyn_busattachment_join(serviceBus);
             alljoyn_busattachment_destroy(serviceBus);
-            serviceBus = NULL;
+            serviceBus = nullptr;
         }
         if (aboutData) {
             alljoyn_aboutdata_destroy(aboutData);
-            aboutData = NULL;
+            aboutData = nullptr;
+        }
+
+        if (listener) {
+            alljoyn_sessionportlistener_destroy(listener);
+            listener = nullptr;
         }
     }
 
+    alljoyn_sessionportlistener listener;
     alljoyn_busattachment serviceBus;
     alljoyn_aboutdata aboutData;
     alljoyn_sessionport port;
@@ -153,7 +158,7 @@ TEST_F(AboutListenerTest, ReceiverAnnouncement) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener = create_about_test_about_listener(0);
@@ -215,13 +220,13 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener = create_about_test_about_listener(0);
 
     alljoyn_busattachment_registeraboutlistener(clientBus, aboutListener->listener);
-    status =  alljoyn_busattachment_whoimplements_interface(clientBus, NULL);
+    status =  alljoyn_busattachment_whoimplements_interface(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_aboutobj_announce(aboutObj, port, aboutData);
@@ -235,7 +240,7 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementNullWhoImplementsValue) {
     }
 
     ASSERT_TRUE(announceListenerFlags[0]);
-    alljoyn_busattachment_cancelwhoimplements_interface(clientBus, NULL);
+    alljoyn_busattachment_cancelwhoimplements_interface(clientBus, nullptr);
     alljoyn_busattachment_unregisteraboutlistener(clientBus, aboutListener->listener);
 
     status = alljoyn_busattachment_stop(clientBus);
@@ -276,7 +281,7 @@ TEST_F(AboutListenerTest, ReAnnounceAnnouncement) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener = create_about_test_about_listener(0);
@@ -351,7 +356,7 @@ TEST_F(AboutListenerTest, ReceiveAnnouncementRegisterThenAddInterface) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener = create_about_test_about_listener(0);
@@ -414,7 +419,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListeners) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener1 = create_about_test_about_listener(1);
@@ -491,7 +496,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregister) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener1 = create_about_test_about_listener(1);
@@ -583,7 +588,7 @@ TEST_F(AboutListenerTest, MultipleAnnounceListenersUnregisterAll) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener1 = create_about_test_about_listener(1);
@@ -707,7 +712,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfaces) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     about_test_about_listener* aboutListener = create_about_test_about_listener(0);
     alljoyn_busattachment_registeraboutlistener(clientBus, aboutListener->listener);
@@ -807,7 +812,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesSubSet) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     about_test_about_listener* aboutListener = create_about_test_about_listener(0);
 
@@ -906,7 +911,7 @@ TEST_F(AboutListenerTest, MatchMultipleInterfacesRegisterInDifferentOrder) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     about_test_about_listener* aboutListener = create_about_test_about_listener(0);
 
@@ -997,7 +1002,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_wildcard_about_listener* aboutListener = create_about_test_wildcard_about_listener();
@@ -1080,7 +1085,7 @@ TEST_F(AboutListenerTest, WildCardInterfaceMatching2) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_wildcard_about_listener* aboutListener = create_about_test_wildcard_about_listener();
@@ -1165,7 +1170,7 @@ TEST_F(AboutListenerTest, MultipleWildCardInterfaceMatching) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_wildcard_about_listener* aboutListener = create_about_test_wildcard_about_listener();
@@ -1250,7 +1255,7 @@ TEST_F(AboutListenerTest, MixedWildCardNonWildCardInterfaceMatching) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_wildcard_about_listener* aboutListener = create_about_test_wildcard_about_listener();
@@ -1338,7 +1343,7 @@ TEST_F(AboutListenerTest, RemoveObjectDescriptionAnnouncement) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     remove_object_description_about_listener* aboutListener =
@@ -1446,7 +1451,7 @@ TEST_F(AboutListenerTest, StressInterfaces) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     about_test_about_listener* aboutListener = create_about_test_about_listener(3);
@@ -1497,7 +1502,7 @@ TEST_F(AboutListenerTest, CancelWhoImplementsMisMatch) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     status = alljoyn_busattachment_cancelwhoimplements_interface(clientBus, ifaceName);
@@ -1540,7 +1545,7 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     announce_non_128_bit_app_id_about_listener* aboutListener =
@@ -1686,13 +1691,13 @@ TEST_F(AboutListenerTest, WhoImplementsNull) {
     status = alljoyn_busattachment_start(clientBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
-    status = alljoyn_busattachment_connect(clientBus, NULL);
+    status = alljoyn_busattachment_connect(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     filtered_about_listener* aboutListener = create_filtered_about_listener();
     alljoyn_busattachment_registeraboutlistener(clientBus, aboutListener->listener);
 
-    status = alljoyn_busattachment_whoimplements_interface(clientBus, NULL);
+    status = alljoyn_busattachment_whoimplements_interface(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     setExpectInterfaces(aboutListener, path, ifaceNames, 3);
@@ -1708,7 +1713,7 @@ TEST_F(AboutListenerTest, WhoImplementsNull) {
 
     ASSERT_EQ(1u, aboutListener->announcelistenercount);
 
-    alljoyn_busattachment_cancelwhoimplements_interface(clientBus, NULL);
+    alljoyn_busattachment_cancelwhoimplements_interface(clientBus, nullptr);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     alljoyn_busattachment_unregisteraboutlistener(clientBus, aboutListener->listener);

@@ -46,9 +46,7 @@
 		7DBACA2419EB8444007DF927 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DBACA2319EB8444007DF927 /* AJNAboutProxy.mm */; };
 		7DC6D4791A0205E000764C73 /* AJNAboutIconObject.h in Headers */ = {isa = PBXBuildFile; fileRef = 7DC6D4781A0205E000764C73 /* AJNAboutIconObject.h */; };
 		7DC6D47B1A02075C00764C73 /* AJNAboutIconObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DC6D47A1A02075C00764C73 /* AJNAboutIconObject.mm */; };
-		7DEA2F2D1AC3EFFB007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F2C1AC3EFFB007ECE82 /* libc++.dylib */; };
-		7DEA2F311AC40225007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F2C1AC3EFFB007ECE82 /* libc++.dylib */; };
-		8341BF0A193B10650009B66E /* AJNTranslator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF07193B10650009B66E /* AJNTranslator.h */; };
+                8341BF0A193B10650009B66E /* AJNTranslator.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF07193B10650009B66E /* AJNTranslator.h */; };
 		8341BF0B193B10650009B66E /* AJNTranslatorImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 8341BF08193B10650009B66E /* AJNTranslatorImpl.h */; };
 		8341BF0C193B10650009B66E /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */; };
 		89153DE31AADB332009DB2EA /* AJNObserver.h in Headers */ = {isa = PBXBuildFile; fileRef = 89153DE01AADB332009DB2EA /* AJNObserver.h */; };
@@ -169,7 +167,6 @@
 		7DBACA2319EB8444007DF927 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutProxy.mm; sourceTree = "<group>"; };
 		7DC6D4781A0205E000764C73 /* AJNAboutIconObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIconObject.h; sourceTree = "<group>"; };
 		7DC6D47A1A02075C00764C73 /* AJNAboutIconObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutIconObject.mm; sourceTree = "<group>"; };
-		7DEA2F2C1AC3EFFB007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		8341BF07193B10650009B66E /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslator.h; sourceTree = "<group>"; };
 		8341BF08193B10650009B66E /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		8341BF09193B10650009B66E /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -276,7 +273,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7DEA2F2D1AC3EFFB007ECE82 /* libc++.dylib in Frameworks */,
 				ACB44E5615485F3E00FF7DBC /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -285,9 +281,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7DEA2F311AC40225007ECE82 /* libc++.dylib in Frameworks */,
-				AC9FD2CB15E4494B003BAE7C /* libssl.0.9.8.dylib in Frameworks */,
-				AC9FD2C915E44939003BAE7C /* libcrypto.0.9.8.dylib in Frameworks */,
 				AC5C55EC1548BED400C13A0B /* libobjc.dylib in Frameworks */,
 				AC5C55DA1548B53D00C13A0B /* libajrouter.a in Frameworks */,
 				AC5C55E41548B6BF00C13A0B /* liballjoyn.a in Frameworks */,
@@ -323,9 +316,6 @@
 		ACB44E5415485F3E00FF7DBC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				7DEA2F2C1AC3EFFB007ECE82 /* libc++.dylib */,
-				AC9FD2CA15E4494B003BAE7C /* libssl.0.9.8.dylib */,
-				AC9FD2C815E44939003BAE7C /* libcrypto.0.9.8.dylib */,
 				AC5C55EB1548BED400C13A0B /* libobjc.dylib */,
 				AC5C55E71548B75B00C13A0B /* libpthread.dylib */,
 				AC5C55E01548B65800C13A0B /* libstdc++.dylib */,

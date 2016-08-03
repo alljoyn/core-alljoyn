@@ -220,6 +220,11 @@ final class MsgArg {
      */
     @SuppressWarnings("unchecked")
     public static Object unmarshal(long msgArg, Type type) throws MarshalBusException {
+        // Verify msgArg is valid
+        if (msgArg == 0) {
+            throw new MarshalBusException("cannot marshal invalid MsgArg into " + type);
+        }
+ 
         try {
             Object object;
             switch (getTypeId(msgArg)) {

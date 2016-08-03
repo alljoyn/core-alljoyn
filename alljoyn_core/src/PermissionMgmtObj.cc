@@ -224,39 +224,39 @@ static QStatus RetrieveAndGenDSAPublicKey(CredentialAccessor* ca, KeyInfoNISTP25
     return ER_OK;
 }
 
-QStatus PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& key)
+void PermissionMgmtObj::GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& key)
 {
     key.SetType(KeyStore::Key::LOCAL);
     /* each local key will be indexed by an hardcode randomly generated GUID. */
     if (aclEntryType == ENTRY_DEFAULT_POLICY) {
         key.SetGUID(GUID128(qcc::String("D946354436F2F3C79EAF0636D947E8AC")));
-        return ER_OK;
+        return;
     }
     if (aclEntryType == ENTRY_POLICY) {
         key.SetGUID(GUID128(qcc::String("F5CB9E723D7D4F1CFF985F4DD0D5E388")));
-        return ER_OK;
+        return;
     }
     if (aclEntryType == ENTRY_MEMBERSHIPS) {
         key.SetGUID(GUID128(qcc::String("42B0C7F35695A3220A46B3938771E965")));
-        return ER_OK;
+        return;
     }
     if (aclEntryType == ENTRY_IDENTITY) {
         key.SetGUID(GUID128(qcc::String("4D8B9E901D7BE0024A331609BBAA4B02")));
-        return ER_OK;
+        return;
     }
     if (aclEntryType == ENTRY_MANIFEST_TEMPLATE) {
         key.SetGUID(GUID128(qcc::String("2962ADEAE004074C8C0D598C5387FEB3")));
-        return ER_OK;
+        return;
     }
     if (aclEntryType == ENTRY_MANIFEST) {
         key.SetGUID(GUID128(qcc::String("5FFFB6E33C19F27A8A5535D45382B9E8")));
-        return ER_OK;
+        return;
     }
     if (aclEntryType == ENTRY_CONFIGURATION) {
         key.SetGUID(GUID128(qcc::String("4EDDBBCE46E0542C24BEC5BF9717C971")));
-        return ER_OK;
+        return;
     }
-    return ER_CRYPTO_KEY_UNAVAILABLE;      /* not available */
+    QCC_ASSERT(!"Unknown aclEntryType");
 }
 
 QStatus PermissionMgmtObj::MethodReply(const Message& msg, QStatus status)
@@ -519,6 +519,149 @@ static void GenerateDefaultPolicy(const KeyInfoNISTP256& certificateAuthority, c
     policy.SetAcls(4, acls);
 }
 
+QStatus PermissionMgmtObj::Claim(
+    const TrustAnchor& certificateAuthority,
+    const TrustAnchor& adminGroupAuthority,
+    const CertificateX509* certs,
+    size_t certCount,
+    const Manifest* manifests,
+    size_t manifestCount)
+{
+    QStatus status = ClaimInternal(
+        certificateAuthority,
+        adminGroupAuthority,
+        certs,
+        certCount,
+        manifests,
+        manifestCount);
+
+    if (ER_OK != status) {
+        QStatus aStatus = PerformReset(true);
+        /* If PerformReset fails, there's not much to do, though, but tell the caller. */
+        if (ER_OK != aStatus) {
+            QCC_LogError(aStatus, ("Failed to PerformReset after failed claim! App may be in indeterminate state. ClaimInternal status was %s.", QCC_StatusText(status)));
+            return ER_FAIL;
+        }
+    }
+
+    return status;
+}
+
+QStatus PermissionMgmtObj::ClaimInternal(
+    const TrustAnchor& certificateAuthority,
+    const TrustAnchor& adminGroupAuthority,
+    const CertificateX509* certs,
+    size_t certCount,
+    const Manifest* manifests,
+    size_t manifestCount)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QStatus status = ER_OK;
+    ECCPublicKey pubKey;
+
+    if (applicationState == PermissionConfigurator::NOT_CLAIMABLE) {
+        QCC_LogError(ER_PERMISSION_DENIED, ("Unclaimable"));
+        return ER_PERMISSION_DENIED;
+    }
+    if ((applicationState == PermissionConfigurator::CLAIMED) ||
+        (applicationState == PermissionConfigurator::NEED_UPDATE)) {
+        QCC_LogError(ER_PERMISSION_DENIED, ("Already claimed"));
+        return ER_PERMISSION_DENIED;
+    }
+
+    if (certificateAuthority.keyInfo.empty()) {
+        QCC_LogError(ER_BAD_ARG_1, ("certificateAuthority keyInfo is empty"));
+        return ER_BAD_ARG_1;
+    }
+    if (certificateAuthority.keyInfo.GetKeyIdLen() == 0) {
+        QCC_LogError(ER_BAD_ARG_2, ("certificateAuthority keyInfo ID length is zero"));
+        return ER_BAD_ARG_2;
+    }
+    if (adminGroupAuthority.keyInfo.empty()) {
+        QCC_LogError(ER_BAD_ARG_4, ("adminGroupAuthority keyInfo is empty"));
+        return ER_BAD_ARG_4;
+    }
+    if (adminGroupAuthority.keyInfo.GetKeyIdLen() == 0) {
+        QCC_LogError(ER_BAD_ARG_5, ("adminGroupAuthority key info ID length is zero"));
+        return ER_BAD_ARG_5;
+    }
+
+    /* clear most of the key entries with the exception of the DSA keys and manifest */
+    status = PerformReset(true);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to PerformReset during claim"));
+        return status;
+    }
+
+    /* generate the default policy */
+    std::unique_ptr<PermissionPolicy> defaultPolicy(new (std::nothrow) PermissionPolicy());
+    if (nullptr == defaultPolicy.get()) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Could not allocate default policy object"));
+        return ER_OUT_OF_MEMORY;
+    }
+    status = ca->GetDSAPublicKey(pubKey);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not GetDSAPublicKey"));
+        return status;
+    }
+    GenerateDefaultPolicy(certificateAuthority.keyInfo, adminGroupAuthority.securityGroupId, adminGroupAuthority.keyInfo, &pubKey, *defaultPolicy.get());
+    /* load the trust anchors from the default policy for validation of the identity cert chain */
+    status = ManageTrustAnchors(defaultPolicy.get());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not ManageTrustAnchors"));
+        return status;
+    }
+
+    /* install the identity cert chain */
+    status = StoreIdentityCertChain(certCount, certs);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("PermissionMgmtObj::ClaimInternal failed to store identity certificate chain"));
+        return status;
+    }
+    /* install the manifests */
+    status = StoreManifests(manifestCount, manifests, false);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("PermissionMgmtObj::ClaimInternal failed to store manifests"));
+        return status;
+    }
+
+    /* store the default policy for support of the property ManagedApplication::DefaultPolicy */
+    status = StorePolicy(*defaultPolicy.get(), true);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to StorePolicy default policy"));
+        return status;
+    }
+
+    /* store the default policy as the initial local policy */
+    status = StorePolicy(*defaultPolicy.get());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to StorePolicy active policy"));
+        return status;
+    }
+
+    applicationState = PermissionConfigurator::CLAIMED;
+    status = StoreApplicationState();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to StoreApplicationState"));
+        return status;
+    }
+    policyVersion = defaultPolicy->GetVersion();
+    /*
+     * On success, ownership of defaultpolicy transfers to PermissionManager, which is then
+     * responsible for freeing it later. defaultpolicy does not leak here.
+     */
+    PolicyChanged(defaultPolicy.release());
+    status = StateChanged();
+    /* StateChanged will return ER_BUS_NO_ENDPOINT if the bus is not connected. This is fine. */
+    if ((ER_OK != status) && (ER_BUS_NO_ENDPOINT != status)) {
+        QCC_LogError(status, ("Failed to StateChanged"));
+        return status;
+    }
+
+    return ER_OK;
+}
+
 void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_DbgTrace(("PermissionMgmtObj::%s", __FUNCTION__));
@@ -534,30 +677,23 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     }
     size_t numArgs;
     MsgArg* args;
+
     msg->GetArgs((size_t&) numArgs, (const MsgArg*&) args);
     if (7 != numArgs) {
         MethodReply(msg, ER_BAD_ARG_COUNT);
         return;
     }
 
-    PermissionPolicy* defaultPolicy = NULL;
-    ECCPublicKey pubKey;
     TrustAnchor* adminGroupAuthority = NULL;
     TrustAnchor* certificateAuthority = new TrustAnchor(TRUST_ANCHOR_CA);
+    std::vector<CertificateX509> certs;
+    std::vector<Manifest> manifests;
     QStatus status = KeyInfoHelper::MsgArgToKeyInfoNISTP256PubKey(args[0], certificateAuthority->keyInfo);
     if (ER_OK != status) {
         goto DoneValidation;
     }
-    if (certificateAuthority->keyInfo.empty()) {
-        status = ER_BAD_ARG_1;
-        goto DoneValidation;
-    }
     status = KeyInfoHelper::MsgArgToKeyInfoKeyId(args[1], certificateAuthority->keyInfo);
     if (ER_OK != status) {
-        goto DoneValidation;
-    }
-    if (certificateAuthority->keyInfo.GetKeyIdLen() == 0) {
-        status = ER_BAD_ARG_2;
         goto DoneValidation;
     }
 
@@ -580,85 +716,61 @@ void PermissionMgmtObj::Claim(const InterfaceDescription::Member* member, Messag
     if (ER_OK != status) {
         goto DoneValidation;
     }
-    if (adminGroupAuthority->keyInfo.empty()) {
-        status = ER_BAD_ARG_4;
-        goto DoneValidation;
-    }
     status = KeyInfoHelper::MsgArgToKeyInfoKeyId(args[4], adminGroupAuthority->keyInfo);
     if (ER_OK != status) {
         goto DoneValidation;
     }
-    if (adminGroupAuthority->keyInfo.GetKeyIdLen() == 0) {
-        status = ER_BAD_ARG_5;
-        goto DoneValidation;
-    }
 
-    /* clear most of the key entries with the exception of the DSA keys and manifest */
-    PerformReset(true);
-
-    /* generate the default policy */
-    defaultPolicy = new PermissionPolicy();
-    ca->GetDSAPublicKey(pubKey);
-    GenerateDefaultPolicy(certificateAuthority->keyInfo, adminGroupAuthority->securityGroupId, adminGroupAuthority->keyInfo, &pubKey, *defaultPolicy);
-    /* load the trust anchors from the default policy for validation of the
-        identity cert chain */
-    status = ManageTrustAnchors(defaultPolicy);
+    status = RetrieveCertsFromMsgArg(args[5], certs);
     if (ER_OK != status) {
         goto DoneValidation;
     }
 
-    /* install the identity cert chain */
-    status = StoreIdentityCertChain(args[5]);
+    status = RetrieveManifestsFromMsgArg(args[6], manifests);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store identity certificate chain"));
         goto DoneValidation;
     }
-    /* install the manifest */
-    status = StoreManifests(args[6], false);
+
+    status = Claim(*certificateAuthority, *adminGroupAuthority, certs.data(), certs.size(), manifests.data(), manifests.size());
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::Claim failed to store manifest"));
-        goto DoneValidation;
+        QCC_DbgPrintf(("%s: Claim returned %s", __FUNCTION__, QCC_StatusText(status)));
     }
 
 DoneValidation:
     delete adminGroupAuthority;
     delete certificateAuthority;
-    if (ER_OK != status) {
-        delete defaultPolicy;
-        PerformReset(true);
-        MethodReply(msg, status);
-        return;
-    }
-    /* store the default policy for support of the property ManagedApplication::DefaultPolicy */
-    status = StorePolicy(*defaultPolicy, true);
-    if (ER_OK == status) {
-        /* store the default policy as the initial local policy */
-        status = StorePolicy(*defaultPolicy);
-    }
-    if (ER_OK != status) {
-        delete defaultPolicy;
-        PerformReset(true);
-    }
-    MethodReply(msg, status);
 
-    if (ER_OK == status) {
-        applicationState = PermissionConfigurator::CLAIMED;
-        StoreApplicationState();
-        policyVersion = defaultPolicy->GetVersion();
-        PolicyChanged(defaultPolicy);
-        StateChanged();
+    MethodReply(msg, status);
+}
+
+QStatus PermissionMgmtObj::InstallPolicy(const PermissionPolicy& policy)
+{
+    std::unique_ptr<PermissionPolicy> policyCopy(new (std::nothrow) PermissionPolicy(policy));
+    if (nullptr == policyCopy.get()) {
+        return ER_OUT_OF_MEMORY;
     }
+
+    QStatus status = StorePolicy(*policyCopy.get(), false);
+    if (ER_OK == status) {
+        policyVersion = policyCopy->GetVersion();
+        /* PermissionManager takes ownership of the heap-allocated policy object when calling PolicyChanged. */
+        PolicyChanged(policyCopy.release());
+    }
+
+    return status;
 }
 
 void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
 
-    PermissionPolicy* policy = new PermissionPolicy();
-    QStatus status = policy->Import(PermissionPolicy::SPEC_VERSION, *msg->GetArg(0));
+    PermissionPolicy policy;
+    QStatus status = policy.Import(PermissionPolicy::SPEC_VERSION, *msg->GetArg(0));
     if (ER_OK != status) {
-        delete policy;
-        MethodReply(msg, status);
+        QStatus rStatus = MethodReply(msg, status);
+        if (ER_OK != rStatus) {
+            QCC_LogError(rStatus, ("Could not MethodReply with status %s", QCC_StatusText(status)));
+        }
         return;
     }
 
@@ -667,59 +779,71 @@ void PermissionMgmtObj::InstallPolicy(const InterfaceDescription::Member* member
     PermissionPolicy existingPolicy;
     status = RetrievePolicy(existingPolicy);
     if (ER_OK == status) {
-        if (policy->GetVersion() <= existingPolicy.GetVersion()) {
+        if (policy.GetVersion() <= existingPolicy.GetVersion()) {
             MethodReply(msg, ER_POLICY_NOT_NEWER);
-            delete policy;
             return;
         }
     }
 
-    status = StorePolicy(*policy);
-    if (ER_OK == status) {
-        policyVersion = policy->GetVersion();
-    }
+    status = InstallPolicy(policy);
+
     if (ER_OK == status) {
         /* notify me when the encryption completes for this message so the
            secrets can be removed */
         msg->SetMessageEncryptionNotification(callbackToClearSecrets);
     }
-    MethodReply(msg, status);
-    if (ER_OK == status) {
-        PolicyChanged(policy);
-    } else {
-        delete policy;
+    QStatus rStatus = MethodReply(msg, status);
+    if (ER_OK != rStatus) {
+        QCC_LogError(rStatus, ("Could not MethodReply with status %s", QCC_StatusText(status)));
     }
 }
 
-void PermissionMgmtObj::ResetPolicy(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::ResetPolicy()
 {
-    QCC_UNUSED(member);
+    QCC_DbgTrace(("%s", __FUNCTION__));
     KeyStore::Key key;
     GetACLKey(ENTRY_POLICY, key);
     QStatus status = ca->DeleteKey(key);
     if (ER_OK != status) {
-        MethodReply(msg, status);
-        return;
+        return status;
     }
     /* restore the default policy */
-    PermissionPolicy* defaultPolicy = new PermissionPolicy();
-    status = RebuildDefaultPolicy(*defaultPolicy);
+    std::unique_ptr<PermissionPolicy> defaultPolicy(new (std::nothrow) PermissionPolicy());
+    if (nullptr == defaultPolicy.get()) {
+        return ER_OUT_OF_MEMORY;
+    }
+    status = RebuildDefaultPolicy(*defaultPolicy.get());
     if (ER_OK != status) {
         QCC_LogError(status, ("PermissionMgmtObj::ResetPolicy rebuild the default policy failed"));
         goto Exit;
     }
-    status = StorePolicy(*defaultPolicy);
+    status = StorePolicy(*defaultPolicy.get());
     if (ER_OK != status) {
         QCC_LogError(status, ("PermissionMgmtObj::ResetPolicy storing the default policy failed"));
         goto Exit;
     }
 Exit:
-    MethodReply(msg, status);
     if (ER_OK == status) {
         policyVersion = defaultPolicy->GetVersion();
-        PolicyChanged(defaultPolicy);
-    } else {
-        delete defaultPolicy;
+        /*
+         * Calling PolicyChanged causes the PermissionManager to take ownership of defaultPolicy, so it does
+         * not leak here.
+         */
+        PolicyChanged(defaultPolicy.release());
+    }
+
+    return status;
+}
+
+void PermissionMgmtObj::ResetPolicy(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    QCC_UNUSED(member);
+    QStatus status = ResetPolicy();
+
+    QStatus aStatus = MethodReply(msg, status);
+    if (ER_OK != aStatus) {
+        QCC_LogError(aStatus, ("Could not MethodReply with status %s", QCC_StatusText(status)));
     }
 }
 
@@ -920,15 +1044,47 @@ QStatus PermissionMgmtObj::GetDSAPrivateKey(qcc::ECCPrivateKey& privateKey)
     return ca->GetDSAPrivateKey(privateKey);
 }
 
-QStatus PermissionMgmtObj::StoreIdentityCertChain(MsgArg& certArg)
+QStatus PermissionMgmtObj::RetrieveCertsFromMsgArg(const MsgArg& certArg, std::vector<CertificateX509>& certs)
 {
     size_t certChainCount;
     MsgArg* certChain;
     QStatus status = certArg.Get("a(yay)", &certChainCount, &certChain);
     if (ER_OK != status) {
-        QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed to retrieve certificate chain status 0x%x", status));
+        QCC_LogError(status, ("PermissionMgmtObj::RetrieveCertsFromMsgArg failed to retrieve certificate chain"));
         return status;
     }
+    if (certChainCount == 0) {
+        return ER_INVALID_DATA;
+    }
+
+    certs.clear();
+    certs.resize(certChainCount);
+
+    for (size_t cnt = 0; cnt < certChainCount; cnt++) {
+        uint8_t encoding;
+        uint8_t* encoded;
+        size_t encodedLen;
+        status = certChain[cnt].Get("(yay)", &encoding, &encodedLen, &encoded);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not get certificate from MsgArg"));
+            return status;
+        }
+        if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
+            QCC_LogError(ER_NOT_IMPLEMENTED, ("PermissionMgmtObj::RetrieveCertsFromMsgArg does not support encoding %d", encoding));
+            return ER_NOT_IMPLEMENTED;
+        }
+        status = LoadCertificate((CertificateX509::EncodingType) encoding, encoded, encodedLen, certs[cnt]);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("PermissionMgmtObj::RetrieveCertsFromMsgArg failed to validate certificate"));
+            return status;
+        }
+    }
+
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::StoreIdentityCertChain(size_t certChainCount, const CertificateX509* certs)
+{
     if (certChainCount == 0) {
         return ER_INVALID_DATA;
     }
@@ -936,30 +1092,12 @@ QStatus PermissionMgmtObj::StoreIdentityCertChain(MsgArg& certArg)
     KeyStore::Key identityHead;
     GetACLKey(ENTRY_IDENTITY, identityHead);
     /* remove the existing identity cert chain */
-    status = ca->DeleteKey(identityHead);
+    QStatus status = ca->DeleteKey(identityHead);
     if (ER_OK != status) {
         return status;
     }
-    CertificateX509* certs = new CertificateX509[certChainCount];
     KeyStore::Key previousKey;
-    for (size_t cnt = 0; cnt < certChainCount; cnt++) {
-        uint8_t encoding;
-        uint8_t* encoded;
-        size_t encodedLen;
-        status = certChain[cnt].Get("(yay)", &encoding, &encodedLen, &encoded);
-        if (ER_OK != status) {
-            goto ExitStoreIdentity;
-        }
-        if ((encoding != CertificateX509::ENCODING_X509_DER) && (encoding != CertificateX509::ENCODING_X509_DER_PEM)) {
-            QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain does not support encoding %d", encoding));
-            status = ER_NOT_IMPLEMENTED;
-            goto ExitStoreIdentity;
-        }
-        status = LoadCertificate((CertificateX509::EncodingType) encoding, encoded, encodedLen, certs[cnt]);
-        if (ER_OK != status) {
-            QCC_DbgPrintf(("PermissionMgmtObj::StoreIdentityCertChain failed to validate certificate status 0x%x", status));
-        }
-    }
+
     if (!ValidateCertChain(true, false, certs, certChainCount)) {
         status = ER_INVALID_CERTIFICATE;
         goto ExitStoreIdentity;
@@ -1005,7 +1143,6 @@ ExitStoreIdentity:
         /* clear out the identity entry and all of its associated key */
         ca->DeleteKey(identityHead);
     }
-    delete [] certs;
     return status;
 }
 
@@ -1043,6 +1180,26 @@ Exit:
         blobs.clear();
     }
     delete [] keys;
+    return status;
+}
+
+QStatus PermissionMgmtObj::GetIdentity(std::vector<qcc::CertificateX509>& certChain)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    MsgArg certArg;
+
+    QStatus status = GetIdentity(certArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not GetIdentity"));
+        return status;
+    }
+
+    status = RetrieveCertsFromMsgArg(certArg, certChain);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not RetrieveCertsFromMsgArg"));
+        return status;
+    }
+
     return status;
 }
 
@@ -1178,43 +1335,85 @@ Exit:
     return status;
 }
 
-void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::UpdateIdentity(
+    const CertificateX509* certs,
+    size_t certCount,
+    const Manifest* manifests,
+    size_t manifestCount)
 {
-    QCC_UNUSED(member);
+    QCC_DbgTrace(("%s", __FUNCTION__));
     /* save the current identity cert chain to rollback */
     MsgArg* currentCertArgs = NULL;
     size_t count = 0;
-    RetrieveIdentityCertChain(&currentCertArgs, &count);
-
-    QStatus status = StoreIdentityCertChain((MsgArg&) *msg->GetArg(0));
+    QStatus status = RetrieveIdentityCertChain(&currentCertArgs, &count);
     if (ER_OK != status) {
-        goto Exit;
+        QCC_LogError(status, ("Could not RetrieveIdentityCertChain"));
+        return status;
     }
-    status = StoreManifests((MsgArg&) *msg->GetArg(1), false);
-Exit:
+
+    /* currentCertArgs has to be freed by the caller, so take ownership. */
+    std::unique_ptr<MsgArg[]> currentCertArgsWrapper(currentCertArgs);
+
+    status = StoreIdentityCertChain(certCount, certs);
     if (ER_OK != status) {
-        /* restore the identity cert chain */
+        QCC_LogError(status, ("Could not StoreIdentityCertChain"));
+        return status;
+    }
+
+    status = StoreManifests(manifestCount, manifests, false);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not StoreManifests"));
+        /* In this case, we have to undo setting the identity cert chain. */
         if (currentCertArgs != NULL) {
             MsgArg arg("a(yay)", count, currentCertArgs);
-            QStatus aStatus = StoreIdentityCertChain(arg);
+            std::vector<CertificateX509> origCerts;
+            QStatus aStatus = RetrieveCertsFromMsgArg(arg, origCerts);
             if (ER_OK != aStatus) {
-                QCC_LogError(aStatus, ("PermissionMgmtObj::InstallIdentity restoring the identity certificate failed"));
+                QCC_LogError(aStatus, ("PermissionMgmtObj::DoUpdateIdentity restoring the identity certificate failed RetrieveCertsFromMsgArg"));
+            } else {
+                aStatus = StoreIdentityCertChain(origCerts.size(), origCerts.data());
+                if (ER_OK != aStatus) {
+                    QCC_LogError(aStatus, ("PermissionMgmtObj::DoUpdateIdentity restoring the identity certificate failed StoreIdentityCertChain"));
+                }
             }
         }
     }
-    delete [] currentCertArgs;
-    if (ER_OK == status) {
-        /* notify me when the encryption completes for this message so the
-           secrets can be removed */
-        msg->SetMessageEncryptionNotification(callbackToClearSecrets);
-    }
-    MethodReply(msg, status);
+
     if (ER_OK == status) {
         /* now that there is a new identity and manifest */
         if (applicationState == PermissionConfigurator::NEED_UPDATE) {
             SetApplicationState(PermissionConfigurator::CLAIMED);
         }
     }
+
+    return status;
+}
+
+void PermissionMgmtObj::InstallIdentity(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_UNUSED(member);
+    std::vector<CertificateX509> certs;
+    std::vector<Manifest> manifests;
+
+    QStatus status = RetrieveCertsFromMsgArg((MsgArg&)*msg->GetArg(0), certs);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+
+    status = RetrieveManifestsFromMsgArg(*msg->GetArg(1), manifests);
+    if (ER_OK != status) {
+        goto Exit;
+    }
+
+    status = UpdateIdentity(certs.data(), certs.size(), manifests.data(), manifests.size());
+
+Exit:
+    if (ER_OK == status) {
+        /* notify me when the encryption completes for this message so the
+           secrets can be removed */
+        msg->SetMessageEncryptionNotification(callbackToClearSecrets);
+    }
+    MethodReply(msg, status);
 }
 
 QStatus PermissionMgmtObj::GetIdentityBlob(KeyBlob& kb)
@@ -1272,14 +1471,12 @@ QStatus PermissionMgmtObj::GenerateManifestDigest(BusAttachment& bus, const Perm
     return marshaller.Digest(rules, count, digest, Crypto_SHA256::DIGEST_SIZE);
 }
 
-QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool append)
+QStatus PermissionMgmtObj::RetrieveManifestsFromMsgArg(const MsgArg& signedManifestsArg, std::vector<Manifest>& manifests)
 {
-    QCC_DbgTrace(("%s", __FUNCTION__));
-
-    IdentityCertificate cert;
     MsgArg* signedManifestArgArray;
     size_t signedManifestCount;
-    MsgArg manifestArg;
+
+    manifests.clear();
 
     QStatus status = signedManifestsArg.Get(_Manifest::s_MsgArgArraySignature, &signedManifestCount, &signedManifestArgArray);
     if (ER_OK != status) {
@@ -1288,8 +1485,6 @@ QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool appen
     if (signedManifestCount == 0) {
         return ER_OK; /* nothing to do */
     }
-
-    std::vector<Manifest> newManifests;
 
     for (size_t i = 0; i < signedManifestCount; i++) {
         /* As long as we successfully parse one manifest and can install it, we succeed. */
@@ -1305,15 +1500,28 @@ QStatus PermissionMgmtObj::StoreManifests(MsgArg& signedManifestsArg, bool appen
          * so we don't waste time and space with manifests that can't possibly be valid.
          */
         if (signedManifest->HasSignature()) {
-            newManifests.push_back(signedManifest);
+            manifests.push_back(signedManifest);
         } else {
             QCC_DbgTrace(("Not storing this manifest because it's unsigned: %s", signedManifest->ToString().c_str()));
         }
     }
 
-    if (0 == newManifests.size()) {
-        QCC_LogError(ER_DIGEST_MISMATCH, ("No digests passed validation"));
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::StoreManifests(size_t manifestCount, const Manifest* manifests, bool append)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QStatus status = ER_OK;
+
+    if (0 == manifestCount) {
         return ER_DIGEST_MISMATCH;
+    }
+
+    std::vector<Manifest> newManifests;
+    for (size_t i = 0; i < manifestCount; i++) {
+        newManifests.push_back(manifests[i]);
     }
 
     if (append) {
@@ -1538,6 +1746,87 @@ QStatus PermissionMgmtObj::LocateMembershipEntry(const String& serialNum, const 
     return GetMembershipKey(ca, membershipHead, serialNum, issuerAki, membershipKey);
 }
 
+QStatus PermissionMgmtObj::RemoveMembership(const String& serial, const ECCPublicKey* issuerPublicKey, const String& issuerAki)
+{
+    QStatus status = RemoveMembershipInternal(serial, issuerPublicKey, issuerAki);
+
+    if (ER_BUS_KEY_UNAVAILABLE == status) {
+        return ER_CERTIFICATE_NOT_FOUND;
+    } else {
+        return status;
+    }
+}
+
+static QStatus SetKeyInfo(const ECCPublicKey* publicKey, const String& aki, KeyInfoNISTP256& keyInfo)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    keyInfo.SetPublicKey(publicKey);
+    if (aki.empty()) {
+        String computedAki;
+        /* calculate it */
+        QStatus status = CertificateX509::GenerateAuthorityKeyId(keyInfo.GetPublicKey(), computedAki);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("Could not GenerateAuthorityKeyId"));
+            return status;
+        }
+        keyInfo.SetKeyId((const uint8_t*)computedAki.data(), computedAki.size());
+    } else {
+        keyInfo.SetKeyId((const uint8_t*)aki.data(), aki.size());
+    }
+
+    return ER_OK;
+}
+
+QStatus PermissionMgmtObj::RemoveMembershipInternal(const String& serial, const ECCPublicKey* issuerPublicKey, const String& issuerAki)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    KeyStore::Key membershipKey;
+    MembershipCertificate cert;
+    KeyBlob kb;
+    QStatus status = ER_OK;
+
+    KeyInfoNISTP256 issuerKeyInfo;
+    status = SetKeyInfo(issuerPublicKey, issuerAki, issuerKeyInfo);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    status = LocateMembershipEntry(serial, issuerAki, membershipKey);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not LocateMembershipEntry"));
+        return status;
+    }
+    /* retrieve the cert to validate before delete */
+    status = ca->GetKey(membershipKey, kb);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not GetKey"));
+        return status;
+    }
+    status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not LoadCertificate"));
+        return status;
+    }
+    /* verify the cert with issuer's public key */
+    status = cert.Verify(issuerKeyInfo.GetPublicKey());
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not verify cert with issuer's public key"));
+        return ER_CERTIFICATE_NOT_FOUND;
+    }
+
+    /* found it so delete it */
+    status = ca->DeleteKey(membershipKey);
+    if (ER_BUS_KEY_UNAVAILABLE == status) {
+        /* could not find it.  */
+        QCC_LogError(status, ("Could not find certificate to delete"));
+    } else if (ER_OK != status) {
+        QCC_LogError(status, ("Could not DeleteKey"));
+    }
+
+    return status;
+}
+
 void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* member, Message& msg)
 {
     QCC_UNUSED(member);
@@ -1575,56 +1864,14 @@ void PermissionMgmtObj::RemoveMembership(const InterfaceDescription::Member* mem
         MethodReply(msg, ER_INVALID_DATA);
         return;
     }
-    KeyInfoNISTP256 issuerKeyInfo;
-    issuerKeyInfo.SetPublicKey(&publicKey);
-    String issuerAki;
-    if (akiLen == 0) {
-        /* calculate it */
-        if (ER_OK != CertificateX509::GenerateAuthorityKeyId(issuerKeyInfo.GetPublicKey(), issuerAki)) {
-            MethodReply(msg, status);
-            return;
-        }
-    } else {
-        issuerAki.assign_std((const char*) akiVal, akiLen);
-    }
-    issuerKeyInfo.SetKeyId((uint8_t*) issuerAki.data(), issuerAki.size());
     String serial((const char*) serialVal, serialLen);
-    KeyStore::Key membershipKey;
-    MembershipCertificate cert;
-    KeyBlob kb;
-    status = LocateMembershipEntry(serial, issuerAki, membershipKey);
-    if (ER_OK != status) {
-        goto Exit;
-    }
-    /* retrieve the cert to validate before delete */
-    status = ca->GetKey(membershipKey, kb);
-    if (ER_OK != status) {
-        goto Exit;
-    }
-    status = LoadCertificate(CertificateX509::ENCODING_X509_DER, kb.GetData(), kb.GetSize(), cert);
-    if (ER_OK != status) {
-        goto Exit;
-    }
-    /* verify the cert with issuer's public key */
-    status = cert.Verify(issuerKeyInfo.GetPublicKey());
-    if (ER_OK != status) {
-        status = ER_CERTIFICATE_NOT_FOUND;
-        goto Exit;
-    }
-
-    /* found it so delete it */
-    status = ca->DeleteKey(membershipKey);
-Exit:
-    if (ER_BUS_KEY_UNAVAILABLE == status) {
-        /* could not find it.  */
-        status = ER_CERTIFICATE_NOT_FOUND;
-    }
+    String issuerAki((const char*)akiVal, akiLen);
+    status = RemoveMembership(serial, &publicKey, issuerAki);
     MethodReply(msg, status);
 }
 
-void PermissionMgmtObj::StartManagement(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::StartManagement()
 {
-    QCC_UNUSED(member);
     QStatus status = ER_OK;
 
     if (!CompareAndExchange(&managementStarted, false, true)) {
@@ -1633,12 +1880,19 @@ void PermissionMgmtObj::StartManagement(const InterfaceDescription::Member* memb
         bus.GetInternal().CallStartManagementCallback();
     }
 
+    return status;
+}
+
+void PermissionMgmtObj::StartManagement(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_UNUSED(member);
+    QStatus status = StartManagement();
+
     MethodReply(msg, status);
 }
 
-void PermissionMgmtObj::EndManagement(const InterfaceDescription::Member* member, Message& msg)
+QStatus PermissionMgmtObj::EndManagement()
 {
-    QCC_UNUSED(member);
     QStatus status = ER_OK;
 
     if (!CompareAndExchange(&managementStarted, true, false)) {
@@ -1647,6 +1901,14 @@ void PermissionMgmtObj::EndManagement(const InterfaceDescription::Member* member
         bus.GetInternal().CallEndManagementCallback();
     }
 
+    return status;
+}
+
+void PermissionMgmtObj::EndManagement(const InterfaceDescription::Member* member, Message& msg)
+{
+    QCC_UNUSED(member);
+    QStatus status = EndManagement();
+
     MethodReply(msg, status);
 }
 
@@ -1654,9 +1916,15 @@ void PermissionMgmtObj::InstallManifests(const InterfaceDescription::Member* mem
 {
     QCC_UNUSED(member);
 
-    QStatus status = StoreManifests((MsgArg&)*msg->GetArg(0), true);
+    std::vector<Manifest> manifests;
+    QStatus status = RetrieveManifestsFromMsgArg((MsgArg&)*msg->GetArg(0), manifests);
     if (ER_OK != status) {
-        QCC_LogError(status, ("%s: Could not StoreManifests", __FUNCTION__));
+        QCC_LogError(status, ("%s: Could not RetrieveManifestsFromMsgArg", __FUNCTION__));
+    } else {
+        status = StoreManifests(manifests.size(), manifests.data(), true);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("%s: Could not StoreManifests", __FUNCTION__));
+        }
     }
 
     QStatus rStatus = MethodReply(msg, status);
@@ -2415,34 +2683,18 @@ QStatus PermissionMgmtObj::SetManifestTemplate(const PermissionPolicy::Rule* rul
     if (count == 0) {
         return ER_OK;
     }
-    PermissionPolicy policy;
-    PermissionPolicy::Acl acls[1];
-    PermissionPolicy::Rule* localRules = NULL;
-    if (count > 0) {
-        localRules = new PermissionPolicy::Rule[count];
-        for (size_t cnt = 0; cnt < count; cnt++) {
-            localRules[cnt] = rules[cnt];
-        }
-    }
-    acls[0].SetRules(count, localRules);
-    policy.SetAcls(1, acls);
 
-    delete [] localRules;
-    localRules = NULL;
-
-    uint8_t* buf = NULL;
-    size_t size;
+    vector<uint8_t> buf;
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    QStatus status = policy.Export(marshaller, &buf, &size);
+    QStatus status = marshaller.MarshalManifestTemplate(rules, count, buf);
     if (ER_OK != status) {
         return status;
     }
     /* store the message into the key store */
     KeyStore::Key key;
     GetACLKey(ENTRY_MANIFEST_TEMPLATE, key);
-    KeyBlob kb((uint8_t*) buf, size, KeyBlob::GENERIC);
-    delete [] buf;
+    KeyBlob kb(buf.data(), buf.size(), KeyBlob::GENERIC);
 
     status = ca->StoreKey(key, kb);
     if (ER_OK == status) {
@@ -2489,7 +2741,7 @@ QStatus PermissionMgmtObj::RetrieveManifests(std::vector<Manifest>& manifests)
     return status;
 }
 
-QStatus PermissionMgmtObj::LoadManifestTemplate(PermissionPolicy& policy)
+QStatus PermissionMgmtObj::LoadManifestTemplate(vector<PermissionPolicy::Rule>& manifestTemplate)
 {
     KeyBlob kb;
     KeyStore::Key key;
@@ -2503,11 +2755,11 @@ QStatus PermissionMgmtObj::LoadManifestTemplate(PermissionPolicy& policy)
     }
     Message tmpMsg(bus);
     DefaultPolicyMarshaller marshaller(tmpMsg);
-    status = policy.Import(marshaller, kb.GetData(), kb.GetSize());
+    status = marshaller.UnmarshalManifestTemplate(kb.GetData(), kb.GetSize(), manifestTemplate);
     if (ER_OK != status) {
         return status;
     }
-    if (policy.GetAclsSize() == 0) {
+    if (manifestTemplate.size() == 0) {
         return ER_MANIFEST_NOT_FOUND;
     }
     return ER_OK;
@@ -2528,27 +2780,31 @@ QStatus PermissionMgmtObj::LookForManifestTemplate(bool& exist)
     return status;
 }
 
+QStatus PermissionMgmtObj::GetManifestTemplate(vector<PermissionPolicy::Rule>& manifestTemplate)
+{
+    return LoadManifestTemplate(manifestTemplate);
+}
+
 QStatus PermissionMgmtObj::GetManifestTemplate(MsgArg& arg)
 {
-    PermissionPolicy policy;
-    QStatus status = LoadManifestTemplate(policy);
+    vector<PermissionPolicy::Rule> manifestTemplate;
+    QStatus status = LoadManifestTemplate(manifestTemplate);
     if (ER_OK != status) {
         return status;
     }
-    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
-    return PermissionPolicy::GenerateRules(acls[0].GetRules(), acls[0].GetRulesSize(), arg);
+
+    return PermissionPolicy::ManifestTemplateToMsgArg(manifestTemplate.data(), manifestTemplate.size(), arg);
 }
 
 QStatus PermissionMgmtObj::GetManifestTemplateDigest(MsgArg& arg)
 {
-    PermissionPolicy policy;
-    QStatus status = LoadManifestTemplate(policy);
+    vector<PermissionPolicy::Rule> manifestTemplate;
+    QStatus status = LoadManifestTemplate(manifestTemplate);
     if (ER_OK != status) {
         return status;
     }
-    PermissionPolicy::Acl* acls = (PermissionPolicy::Acl*) policy.GetAcls();
     uint8_t digest[Crypto_SHA256::DIGEST_SIZE];
-    status = GenerateManifestDigest(bus, acls[0].GetRules(), acls[0].GetRulesSize(), digest, Crypto_SHA256::DIGEST_SIZE);
+    status = GenerateManifestDigest(bus, manifestTemplate.data(), manifestTemplate.size(), digest, Crypto_SHA256::DIGEST_SIZE);
     if (ER_OK != status) {
         return status;
     }

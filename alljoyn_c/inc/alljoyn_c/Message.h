@@ -225,7 +225,7 @@ extern AJ_API const alljoyn_msgarg AJ_CALL alljoyn_message_getarg(alljoyn_messag
  * @param[out] ...        Pointers to return references to the unpacked values.
  * @return  ER_OK if successful.
  */
-extern AJ_API QStatus AJ_CALL alljoyn_message_parseargs(alljoyn_message msg, const char* signature, ...);
+extern AJ_API QStatus CDECL_CALL alljoyn_message_parseargs(alljoyn_message msg, const char* signature, ...);
 
 /**
  * Accessor function to get serial number for the message. Usually only important for

@@ -16,19 +16,45 @@
 #include <gtest/gtest.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/PermissionConfigurator.h>
+#include <alljoyn_c/SecurityApplicationProxy.h>
 #include <qcc/Util.h>
+#include <qcc/GUID.h>
 #include "ajTestCommon.h"
 #include "InMemoryKeyStore.h"
+#include "SecurityApplicationProxyTestHelper.h"
 
 using namespace ajn;
+using namespace qcc;
 
 #define NULL_AUTH_MECHANISM "ALLJOYN_ECDHE_NULL"
 #define SAMPLE_MANAGED_APP_NAME "SampleManagedApp"
+
+#define VALID_ALLOW_ALL_RULES \
+    "<rules>" \
+    "<node>" \
+    "<interface>" \
+    "<method>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>" \
+    "</method>" \
+    "<property>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>" \
+    "</propert>" \
+    "<signal>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>" \
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>" \
+    "</signal>" \
+    "</interface>" \
+    "</node>" \
+    "</rules>"
 
 static AJ_PCSTR s_validAllowAllManifestTemplate =
     "<manifest>"
     "<node>"
     "<interface>"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
     "<method>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
     "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
@@ -50,13 +76,30 @@ static AJ_PCSTR s_invalidManifestTemplate =
     "<manifest>"
     "</manifest>";
 
+static AJ_PCSTR s_validNewerPolicy =
+    "<policy>"
+    "<policyVersion>1</policyVersion>"
+    "<serialNumber>200</serialNumber>"
+    "<acls>"
+    "<acl>"
+    "<peers>"
+    "<peer>"
+    "<type>ALL</type>"
+    "</peer>"
+    "</peers>"
+    VALID_ALLOW_ALL_RULES
+    "</acl>"
+    "</acls>"
+    "</policy>";
+
+static AJ_PCSTR s_MembershipCertName = "TestApp";
+
 static void BasicBusSetup(alljoyn_busattachment* bus, AJ_PCSTR busName, InMemoryKeyStoreListener* keyStoreListener)
 {
     *bus = alljoyn_busattachment_create(busName, QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(busName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(busName));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_registerkeystorelistener(*bus, (alljoyn_keystorelistener)keyStoreListener));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_start(*bus));
-    ASSERT_EQ(ER_OK, alljoyn_busattachment_connect(*bus, getConnectArg().c_str()));
 }
 
 static void BasicBusTearDown(alljoyn_busattachment bus)
@@ -74,6 +117,8 @@ class PermissionConfiguratorTestWithoutSecurity : public testing::Test {
         m_configuratorUnderTest(nullptr),
         m_appUnderTest(nullptr)
     { }
+
+  protected:
 
     virtual void SetUp()
     {
@@ -98,6 +143,15 @@ class PermissionConfiguratorTestWithoutSecurity : public testing::Test {
 
 class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTestWithoutSecurity {
 
+  public:
+
+    PermissionConfiguratorTestWithSecurity() :
+        PermissionConfiguratorTestWithoutSecurity(),
+        m_callbacks()
+    { }
+
+  protected:
+
     virtual void SetUp()
     {
         PermissionConfiguratorTestWithoutSecurity::SetUp();
@@ -111,8 +165,6 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
 
         m_configuratorUnderTest = alljoyn_busattachment_getpermissionconfigurator(m_appUnderTest);
     }
-
-  protected:
 
     void PassFlagsToCallbacks(bool* policyChanged, bool* factoryResetHappened)
     {
@@ -186,6 +238,185 @@ class PermissionConfiguratorTestWithSecurity : public PermissionConfiguratorTest
             *policyChanged = false;
         }
     }
+};
+
+class PermissionConfiguratorPreClaimTest : public PermissionConfiguratorTestWithSecurity {
+
+  public:
+
+    PermissionConfiguratorPreClaimTest() : PermissionConfiguratorTestWithSecurity(),
+        m_identityCertificate(nullptr),
+        m_altIdentityCertificate(nullptr),
+        m_publicKey(nullptr),
+        m_privateKey(nullptr),
+        m_signedManifestXmls(),
+        m_adminGroupGuid(),
+        m_adminGroupId(nullptr),
+        m_retrievedManifestTemplate(nullptr),
+        m_retrievedPublicKey(nullptr)
+    {
+        for (size_t i = 0; i < ArraySize(m_signedManifestXmls); i++) {
+            m_signedManifestXmls[i] = nullptr;
+        }
+    }
+
+  protected:
+
+    virtual void SetUp()
+    {
+        PermissionConfiguratorTestWithSecurity::SetUp();
+
+        SecurityApplicationProxyTestHelper::CreateIdentityCert(m_appUnderTest, m_appUnderTest, &m_identityCertificate);
+        SecurityApplicationProxyTestHelper::RetrieveDSAPublicKeyFromKeyStore(m_appUnderTest, &m_publicKey);
+        SecurityApplicationProxyTestHelper::RetrieveDSAPrivateKeyFromKeyStore(m_appUnderTest, &m_privateKey);
+
+        m_adminGroupId = m_adminGroupGuid.GetBytes();
+
+        ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_signmanifest(s_validAllowAllManifestTemplate,
+                                                                       m_identityCertificate,
+                                                                       m_privateKey,
+                                                                       &m_signedManifestXmls[0]));
+
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
+    }
+
+    virtual void TearDown()
+    {
+        SecurityApplicationProxyTestHelper::DestroyCertificate(m_identityCertificate);
+        SecurityApplicationProxyTestHelper::DestroyCertificate(m_altIdentityCertificate);
+        SecurityApplicationProxyTestHelper::DestroyKey(m_publicKey);
+        SecurityApplicationProxyTestHelper::DestroyKey(m_privateKey);
+
+        if (nullptr != m_retrievedManifestTemplate) {
+            alljoyn_permissionconfigurator_manifesttemplate_destroy(m_retrievedManifestTemplate);
+            m_retrievedManifestTemplate = nullptr;
+        }
+
+        if (nullptr != m_retrievedPublicKey) {
+            alljoyn_permissionconfigurator_publickey_destroy(m_retrievedPublicKey);
+            m_retrievedPublicKey = nullptr;
+        }
+
+        for (size_t i = 0; i < ArraySize(m_signedManifestXmls); i++) {
+            if (nullptr != m_signedManifestXmls[i]) {
+                alljoyn_securityapplicationproxy_manifest_destroy(m_signedManifestXmls[i]);
+                m_signedManifestXmls[i] = nullptr;
+            }
+        }
+
+        PermissionConfiguratorTestWithSecurity::TearDown();
+    }
+
+
+    void CreateAltIdentityCertificate(const std::string& subject)
+    {
+        alljoyn_busattachment differentApp;
+        InMemoryKeyStoreListener differentKsl;
+
+        /* Provision a different bus, which will create a different public key. */
+        BasicBusSetup(&differentApp, subject.c_str(), &differentKsl);
+        ASSERT_EQ(ER_OK, alljoyn_busattachment_enablepeersecurity(differentApp,
+                                                                  NULL_AUTH_MECHANISM,
+                                                                  nullptr,
+                                                                  nullptr,
+                                                                  QCC_FALSE));
+        SecurityApplicationProxyTestHelper::CreateIdentityCert(differentApp, differentApp, &m_altIdentityCertificate);
+        BasicBusTearDown(differentApp);
+    }
+
+    AJ_PSTR m_identityCertificate;
+    AJ_PSTR m_altIdentityCertificate;
+    AJ_PSTR m_publicKey;
+    AJ_PSTR m_privateKey;
+    AJ_PSTR m_signedManifestXmls[1];
+    GUID128 m_adminGroupGuid;
+    const uint8_t* m_adminGroupId;
+    AJ_PSTR m_retrievedManifestTemplate;
+    AJ_PSTR m_retrievedPublicKey;
+};
+
+class PermissionConfiguratorPostClaimTest : public PermissionConfiguratorPreClaimTest {
+
+  public:
+
+    PermissionConfiguratorPostClaimTest() : PermissionConfiguratorPreClaimTest(),
+        m_membershipCertificate(nullptr),
+        m_certificateId(),
+        m_certificateIdArray(),
+        m_policyXml(nullptr),
+        m_defaultPolicyXml(nullptr),
+        m_newPolicyXml(nullptr),
+        m_manifestArray(),
+        m_identityCertificateChain(nullptr)
+    { }
+
+  protected:
+
+    virtual void SetUp()
+    {
+        PermissionConfiguratorPreClaimTest::SetUp();
+
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                              m_publicKey,
+                                                              m_identityCertificate,
+                                                              m_adminGroupId,
+                                                              GUID128::SIZE,
+                                                              m_publicKey,
+                                                              (AJ_PCSTR*)m_signedManifestXmls,
+                                                              ArraySize(m_signedManifestXmls)));
+    }
+
+    virtual void TearDown()
+    {
+        SecurityApplicationProxyTestHelper::DestroyCertificate(m_membershipCertificate);
+
+        alljoyn_permissionconfigurator_certificateid_cleanup(&m_certificateId);
+        alljoyn_permissionconfigurator_certificateidarray_cleanup(&m_certificateIdArray);
+
+        if (nullptr != m_policyXml) {
+            alljoyn_permissionconfigurator_policy_destroy(m_policyXml);
+            m_policyXml = nullptr;
+        }
+
+        if (nullptr != m_defaultPolicyXml) {
+            alljoyn_permissionconfigurator_policy_destroy(m_defaultPolicyXml);
+            m_defaultPolicyXml = nullptr;
+        }
+
+        if (nullptr != m_newPolicyXml) {
+            alljoyn_permissionconfigurator_policy_destroy(m_newPolicyXml);
+            m_newPolicyXml = nullptr;
+        }
+
+        alljoyn_permissionconfigurator_manifestarray_cleanup(&m_manifestArray);
+
+        if (nullptr != m_identityCertificateChain) {
+            alljoyn_permissionconfigurator_certificatechain_destroy(m_identityCertificateChain);
+            m_identityCertificateChain = nullptr;
+        }
+
+        PermissionConfiguratorPreClaimTest::TearDown();
+    }
+
+    void CreateMembershipCertificate(const std::string& subject)
+    {
+        SecurityApplicationProxyTestHelper::CreateMembershipCert(m_appUnderTest,
+                                                                 m_appUnderTest,
+                                                                 m_adminGroupId,
+                                                                 true,
+                                                                 subject,
+                                                                 &m_membershipCertificate);
+    }
+
+
+    AJ_PSTR m_membershipCertificate;
+    alljoyn_certificateid m_certificateId;
+    alljoyn_certificateidarray m_certificateIdArray;
+    AJ_PSTR m_policyXml;
+    AJ_PSTR m_defaultPolicyXml;
+    AJ_PSTR m_newPolicyXml;
+    alljoyn_manifestarray m_manifestArray;
+    AJ_PSTR m_identityCertificateChain;
 };
 
 class PermissionConfiguratorApplicationStateTest : public testing::TestWithParam<alljoyn_applicationstate> {
@@ -282,7 +513,7 @@ TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenSettingCl
 
 TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithoutPeerSecurity)
 {
-    EXPECT_EQ(ER_FEATURE_NOT_AVAILABLE, alljoyn_permissionconfigurator_setmanifestfromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
+    EXPECT_EQ(ER_FEATURE_NOT_AVAILABLE, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
 }
 
 TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenResetingWithoutPeerSecurity)
@@ -292,12 +523,12 @@ TEST_F(PermissionConfiguratorTestWithoutSecurity, ShouldReturnErrorWhenResetingW
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithEmptyString)
 {
-    EXPECT_EQ(ER_EOF, alljoyn_permissionconfigurator_setmanifestfromxml(m_configuratorUnderTest, ""));
+    EXPECT_EQ(ER_EOF, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, ""));
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithInvalidXml)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, alljoyn_permissionconfigurator_setmanifestfromxml(m_configuratorUnderTest, s_invalidManifestTemplate));
+    EXPECT_EQ(ER_XML_MALFORMED, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_invalidManifestTemplate));
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyBeNotClaimable)
@@ -313,7 +544,7 @@ TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyHaveDefaultClaimCa
     alljoyn_claimcapabilities claimCapabilities;
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getclaimcapabilities(m_configuratorUnderTest, &claimCapabilities));
 
-    EXPECT_EQ(CLAIM_CAPABILITIES_DEFAULT, claimCapabilities);
+    EXPECT_EQ(alljoyn_permissionconfigurator_getdefaultclaimcapabilities(), claimCapabilities);
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyHaveNoClaimCapabilityAdditionalInfo)
@@ -326,13 +557,13 @@ TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyHaveNoClaimCapabil
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldPassWhenSettingManifestTemplateWithValidXml)
 {
-    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldChangeStateToClaimableAfterSettingManifestTemplate)
 {
     alljoyn_applicationstate state;
-    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getapplicationstate(m_configuratorUnderTest, &state));
 
     EXPECT_EQ(CLAIMABLE, state);
@@ -358,7 +589,7 @@ TEST_F(PermissionConfiguratorTestWithSecurity, DISABLED_ShouldNotMakeAppClaimabl
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldMakeAppClaimableAfterResetForSetTemplateAndInNeedOfUpdate)
 {
     alljoyn_applicationstate state;
-    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_validAllowAllManifestTemplate));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setapplicationstate(m_configuratorUnderTest, NEED_UPDATE));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_reset(m_configuratorUnderTest));
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getapplicationstate(m_configuratorUnderTest, &state));
@@ -466,4 +697,370 @@ TEST_P(PermissionConfiguratorClaimCapabilitiesTest, ShouldSetClaimCapabilitiesAd
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getclaimcapabilitiesadditionalinfo(m_configuratorUnderTest, &claimCapabilitiesAdditionalInfo));
 
     EXPECT_EQ(m_expectedValue, claimCapabilitiesAdditionalInfo);
+}
+
+#ifdef NDEBUG
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenSigningManifestWithNullCertificate)
+{
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_securityapplicationproxy_signmanifest(s_validAllowAllManifestTemplate,
+                                                                             nullptr,
+                                                                             m_privateKey,
+                                                                             &m_signedManifestXmls[0]));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenSigningManifestWithNullPrivateKey)
+{
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_securityapplicationproxy_signmanifest(s_validAllowAllManifestTemplate,
+                                                                             m_identityCertificate,
+                                                                             nullptr,
+                                                                             &m_signedManifestXmls[0]));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithNullPublicKey)
+{
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                    nullptr,
+                                                                    m_identityCertificate,
+                                                                    m_adminGroupId,
+                                                                    GUID128::SIZE,
+                                                                    m_publicKey,
+                                                                    (AJ_PCSTR*)m_signedManifestXmls,
+                                                                    ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithNullCertificate)
+{
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                    m_publicKey,
+                                                                    nullptr,
+                                                                    m_adminGroupId,
+                                                                    GUID128::SIZE,
+                                                                    m_publicKey,
+                                                                    (AJ_PCSTR*)m_signedManifestXmls,
+                                                                    ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithNullGroupAuthority)
+{
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                    m_publicKey,
+                                                                    m_identityCertificate,
+                                                                    m_adminGroupId,
+                                                                    GUID128::SIZE,
+                                                                    nullptr,
+                                                                    (AJ_PCSTR*)m_signedManifestXmls,
+                                                                    ArraySize(m_signedManifestXmls)));
+}
+#endif
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithInvalidPublicKey)
+{
+    AJ_PCSTR invalidPublicKey = m_privateKey;
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                    invalidPublicKey,
+                                                                    m_identityCertificate,
+                                                                    m_adminGroupId,
+                                                                    GUID128::SIZE,
+                                                                    m_publicKey,
+                                                                    (AJ_PCSTR*)m_signedManifestXmls,
+                                                                    ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithInvalidCertificate)
+{
+    AJ_PCSTR invalidIdentityCert = m_privateKey;
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                    m_publicKey,
+                                                                    invalidIdentityCert,
+                                                                    m_adminGroupId,
+                                                                    GUID128::SIZE,
+                                                                    m_publicKey,
+                                                                    (AJ_PCSTR*)m_signedManifestXmls,
+                                                                    ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldIgnoreAndPassWhenClaimingWithInvalidGroupId)
+{
+    uint8_t invalidGroupId[] = { 1 };
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                          m_publicKey,
+                                                          m_identityCertificate,
+                                                          invalidGroupId,
+                                                          GUID128::SIZE,
+                                                          m_publicKey,
+                                                          (AJ_PCSTR*)m_signedManifestXmls,
+                                                          ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithInvalidGroupIdSize)
+{
+    size_t invalidGroupIdSize = GUID128::SIZE + 1;
+    EXPECT_EQ(ER_INVALID_GUID, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                    m_publicKey,
+                                                                    m_identityCertificate,
+                                                                    m_adminGroupId,
+                                                                    invalidGroupIdSize,
+                                                                    m_publicKey,
+                                                                    (AJ_PCSTR*)m_signedManifestXmls,
+                                                                    ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithInvalidGroupAuthority)
+{
+    AJ_PCSTR invalidGroupAuthority = m_privateKey;
+    EXPECT_EQ(ER_INVALID_DATA, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                    m_publicKey,
+                                                                    m_identityCertificate,
+                                                                    m_adminGroupId,
+                                                                    GUID128::SIZE,
+                                                                    invalidGroupAuthority,
+                                                                    (AJ_PCSTR*)m_signedManifestXmls,
+                                                                    ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldReturnErrorWhenClaimingWithIdentityCertificateThumbprintMismatch)
+{
+    CreateAltIdentityCertificate("DifferentApp");
+
+    EXPECT_EQ(ER_UNKNOWN_CERTIFICATE, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                                           m_publicKey,
+                                                                           m_altIdentityCertificate,
+                                                                           m_adminGroupId,
+                                                                           GUID128::SIZE,
+                                                                           m_publicKey,
+                                                                           (AJ_PCSTR*)m_signedManifestXmls,
+                                                                           ArraySize(m_signedManifestXmls)));
+
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldPassWhenClaimingWithValidInput)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_claim(m_configuratorUnderTest,
+                                                          m_publicKey,
+                                                          m_identityCertificate,
+                                                          m_adminGroupId,
+                                                          GUID128::SIZE,
+                                                          m_publicKey,
+                                                          (AJ_PCSTR*)m_signedManifestXmls,
+                                                          ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldPassGetManifestTemplateAsXml)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getmanifesttemplate(m_configuratorUnderTest, &m_retrievedManifestTemplate));
+    EXPECT_NE(nullptr, m_retrievedManifestTemplate);
+}
+
+TEST_F(PermissionConfiguratorPreClaimTest, shouldPassGetPublicKey)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getpublickey(m_configuratorUnderTest, &m_retrievedPublicKey));
+    EXPECT_NE(nullptr, m_retrievedPublicKey);
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassStartManagementCall)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_startmanagement(m_configuratorUnderTest));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassEndManagementCallAfterStartManagementCall)
+{
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_startmanagement(m_configuratorUnderTest));
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_endmanagement(m_configuratorUnderTest));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldFailEndManagementCallWithoutStartManagementCall)
+{
+    EXPECT_EQ(ER_MANAGEMENT_NOT_STARTED, alljoyn_permissionconfigurator_endmanagement(m_configuratorUnderTest));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, secondStartManagementCallShouldFail)
+{
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_startmanagement(m_configuratorUnderTest));
+    EXPECT_EQ(ER_MANAGEMENT_ALREADY_STARTED, alljoyn_permissionconfigurator_startmanagement(m_configuratorUnderTest));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassUpdateIdentity)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_updateidentity(m_configuratorUnderTest,
+                                                                   m_identityCertificate,
+                                                                   (AJ_PCSTR*)m_signedManifestXmls,
+                                                                   ArraySize(m_signedManifestXmls)));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetIdentity)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getidentity(m_configuratorUnderTest, &m_identityCertificateChain));
+    EXPECT_NE(nullptr, m_identityCertificateChain);
+
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetManifests)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getmanifests(m_configuratorUnderTest, &m_manifestArray));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetManifestsAfterInstallManifests)
+{
+    const uint8_t additionalManifests = 10;
+
+    for (uint8_t i = 0; i < additionalManifests; i++) {
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_installmanifests(m_configuratorUnderTest,
+                                                                         (AJ_PCSTR*)m_signedManifestXmls,
+                                                                         ArraySize(m_signedManifestXmls),
+                                                                         QCC_TRUE));
+    }
+
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getmanifests(m_configuratorUnderTest, &m_manifestArray));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldGetCorrectNumberOfManifestsAfterInstallManifests)
+{
+    const uint8_t additionalManifests = 10;
+
+    for (uint8_t i = 0; i < additionalManifests; i++) {
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_installmanifests(m_configuratorUnderTest,
+                                                                         (AJ_PCSTR*)m_signedManifestXmls,
+                                                                         ArraySize(m_signedManifestXmls),
+                                                                         QCC_TRUE));
+    }
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getmanifests(m_configuratorUnderTest, &m_manifestArray));
+    EXPECT_EQ(additionalManifests + 1U, m_manifestArray.count);
+    for (uint8_t i = 0; i < additionalManifests + 1; i++) {
+        EXPECT_NE(nullptr, m_manifestArray.xmls[i]) << "Manifest XML " << i << " is null";
+    }
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassInstallManifests)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_installmanifests(m_configuratorUnderTest,
+                                                                     (AJ_PCSTR*)m_signedManifestXmls,
+                                                                     ArraySize(m_signedManifestXmls),
+                                                                     QCC_FALSE));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassInstallManifestsAppendMode)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_installmanifests(m_configuratorUnderTest,
+                                                                     (AJ_PCSTR*)m_signedManifestXmls,
+                                                                     ArraySize(m_signedManifestXmls),
+                                                                     QCC_TRUE));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetIdentityCertificateId)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getidentitycertificateid(m_configuratorUnderTest, &m_certificateId));
+    EXPECT_NE(nullptr, m_certificateId.serial);
+    EXPECT_NE(nullptr, m_certificateId.issuerPublicKey);
+    EXPECT_EQ(nullptr, m_certificateId.issuerAki);
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassUpdatePolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_updatepolicy(m_configuratorUnderTest, s_validNewerPolicy));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getpolicy(m_configuratorUnderTest, &m_policyXml));
+    EXPECT_NE(nullptr, m_policyXml);
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetDefaultPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getdefaultpolicy(m_configuratorUnderTest, &m_policyXml));
+    EXPECT_NE(nullptr, m_policyXml);
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassResetPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_resetpolicy(m_configuratorUnderTest));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, policiesShouldBeDifferentAfterResetPolicy)
+{
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_updatepolicy(m_configuratorUnderTest, s_validNewerPolicy));
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getpolicy(m_configuratorUnderTest, &m_policyXml));
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getdefaultpolicy(m_configuratorUnderTest, &m_defaultPolicyXml));
+    ASSERT_STRNE(m_policyXml, m_defaultPolicyXml);
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_resetpolicy(m_configuratorUnderTest));
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getpolicy(m_configuratorUnderTest, &m_newPolicyXml));
+
+    EXPECT_STRNE(m_policyXml, m_newPolicyXml);
+    EXPECT_STREQ(m_defaultPolicyXml, m_newPolicyXml);
+
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassInstallMembership)
+{
+    CreateMembershipCertificate(s_MembershipCertName);
+
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_installmembership(m_configuratorUnderTest, m_membershipCertificate));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetMembershipSummariesNoCertsInstalled)
+{
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getmembershipsummaries(m_configuratorUnderTest,
+                                                                           &m_certificateIdArray));
+    EXPECT_EQ(0U, m_certificateIdArray.count);
+    EXPECT_EQ(nullptr, m_certificateIdArray.ids);
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassGetMembershipSummaries)
+{
+    CreateMembershipCertificate(s_MembershipCertName);
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_installmembership(m_configuratorUnderTest, m_membershipCertificate));
+
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_getmembershipsummaries(m_configuratorUnderTest,
+                                                                           &m_certificateIdArray));
+
+    EXPECT_LT(0U, m_certificateIdArray.count);
+    for (size_t i = 0; i < m_certificateIdArray.count; i++) {
+        EXPECT_NE(nullptr, m_certificateIdArray.ids[i].serial) << "Serial " << i << " is nullptr";
+        EXPECT_NE(nullptr, m_certificateIdArray.ids[i].issuerPublicKey) << "Issuer public key " << i << " is nullptr";
+        EXPECT_NE(nullptr, m_certificateIdArray.ids[i].issuerAki) << "Issuer AKI " << i << " is nullptr";
+    }
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldPassRemoveMembershipAfterInstallMembership)
+{
+    CreateMembershipCertificate(s_MembershipCertName);
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_installmembership(m_configuratorUnderTest, m_membershipCertificate));
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getmembershipsummaries(m_configuratorUnderTest,
+                                                                           &m_certificateIdArray));
+
+    ASSERT_EQ(1U, m_certificateIdArray.count);
+
+    EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_removemembership(m_configuratorUnderTest,
+                                                                     m_certificateIdArray.ids[0].serial,
+                                                                     m_certificateIdArray.ids[0].issuerPublicKey,
+                                                                     m_certificateIdArray.ids[0].issuerAki));
+}
+
+TEST_F(PermissionConfiguratorPostClaimTest, shouldFailRemoveMembershipSecondCall)
+{
+    CreateMembershipCertificate(s_MembershipCertName);
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_installmembership(m_configuratorUnderTest, m_membershipCertificate));
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_getmembershipsummaries(m_configuratorUnderTest,
+                                                                           &m_certificateIdArray));
+
+    ASSERT_EQ(1U, m_certificateIdArray.count);
+
+    ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_removemembership(m_configuratorUnderTest,
+                                                                     m_certificateIdArray.ids[0].serial,
+                                                                     m_certificateIdArray.ids[0].issuerPublicKey,
+                                                                     m_certificateIdArray.ids[0].issuerAki));
+
+    EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, alljoyn_permissionconfigurator_removemembership(m_configuratorUnderTest,
+                                                                                        m_certificateIdArray.ids[0].serial,
+                                                                                        m_certificateIdArray.ids[0].issuerPublicKey,
+                                                                                        m_certificateIdArray.ids[0].issuerAki));
+
 }

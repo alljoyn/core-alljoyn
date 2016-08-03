@@ -79,6 +79,21 @@
 #endif
 
 /**
+ * Hitting _ASSERTE or a regular assert would display a UI window and prevent us
+ * from creating automatic memory dumps in Jenkins for Windows builds. This version
+ * of QCC_ASSERT forces a dereference of a null pointer, which does not display
+ * the UI window, but immediately skips to the default debugger.
+ */
+#if defined(ALLJOYN_CRASH_DUMP_SUPPORT) && !defined(NDEBUG)
+#define QCC_ASSERT(expr) ((void) (                                                                                  \
+                              (!!(expr)) ||                                                                         \
+                              (printf("%s(%d) : Assertion failed for expression: %s.", __FILE__, __LINE__, # expr), \
+                               fflush(stdout),                                                                      \
+                               *((volatile int*)0))                                                                 \
+                              ))
+#endif
+
+/**
  * Map QCC_ASSERT to _ASSERTE if not already defined.
  *
  * _ASSERTE allows the developer to break into a debugger instead of aborting.
@@ -121,5 +136,12 @@
  */
 #define WHITELISTED_APPLICATION       "WhitelistedApplication"
 ///@}
+
+/**
+ * This API has been renamed, but older Windows 10 apps might still be using the old name.
+ */
+#if (_WIN32_WINNT == _WIN32_WINNT_WIN10) && !defined(AJ_DISABLE_DEPRECATED_API_MAPPING)
+#define alljoyn_permissionconfigurator_setmanifestfromxml alljoyn_permissionconfigurator_setmanifesttemplatefromxml
+#endif
 
 #endif

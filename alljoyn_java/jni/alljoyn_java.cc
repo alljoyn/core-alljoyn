@@ -29,6 +29,8 @@
 #include <qcc/Thread.h>
 #include <qcc/ScopedMutexLock.h>
 #include <alljoyn/BusAttachment.h>
+#include <alljoyn/AutoPinger.h>
+#include <alljoyn/PingListener.h>
 #include <alljoyn/DBusStd.h>
 #include <alljoyn/PasswordManager.h>
 #include <MsgArgUtils.h>
@@ -6832,6 +6834,59 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_removeSessionMember
     return JStatus(status);
 }
 
+/**
+ * Explicitly secure the connection to the remote peer. Peer-to-peer
+ * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+ * attachment. If the peer-to-peer connection is already secure this
+ * function does nothing. Note that peer-to-peer connections are automatically secured when a
+ * method call requiring encryption is sent.
+ *
+ * This call causes messages to be sent on the bus, therefore it cannot be called within AllJoyn
+ * callbacks (method/signal/reply handlers or ObjectRegistered callbacks, etc.)
+ *
+ * @param  name       The unique name of the remote peer or NULL to secure the connections to all peers
+ *                        this BusAttachment is in session with.
+ * @param  forceAuth  If true, forces re-authentication even if the peer connection is already
+ *                        authenticated.
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_secureConnection(JNIEnv* env, jobject thiz, jstring name, jboolean forceAuth)
+{
+
+    QCC_DbgPrintf(("BusAttachment_secureConnection()"));
+
+    JString busname(name);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): Exception on getting name"));
+        return NULL;
+    }
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): Exception on getting Bus Attachment"));
+        return NULL;
+    }
+
+    /*
+     * We don't want to force the user to constantly check for NULL return
+     * codes, so if we have a problem, we throw an exception.
+     */
+    if (busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): NULL bus pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    QCC_DbgPrintf(("BusAttachment_secureConnection(): Refcount on busPtr is %d", busPtr->GetRef()));
+
+    QStatus status = busPtr->SecureConnection(busname.c_str(), forceAuth);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("BusAttachment_secureConnection(): SecureConnection call Exception"));
+        return NULL;
+    } else {
+        return JStatus(status);
+    }
+}
+
 static jobject setGenericSessionListener(JNIEnv* env, jobject thiz,
                                          jint jsessionId, jobject jlistener,
                                          BusAttachmentSessionListenerIndex index)
@@ -9979,7 +10034,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterSignalHandle
     busPtr->UnregisterSignalHandler(jsignalHandler, jmethod);
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getUniqueName(JNIEnv* env, jobject thiz)
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_BusAttachment_getUniqueName(JNIEnv* env, jobject thiz)
 {
     QCC_DbgPrintf(("BusAttachment_getUniqueName()"));
 
@@ -10004,7 +10059,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getUniqueName(JNIEn
     return env->NewStringUTF(busPtr->GetUniqueName().c_str());
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getGlobalGUIDString(JNIEnv* env, jobject thiz)
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_BusAttachment_getGlobalGUIDString(JNIEnv* env, jobject thiz)
 {
     QCC_DbgPrintf(("BusAttachment_getGlobalGUIDString()"));
 
@@ -13247,4 +13302,359 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_Observer_triggerEnablePendingListene
     if (obs) {
         obs->TriggerEnablePendingListeners();
     }
+}
+
+class JAutoPinger : public AutoPinger {
+  public:
+    /**
+     * A mutex to serialize access to autoPingListeners.
+     * Note that this member is public since we trust that
+     * the native binding we wrote will use it correctly.
+     */
+    Mutex lockAutoPingListeners;
+
+    /**
+     * a map of strong references to autoping listeners
+     * associated to the group name.
+     */
+    map<String, jobject> autoPingListeners;
+
+    JAutoPinger(BusAttachment& busAttachment) : AutoPinger(busAttachment) { }
+    ~JAutoPinger() {
+
+        /*
+         * Release any strong references we may hold to Java auto ping listener objects.
+         */
+        QCC_DbgPrintf(("JAutoPinger::~JAutoPinger(): Releasing AutoPingListeners"));
+        for (map<String, jobject>::iterator i = autoPingListeners.begin(); i != autoPingListeners.end(); ++i) {
+            QCC_DbgPrintf(("JAutoPinger::~JAutoPinger(): Releasing strong global reference to AutoPingListener %p", i->second));
+            GetEnv()->DeleteGlobalRef(i->second);
+        }
+        autoPingListeners.clear();
+
+    }
+};
+
+static JAutoPinger* GetAutoPinger(JNIEnv* env, jobject thiz) {
+    JAutoPinger* autopinger = GetHandle<JAutoPinger*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("AutoPinger: Exception"));
+        return NULL;
+    } else if (autopinger == NULL) {
+        QCC_LogError(ER_FAIL, ("AutoPinger: NULL JAutoPinger"));
+    }
+    return autopinger;
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AutoPinger_create(JNIEnv* env, jobject thiz, jobject jbus) {
+
+    JBusAttachment* bus = GetHandle<JBusAttachment*>(jbus);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("AutoPinger_create(): Exception"));
+        return;
+    } else if (bus == NULL) {
+        QCC_LogError(ER_FAIL, ("AutoPinger_create(): NULL BusAttachment"));
+        return;
+    }
+
+    JAutoPinger* autoPinger = new JAutoPinger(*bus);
+
+    if (!autoPinger) {
+        Throw("java/lang/OutOfMemoryError", NULL);
+    }
+    if (env->ExceptionCheck()) {
+        return;
+    }
+
+    SetHandle(thiz, autoPinger);
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AutoPinger_destroy(JNIEnv* env, jobject thiz) {
+    QCC_DbgPrintf(("AutoPinger_destroy()"));
+
+    JAutoPinger* autoPinger = GetAutoPinger(env, thiz);
+    if (autoPinger) {
+        delete autoPinger;
+        SetHandle(thiz, NULL);
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AutoPinger_pause(JNIEnv* env, jobject thiz) {
+    JAutoPinger* autopinger = GetAutoPinger(env, thiz);
+    if (autopinger) {
+        autopinger->Pause();
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AutoPinger_resume(JNIEnv* env, jobject thiz) {
+    JAutoPinger* autopinger = GetAutoPinger(env, thiz);
+    if (autopinger) {
+        autopinger->Resume();
+    }
+}
+
+class JPingListener : public PingListener {
+  public:
+    JPingListener(jobject pingListener);
+    ~JPingListener();
+    void DestinationFound(const String& group, const String& destination);
+    void DestinationLost(const String& group, const String& destination);
+
+  private:
+
+    jweak jpinglistener;
+    jmethodID mid_DestinationLost;
+    jmethodID mid_DestinationFound;
+
+};
+
+/**
+ * Construct a JPingListener C++ object by arranging the correspondence
+ * between the C++ object being constructed and the provided Java object.
+ *
+ * Since the purpose of the PingListener is to allow a client to recieve
+ * callbacks from the AllJoyn system, we need to connect the C++ methods to
+ * the java methods.  We do that using Java reflection.  In the constructor
+ * we do the expensive work of finding the Java method IDs (MID_xxx below)
+ * which will be invoked when the callbacks happen.
+ *
+ * We also save the required reference to the provided Java object (see the
+ * sidebar on memory management at the start of this file).
+ *
+ * @param jpinglistener The corresponding java object.
+ */
+JPingListener::JPingListener(jobject jlistener) : jpinglistener(NULL)
+{
+    QCC_DbgPrintf(("JPingListener::JPingListener()"));
+
+    JNIEnv* env = GetEnv();
+
+    QCC_DbgPrintf(("JPingListener::JPingListener(): Taking weak global reference to PingListener %p", jlistener));
+    jpinglistener = env->NewWeakGlobalRef(jlistener);
+    if (!jpinglistener) {
+        QCC_LogError(ER_FAIL, ("JPingListener::JPingListener(): Can't create new weak global reference to PingListener"));
+        return;
+    }
+
+    JLocalRef<jclass> clazz = env->GetObjectClass(jlistener);
+    if (!clazz) {
+        QCC_LogError(ER_FAIL, ("JPingListener::JPingListener(): Can't GetObjectClass() for PingListener"));
+        return;
+    }
+
+    mid_DestinationLost = env->GetMethodID(clazz, "destinationLost", "(Ljava/lang/String;Ljava/lang/String;)V");
+    if (!mid_DestinationLost) {
+        QCC_DbgPrintf(("JPingListener::JPingListener(): Can't find DestinationLost() in PingListener"));
+    }
+
+    mid_DestinationFound = env->GetMethodID(clazz, "destinationFound", "(Ljava/lang/String;Ljava/lang/String;)V");
+    if (!mid_DestinationFound) {
+        QCC_DbgPrintf(("JPingListener::JPingListener(): Can't find DestinationFound() in PingListener"));
+    }
+}
+
+/**
+ * Destroy a JPingListener C++ object.
+ *
+ * We remove the reference to the associated Java object when the C++
+ * object goes away.
+ */
+JPingListener::~JPingListener()
+{
+    QCC_DbgPrintf(("JPingListener::~JPingListener()"));
+    if (jpinglistener) {
+        QCC_DbgPrintf(("JPingListener::~JPingListener(): Releasing weak global reference to PingListener %p", jpinglistener));
+        GetEnv()->DeleteWeakGlobalRef(jpinglistener);
+        jpinglistener = NULL;
+    }
+}
+
+/**
+ * Handle the C++ DestinationFound callback from the AllJoyn system.
+ *
+ */
+void JPingListener::DestinationFound(const String& group, const String& destination)
+{
+    QCC_DbgPrintf(("JPingListener::DestinationFound()"));
+
+    /*
+     * JScopedEnv will automagically attach the JVM to the current native
+     * thread.
+     */
+    JScopedEnv env;
+
+    JLocalRef<jstring> jgroup = env->NewStringUTF(group.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPingListener::DestinationFound(): Exception"));
+        return;
+    }
+
+    JLocalRef<jstring> jdestination = env->NewStringUTF(destination.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPingListener::DestinationFound(): Exception"));
+        return;
+    }
+
+    /*
+     * The weak global reference jpinglistener cannot be directly used.  We have to get
+     * a "hard" reference to it and then use that.  If you try to use a weak reference
+     * directly you will crash and burn.
+     */
+    jobject jo = env->NewLocalRef(jpinglistener);
+    if (!jo) {
+        QCC_LogError(ER_FAIL, ("JPingListener::DestinationFound(): Can't get new local reference PingListener"));
+        return;
+    }
+
+    /*
+     * This call out to the listener means that the DestinationFound method
+     * must be MT-Safe.  This is implied by the definition of the listener.
+     */
+    QCC_DbgPrintf(("JPingListener::DestinationFound(): Call out to listener object and method"));
+    env->CallVoidMethod(jo, mid_DestinationFound, (jstring) jgroup, (jstring) jdestination);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JSessionPortListener:DestinationFound(): Exception"));
+        return;
+    }
+}
+
+/**
+ * Handle the C++ DestinationLost callback from the AllJoyn system.
+ *
+ */
+void JPingListener::DestinationLost(const String& group, const String& destination)
+{
+    QCC_DbgPrintf(("JPingListener::DestinationLost()"));
+
+    /*
+     * JScopedEnv will automagically attach the JVM to the current native
+     * thread.
+     */
+    JScopedEnv env;
+
+    JLocalRef<jstring> jgroup = env->NewStringUTF(group.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPingListener::DestinationLost(): Exception"));
+        return;
+    }
+
+    JLocalRef<jstring> jdestination = env->NewStringUTF(destination.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JPingListener::DestinationLost(): Exception"));
+        return;
+    }
+
+    /*
+     * The weak global reference jpinglistener cannot be directly used.  We have to get
+     * a "hard" reference to it and then use that.  If you try to use a weak reference
+     * directly you will crash and burn.
+     */
+    jobject jo = env->NewLocalRef(jpinglistener);
+    if (!jo) {
+        QCC_LogError(ER_FAIL, ("JPingListener::DestinationLost(): Can't get new local reference PingListener"));
+        return;
+    }
+
+    /*
+     * This call out to the listener means that the DestinationLost method
+     * must be MT-Safe.  This is implied by the definition of the listener.
+     */
+    QCC_DbgPrintf(("JSessionPortListener::DestinationLost(): Call out to listener object and method"));
+    env->CallVoidMethod(jo, mid_DestinationLost, (jstring) jgroup, (jstring) jdestination);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("JSessionPortListener:DestinationLost(): Exception"));
+        return;
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AutoPinger_addPingGroup(JNIEnv* env, jobject thiz, jstring group, jobject pingListener, jint pingInterval) {
+
+    JAutoPinger* autopinger = GetAutoPinger(env, thiz);
+    if (autopinger) {
+        const char*grName = env->GetStringUTFChars(group, NULL);
+        String groupName;
+        groupName.assign(grName);
+        env->ReleaseStringUTFChars(group, grName);
+
+        JPingListener*ping_listener = new JPingListener(pingListener);
+
+        jobject jglobalref = env->NewGlobalRef(pingListener);
+        if (!jglobalref) {
+            return;
+        }
+
+        QCC_DbgPrintf(("AutoPinger_addPingGroup(): Taking AutoPinger autoPingListeners Lock"));
+        autopinger->lockAutoPingListeners.Lock();
+        autopinger->autoPingListeners.insert(pair<String, jobject>(groupName, jglobalref));
+
+        QCC_DbgPrintf(("AutoPinger_addPingGroup(): Releasing AutoPinger autoPingListeners Lock"));
+        autopinger->lockAutoPingListeners.Unlock();
+
+        autopinger->AddPingGroup(groupName, *ping_listener, pingInterval);
+    }
+}
+
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_AutoPinger_removePingGroup(JNIEnv* env, jobject thiz, jstring group) {
+    JAutoPinger* autopinger = GetAutoPinger(env, thiz);
+    if (autopinger) {
+        const char*grName = env->GetStringUTFChars(group, NULL);
+        String groupName;
+        groupName.assign(grName);
+        env->ReleaseStringUTFChars(group, grName);
+
+        QCC_DbgPrintf(("AutoPinger_removePingGroup(): Taking AutoPinger autoPingListeners Lock"));
+        autopinger->lockAutoPingListeners.Lock();
+        map<String, jobject>::iterator it = autopinger->autoPingListeners.find(groupName);
+        if (it != autopinger->autoPingListeners.end()) {
+            autopinger->autoPingListeners.erase(it);
+        }
+        QCC_DbgPrintf(("AutoPinger_addPingGroup(): Releasing AutoPinger autoPingListeners Lock"));
+        autopinger->lockAutoPingListeners.Unlock();
+
+        autopinger->RemovePingGroup(groupName);
+    }
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AutoPinger_setPingInterval(JNIEnv* env, jobject thiz, jstring group, jint pingInterval) {
+    JAutoPinger* autopinger = GetAutoPinger(env, thiz);
+    if (autopinger) {
+        const char*grName = env->GetStringUTFChars(group, NULL);
+        String groupName;
+        groupName.assign(grName);
+        env->ReleaseStringUTFChars(group, grName);
+        return JStatus(autopinger->SetPingInterval(groupName, pingInterval));
+    }
+    return JStatus(ER_FAIL);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AutoPinger_addDestination(JNIEnv* env, jobject thiz, jstring group, jstring destination) {
+    JAutoPinger* autopinger = GetAutoPinger(env, thiz);
+    if (autopinger) {
+        const char*grName = env->GetStringUTFChars(group, NULL);
+        String groupName;
+        groupName.assign(grName);
+        env->ReleaseStringUTFChars(group, grName);
+        const char*destinationp = env->GetStringUTFChars(destination, NULL);
+        String destinationName;
+        destinationName.assign(destinationp);
+        env->ReleaseStringUTFChars(destination, destinationp);
+        return JStatus(autopinger->AddDestination(groupName, destinationName));
+    }
+    return JStatus(ER_FAIL);
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_AutoPinger_removeDestination(JNIEnv* env, jobject thiz, jstring group, jstring destination, jboolean removeAll) {
+    JAutoPinger* autopinger = GetAutoPinger(env, thiz);
+    if (autopinger) {
+        const char*grName = env->GetStringUTFChars(group, NULL);
+        String groupName;
+        groupName.assign(grName);
+        env->ReleaseStringUTFChars(group, grName);
+        const char*destinationp = env->GetStringUTFChars(destination, NULL);
+        String destinationName;
+        destinationName.assign(destinationp);
+        env->ReleaseStringUTFChars(destination, destinationp);
+        return JStatus(autopinger->RemoveDestination(groupName, destinationName, removeAll));
+    }
+    return JStatus(ER_FAIL);
 }

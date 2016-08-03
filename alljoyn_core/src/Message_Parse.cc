@@ -646,7 +646,7 @@ QStatus _Message::UnmarshalArgs(PeerStateTable* peerStateTable,
         }
         QCC_ASSERT(0 <= authVersion);
 
-        QCC_DbgHLPrintf(("Decrypting messge from %s", GetSender()));
+        QCC_DbgHLPrintf(("Decrypting message from %s", GetSender()));
         /*
          * Decryption will  make the body length  smaller because the encryption
          * algorithm appends data to the end of the encrypted data.
@@ -1124,7 +1124,7 @@ QStatus _Message::Read(RemoteEndpoint& endpoint, bool checkSender, bool pedantic
     readState = MESSAGE_NEW;
 
     /* Keep pulling bytes until the message is incomplete and
-     * no error has occured.
+     * no error has occurred.
      */
     while (readState != MESSAGE_COMPLETE && status == ER_OK) {
         status = PullBytes(endpoint, checkSender, pedantic, PULL_TIMEOUT(countRead));
