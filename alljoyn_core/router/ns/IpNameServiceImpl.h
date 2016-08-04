@@ -326,8 +326,6 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     QStatus CreateVirtualInterface(const qcc::IfConfigEntry& entry);
 
-    QStatus CreateUnicastSocket();
-
     /**
      * @brief Delete a virtual network interface. In normal cases WiFi-Direct
      * creates a soft-AP for a temporary network. Once the P2P keep-alive connection is
@@ -505,8 +503,8 @@ class IpNameServiceImpl : public qcc::Thread {
      *     of a server listening for connections if enableReliableIPv4 is true
      * @param reliableIPv6Port Indicates the port number of a server listening for
      *     connections if enableUnreliableIPv6 is true
-     * @param unreliableIPv4Port Indicates a map of interfaces to port numbers
-     *     of a server listening for connections if enableUnreliableIPv4 is true
+     * @param unreliablePortMap Indicates a map of interfaces to port numbers of a server
+     *     listening for connections if enableUnreliableIPv4 or enableUnreliableIPv6 is true
      * @param unreliableIPv6Port Indicates the port number of a server listening for
      *     connections if enableUnreliableIPv6 is true.
      * @param enableReliableIPv4
@@ -518,13 +516,13 @@ class IpNameServiceImpl : public qcc::Thread {
      * @param enableUnreliableIPv4
      *     - true indicates this protocol is enabled.
      *     - false indicates this protocol is not enabled.
-     * @param enableUnreliableIPv4
+     * @param enableUnreliableIPv6
      *     - true indicates this protocol is enabled.
      *     - false indicates this protocol is not enabled.
      */
     QStatus Enable(TransportMask transportMask,
                    const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
-                   const std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t unreliableIPv6Port,
+                   const std::map<qcc::String, uint16_t>& unreliablePortMap, uint16_t unreliableIPv6Port,
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
 
@@ -741,7 +739,7 @@ class IpNameServiceImpl : public qcc::Thread {
      *
      */
     QStatus SetNetworkEventCallback(TransportMask transportMask,
-                                    Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* cb);
+                                    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* cb);
 
     /**
      * @brief Clear the callbacks for all transports.
@@ -889,6 +887,9 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief Assigning an IpNameServiceImpl object is forbidden.
      */
     IpNameServiceImpl& operator =(const IpNameServiceImpl& other);
+
+    QStatus CreateUnicastSocket(bool isIPv4);
+    void ClearUnicastSocketAndEvent();
 
     /**
      * @brief The number of transports that can be represented in a 16-bit
@@ -1078,6 +1079,8 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     bool m_protect_net_callback;
 
+    static bool AddrMatches(const qcc::IPAddress& addr1, const qcc::IPAddress& addr2);
+
     /**
      * Send outbound name service messages out the current live interfaces.
      */
@@ -1167,26 +1170,28 @@ class IpNameServiceImpl : public qcc::Thread {
      * respecting the version of the message as specified by msgVersion.
      *
      * @param msgVersion The version of the message that is being constructed.
-     * @param isAt A pointer to the is-at message that is to be rewritten.
+     * @param packet The NS/MDNS packet.
      * @param haveIPv4address If true, the provided ipv4Address is valid and
      *     should be used.
-     * @param iPv4address The qcc::IPAddress of the IPv4 interface for which
+     * @param ipv4address The qcc::IPAddress of the IPv4 interface for which
      *      the is-at message is eventually destined.
-     * @param haveIPv6address If true, the provided ipv6Address is valid and
+     * @param haveIPv6Address If true, the provided ipv6Address is valid and
      *      should be used.
-     * @param iPv6address The qcc::IPAddress of the IPv6 interface for which
+     * @param ipv6address The qcc::IPAddress of the IPv6 interface for which
      *     the is-at message is eventually destined.
-     * @param iPv4port The port that the daemon is listening to of the IPv4
+     * @param unicastIpv4Port The port that the daemon is listening to of the IPv4
      *     interface for which the is-at message is eventually destined.
-     * @param iPv6port The port that the daemon is listening to of the IPv6
+     * @param unicastIpv6Port The port that the daemon is listening to of the IPv6
      *     interface for which the is-at message is eventually destined.
      * @param interface The network interface name over which the message
      *     is to be sent.
+     * @param reliableTransportPort TCP transport port set for is-at message.
+     * @param unreliableTransportPort UDP transport port set for is-at message.
      */
     void RewriteVersionSpecific(uint32_t msgVersion, Packet packet,
                                 bool haveIPv4address, qcc::IPAddress ipv4address,
                                 bool haveIPv6Address, qcc::IPAddress ipv6address,
-                                uint16_t unicastIpv4Port = 0, const qcc::String& interface = qcc::String(),
+                                uint16_t unicastIpv4Port = 0, uint16_t unicastIpv6Port = 0, const qcc::String& interface = qcc::String(),
                                 const uint16_t reliableTransportPort = 0, const uint16_t unreliableTransportPort = 0);
 
     /**
@@ -1254,7 +1259,7 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     Callback<void, const qcc::String&, const qcc::String&, std::vector<qcc::String>&, uint32_t>* m_callback[N_TRANSPORTS];
 
-    Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* m_networkEventCallback[N_TRANSPORTS];
+    Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* m_networkEventCallback[N_TRANSPORTS];
 
     /**
      * @internal @brief A vector of list of all of the names that the various
@@ -1323,16 +1328,16 @@ class IpNameServiceImpl : public qcc::Thread {
      * @brief Whether the ports on this daemon that are listening for unreliable (UDP)
      * inbound connections over IPv4.
      */
-    bool m_enabledUnreliableIPv4[N_TRANSPORTS];
+    bool m_enabledUnreliable[N_TRANSPORTS];
 
     /**
      * @internal
      * @brief A map of network interfaces to ports on this daemon that are listening
-     * for unreliable (UDP) inbound connections over IPv4.
+     * for unreliable (UDP) inbound connections over IPv4 pr IPv6.
      */
-    std::map<qcc::String, uint16_t> m_unreliableIPv4PortMap[N_TRANSPORTS];
+    std::map<qcc::String, uint16_t> m_unreliablePortMap[N_TRANSPORTS];
 
-    std::map<qcc::String, uint16_t> m_priorUnreliableIPv4PortMap[N_TRANSPORTS];
+    std::map<qcc::String, uint16_t> m_priorUnreliablePortMap[N_TRANSPORTS];
 
     /**
      * @internal
@@ -1363,20 +1368,6 @@ class IpNameServiceImpl : public qcc::Thread {
      * zero.
      */
     qcc::String m_unreliableIPv6Address[N_TRANSPORTS];
-
-    /**
-     * @internal
-     * @brief Whether the ports on this daemon that are listening for reliable (UDP)
-     * inbound connections over IPv6.
-     */
-    bool m_enabledUnreliableIPv6[N_TRANSPORTS];
-
-    /**
-     * @internal
-     * @brief The port on this daemon that is listening for unreliable (UDP)
-     * inbound connections over IPv6.
-     */
-    uint16_t m_unreliableIPv6Port[N_TRANSPORTS];
 
     /**
      * @internal
@@ -1451,17 +1442,9 @@ class IpNameServiceImpl : public qcc::Thread {
     bool m_enableV1;
 
     /**
-     * @internal
-     * @brief Advertise IPv4 address assigned to this interface when multicasting
-     * over IPv6 sockets in m_overrideIpv6 mode.  Used  to compensate for broken
-     * Android phones that don't support IPv4 multicast.
-     */
-    qcc::String m_overrideInterface;
-
-    /**
      * @internal @brief Set to true if a given transpot has indicated that it
      * wants to use all available interfaces whenever they may be up if true.
-     * Think INADDR_ANY or in6addr_any.  this is typically what most transports
+     * Think (INADDR_ANY && IN6ADDR_ANY). This is typically what most transports
      * want to do.
      */
     bool m_any[N_TRANSPORTS];
@@ -1591,7 +1574,9 @@ class IpNameServiceImpl : public qcc::Thread {
     qcc::SocketFd m_ipv6QuietSockFd;
 
     qcc::SocketFd m_ipv4UnicastSockFd;
+    qcc::SocketFd m_ipv6UnicastSockFd;
     qcc::Event* m_unicastEvent;
+    qcc::Event* m_unicast6Event;
 
     std::list<BurstResponseHeader> m_burstQueue;
 
