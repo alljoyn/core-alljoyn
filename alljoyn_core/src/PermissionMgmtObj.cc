@@ -2169,12 +2169,6 @@ Exit:
 
 bool PermissionMgmtObj::IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<ECCPublicKey> peerIssuers)
 {
-    /*
-     * A membership cert is considered relevant to this exchange if any certificate in the membership chain was issued by an issuer
-     * in the peer's identity cert chain.  We have only public keys to compare from the identity cert chain, the certificates themselves
-     * are not persisted as auth metadata.
-     */
-
     QStatus status;
     CertificateX509 cert;
 
@@ -2182,36 +2176,37 @@ bool PermissionMgmtObj::IsRelevantMembershipCert(std::vector<MsgArg*>& membershi
         return false;
     }
 
-    /* Compare membership chain to peerIssuers. */
     for (size_t i = 0; i < membershipChain.size(); i++) {
         status = LoadX509CertFromMsgArg(membershipChain[i][0], cert);
         if (status != ER_OK) {
-            QCC_DbgPrintf(("PermissionMgmtObj::IsRelevantMembershipCert failed to load certificate in membership chain"));
+            QCC_LogError(status, ("PermissionMgmtObj::IsRelevantMembershipCert failed to load certificate in membership chain"));
             return false;
         }
 
+        /* If the membership cert chain is issued by one of our trust anchors, then the peer has to be in our
+         * local security domain: its identity cert chain must be issued by a trust anchor, although not necessarily
+         * the same one.
+         *
+         * If the membership cert chain is not issued by a trust anchor, it's from a foreign security manager; only send
+         * if the peer's identity cert chain comes from the same issuer. We don't know the other trust anchors for the
+         * foreign security domain, so foreign security managers will have to issue certificates from the same issuer as
+         * any apps we're allowed to interact with.
+         */
+
+        TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, cert.GetAuthorityKeyId());
+        bool certIssuedByTrustAnchor = !anchors.empty();
+
         for (size_t j = 0; j < peerIssuers.size(); j++) {
-            if (cert.IsSubjectPublicKeyEqual(&(peerIssuers[j]))) {
+            /* If anchors is non-empty, this membership cert was issued by one of our trust anchors. See
+             * if this cert in the peer's chain is issued by a trust anchor.
+             */
+            if (certIssuedByTrustAnchor && IsTrustAnchor(&peerIssuers[j])) {
+                /* Peer's identity cert chain is issued by a trust anchor. Send. */
                 return true;
             }
-        }
-    }
 
-    /* Check if this chain ends in a root, if so we're done, if not, check the installed roots. */
-    if (cert.IsIssuerOf(cert)) {
-        return false;
-    }
-
-    TrustAnchorList anchors = LocateTrustAnchor(trustAnchors, cert.GetAuthorityKeyId());
-
-    if (anchors.size() == 0) {
-        QCC_DbgPrintf(("PermissionMgmtObj::IsRelevantMembershipCert: Membership certificate present, but no trust anchors are installed"));
-        return false;
-    }
-
-    for (TrustAnchorList::const_iterator it = anchors.begin(); it != anchors.end(); it++) {
-        for (size_t j = 0; j < peerIssuers.size(); j++) {
-            if (*(*it)->keyInfo.GetPublicKey() == peerIssuers[j]) {
+            /* Otherwise it may be a foreign membership cert. Send if the chains share issuers. */
+            if (cert.IsSubjectPublicKeyEqual(&(peerIssuers[j]))) {
                 return true;
             }
         }
