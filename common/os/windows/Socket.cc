@@ -213,17 +213,17 @@ QStatus Connect(SocketFd sockfd, const char* pathName)
 }
 
 
-QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
+QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort, uint32_t scopeId)
 {
     QStatus status = ER_OK;
     int ret;
     SOCKADDR_STORAGE addr;
     socklen_t addrLen = sizeof(addr);
 
-    QCC_DbgTrace(("Bind(sockfd = %d, localAddr = %s, localPort = %hu)",
-                  sockfd, localAddr.ToString().c_str(), localPort));
+    QCC_DbgTrace(("Bind(sockfd = %d, localAddr = %s, localPort = %hu, scopeId = %u)",
+                  sockfd, localAddr.ToString().c_str(), localPort, scopeId));
 
-    MakeSockAddr(localAddr, localPort, &addr, addrLen);
+    MakeSockAddr(localAddr, localPort, scopeId, &addr, addrLen);
     ret = bind(static_cast<SOCKET>(sockfd), reinterpret_cast<struct sockaddr*>(&addr), addrLen);
     if (ret == SOCKET_ERROR) {
         status = (WSAGetLastError() == WSAEADDRNOTAVAIL) ? ER_SOCKET_BIND_ERROR : ER_OS_ERROR;
@@ -232,6 +232,10 @@ QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
     return status;
 }
 
+QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
+{
+    return Bind(sockfd, localAddr, localPort, 0);
+}
 
 QStatus Bind(SocketFd sockfd, const char* pathName)
 {
