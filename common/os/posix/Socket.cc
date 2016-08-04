@@ -325,17 +325,17 @@ QStatus Connect(SocketFd sockfd, const char* pathName)
 }
 
 
-QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
+QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort, uint32_t scopeId)
 {
     QStatus status = ER_OK;
     int ret;
     struct sockaddr_storage addr;
     socklen_t addrLen = sizeof(addr);
 
-    QCC_DbgTrace(("Bind(sockfd = %d, localAddr = %s, localPort = %hu)",
-                  sockfd, localAddr.ToString().c_str(), localPort));
+    QCC_DbgTrace(("Bind(sockfd = %d, localAddr = %s, localPort = %hu, scopeId = %d)",
+                  sockfd, localAddr.ToString().c_str(), localPort, scopeId));
 
-    status = MakeSockAddr(localAddr, localPort, &addr, addrLen);
+    status = MakeSockAddr(localAddr, localPort, scopeId, &addr, addrLen);
     if (status != ER_OK) {
         return status;
     }
@@ -349,7 +349,10 @@ QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
     return status;
 }
 
-
+QStatus Bind(SocketFd sockfd, const IPAddress& localAddr, uint16_t localPort)
+{
+    return Bind(sockfd, localAddr, localPort, 0);
+}
 QStatus Bind(SocketFd sockfd, const char* pathName)
 {
     QStatus status = ER_OK;
