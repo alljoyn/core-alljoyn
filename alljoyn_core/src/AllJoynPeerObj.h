@@ -316,6 +316,16 @@ class AllJoynPeerObj : public BusObject, public BusListener, public qcc::AlarmLi
     void KeyAuthentication(const InterfaceDescription::Member* member, Message& msg);
 
     /**
+     * Run the authentication protocol to one peer. See AuthenticatePeer()
+     *
+     * @param msgType  Message type we're trying to send.
+     * @param busName  This identifies the peer
+     * @param wait     Wait until the authentication is done
+     * @param msg      An optional hint for sending manifests
+     */
+    QStatus AuthenticatePeerInternal(AllJoynMessageType msgType, qcc::String& busName, bool wait, Message* msg);
+
+    /**
      * ExchangeSuites method call handler
      *
      * @param member  The member that was called
