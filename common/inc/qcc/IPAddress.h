@@ -132,6 +132,49 @@ class IPAddress {
     bool IsIPv6(void) const { return addrSize == IPv6_SIZE; }
 
     /**
+     * Test if IP address is an IPv6 link-local address by comparing
+     * its first 64 bits with link-local address prefix (fe80::/64).
+     *
+     * @return  "true" if IP address is a IPv6 link local address.
+     */
+    bool IsIPv6LinkLocal(void) const
+    {
+        if (addrSize != IPv6_SIZE) {
+            return false;
+        }
+        if ((addr[0] != 0xfe) || (addr[1] != 0x80)) {
+            return false;
+        }
+        for (size_t i = 2; i < 8; ++i) {
+            if (addr[i] != 0x00) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Test if two IPv6 addresses belong to the same network by comparing
+     * their most significant 64 bits (routing prefix and subnet id).
+     *
+     * @param other     The other IPAddress to compare against.
+     *
+     * @return  "true" if two IPv6 addresses belong to the same network.
+     */
+    bool IsSameIPv6Network(const IPAddress& other) const
+    {
+        if ((addrSize != IPv6_SIZE) || (other.addrSize != IPv6_SIZE)) {
+            return false;
+        }
+        for (size_t i = 0; i < (IPv6_SIZE / 2); ++i) {
+            if (addr[i] != other.addr[i]) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
      * Test if IP address is a loopback address.
      *
      * @return  "true" if IP address is a loopback.
