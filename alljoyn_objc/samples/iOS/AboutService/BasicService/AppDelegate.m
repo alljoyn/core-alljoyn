@@ -23,7 +23,7 @@
     // Override point for customization after application launch.
     return YES;
 }
-							
+
 - (void)applicationWillResignActive:(UIApplication *)application
 {
     // Sent when the application is about to move from active to inactive state. This can occur for certain types of temporary interruptions (such as an incoming phone call or SMS message) or when the user quits the application and it begins the transition to the background state.
@@ -32,8 +32,28 @@
 
 - (void)applicationDidEnterBackground:(UIApplication *)application
 {
-    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later. 
+    // Use this method to release shared resources, save user data, invalidate timers, and store enough application state information to restore your application to its current state in case it is terminated later.
     // If your application supports background execution, this method is called instead of applicationWillTerminate: when the user quits.
+    __block UIBackgroundTaskIdentifier background_task;
+    
+    background_task = [application beginBackgroundTaskWithExpirationHandler:^ {
+        [application endBackgroundTask: background_task];
+        background_task = UIBackgroundTaskInvalid;
+    }];
+    
+    dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+        
+        while(TRUE)
+        {
+            //backgroundTimeRemaining time does not go down.
+            
+            NSLog(@"Background time Remaining: %f",[[UIApplication sharedApplication] backgroundTimeRemaining]);
+            [NSThread sleepForTimeInterval:1]; //wait for 1 sec
+        }
+        
+        [application endBackgroundTask: background_task];
+        background_task = UIBackgroundTaskInvalid;
+    });
 }
 
 - (void)applicationWillEnterForeground:(UIApplication *)application

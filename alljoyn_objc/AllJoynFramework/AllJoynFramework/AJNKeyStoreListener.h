@@ -72,5 +72,34 @@
  */
 - (QStatus)putKeys:(AJNHandle) keyStore source:(NSString *)source password:(NSString *)password;
 
+/**
+ * Request to acquire exclusive lock (e.g., file lock) on the keyStore.
+ *
+ * @remark Best practice is to call `AcquireExclusiveLock(MUTEX_CONTEXT)`
+ *
+ * @see MUTEX_CONTEXT
+ *
+ * @param file the name of the file this lock was called from
+ * @param line the line number of the file this lock was called from
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - An error status otherwise
+ */
+- (QStatus)acquireExclusiveLock:(NSString*)file line:(uint32_t)line;
+
+/**
+ * Release the exclusive lock (e.g., file lock) of the keyStore.
+ *
+ * @remark Best practice is to call `ReleaseExclusiveLock(MUTEX_CONTEXT)`
+ *
+ * @see MUTEX_CONTEXT
+ *
+ * @param file the name of the file this lock was called from
+ * @param line the line number of the file this lock was called from
+ *
+ */
+- (QStatus)releaseExclusiveLock:(NSString*)file line:(uint32_t)line;
+
 
 @end

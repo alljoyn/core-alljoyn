@@ -383,7 +383,7 @@ QStatus PingObjectImpl::Sendmy_signal( const char* destination, SessionId sessio
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.alljoyn_test"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.alljoyn_test" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
         
     
         // add the methods to the interface description
@@ -424,25 +424,25 @@ QStatus PingObjectImpl::Sendmy_signal( const char* destination, SessionId sessio
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.alljoyn_test.values"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.alljoyn_test.values" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
         
     
         // add the properties to the interface description
         //
     
-        status = [interfaceDescription addPropertyWithName:@"int_val" signature:@"i"];
+        status = [interfaceDescription addPropertyWithName:@"int_val" signature:@"i" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  int_val" userInfo:nil];
         }
 
-        status = [interfaceDescription addPropertyWithName:@"ro_str" signature:@"s"];
+        status = [interfaceDescription addPropertyWithName:@"ro_str" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  ro_str" userInfo:nil];
         }
 
-        status = [interfaceDescription addPropertyWithName:@"str_val" signature:@"s"];
+        status = [interfaceDescription addPropertyWithName:@"str_val" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  str_val" userInfo:nil];

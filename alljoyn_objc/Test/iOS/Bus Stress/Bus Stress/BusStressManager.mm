@@ -22,6 +22,8 @@
 #import "BasicObject.h"
 
 static BOOL s_stopStressFlag;
+static dispatch_queue_t queue;
+static dispatch_group_t group;
 
 @interface AJNBusAttachment(Private)
 
@@ -335,8 +337,9 @@ static BOOL s_stopStressFlag;
 
 + (void)runStress:(NSInteger)iterations threadCount:(NSInteger)threadCount deleteBusFlag:(BOOL)shouldDeleteBusAttachment stopThreadsFlag:(BOOL)stopThreads operationMode:(BusStressManagerOperationMode)mode delegate:(id<BusStressManagerDelegate>)delegate
 {
-    dispatch_queue_t queue = dispatch_queue_create("bastress", NULL);
-    dispatch_async(queue, ^{
+    queue = dispatch_queue_create("bastress", NULL);
+    group = dispatch_group_create();
+    dispatch_group_async(group, queue, ^{
 
         [delegate didCompleteIteration:0 totalIterations:iterations];
         for (NSInteger i = 0; i < iterations; i++) {
@@ -392,6 +395,7 @@ static BOOL s_stopStressFlag;
     @synchronized(self) {
         s_stopStressFlag = YES;
     }
+    dispatch_group_wait(group, DISPATCH_TIME_FOREVER);
 }
 
 @end

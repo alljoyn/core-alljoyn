@@ -77,7 +77,7 @@ TEST(InterfaceDescriptionTest, addmember) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -94,7 +94,7 @@ TEST(InterfaceDescriptionTest, getmember) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -139,7 +139,7 @@ TEST(InterfaceDescriptionTest, getmembers) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -193,7 +193,7 @@ TEST(InterfaceDescriptionTest, hasmembers) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -222,7 +222,7 @@ TEST(InterfaceDescriptionTest, activate) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -242,7 +242,7 @@ TEST(InterfaceDescriptionTest, introspect) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -307,7 +307,7 @@ TEST(InterfaceDescriptionTest, issecure) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface_secure(bus, "org.alljoyn.test.InterfaceDescription", &testIntf, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -326,7 +326,7 @@ TEST(InterfaceDescriptionTest, addproperty) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -357,7 +357,7 @@ TEST(InterfaceDescriptionTest, hasproperty) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -380,7 +380,7 @@ TEST(InterfaceDescriptionTest, hasproperties) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -422,7 +422,7 @@ TEST(InterfaceDescriptionTest, getname) {
     QStatus status;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -436,7 +436,7 @@ TEST(InterfaceDescriptionTest, addmethod) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -465,7 +465,7 @@ TEST(InterfaceDescriptionTest, getmethod) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -506,7 +506,7 @@ TEST(InterfaceDescriptionTest, addsignal) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -533,7 +533,7 @@ TEST(InterfaceDescriptionTest, getsignal) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -572,7 +572,7 @@ TEST(InterfaceDescriptionTest, getproperty) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -607,7 +607,7 @@ TEST(InterfaceDescriptionTest, getproperties) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -661,7 +661,7 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_member_eql)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -693,7 +693,7 @@ TEST(InterfaceDescriptionTest, alljoyn_interfacedescription_property_eql)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -723,7 +723,7 @@ TEST(InterfaceDescriptionTest, interface_annotations)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -854,7 +854,7 @@ TEST(InterfaceDescriptionTest, method_annotations)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1050,7 +1050,7 @@ TEST(InterfaceDescriptionTest, signal_annotations)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1116,7 +1116,7 @@ TEST(InterfaceDescriptionTest, property_annotations)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1306,7 +1306,7 @@ TEST(InterfaceDescriptionTest, member_argument_annotations)
     char argValue2[] = "in_value 2";
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_NE(nullptr, bus);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1526,7 +1526,7 @@ TEST(InterfaceDescriptionTest, annotation_flags)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1587,7 +1587,7 @@ TEST(InterfaceDescriptionTest, multiple_annotations)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_TRUE(bus != NULL);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1658,7 +1658,7 @@ TEST(InterfaceDescriptionTest, description_language)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_NE(nullptr, bus);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1684,7 +1684,7 @@ TEST(InterfaceDescriptionTest, member_property_arg_description)
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_NE(nullptr, bus);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1720,7 +1720,7 @@ TEST(InterfaceDescriptionTest, description_translator_en_en) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_NE(nullptr, bus);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1773,7 +1773,7 @@ TEST(InterfaceDescriptionTest, description_translator_en_null) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_NE(nullptr, bus);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);
@@ -1834,7 +1834,7 @@ TEST(InterfaceDescriptionTest, description_translator_en_de) {
     QStatus status = ER_OK;
     alljoyn_busattachment bus = NULL;
     bus = alljoyn_busattachment_create("InterfaceDescriptionTest", QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("InterfaceDescriptionTest"));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("InterfaceDescriptionTest"));
     ASSERT_NE(nullptr, bus);
     alljoyn_interfacedescription testIntf = NULL;
     status = alljoyn_busattachment_createinterface(bus, "org.alljoyn.test.InterfaceDescription", &testIntf);

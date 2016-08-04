@@ -14,7 +14,7 @@
 
 Import('config_env')
 
-classes = config_env.Java(config_env.Dir('./classes').srcnode(), source = ['org'])
+classes = config_env.Java('$OBJDIR_CONFIG/java/classes', source = ['org'])
 if config_env['dep_jars']:
     config_env.Depends(classes, config_env['dep_jars'])
 jars = config_env.Jar(target = 'alljoyn_config', source = classes)

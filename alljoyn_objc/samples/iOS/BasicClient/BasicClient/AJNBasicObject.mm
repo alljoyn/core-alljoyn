@@ -176,7 +176,7 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
         //
         // create an interface description
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample" enableSecurity:NO];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     
         // add the methods to the interface description

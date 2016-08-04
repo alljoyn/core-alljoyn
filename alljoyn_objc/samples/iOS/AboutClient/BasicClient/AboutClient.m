@@ -101,7 +101,7 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     
     // create an interface description
     //
-    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"com.example.about.feature.interface.sample" enableSecurity:NO];
+    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"com.example.about.feature.interface.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
     
     // add the methods to the interface description
     //
@@ -158,7 +158,7 @@ static const AJNSessionPort kAboutClientServicePort = 900;
     
     [self.receivedAnnounce unlock];
 
-    [self.bus disconnectWithArguments:@"null"];
+    [self.bus disconnect];
     [self.bus stop];
     
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
