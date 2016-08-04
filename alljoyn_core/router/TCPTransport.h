@@ -374,7 +374,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         qcc::String m_requestParam;
         bool m_requestParamOpt;
         TransportMask m_requestTransportMask;
-        std::map<qcc::String, qcc::IPAddress> ifMap;
+        std::multimap<qcc::String, qcc::IPAddress> ifMap;
     };
 
     qcc::Mutex m_listenRequestsLock;                               /**< Mutex that protects m_listenRequests */
@@ -483,7 +483,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DoStopListen(qcc::String& listenSpec);
 
-    void QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAddress>&);
+    void QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>&);
 
     /**
      * @internal
@@ -525,7 +525,7 @@ class TCPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     class NetworkEventCallback {
       public:
         NetworkEventCallback(TCPTransport& transport) : m_transport(transport) { }
-        void Handler(const std::map<qcc::String, qcc::IPAddress>&);
+        void Handler(const std::multimap<qcc::String, qcc::IPAddress>&);
       private:
         /* Private assigment operator - does nothing */
         NetworkEventCallback operator=(const NetworkEventCallback&);
