@@ -132,6 +132,19 @@ class IPAddress {
     bool IsIPv6(void) const { return addrSize == IPv6_SIZE; }
 
     /**
+     * Test if IP address is a IPv6 link local address.
+     *
+     * @return  "true" if IP address is a IPv6 link local address.
+     */
+    bool IsIPv6LinkLocal(void) const
+    {
+        if (addrSize != IPv6_SIZE) {
+            return false;
+        }
+        return ((addr[0] == 0xfe) && (addr[1] == 0x80));
+    }
+
+    /**
      * Test if IP address is a loopback address.
      *
      * @return  "true" if IP address is a loopback.
