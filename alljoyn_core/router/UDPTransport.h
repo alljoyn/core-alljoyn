@@ -760,12 +760,13 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @param[out] socketFd The assigned descriptor which will identify the socket.
      * @param[in] addr The IP address the socket will be bound to.
      * @param[in] port The IP port the socket will be bound to.
+     * @param[in] scopeId The scope of IPv6 address.
      * @return
      *      - ER_OK if socket creation and binding succeeded.
      *      - an error status otherwise. Some configuration failures are not treated as errors
      *        and will not make the method abort with an error status.
      */
-    QStatus SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port);
+    QStatus SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port, uint32_t scopeId);
 
     /**
      * @brief Returns a given socket's accepting status.

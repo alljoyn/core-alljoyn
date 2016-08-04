@@ -63,7 +63,7 @@ class IpNameServiceListener {
  * singleton for AllJoyn.
  *
  * The IpNameService is implemented as a Meyers singleton, so a static method is
- * requred to get a reference to the sinle instance of the singleton.  The
+ * required to get a reference to the sinle instance of the singleton. The
  * underlying object will be constructed the first time this method is called.
  *
  * We expect that there may be zero to N transports running under control of a
