@@ -1050,13 +1050,100 @@ void AllJoynPeerObj::ForceAuthentication(const qcc::String& busName)
 #define AUTH_TIMEOUT      120000
 #define DEFAULT_TIMEOUT   10000
 
+
 QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::String& busName, bool wait, Message* msg)
 {
-    QCC_ASSERT(bus);
-    QStatus status;
+    /*
+     * If we find that the peer has been successfully authenticated and there are messages in the
+     * queue awaiting delivery then we flush them.  If the authentication failed then the messages
+     * will get error returns where appropriate.
+     * 
+     * The msg is only used as a hint for sending manifests.
+     */
+    qcc::String uniqueName = busName;           // this may be updated by AuthenticatePeerInternal
+
+    QStatus authStatus = AuthenticatePeerInternal(msgType, uniqueName, wait, msg);
+
+    if (authStatus == ER_WOULDBLOCK) {
+        // There is another authentication going on and wait = false. Do nothing.
+        return ER_OK;
+    }
+
     PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
-    PeerState peerState = peerStateTable->GetPeerState(busName);
-    qcc::String mech;
+
+    if (!peerStateTable->GetPeerState(uniqueName)->IsSecure()) {
+        // We failed to authenticate.
+        return authStatus;
+    }
+
+    /*
+     * Check each message that is waiting for an authentication to complete
+     * to see if this is the authentication the message was waiting for.
+     */
+    lock.Lock(MUTEX_CONTEXT);
+
+    for (auto iter = msgsPendingAuth.begin(); iter != msgsPendingAuth.end(); ) {
+        Message thisMsg = *iter;
+
+        if (peerStateTable->IsAlias(thisMsg->GetDestination(), uniqueName)) {
+            LocalEndpoint lep = bus->GetInternal().GetLocalEndpoint();
+
+            if (authStatus != ER_OK) {
+                // If the failed message was a method call then push an error response.
+                if (thisMsg->GetType() == MESSAGE_METHOD_CALL) {
+                    Message reply(*bus);
+                    reply->ErrorMsg(authStatus, thisMsg->GetCallSerial());
+                    lep->PushMessage(reply);
+                }
+            } else {
+                // The timer was stopped when the message was enqueued.
+                if (thisMsg->GetType() == MESSAGE_METHOD_CALL) {
+                    lep->ResumeReplyHandlerTimeout(thisMsg);
+                }
+
+                BusEndpoint busEndpoint = BusEndpoint::cast(lep);
+
+                auto pushStatus = bus->GetInternal().GetRouter().PushMessage(thisMsg, busEndpoint);
+
+                if (pushStatus == ER_PERMISSION_DENIED) {
+                    // We couldn't push it. Report an error.
+                    // (The original code had "req->msg" in place of thisMsg. I think that this was a bug).
+                    if (thisMsg->GetType() == MESSAGE_METHOD_CALL) {
+                        Message reply(*bus);
+                        reply->ErrorMsg(pushStatus, thisMsg->GetCallSerial());
+                        lep->PushMessage(reply);
+                    }
+                }
+            }
+
+            iter = msgsPendingAuth.erase(iter);
+
+        } else {
+            // The message is not for the bus we have just authenticated
+            iter++;
+        }
+    }
+
+    lock.Unlock(MUTEX_CONTEXT);
+    return authStatus;
+}
+
+
+
+QStatus AllJoynPeerObj::AuthenticatePeerInternal(AllJoynMessageType msgType, qcc::String& busName, bool wait, Message* msg)
+{
+    /*
+     * msg is optional.  It is used to provide information about whether to send manifests.  The
+     * busName will be replaced with the unique bus name if we discover it.
+     */
+
+    QCC_ASSERT(bus);
+
+    QStatus         status;
+    PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
+    PeerState       peerState      = peerStateTable->GetPeerState(busName);
+    qcc::String     mech;
+
     const InterfaceDescription* ifc = bus->GetInterface(org::alljoyn::Bus::Peer::Authentication::InterfaceName);
     if (ifc == NULL) {
         return ER_BUS_NO_SUCH_INTERFACE;
@@ -1151,6 +1238,10 @@ QStatus AllJoynPeerObj::AuthenticatePeer(AllJoynMessageType msgType, const qcc::
      */
     peerState = peerStateTable->GetPeerState(sender, busName);
     peerState->SetGuidAndAuthVersion(remotePeerGuid, authVersion);
+    
+    // Tell the caller the canonical bus name
+    busName = sender;
+
     /*
      * We can now return if the peer is authenticated.
      */
@@ -1639,54 +1730,12 @@ void AllJoynPeerObj::AlarmTriggered(const Alarm& alarm, QStatus reason)
         if (req->msg->GetType() == MESSAGE_METHOD_CALL) {
             bus->GetInternal().GetLocalEndpoint()->PauseReplyHandlerTimeout(req->msg);
         }
+
         status = AuthenticatePeer(req->msg->GetType(), req->msg->GetDestination(), false, &req->msg);
-        if (status != ER_WOULDBLOCK) {
-            PeerStateTable* peerStateTable = bus->GetInternal().GetPeerStateTable();
-            /*
-             * Check each message that is queued waiting for an authentication to complete
-             * to see if this is the authentication the message was waiting for.
-             */
-            lock.Lock(MUTEX_CONTEXT);
-            std::deque<Message>::iterator iter = msgsPendingAuth.begin();
-            while (iter != msgsPendingAuth.end()) {
-                Message msg = *iter;
-                if (peerStateTable->IsAlias(msg->GetDestination(), req->msg->GetDestination())) {
-                    LocalEndpoint lep =  bus->GetInternal().GetLocalEndpoint();
-                    if (status != ER_OK) {
-                        /*
-                         * If the failed message was a method call push an error response.
-                         */
-                        if (msg->GetType() == MESSAGE_METHOD_CALL) {
-                            Message reply(*bus);
-                            reply->ErrorMsg(status, msg->GetCallSerial());
-                            bus->GetInternal().GetLocalEndpoint()->PushMessage(reply);
-                        }
-                    } else {
-                        if (msg->GetType() == MESSAGE_METHOD_CALL) {
-                            bus->GetInternal().GetLocalEndpoint()->ResumeReplyHandlerTimeout(msg);
-                        }
-                        BusEndpoint busEndpoint = BusEndpoint::cast(bus->GetInternal().GetLocalEndpoint());
-                        status = bus->GetInternal().GetRouter().PushMessage(msg, busEndpoint);
-                        if (status == ER_PERMISSION_DENIED) {
-                            if (req->msg->GetType() == MESSAGE_METHOD_CALL) {
-                                Message reply(*bus);
-                                reply->ErrorMsg(status, req->msg->GetCallSerial());
-                                bus->GetInternal().GetLocalEndpoint()->PushMessage(reply);
-                            }
-                        }
-                    }
-                    iter = msgsPendingAuth.erase(iter);
-                } else {
-                    iter++;
-                }
-            }
-            lock.Unlock(MUTEX_CONTEXT);
-            /*
-             * Report a single error for the message the triggered the authentication
-             */
-            if (status != ER_OK) {
-                peerAuthListener.SecurityViolation(status, req->msg);
-            }
+
+        if (status != ER_OK) {
+            // Report a single error for the message that the triggered the authentication
+            peerAuthListener.SecurityViolation(status, req->msg);
         }
         break;
 
