@@ -97,7 +97,7 @@ static AJ_PCSTR s_MembershipCertName = "TestApp";
 static void BasicBusSetup(alljoyn_busattachment* bus, AJ_PCSTR busName, InMemoryKeyStoreListener* keyStoreListener)
 {
     *bus = alljoyn_busattachment_create(busName, QCC_FALSE);
-    EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest(busName));
+    EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore(busName));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_registerkeystorelistener(*bus, (alljoyn_keystorelistener)keyStoreListener));
     ASSERT_EQ(ER_OK, alljoyn_busattachment_start(*bus));
 }

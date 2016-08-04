@@ -80,6 +80,11 @@
     return [NSString stringWithCString:self.interfaceDescription->Introspect(2).c_str() encoding:NSUTF8StringEncoding];
 }
 
+- (NSString *)language
+{
+    return [NSString stringWithCString:self.interfaceDescription->GetDescriptionLanguage() encoding:NSUTF8StringEncoding];
+}
+
 - (BOOL)isSecure
 {
     return self.interfaceDescription->IsSecure();
@@ -90,9 +95,29 @@
     return self.interfaceDescription->HasProperties() ? YES : NO;
 }
 
+- (BOOL)hasCacheableProperties
+{
+    return self.interfaceDescription->HasCacheableProperties() ? YES : NO;
+}
+
+- (BOOL)hasDescription
+{
+    return self.interfaceDescription->HasDescription() ? YES : NO;
+}
+
 - (AJNInterfaceSecurityPolicy) securityPolicy
 {
     return (AJNInterfaceSecurityPolicy)self.interfaceDescription->GetSecurityPolicy();
+}
+
+- (QStatus)addMember:(AJNMessageType)type name:(NSString *)name inputSig:(NSString *)inputSig outSig:(NSString *)outSig argNames:(NSString *)argNames
+{
+    return self.interfaceDescription->AddMember((ajn::AllJoynMessageType)type, [name UTF8String], [inputSig UTF8String], [outSig UTF8String], [argNames UTF8String]);
+}
+
+- (QStatus)addMember:(AJNMessageType)type name:(NSString *)name inputSig:(NSString *)inputSig outSig:(NSString *)outSig argNames:(NSString *)argNames annotation:(uint8_t)annotation accessPerms:(NSString *)accessPerms
+{
+    return self.interfaceDescription->AddMember((ajn::AllJoynMessageType)type, [name UTF8String], [inputSig UTF8String], [outSig UTF8String], [argNames UTF8String], annotation, [accessPerms UTF8String]);
 }
 
 - (QStatus)addMethodWithName:(NSString*)methodName inputSignature:(NSString*)inputSignature outputSignature:(NSString*)outputSignature argumentNames:(NSArray*)arguments annotation:(AJNInterfaceAnnotationFlags)annotation accessPermissions:(NSString*)accessPermissions
@@ -122,6 +147,18 @@
     return [[AJNInterfaceMember alloc] initWithHandle:(AJNHandle)self.interfaceDescription->GetMethod([methodName UTF8String])];
 }
 
+- (QStatus) addSignalWithName:(NSString*)name
+{
+    QStatus result = ER_OK;
+    if (self.interfaceDescription) {
+        result = self.interfaceDescription->AddSignal([name UTF8String], "", "", 0);
+        if (result != ER_OK && result != ER_BUS_MEMBER_ALREADY_EXISTS) {
+            NSLog(@"ERROR: Failed to create signal named %@. %s", name, QCC_StatusText(result) );
+        }
+    }
+    return result;
+}
+
 - (QStatus) addSignalWithName:(NSString *)name inputSignature:(NSString *)inputSignature argumentNames:(NSArray *)arguments
 {
     return [self addSignalWithName:name inputSignature:inputSignature argumentNames:arguments annotation:0 accessPermissions:nil];
@@ -141,17 +178,12 @@
             NSLog(@"ERROR: Failed to create signal named %@. %s", name, QCC_StatusText(result) );
         }
     }
-    return result;    
+    return result;
 }
 
 - (AJNInterfaceMember*)signalWithName:(NSString *)signalName
 {
-    return [[AJNInterfaceMember alloc] initWithHandle:(AJNHandle)self.interfaceDescription->GetSignal([signalName UTF8String])];    
-}
-
-- (QStatus)addPropertyWithName:(NSString*)name signature:(NSString*)signature
-{
-    return [self addPropertyWithName:name signature:signature accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
+    return [[AJNInterfaceMember alloc] initWithHandle:(AJNHandle)self.interfaceDescription->GetSignal([signalName UTF8String])];
 }
 
 - (QStatus)addPropertyWithName:(NSString*)name signature:(NSString*)signature accessPermissions:(AJNInterfacePropertyAccessPermissionsFlags)permissions
@@ -168,7 +200,12 @@
 
 - (AJNInterfaceProperty*)propertyWithName:(NSString *)propertyName
 {
-    return [[AJNInterfaceProperty alloc] initWithHandle:(AJNHandle)self.interfaceDescription->GetProperty([propertyName UTF8String])];        
+    return [[AJNInterfaceProperty alloc] initWithHandle:(AJNHandle)self.interfaceDescription->GetProperty([propertyName UTF8String])];
+}
+
+- (BOOL)hasPropertyWithName:(NSString *)propertyName
+{
+    return self.interfaceDescription->HasProperty([propertyName UTF8String]);
 }
 
 - (AJNInterfaceMember*)memberWithName:(NSString*)name
@@ -208,7 +245,7 @@
 }
 
 
-- (NSString *)annotationWithName:(NSString *)annotationName forMemberWithName:(NSString *)memberName
+- (NSString *)memberAnnotationWithName:(NSString *)annotationName forMemberWithName:(NSString *)memberName
 {
     NSString *annotationValue;
     qcc::String value;
@@ -220,7 +257,7 @@
     return annotationValue;
 }
 
-- (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forMemberWithName:(NSString *)memberName
+- (QStatus)addMemberAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forMemberWithName:(NSString *)memberName
 {
     QStatus status;
     qcc::String name = [annotationName UTF8String];
@@ -241,13 +278,32 @@
     return annotationValue;
 }
 
-- (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forPropertyWithName:(NSString *)propertyName
+- (QStatus)addPropertyAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forPropertyWithName:(NSString *)propertyName
 {
     QStatus status;
     qcc::String name = [annotationName UTF8String];
     qcc::String value = [annotationValue UTF8String];
     status = self.interfaceDescription->AddPropertyAnnotation([propertyName UTF8String], name, value);
     return status;
+}
+
+- (QStatus)addArgAnnotationWithName:(NSString *)member arg:(NSString *)arg name:(NSString *)name value:(NSString *)value
+{
+    qcc::String annotationName = [name UTF8String];
+    qcc::String annotationValue = [value UTF8String];
+    return self.interfaceDescription->AddArgAnnotation([member UTF8String], [arg UTF8String], annotationName, annotationValue);
+}
+
+- (NSString *)getArgAnnotationWithName:(NSString *)member arg:(NSString *)arg name:(NSString *)name
+{
+    NSString *argAnnotation;
+    qcc::String value;
+    qcc::String annotationName = [name UTF8String];
+    bool result = self.interfaceDescription->GetArgAnnotation([member UTF8String], [arg UTF8String], annotationName, value);
+    if (result) {
+        argAnnotation = [NSString stringWithCString:value.c_str() encoding:NSUTF8StringEncoding];
+    }
+    return argAnnotation;
 }
 
 - (void)setDescriptionLanguage:(NSString *)language
@@ -261,6 +317,11 @@
     if(self.interfaceDescription){
         self.interfaceDescription->SetDescription([description UTF8String]);
     }
+}
+
+- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member
+{
+    return self.interfaceDescription->SetMemberDescription([member UTF8String], [description UTF8String]);
 }
 
 - (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless

@@ -70,6 +70,7 @@
     
     // allocate the client bus controller and set bus properties
     //
+    
     self.serviceController = [[AJNServiceController alloc] init];
     self.serviceController.trafficType = kAJNTrafficMessages;
     self.serviceController.proximityOptions = kAJNProximityAny;

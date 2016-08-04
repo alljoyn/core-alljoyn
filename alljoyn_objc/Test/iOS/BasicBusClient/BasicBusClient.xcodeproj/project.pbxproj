@@ -404,6 +404,11 @@
 			attributes = {
 				LastUpgradeCheck = 0450;
 				ORGANIZATIONNAME = "AllSeen Alliance.";
+				TargetAttributes = {
+					AC85B987162CB5580013BCF2 = {
+						DevelopmentTeam = LHK5UCWG92;
+					};
+				};
 			};
 			buildConfigurationList = AC85B982162CB5580013BCF2 /* Build configuration list for PBXProject "BasicBusClient" */;
 			compatibilityVersion = "Xcode 3.2";
@@ -586,21 +591,30 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD)";
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					arm,
+				);
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicBusClient/BasicBusClient-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "BasicBusClient/BasicBusClient-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -611,7 +625,10 @@
 					"-lalljoyn",
 					"-lajrouter",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.BasicBusClient.jorge;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
+				VALID_ARCHS = "arm64 armv7 armv7s arm";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Debug;
@@ -620,21 +637,30 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_STANDARD)";
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					arm,
+				);
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				ENABLE_BITCODE = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicBusClient/BasicBusClient-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/inc/\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "BasicBusClient/BasicBusClient-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
-					"\"$(SRCROOT)/../../../../build/darwin/arm/$(PLATFORM_NAME)/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
 				);
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
@@ -646,7 +672,10 @@
 					"-lalljoyn",
 					"-lajrouter",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.BasicBusClient.jorge;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE = "";
+				VALID_ARCHS = "arm64 armv7 armv7s arm";
 				WRAPPER_EXTENSION = app;
 			};
 			name = Release;

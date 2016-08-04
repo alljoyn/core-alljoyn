@@ -1898,13 +1898,13 @@ static const uint8_t ICON_BYTE = 0x11;
     [gDefaultAboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
     
     AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "14.12"];
+    [ajSoftwareVersion setValue:@"s", "00.00.01"];
     [ajSoftwareVersion stabilize];
     [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
     [gDefaultAboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
     
     AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "14.12"];
+    [hwSoftwareVersion setValue:@"s", "00.00.01"];
     [hwSoftwareVersion stabilize];
     [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
     [gDefaultAboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
@@ -1998,13 +1998,13 @@ static const uint8_t ICON_BYTE = 0x11;
     [gDefaultAboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
 
     AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "14.12"];
+    [ajSoftwareVersion setValue:@"s", "00.00.01"];
     [ajSoftwareVersion stabilize];
     [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
     [gDefaultAboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
 
     AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "14.12"];
+    [hwSoftwareVersion setValue:@"s", "00.00.01"];
     [hwSoftwareVersion stabilize];
     [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
     [gDefaultAboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];

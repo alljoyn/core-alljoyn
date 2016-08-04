@@ -53,7 +53,6 @@
 		ACB3B80516691CCE0082721B /* ChatViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = ACB3B80416691CCE0082721B /* ChatViewController.m */; };
 		ACB3B80B166922A40082721B /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB3B80A166922A40082721B /* SystemConfiguration.framework */; };
 		ACB3B80D166922AA0082721B /* libstdc++.6.0.9.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB3B80C166922AA0082721B /* libstdc++.6.0.9.dylib */; };
-		ACB3B80F166922B50082721B /* libcrypto.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB3B80E166922B50082721B /* libcrypto.0.9.8.dylib */; };
 		ACB632101668339700231FA3 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = ACB6320F1668339700231FA3 /* Cocoa.framework */; };
 		ACB6321A1668339700231FA3 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = ACB632181668339700231FA3 /* InfoPlist.strings */; };
 		ACB6321C1668339700231FA3 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = ACB6321B1668339700231FA3 /* main.m */; };
@@ -561,14 +560,11 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynChat/AllJoynChat-Prefix.pch";
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
-				);
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/inc\"";
 				INFOPLIST_FILE = "AllJoynChat/AllJoynChat-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/lib\"",
 				);
 				OTHER_CFLAGS = (
 					"-DQCC_OS_DARWIN",
@@ -591,14 +587,11 @@
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "AllJoynChat/AllJoynChat-Prefix.pch";
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
-				);
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/inc/alljoyn\"";
 				INFOPLIST_FILE = "AllJoynChat/AllJoynChat-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/lib\"",
 				);
 				OTHER_CFLAGS = (
 					"-DQCC_OS_DARWIN",

@@ -539,14 +539,15 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicBusService/BasicBusService-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "BasicBusService/BasicBusService-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/debug/dist/cpp/lib\"",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_DARWIN",
 					"-DQCC_OS_GROUP_POSIX",
@@ -569,14 +570,15 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "BasicBusService/BasicBusService-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "BasicBusService/BasicBusService-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/release/dist/cpp/lib\"",
 				);
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_DARWIN",
 					"-DQCC_OS_GROUP_POSIX",
