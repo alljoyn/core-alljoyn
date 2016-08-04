@@ -29,13 +29,13 @@ public:
             return ER_BAD_ARG_1;
         }
         QStatus status = VParseArgs(signature, sigLen, pMsgArg, 1, argp);
-        return status;        
+        return status;
     }
-    
+
     static QStatus Set(MsgArg* pMsgArg, const char* signature, va_list* argp)
     {
         QStatus status = ER_OK;
-        
+
         pMsgArg->Clear();
         size_t sigLen = (signature ? strlen(signature) : 0);
         if ((sigLen < 1) || (sigLen > 255)) {
@@ -46,7 +46,7 @@ public:
                 status = ER_BUS_NOT_A_COMPLETE_TYPE;
             }
         }
-        return status;        
+        return status;
     }
 };
 

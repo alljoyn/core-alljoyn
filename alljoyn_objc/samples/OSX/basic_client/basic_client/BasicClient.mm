@@ -103,7 +103,7 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     dispatch_async( clientQueue, ^{
         [self run];
     });
-    dispatch_release(clientQueue);
+    //dispatch_release(clientQueue);
 }
 
 - (void)run

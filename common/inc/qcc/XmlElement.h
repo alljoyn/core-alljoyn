@@ -298,7 +298,7 @@ struct XmlParseContext {
      * Return a const pointer to the current root. The root will become invalid when the context is
      * freed.
      */
-    const XmlElement* GetRoot() {
+    const XmlElement* GetRoot() const {
         return root;
     }
 

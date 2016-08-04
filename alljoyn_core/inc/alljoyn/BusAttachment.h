@@ -894,6 +894,18 @@ class BusAttachment : public MessageReceiver {
     void ClearKeyStore();
 
     /**
+     * Deletes the key store of the specified application.
+     * To avoid errors, app should only call this function after all instances of BusAttachment are deleted.
+     *
+     * @param[in] applicationName Name of the application specified in BusAttachment constructor.
+     *
+     * @return  - ER_OK if the file was not present, or if it has been deleted successfully
+     *          - ER_OS_ERROR if the OS fails to delete the key store
+     *          - Other errors
+     */
+    static QStatus DeleteDefaultKeyStore(const char* applicationName);
+
+    /**
      * Clear the keys associated with a specific remote peer as identified by its peer GUID. The
      * peer GUID associated with a bus name can be obtained by calling GetPeerGUID().
      *
