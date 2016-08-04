@@ -116,3 +116,22 @@ QStatus AJNKeyStoreListenerImpl::PutKeys(ajn::KeyStore& keyStore, const qcc::Str
     return status;        
 }
 
+QStatus AJNKeyStoreListenerImpl::AcquireExclusiveLock(const char* file, uint32_t line)
+{
+    NSLog(@"AJNKeyStoreListenerImpl::AcquireExclusiveLock");
+    QStatus status = ER_NONE;
+    NSString* nsFileStr = [NSString stringWithCString:file encoding:NSUTF8StringEncoding];
+    if (m_delegate) {
+        status = [m_delegate acquireExclusiveLock:nsFileStr line:line];
+    }
+    return status;
+}
+void AJNKeyStoreListenerImpl::ReleaseExclusiveLock(const char* file, uint32_t line)
+{
+    NSLog(@"AJNKeyStoreListenerImpl::ReleaseExclusiveLock");
+    NSString* nsFileStr = [NSString stringWithCString:file encoding:NSUTF8StringEncoding];
+    if (m_delegate) {
+        [m_delegate releaseExclusiveLock:nsFileStr line:line];
+    }
+}
+

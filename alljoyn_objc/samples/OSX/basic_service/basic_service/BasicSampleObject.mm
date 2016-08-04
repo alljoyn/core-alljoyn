@@ -18,48 +18,6 @@
 #import "BasicSampleObjectImpl.h"
 #import "AJNInterfaceDescription.h"
 
-@interface InterfaceTranslator : NSObject<AJNTranslator>
-
-- (size_t)numTargetLanguages;
-- (NSString*)getTargetLanguage:(size_t)index;
-- (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang;
-
-@end
-
-@implementation InterfaceTranslator
-- (size_t)numTargetLanguages
-{
-    return 1;
-}
-
-- (NSString*)getTargetLanguage:(size_t)index
-{
-    return @"en";
-}
-
-- (NSString*)translateText:(NSString*)text from:(NSString*)fromLang to:(NSString*)toLang
-{
-    if(![toLang isEqualToString:(@"en")])
-    {
-        return nil;
-    }
-    if([text isEqualToString:@"Isthay siay naay nterfacenay"])
-    {
-        return @"This is an interface";
-    }
-    if([text isEqualToString:@"IsThay siay ethay atcay"])
-    {
-        return @"This is the cat";
-    }
-    if([text isEqualToString:@"IsThay siay ethay esponsray"])
-    {
-        return @"This is the response";
-    }
-    return nil;
-}
-
-@end
-
 @implementation MyBasicSampleObject
 
 @synthesize delegate = _delegate;
@@ -79,7 +37,7 @@
         
         // create an interface description and add the concatenate method to it
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:kBasicObjectInterfaceName];
+        interfaceDescription = [busAttachment createInterfaceWithName:kBasicObjectInterfaceName withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
         result = [interfaceDescription addMethodWithName:kBasicObjectMethodName inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1", @"str2", @"outStr", nil]];
         
@@ -88,13 +46,7 @@
             
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface" userInfo:nil];
         }
-        [self.delegate didReceiveStatusUpdateMessage:@"Interface Created.\n"];        
- 
-        [interfaceDescription setDescriptionLanguage:@"pig"];
-        [interfaceDescription setDescription:@"Isthay siay naay nterfacenay"];
-        [interfaceDescription setMemberDescription:@"IsThay siay ethay atcay" forMemberWithName:@"cat" sessionlessSignal:FALSE];
-        [interfaceDescription setArgDescription:@"IsThay siay ethay esponsray" forArgument:@"outStr" ofMember:@"cat"];
-        [interfaceDescription setDescriptionTranslator:[InterfaceTranslator alloc]];
+        [self.delegate didReceiveStatusUpdateMessage:@"Interface Created.\n"];
         
         [interfaceDescription activate];
         

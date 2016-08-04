@@ -182,7 +182,7 @@ void SecureObjectImpl::Ping(const InterfaceDescription::Member *member, Message&
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.secure.SecureInterface"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.samples.secure.SecureInterface" withInterfaceSecPolicy:AJN_IFC_SECURITY_REQUIRED];
         
     
         // add the methods to the interface description

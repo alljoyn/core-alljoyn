@@ -233,7 +233,7 @@ TEST(SRPTest, authentication_mechanism) {
     QStatus status = ER_OK;
 
     BusAttachment bus("srp");
-    ASSERT_EQ(ER_OK, DeleteDefaultKeyStoreFile("srp"));
+    ASSERT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("srp"));
 
     MyAuthListener myListener;
     bus.EnablePeerSecurity("ALLJOYN_SRP_KEYX", &myListener);

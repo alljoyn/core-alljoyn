@@ -128,7 +128,7 @@ class AuthListenerTest : public testing::Test {
 
         /* set up the service bus */
         servicebus = alljoyn_busattachment_create("AuthListenerTestService", false);
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("AuthListenerTestService"));
+        EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("AuthListenerTestService"));
         status = alljoyn_busattachment_start(servicebus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_busattachment_connect(servicebus, ajn::getConnectArg().c_str());
@@ -143,7 +143,7 @@ class AuthListenerTest : public testing::Test {
         alljoyn_interfacedescription_activate(service_intf);
 
         clientbus = alljoyn_busattachment_create("AuthListenerTestClient", false);
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFileCTest("AuthListenerTestClient"));
+        EXPECT_EQ(ER_OK, alljoyn_busattachment_deletedefaultkeystore("AuthListenerTestClient"));
         status = alljoyn_busattachment_start(clientbus);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_busattachment_connect(clientbus, ajn::getConnectArg().c_str());
