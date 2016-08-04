@@ -63,7 +63,7 @@ class IpNameServiceListener {
  * singleton for AllJoyn.
  *
  * The IpNameService is implemented as a Meyers singleton, so a static method is
- * requred to get a reference to the sinle instance of the singleton.  The
+ * required to get a reference to the sinle instance of the singleton. The
  * underlying object will be constructed the first time this method is called.
  *
  * We expect that there may be zero to N transports running under control of a
@@ -168,7 +168,7 @@ class IpNameService {
      * @brief Set the Callback for notification of network interface events.
      */
     void SetNetworkEventCallback(TransportMask transportMask,
-                                 Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* cb);
+                                 Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* cb);
 
     void RegisterListener(IpNameServiceListener& listener);
 
@@ -342,10 +342,8 @@ class IpNameService {
      *     of a server listening for connections if enableReliableIPv4 is true
      * @param reliableIPv6Port Indicates the port number of a server listening for
      *     connections if enableUnreliableIPv4 is true
-     * @param unreliableIPv4PortMap Indicates a map of interfaces to port numbers
-     *     of a server listening for connections if enableReliableIPv6 is true
-     * @param unreliableIPv6Port Indicates the port number of a server listening for
-     *     connections if enableUnreliableIPv6 is true.
+     * @param unreliablePortMap Indicates a map of interfaces to port numbers
+     *     of a server listening for connections
      * @param enableReliableIPv4
      *     - true indicates this protocol is enabled.
      *     - false indicates this protocol is not enabled.
@@ -361,7 +359,7 @@ class IpNameService {
      */
     QStatus Enable(TransportMask transportMask,
                    const std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t reliableIPv6Port,
-                   const std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t unreliableIPv6PortMap,
+                   const std::map<qcc::String, uint16_t>& unreliablePortMap,
                    bool enableReliableIPv4, bool enableReliableIPv6,
                    bool enableUnreliableIPv4, bool enableUnreliableIPv6);
 
@@ -378,14 +376,12 @@ class IpNameService {
      *     not empty, indicates the interfaces/port numbers of a server listening for connections.
      * @param reliableIPv6Port If zero, indicates this protocol is not enabled.  If
      *     non-zero, indicates the port number of a server listening for connections.
-     * @param unreliableIPv4PortMap If empty, indicates this protocol is not enabled.  If
+     * @param unreliablePortMap If empty, indicates this protocol is not enabled.  If
      *     not empty, indicates the interfaces/port numbers of a server listening for connections.
-     * @param unreliableIPv6Port If zero, indicates this protocol is not enabled.  If
-     *     non-zero, indicates the port number of a server listening for connections.
      */
     QStatus Enabled(TransportMask transportMask,
                     std::map<qcc::String, uint16_t>& reliableIPv4PortMap, uint16_t& reliableIPv6Port,
-                    std::map<qcc::String, uint16_t>& unreliableIPv4PortMap, uint16_t& unreliableIPv6Port);
+                    std::map<qcc::String, uint16_t>& unreliablePortMap);
 
     /**
      * @brief Discover well-known names starting with the specified prefix over
