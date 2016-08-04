@@ -312,7 +312,7 @@ void IpNameService::SetCallback(TransportMask transportMask,
 }
 
 void IpNameService::SetNetworkEventCallback(TransportMask transportMask,
-                                            Callback<void, const std::map<qcc::String, qcc::IPAddress>&>* cb)
+                                            Callback<void, const std::multimap<qcc::String, qcc::IPAddress>&>* cb)
 {
     if (m_destroyed) {
         return;
