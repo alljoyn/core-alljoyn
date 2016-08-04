@@ -326,7 +326,7 @@ class IpNameServiceImpl : public qcc::Thread {
      */
     QStatus CreateVirtualInterface(const qcc::IfConfigEntry& entry);
 
-    QStatus CreateUnicastSocket();
+    QStatus CreateUnicastSocket(bool isIPv4);
 
     /**
      * @brief Delete a virtual network interface. In normal cases WiFi-Direct
@@ -1186,7 +1186,7 @@ class IpNameServiceImpl : public qcc::Thread {
     void RewriteVersionSpecific(uint32_t msgVersion, Packet packet,
                                 bool haveIPv4address, qcc::IPAddress ipv4address,
                                 bool haveIPv6Address, qcc::IPAddress ipv6address,
-                                uint16_t unicastIpv4Port = 0, const qcc::String& interface = qcc::String(),
+                                uint16_t unicastIpv4Port = 0, uint16_t unicastIpv6Port = 0, const qcc::String& interface = qcc::String(),
                                 const uint16_t reliableTransportPort = 0, const uint16_t unreliableTransportPort = 0);
 
     /**
@@ -1451,14 +1451,6 @@ class IpNameServiceImpl : public qcc::Thread {
     bool m_enableV1;
 
     /**
-     * @internal
-     * @brief Advertise IPv4 address assigned to this interface when multicasting
-     * over IPv6 sockets in m_overrideIpv6 mode.  Used  to compensate for broken
-     * Android phones that don't support IPv4 multicast.
-     */
-    qcc::String m_overrideInterface;
-
-    /**
      * @internal @brief Set to true if a given transpot has indicated that it
      * wants to use all available interfaces whenever they may be up if true.
      * Think INADDR_ANY or in6addr_any.  this is typically what most transports
@@ -1591,7 +1583,9 @@ class IpNameServiceImpl : public qcc::Thread {
     qcc::SocketFd m_ipv6QuietSockFd;
 
     qcc::SocketFd m_ipv4UnicastSockFd;
+    qcc::SocketFd m_ipv6UnicastSockFd;
     qcc::Event* m_unicastEvent;
+    qcc::Event* m_unicast6Event;
 
     std::list<BurstResponseHeader> m_burstQueue;
 
