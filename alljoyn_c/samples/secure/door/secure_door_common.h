@@ -62,6 +62,7 @@ QStatus CommonDoorSetUp(AJ_PCSTR appName, CommonDoorData* doorData);
 QStatus HostSession(const CommonDoorData* doorData);
 QStatus AnnounceAboutData(CommonDoorData* doorData, AJ_PCSTR appName);
 QStatus WaitToBeClaimed(alljoyn_busattachment bus);
+QStatus SetSecurityForClaimedMode(CommonDoorData* doorData);
 void CommonDoorTearDown(CommonDoorData* doorData);
 
 #endif /* ALLJOYN_SAMPLE_C_SECURE_DOOR_COMMON_H_ */

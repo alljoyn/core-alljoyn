@@ -271,7 +271,18 @@ class PermissionConfigurator {
     QStatus GetClaimCapabilityAdditionalInfo(PermissionConfigurator::ClaimCapabilityAdditionalInfo& additionalInfo) const;
 
     /**
-     * Perform claiming of this app locally/offline.
+     * Perform claiming of this app locally/offline. Peer security must first be enabled on the bus attachment.
+     *
+     * To prevent a potential security-critical race condition, before claiming a bus attachment with this method,
+     * it is recommended to call EnablePeerSecurity on an unclaimed BusAttachment with "ALLJOYN_ECDHE_ECDSA" only
+     * in the authMechanisms parameter. The default claim capabilities do not allow ALLJOYN_ECDHE_ECDSA for claiming,
+     * and this will guarantee a rogue security manager on the same bus can't claim the bus attachment before this
+     * method is called. Do not set claim capabilities on a bus attachment which will be claimed using this method.
+     *
+     * After the bus attachment is claimed, EnablePeerSecurity can be called again if any of the other authentication
+     * mechanisms are required; this will usually only be required if the bus attachment will be used by a security
+     * manager to claim other apps over the bus. See BusAttachment::EnablePeerSecurity's documentation for details on
+     * changing authentication mechanisms.
      *
      * @param[in] certificateAuthority Certificate authority public key
      * @param[in] adminGroupGuid Admin group GUID

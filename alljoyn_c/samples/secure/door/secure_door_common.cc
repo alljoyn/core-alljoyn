@@ -219,6 +219,23 @@ QStatus WaitToBeClaimed(alljoyn_busattachment bus)
     return status;
 }
 
+QStatus SetSecurityForClaimedMode(CommonDoorData* doorData)
+{
+    QStatus status = alljoyn_busattachment_enablepeersecurity(doorData->bus, "", nullptr, nullptr, QCC_TRUE);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to clear peer security - status (%s)\n", QCC_StatusText(status));
+        return status;
+    }
+
+    status = alljoyn_busattachment_enablepeersecurity(doorData->bus, KEYX_ECDHE_DSA, doorData->authListener, nullptr, QCC_FALSE);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to set peer security for claimed mode - status (%s)\n", QCC_StatusText(status));
+        return status;
+    }
+
+    return ER_OK;
+}
+
 void CommonDoorTearDown(CommonDoorData* doorData)
 {
     QStatus status = alljoyn_busattachment_enablepeersecurity(doorData->bus, "", nullptr, nullptr, QCC_TRUE);

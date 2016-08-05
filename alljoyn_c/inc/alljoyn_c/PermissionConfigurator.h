@@ -247,7 +247,19 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_reset(alljoyn_permissionco
  * Claims the application. The application is provided an identity certificate chain with
  * its own cert as the leaf. The application automatically installs the policy to
  * allow all communication from the provided admin group.
- * The application's manifests are installed as well.
+ * The application's manifests are installed as well. Peer security must first be enabled on the bus attachment.
+ *
+ * To prevent a potential security-critical race condition, before claiming a bus attachment with this method,
+ * it is recommended to call alljoyn_busattachment_enablepersecurity on an unclaimed bus attachment with
+ * "ALLJOYN_ECDHE_ECDSA" only in the authMechanisms parameter. The default claim capabilities do not allow
+ * ALLJOYN_ECDHE_ECDSA for claiming, and this will guarantee a rogue security manager on the same bus can't
+ * claim this bus attachment before this function is called. Do not set claim capabilities on a bus attachment
+ * that will be claimed with this function.
+ *
+ * After the bus attachment is claimed, alljoyn_busattachment_enablepeersecurity can be called again if any of
+ * ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, or ALLJOYN_ECDHE_SPEKE are required; this will usually only be required
+ * if the bus attachment will be used by a security manager to claim other apps over the bus. See the documentation
+ * for alljoyn_busattachment_enablepeersecurity for details on changing authentication mechanisms.
  *
  * @param[in]    configurator               The alljoyn_permissionconfigurator for the application's bus attachment.
  * @param[in]    caKey                      Null-terminated C string representing the CA's PEM-encoded public key.
