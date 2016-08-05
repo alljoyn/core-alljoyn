@@ -431,6 +431,12 @@ int CDECL_CALL main(int argc, char** argv)
         goto Exit;
     }
 
+    status = SetSecurityForClaimedMode(&doorData);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to SetSecurityForClaimedMode - status (%s)\n", QCC_StatusText(status));
+        goto Exit;
+    }
+
     printf("Door provider initialized; Waiting for consumers ...\n");
     PrintHelp();
     ExecuteCommands(&doorData);

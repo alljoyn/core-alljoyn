@@ -287,9 +287,11 @@ static void CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const u
 
 }
 
-QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
+QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
 {
     CreateInterface();
+
+    pcl = inPcl;
 
     QStatus status = ba->Start();
     if (ER_OK != status) {
@@ -304,7 +306,6 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     }
 
     GUID128 psk;
-    DefaultECDHEAuthListener* authListener;
     if (provider) {
         authListener = new DefaultECDHEAuthListener();
         CallDeprecatedSetPSK(authListener, psk.GetBytes(), GUID128::SIZE);
@@ -383,6 +384,23 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     return HostSession();
 }
 
+QStatus DoorCommon::SetSecurityForClaimedMode()
+{
+    QStatus status = ba->EnablePeerSecurity("", nullptr, nullptr, true);
+    if (ER_OK != status) {
+        fprintf(stderr, "SetSecurityForClaimedMode: Could not clear peer security - status (%s)\n", QCC_StatusText(status));
+        return status;
+    }
+
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA, authListener, nullptr, false, pcl);
+    if (ER_OK != status) {
+        fprintf(stderr, "SetSecurityForClaimedMode: Could not reset peer security - status (%s)\n", QCC_StatusText(status));
+        return status;
+    }
+
+    return ER_OK;
+}
+
 QStatus DoorCommon::UpdateManifest(const PermissionPolicy::Acl& manifest)
 {
     PermissionPolicy::Rule* rules = const_cast<PermissionPolicy::Rule*> (manifest.GetRules());
@@ -410,6 +428,9 @@ void DoorCommon::Fini()
      * so previously claimed apps can still be so after restarting.
      **/
     ba->EnablePeerSecurity("", nullptr, nullptr, true);
+
+    delete authListener;
+    authListener = nullptr;
 
     delete aboutObj;
     aboutObj = nullptr;
