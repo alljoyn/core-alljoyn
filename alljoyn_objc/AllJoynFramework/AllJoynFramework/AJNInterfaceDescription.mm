@@ -85,6 +85,19 @@
     return [NSString stringWithCString:self.interfaceDescription->GetDescriptionLanguage() encoding:NSUTF8StringEncoding];
 }
 
+- (NSSet*)languages
+{
+    std::set<qcc::String> languagesSet = self.interfaceDescription->GetDescriptionLanguages();
+    NSMutableSet *ajnLanguages = [[NSMutableSet alloc] initWithCapacity:languagesSet.size()];
+    
+    for (auto &it : languagesSet) {
+        NSString* str = [NSString stringWithCString:it.c_str() encoding:NSUTF8StringEncoding];
+        [ajnLanguages addObject:str];
+    }
+    
+    return ajnLanguages;
+}
+
 - (BOOL)isSecure
 {
     return self.interfaceDescription->IsSecure();
@@ -319,14 +332,46 @@
     }
 }
 
+- (QStatus)setDescriptionForLanguage:(NSString*)description forLanguage:(NSString*)languageTag
+{
+    return self.interfaceDescription->SetDescriptionForLanguage([description UTF8String], [languageTag UTF8String]);
+}
+
 - (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member
 {
     return self.interfaceDescription->SetMemberDescription([member UTF8String], [description UTF8String]);
 }
 
+- (NSString*)descriptionForLanguage:(NSString*)languageTag
+{
+    qcc::String givenDescription;
+    if (self.interfaceDescription->GetDescriptionForLanguage(givenDescription, [languageTag UTF8String]))
+    {
+        return [NSString stringWithCString:givenDescription.c_str() encoding:NSUTF8StringEncoding];
+    }
+    
+    return nil;
+}
+
+
 - (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless
 {
     return self.interfaceDescription->SetMemberDescription([member UTF8String], [description UTF8String], sessionless);
+}
+
+ - (QStatus)setMemberDescriptionForLanguage:(NSString*)member withDescription:(NSString*)description forLanguage:(NSString*)languageTag
+{
+    return self.interfaceDescription->SetMemberDescriptionForLanguage([member UTF8String], [description UTF8String], [languageTag UTF8String]);
+}
+
+- (NSString*)memberDescriptionForLanguage:(NSString*)memberName forLanguage:(NSString*)languageTag
+{
+    qcc::String description;
+    if (self.interfaceDescription->GetMemberDescriptionForLanguage([memberName UTF8String], description, [languageTag UTF8String])) {
+        return [NSString stringWithCString:description.c_str() encoding:NSUTF8StringEncoding];
+    }
+    
+    return nil;
 }
 
 - (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName
@@ -334,9 +379,40 @@
     return self.interfaceDescription->SetPropertyDescription([propName UTF8String], [description UTF8String]);
 }
 
+- (QStatus)setPropertyDescriptionForLanguage:(NSString*)propertyName withDescription:(NSString*)description withLanguage:(NSString*)languageTag
+{
+    return self.interfaceDescription->SetPropertyDescriptionForLanguage([propertyName UTF8String], [description UTF8String], [languageTag UTF8String]);
+}
+
+- (NSString*)propertyDescriptionForLanguage:(NSString*)propertyName withLanguage:(NSString*)languageTag
+{
+    qcc::String description;
+    if (self.interfaceDescription->GetPropertyDescriptionForLanguage([propertyName UTF8String], description, [languageTag UTF8String])) {
+        return [NSString stringWithCString:description.c_str() encoding:NSUTF8StringEncoding];
+    }
+    
+    return nil;
+}
+
 - (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member
 {
     return self.interfaceDescription->SetArgDescription([member  UTF8String], [argName UTF8String], [description UTF8String]);
+}
+
+- (QStatus)setArgDescriptionForLanguage:(NSString*)memberName forArg:(NSString*)argName withDescription:(NSString*)description withLanguage:(NSString*)languageTag
+{
+    return self.interfaceDescription->SetArgDescriptionForLanguage([memberName UTF8String], [argName UTF8String], [description UTF8String], [languageTag UTF8String]);
+}
+
+- (NSString*)argDescriptionForLanguage:(NSString*)memberName forArg:(NSString*)argName withDescription:(NSString*)description withLanguage:(NSString*)languageTag;
+{
+    qcc::String argDescription;
+    
+    if (self.interfaceDescription->GetArgDescriptionForLanguage([memberName UTF8String], [argName UTF8String], argDescription, [languageTag UTF8String])) {
+        return [NSString stringWithCString:argDescription.c_str() encoding:NSUTF8StringEncoding];
+    }
+    
+    return nil;
 }
 
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator
