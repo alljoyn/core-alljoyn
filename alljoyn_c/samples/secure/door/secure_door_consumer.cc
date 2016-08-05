@@ -517,6 +517,12 @@ int CDECL_CALL main(int argc, char** argv)
         goto Exit;
     }
 
+    status = SetSecurityForClaimedMode(&doorData);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to SetSecurityForClaimedMode - status (%s)\n", QCC_StatusText(status));
+        goto Exit;
+    }
+
     status = alljoyn_busattachment_whoimplements_interface(doorData.bus, DOOR_INTERFACE);
     if (ER_OK != status) {
         fprintf(stderr, "Failed to call whoimplements_interface - status (%s)\n", QCC_StatusText(status));

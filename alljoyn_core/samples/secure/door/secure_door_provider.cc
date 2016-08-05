@@ -112,6 +112,14 @@ int CDECL_CALL main(int argc, char** argv)
             goto Exit;
         }
 
+        // After claiming, only allow ALLJOYN_ECDHE_ECDSA connections
+        status = common.SetSecurityForClaimedMode();
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to SetSecurityForClaimedMode - status (%s)\n",
+                    QCC_StatusText(status));
+            goto Exit;
+        }
+
         printf("Door provider initialized; Waiting for consumers ...\n");
         printf("Type 'q' to quit\n");
         printf(">");
