@@ -64,6 +64,21 @@
 - (void)didReceiveValueForProperty:(AJNMessageArgument *)value ofObject:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context;
 
 /**
+ * Handler for receiving the value of a property asynchronously
+ *
+ * @param value     If status is ER_OK a MsgArg containing the returned property value
+ * @param object    Remote bus object that was introspected
+ * @param status    - ER_OK if the property get request was successfull or:
+ *                  - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *                  - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ *                  - Other error status codes indicating the reason the get request failed.
+ * @param context   Caller provided context passed in to GetPropertyAsync()
+ * @param errorName         Error name
+ * @param errorDescription  Error description
+ */
+- (void)didReceiveValueAndErrorsForProperty:(AJNMessageArgument *)value ofObject:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context withErrorName:(NSString*)errorName withErrorDescription:(NSString*)errorDescription;
+
+/**
  * Handler for receiving all the values of all properties on an object asynchronously
  *
  * @param values        If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties.
@@ -76,6 +91,34 @@
 - (void)didReceiveValuesForAllProperties:(AJNMessageArgument *)values ofObject:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context;
 
 /**
+ * Handler for receiving all the values of all properties on an object asynchronously
+ *
+ * @param values        If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties.
+ * @param object        Remote bus object that was introspected
+ * @param status      - ER_OK if the get all properties request was successfull or:
+ *                    - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *                    - Other error status codes indicating the reason the get request failed.
+ * @param context       Caller provided context passed in to GetPropertyAsync()
+ * @param errorName         Error name
+ * @param errorDescription  Error description
+ */
+- (void)didReceiveValuesAndErrorsForAllProperties:(AJNMessageArgument *)values ofObject:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context withErrorName:(NSString*)errorName withErrorDescription:(NSString*)errorDescription;
+
+/*
+ * Callback registered with SetPropertyAsync()
+ *
+ * @deprecated
+
+ * @param object    Remote bus object that was introspected
+ * @param status    - ER_OK if the property was successfully set or:
+ *                  - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *                  - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ *                  - Other error status codes indicating the reason the set request failed.
+ * @param context   Caller provided context passed in to SetPropertyAsync()
+ */
+- (void)didComleteSetPropertyOnObject:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context __attribute__((deprecated));
+
+/**
  * Callback registered with SetPropertyAsync()
  *
  * @param object    Remote bus object that was introspected
@@ -85,7 +128,21 @@
  *                  - Other error status codes indicating the reason the set request failed.
  * @param context   Caller provided context passed in to SetPropertyAsync()
  */
-- (void)didComleteSetPropertyOnObject:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context;
+- (void)didCompleteSetPropertyOnObject:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context;
+
+/**
+ * Callback registered with SetPropertyAsync()
+ *
+ * @param object    Remote bus object that was introspected
+ * @param status    - ER_OK if the property was successfully set or:
+ *                  - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+ *                  - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ *                  - Other error status codes indicating the reason the set request failed.
+ * @param context   Caller provided context passed in to SetPropertyAsync()
+ * @param errorName         Error name
+ * @param errorDescription  Error description
+ */
+- (void)didCompleteSetPropertyOnObjectAndReturnedErrors:(AJNProxyBusObject *)object completionStatus:(QStatus)status context:(AJNHandle)context withErrorName:(NSString*)errorName withErrorDescription:(NSString*)errorDescription;
 
 
 @end
@@ -557,6 +614,23 @@
 - (AJNMessageArgument *)propertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName fetchTimeout:(uint32_t)timeout;
 
 /**
+* Get a property from an interface on the remote object.
+*
+* @param propertyName          The name of the property to get
+* @param interfaceName         Name of interface to retrieve property from
+* @param[out] value            Property value
+* @param[out] errorName        Error name
+* @param[out] errorDescription Error description
+* @param timeout               Timeout specified in milliseconds to wait for a reply
+*
+* @return
+*                              - #ER_OK if the property was obtained
+*                              - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if there is no such interface on this remote object
+*                              - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+*/
+- (QStatus)propertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName withValue:(AJNMessageArgument**)value withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription fetchTimeout:(uint32_t)timeout;
+
+/**
  * Make an asynchronous request to get a property from an interface on the remote object.
  * The property value is passed to the callback function.
  *
@@ -573,14 +647,31 @@
 - (QStatus)propertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout;
 
 /**
+ * Make an asynchronous request to get a property from an interface on the remote object.
+ * The property value is passed to the callback function.
+ *
+ * @param propertyName  The name of the property to get.
+ * @param interfaceName Name of interface to retrieve property from.
+ * @param delegate      Pointer to the object that will receive the callback.
+ * @param context       User defined context which will be passed as-is to callback.
+ * @param timeout       Timeout specified in milliseconds to wait for a reply
+ * @return
+ *      - #ER_OK if the request to get the property was successfully issued .
+ *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if there is no such interface on this remote object.
+ *      - An error status otherwise
+ */
+- (QStatus)propertyWithNameAndErrors:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(void*)context timeout:(uint32_t)timeout;
+
+/**
  * Get all properties from an interface on the remote object.
  *
- * @param values            Property values returned as an array of dictionary entries, signature "a{sv}".
+ * @param[out] values       Property values returned as an array of dictionary entries, signature "a{sv}".
  * @param interfaceName     Name of interface to retrieve all properties from.
  *
- * @return  - ER_OK if the property was obtained.
- *          - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
- *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ * @return
+ *      - #ER_OK if the property was obtained.
+ *      - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+ *      - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
 - (QStatus)propertyValues:(AJNMessageArgument **)values ofInterfaceWithName:(NSString *)interfaceName;
 
@@ -597,6 +688,36 @@
  */
 - (QStatus)propertyValuesForInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout;
 
+
+/**
+ * Get all properties from an interface on the remote object.
+ *
+ * @param[out] values           Property values returned as an array of dictionary entries, signature "a{sv}"
+ * @param interfaceName         Name of interface to retrieve all properties from
+ * @param[out] errorName        Error name
+ * @param[out] errorDescription Error description
+ * @param timeout               Timeout specified in milliseconds to wait for a reply
+ *
+ * @return
+ *                              - #ER_OK if the property was obtained
+ *                              - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if there is no such interface on this remote object
+ *                              - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)propertyValues:(AJNMessageArgument **)values ofInterfaceWithName:(NSString*)interfaceName withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription timeout:(uint32_t)timeout;
+
+/**
+ * Make an asynchronous request to get all properties from an interface on the remote object.
+ *
+ * @param interfaceName     Name of interface to retrieve property from.
+ * @param delegate          Pointer to the object that will receive the callback
+ * @param context           User defined context which will be passed as-is to callback
+ * @param timeout           Timeout specified in milliseconds to wait for a reply
+ * @return
+ *                  - #ER_OK if the request to get all properties was successfully issued
+ *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if there is no such interface on this remote object
+ *                  - An error status otherwise
+ */
+- (QStatus)propertyValuesAndErrorsForInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout;
 /**
  * Set a property on an interface on the remote object.
  *
@@ -625,6 +746,22 @@
 - (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value setTimeout:(uint32_t)timeout;
 
 /**
+ * Set a property on an interface on the remote object.
+ *
+ * @param propertyName           The name of the property to set
+ * @param interfaceName          Remote object's interface on which the property is defined
+ * @param value                  The value to set
+ * @param[out] errorName         Error name
+ * @param[out] errorDescription  Error description
+ * @param timeout                Timeout specified in milliseconds to wait for a reply
+ * @return
+ *                               - #ER_OK if the property was set
+ *                               - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+ *                               - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toValue:(AJNMessageArgument*)value withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription setTimeout:(uint32_t)timeout;
+
+/**
  * Make an asynchronous request to set a property on an interface on the remote object.
  * A callback function reports the success or failure of ther operation.
  *
@@ -641,30 +778,109 @@
 - (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout;
 
 /**
+ * Make an asynchronous request to set a property on an interface on the remote object.
+ * A callback function reports the success or failure of the operation.
+ *
+ * @param propertyName      The name of the property to set
+ * @param interfaceName     Remote object's interface on which the property is defined
+ * @param value             The value to set
+ * @param delegate          Pointer to the object that will receive the callback
+ * @param context           User defined context which will be passed as-is to callback
+ * @param timeout           Timeout specified in milliseconds to wait for a reply
+ * @return
+ *                  - #ER_OK if the request to set the property was successfully issued
+ *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+ *                  - An error status otherwise
+ */
+- (QStatus)setPropertyWithNameAndReturnErrors:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout;
+
+/**
  * Set a uint32 property.
  *
- * @param propertyName  The name of the property to set
- * @param interfaceName     Interface that holds the property
- * @param value         The uint32 value to set
+ * @param propertyName   The name of the property to set
+ * @param interfaceName  Interface that holds the property
+ * @param value          The uint32 value to set
  *
  * @return  - ER_OK if the property was set
  *          - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
  *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
-- (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toIntValue:(NSInteger)value;
+- (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toUIntValue:(uint32_t)value;
+
+/**
+ * Helper function to synchronously set a uint32 property on the remote object.
+ *
+ * @param propertyName          The name of the property to set
+ * @param interfaceName         Remote object's interface on which the property is defined
+ * @param value                 The uint32 value to set
+ * @param[out] errorName        Error name
+ * @param[out] errorDescription Error description
+ *
+ * @return
+ *                              - #ER_OK if the property was set
+ *                              - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+ *                              - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString *)interfaceName toUIntValue:(uint32_t)value witErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription;
+
+/**
+ * Set a int32 property.
+ *
+ * @param propertyName   The name of the property to set
+ * @param interfaceName  Interface that holds the property
+ * @param value          The uint32 value to set
+ *
+ * @return  - ER_OK if the property was set
+ *          - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
+ *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toIntValue:(int32_t)value;
+
+/**
+ * Helper function to synchronously set an int32 property on the remote object.
+ *
+ * @param propertyName          The name of the property to set
+ * @param interfaceName         Remote object's interface on which the property is defined
+ * @param value                 The int32 value to set
+ * @param[out] errorName        Error name
+ * @param[out] errorDescription Error description
+ *
+ * @return
+ *                              - #ER_OK if the property was set
+ *                              - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+ *                              - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString *)interfaceName toIntValue:(int32_t)value witErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription;
 
 /**
  * Set a string property.
  *
- * @param propertyName  The name of the property to set
- * @param interfaceName     Interface that holds the property
- * @param value         The string value to set
+ * @param propertyName   The name of the property to set
+ * @param interfaceName  Interface that holds the property
+ * @param value          The string value to set
  *
  * @return  - ER_OK if the property was set
  *          - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the no such interface on this remote object.
  *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  */
 - (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toStringValue:(NSString *)value;
+
+/**
+ * Helper function to synchronously set string property on the remote object.
+ *
+ * @param propertyName          The name of the property to set
+ * @param interfaceName         Remote object's interface on which the property is defined
+ * @param value                 The string value to set
+ * @param[out] errorName        Error name
+ * @param[out] errorDescription Error description
+ *
+ * @return
+ *                              - #ER_OK if the property was set
+ *                              - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+ *                              - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+ */
+- (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toStringValue:(NSString *)value withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription;
+
 
 /**
  * Function to register a handler for property change events.
