@@ -58,6 +58,12 @@
 /** Get the language tag for the introspection descriptions of this InterfaceDescription */
 @property (readonly, nonatomic) NSString *language;
 
+/** Get the set of all available description languages.
+ *
+ * The set contains the sum of the language tags for the interface description, interface property, interface member and member argument descriptions.
+*/
+@property (readonly, nonatomic) NSSet *languages;
+
 /** Get the Translator that provies this InterfaceDescription's introspection descprition in multiple lanauges */
 @property (readonly, nonatomic) id<AJNTranslator> translator;
 
@@ -358,6 +364,49 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (void)setDescription:(NSString *)description;
 
 /**
+ * Set the introspection description for this InterfaceDescription in the given language.
+ *
+ * The description that was set can be retrieved by calling GetDescriptionForLanguage() OR GetAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetDescriptionForLanguage("This is the interface", "en") can be retrieved by calling:
+ *      - GetDescriptionForLanguage(description, "en") OR
+ *      - GetAnnotation("org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface already has a description.
+ */
+- (QStatus)setDescriptionForLanguage:(NSString*)description forLanguage:(NSString*)languageTag;
+
+/**
+ * Get the introspection description for this InterfaceDescription in the given language.
+ *
+ * To obtain the description, the method searches for the best match of the given language tag
+ * using the lookup algorithm in RFC 4647 section 3.4.
+ * For example, if descriptionForLanguage("en-US") is called, the method will:
+ *       - Search for a description with the same language tag ("en-US"), return the description
+ *       if such a description is found; else:
+ *       - Search for a description with a less specific language tag ("en"), return the description
+ *       if such a description is found; else:
+ *       - Return nil.
+ *
+ * The method will also provide descriptions which have been set as description annotations
+ * (set by calling AddAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+ * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+ *
+ * @param languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - description for the given language
+ *      - nil otherwise.
+ */
+- (NSString*)descriptionForLanguage:(NSString*)languageTag;
+
+/**
  * Set the introspection description for "member" of this InterfaceDescription.
  *
  * @param description The description of the method or signal
@@ -383,6 +432,53 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless;
 
 /**
+ * Set the introspection description for member "memberName" of this InterfaceDescription
+ * in the given language.
+ *
+ * The set description can be retrieved by calling GetMemberDescriptionForLanguage() OR GetMemberAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetMemberDescriptionForLanguage("MethodName", "This is the method", "en") can be retrieved by calling:
+ *      - GetMemberDescriptionForLanguage("MethodName", description, "en") OR
+ *      - GetMemberAnnotation("MethodName", "org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] memberName The name of the member.
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface member already has a description.
+ */
+ - (QStatus)setMemberDescriptionForLanguage:(NSString*)member withDescription:(NSString*)description forLanguage:(NSString*)languageTag;
+
+ /**
+  * Get the introspection description for the member "member" of this InterfaceDescription
+  * in the given language.
+  *
+  * To obtain the description, the method searches for the best match of the given language tag
+  * using the lookup algorithm in RFC 4647 section 3.4.
+  * For example, if GetMemberDescriptionForLanguage("MethodName", description, "en-US") is called, the method will:
+  *       - Search for a description with the same language tag ("en-US"), return true and
+  *       write that description to the description argument if such a description is found; else:
+  *       - Search for a description with a less specific language tag ("en"), return true and
+  *       write that description to the description argument if such a description is found; else:
+  *       - Return false and write an empty string to the description argument.
+  *
+  * The method will also provide descriptions which have been set as description annotations
+  * (set by calling AddMemberAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+  * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+  *
+  * @param[in] memberName The name of the member.
+  * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+  * @return
+  *      - description for given language
+  *      - nil otherwise.
+  */
+- (NSString*)memberDescriptionForLanguage:(NSString*)memberName forLanguage:(NSString*)languageTag;
+
+/**
  * Set the introspection description for "property" of this InterfaceDescription.
  *
  * @param description The description of the property
@@ -393,6 +489,53 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
  */
 - (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName;
+
+/**
+ * Set the introspection description for the interface property "propertyName"
+ * of this InterfaceDescription in the given language.
+ *
+ * The set description can be retrieved by calling GetPropertyDescription() OR GetPropertyAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetPropertyDescriptionForLanguage("PropertyName", "This is the property", "en") can be retrieved by calling:
+ *      - GetPropertyDescriptionForLanguage("PropertyName", description, "en") OR
+ *      - GetPropertyAnnotation("PropertyName", "org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] propertyName The name of the property.
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface property already has a description.
+ */
+- (QStatus)setPropertyDescriptionForLanguage:(NSString*)propertyName withDescription:(NSString*)description withLanguage:(NSString*)languageTag;
+
+/**
+ * Get the introspection description for for the property "propertyName"
+ * of this InterfaceDescription in the given language.
+ *
+ * To obtain the description, the method searches for the best match of the given language tag
+ * using the lookup algorithm in RFC 4647 section 3.4.
+ * For example, if GetPropertyDescriptionForLanguage("PropertyName", description, "en-US") is called, the method will:
+ *       - Search for a description with the same language tag ("en-US"), return true and
+ *       write that description to the description argument if such a description is found; else:
+ *       - Search for a description with a less specific language tag ("en"), return true and
+ *       write that description to the description argument if such a description is found; else:
+ *       - Return false and write an empty string to the description argument.
+ *
+ * The method will also provide descriptions which have been set as description annotations
+ * (set by calling AddPropertyAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+ * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] propertyName The name of the property.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - description for the given language.
+ *      - nil otherwise.
+ */
+- (NSString*)propertyDescriptionForLanguage:(NSString*)propertyName withLanguage:(NSString*)languageTag;
 
 /**
  * Set the introspection description for the argument "arg of member" of this InterfaceDescription.
@@ -406,6 +549,55 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
  */
 - (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member;
+
+/**
+ * Set the introspection description for the argument "argName" of the member "memberName"
+ * of this InterfaceDescription in the given language.
+ *
+ * The set description can be retrieved by calling GetArgDescriptionForLanguage() OR GetArgAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetArgDescriptionForLanguage("MethodName", "ArgName", "This is the argument", "en") can be retrieved by calling:
+ *      - GetArgDescriptionForLanguage("MethodName", "ArgName", description, "en") OR
+ *      - GetArgAnnotation("MethodName", "ArgName", "org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] memberName The name of the member.
+ * @param[in] argName The name of the argument.
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface member argument already has a description.
+ */
+- (QStatus)setArgDescriptionForLanguage:(NSString*)memberName forArg:(NSString*)argName withDescription:(NSString*)description withLanguage:(NSString*)languageTag;
+
+/**
+ * Get the introspection description for the argument "argName" of the member "memberName"
+ * of this InterfaceDescription in the given language.
+ *
+ * To obtain the description, the method searches for the best match of the given language tag
+ * using the lookup algorithm in RFC 4647 section 3.4.
+ * For example, if GetArgDescriptionForLanguage("MethodName", "ArgName", description, "en-US") is called, the method will:
+ *       - Search for a description with the same language tag ("en-US"), return true and
+ *       write that description to the description argument if such a description is found; else:
+ *       - Search for a description with a less specific language tag ("en"), return true and
+ *       write that description to the description argument if such a description is found; else:
+ *       - Return false and write an empty string to the description argument.
+ *
+ * The method will also provide descriptions which have been set as description annotations
+ * (set by calling AddArgAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+ * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] memberName The name of the member.
+ * @param[in] argName The name of the argument.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - description for the given language
+ *      - nil otherwise.
+ */
+- (NSString*)argDescriptionForLanguage:(NSString*)memberName forArg:(NSString*)argName withLanguage:(NSString*)languageTag;
 
 /**
  * Set the Translator that provides this InterfaceDescription's introspection description in multiple lauanges.
