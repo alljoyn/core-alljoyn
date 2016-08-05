@@ -15,6 +15,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AJNObject.h"
+#import "AJNMessageArgument.h"
 #import "AJNInterfaceMember.h"
 #import "AJNMessageHeaderFields.h"
 
@@ -32,7 +33,7 @@ extern const AJNMessageFlag kAJNMessageFlagAllowRemoteMessages;
 extern const AJNMessageFlag kAJNMessageFlagSessionless;
 /** Global (bus-to-bus) broadcast */
 extern const AJNMessageFlag kAJNMessageFlagGlobalBroadcast;
-/** 
+/**
  * Header is compressed
  *
  * @deprecated Header compression was deprecated in March 2015 for 15.04
@@ -61,6 +62,13 @@ extern const AJNMessageFlag kAJNMessageFlagEncrypted;
  * @return  Return true if this is a global broadcast message.
  */
 @property (nonatomic, readonly) BOOL isGlobalBroadcast;
+
+/**
+ * Determine if message is sessionless.
+ *
+ * @return  Return true if this is sessionless.
+ */
+@property (nonatomic, readonly) BOOL isSessionless;
 
 /**
  * Returns the flags for the message.
@@ -117,6 +125,13 @@ extern const AJNMessageFlag kAJNMessageFlagEncrypted;
  * @return Returns the message arguments in an array. The array is populated with instances of the AJNMessageArgument class.
  */
 @property (nonatomic, readonly) NSArray *arguments;
+
+/**
+ * Return the reference arguments for this message.  These arguments are copied when the message is marshalled.
+ *
+ * @return an array of reference arguments;
+ */
+@property (nonatomic, readonly) NSArray *referenceArguments;
 
 /**
  * Accessor function to get serial number for the message. Usually only important for
@@ -249,5 +264,25 @@ extern const AJNMessageFlag kAJNMessageFlagEncrypted;
  * @return The timestamp for this message.
  */
 @property (nonatomic, readonly) uint32_t timeStamp;
+
+/**
+ * Get the Authentication Version of the message.
+ *
+ * @return
+ *      - If the Authentication Version has been set, the value is returned.
+ *      - Otherwise -1.
+ */
+@property (nonatomic, readonly) int32_t authVersion;
+
+/**
+ * Return a specific argument.
+ *
+ * @param withIndex  The index of the argument to get.
+ *
+ * @return
+ *      - The argument
+ *      - nil if unmarshal failed or there is not such argument.
+ */
+- (AJNMessageArgument*) arg:(size_t)withIndex;
 
 @end

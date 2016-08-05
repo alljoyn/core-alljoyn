@@ -24,6 +24,7 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <memory>
 #include <set>
 #include <qcc/String.h>
 #include <alljoyn/InterfaceDescription.h>
@@ -52,11 +53,14 @@ class BusAttachment;
  * remotely located DBus objects.
  */
 class ProxyBusObject : public MessageReceiver {
+    class LegacyIntrospectionHandler;
+
     friend class XmlHelper;
     friend class AllJoynObj;
     friend class AllJoynPeerObj;
     friend class KeyExchangerCB;
     friend class MatchRuleTracker;
+    friend class LegacyIntrospectionHandler;
 
   public:
 
@@ -1188,9 +1192,16 @@ class ProxyBusObject : public MessageReceiver {
     BusAttachment& GetBusAttachment() const;
 
   private:
-
     class Internal;
     qcc::ManagedObj<Internal> internal; /**< Internal ProxyBusObject state */
+
+    /**
+     * @internal
+     * Helper object which retrieves introspection descriptions from pre-16.04 nodes.
+     *
+     * @see ASACORE-2744
+     */
+    std::unique_ptr<LegacyIntrospectionHandler> legacyIntrospectionHandler;
 
     bool isExiting;             /**< true iff ProxyBusObject is in the process of being destroyed */
 

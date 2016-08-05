@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 import os.path
 Import('env')
 
@@ -22,13 +22,13 @@ sdk_propertiesService_sample = env.Java('$OBJDIR_ALLJOYN_JAVA/samples/JavaSDKDoc
 if not env.GetOption('clean'):
     if not os.path.isfile('MANIFEST.MF'):
         manifest = ("Manifest-Version: 1.0\n" +
-                   "Class-Path: alljoyn.jar\n" + 
+                   "Class-Path: alljoyn.jar\n" +
                    "Main-Class: org.alljoyn.bus.samples.Service\n")
         file = open('MANIFEST.MF', 'w')
         file.write(manifest)
         file.close()
 
-#add the manifest to the list of files used to build the *.jar file   
+#add the manifest to the list of files used to build the *.jar file
 sdk_propertiesService_sample.append('MANIFEST.MF')
 
 env.Jar('$JARDIR/JavaSDKDocPropertiesService.jar', sdk_propertiesService_sample)
