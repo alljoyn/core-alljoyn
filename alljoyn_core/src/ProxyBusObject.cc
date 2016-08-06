@@ -952,7 +952,7 @@ QStatus ProxyBusObject::GetProperty(const char* iface, const char* property, Msg
                     }
                 }
                 internal->lock.Unlock(MUTEX_CONTEXT);
-            } else {
+            } else if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
                 GetReplyErrorStatus(reply, status);
             }
         }
@@ -1090,7 +1090,7 @@ QStatus ProxyBusObject::SetProperty(const char* iface, const char* property, Msg
                                 reply,
                                 timeout,
                                 flags);
-            if (ER_OK != status) {
+            if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
                 GetReplyErrorStatus(reply, status);
             }
         }
