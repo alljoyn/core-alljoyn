@@ -395,6 +395,7 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_getidentitycertificateid(alljoyn_
     }
 
     certificateId->issuerAki = nullptr;
+    certificateId->issuerAkiLen = 0;
 
     return ER_OK;
 }
@@ -407,7 +408,7 @@ void AJ_CALL alljoyn_permissionconfigurator_certificateid_cleanup(alljoyn_certif
 
     DestroyStringCopy(certificateId->serial);
     DestroyStringCopy(certificateId->issuerPublicKey);
-    DestroyStringCopy(certificateId->issuerAki);
+    delete[] certificateId->issuerAki;
 
     memset(certificateId, 0, sizeof(*certificateId));
 }
@@ -534,6 +535,7 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_getmembershipsummaries(alljoyn_pe
         }
         status = KeyInfoHelper::KeyInfoNISTP256ExtractAki(keyInfosVector[i], akiString);
         if (ER_OK != status) {
+            alljoyn_permissionconfigurator_certificateidarray_cleanup(certificateIds);
             return status;
         }
 
@@ -549,11 +551,14 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_getmembershipsummaries(alljoyn_pe
             return ER_OUT_OF_MEMORY;
         }
 
-        certificateIds->ids[i].issuerAki = CreateStringCopy(akiString);
-        if (nullptr == certificateIds->ids[i].issuerAki) {
+        uint8_t* akiBuffer = new (std::nothrow) uint8_t[akiString.size()];
+        if (nullptr == akiBuffer) {
             alljoyn_permissionconfigurator_certificateidarray_cleanup(certificateIds);
             return ER_OUT_OF_MEMORY;
         }
+        memcpy(akiBuffer, akiString.data(), akiString.size());
+        certificateIds->ids[i].issuerAki = akiBuffer;
+        certificateIds->ids[i].issuerAkiLen = akiString.size();
     }
 
     return ER_OK;
@@ -598,7 +603,8 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_installmembership(alljoyn_permiss
 QStatus AJ_CALL alljoyn_permissionconfigurator_removemembership(alljoyn_permissionconfigurator configurator,
                                                                 AJ_PCSTR serial,
                                                                 AJ_PCSTR issuerPublicKey,
-                                                                AJ_PCSTR issuerAki)
+                                                                uint8_t* issuerAki,
+                                                                size_t issuerAkiLen)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -610,7 +616,7 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_removemembership(alljoyn_permissi
         return status;
     }
 
-    return ((PermissionConfigurator*)configurator)->RemoveMembership(String(serial), &pubKey, String(issuerAki));
+    return ((PermissionConfigurator*)configurator)->RemoveMembership(String(serial), &pubKey, String(reinterpret_cast<char*>(issuerAki), issuerAkiLen));
 }
 
 QStatus AJ_CALL alljoyn_permissionconfigurator_startmanagement(alljoyn_permissionconfigurator configurator)
