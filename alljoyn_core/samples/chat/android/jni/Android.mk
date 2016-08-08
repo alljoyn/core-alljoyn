@@ -1,7 +1,3 @@
-# Define ALLJOYN_DIST before building. It should point to the "dist/cpp" directory for the appropriate
-# platform and version (debug or release). For example:
-# <AJ_ROOT>/core/alljoyn/build/android/arm/debug/dist/cpp
-
 # An Android.mk file must begin with the definition of the LOCAL_PATH
 # variable. It is used to locate source files in the development tree. Here
 # the macro function 'my-dir', provided by the build system, is used to return
@@ -9,6 +5,17 @@
 #
 LOCAL_PATH := $(call my-dir)
 
+# The ALLJOYN_DIST variable is used to locate needed distribution files.
+# The referenced directory must contain the /lib and /inc directories.
+# A default path is provided here which is relative to the directory
+# containing the Android.mk file. This default can be overidden via 
+# an ALLJOYN_DIST environment variable which points to an alternate 
+# cpp distribution directory for the appropriate build variant; e.g.
+# $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
+#
+ifndef $(ALLJOYN_DIST)
+    ALLJOYN_DIST := ../../..
+endif
 
 # Declare the prebuilt libajrouter.a static library.
 #
