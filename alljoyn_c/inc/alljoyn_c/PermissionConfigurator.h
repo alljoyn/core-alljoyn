@@ -77,6 +77,7 @@ typedef struct {
     AJ_PSTR serial;                         /**< The certificate's serial number. */
     AJ_PSTR issuerPublicKey;                /**< The certificate issuer's public key in PEM format. */
     AJ_PSTR issuerAki;                      /**< The certificate issuer's AKI. */
+    size_t issuerAkiLen;                    /**< The certificate issuer's AKI length. */
 } alljoyn_certificateid;
 
 /**
@@ -529,6 +530,7 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_installmembership(alljoyn_
  * @param[in]    serial                     Null-terminated C string of the certificate's serial number.
  * @param[in]    issuerPublicKey            PEM-encoded public key of the certificate's issuer.
  * @param[in]    issuerAki                  Certificate issuer's AKI.
+ * @param[in]    issuerAkiLen               Certificate issuer's AKI length.
  *
  * @return
  *          - #ER_OK                    If successful.
@@ -538,7 +540,7 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_installmembership(alljoyn_
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_removemembership(alljoyn_permissionconfigurator configurator,
                                                                        AJ_PCSTR serial,
                                                                        AJ_PCSTR issuerPublicKey,
-                                                                       AJ_PCSTR issuerAki);
+                                                                       AJ_PCSTR issuerAki, size_t issuerAkiLen);
 
 /**
  * This method allows the app to signal itself that management is starting.

@@ -395,6 +395,7 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_getidentitycertificateid(alljoyn_
     }
 
     certificateId->issuerAki = nullptr;
+    certificateId->issuerAkiLen = 0;
 
     return ER_OK;
 }
@@ -550,6 +551,8 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_getmembershipsummaries(alljoyn_pe
         }
 
         certificateIds->ids[i].issuerAki = CreateStringCopy(akiString);
+        certificateIds->ids[i].issuerAkiLen = akiString.size();
+
         if (nullptr == certificateIds->ids[i].issuerAki) {
             alljoyn_permissionconfigurator_certificateidarray_cleanup(certificateIds);
             return ER_OUT_OF_MEMORY;
@@ -598,7 +601,7 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_installmembership(alljoyn_permiss
 QStatus AJ_CALL alljoyn_permissionconfigurator_removemembership(alljoyn_permissionconfigurator configurator,
                                                                 AJ_PCSTR serial,
                                                                 AJ_PCSTR issuerPublicKey,
-                                                                AJ_PCSTR issuerAki)
+                                                                AJ_PCSTR issuerAki, size_t issuerAkiLen)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
@@ -610,7 +613,7 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_removemembership(alljoyn_permissi
         return status;
     }
 
-    return ((PermissionConfigurator*)configurator)->RemoveMembership(String(serial), &pubKey, String(issuerAki));
+    return ((PermissionConfigurator*)configurator)->RemoveMembership(String(serial), &pubKey, String(issuerAki, issuerAkiLen));
 }
 
 QStatus AJ_CALL alljoyn_permissionconfigurator_startmanagement(alljoyn_permissionconfigurator configurator)

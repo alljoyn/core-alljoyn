@@ -1039,7 +1039,8 @@ TEST_F(PermissionConfiguratorPostClaimTest, shouldPassRemoveMembershipAfterInsta
     EXPECT_EQ(ER_OK, alljoyn_permissionconfigurator_removemembership(m_configuratorUnderTest,
                                                                      m_certificateIdArray.ids[0].serial,
                                                                      m_certificateIdArray.ids[0].issuerPublicKey,
-                                                                     m_certificateIdArray.ids[0].issuerAki));
+                                                                     m_certificateIdArray.ids[0].issuerAki,
+                                                                     m_certificateIdArray.ids[0].issuerAkiLen));
 }
 
 TEST_F(PermissionConfiguratorPostClaimTest, shouldFailRemoveMembershipSecondCall)
@@ -1056,11 +1057,13 @@ TEST_F(PermissionConfiguratorPostClaimTest, shouldFailRemoveMembershipSecondCall
     ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_removemembership(m_configuratorUnderTest,
                                                                      m_certificateIdArray.ids[0].serial,
                                                                      m_certificateIdArray.ids[0].issuerPublicKey,
-                                                                     m_certificateIdArray.ids[0].issuerAki));
+                                                                     m_certificateIdArray.ids[0].issuerAki,
+                                                                     m_certificateIdArray.ids[0].issuerAkiLen));
 
     EXPECT_EQ(ER_CERTIFICATE_NOT_FOUND, alljoyn_permissionconfigurator_removemembership(m_configuratorUnderTest,
                                                                                         m_certificateIdArray.ids[0].serial,
                                                                                         m_certificateIdArray.ids[0].issuerPublicKey,
-                                                                                        m_certificateIdArray.ids[0].issuerAki));
+                                                                                        m_certificateIdArray.ids[0].issuerAki,
+                                                                                        m_certificateIdArray.ids[0].issuerAkiLen));
 
 }
