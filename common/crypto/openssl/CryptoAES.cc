@@ -24,7 +24,13 @@
 
 #include <algorithm>
 #include <ctype.h>
-#include <math.h>
+/* due to a change in gcc6, cmath must be included now */
+#if __GNUC__ >= 6
+ #include <cmath>
+#else
+ #include <math.h>
+#endif
+
 
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
