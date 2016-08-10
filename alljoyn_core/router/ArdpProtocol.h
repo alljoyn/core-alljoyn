@@ -215,7 +215,7 @@ uint32_t ARDP_GetConnId(ArdpHandle* handle, ArdpConnRecord* conn);
 uint32_t ARDP_GetConnPending(ArdpHandle* handle, ArdpConnRecord* conn);
 QStatus ARDP_GetRemoteIPEndpointFromConn(ArdpHandle* handle, ArdpConnRecord* conn, qcc::IPEndpoint& endpoint);
 QStatus ARDP_GetLocalIPEndpointFromConn(ArdpHandle* handle, ArdpConnRecord* conn, qcc::IPEndpoint& endpoint);
-QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool readReady, bool writeReady, uint32_t* ms);
+QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool readReady, bool writeReady, bool sockAccepts, uint32_t* ms);
 QStatus ARDP_StartPassive(ArdpHandle* handle);
 QStatus ARDP_Accept(ArdpHandle* handle, ArdpConnRecord* conn, uint16_t segmax, uint16_t segbmax, uint8_t* buf, uint16_t len);
 QStatus ARDP_Acknowledge(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint16_t len);
