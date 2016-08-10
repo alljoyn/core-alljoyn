@@ -3358,7 +3358,7 @@ static bool IsDuplicateConnRequest(ArdpHandle* handle, uint16_t foreign, qcc::IP
     return false;
 }
 
-QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool sockWrite, uint32_t* ms)
+QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool sockWrite, bool sockAccepts, uint32_t* ms)
 {
     const size_t bufferSize = 65536;      /* UDP packet can be up to 64K long */
     uint32_t buf32[bufferSize >> 2];
@@ -3368,7 +3368,8 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
     size_t nbytes;                        /* The number of bytes actually received */
     QStatus status = ER_OK;
 
-    //QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketRead=%d., socketWrite=%d., ms=%p)", handle, sock, sockRead, sockWrite, ms));
+    QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d, socketRead=%d, socketWrite=%d, ms=%p, sockAccepts: %s)",
+                  handle, sock, sockRead, sockWrite, ms, (sockAccepts == true ? "y" : "n")));
     if (sockWrite) {
         handle->trafficJam = false;
     }
@@ -3389,7 +3390,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                 uint16_t local, foreign;
                 ProtocolDemux(buf, nbytes, &local, &foreign);
                 if (local == 0) {
-                    if (handle->accepting && handle->cb.AcceptCb) {
+                    if (sockAccepts && handle->accepting && handle->cb.AcceptCb) {
                         if (!IsDuplicateConnRequest(handle, foreign, address)) {
                             ArdpConnRecord* conn = NewConnRecord();
                             status = InitConnRecord(handle, conn, sock, address, port, foreign);
@@ -3408,6 +3409,9 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                            */
 
                     } else {
+                        if (sockAccepts == false) {
+                            QCC_LogError(status, ("Attempt to connect to non-accepting sock %d", sock));
+                        }
                         status = ER_ARDP_INVALID_STATE;
                     }
                     if (status != ER_OK) {

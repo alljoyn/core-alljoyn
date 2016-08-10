@@ -355,10 +355,14 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     class ListenFdEntry {
       public:
-        ListenFdEntry(qcc::String normSpec, qcc::SocketFd sockFd) : m_normSpec(normSpec), m_sockFd(sockFd), m_remove(false) { }
+        ListenFdEntry(qcc::String normSpec, qcc::SocketFd sockFd, bool accepting)
+            : m_normSpec(normSpec), m_sockFd(sockFd), m_remove(false), m_accepting(accepting) { }
         qcc::String m_normSpec;  /**< The normalized listen spec for this entry */
         qcc::SocketFd m_sockFd;  /**< The socket associated with this entry */
         bool m_remove;           /**< If true, a request to stop listening on this liste spec has been received */
+        bool m_accepting;        /**< If true, the socket associated with this entry is supposed to accept incoming connection requests.
+                                      If false, the socket only handles traffic belonging to sessions hosted by other routing nodes and
+                                      the ARDP layer will reject incoming connection requests on that socket. */
     };
 
     std::list<ListenFdEntry> m_listenFds; /**< Listen specs that the transport should be listening on */
@@ -750,6 +754,34 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     bool NewListenOp(ListenOp op, qcc::String name);
 
+    /**
+     * @brief Creates, configures and binds a socket for UDP traffic.
+     *
+     * @param[out] socketFd The assigned descriptor which will identify the socket.
+     * @param[in] addr The IP address the socket will be bound to.
+     * @param[in] port The IP port the socket will be bound to.
+     * @return
+     *      - ER_OK if socket creation and binding succeeded.
+     *      - an error status otherwise. Some configuration failures are not treated as errors
+     *        and will not make the method abort with an error status.
+     */
+    QStatus SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port);
+
+    /**
+     * @brief Returns a given socket's accepting status.
+     *
+     * @param[in] socketFd The descriptor of the socket.
+     * @param[out] isAccepting The accepting status of the socket.
+     *      - true if the socket associated with this entry is supposed to accept incoming
+     *        connection requests.
+     *      - false otherwise - the socket only handles traffic belonging to sessions hosted
+     *        by other routing nodes.
+     * @return
+     *      - ER_OK if the socket descriptor has been found on the list.
+     *      - ER_FAIL otherwise.
+     */
+    QStatus IsSocketAccepting(qcc::SocketFd socketFd, bool& isAccepting) const;
+
     void QueueEnableDiscovery(const char* namePrefix, TransportMask transports);
     void QueueDisableDiscovery(const char* namePrefix, TransportMask transports);
     void QueueEnableAdvertisement(const qcc::String& advertiseName, bool quietly, TransportMask transports);
@@ -795,11 +827,37 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     std::map<qcc::String, uint16_t> m_listenPortMap; /**< If m_isListening, a map of the ports on which we are listening on different interfaces/addresses */
 
-    std::map<qcc::String, qcc::IPEndpoint> m_requestedInterfaces; /**< A map of requested interfaces and corresponding IP addresses/ports or defaults */
+    struct InterfaceInfo {
+        InterfaceInfo()
+            : m_address(), m_acceptingPort(0), m_activePort(0)
+        { }
 
-    std::map<qcc::String, qcc::String> m_requestedAddresses; /**< A map of requested IP addresses to interfaces or defaults */
+        InterfaceInfo(const qcc::IPAddress& address, uint16_t acceptingPort, uint16_t activePort)
+            : m_address(address), m_acceptingPort(acceptingPort), m_activePort(activePort)
+        { }
 
-    std::map<qcc::String, uint16_t> m_requestedAddressPortMap; /**< A map of requested IP addresses to ports */
+        InterfaceInfo(const qcc::String& address, uint16_t acceptingPort, uint16_t activePort)
+            : m_address(address), m_acceptingPort(acceptingPort), m_activePort(activePort)
+        { }
+        qcc::IPAddress m_address; /**< The address currently associated with the interface. */
+        uint16_t m_acceptingPort; /**< The port used for accepting incoming connection requests from other routing nodes. */
+        uint16_t m_activePort;    /**< The port used for joining and handling sessions hosted by other routing nodes. */
+    };
+    std::map<qcc::String, InterfaceInfo> m_requestedInterfaces; /**< A map of requested interfaces and corresponding IP addresses/ports or defaults */
+
+    struct AddressInfo {
+        AddressInfo()
+            : m_interface(), m_acceptingPort(0), m_activePort(0)
+        { }
+
+        AddressInfo(const qcc::String& interface, uint16_t acceptingPort, uint16_t activePort)
+            : m_interface(interface), m_acceptingPort(acceptingPort), m_activePort(activePort)
+        { }
+        qcc::String m_interface;  /**< The interface currently associated with the address. */
+        uint16_t m_acceptingPort; /**< The port used for accepting incoming connection requests from other routing nodes. */
+        uint16_t m_activePort;    /**< The port used for joining and handling sessions hosted by other routing nodes. */
+    };
+    std::map<qcc::String, AddressInfo> m_requestedAddresses; /**< A map of requested IP addresses to interfaces or defaults */
 
     std::list<ListenRequest> m_pendingAdvertisements; /**< A list of advertisement requests that came in while no interfaces were yet IFF_UP */
 
