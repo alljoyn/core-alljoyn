@@ -23,6 +23,12 @@
 /* Begin PBXBuildFile section */
 		032690F41D2D8E7F00444567 /* AJNAboutData.h in Headers */ = {isa = PBXBuildFile; fileRef = 032690F21D2D8E7F00444567 /* AJNAboutData.h */; };
 		032690F51D2D8E7F00444567 /* AJNAboutData.mm in Sources */ = {isa = PBXBuildFile; fileRef = 032690F31D2D8E7F00444567 /* AJNAboutData.mm */; };
+		5B26538B1D89F04200A9AA7F /* AJNApplicationStateListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B2653891D89F04200A9AA7F /* AJNApplicationStateListenerImpl.mm */; };
+		5B26538C1D89F04200A9AA7F /* AJNPermissionConfigurationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B26538A1D89F04200A9AA7F /* AJNPermissionConfigurationListenerImpl.mm */; };
+		5B2653911D89F05A00A9AA7F /* AJNApplicationStateListener.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B26538D1D89F05A00A9AA7F /* AJNApplicationStateListener.h */; };
+		5B2653921D89F05A00A9AA7F /* AJNApplicationStateListenerImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B26538E1D89F05A00A9AA7F /* AJNApplicationStateListenerImpl.h */; };
+		5B2653931D89F05A00A9AA7F /* AJNPermissionConfigurationListener.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B26538F1D89F05A00A9AA7F /* AJNPermissionConfigurationListener.h */; };
+		5B2653941D89F05A00A9AA7F /* AJNPermissionConfigurationListenerImpl.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B2653901D89F05A00A9AA7F /* AJNPermissionConfigurationListenerImpl.h */; };
 		5B7FA43E1D78B5B30097FD43 /* AJNPermissionConfigurator.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA43D1D78B5B30097FD43 /* AJNPermissionConfigurator.mm */; };
 		5B7FA4401D78B5C50097FD43 /* AJNPermissionConfigurator.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B7FA43F1D78B5C50097FD43 /* AJNPermissionConfigurator.h */; };
 		5B7FA4511D79EED20097FD43 /* AJNCertificateX509.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA44D1D79EED20097FD43 /* AJNCertificateX509.mm */; };
@@ -151,6 +157,12 @@
 /* Begin PBXFileReference section */
 		032690F21D2D8E7F00444567 /* AJNAboutData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutData.h; sourceTree = "<group>"; };
 		032690F31D2D8E7F00444567 /* AJNAboutData.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutData.mm; sourceTree = "<group>"; };
+		5B2653891D89F04200A9AA7F /* AJNApplicationStateListenerImpl.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNApplicationStateListenerImpl.mm; sourceTree = "<group>"; };
+		5B26538A1D89F04200A9AA7F /* AJNPermissionConfigurationListenerImpl.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNPermissionConfigurationListenerImpl.mm; sourceTree = "<group>"; };
+		5B26538D1D89F05A00A9AA7F /* AJNApplicationStateListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNApplicationStateListener.h; sourceTree = "<group>"; };
+		5B26538E1D89F05A00A9AA7F /* AJNApplicationStateListenerImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNApplicationStateListenerImpl.h; sourceTree = "<group>"; };
+		5B26538F1D89F05A00A9AA7F /* AJNPermissionConfigurationListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNPermissionConfigurationListener.h; sourceTree = "<group>"; };
+		5B2653901D89F05A00A9AA7F /* AJNPermissionConfigurationListenerImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNPermissionConfigurationListenerImpl.h; sourceTree = "<group>"; };
 		5B7FA43D1D78B5B30097FD43 /* AJNPermissionConfigurator.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNPermissionConfigurator.mm; sourceTree = "<group>"; };
 		5B7FA43F1D78B5C50097FD43 /* AJNPermissionConfigurator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNPermissionConfigurator.h; sourceTree = "<group>"; };
 		5B7FA44D1D79EED20097FD43 /* AJNCertificateX509.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNCertificateX509.mm; sourceTree = "<group>"; };
@@ -361,6 +373,12 @@
 		ACB44E5B15485F3E00FF7DBC /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				5B26538D1D89F05A00A9AA7F /* AJNApplicationStateListener.h */,
+				5B26538E1D89F05A00A9AA7F /* AJNApplicationStateListenerImpl.h */,
+				5B26538F1D89F05A00A9AA7F /* AJNPermissionConfigurationListener.h */,
+				5B2653901D89F05A00A9AA7F /* AJNPermissionConfigurationListenerImpl.h */,
+				5B2653891D89F04200A9AA7F /* AJNApplicationStateListenerImpl.mm */,
+				5B26538A1D89F04200A9AA7F /* AJNPermissionConfigurationListenerImpl.mm */,
 				5B7FA4551D79EEFA0097FD43 /* AJNCertificateX509.h */,
 				5B7FA4561D79EEFA0097FD43 /* AJNCryptoECC.h */,
 				5B7FA4571D79EEFA0097FD43 /* AJNGUID.h */,
@@ -519,6 +537,10 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5B2653911D89F05A00A9AA7F /* AJNApplicationStateListener.h in Headers */,
+				5B2653921D89F05A00A9AA7F /* AJNApplicationStateListenerImpl.h in Headers */,
+				5B2653931D89F05A00A9AA7F /* AJNPermissionConfigurationListener.h in Headers */,
+				5B2653941D89F05A00A9AA7F /* AJNPermissionConfigurationListenerImpl.h in Headers */,
 				5B7FA4591D79EEFA0097FD43 /* AJNCertificateX509.h in Headers */,
 				5B7FA45A1D79EEFA0097FD43 /* AJNCryptoECC.h in Headers */,
 				5B7FA45B1D79EEFA0097FD43 /* AJNGUID.h in Headers */,
@@ -675,6 +697,8 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5B26538B1D89F04200A9AA7F /* AJNApplicationStateListenerImpl.mm in Sources */,
+				5B26538C1D89F04200A9AA7F /* AJNPermissionConfigurationListenerImpl.mm in Sources */,
 				5B7FA4511D79EED20097FD43 /* AJNCertificateX509.mm in Sources */,
 				5B7FA4521D79EED20097FD43 /* AJNCryptoECC.mm in Sources */,
 				5B7FA4531D79EED20097FD43 /* AJNGUID.mm in Sources */,
