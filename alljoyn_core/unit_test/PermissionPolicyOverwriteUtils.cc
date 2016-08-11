@@ -15,6 +15,7 @@
  ******************************************************************************/
 
 #include <memory>
+#include <vector>
 #include <gtest/gtest.h>
 #include <qcc/GUID.h>
 #include "KeyInfoHelper.h"
@@ -26,115 +27,92 @@ using namespace std;
 
 void PolicyOverwriteUtils::ChangeMemberName(PermissionPolicy::Rule& rule, size_t memberIndex, AJ_PCSTR newName)
 {
-    PermissionPolicy::Rule::Member* mutableMembers = nullptr;
-    GetMembersCopy(rule, &mutableMembers);
+    vector<PermissionPolicy::Rule::Member> mutableMembers(rule.GetMembers(), rule.GetMembers() + rule.GetMembersSize());
 
     mutableMembers[memberIndex].SetMemberName(newName);
-    rule.SetMembers(rule.GetMembersSize(), mutableMembers);
 
-    delete[] mutableMembers;
+    rule.SetMembers(mutableMembers.size(), mutableMembers.data());
 }
 
 void PolicyOverwriteUtils::ChangeMemberType(PermissionPolicy::Rule& rule, size_t memberIndex, PermissionPolicy::Rule::Member::MemberType newType)
 {
-    PermissionPolicy::Rule::Member* mutableMembers = nullptr;
-    GetMembersCopy(rule, &mutableMembers);
+    vector<PermissionPolicy::Rule::Member> mutableMembers(rule.GetMembers(), rule.GetMembers() + rule.GetMembersSize());
 
     mutableMembers[memberIndex].SetMemberType(newType);
-    rule.SetMembers(rule.GetMembersSize(), mutableMembers);
 
-    delete[] mutableMembers;
+    rule.SetMembers(mutableMembers.size(), mutableMembers.data());
 }
 
 void PolicyOverwriteUtils::ChangeMemberActionMask(PermissionPolicy::Rule& rule, size_t memberIndex, uint8_t newActionMask)
 {
-    PermissionPolicy::Rule::Member* mutableMembers = nullptr;
-    GetMembersCopy(rule, &mutableMembers);
+    vector<PermissionPolicy::Rule::Member> mutableMembers(rule.GetMembers(), rule.GetMembers() + rule.GetMembersSize());
 
     mutableMembers[memberIndex].SetActionMask(newActionMask);
-    rule.SetMembers(rule.GetMembersSize(), mutableMembers);
 
-    delete[] mutableMembers;
+    rule.SetMembers(mutableMembers.size(), mutableMembers.data());
 }
 
 void PolicyOverwriteUtils::ChangeRecommendedSecurityLevel(PermissionPolicy::Rule::SecurityLevel securityLevel, PermissionPolicy& policy)
 {
-    PermissionPolicy::Rule* mutableRules = nullptr;
+    const PermissionPolicy::Acl& acl = policy.GetAcls()[0];
+    vector<PermissionPolicy::Rule> mutableRules(acl.GetRules(), acl.GetRules() + acl.GetRulesSize());
 
-    GetRulesCopy(policy.GetAcls()[0], &mutableRules);
     mutableRules[0].SetRecommendedSecurityLevel(securityLevel);
-    ChangeRules(policy.GetAcls()[0].GetRulesSize(), mutableRules, policy);
 
-    delete[] mutableRules;
+    ChangeRules(mutableRules.size(), mutableRules.data(), policy);
 }
 
 void PolicyOverwriteUtils::ChangeRules(size_t rulesCount, PermissionPolicy::Rule* rules, PermissionPolicy& policy)
 {
-    PermissionPolicy::Acl* mutableAcls = nullptr;
-    GetAclsCopy(policy, &mutableAcls);
+    vector<PermissionPolicy::Acl> mutableAcls(policy.GetAcls(), policy.GetAcls() + policy.GetAclsSize());
+
     mutableAcls[0].SetRules(rulesCount, rules);
 
-    policy.SetAcls(1U, mutableAcls);
+    policy.SetAcls(mutableAcls.size(), mutableAcls.data());
 }
 
 void PolicyOverwriteUtils::ChangePeers(size_t peersCount, PermissionPolicy::Peer* peers, PermissionPolicy& policy)
 {
-    PermissionPolicy::Acl* mutableAcls = nullptr;
-    GetAclsCopy(policy, &mutableAcls);
+    vector<PermissionPolicy::Acl> mutableAcls(policy.GetAcls(), policy.GetAcls() + policy.GetAclsSize());
+
     mutableAcls[0].SetPeers(peersCount, peers);
 
-    policy.SetAcls(1U, mutableAcls);
+    policy.SetAcls(mutableAcls.size(), mutableAcls.data());
 }
 
 void PolicyOverwriteUtils::ChangePeerType(size_t m_peerIndex, PermissionPolicy::Peer::PeerType peerType, PermissionPolicy& policy)
 {
-    PermissionPolicy::Acl* mutableAcls = nullptr;
-    PermissionPolicy::Peer* mutablePeers = nullptr;
-
-    GetAclsCopy(policy, &mutableAcls);
-    GetPeersCopy(mutableAcls[0], &mutablePeers);
+    vector<PermissionPolicy::Acl> mutableAcls(policy.GetAcls(), policy.GetAcls() + policy.GetAclsSize());
+    vector<PermissionPolicy::Peer> mutablePeers(mutableAcls[0].GetPeers(), mutableAcls[0].GetPeers() + mutableAcls[0].GetPeersSize());
 
     mutablePeers[m_peerIndex].SetType(peerType);
-    mutableAcls[0].SetPeers(mutableAcls[0].GetPeersSize(), mutablePeers);
+    mutableAcls[0].SetPeers(mutablePeers.size(), mutablePeers.data());
 
-    policy.SetAcls(1, mutableAcls);
-
-    delete[] mutableAcls;
-    delete[] mutablePeers;
+    policy.SetAcls(mutableAcls.size(), mutableAcls.data());
 }
 
 void PolicyOverwriteUtils::ChangePeerPublicKey(size_t m_peerIndex, AJ_PCSTR publicKeyPem, PermissionPolicy& policy)
 {
-    PermissionPolicy::Acl* mutableAcls = nullptr;
-    PermissionPolicy::Peer* mutablePeers = nullptr;
-
-    GetAclsCopy(policy, &mutableAcls);
-    GetPeersCopy(mutableAcls[0], &mutablePeers);
+    vector<PermissionPolicy::Acl> mutableAcls(policy.GetAcls(), policy.GetAcls() + policy.GetAclsSize());
+    const PermissionPolicy::Acl& acl = mutableAcls[0];
+    vector<PermissionPolicy::Peer> mutablePeers(acl.GetPeers(), acl.GetPeers() + acl.GetPeersSize());
 
     SetPeerPublicKey(publicKeyPem, mutablePeers[m_peerIndex]);
-    mutableAcls[0].SetPeers(mutableAcls[0].GetPeersSize(), mutablePeers);
+    mutableAcls[0].SetPeers(mutablePeers.size(), mutablePeers.data());
 
-    policy.SetAcls(1, mutableAcls);
-
-    delete[] mutableAcls;
-    delete[] mutablePeers;
+    policy.SetAcls(mutableAcls.size(), mutableAcls.data());
 }
 
 void PolicyOverwriteUtils::ChangePeerSgId(size_t m_peerIndex, AJ_PCSTR sgIdHex, PermissionPolicy& policy)
 {
-    PermissionPolicy::Acl* mutableAcls = nullptr;
-    PermissionPolicy::Peer* mutablePeers = nullptr;
-
-    GetAclsCopy(policy, &mutableAcls);
-    GetPeersCopy(mutableAcls[0], &mutablePeers);
+    vector<PermissionPolicy::Acl> mutableAcls(policy.GetAcls(), policy.GetAcls() + policy.GetAclsSize());
+    const PermissionPolicy::Acl& acl = mutableAcls[0];
+    vector<PermissionPolicy::Peer> mutablePeers(acl.GetPeers(), acl.GetPeers() + acl.GetPeersSize());
 
     mutablePeers[m_peerIndex].SetSecurityGroupId(GUID128(sgIdHex));
-    mutableAcls[0].SetPeers(mutableAcls[0].GetPeersSize(), mutablePeers);
+    mutableAcls[0].SetPeers(mutablePeers.size(), mutablePeers.data());
 
-    policy.SetAcls(1, mutableAcls);
-
-    delete[] mutableAcls;
-    delete[] mutablePeers;
+    policy.SetAcls(mutableAcls.size(), mutableAcls.data());
 }
 
 PermissionPolicy::Peer PolicyOverwriteUtils::BuildPeer(PermissionPolicy::Peer::PeerType peerType, AJ_PCSTR publicKeyPem, AJ_PCSTR sgIdHex)
@@ -149,46 +127,6 @@ PermissionPolicy::Peer PolicyOverwriteUtils::BuildPeer(PermissionPolicy::Peer::P
     }
 
     return result;
-}
-
-void PolicyOverwriteUtils::GetMembersCopy(const PermissionPolicy::Rule& rule, PermissionPolicy::Rule::Member** mutableMembers)
-{
-    size_t membersSize = rule.GetMembersSize();
-    *mutableMembers = new PermissionPolicy::Rule::Member[membersSize];
-
-    for (size_t index = 0; index < membersSize; index++) {
-        (*mutableMembers)[index] = rule.GetMembers()[index];
-    }
-}
-
-void PolicyOverwriteUtils::GetAclsCopy(const PermissionPolicy& policy, PermissionPolicy::Acl** mutableAcls)
-{
-    size_t aclsSize = policy.GetAclsSize();
-    *mutableAcls = new PermissionPolicy::Acl[aclsSize];
-
-    for (size_t index = 0; index < aclsSize; index++) {
-        (*mutableAcls)[index] = policy.GetAcls()[index];
-    }
-}
-
-void ajn::PolicyOverwriteUtils::GetRulesCopy(const PermissionPolicy::Acl& acl, PermissionPolicy::Rule** mutableRules)
-{
-    size_t rulesSize = acl.GetPeersSize();
-    *mutableRules = new PermissionPolicy::Rule[rulesSize];
-
-    for (size_t index = 0; index < rulesSize; index++) {
-        (*mutableRules)[index] = acl.GetRules()[index];
-    }
-}
-
-void PolicyOverwriteUtils::GetPeersCopy(const PermissionPolicy::Acl& acl, PermissionPolicy::Peer** mutablePeers)
-{
-    size_t peersSize = acl.GetPeersSize();
-    *mutablePeers = new PermissionPolicy::Peer[peersSize];
-
-    for (size_t index = 0; index < peersSize; index++) {
-        (*mutablePeers)[index] = acl.GetPeers()[index];
-    }
 }
 
 void PolicyOverwriteUtils::SetPeerPublicKey(AJ_PCSTR publicKeyPem, PermissionPolicy::Peer& peer)
