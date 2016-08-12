@@ -271,7 +271,7 @@ void* Test::Run(void* arg)
             } else {
                 QCC_DbgPrintf(("Test::Run(): Socket event fired"));
                 uint32_t ms;
-                ARDP_Run(ardpHandle, sock, true, false, &ms);
+                ARDP_Run(ardpHandle, sock, true, false, true, &ms);
             }
         }
     }
