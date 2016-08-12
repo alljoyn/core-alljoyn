@@ -32,22 +32,26 @@ using namespace std;
 namespace ajn {
 
 XmlManifestTemplateValidator* XmlManifestTemplateValidator::s_validator = nullptr;
-map<string, PermissionPolicy::Rule::SecurityLevel> XmlManifestTemplateValidator::s_securityLevelMap;
+map<string, PermissionPolicy::Rule::SecurityLevel>* XmlManifestTemplateValidator::s_securityLevelMap = nullptr;
 
 void XmlManifestTemplateValidator::Init()
 {
-    QCC_ASSERT(nullptr == s_validator);
+    QCC_ASSERT((nullptr == s_validator) && (nullptr == s_securityLevelMap));
     s_validator = new XmlManifestTemplateValidator();
 
-    s_securityLevelMap[PRIVILEGED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::PRIVILEGED;
-    s_securityLevelMap[NON_PRIVILEGED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED;
-    s_securityLevelMap[UNAUTHENTICATED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED;
+    s_securityLevelMap = new map<string, PermissionPolicy::Rule::SecurityLevel>();
+    (*s_securityLevelMap)[PRIVILEGED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::PRIVILEGED;
+    (*s_securityLevelMap)[NON_PRIVILEGED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED;
+    (*s_securityLevelMap)[UNAUTHENTICATED_SECURITY_LEVEL] = PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED;
 }
 
 void XmlManifestTemplateValidator::Shutdown()
 {
     delete s_validator;
     s_validator = nullptr;
+
+    delete s_securityLevelMap;
+    s_securityLevelMap = nullptr;
 }
 
 XmlManifestTemplateValidator* XmlManifestTemplateValidator::GetInstance()
@@ -95,8 +99,8 @@ QStatus XmlManifestTemplateValidator::ValidateSecurityLevelAnnotation(const XmlE
 QStatus XmlManifestTemplateValidator::ValidateSecurityLevelAnnotationValue(const XmlElement* annotation)
 {
     String securityLevel = annotation->GetAttribute(VALUE_XML_ATTRIBUTE);
-    auto foundSecurityLevel = s_securityLevelMap.find(securityLevel.c_str());
+    auto foundSecurityLevel = s_securityLevelMap->find(securityLevel.c_str());
 
-    return (foundSecurityLevel == s_securityLevelMap.end()) ? ER_XML_MALFORMED : ER_OK;
+    return (foundSecurityLevel == s_securityLevelMap->end()) ? ER_XML_MALFORMED : ER_OK;
 }
 }

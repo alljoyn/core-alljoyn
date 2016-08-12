@@ -160,12 +160,12 @@ class XmlRulesConverter {
      * Map used to extract XML member type values from the PermissionPolicy::Rule::Member::MemberType enum.
      * Cannot use unordered_map with enums as keys for some compilers.
      */
-    static std::map<PermissionPolicy::Rule::Member::MemberType, std::string> s_inverseMemberTypeMap;
+    static std::map<PermissionPolicy::Rule::Member::MemberType, std::string>* s_inverseMemberTypeMap;
 
     /*
      * Map used to extract action masks from XML contents.
      */
-    static std::unordered_map<std::string, uint8_t> s_memberMasksMap;
+    static std::unordered_map<std::string, uint8_t>* s_memberMasksMap;
 
     /*
      * Initializes the "s_inverseMemberTypeMap" member.

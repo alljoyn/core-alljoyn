@@ -28,22 +28,29 @@
 #include "XmlPoliciesValidator.h"
 
 using namespace qcc;
+using namespace std;
 
 namespace ajn {
 
-std::unordered_map<std::string, PermissionPolicy::Peer::PeerType> XmlPoliciesValidator::s_peerTypeMap;
+unordered_map<string, PermissionPolicy::Peer::PeerType>* XmlPoliciesValidator::s_peerTypeMap = nullptr;
 
 void XmlPoliciesValidator::Init()
 {
-    s_peerTypeMap[XML_PEER_ALL] = PermissionPolicy::Peer::PeerType::PEER_ALL;
-    s_peerTypeMap[XML_PEER_ANY_TRUSTED] = PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED;
-    s_peerTypeMap[XML_PEER_FROM_CERTIFICATE_AUTHORITY] = PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY;
-    s_peerTypeMap[XML_PEER_WITH_MEMBERSHIP] = PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP;
-    s_peerTypeMap[XML_PEER_WITH_PUBLIC_KEY] = PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY;
+    QCC_ASSERT(nullptr == s_peerTypeMap);
+
+    s_peerTypeMap = new unordered_map<string, PermissionPolicy::Peer::PeerType>();
+
+    (*s_peerTypeMap)[XML_PEER_ALL] = PermissionPolicy::Peer::PeerType::PEER_ALL;
+    (*s_peerTypeMap)[XML_PEER_ANY_TRUSTED] = PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED;
+    (*s_peerTypeMap)[XML_PEER_FROM_CERTIFICATE_AUTHORITY] = PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY;
+    (*s_peerTypeMap)[XML_PEER_WITH_MEMBERSHIP] = PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP;
+    (*s_peerTypeMap)[XML_PEER_WITH_PUBLIC_KEY] = PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY;
 }
 
 void XmlPoliciesValidator::Shutdown()
 {
+    delete s_peerTypeMap;
+    s_peerTypeMap = nullptr;
 }
 
 QStatus XmlPoliciesValidator::Validate(const XmlElement* policyXml)
@@ -226,9 +233,9 @@ QStatus XmlPoliciesValidator::PeerValidator::GetValidPeerType(const XmlElement* 
 {
     QStatus status = ER_OK;
     AJ_PCSTR stringPeerType = peer->GetChildren()[PEER_TYPE_INDEX]->GetContent().c_str();
-    auto foundType = s_peerTypeMap.find(stringPeerType);
+    auto foundType = s_peerTypeMap->find(stringPeerType);
 
-    if (foundType != s_peerTypeMap.end()) {
+    if (foundType != s_peerTypeMap->end()) {
         *peerType = foundType->second;
     } else {
         status = ER_XML_MALFORMED;

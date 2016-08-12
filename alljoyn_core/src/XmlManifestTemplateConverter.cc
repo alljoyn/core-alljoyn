@@ -33,22 +33,26 @@ using namespace std;
 namespace ajn {
 
 XmlManifestTemplateConverter* XmlManifestTemplateConverter::s_converter = nullptr;
-std::map<PermissionPolicy::Rule::SecurityLevel, std::string> XmlManifestTemplateConverter::s_inverseSecurityLevelMap;
+map<PermissionPolicy::Rule::SecurityLevel, string>* XmlManifestTemplateConverter::s_inverseSecurityLevelMap = nullptr;
 
 void XmlManifestTemplateConverter::Init()
 {
-    QCC_ASSERT(nullptr == s_converter);
+    QCC_ASSERT((nullptr == s_converter) && (nullptr == s_inverseSecurityLevelMap));
     s_converter = new XmlManifestTemplateConverter();
 
-    s_inverseSecurityLevelMap[PermissionPolicy::Rule::SecurityLevel::PRIVILEGED] = PRIVILEGED_SECURITY_LEVEL;
-    s_inverseSecurityLevelMap[PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED] = NON_PRIVILEGED_SECURITY_LEVEL;
-    s_inverseSecurityLevelMap[PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED] = UNAUTHENTICATED_SECURITY_LEVEL;
+    s_inverseSecurityLevelMap = new map<PermissionPolicy::Rule::SecurityLevel, string>();
+    (*s_inverseSecurityLevelMap)[PermissionPolicy::Rule::SecurityLevel::PRIVILEGED] = PRIVILEGED_SECURITY_LEVEL;
+    (*s_inverseSecurityLevelMap)[PermissionPolicy::Rule::SecurityLevel::NON_PRIVILEGED] = NON_PRIVILEGED_SECURITY_LEVEL;
+    (*s_inverseSecurityLevelMap)[PermissionPolicy::Rule::SecurityLevel::UNAUTHENTICATED] = UNAUTHENTICATED_SECURITY_LEVEL;
 }
 
 void XmlManifestTemplateConverter::Shutdown()
 {
     delete s_converter;
     s_converter = nullptr;
+
+    delete s_inverseSecurityLevelMap;
+    s_inverseSecurityLevelMap = nullptr;
 }
 
 XmlManifestTemplateConverter* XmlManifestTemplateConverter::GetInstance()
@@ -92,6 +96,6 @@ PermissionPolicy::Rule::RuleType XmlManifestTemplateConverter::GetRuleType()
 
 void XmlManifestTemplateConverter::BuildXmlInterfaceAnnotations(const PermissionPolicy::Rule& rule, XmlElement* interfaceElement)
 {
-    AddChildAnnotation(interfaceElement, SECURITY_LEVEL_ANNOTATION_NAME, s_inverseSecurityLevelMap.at(rule.GetRecommendedSecurityLevel()).c_str());
+    AddChildAnnotation(interfaceElement, SECURITY_LEVEL_ANNOTATION_NAME, s_inverseSecurityLevelMap->at(rule.GetRecommendedSecurityLevel()).c_str());
 }
 }

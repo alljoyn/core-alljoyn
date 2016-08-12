@@ -46,7 +46,7 @@ class XmlManifestTemplateValidator : public XmlRulesValidator {
     /**
      * Mapping between the member types in string format and PermissionPolicy::Rule::Member::MemberType enum.
      */
-    static std::map<std::string, PermissionPolicy::Rule::SecurityLevel> s_securityLevelMap;
+    static std::map<std::string, PermissionPolicy::Rule::SecurityLevel>* s_securityLevelMap;
 
     /**
      * Initializes the static members.

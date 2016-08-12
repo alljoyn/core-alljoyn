@@ -78,7 +78,7 @@ class XmlPoliciesValidator : public XmlValidator {
     /**
      * Mapping between the peer types in string format and PermissionPolicy::Peer::PeerType enum.
      */
-    static std::unordered_map<std::string, PermissionPolicy::Peer::PeerType> s_peerTypeMap;
+    static std::unordered_map<std::string, PermissionPolicy::Peer::PeerType>* s_peerTypeMap;
 
     /**
      * Initializes the static members.
