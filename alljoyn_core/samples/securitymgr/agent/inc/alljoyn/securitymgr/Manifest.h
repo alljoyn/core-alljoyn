@@ -134,6 +134,16 @@ class Manifest {
                          const size_t manifestRulesCount);
 
     /**
+     * @brief Populate the manifest from a manifest template XML.
+     *
+     * @param[in]    manifestTemplateXml XML containing the manifest template.
+     *
+     * @return ER_OK                       If the manifest was populated successfully.
+     * @return others
+     */
+    QStatus SetFromManifestTemplateXml(AJ_PCSTR manifestTemplateXml);
+
+    /**
      * @brief Populate the manifest from an ajn::Manifest object.
      *
      * @param[in] signedManifest           ajn::Manifest object

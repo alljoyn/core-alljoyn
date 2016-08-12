@@ -20,6 +20,7 @@
 #include <qcc/Debug.h>
 
 #include <alljoyn/securitymgr/CertificateUtil.h>
+#include <alljoyn/SecurityApplicationProxy.h>
 
 #define QCC_MODULE "SECMGR_STORAGE"
 
@@ -181,6 +182,50 @@ QStatus AJNCaStorage::RegisterAgent(const KeyInfoNISTP256& agentKey,
     return ER_OK;
 }
 
+QStatus AJNCaStorage::RegisterAgent(const KeyInfoNISTP256& agentKey,
+                                    AJ_PCSTR unsignedManifestXml,
+                                    GroupInfo& adminGroup,
+                                    IdentityCertificateChain& identityCertificates,
+                                    string& signedManifestXml,
+                                    vector<MembershipCertificateChain>& adminGroupMemberships)
+{
+    QStatus status = GetAdminGroup(adminGroup);
+    if (status != ER_OK) {
+        return status;
+    }
+
+    Application agentInfo;
+    if (agentKey.empty()) {
+        QCC_LogError(status, ("Bad Name: key empty ? %i", agentKey.empty()));
+        return ER_FAIL;
+    }
+    agentInfo.keyInfo = agentKey;
+
+    MembershipCertificate memberShip;
+    GenerateMembershipCertificate(agentInfo, adminGroup, memberShip);
+    MembershipCertificateChain chain;
+    chain.push_back(memberShip);
+    adminGroupMemberships.push_back(chain);
+
+    IdentityInfo agentID;
+    agentID.name = "Admin";
+    agentID.guid = GUID128(0xab);
+    IdentityCertificate idCert;
+    status = GenerateIdentityCertificate(agentInfo, agentID, idCert);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to generate identity certificate for agent"));
+        return status;
+    }
+    identityCertificates.push_back(idCert);
+
+    status = GenerateSignedManifest(idCert, unsignedManifestXml, signedManifestXml);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Could not generate signed manifest"));
+    }
+
+    return ER_OK;
+}
+
 QStatus AJNCaStorage::SignCertifcate(CertificateX509& certificate) const
 {
     if (certificate.GetSerialLen() == 0) {
@@ -250,6 +295,30 @@ QStatus AJNCaStorage::GenerateSignedManifest(const qcc::CertificateX509& idCert,
         QCC_LogError(status, ("Failed to sign manifest"));
         return status;
     }
+
+    return ER_OK;
+}
+
+QStatus AJNCaStorage::GenerateSignedManifest(const qcc::CertificateX509& idCert, AJ_PCSTR unsignedManifestXml, string& signedManifestXml)
+{
+    ECCPrivateKey epk;
+    AJ_PSTR signedManifestXmlC = nullptr;
+
+    QStatus status = ca->GetDSAPrivateKey(epk);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to load key"));
+        return status;
+    }
+
+    status = SecurityApplicationProxy::SignManifest(idCert, epk, unsignedManifestXml, &signedManifestXmlC);
+
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to sign the manifest"));
+        return status;
+    }
+
+    signedManifestXml = signedManifestXmlC;
+    SecurityApplicationProxy::DestroySignedManifest(signedManifestXmlC);
 
     return ER_OK;
 }

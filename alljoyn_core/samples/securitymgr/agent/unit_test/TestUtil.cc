@@ -209,7 +209,7 @@ QStatus BasicTest::CreateProxyObjectManager()
         }
         proxyObjectManager = shared_ptr<ProxyObjectManager>(new ProxyObjectManager(ownBus));
         status =
-            ownBus->EnablePeerSecurity(KEYX_ECDHE_NULL " " ECDHE_KEYX, &proxyObjectManager->listener, nullptr, true);
+            ownBus->EnablePeerSecurity(KEYX_ECDHE_NULL " " KEYX_ECDHE_ECDSA, &proxyObjectManager->listener, nullptr, true);
         PermissionPolicy::Rule rule;
         rule.SetInterfaceName("*");
         PermissionPolicy::Rule::Member member;
@@ -229,27 +229,26 @@ QStatus BasicTest::CreateProxyObjectManager()
             cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
             return ER_FAIL;
         }
-        {
-            ProxyObjectManager::ManagedProxyObject mpo(me);
-            status = proxyObjectManager->GetProxyObject(mpo, ProxyObjectManager::ECDHE_NULL);
-            if (ER_OK != status) {
-                cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
-                return status;
-            }
-            ECCPublicKey pk;
-            status = mpo.GetPublicKey(pk);
-            if (ER_OK != status) {
-                cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
-                return status;
-            }
-            me.keyInfo.SetPublicKey(&pk);
+
+        KeyInfoNISTP256 ownPublicKey;
+        status = ownBus->GetPermissionConfigurator().GetSigningPublicKey(ownPublicKey);
+        if (ER_OK != status) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return status;
         }
+        me.keyInfo.SetPublicKey(ownPublicKey.GetPublicKey());
+
         status = secMgr->Claim(me, id);
         if (ER_OK != status) {
             cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
             return status;
         }
-        status = ownBus->EnablePeerSecurity(ECDHE_KEYX, &proxyObjectManager->listener);
+        if (!WaitForState(me, PermissionConfigurator::CLAIMED, SYNC_UNKNOWN, true)) {
+            cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
+            return ER_FAIL;
+        }
+
+        status = ownBus->EnablePeerSecurity(KEYX_ECDHE_ECDSA, &proxyObjectManager->listener);
         if (ER_OK != status) {
             cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
             return status;

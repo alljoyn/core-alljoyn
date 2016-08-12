@@ -347,9 +347,13 @@ class PermissionMgmtObj : public BusObject {
     /**
      * Reset the Permission module by removing all the trust anchors, DSA keys,
      * installed policy and certificates.
+     *
+     * @param[in]   endManagement   Switch indicating whether to call "EndManagement" or
+     *                              not after reset has finished.
+     *
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus Reset();
+    QStatus Reset(bool endManagement = true);
 
     /**
      * Get the connected peer authentication metadata.
@@ -600,12 +604,14 @@ class PermissionMgmtObj : public BusObject {
     /**
      * Perform claiming of this app locally/offline.
      *
-     * @param[in] certificateAuthority Certificate authority trust anchor information
-     * @param[in] adminGroupAuthority Admin group authority trust anchor information
-     * @param[in] certs Identity cert chain
-     * @param[in] certCount Count of certs array
-     * @param[in] manifests Signed manifests
-     * @param[in] manifestCount Count of manifests array
+     * @param[in]   certificateAuthority    Certificate authority trust anchor information
+     * @param[in]   adminGroupAuthority     Admin group authority trust anchor information
+     * @param[in]   certs                   Identity cert chain
+     * @param[in]   certCount               Count of certs array
+     * @param[in]   manifests               Signed manifests
+     * @param[in]   manifestCount           Count of manifests array
+     * @param[in]   startManagement         Switch indicating whether to call "StartManagement" or
+     *                                      not before claiming begins.
      *
      * @return
      *   - #ER_OK if the app was successfully claimed
@@ -619,7 +625,8 @@ class PermissionMgmtObj : public BusObject {
         const qcc::CertificateX509* certs,
         size_t certCount,
         const Manifest* manifests,
-        size_t manifestCount);
+        size_t manifestCount,
+        bool startManagement = true);
 
     /**
      * Perform a local UpdateIdentity.
@@ -676,6 +683,15 @@ class PermissionMgmtObj : public BusObject {
     /**
      * Signal the app locally that management is starting.
      *
+     * NOTE: The application must assume any kind of possible Security 2.0
+     * configuration changes, including a full reset. It is strongly advised
+     * to put all current actions on hold and close all open sessions as they
+     * might need to be reauthenticated or security policies might change.
+     * The application should wait for "EndManagement" to be called before
+     * attempting to start or continue its operation. The caller will wait
+     * for this call to return until a regular method call timeout is hit.
+     * It is thus advised to return from this callback as quickly as possible.
+     *
      * @return
      *    - #ER_OK if the start management signal was sent
      *    - #ER_MANAGEMENT_ALREADY_STARTED if the app is already in this state
@@ -683,7 +699,16 @@ class PermissionMgmtObj : public BusObject {
     QStatus StartManagement();
 
     /**
-     * Signal the app locally that management is ending.
+     * Signal the app locally that management is ending. The caller will wait
+     * for this call to return until a regular method call timeout is hit.
+     * It is thus advised to return from this callback as quickly as possible.
+     * At this point the application may conclude one of two things has occurred,
+     * depending on its current state:
+     *
+     * CLAIMED state - all Security 2.0-related provisioning
+     * has finished and it's safe to resume or begin regular operation.
+     * CLAIMABLE state - the application has been reset and cannot establish any
+     * sessions to claimed applications until it is claimed once more.
      *
      * @return
      *    - #ER_OK if the start management signal was sent
@@ -734,7 +759,8 @@ class PermissionMgmtObj : public BusObject {
         const qcc::CertificateX509* certs,
         size_t certCount,
         const Manifest* manifests,
-        size_t manifestCount);
+        size_t manifestCount,
+        bool startManagement = true);
     QStatus RemoveMembershipInternal(const qcc::String& serial, const qcc::ECCPublicKey* issuerPubKey, const qcc::String& issuerAki);
     BusAttachment& bus;
     QStatus GetIdentity(MsgArg& arg);
@@ -819,7 +845,7 @@ class PermissionMgmtObj : public BusObject {
     void PolicyChanged(PermissionPolicy* policy);
     QStatus StoreConfiguration(const Configuration& config);
     QStatus GetConfiguration(Configuration& config);
-    QStatus PerformReset(bool keepForClaim);
+    QStatus PerformReset(bool keepForClaim, bool endManagement = true);
     QStatus SameSubjectPublicKey(const qcc::CertificateX509& cert, bool& outcome);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
     QStatus ManageTrustAnchors(PermissionPolicy* policy);

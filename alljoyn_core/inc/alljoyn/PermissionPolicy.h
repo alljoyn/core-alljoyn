@@ -1007,6 +1007,20 @@ class _Manifest {
     QStatus SetRules(const PermissionPolicy::Rule* rules, size_t rulesCount);
 
     /**
+     * Set the rules on this manifest from a manifest template XML.
+     * After calling SetRules, the cryptographic signature on this Manifest will
+     * no lnoger be valid; it will need to be signed again with the
+     * Sign method before applying to an application.
+     *
+     * @param[in]    manifestTemplateXml Input manifest template XML.
+     *
+     * @return
+     * - #ER_OK if successful
+     * - other error indicating failure
+     */
+    QStatus SetRules(AJ_PCSTR manifestTemplateXml);
+
+    /**
      * Cryptographically sign this manifest for the use of a particular subject certificate using
      * the provided signing key. issuerPrivateKey must be the private key that signed subjectCertificate for
      * apps to consider it valid. Caller must ensure the correct issuer public key is provided; this method

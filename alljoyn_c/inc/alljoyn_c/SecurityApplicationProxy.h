@@ -70,6 +70,12 @@ AJ_API void AJ_CALL alljoyn_securityapplicationproxy_destroy(alljoyn_securityapp
  * allow all communication from the provided admin group.
  * The application's manifests are installed as well.
  *
+ * Note: After this call the remote application should wait for the
+ * "alljoyn_securityapplicationproxy_endmanagement" call before it can begin regular operation.
+ * Since "alljoyn_securityapplicationproxy_startmanagement" calls are not possible before the
+ * application is claimed, that call is made internally on the application's side before
+ * the claiming procedure begins.
+ *
  * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
  * @param[in]    caKey                      Null-terminated C string representing the CA's PEM-encoded public key.
  * @param[in]    identityCertificateChain   Null-terminated C string representing PEM-encoded identity certificates
@@ -280,6 +286,9 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_installmembership(alljoy
  * prior to claim. The application's security 2.0 related configuration is
  * discarded. The application is no longer claimed, but this is not a complete factory reset.
  * The managed application keeps its private key.
+ *
+ * Note: After this call the remote application will automatically call
+ * "alljoyn_securityapplicationproxy_endmanagement" on itself.
  *
  * @param[in]    proxy  The alljoyn_securityapplicationproxy connected to the managed application.
  *
