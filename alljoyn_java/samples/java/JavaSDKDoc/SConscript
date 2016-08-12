@@ -18,6 +18,7 @@ Import('env')
 # The return value is the collection of files installed in the build destination.
 returnValue = env.SConscript('JavaSDKDocAboutClient/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocAboutService/SConscript', exports = ['env'])
+returnValue += env.SConscript('JavaSDKDocSecurityInterfaceListener/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocAutoPingerSample/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocMethodsClient/SConscript', exports = ['env'])
 returnValue += env.SConscript('JavaSDKDocMethodsService/SConscript', exports = ['env'])
