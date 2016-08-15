@@ -1,16 +1,9 @@
+# Define ALLJOYN_DIST before building. It should point to the "dist/cpp" directory for the appropriate
+# platform and version (debug or release). For example:
+# <AJ_ROOT>/core/alljoyn/build/android/arm/debug/dist/cpp
+
 LOCAL_PATH := $(call my-dir)
 
-# The ALLJOYN_DIST variable is used to locate needed distribution files.
-# The referenced directory must contain the /lib and /inc directories.
-# A default path is provided here which is relative to the directory
-# containing the Android.mk file. This default can be overidden via
-# an ALLJOYN_DIST environment variable which points to an alternate
-# cpp distribution directory for the appropriate build variant; e.g.
-# $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
-#
-ifndef $(ALLJOYN_DIST)
-    ALLJOYN_DIST := ../../../..
-endif
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := ajrouter
@@ -34,9 +27,9 @@ LOCAL_MODULE := MyAllJoynCode
 TARGET_PLATFORM := android-16
 
 LOCAL_C_INCLUDES := \
-	$(ALLJOYN_DIST)/inc \
-	$(ALLJOYN_DIST)/inc/alljoyn \
-	$(ALLJOYN_DIST)/inc/alljoyn/about
+	$(ALLJOYN_DIST)/../cpp/inc \
+	$(ALLJOYN_DIST)/../cpp/inc/alljoyn \
+	$(ALLJOYN_DIST)/../about/inc
 
 LOCAL_CFLAGS := -std=c++11 -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DANDROID
 
