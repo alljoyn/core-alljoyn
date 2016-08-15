@@ -23,14 +23,16 @@
 /* Begin PBXBuildFile section */
 		032690F41D2D8E7F00444567 /* AJNAboutData.h in Headers */ = {isa = PBXBuildFile; fileRef = 032690F21D2D8E7F00444567 /* AJNAboutData.h */; };
 		032690F51D2D8E7F00444567 /* AJNAboutData.mm in Sources */ = {isa = PBXBuildFile; fileRef = 032690F31D2D8E7F00444567 /* AJNAboutData.mm */; };
-		29636D2E1D621ED60054E634 /* AJNCertificateX509.mm in Sources */ = {isa = PBXBuildFile; fileRef = 29636D271D621ED60054E634 /* AJNCertificateX509.mm */; };
-		29636D2F1D621ED60054E634 /* AJNCryptoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 29636D281D621ED60054E634 /* AJNCryptoECC.mm */; };
-		29636D301D621ED60054E634 /* AJNGUID.mm in Sources */ = {isa = PBXBuildFile; fileRef = 29636D291D621ED60054E634 /* AJNGUID.mm */; };
-		29636D311D621ED60054E634 /* AJNKeyInfoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 29636D2A1D621ED60054E634 /* AJNKeyInfoECC.mm */; };
-		29636D391D621F260054E634 /* AJNCertificateX509.h in Headers */ = {isa = PBXBuildFile; fileRef = 29636D351D621F260054E634 /* AJNCertificateX509.h */; };
-		29636D3A1D621F260054E634 /* AJNCryptoECC.h in Headers */ = {isa = PBXBuildFile; fileRef = 29636D361D621F260054E634 /* AJNCryptoECC.h */; };
-		29636D3B1D621F260054E634 /* AJNGUID.h in Headers */ = {isa = PBXBuildFile; fileRef = 29636D371D621F260054E634 /* AJNGUID.h */; };
-		29636D3C1D621F260054E634 /* AJNKeyInfoECC.h in Headers */ = {isa = PBXBuildFile; fileRef = 29636D381D621F260054E634 /* AJNKeyInfoECC.h */; };
+		5B7FA43E1D78B5B30097FD43 /* AJNPermissionConfigurator.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA43D1D78B5B30097FD43 /* AJNPermissionConfigurator.mm */; };
+		5B7FA4401D78B5C50097FD43 /* AJNPermissionConfigurator.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B7FA43F1D78B5C50097FD43 /* AJNPermissionConfigurator.h */; };
+		5B7FA4511D79EED20097FD43 /* AJNCertificateX509.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA44D1D79EED20097FD43 /* AJNCertificateX509.mm */; };
+		5B7FA4521D79EED20097FD43 /* AJNCryptoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA44E1D79EED20097FD43 /* AJNCryptoECC.mm */; };
+		5B7FA4531D79EED20097FD43 /* AJNGUID.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA44F1D79EED20097FD43 /* AJNGUID.mm */; };
+		5B7FA4541D79EED20097FD43 /* AJNKeyInfoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 5B7FA4501D79EED20097FD43 /* AJNKeyInfoECC.mm */; };
+		5B7FA4591D79EEFA0097FD43 /* AJNCertificateX509.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B7FA4551D79EEFA0097FD43 /* AJNCertificateX509.h */; };
+		5B7FA45A1D79EEFA0097FD43 /* AJNCryptoECC.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B7FA4561D79EEFA0097FD43 /* AJNCryptoECC.h */; };
+		5B7FA45B1D79EEFA0097FD43 /* AJNGUID.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B7FA4571D79EEFA0097FD43 /* AJNGUID.h */; };
+		5B7FA45C1D79EEFA0097FD43 /* AJNKeyInfoECC.h in Headers */ = {isa = PBXBuildFile; fileRef = 5B7FA4581D79EEFA0097FD43 /* AJNKeyInfoECC.h */; };
 		7D027E2B1A0020EE00100D98 /* AJNAboutIcon.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D027E2A1A0020EE00100D98 /* AJNAboutIcon.h */; };
 		7D027E2D1A002E5500100D98 /* AJNAboutIcon.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7D027E2C1A002E5500100D98 /* AJNAboutIcon.mm */; };
 		7D027E2F1A0041BE00100D98 /* AJNAboutIconProxy.h in Headers */ = {isa = PBXBuildFile; fileRef = 7D027E2E1A0041BE00100D98 /* AJNAboutIconProxy.h */; };
@@ -149,14 +151,16 @@
 /* Begin PBXFileReference section */
 		032690F21D2D8E7F00444567 /* AJNAboutData.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutData.h; sourceTree = "<group>"; };
 		032690F31D2D8E7F00444567 /* AJNAboutData.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutData.mm; sourceTree = "<group>"; };
-		29636D271D621ED60054E634 /* AJNCertificateX509.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCertificateX509.mm; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNCertificateX509.mm; sourceTree = "<group>"; };
-		29636D281D621ED60054E634 /* AJNCryptoECC.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCryptoECC.mm; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNCryptoECC.mm; sourceTree = "<group>"; };
-		29636D291D621ED60054E634 /* AJNGUID.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNGUID.mm; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNGUID.mm; sourceTree = "<group>"; };
-		29636D2A1D621ED60054E634 /* AJNKeyInfoECC.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNKeyInfoECC.mm; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.mm; sourceTree = "<group>"; };
-		29636D351D621F260054E634 /* AJNCertificateX509.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AJNCertificateX509.h; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNCertificateX509.h; sourceTree = "<group>"; };
-		29636D361D621F260054E634 /* AJNCryptoECC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AJNCryptoECC.h; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNCryptoECC.h; sourceTree = "<group>"; };
-		29636D371D621F260054E634 /* AJNGUID.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AJNGUID.h; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNGUID.h; sourceTree = "<group>"; };
-		29636D381D621F260054E634 /* AJNKeyInfoECC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AJNKeyInfoECC.h; path = ../../../../../../../Affinegy/alljoyn/core/alljoyn/alljoyn_objc/AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.h; sourceTree = "<group>"; };
+		5B7FA43D1D78B5B30097FD43 /* AJNPermissionConfigurator.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNPermissionConfigurator.mm; sourceTree = "<group>"; };
+		5B7FA43F1D78B5C50097FD43 /* AJNPermissionConfigurator.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNPermissionConfigurator.h; sourceTree = "<group>"; };
+		5B7FA44D1D79EED20097FD43 /* AJNCertificateX509.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNCertificateX509.mm; sourceTree = "<group>"; };
+		5B7FA44E1D79EED20097FD43 /* AJNCryptoECC.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNCryptoECC.mm; sourceTree = "<group>"; };
+		5B7FA44F1D79EED20097FD43 /* AJNGUID.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNGUID.mm; sourceTree = "<group>"; };
+		5B7FA4501D79EED20097FD43 /* AJNKeyInfoECC.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNKeyInfoECC.mm; sourceTree = "<group>"; };
+		5B7FA4551D79EEFA0097FD43 /* AJNCertificateX509.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNCertificateX509.h; sourceTree = "<group>"; };
+		5B7FA4561D79EEFA0097FD43 /* AJNCryptoECC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNCryptoECC.h; sourceTree = "<group>"; };
+		5B7FA4571D79EEFA0097FD43 /* AJNGUID.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNGUID.h; sourceTree = "<group>"; };
+		5B7FA4581D79EEFA0097FD43 /* AJNKeyInfoECC.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = AJNKeyInfoECC.h; sourceTree = "<group>"; };
 		7D027E2A1A0020EE00100D98 /* AJNAboutIcon.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIcon.h; sourceTree = "<group>"; };
 		7D027E2C1A002E5500100D98 /* AJNAboutIcon.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNAboutIcon.mm; sourceTree = "<group>"; };
 		7D027E2E1A0041BE00100D98 /* AJNAboutIconProxy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutIconProxy.h; sourceTree = "<group>"; };
@@ -357,6 +361,16 @@
 		ACB44E5B15485F3E00FF7DBC /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				5B7FA4551D79EEFA0097FD43 /* AJNCertificateX509.h */,
+				5B7FA4561D79EEFA0097FD43 /* AJNCryptoECC.h */,
+				5B7FA4571D79EEFA0097FD43 /* AJNGUID.h */,
+				5B7FA4581D79EEFA0097FD43 /* AJNKeyInfoECC.h */,
+				5B7FA44D1D79EED20097FD43 /* AJNCertificateX509.mm */,
+				5B7FA44E1D79EED20097FD43 /* AJNCryptoECC.mm */,
+				5B7FA44F1D79EED20097FD43 /* AJNGUID.mm */,
+				5B7FA4501D79EED20097FD43 /* AJNKeyInfoECC.mm */,
+				5B7FA43F1D78B5C50097FD43 /* AJNPermissionConfigurator.h */,
+				5B7FA43D1D78B5B30097FD43 /* AJNPermissionConfigurator.mm */,
 				032690F21D2D8E7F00444567 /* AJNAboutData.h */,
 				032690F31D2D8E7F00444567 /* AJNAboutData.mm */,
 				7D74A7A819E711870055CD21 /* AJNAboutDataListener.h */,
@@ -392,12 +406,6 @@
 				ACB44E8715485F7800FF7DBC /* AJNBusObject.mm */,
 				ACB44E8815485F7800FF7DBC /* AJNBusObjectImpl.h */,
 				ACB44E8915485F7800FF7DBC /* AJNBusObjectImpl.mm */,
-				29636D351D621F260054E634 /* AJNCertificateX509.h */,
-				29636D271D621ED60054E634 /* AJNCertificateX509.mm */,
-				29636D361D621F260054E634 /* AJNCryptoECC.h */,
-				29636D281D621ED60054E634 /* AJNCryptoECC.mm */,
-				29636D371D621F260054E634 /* AJNGUID.h */,
-				29636D291D621ED60054E634 /* AJNGUID.mm */,
 				ACB44E8A15485F7800FF7DBC /* AJNHandle.h */,
 				7DAADABC1A97C77D000D18F9 /* AJNInit.h */,
 				7DAADABE1A97C787000D18F9 /* AJNInit.mm */,
@@ -407,8 +415,6 @@
 				ACB44E8E15485F7800FF7DBC /* AJNInterfaceMember.mm */,
 				ACB44E8F15485F7800FF7DBC /* AJNInterfaceProperty.h */,
 				ACB44E9015485F7800FF7DBC /* AJNInterfaceProperty.mm */,
-				29636D381D621F260054E634 /* AJNKeyInfoECC.h */,
-				29636D2A1D621ED60054E634 /* AJNKeyInfoECC.mm */,
 				AC3A983D1576DE4100CFF856 /* AJNKeyStoreListener.h */,
 				AC3A98421577CF9600CFF856 /* AJNKeyStoreListenerImpl.h */,
 				AC3A98431577CF9600CFF856 /* AJNKeyStoreListenerImpl.mm */,
@@ -513,10 +519,11 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				29636D391D621F260054E634 /* AJNCertificateX509.h in Headers */,
-				29636D3A1D621F260054E634 /* AJNCryptoECC.h in Headers */,
-				29636D3B1D621F260054E634 /* AJNGUID.h in Headers */,
-				29636D3C1D621F260054E634 /* AJNKeyInfoECC.h in Headers */,
+				5B7FA4591D79EEFA0097FD43 /* AJNCertificateX509.h in Headers */,
+				5B7FA45A1D79EEFA0097FD43 /* AJNCryptoECC.h in Headers */,
+				5B7FA45B1D79EEFA0097FD43 /* AJNGUID.h in Headers */,
+				5B7FA45C1D79EEFA0097FD43 /* AJNKeyInfoECC.h in Headers */,
+				5B7FA4401D78B5C50097FD43 /* AJNPermissionConfigurator.h in Headers */,
 				ACB44EA815485F7800FF7DBC /* AJNBus.h in Headers */,
 				ACB44EAA15485F7800FF7DBC /* AJNBusAttachment.h in Headers */,
 				032690F41D2D8E7F00444567 /* AJNAboutData.h in Headers */,
@@ -668,10 +675,11 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				29636D2E1D621ED60054E634 /* AJNCertificateX509.mm in Sources */,
-				29636D2F1D621ED60054E634 /* AJNCryptoECC.mm in Sources */,
-				29636D301D621ED60054E634 /* AJNGUID.mm in Sources */,
-				29636D311D621ED60054E634 /* AJNKeyInfoECC.mm in Sources */,
+				5B7FA4511D79EED20097FD43 /* AJNCertificateX509.mm in Sources */,
+				5B7FA4521D79EED20097FD43 /* AJNCryptoECC.mm in Sources */,
+				5B7FA4531D79EED20097FD43 /* AJNGUID.mm in Sources */,
+				5B7FA4541D79EED20097FD43 /* AJNKeyInfoECC.mm in Sources */,
+				5B7FA43E1D78B5B30097FD43 /* AJNPermissionConfigurator.mm in Sources */,
 				7D74A7AD19E711870055CD21 /* AJNAboutDataListenerImpl.mm in Sources */,
 				7D74A7B019E711870055CD21 /* AJNAboutListenerImpl.mm in Sources */,
 				ACB44EA915485F7800FF7DBC /* AJNBus.m in Sources */,
