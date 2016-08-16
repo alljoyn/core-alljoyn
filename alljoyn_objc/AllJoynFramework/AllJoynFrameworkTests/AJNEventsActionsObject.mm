@@ -61,25 +61,25 @@ class EventsActionsObjectImpl : public AJNBusObjectImpl
 private:
     const InterfaceDescription::Member* TestEventSignalMember;
 
-    
+
 public:
     EventsActionsObjectImpl(const char *path, id<EventsActionsObjectDelegate> aDelegate);
     EventsActionsObjectImpl(BusAttachment &bus, const char *path, id<EventsActionsObjectDelegate> aDelegate);
 
     virtual QStatus AddInterfacesAndHandlers(BusAttachment &bus);
 
-    
+
     // properties
     //
     virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
-    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val);        
-    
-    
+    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
+
+
     // methods
     //
     void TestAction(const InterfaceDescription::Member* member, Message& msg);
 
-    
+
     // signals
     //
     QStatus SendTestEvent(const char * outStr, const char* destination, SessionId sessionId, uint16_t timeToLive = 0, uint8_t flags = 0);
@@ -110,8 +110,8 @@ QStatus EventsActionsObjectImpl::AddInterfacesAndHandlers(BusAttachment &bus)
     const InterfaceDescription* interfaceDescription = NULL;
     QStatus status;
     status = ER_OK;
-    
-    
+
+
     // Add the org.alljoyn.bus.sample interface to this object
     //
     interfaceDescription = bus.GetInterface("org.alljoyn.bus.sample");
@@ -120,7 +120,7 @@ QStatus EventsActionsObjectImpl::AddInterfacesAndHandlers(BusAttachment &bus)
     if (ER_OK != status) {
         NSLog(@"ERROR: An error occurred while adding the interface org.alljoyn.bus.sample.%@", [AJNStatus descriptionForStatusCode:status]);
     }
-    
+
     // Register the method handlers for interface EventsActionsObjectDelegate with the object
     //
     const MethodEntry methodEntriesForEventsActionsObjectDelegate[] = {
@@ -128,18 +128,18 @@ QStatus EventsActionsObjectImpl::AddInterfacesAndHandlers(BusAttachment &bus)
         {
 			interfaceDescription->GetMember("TestAction"), static_cast<MessageReceiver::MethodHandler>(&EventsActionsObjectImpl::TestAction)
 		}
-    
+
     };
-    
+
     status = AddMethodHandlers(methodEntriesForEventsActionsObjectDelegate, sizeof(methodEntriesForEventsActionsObjectDelegate) / sizeof(methodEntriesForEventsActionsObjectDelegate[0]));
     if (ER_OK != status) {
         NSLog(@"ERROR: An error occurred while adding method handlers for interface org.alljoyn.bus.sample to the interface description. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    
+
     // save off signal members for later
     //
     TestEventSignalMember = interfaceDescription->GetMember("TestEvent");
-    assert(TestEventSignalMember);    
+    assert(TestEventSignalMember);
 
     return status;
 }
@@ -148,35 +148,35 @@ QStatus EventsActionsObjectImpl::AddInterfacesAndHandlers(BusAttachment &bus)
 QStatus EventsActionsObjectImpl::Get(const char* ifcName, const char* propName, MsgArg& val)
 {
     QStatus status = ER_BUS_NO_SUCH_PROPERTY;
-    
+
     @autoreleasepool {
-    
-    if (strcmp(ifcName, "org.alljoyn.bus.sample") == 0) 
+
+    if (strcmp(ifcName, "org.alljoyn.bus.sample") == 0)
     {
-    
+
         if (strcmp(propName, "TestProperty") == 0)
         {
-                
+
             status = val.Set( "s", [((id<EventsActionsObjectDelegate>)delegate).TestProperty UTF8String] );
-            
+
         }
-    
+
     }
-    
-    
+
+
     }
-    
+
     return status;
 }
-    
+
 QStatus EventsActionsObjectImpl::Set(const char* ifcName, const char* propName, MsgArg& val)
 {
     QStatus status = ER_BUS_NO_SUCH_PROPERTY;
-    
+
     @autoreleasepool {
-    
-    
-    
+
+
+
     }
 
     return status;
@@ -185,41 +185,41 @@ QStatus EventsActionsObjectImpl::Set(const char* ifcName, const char* propName, 
 void EventsActionsObjectImpl::TestAction(const InterfaceDescription::Member *member, Message& msg)
 {
     @autoreleasepool {
-    
-    
-    
-    
+
+
+
+
     // get all input arguments
     //
-    
+
     qcc::String inArg0 = msg->GetArg(0)->v_string.str;
-        
+
     qcc::String inArg1 = msg->GetArg(1)->v_string.str;
-        
+
     // declare the output arguments
     //
-    
+
 	NSString* outArg0;
 
-    
+
     // call the Objective-C delegate method
     //
-    
+
 	outArg0 = [(id<EventsActionsObjectDelegate>)delegate concatenateString:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] withString:[NSString stringWithCString:inArg1.c_str() encoding:NSUTF8StringEncoding] message:[[AJNMessage alloc] initWithHandle:&msg]];
-            
-        
+
+
     // formulate the reply
     //
     MsgArg outArgs[1];
-    
+
     outArgs[0].Set("s", [outArg0 UTF8String]);
-        
+
     QStatus status = MethodReply(msg, outArgs, 1);
     if (ER_OK != status) {
         NSLog(@"ERROR: An error occurred when attempting to send a method reply for TestAction. %@", [AJNStatus descriptionForStatusCode:status]);
-    }  
-        
-    
+    }
+
+
     }
 }
 
@@ -228,9 +228,9 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
 
     MsgArg args[1];
 
-    
+
             args[0].Set( "s", outStr );
-        
+
 
     return Signal(destination, sessionId, *TestEventSignalMember, args, 1, timeToLive, flags);
 }
@@ -284,55 +284,55 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
 
     AJNInterfaceDescription *interfaceDescription;
 
-    
+
         //
         // EventsActionsObjectDelegate interface (org.alljoyn.bus.sample)
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
-    
+
         [interfaceDescription setDescriptionLanguage:@""];
         [interfaceDescription setDescription:@"This is the interface"];
-    
+
         // add the properties to the interface description
         //
-    
-        status = [interfaceDescription addPropertyWithName:@"TestProperty" signature:@"s"];
-        
+
+        status = [interfaceDescription addPropertyWithName:@"TestProperty" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
+
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  TestProperty" userInfo:nil];
         }
-    
+
         [interfaceDescription setPropertyDescription:@"This is property description" forPropertyWithName:@"TestProperty"];
-    
+
         // add the methods to the interface description
         //
-    
+
         status = [interfaceDescription addMethodWithName:@"TestAction" inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1",@"str2",@"outStr", nil]];
-        
+
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: TestAction" userInfo:nil];
         }
-    
+
         [interfaceDescription setMemberDescription:@"This is the test action" forMemberWithName:@"TestAction" sessionlessSignal:FALSE];
-    
+
         // add the signals to the interface description
         //
-    
+
         status = [interfaceDescription addSignalWithName:@"TestEvent" inputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"outStr", nil]];
-        
+
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestEvent" userInfo:nil];
         }
-    
+
         [interfaceDescription setMemberDescription:@"This is the test event" forMemberWithName:@"TestEvent" sessionlessSignal:TRUE];
 
-    
-    
 
-    
+
+
+
         [interfaceDescription activate];
 
 
@@ -362,10 +362,10 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
         // create the internal C++ bus object
         //
         EventsActionsObjectImpl *busObject = new EventsActionsObjectImpl(*((ajn::BusAttachment*)busAttachment.handle), [path UTF8String], (id<EventsActionsObjectDelegate>)self);
-        
+
         self.handle = busObject;
-        
-      
+
+
         [self setDescription:@"This is the bus object" inLanguage:@""];
 
     }
@@ -379,7 +379,7 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
     self.handle = nil;
 }
 
-    
+
 - (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2 message:(AJNMessage *)methodCallMessage
 {
     //
@@ -391,12 +391,12 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
 - (void)sendtestEventString:(NSString*)outStr inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath
 
 {
-    
+
     self.busObject->SendTestEvent([outStr UTF8String], [destinationPath UTF8String], sessionId);
-        
+
 }
 
-    
+
 @end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -416,61 +416,61 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
 @end
 
 @implementation EventsActionsObjectProxy
-    
+
 - (NSString*)TestProperty
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample"];
-    
-    
+
+
     MsgArg propValue;
-    
+
     QStatus status = self.proxyBusObject->GetProperty("org.alljoyn.bus.sample", "TestProperty", propValue);
 
     if (status != ER_OK) {
         NSLog(@"ERROR: Failed to get property TestProperty on interface org.alljoyn.bus.sample. %@", [AJNStatus descriptionForStatusCode:status]);
-        
+
         return nil;
-        
+
     }
 
-    
+
     return [NSString stringWithCString:propValue.v_variant.val->v_string.str encoding:NSUTF8StringEncoding];
-        
+
 }
-    
+
 - (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2
 {
     [self addInterfaceNamed:@"org.alljoyn.bus.sample"];
-    
+
     // prepare the input arguments
     //
-    
-    Message reply(*((BusAttachment*)self.bus.handle));    
+
+    Message reply(*((BusAttachment*)self.bus.handle));
     MsgArg inArgs[2];
-    
+
     inArgs[0].Set("s", [str1 UTF8String]);
-        
+
     inArgs[1].Set("s", [str2 UTF8String]);
-        
+
 
     // make the function call using the C++ proxy object
     //
-    
+
     QStatus status = self.proxyBusObject->MethodCall("org.alljoyn.bus.sample", "TestAction", inArgs, 2, reply, 5000);
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample failed. %@", [AJNStatus descriptionForStatusCode:status]);
-        
+
         return nil;
-            
+
     }
 
-    
+
     // pass the output arguments back to the caller
     //
-    
-        
+
+
     return [NSString stringWithCString:reply->GetArg()->v_string.str encoding:NSUTF8StringEncoding];
-        
+
 
 }
 
@@ -491,19 +491,19 @@ private:
     const ajn::InterfaceDescription::Member* TestEventSignalMember;
     void TestEventSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg);
 
-    
+
 public:
     /**
      * Constructor for the AJN signal handler implementation.
      *
-     * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.     
-     */    
+     * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
+     */
     EventsActionsObjectDelegateSignalHandlerImpl(id<AJNSignalHandler> aDelegate);
-    
+
     virtual void RegisterSignalHandler(ajn::BusAttachment &bus);
-    
+
     virtual void UnregisterSignalHandler(ajn::BusAttachment &bus);
-    
+
     /**
      * Virtual destructor for derivable class.
      */
@@ -514,8 +514,8 @@ public:
 /**
  * Constructor for the AJN signal handler implementation.
  *
- * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.     
- */    
+ * @param aDelegate         Objective C delegate called when one of the below virtual functions is called.
+ */
 EventsActionsObjectDelegateSignalHandlerImpl::EventsActionsObjectDelegateSignalHandlerImpl(id<AJNSignalHandler> aDelegate) : AJNSignalHandlerImpl(aDelegate)
 {
 	TestEventSignalMember = NULL;
@@ -532,7 +532,7 @@ void EventsActionsObjectDelegateSignalHandlerImpl::RegisterSignalHandler(ajn::Bu
     QStatus status;
     status = ER_OK;
     const ajn::InterfaceDescription* interface = NULL;
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Register signal handler for signal TestEvent
     //
@@ -543,13 +543,13 @@ void EventsActionsObjectDelegateSignalHandlerImpl::RegisterSignalHandler(ajn::Bu
         TestEventSignalMember = interface->GetMember("TestEvent");
         assert(TestEventSignalMember);
 
-        
+
         // Register signal handler for TestEvent
         status =  bus.RegisterSignalHandler(this,
             static_cast<MessageReceiver::SignalHandler>(&EventsActionsObjectDelegateSignalHandlerImpl::TestEventSignalHandler),
             TestEventSignalMember,
             NULL);
-            
+
         if (status != ER_OK) {
             NSLog(@"ERROR: Interface EventsActionsObjectDelegateSignalHandlerImpl::RegisterSignalHandler failed. %@", [AJNStatus descriptionForStatusCode:status] );
         }
@@ -557,7 +557,7 @@ void EventsActionsObjectDelegateSignalHandlerImpl::RegisterSignalHandler(ajn::Bu
     else {
         NSLog(@"ERROR: org.alljoyn.bus.sample not found.");
     }
-    ////////////////////////////////////////////////////////////////////////////    
+    ////////////////////////////////////////////////////////////////////////////
 
 }
 
@@ -566,26 +566,26 @@ void EventsActionsObjectDelegateSignalHandlerImpl::UnregisterSignalHandler(ajn::
     QStatus status;
     status = ER_OK;
     const ajn::InterfaceDescription* interface = NULL;
-    
+
     ////////////////////////////////////////////////////////////////////////////
     // Unregister signal handler for signal TestEvent
     //
     interface = bus.GetInterface("org.alljoyn.bus.sample");
-    
+
     // Store the TestEvent signal member away so it can be quickly looked up
     TestEventSignalMember = interface->GetMember("TestEvent");
     assert(TestEventSignalMember);
-    
+
     // Unregister signal handler for TestEvent
     status =  bus.UnregisterSignalHandler(this,
         static_cast<MessageReceiver::SignalHandler>(&EventsActionsObjectDelegateSignalHandlerImpl::TestEventSignalHandler),
         TestEventSignalMember,
         NULL);
-        
+
     if (status != ER_OK) {
         NSLog(@"ERROR:EventsActionsObjectDelegateSignalHandlerImpl::UnregisterSignalHandler failed. %@", [AJNStatus descriptionForStatusCode:status] );
     }
-    ////////////////////////////////////////////////////////////////////////////    
+    ////////////////////////////////////////////////////////////////////////////
 
 }
 
@@ -593,20 +593,20 @@ void EventsActionsObjectDelegateSignalHandlerImpl::UnregisterSignalHandler(ajn::
 void EventsActionsObjectDelegateSignalHandlerImpl::TestEventSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
     @autoreleasepool {
-        
+
     qcc::String inArg0 = msg->GetArg(0)->v_string.str;
-        
+
         AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
-        AJNSessionId sessionId = msg->GetSessionId();        
+        AJNSessionId sessionId = msg->GetSessionId();
         NSLog(@"Received TestEvent signal from %@ on path %@ for session id %u [%s > %s]", [signalMessage senderName], objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
-        
+
         dispatch_async(dispatch_get_main_queue(), ^{
-            
+
             [(id<EventsActionsObjectDelegateSignalHandler>)m_delegate didReceivetestEventString:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] inSession:sessionId message:signalMessage];
-                
+
         });
-        
+
     }
 }
 
@@ -623,4 +623,4 @@ void EventsActionsObjectDelegateSignalHandlerImpl::TestEventSignalHandler(const 
 @end
 
 ////////////////////////////////////////////////////////////////////////////////
-    
+
