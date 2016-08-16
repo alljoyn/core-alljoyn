@@ -11515,6 +11515,9 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         status = SetupSocket(activeFd, listenAddr, requestedActivePort);
         if (status != ER_OK) {
             QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetupSocket() for active FD failed"));
+            if (acceptingFd != INVALID_SOCKET_FD) {
+                qcc::Close(acceptingFd);
+            }
             continue;
         }
 
@@ -11529,6 +11532,12 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
                 status = qcc::GetLocalAddress(acceptingFd, listenAddr, acceptingPort);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): GetLocalAddress() for accepting FD failed"));
+                    if (acceptingFd != INVALID_SOCKET_FD) {
+                        qcc::Close(acceptingFd);
+                    }
+                    if (activeFd != INVALID_SOCKET_FD) {
+                        qcc::Close(activeFd);
+                    }
                     continue;
                 }
             } else {
@@ -11539,6 +11548,12 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
                 status = qcc::GetLocalAddress(activeFd, listenAddr, activePort);
                 if (status != ER_OK) {
                     QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): GetLocalAddress() for active FD failed"));
+                    if (acceptingFd != INVALID_SOCKET_FD) {
+                        qcc::Close(acceptingFd);
+                    }
+                    if (activeFd != INVALID_SOCKET_FD) {
+                        qcc::Close(activeFd);
+                    }
                     continue;
                 }
             } else {
