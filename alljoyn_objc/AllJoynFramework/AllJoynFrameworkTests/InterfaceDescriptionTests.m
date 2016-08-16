@@ -66,7 +66,7 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
 - (void)setUp
 {
     [super setUp];
-    
+
     // Set-up code here. Executed before each test case is run.
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
@@ -75,10 +75,10 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
 - (void)tearDown
 {
     // Tear-down code here. Executed after each test case is run.
-    //    
+    //
     [self.bus destroy];
     self.bus = nil;
-    
+
     [super tearDown];
 }
 
@@ -87,21 +87,21 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
 {
     AJNInterfaceDescription *iface = [self.bus createInterfaceWithName:kInterfaceName enableSecurity:NO];
     XCTAssertNotNil(iface, @"Bus failed to create interface.");
-    
+
     [iface activate];
-    
+
     iface = [self.bus interfaceWithName:kInterfaceName];
     XCTAssertNotNil(iface, @"Bus failed to retrieve interface that had already been created.");
 }
 
 - (void)testShouldListMembersAndPropertiesAddedToInterfaceViaXML
 {
-    QStatus status = [self.bus createInterfacesFromXml:kInterfaceXML];    
-    XCTAssertTrue(status == ER_OK, @"Bus failed to create interface from XML.");    
-    
+    QStatus status = [self.bus createInterfacesFromXml:kInterfaceXML];
+    XCTAssertTrue(status == ER_OK, @"Bus failed to create interface from XML.");
+
     AJNInterfaceDescription *iface = [self.bus interfaceWithName:kInterfaceName];
     XCTAssertNotNil(iface, @"Bus failed to retrieve interface that had already been created from XML.");
-    
+
     NSArray *members = iface.members;
     XCTAssertTrue(members.count == 2, @"The number of members does not match the interface created from XML");
 
@@ -116,15 +116,15 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
     XCTAssertTrue([member.inputSignature compare:kInterfaceMethodInputSignature] == NSOrderedSame, @"The interface member input signature does not match what was specified in the XML.");
     XCTAssertTrue([member.outputSignature compare:kInterfaceMethodOutputSignature] == NSOrderedSame, @"The interface member output signature does not match what was specified in the XML.");
     XCTAssertTrue([[member.argumentNames componentsJoinedByString:@","] compare:kInterfaceMethodArgNames] == NSOrderedSame, @"The interface member argument names do not match what was specified in the XML.");
-    
+
     NSArray *properties = iface.properties;
-    XCTAssertTrue(properties.count == 1, @"The number of properties does not match the interface created from XML");    
-    
+    XCTAssertTrue(properties.count == 1, @"The number of properties does not match the interface created from XML");
+
     AJNInterfaceProperty *property = [properties objectAtIndex:0];
     XCTAssertTrue([property.name compare:kInterfaceProperty] == NSOrderedSame, @"The interface property name does not match what was specified in the XML.");
     XCTAssertTrue([property.signature compare:kInterfacePropertySignature] == NSOrderedSame, @"The interface property input signature does not match what was specified in the XML.");
     XCTAssertTrue(property.accessPermissions == kInterfacePropertyAccessPermissions, @"The interface property output signature does not match what was specified in the XML.");
-    
+
 }
 
 @end
