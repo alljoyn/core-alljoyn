@@ -455,7 +455,7 @@ void TestBothImpl::IdentifyB(const InterfaceDescription::Member *member, Message
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.a"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.a" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     
         // add the methods to the interface description
@@ -593,7 +593,7 @@ void TestBothImpl::IdentifyB(const InterfaceDescription::Member *member, Message
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.b"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.b" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     
         // add the methods to the interface description
@@ -731,7 +731,7 @@ void TestBothImpl::IdentifyB(const InterfaceDescription::Member *member, Message
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.a"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.a" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     
         // add the methods to the interface description
@@ -753,7 +753,7 @@ void TestBothImpl::IdentifyB(const InterfaceDescription::Member *member, Message
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.b"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.test.b" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     
         // add the methods to the interface description

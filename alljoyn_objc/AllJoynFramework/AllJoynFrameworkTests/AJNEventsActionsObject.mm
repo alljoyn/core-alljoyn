@@ -290,7 +290,7 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
         //
         // create an interface description, or if that fails, get the interface as it was already created
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample"];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     
         [interfaceDescription setDescriptionLanguage:@""];
@@ -299,7 +299,7 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
         // add the properties to the interface description
         //
     
-        status = [interfaceDescription addPropertyWithName:@"TestProperty" signature:@"s"];
+        status = [interfaceDescription addPropertyWithName:@"TestProperty" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  TestProperty" userInfo:nil];
