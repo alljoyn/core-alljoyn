@@ -37,20 +37,20 @@
 - (AJNSecurityCredentials*)requestSecurityCredentialsWithAuthenticationMechanism:(NSString*)authenticationMechanism peerName:(NSString*)peerName authenticationCount:(uint16_t)authenticationCount userName:(NSString*)userName credentialTypeMask:(AJNSecurityCredentialType)mask
 {
     AJNSecurityCredentials *securityCredentials = [[AJNSecurityCredentials alloc] init];
-    
+
     if (authenticationCount > self.maximumAuthentications) {
         return nil;
     }
-    
+
     NSLog(@"RequestCredentials for authenticating %@ using mechanism %@", peerName, authenticationMechanism);
-    
+
     NSString *guid = [self.bus guidForPeerNamed:peerName];
     NSLog(@"Peer guid %@", guid);
-    
+
     if (self.keyExpiration != 0xFFFFFFFF) {
         [securityCredentials setExpirationTime:self.keyExpiration];
     }
-    
+
     if ([authenticationMechanism compare:@"ALLJOYN_SRP_KEYX"] == NSOrderedSame) {
         if (mask & kAJNSecurityCredentialTypePassword) {
             if (authenticationCount == 3) {
@@ -62,7 +62,7 @@
         }
         return securityCredentials;
     }
-    
+
     if ([authenticationMechanism compare:@"ALLJOYN_SRP_LOGON"] == NSOrderedSame) {
         if (mask & kAJNSecurityCredentialTypeUserName) {
             if (authenticationCount == 1) {
@@ -76,19 +76,19 @@
         }
         return securityCredentials;
     }
-    
-    return nil;    
+
+    return nil;
 }
 
 - (void)authenticationUsing:(NSString*)authenticationMechanism forRemotePeer:(NSString*)peer didCompleteWithStatus:(BOOL)success
 {
-    NSLog(@"Authentication %@ for peer %@ %@\n", authenticationMechanism, peer, success ? @" was succesful" : @" failed");    
+    NSLog(@"Authentication %@ for peer %@ %@\n", authenticationMechanism, peer, success ? @" was succesful" : @" failed");
 }
 
 - (BOOL)verifySecurityCredentials:(AJNSecurityCredentials*)credentials usingAuthenticationMechanism:(NSString*)authenticationMechanism forRemotePeer:(NSString*)peerName
 {
     // Not used with the SRP authentication mechanism
-    return false;        
+    return false;
 }
 
 - (void)securityViolationOccurredWithErrorCode:(QStatus)errorCode forMessage:(AJNMessage*)message
