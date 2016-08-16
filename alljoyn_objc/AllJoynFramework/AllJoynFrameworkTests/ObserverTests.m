@@ -248,8 +248,8 @@ static NSString * const kPathPrefix = @"/test/";
     }];
 
     if (YES == self.registerInterfaces) {
-        [self.bus deleteInterfaceWithName:kObserverTestsInterfaceNameA];
-        [self.bus deleteInterfaceWithName:kObserverTestsInterfaceNameB];
+        [self.bus deleteInterface:[self.bus interfaceWithName:kObserverTestsInterfaceNameA]];
+        [self.bus deleteInterface:[self.bus interfaceWithName:kObserverTestsInterfaceNameB]];
     }
 
     QStatus status = [self.bus disconnectWithArguments:@"null:"];
@@ -363,7 +363,7 @@ static NSString * const kPathPrefix = @"/test/";
 
     [self.hostedSessionMapLock lock];
     [self.hostedSessionMap setObject:[NSNumber numberWithUnsignedInt:sessionId] forKey:joiner];
-    [self.bus bindHostedSessionListener:self toSession:sessionId];
+    [self.bus setHostedSessionListener:self toSession:sessionId];
     [self.hostedSessionMapLock unlock];
 }
 
