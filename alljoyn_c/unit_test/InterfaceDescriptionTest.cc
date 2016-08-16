@@ -1665,6 +1665,14 @@ TEST(InterfaceDescriptionTest, description_language)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     ASSERT_NE(nullptr, testIntf);
     char language[] = "En";
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     alljoyn_interfacedescription_setdescriptionlanguage(testIntf, language);
     alljoyn_interfacedescription_setdescription(testIntf, "Hello");
     alljoyn_interfacedescription_activate(testIntf);
@@ -1673,6 +1681,12 @@ TEST(InterfaceDescriptionTest, description_language)
     EXPECT_EQ((size_t)1, count);
     const char* languages[1];
     count = alljoyn_interfacedescription_getdescriptionlanguages(testIntf, languages, ArraySize(languages));
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     EXPECT_EQ((size_t)1, count);
     EXPECT_STREQ(language, languages[0]);
 
@@ -1696,6 +1710,14 @@ TEST(InterfaceDescriptionTest, member_property_arg_description)
 
     status = alljoyn_interfacedescription_addmember(testIntf, ALLJOYN_MESSAGE_METHOD_CALL, "ping", "s", "s", "in,out", 0);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "my member description");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
@@ -1708,6 +1730,12 @@ TEST(InterfaceDescriptionTest, member_property_arg_description)
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_interfacedescription_setpropertydescription(testIntf, "prop1", "my property description");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     alljoyn_interfacedescription_activate(testIntf);
 
     hasdescription = alljoyn_interfacedescription_hasdescription(testIntf);
@@ -1734,6 +1762,14 @@ TEST(InterfaceDescriptionTest, description_translator_en_en) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
     // Set description language to "En", introspect returns "En" descriptions
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "En");
     alljoyn_interfacedescription_setdescription(testIntf, "in_desc");
     status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "me_desc");
@@ -1744,6 +1780,13 @@ TEST(InterfaceDescriptionTest, description_translator_en_en) {
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     status = alljoyn_interfacedescription_setpropertydescription(testIntf, "prop1", "pr_desc");
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     const char* expectedIntrospect =
         "<interface name=\"org.alljoyn.test.InterfaceDescription\">\n"
         "  <signal name=\"chirp\">\n"
@@ -1786,6 +1829,14 @@ TEST(InterfaceDescriptionTest, description_translator_en_null) {
     status = alljoyn_interfacedescription_addproperty(testIntf, "prop1", "s", ALLJOYN_PROP_ACCESS_READ);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "En");
     alljoyn_interfacedescription_setdescription(testIntf, "in_desc");
     status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "me_desc");
@@ -1805,6 +1856,13 @@ TEST(InterfaceDescriptionTest, description_translator_en_null) {
 
     // Set translation callback and set description language to "", translation callback is invoked and introspect returns translated "En" descriptions
     alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "");
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     const char* expectedIntrospect =
         "<interface name=\"org.alljoyn.test.InterfaceDescription\">\n"
         "  <signal name=\"chirp\">\n"
@@ -1847,6 +1905,14 @@ TEST(InterfaceDescriptionTest, description_translator_en_de) {
     status = alljoyn_interfacedescription_addproperty(testIntf, "prop1", "s", ALLJOYN_PROP_ACCESS_READ);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "En");
     alljoyn_interfacedescription_setdescription(testIntf, "in_desc");
     status = alljoyn_interfacedescription_setmemberdescription(testIntf, "ping", "me_desc");
@@ -1862,6 +1928,12 @@ TEST(InterfaceDescriptionTest, description_translator_en_de) {
 
     // Set description language to "De", translation callback is invoked and introspect returns "En" and translated "De" descriptions
     alljoyn_interfacedescription_setdescriptionlanguage(testIntf, "De");
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     const char* expectedIntrospect =
         "<interface name=\"org.alljoyn.test.InterfaceDescription\">\n"
         "  <signal name=\"chirp\">\n"

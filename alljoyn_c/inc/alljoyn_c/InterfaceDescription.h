@@ -103,6 +103,10 @@ typedef struct {
 /**
  * Type for the interface description translation callback.
  *
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use language-aware accessors instead
+ * (e.g., alljoyn_interfacedescription_setdescriptionforlanguage()).
+ *
  * Called by the interface description when the description of a language is requested.
  *
  * @param[in] sourceLanguage The language tag of the text in sourceText. If
@@ -625,16 +629,22 @@ extern AJ_API alljoyn_interfacedescription_securitypolicy AJ_CALL alljoyn_interf
 /**
  * Set the description language to this interface.
  *
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use alljoyn_interfacedescription_setdescriptionforlanguage() instead.
+ *
  * @param[in] iface Interface on which to set the description language.
  * @param[in] language The language tag.
  */
-extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(alljoyn_interfacedescription iface, const char* language);
+QCC_DEPRECATED_ON(
+    extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(alljoyn_interfacedescription iface, const char* language),
+    16.10);
 
 /**
- * Get the description language of this interface.
+ * Get the description language of this interface
  *
- * @note This function returns languages for descriptions set by the single-language accessors
+ * @deprecated This function returns languages for descriptions set by the single-language accessors
  * (e.g., alljoyn_interfacedescription_setdescription()) and translated using the translation callback.
+ * These accessors are deprecated.
  * To get languages for the new descriptions, set by the multilingual accessors
  * (e.g., alljoyn_interfacedescription_setdescriptionforlanguage()) or annotation setters
  * (e.g., alljoyn_interfacedescription_addannotation()), please use
@@ -650,7 +660,9 @@ extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(a
  * @return The number of languages returned or the total number of
  *         language tags if languages is NULL.
  */
-extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoyn_interfacedescription iface, const char** languages, size_t size);
+QCC_DEPRECATED_ON(
+    extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoyn_interfacedescription iface, const char** languages, size_t size),
+    16.10);
 
 /**
  * Get all the description languages for this interface.
@@ -665,9 +677,8 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguage
  *
  * @note This function returns languages for descriptions set by the multilingual accessors
  * (e.g., alljoyn_interfacedescription_setdescriptionforlanguage()) or annotation setters
- * (e.g., alljoyn_interfacedescription_addannotation()). To get a language array for the legacy
- * descriptions, set by the single-language accessors (e.g., alljoyn_interfacedescription_setdescription())
- * and translated using the translation callback, please use alljoyn_interfacedescription_getdescriptionlanguages().
+ * (e.g., alljoyn_interfacedescription_addannotation()). It will not return languages set
+ * by the deprecated accessors and translators (e.g., alljoyn_interfacedescription_setdescription()).
  *
  * @param[in] iface Interface to query.
  * @param[out] languages A pointer to an array to receive the language tags. The function caller is responsible
@@ -683,10 +694,15 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguage
 /**
  * Set the description to this interface.
  *
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use alljoyn_interfacedescription_setdescriptionforlanguage() instead.
+ *
  * @param[in] iface Interface on which to set the description.
  * @param[in] description The interface description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
  */
-extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description);
+QCC_DEPRECATED_ON(
+    extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description),
+    16.10);
 
 /**
  * Set the introspection description for this interface in the given language.
@@ -738,6 +754,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionforlangu
 /**
  * Set the description for member of this interface.
  *
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use alljoyn_interfacedescription_setmemberdescriptionforlanguage() instead.
+ *
  * @param[in] iface Interface on which to set member description.
  * @param[in] member The name of the member.
  * @param[in] description The member description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
@@ -747,7 +766,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionforlangu
  *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
  *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
  */
-extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description);
+QCC_DEPRECATED_ON(
+    extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description),
+    16.10);
 
 /**
  * Set the description for the member "member" of this interface in the given language.
@@ -805,9 +826,8 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getmemberdescriptionfo
 /**
  * Set the description for the argument of the member of this interface.
  *
- * The description will be stored as an annotation, so calling this method is equivalent
- * to adding an "org.alljoyn.Bus.DocString" annotation with the desired language tag
- * (e.g., "org.alljoyn.Bus.DocString.en") by calling alljoyn_interfacedescription_addargannotation().
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use alljoyn_interfacedescription_setargdescriptionforlanguage() instead.
  *
  * @param[in] iface Interface on which to set argument description.
  * @param[in] member The name of the member.
@@ -819,7 +839,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getmemberdescriptionfo
  *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
  *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
  */
-extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description);
+QCC_DEPRECATED_ON(
+    extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description),
+    16.10);
 
 /**
  * Set the description for the argument "arg" of the member "member" of this interface.
@@ -879,6 +901,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getargdescriptionforla
 /**
  * Set the description for the property of this interface.
  *
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use alljoyn_interfacedescription_setpropertydescriptionforlanguage() instead.
+ *
  * @param[in] iface Interface on which to set property description.
  * @param[in] name The name of the property.
  * @param[in] description The introspection description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
@@ -888,7 +913,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getargdescriptionforla
  *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
  *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found.
  */
-extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description);
+QCC_DEPRECATED_ON(
+    extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description),
+    16.10);
 
 /**
  * Set the description for the property of this interface in the given language.
@@ -945,19 +972,31 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getpropertydescription
 /**
  * Set the translation callback that provides this interface's description in multiple languages.
  *
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use language-aware accessors instead
+ * (e.g., alljoyn_interfacedescription_setdescriptionforlanguage()).
+ *
  * @param[in] iface Interface on which to set description translation callback.
  * @param[in] translationCallback The translation callback instance.
  */
-extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptiontranslationcallback(alljoyn_interfacedescription iface, alljoyn_interfacedescription_translation_callback_ptr translationCallback);
+QCC_DEPRECATED_ON(
+    extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptiontranslationcallback(alljoyn_interfacedescription iface, alljoyn_interfacedescription_translation_callback_ptr translationCallback),
+    16.10);
 
 /**
  * Get the translation callback that provides this interface's description in multiple languages.
+ *
+ * @deprecated Using a single description and an optional translator for interface descriptions
+ * has been deprecated, please use language-aware accessors instead
+ * (e.g., alljoyn_interfacedescription_setdescriptionforlanguage()).
  *
  * @param[in] iface Interface to query.
  *
  * @return The translation callback instance.
  */
-extern AJ_API alljoyn_interfacedescription_translation_callback_ptr AJ_CALL alljoyn_interfacedescription_getdescriptiontranslationcallback(const alljoyn_interfacedescription iface);
+QCC_DEPRECATED_ON(
+    extern AJ_API alljoyn_interfacedescription_translation_callback_ptr AJ_CALL alljoyn_interfacedescription_getdescriptiontranslationcallback(const alljoyn_interfacedescription iface),
+    16.10);
 
 /**
  * Determine whether this interface has at least one description on an element.

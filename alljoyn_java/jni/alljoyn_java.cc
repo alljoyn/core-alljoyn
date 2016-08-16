@@ -10746,7 +10746,26 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionL
         return;
     }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this Java accessor, which is also to be deprecated
+     * (see ASACORE-3117, ASACORE-3118).
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     intf->SetDescriptionLanguage(jlanguage.c_str());
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
@@ -10767,7 +10786,26 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
         return;
     }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this Java accessor, which is also to be deprecated
+     * (see ASACORE-3117, ASACORE-3118).
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     intf->SetDescription(jdescription.c_str());
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator(
@@ -10832,7 +10870,26 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionT
      * Make the call into AllJoyn.
      */
     QCC_DbgPrintf(("BusAttachment_setDescriptionTranslator(): Call SetDescriptionTranslator()"));
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this Java accessor, which is also to be deprecated
+     * (see ASACORE-3117, ASACORE-3118).
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     intf->SetDescriptionTranslator(translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescription(JNIEnv*env, jobject thiz,
@@ -10905,7 +10962,26 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyD
         return NULL;
     }
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this Java accessor, which is also to be deprecated
+     * (see ASACORE-3117, ASACORE-3118).
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     QStatus status = intf->SetPropertyDescription(propName.c_str(), desc.c_str());
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     return JStatus(status);
 }
 

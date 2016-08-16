@@ -792,7 +792,7 @@ TEST_F(SignalTest, BackPressure) {
 
 QStatus SetMemberDescription(InterfaceDescription* intf)
 {
-    return intf->SetMemberDescription("my_signal", "my_signal description");
+    return intf->SetMemberDescriptionForLanguage("my_signal", "my_signal description", "en");
 }
 
 // Test the deprecated API to set a member description and mark a signal
