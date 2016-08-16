@@ -1417,7 +1417,7 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
     AJNAboutObjectDescription *aboutObjectDescription = [[AJNAboutObjectDescription alloc] init];
     [aboutObjectDescription createFromMsgArg:objectDescriptionArg];
 
-    BOOL test = [aboutObjectDescription hasInterface:"org.alljoyn.bus.sample" withPath:"/events_actions"];
+    BOOL test = [aboutObjectDescription hasInterface:@"org.alljoyn.bus.sample" withPath:@"/events_actions"];
     XCTAssertTrue(test == YES, @"hasInterface:withPath test failed");
 
     self.didReceiveAnnounce = YES;

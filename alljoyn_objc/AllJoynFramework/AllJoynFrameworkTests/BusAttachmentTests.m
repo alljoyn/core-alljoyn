@@ -49,7 +49,7 @@ static NSMutableDictionary *gDefaultAboutData;
 static const size_t MAX_ICON_SIZE_IN_BYTES = 131072;
 static const uint8_t ICON_BYTE = 0x11;
 
-@interface BusAttachmentTests() <AJNBusListener, AJNSessionListener, AJNSessionPortListener, AJNSessionDelegate, AJNPingPeerDelegate, AJNAboutDataListener, AJNAboutListener>
+@interface BusAttachmentTests() <AJNBusListener, AJNSessionListener, AJNSessionPortListener, AJNJoinSessionDelegate, AJNPingPeerDelegate, AJNAboutDataListener, AJNAboutListener>
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic) BOOL listenerDidRegisterWithBusCompleted;
@@ -928,16 +928,16 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
-    status = [self.bus bindHostedSessionListener:self toSession:self.testSessionId];
+    status = [self.bus setHostedSessionListener:self toSession:self.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
     
-    status = [client.bus bindJoinedSessionListener:client toSession:client.testSessionId];
+    status = [client.bus setJoinedSessionListener:client toSession:client.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
     
-    status = [self.bus bindHostedSessionListener:nil toSession:self.testSessionId];
+    status = [self.bus setHostedSessionListener:nil toSession:self.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Removal of the Service sessionlistener failed");
     
-    status = [client.bus bindJoinedSessionListener:nil toSession:client.testSessionId];
+    status = [client.bus setJoinedSessionListener:nil toSession:client.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Removal of the Client sessionlistener failed");
     
     status = [self.bus leaveHostedSession:self.testSessionId];
@@ -989,10 +989,10 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
     
-    status = [self.bus bindHostedSessionListener:self toSession:self.testSessionId];
+    status = [self.bus setHostedSessionListener:self toSession:self.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Binding of a Service sessionlistener failed");
     
-    status = [client.bus bindJoinedSessionListener:client toSession:client.testSessionId];
+    status = [client.bus setJoinedSessionListener:client toSession:client.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
     
     status = [client.bus leaveJoinedSession:client.testSessionId];
@@ -1691,10 +1691,10 @@ static const uint8_t ICON_BYTE = 0x11;
     
     XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
     
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
     
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
     
     [client.bus unregisterBusListener:self];
@@ -1715,7 +1715,7 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(status == ER_OK, @"Client connection to bus via null transport failed.");
     status = [client.bus whoImplementsInterface:@"org.alljoyn.bus.sample.strings"];
     XCTAssertTrue(status == ER_OK, @"Client call to WhoImplements Failed");
-    status = [client.bus cancelWhoImplements:@"org.alljoyn.bus.sample.strings.mismatch"];
+    status = [client.bus cancelWhoImplementsInterface:@"org.alljoyn.bus.sample.strings.mismatch"];
     XCTAssertTrue(status == ER_BUS_MATCH_RULE_NOT_FOUND, @"Test for mismatched CancelWhoImplements Failed");
     
     [client.bus disconnectWithArguments:@"null:"];
@@ -1772,29 +1772,26 @@ static const uint8_t ICON_BYTE = 0x11;
             [aboutObjectDescription createFromMsgArg:objectDescriptionArg];
             XCTAssertNotNil(aboutObjectDescription, @"Fail");
 
-            BOOL test = [aboutObjectDescription hasPath:"/basic_object"];
+            BOOL test = [aboutObjectDescription hasPath:@"/basic_object"];
             XCTAssertTrue(test == YES, @"hasPath test failed");
 
-            test = [aboutObjectDescription hasPath:"/basic_"];
+            test = [aboutObjectDescription hasPath:@"/basic_"];
             XCTAssertFalse(test, @"Negative hasPath test failed");
 
-            test = [aboutObjectDescription hasInterface:"org.alljoyn.bus.sample.strings" withPath:"/basic_object"];
+            test = [aboutObjectDescription hasInterface:@"org.alljoyn.bus.sample.strings" withPath:@"/basic_object"];
             XCTAssertTrue(test == YES, @"hasInterface:withPath test failed");
 
-            test = [aboutObjectDescription hasInterface:"org.alljoyn.bus.sample.strings" withPath:"/basic_"];
+            test = [aboutObjectDescription hasInterface:@"org.alljoyn.bus.sample.strings" withPath:@"/basic_"];
             XCTAssertFalse(test, @"hasInterface:withPath test failed");
 
-            size_t numPaths = [aboutObjectDescription getPaths:nil withSize:0];
-            NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:numPaths];
-            XCTAssertTrue([aboutObjectDescription getPaths:&paths withSize:numPaths] == 2, @"getPaths:withSize test failed");
+            NSArray *paths = aboutObjectDescription.paths;
+            XCTAssertTrue(paths.count == 2, @"getPaths:withSize test failed");
 
-            numPaths = [aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings" paths:nil numOfPaths:0];
-            NSMutableArray *interfacePaths = [[NSMutableArray alloc] initWithCapacity:numPaths];
-            XCTAssertTrue([aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings" paths:&interfacePaths numOfPaths:1] == 1, @"getPaths:withSize test failed");
+            NSArray *interfacePaths = [aboutObjectDescription getInterfacePathsForInterface:@"org.alljoyn.bus.sample.strings"];
+            XCTAssertTrue(interfacePaths.count == 1, @"getPaths:withSize test failed");
 
-            size_t numInterfaces = [aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:nil numOfInterfaces:0];
-            NSMutableArray *interfaces = [[NSMutableArray alloc] initWithCapacity:numInterfaces];
-            XCTAssertTrue([aboutObjectDescription getInterfacesForPath:@"/basic_object" interfaces:&interfaces numOfInterfaces:2] == 2, @"getInterfacesForPath failed");
+            NSArray *interfaces = [aboutObjectDescription getInterfacesForPath:@"/basic_object"];
+            XCTAssertTrue(interfaces.count == 2, @"getInterfacesForPath failed");
 
         }
         receiveAnnounce = YES;

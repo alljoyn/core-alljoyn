@@ -170,13 +170,13 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     status = [self.bus enablePeerSecurity:@"ALLJOYN_SRP_LOGON" authenticationListener:self.authenticationListener];
     XCTAssertTrue(status == ER_OK, @"Unable to enable peer security on service side. %@", [AJNStatus descriptionForStatusCode:status]);
     
-    status = [self.bus addLogonEntryToKeyStoreWithAuthenticationMechanism:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
+    status = [self.bus addLogonEntry:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
     XCTAssertTrue(status == ER_OK, @"Unable to add logon entry to keystore. %@", [AJNStatus descriptionForStatusCode:status]);
     
     status = [client.bus enablePeerSecurity:@"ALLJOYN_SRP_LOGON" authenticationListener:client.authenticationListener];
     XCTAssertTrue(status == ER_OK, @"Unable to enable peer security on client side. %@", [AJNStatus descriptionForStatusCode:status]);
 
-    status = [client.bus addLogonEntryToKeyStoreWithAuthenticationMechanism:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
+    status = [client.bus addLogonEntry:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
     XCTAssertTrue(status == ER_OK, @"Unable to add logon entry to keystore. %@", [AJNStatus descriptionForStatusCode:status]);
 
     status = [self.bus connectWithArguments:@"null:"];
