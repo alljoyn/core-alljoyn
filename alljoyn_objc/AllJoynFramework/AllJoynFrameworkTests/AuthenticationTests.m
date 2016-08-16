@@ -170,13 +170,13 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     status = [self.bus enablePeerSecurity:@"ALLJOYN_SRP_LOGON" authenticationListener:self.authenticationListener];
     XCTAssertTrue(status == ER_OK, @"Unable to enable peer security on service side. %@", [AJNStatus descriptionForStatusCode:status]);
     
-    status = [self.bus addLogonEntryToKeyStoreWithAuthenticationMechanism:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
+    status = [self.bus addLogonEntry:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
     XCTAssertTrue(status == ER_OK, @"Unable to add logon entry to keystore. %@", [AJNStatus descriptionForStatusCode:status]);
     
     status = [client.bus enablePeerSecurity:@"ALLJOYN_SRP_LOGON" authenticationListener:client.authenticationListener];
     XCTAssertTrue(status == ER_OK, @"Unable to enable peer security on client side. %@", [AJNStatus descriptionForStatusCode:status]);
 
-    status = [client.bus addLogonEntryToKeyStoreWithAuthenticationMechanism:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
+    status = [client.bus addLogonEntry:@"ALLJOYN_SRP_LOGON" userName:@"Code Monkey" password:@"123banana321"];
     XCTAssertTrue(status == ER_OK, @"Unable to add logon entry to keystore. %@", [AJNStatus descriptionForStatusCode:status]);
 
     status = [self.bus connectWithArguments:@"null:"];
@@ -190,7 +190,7 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kAuthenticationTestsServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kAuthenticationTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kAuthenticationTestsServicePort);
     
     status = [self.bus advertiseName:kAuthenticationTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
     XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
@@ -279,7 +279,7 @@ const NSInteger kAuthenticationTestsServicePort = 999;
             AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
             
             self.testSessionId = [self.bus joinSessionWithName:name onPort:kAuthenticationTestsServicePort withDelegate:self options:sessionOptions];
-            XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect to the service %@ on port %u", name, kAuthenticationTestsServicePort);
+            XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect to the service %@ on port %ld", name, (long)kAuthenticationTestsServicePort);
             
             self.clientConnectionCompleted = YES;
         }
@@ -365,7 +365,7 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 - (void)didJoinSession:(AJNSessionId)sessionId status:(QStatus)status sessionOptions:(AJNSessionOptions *)sessionOptions context:(AJNHandle)context
 {
     self.testSessionId = sessionId;
-    XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect asynchronously using delegate to the service on port %u", kAuthenticationTestsServicePort);
+    XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect asynchronously using delegate to the service on port %ld", (long)kAuthenticationTestsServicePort);
     
     self.clientConnectionCompleted = YES;            
     

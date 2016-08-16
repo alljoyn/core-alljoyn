@@ -520,7 +520,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         // add the properties to the interface description
         //
     
-        status = [interfaceDescription addPropertyWithName:@"testStringProperty" signature:@"s"];
+        status = [interfaceDescription addPropertyWithName:@"testStringProperty" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  testStringProperty" userInfo:nil];
@@ -582,7 +582,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
         // add the properties to the interface description
         //
     
-        status = [interfaceDescription addPropertyWithName:@"name" signature:@"s"];
+        status = [interfaceDescription addPropertyWithName:@"name" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
         
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  name" userInfo:nil];

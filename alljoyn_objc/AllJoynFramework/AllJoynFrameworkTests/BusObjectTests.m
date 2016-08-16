@@ -175,7 +175,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusObjectTestsServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusObjectTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusObjectTestsServicePort);
     
     status = [self.bus advertiseName:kBusObjectTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
     XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
@@ -250,7 +250,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
 
     status = [self.bus bindSessionOnPort:kBusObjectTestsServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusObjectTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusObjectTestsServicePort);
 
     status = [self.bus advertiseName:kBusObjectTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
     XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
@@ -344,7 +344,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
     
     status = [self.bus bindSessionOnPort:kBusObjectTestsServicePort withOptions:sessionOptions withDelegate:self];
-    XCTAssertTrue(status == ER_OK, @"Bind session on port %u failed.", kBusObjectTestsServicePort);
+    XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusObjectTestsServicePort);
     
     status = [self.bus advertiseName:kBusObjectTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
     XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
@@ -454,7 +454,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
             AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:NO proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
             
             self.testSessionId = [self.bus joinSessionWithName:name onPort:kBusObjectTestsServicePort withDelegate:self options:sessionOptions];
-            XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect to the service %@ on port %u", name, kBusObjectTestsServicePort);
+            XCTAssertTrue(self.testSessionId != -1, @"Test client failed to connect to the service %@ on port %ld", name, (long)kBusObjectTestsServicePort);
             
             self.clientConnectionCompleted = YES;
         }
