@@ -5,30 +5,34 @@
 #
 LOCAL_PATH := $(call my-dir)
 
-# The ALLJOYN_DIST variable is used to locate needed distribution files.
-# The referenced directory must contain the /lib and /inc directories.
-# A default path is provided here which is relative to the directory
-# containing the Android.mk file. This default can be overidden via 
-# an ALLJOYN_DIST environment variable which points to an alternate 
-# cpp distribution directory for the appropriate build variant; e.g.
-# $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
+# An ALLJOYN_DIST environment variable may be provided in order to 
+# locate the cpp distribution files. The referenced directory must 
+# contain the /lib and /inc directories of the desired build variant; 
+# e.g. $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
+# If ALLJOYN_DIST is not defined, then relative paths are defaulted
+# here that reference the /lib and /inc directories in order to work
+# with the Jenkins build.
 #
 ifndef $(ALLJOYN_DIST)
-    ALLJOYN_DIST := ../../..
+    ALLJOYN_DIST_LIB := ../../../lib
+    ALLJOYN_DIST_INC := ../../inc
+else
+    ALLJOYN_DIST_LIB := $(ALLJOYN_DIST)/lib
+    ALLJOYN_DIST_INC := $(ALLJOYN_DIST)/inc
 endif
 
 # Declare the prebuilt libajrouter.a static library.
 #
 include $(CLEAR_VARS)
 LOCAL_MODULE := ajrouter
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/libajrouter.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/libajrouter.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 # Declare the prebuilt liballjoyn.a static library.
 #
 include $(CLEAR_VARS)
 LOCAL_MODULE := alljoyn
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/liballjoyn.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 # The CLEAR_VARS variable is provided by the build system and points to a
@@ -57,7 +61,7 @@ TARGET_PLATFORM := android-16
 # corresponding inclusion flag in LOCAL_CFLAGS / LOCAL_CPPFLAGS.
 #
 LOCAL_C_INCLUDES := \
-	$(ALLJOYN_DIST)/inc
+	$(ALLJOYN_DIST_INC)
 
 # An optional set of compiler flags that will be passed when building
 # C ***AND*** C++ source files.

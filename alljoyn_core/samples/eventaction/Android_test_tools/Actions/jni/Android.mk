@@ -1,30 +1,34 @@
 LOCAL_PATH := $(call my-dir)
 
-# The ALLJOYN_DIST variable is used to locate needed distribution files.
-# The referenced directory must contain the /lib and /inc directories.
-# A default path is provided here which is relative to the directory
-# containing the Android.mk file. This default can be overidden via
-# an ALLJOYN_DIST environment variable which points to an alternate
-# cpp distribution directory for the appropriate build variant; e.g.
-# $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
+# An ALLJOYN_DIST environment variable may be provided in order to
+# locate the cpp distribution files. The referenced directory must
+# contain the /lib and /inc directories of the desired build variant;
+# e.g. $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
+# If ALLJOYN_DIST is not defined, then relative paths are defaulted
+# here that reference the /lib and /inc directories in order to work
+# with the Jenkins build.
 #
 ifndef $(ALLJOYN_DIST)
-    ALLJOYN_DIST := ../../../..
+    ALLJOYN_DIST_LIB := ../../../../lib
+    ALLJOYN_DIST_INC := ../../../inc
+else
+    ALLJOYN_DIST_LIB := $(ALLJOYN_DIST)/lib
+    ALLJOYN_DIST_INC := $(ALLJOYN_DIST)/inc
 endif
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := ajrouter
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/libajrouter.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/libajrouter.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := alljoyn
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/liballjoyn.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := alljoyn_about
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn_about.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/liballjoyn_about.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -34,9 +38,9 @@ LOCAL_MODULE := MyAllJoynCode
 TARGET_PLATFORM := android-16
 
 LOCAL_C_INCLUDES := \
-	$(ALLJOYN_DIST)/inc \
-	$(ALLJOYN_DIST)/inc/alljoyn \
-	$(ALLJOYN_DIST)/inc/alljoyn/about
+	$(ALLJOYN_DIST_INC) \
+	$(ALLJOYN_DIST_INC)/alljoyn \
+	$(ALLJOYN_DIST_INC)/alljoyn/about
 
 LOCAL_CFLAGS := -std=c++11 -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DANDROID
 
