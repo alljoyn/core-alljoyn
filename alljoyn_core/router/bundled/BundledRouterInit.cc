@@ -34,7 +34,7 @@ extern "C" {
 static uint32_t allJoynRouterInitCount = 0;
 static qcc::Mutex allJoynRouterInitLock;
 
-QStatus AJ_CALL AllJoynRouterInit(void)
+QStatus AJ_CALL AllJoynRouterInitImpl(const char* configXml)
 {
     QStatus status = ER_OK;
 
@@ -42,7 +42,7 @@ QStatus AJ_CALL AllJoynRouterInit(void)
 
     if (allJoynRouterInitCount == 0) {
         ajn::RouterGlobals::Init();
-        bundledRouter = new ajn::BundledRouter();
+        bundledRouter = new ajn::BundledRouter(configXml);
         allJoynRouterInitCount = 1;
     } else if (allJoynRouterInitCount == std::numeric_limits<uint32_t>::max()) {
         QCC_ASSERT(!"Incorrect allJoynRouterInitCount count");
@@ -54,6 +54,16 @@ QStatus AJ_CALL AllJoynRouterInit(void)
     allJoynRouterInitLock.Unlock();
 
     return status;
+}
+
+QStatus AJ_CALL AllJoynRouterInit(void)
+{
+    return AllJoynRouterInitImpl("");
+}
+
+QStatus AJ_CALL AllJoynRouterInitWithConfig(const char* configXml)
+{
+    return AllJoynRouterInitImpl(configXml);
 }
 
 QStatus AJ_CALL AllJoynRouterShutdown(void)

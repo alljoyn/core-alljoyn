@@ -129,8 +129,8 @@ void ConfigDB::NameOwnerChanged(const String& alias,
 }
 #endif
 
-ConfigDB::ConfigDB(const String defaultXml, const String srcFileName) :
-    defaultXml(defaultXml), fileName(srcFileName), db(new DB()), stopping(false)
+ConfigDB::ConfigDB(const String defaultXml, const String srcFileName, const String userXml) :
+    defaultXml(defaultXml), fileName(srcFileName), userXml(userXml), db(new DB()), stopping(false)
 {
     QCC_ASSERT(!singleton);
     if (!singleton) {
@@ -151,7 +151,9 @@ bool ConfigDB::LoadConfig(Bus* bus)
     }
 
     StringSource defaultSrc(defaultXml);
-    DB* newDb = new DB();
+    DB* defaultDb = new DB();
+    DB* userDb = nullptr;
+    DB* dbToUse = nullptr;
     bool success = true;
 
     /*
@@ -162,23 +164,58 @@ bool ConfigDB::LoadConfig(Bus* bus)
      * read.
      */
     while (success && (defaultSrc.Remaining() > 0)) {
-        success = newDb->ParseSource("<default>", defaultSrc);
+        success = defaultDb->ParseSource("<default>", defaultSrc);
+    }
+    if (success) {
+        dbToUse = defaultDb;
     }
 
-    if (!fileName.empty()) {
-        success = newDb->ParseFile(ExpandPath(fileName));
+    if (!userXml.empty() && !fileName.empty()) {
+        Log(LOG_ERR, "%s: Configuration XML and custom configuration file should not be defined at the same time. %s\n",
+            __FUNCTION__, (dbToUse != nullptr ? "Applying defaults." : ""));
     }
 
-    newDb->Finalize(bus);
+    if (!userXml.empty() && fileName.empty()) {
+        userDb = new DB();
+        StringSource userSrc(userXml);
+        if (userDb->ParseSource("<user>", userSrc)) {
+            dbToUse = userDb;
+        } else {
+            Log(LOG_ERR, "%s: Error when parsing provided configuration XML. %s\n",
+                __FUNCTION__, (dbToUse != nullptr ? "Applying defaults." : ""));
+        }
+    }
+
+    if (!fileName.empty() && userXml.empty()) {
+        userDb = new DB();
+        if (userDb->ParseFile(ExpandPath(fileName))) {
+            dbToUse = userDb;
+        } else {
+            Log(LOG_ERR, "%s: Error when parsing provided configuration file. %s\n",
+                __FUNCTION__, (dbToUse != nullptr ? "Applying defaults." : ""));
+        }
+    }
+
+    success = (dbToUse != nullptr);
 
     if (success) {
+        dbToUse->Finalize(bus);
+
         rwlock.WRLock();
         DB* old = db;
-        db = newDb;
+        db = dbToUse;
         rwlock.Unlock();
         delete old;
+        if (dbToUse == defaultDb) {
+            delete userDb;
+        } else {
+            delete defaultDb;
+        }
     } else {
-        delete newDb;
+        Log(LOG_ERR, "%s: No configuration to apply!\n",
+            __FUNCTION__);
+        delete defaultDb;
+        delete userDb;
     }
     return success;
 }
