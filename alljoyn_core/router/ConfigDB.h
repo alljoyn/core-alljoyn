@@ -77,8 +77,12 @@ class ConfigDB {
      * @param   defaultXml      XML with the default configuration for limits,
      *                          flags, and properties.
      * @param   fileName        [optional] Name of the config file to load.
+     * @param   userXml         [optional] XML with a custom, user-defined configuration.
+     *                          If this configuration is valid (is parsed successfully), it
+     *                          will override the defaults. If it is invalid, defaults will
+     *                          be applied.
      */
-    ConfigDB(const qcc::String defaultXml, const qcc::String fileName = "");
+    ConfigDB(const qcc::String defaultXml, const qcc::String fileName = "", const qcc::String userXml = "");
 
     /**
      * Destructor.
@@ -492,6 +496,7 @@ class ConfigDB {
 
     const qcc::String defaultXml;   /**< Default configuration. */
     const qcc::String fileName;     /**< Config file to read. */
+    const qcc::String userXml;      /**< User-defined configuration. */
     DB* db;                         /**< The current config database storage object. */
     bool stopping;
     static ConfigDB* singleton;

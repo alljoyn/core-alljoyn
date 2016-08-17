@@ -20,6 +20,7 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <qcc/Logger.h>
 #include <qcc/Mutex.h>
 #include <qcc/StaticGlobals.h>
 #include <alljoyn/Init.h>
@@ -50,6 +51,14 @@ QStatus AJ_CALL AllJoynRouterInit(void)
     allJoynRouterInitLock.Unlock();
 
     return status;
+}
+
+QStatus AJ_CALL AllJoynRouterInitWithConfig(const char* configXml)
+{
+    QCC_UNUSED(configXml);
+    qcc::Log(LOG_ERR, "AllJoynRouterInitWithConfig can only by used with a bundled router. "
+             "For the standalone router, please use the \"--config-file\" option instead.");
+    return ER_INVALID_APPLICATION_STATE;
 }
 
 QStatus AJ_CALL AllJoynRouterShutdown(void)
