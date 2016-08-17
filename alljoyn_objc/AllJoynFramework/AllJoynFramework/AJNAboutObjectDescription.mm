@@ -86,12 +86,15 @@ using namespace ajn;
     size_t pathCount = self.aboutObjectDescription->GetPaths(NULL, 0);
     const char** ajPaths = new const char*[pathCount];
     NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:pathCount];
-    self.aboutObjectDescription->GetPaths(ajPaths, 0);
+    self.aboutObjectDescription->GetPaths(ajPaths, pathCount);
+    
     for (int i=0 ; i < pathCount ; i++) {
-        NSString *objPath = [[NSString alloc] initWithUTF8String:ajPaths[i]];
+        NSString *objPath = [NSString stringWithCString:ajPaths[i] encoding:NSUTF8StringEncoding];
         [paths addObject:objPath];
     }
-    delete []ajPaths;
+    
+    delete [] ajPaths;
+    
     return paths;
 }
 
@@ -101,11 +104,14 @@ using namespace ajn;
     const char** ifaces = new const char*[interfaceCount];
     NSMutableArray *interfaces = [[NSMutableArray alloc] initWithCapacity:interfaceCount];
     self.aboutObjectDescription->GetInterfaces([path UTF8String], ifaces, interfaceCount);
+    
     for (int i=0 ; i < interfaceCount ; i++) {
-        NSString *ifacePath = [[NSString alloc] initWithUTF8String:ifaces[i]];
+        NSString *ifacePath = [NSString stringWithCString:ifaces[i] encoding:NSUTF8StringEncoding];
         [interfaces addObject:ifacePath];
     }
-    delete []ifaces;
+    
+    delete [] ifaces;
+    
     return interfaces;
 }
 
@@ -114,12 +120,15 @@ using namespace ajn;
     size_t pathCount = self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], NULL, 0);
     const char** interfacePaths = new const char*[pathCount];
     NSMutableArray *paths = [[NSMutableArray alloc] initWithCapacity:pathCount];
-    self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], interfacePaths, 0);
+    self.aboutObjectDescription->GetInterfacePaths([interface UTF8String], interfacePaths, pathCount);
+    
     for (int i=0 ; i < pathCount ; i++) {
-        NSString *objPath = [[NSString alloc] initWithUTF8String:interfacePaths[i]];
+        NSString *objPath = [NSString stringWithCString:interfacePaths[i] encoding:NSUTF8StringEncoding];
         [paths addObject:objPath];
     }
-    delete []interfacePaths;
+    
+    delete [] interfacePaths;
+    
     return paths;
 }
 
