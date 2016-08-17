@@ -319,7 +319,7 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddProperty("Identity", "a(yay)", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("Identity", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("Manifests", "a(ua(ssa(syy))saysay)", PROP_ACCESS_READ);
-        ifc->AddPropertyAnnotation("Manifest", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddPropertyAnnotation("Manifests", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("IdentityCertificateId", "(ayay(yyayay))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("IdentityCertificateId", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddProperty("PolicyVersion", "u", PROP_ACCESS_READ);
