@@ -74,6 +74,56 @@ extern AJ_API QStatus AJ_CALL alljoyn_shutdown(void);
 extern AJ_API QStatus AJ_CALL alljoyn_routerinit(void);
 
 /**
+ * A variant of alljoyn_routerinit which allows to define a custom configuration.
+ *
+ * @see alljoyn_routerinit
+ *
+ * alljoyn_routerinit() initializes the routing node (bundled or standalone) with a default,
+ * hard-coded configuration. For a standalone routing node, the default configuration
+ * can be overridden by using an XML configuration file. For a bundled routing node,
+ * custom configuration, defined as an XML string, can be provided via alljoyn_routerinitwithconfig().
+ * In that case, alljoyn_routerinitwithconfig() should be called instead of alljoyn_routerinit().
+ * For example:
+ * @code
+ * static const char myConfig[] =
+ *     "<busconfig>"
+ *     "  <type>alljoyn_bundled</type>"
+ *     "  <listen>tcp:iface=*,port=0</listen>"
+ *     "  <listen>udp:iface=*,port=0</listen>"
+ *     "  <limit name=\"auth_timeout\">20000</limit>"
+ *     "  <limit name=\"max_incomplete_connections\">48</limit>"
+ *     "  <limit name=\"max_completed_connections\">64</limit>"
+ *     "  <limit name=\"max_remote_clients_tcp\">48</limit>"
+ *     "  <limit name=\"max_remote_clients_udp\">48</limit>"
+ *     "  <limit name=\"udp_link_timeout\">60000</limit>"
+ *     "  <limit name=\"udp_keepalive_retries\">6</limit>"
+ *     "  <property name=\"router_power_source\">Battery powered and chargeable</property>"
+ *     "  <property name=\"router_mobility\">Intermediate mobility</property>"
+ *     "  <property name=\"router_availability\">3-6 hr</property>"
+ *     "  <property name=\"router_node_connection\">Wireless</property>"
+ *     "</busconfig>";
+ *
+ * alljoyn_init();
+ * alljoyn_routerinitwithconfig(myConfig);
+ * @endcode
+ *
+ * @see https://allseenalliance.org/framework/documentation/learn/core/rn_config for a description
+ * of the available configuration elements.
+ *
+ * alljoyn_routershutdown() must be called for each invocation of alljoyn_routerinitwithconfig().
+ * If the provided XML is invalid and does not parse, the routing node will fall back to
+ * the default configuration.
+ * alljoyn_routerinitwithconfig() can be used only with bundled routing nodes. In order to have
+ * custom configuration on a standalone router (router daemon), please create an XML file with
+ * the configuration and use the "--config-file" option.
+ *
+ * @return
+ *  - #ER_OK on success
+ *  - error code indicating failure otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_routerinitwithconfig(const char* configXml);
+
+/**
  * Call this to release any resources acquired in alljoyn_routerinit().
  *
  * For an application that is a routing node (either standalone or bundled), the
@@ -107,6 +157,8 @@ extern AJ_API QStatus AJ_CALL alljoyn_routershutdown(void);
  */
 extern AJ_API QStatus AJ_CALL AllJoynRouterInit(void);
 #define alljoyn_routerinit AllJoynRouterInit
+extern AJ_API QStatus AJ_CALL AllJoynRouterInitWithConfig(const char* configXml);
+#define alljoyn_routerinitwithconfig(xml) AllJoynRouterInitWithConfig(xml)
 extern AJ_API QStatus AJ_CALL AllJoynRouterShutdown(void);
 #define alljoyn_routershutdown AllJoynRouterShutdown
 

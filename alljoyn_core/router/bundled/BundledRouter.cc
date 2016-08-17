@@ -51,7 +51,7 @@ using namespace std;
 
 namespace ajn {
 
-static const char bundledConfig[] =
+static const char defaultConfig[] =
     "<busconfig>"
     "  <type>alljoyn_bundled</type>"
     "  <listen>tcp:iface=*,port=0</listen>"
@@ -181,7 +181,8 @@ bool ExistFile(const char* fileName) {
  * Stopping the bundled router happens in the BundledRouterShutdown().
  */
 
-BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
+BundledRouter::BundledRouter(const char* configXml)
+    : transportsInitialized(false), stopping(false), ajBus(NULL), ajBusController(NULL)
 {
     NullTransport::RegisterRouterLauncher(this);
     LoggerSetting::GetLoggerSetting("bundled-router");
@@ -191,7 +192,7 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
      */
 #ifdef TEST_CONFIG
     configFile = TEST_CONFIG;
-    qcc::String configStr = bundledConfig;
+    qcc::String configStr = defaultConfig;
     if (ExistFile(configFile.c_str())) {
         configStr = "";
     } else {
@@ -199,7 +200,7 @@ BundledRouter::BundledRouter() : transportsInitialized(false), stopping(false), 
     }
     config = new ConfigDB(configStr, configFile);
 #else
-    config = new ConfigDB(bundledConfig);
+    config = new ConfigDB(defaultConfig, "", (configXml != nullptr ? configXml : ""));
 #endif
 }
 
