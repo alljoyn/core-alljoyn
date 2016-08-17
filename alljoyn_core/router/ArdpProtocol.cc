@@ -3364,7 +3364,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
     uint32_t buf32[bufferSize >> 2];
     uint8_t* buf = reinterpret_cast<uint8_t*>(buf32);
     qcc::IPAddress address;               /* The IP address of the foreign side */
-    uint16_t port;                        /* Will be the UDP port of the foreign side */
+    uint16_t port = 0;                    /* Will be the UDP port of the foreign side */
     size_t nbytes;                        /* The number of bytes actually received */
     QStatus status = ER_OK;
 
