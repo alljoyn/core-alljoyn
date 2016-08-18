@@ -11463,11 +11463,12 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
 
         if (!wildcardAddressRequested && currentAddressRequested) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current address requested"));
-            m_requestedAddresses[addressStr].m_interface = interface;
             if (!m_requestedAddresses[addressStr].m_interface.empty()) {
+                m_requestedAddresses[addressStr].m_interface = interface;
                 QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set interface \"%s\" for address", interface.c_str()));
                 continue;
             }
+            m_requestedAddresses[addressStr].m_interface = interface;
         }
 
         qcc::IPAddress listenAddr;
