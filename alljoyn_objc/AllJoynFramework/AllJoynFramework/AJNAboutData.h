@@ -168,7 +168,7 @@
  *
  * @returns QStatus status indicating failure to obtain the device name
  */
-- (QStatus)getDefaultLanguage:(NSString*)defaultLanguage;
+- (QStatus)getDefaultLanguage:(NSString**)defaultLanguage;
 
 /**
  *Set the DeviceName to the AboutData
@@ -199,7 +199,7 @@
  * @param the deviceName pointer found in the AboutData
  * @returns QStatus status indicating failure to obtain the device name
  */
-- (QStatus)getDeviceName:(NSString*)deviceName andLanguage:(NSString*)language;
+- (QStatus)getDeviceName:(NSString**)deviceName andLanguage:(NSString*)language;
 
 /**
  * Set the DeviceId from the AboutData
@@ -225,7 +225,7 @@
  * @param the deviceId string pointer
  * @returns QStatus status to find device id.
  */
-- (QStatus)getDeviceId:(NSString*)deviceId;
+- (QStatus)getDeviceId:(NSString**)deviceId;
 
 /**
  * Set the AppName to the AboutData
@@ -273,7 +273,7 @@
  * @return The Manufacture for the specified language
  * @returns QStatus indicating failure to obtain the manufacturer name
  */
-- (QStatus)getManufacturer:(NSString*)manufacturer andLanguage:(NSString*)language;
+- (QStatus)getManufacturer:(NSString**)manufacturer andLanguage:(NSString*)language;
 
 /**
  * Set the ModelNumber to the AboutData
@@ -298,7 +298,7 @@
  * @modelNumber the model number
  * @returns QStatus: status indicating failure to obtain the model number
  */
-- (QStatus)getModelNumber:(NSString*)modelNumber;
+- (QStatus)getModelNumber:(NSString**)modelNumber;
 
 /**
  * Set a supported language.
@@ -320,7 +320,7 @@
  *
  * @return length of locals containing languageTags.
  */
-- (size_t)getSupportedLanguages:(NSString*)languageTags num:(size_t)num;
+- (size_t)getSupportedLanguages:(NSString**)languageTags num:(size_t)num;
 
 /**
  * Set the Description to the AboutData
@@ -352,7 +352,7 @@
  *
  * @returns QStatus indicating failure to set the description.
  */
-- (QStatus)getDescription:(NSString*)description language:(NSString*)language;
+- (QStatus)getDescription:(NSString**)description language:(NSString*)language;
 
 /**
  * Set the DateOfManufacture to the AboutData
@@ -384,7 +384,7 @@
  *
  * @return QStatus indicating failure to get the date of manufacture.
  */
-- (QStatus)getDateOfManufacture:(NSString*)dateOfManufacture;
+- (QStatus)getDateOfManufacture:(NSString**)dateOfManufacture;
 
 /**
  * Set the SoftwareVersion to the AboutData
@@ -409,7 +409,7 @@
  * @param softwareVersion is pointer to expect the vale software version
  * @return QStatus indicating failure to get the date of manufacture.
  */
-- (QStatus)getSoftwareVersion:(NSString*)softwareVersion;
+- (QStatus)getSoftwareVersion:(NSString**)softwareVersion;
 
 /**
  * Get the AJSoftwareVersion from the AboutData
@@ -424,7 +424,7 @@
  * @param ajSoftwareVersion is a pointer to expect the AllJoyn software version
  * @return QStatus indicating failure to get the AllJoyn software version
  */
-- (QStatus)getAJSoftwareVersion:(NSString*)ajSoftwareVersion;
+- (QStatus)getAJSoftwareVersion:(NSString**)ajSoftwareVersion;
 
 /**
  * Set the HardwareVersion to the AboutData
@@ -449,7 +449,7 @@
  * @param hardwareVersion is a pointer to expect the hardware version
  * @return QStatus indicating failure to read the hardware version.
  */
-- (QStatus)getHardwareVersion:(NSString*)hardwareVersion;
+- (QStatus)getHardwareVersion:(NSString**)hardwareVersion;
 
 /**
  * Set the SupportUrl to the AboutData
@@ -474,7 +474,7 @@
  * @param supportUrl is a pointer to expet the value of the support URL
  * @return QStatus indicating failure to get the support URL
  */
-- (QStatus)getSupportUrl:(NSString*)supportUrl;
+- (QStatus)getSupportUrl:(NSString**)supportUrl;
 
 /**
      * generic way to Set new field.  Everything could be done this way.
