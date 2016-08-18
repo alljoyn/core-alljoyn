@@ -43,14 +43,6 @@ class PolicyOverwriteUtils {
 
   private:
 
-    static void GetMembersCopy(const PermissionPolicy::Rule& rule, PermissionPolicy::Rule::Member** mutableMembers);
-
-    static void GetAclsCopy(const PermissionPolicy& policy, PermissionPolicy::Acl** mutableAcls);
-
-    static void GetRulesCopy(const PermissionPolicy::Acl& acl, PermissionPolicy::Rule** mutableRules);
-
-    static void GetPeersCopy(const PermissionPolicy::Acl& acl, PermissionPolicy::Peer** mutablePeers);
-
     static void SetPeerPublicKey(AJ_PCSTR publicKeyPem, PermissionPolicy::Peer& peer);
 };
 };
