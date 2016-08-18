@@ -81,7 +81,7 @@ class XmlManifestTemplateConverter : public XmlRulesConverter {
      * Map used to extract XML member type values from the PermissionPolicy::Rule::Member::MemberType enum.
      * Cannot use unordered_map with enums as keys for some compilers.
      */
-    static std::map<PermissionPolicy::Rule::SecurityLevel, std::string> s_inverseSecurityLevelMap;
+    static std::map<PermissionPolicy::Rule::SecurityLevel, std::string>* s_inverseSecurityLevelMap;
 
     /**
      * User shouldn't be able to create their own instance of the converter.

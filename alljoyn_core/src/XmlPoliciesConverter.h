@@ -54,11 +54,6 @@ class XmlPoliciesConverter {
   public:
 
     /**
-     * Mapping between the PermissionPolicy::Peer::PeerType enum and the string format.
-     */
-    static std::map<PermissionPolicy::Peer::PeerType, std::string> s_inversePeerTypeMap;
-
-    /**
      * Initializes the static members.
      */
     static void Init();
@@ -93,6 +88,11 @@ class XmlPoliciesConverter {
     static QStatus ToXml(const PermissionPolicy& policy, std::string& policyXml);
 
   private:
+
+    /**
+     * Mapping between the PermissionPolicy::Peer::PeerType enum and the string format.
+     */
+    static std::map<PermissionPolicy::Peer::PeerType, std::string>* s_inversePeerTypeMap;
 
     /**
      * Sets all of the PermissionPolicy values according to the input XML.
