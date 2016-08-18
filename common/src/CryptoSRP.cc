@@ -26,11 +26,7 @@
 #include <ctype.h>
 #include <stdio.h>
 /* due to a change in gcc6, cmath must be included now */
-#if __GNUC__ >= 6
- #include <cmath>
-#else
- #include <math.h>
-#endif
+#include <cmath>
 
 
 #include <qcc/Debug.h>
