@@ -103,6 +103,16 @@ static const uint16_t ARDP_FIXED_HEADER_LEN = 36;
  */
 const uint16_t ARDP_MAX_WINDOW_SIZE =  ((ARDP_MAX_HEADER_LEN * 2 - ARDP_FIXED_HEADER_LEN) >> 5) << 5;
 
+/*
+ * Minimum interval (in ms) at which probe (keepalive, "NUL") packets can be sent.
+ */
+const uint32_t ARDP_MIN_PROBE_INTERVAL = 1000;
+/*
+ * Minimum timeout of the probe mechanism (in ms).
+ */
+const uint32_t ARDP_MIN_PROBE_TIMEOUT = 1000;
+
+
 typedef struct ARDP_CONN_RECORD ArdpConnRecord;
 
 #define ARDP_FLAG_SYN  0x01    /**< Control flag. Request to open a connection.  Must be separate segment. */
@@ -231,6 +241,7 @@ QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32
 void ARDP_SetSendCb(ArdpHandle* handle, ARDP_SEND_CB SendCb);
 void ARDP_SetSendWindowCb(ArdpHandle* handle, ARDP_SEND_WINDOW_CB SendWindowCb);
 uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn);
+void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t& timeoutMilliseconds);
 
 #if ARDP_TESTHOOKS
 void ARDP_HookSendToSG(ArdpHandle* handle, ARDP_SENDTOSG_TH SendToSG);

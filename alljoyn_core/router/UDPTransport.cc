@@ -2074,21 +2074,27 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Set the link timeout for this connection
-     *
-     * TODO: How does the link timeout set by the application play with the
-     * default link timeout managed by the protocol.  We certainly don't want to
-     * trigger the link timeout functionality of the remote endpoint since it is
-     * going to expect all of the usual stream, thread, event functionality.
-     *
-     * For now, we just silently ignore SetLinkTimeout() and use the underlhing
-     * ARDP mechanism.
+     * Set the link timeout for this connection.
+     * A call to this function will modify the timeout used
+     * for this endpoint by the probe mechanism, i.e. the mechanism
+     * which sends keepalive ("NUL") packets. If no response to the
+     * keepalives has been received in <linktimeoutSeconds> seconds,
+     * the link is considered dead and the session is lost. The set timeout will
+     * also determine the interval at which the keepalives are sent:
+     * interval = linkTimeout / keepaliveRetries.
+     * Default linkTimeout and keepaliveRetries are read from the
+     * routing node configuration XML (elements udp_linktimeout and
+     * udp_keepalive_retries in the XML).
      */
-    QStatus SetLinkTimeout(uint32_t& linkTimeout)
+    QStatus SetLinkTimeout(uint32_t& linkTimeoutSeconds)
     {
-        QCC_UNUSED(linkTimeout);
-        QCC_DbgTrace(("_UDPEndpoint::SetLinkTimeout(linkTimeout=%d.)", linkTimeout));
-        QCC_DbgPrintf(("_UDPEndpoint::SetLinkTimeout(): Ignored", linkTimeout));
+        QCC_DbgTrace(("_UDPEndpoint::SetLinkTimeout(linkTimeout=%d.)", linkTimeoutSeconds));
+
+        m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
+        uint32_t linkTimeoutMilliseconds = linkTimeoutSeconds * 1000;
+        ARDP_UpdateProbeTimeout(GetHandle(), GetConn(), linkTimeoutMilliseconds);
+        m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
+
         return ER_OK;
     }
 
