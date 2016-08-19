@@ -1579,6 +1579,45 @@ uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn)
     return (GetDataTimeout(handle, conn) + 2 * handle->config.initialDataTimeout);
 }
 
+void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t& timeoutMilliseconds)
+{
+    QCC_DbgTrace(("ARDP_UpdateProbeTimeout(handle=%p, conn=%p, timeout=%u)", handle, conn, timeoutMilliseconds));
+    if (timeoutMilliseconds < ARDP_MIN_PROBE_TIMEOUT) {
+        /*
+         * Apply lower timeout limit.
+         */
+        QCC_LogError(ER_WARNING, ("%s: Requested timeout too low, applying minimum of %u ms",
+                                  __FUNCTION__, ARDP_MIN_PROBE_TIMEOUT));
+        timeoutMilliseconds = ARDP_MIN_PROBE_TIMEOUT;
+    }
+    uint32_t retries = handle->config.keepaliveRetries;
+    QCC_ASSERT(retries > 0u);
+    uint32_t intervalMilliseconds = timeoutMilliseconds / retries;
+    if (intervalMilliseconds < ARDP_MIN_PROBE_INTERVAL) {
+        /*
+         * Apply lower interval limit.
+         */
+        QCC_LogError(ER_WARNING, ("%s: Resulting probe interval too low, applying minimum of %u ms",
+                                  __FUNCTION__, ARDP_MIN_PROBE_INTERVAL));
+        intervalMilliseconds = ARDP_MIN_PROBE_INTERVAL;
+        /*
+         * Timeout = retries * interval.
+         * Usually, we keep the number of retries as configured and
+         * adjust the interval to get the required timeout (see above).
+         * Now the interval has reached rock-bottom and we cannot
+         * manipulate it any more. Hence, we need to adjust the retry count
+         * to obtain the required timeout.
+         */
+        retries = timeoutMilliseconds / ARDP_MIN_PROBE_INTERVAL;
+        /*
+         * Make sure we have at least one attempt.
+         */
+        retries = MAX(1, retries);
+    }
+
+    UpdateTimer(handle, conn, &conn->probeTimer, intervalMilliseconds, retries);
+}
+
 static ArdpConnRecord* NewConnRecord(void)
 {
     QCC_DbgTrace(("NewConnRecord()"));
@@ -2999,7 +3038,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 if (status == ER_WOULDBLOCK) {
                     UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
                 }
-
             } else if (seg->DLEN) {
                 isDuplicate = (SEQ32_LT(seg->SEQ, conn->rcv.CUR + 1)) ? true : isDuplicate;
                 QCC_DbgHLPrintf(("ArdpMachine(): OPEN: Got %d bytes of Data with SEQ %u, rcv.CUR = %u (%s)).", seg->DLEN, seg->SEQ, conn->rcv.CUR, isDuplicate ? "duplicate" : "new"));
