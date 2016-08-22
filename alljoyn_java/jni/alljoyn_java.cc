@@ -35,7 +35,6 @@
 #include <alljoyn/PasswordManager.h>
 #include <MsgArgUtils.h>
 #include <SignatureUtils.h>
-#include "alljoyn_java.h"
 #include <alljoyn/BusObject.h>
 #include <alljoyn/Translator.h>
 #include <alljoyn/AllJoynStd.h>
@@ -44,6 +43,9 @@
 #include <alljoyn/Init.h>
 #include <CoreObserver.h>
 #include <BusInternal.h>
+
+#include "alljoyn_java.h"
+#include "alljoyn_jni_helper.h"
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
@@ -779,16 +781,7 @@ static jmethodID MID_MsgArg_unmarshal_array = NULL;
 static jobject Unmarshal(const MsgArg* arg, jobject jtype);
 static MsgArg* Marshal(const char* signature, jobject jarg, MsgArg* arg);
 
-/**
- * Get a valid JNIEnv pointer.
- *
- * A JNIEnv pointer is only valid in an associated JVM thread.  In a callback
- * function (from C++), there is no associated JVM thread, so we need to obtain
- * a valid JNIEnv.  This is a helper function to make that happen.
- *
- * @return The JNIEnv pointer valid in the calling context.
- */
-static JNIEnv* GetEnv(jint* result = 0)
+JNIEnv* GetEnv(jint* result)
 {
     JNIEnv* env;
     jint ret = jvm->GetEnv((void**)&env, JNI_VERSION_1_2);
@@ -1033,34 +1026,6 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm,
 }
 
 /**
- * A helper class to wrap local references ensuring proper release.
- */
-template <class T>
-class JLocalRef {
-  public:
-    JLocalRef() : jobj(NULL) { }
-    JLocalRef(const T& obj) : jobj(obj) { }
-    ~JLocalRef() { if (jobj) { GetEnv()->DeleteLocalRef(jobj); } }
-    JLocalRef& operator=(T obj)
-    {
-        if (jobj) {
-            GetEnv()->DeleteLocalRef(jobj);
-        }
-        jobj = obj;
-        return *this;
-    }
-    operator T() { return jobj; }
-    T move()
-    {
-        T ret = jobj;
-        jobj = NULL;
-        return ret;
-    }
-  private:
-    T jobj;
-};
-
-/**
  * A scoped JNIEnv pointer to ensure proper release.
  */
 class JScopedEnv {
@@ -1140,10 +1105,7 @@ JString::~JString()
     }
 }
 
-/**
- * Helper function to throw an exception
- */
-static void Throw(const char* name, const char* msg)
+void Throw(const char* name, const char* msg)
 {
     JNIEnv* env = GetEnv();
     JLocalRef<jclass> clazz = env->FindClass(name);
@@ -1202,58 +1164,7 @@ static void ThrowErrorReplyBusException(const char* name, const char* message)
     }
 }
 
-/**
- * Get the native C++ handle of a given Java object.
- *
- * If we have an object that has a native counterpart, we need a way to get at
- * the native object from the Java object.  We do this by storing the native
- * pointer as an opaque handle in a Java field named "handle".  We use Java
- * reflection to pull the field out and return the handle value.
- *
- * Think of this handle as the counterpart to the object reference found in
- * the C++ objects that need to call into Java.  Java objects use the handle to
- * get at the C++ objects, and C++ objects use an object reference to get at
- * the Java objects.
- *
- * @return The handle value as a pointer.  NULL is a valid value.
- *
- * @warning This method makes native calls which may throw exceptions.  In the
- *          usual idiom, exceptions must be checked for explicitly by the caller
- *          after *every* call to GetHandle.  Since NULL is a valid value to
- *          return, validity of the returned pointer must be checked as well.
- */
-template <typename T>
-static T GetHandle(jobject jobj)
-{
-    JNIEnv* env = GetEnv();
-    if (!jobj) {
-        Throw("java/lang/NullPointerException", "failed to get native handle on null object");
-        return NULL;
-    }
-    JLocalRef<jclass> clazz = env->GetObjectClass(jobj);
-    jfieldID fid = env->GetFieldID(clazz, "handle", "J");
-    void* handle = NULL;
-    if (fid) {
-        handle = (void*)env->GetLongField(jobj, fid);
-    }
-
-    return reinterpret_cast<T>(handle);
-}
-
-/**
- * Set the native C++ handle of a given Java object.
- *
- * If we have an object that has a native counterpart, we need a way to get at
- * the native object from the Java object.  We do this by storing the native
- * pointer as an opaque handle in a Java field named "handle".  We use Java
- * reflection to determine the field out and set the handle value.
- *
- * @param jobj The Java object which needs to have its handle set.
- * @param handle The pointer to the C++ object which is the handle value.
- *
- * @warning May throw an exception.
- */
-static void SetHandle(jobject jobj, void* handle)
+void SetHandle(jobject jobj, void* handle)
 {
     JNIEnv* env = GetEnv();
     if (!jobj) {
