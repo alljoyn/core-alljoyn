@@ -107,8 +107,8 @@ else:
     if unittest_env['BR'] == 'on':
         # Build apps with bundled daemon support
         unittest_env.Prepend(LIBS = [unittest_env['ajrlib']])
-    elif unittest_env['POLICYDB'] == 'on':
-        # PolicyDB without Bundled Router - link directly with router objects
+    else:
+        # Tests without Bundled Router - link directly with router objects
         unittest_env.Prepend(LIBS = [unittest_env['srobj'], unittest_env['router_objs']])
     # Add private header include path to test bundled router code
     unittest_env.Append(CPPPATH = [ unittest_env.Dir('../router').srcnode() ])
