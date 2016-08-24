@@ -371,7 +371,9 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_PCSTR u
                                                                       AJ_PSTR* signedManifestXml)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
-    if ((2 * ECC_COORDINATE_SZ) != signatureSize) {
+
+    ECCSignature eccSig;
+    if (eccSig.GetSize() != signatureSize) {
         return ER_BAD_ARG_4;
     }
 
@@ -403,10 +405,11 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_PCSTR u
         return status;
     }
 
-    ECCSignature eccSig;
-    /* TODO ASACORE-3006: Need Import/Export methods for ECCSignature */
-    memcpy(eccSig.r, signature, ECC_COORDINATE_SZ);
-    memcpy(eccSig.s, signature + ECC_COORDINATE_SZ, ECC_COORDINATE_SZ);
+    status = eccSig.Import(signature, signatureSize);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Error occured while importing signature."));
+        return status;
+    }
 
     status = manifest->SetSignature(eccSig);
     if (ER_OK != status) {

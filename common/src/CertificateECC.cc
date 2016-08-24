@@ -1345,7 +1345,7 @@ bool CertificateX509::IsDNEqual(const CertificateX509& other) const
     return (this->IsDNEqual(other.GetSubjectCN(), other.GetSubjectCNLength(), other.GetSubjectOU(), other.GetSubjectOULength()));
 }
 
-bool CertificateX509::IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const
+bool CertificateX509::IsDNEqual(const uint8_t* cn, size_t cnLength, const uint8_t* ou, size_t ouLength) const
 {
     QCC_ASSERT((cnLength > 0) || (nullptr == cn));
     QCC_ASSERT((ouLength > 0) || (nullptr == ou));

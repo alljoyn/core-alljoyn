@@ -844,7 +844,7 @@ QStatus Crypto_ECC::GenerateDHKeyPair() {
 }
 
 
-QStatus Crypto_ECC::GenerateSPEKEKeyPair(const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID) {
+QStatus Crypto_ECC::GenerateSPEKEKeyPair(const uint8_t* pw, size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID) {
 
     /*
      * CNG does not implement EC-SPEKE, so the builtin key EC-SPEKE key generation is used.
@@ -1390,7 +1390,7 @@ static QStatus ECCPublicKey_Validate(ECCPublicKey* pubKey)
     return status;
 }
 
-QStatus ECCPublicKey::Import(const uint8_t* data, const size_t size)
+QStatus ECCPublicKey::Import(const uint8_t* data, size_t size)
 {
     if (NULL == data) {
         return ER_BAD_ARG_1;
@@ -1404,7 +1404,7 @@ QStatus ECCPublicKey::Import(const uint8_t* data, const size_t size)
     return this->Import(data, coordinateSize, data + coordinateSize, coordinateSize);
 }
 
-QStatus ECCPublicKey::Import(const uint8_t* xData, const size_t xSize, const uint8_t* yData, const size_t ySize)
+QStatus ECCPublicKey::Import(const uint8_t* xData, size_t xSize, const uint8_t* yData, size_t ySize)
 {
     if (NULL == xData) {
         return ER_BAD_ARG_1;
@@ -1475,6 +1475,73 @@ const String ECCPrivateKey::ToString() const
     s.append(BytesToHexString(d, GetSize()));
     s.append("]");
     return s;
+}
+
+QStatus ECCSignature::Import(const uint8_t* data, size_t size)
+{
+    if (nullptr == data) {
+        return ER_BAD_ARG_1;
+    }
+
+    if (size != 2 * ECC_COORDINATE_SZ) {
+        return ER_BAD_ARG_2;
+    }
+
+    return this->Import(data, ECC_COORDINATE_SZ, data + ECC_COORDINATE_SZ, ECC_COORDINATE_SZ);
+}
+
+QStatus ECCSignature::Import(const uint8_t* rData, size_t rSize,
+                             const uint8_t* sData, size_t sSize)
+{
+    if (nullptr == rData) {
+        return ER_BAD_ARG_1;
+    }
+
+    if (ECC_COORDINATE_SZ != rSize) {
+        return ER_BAD_ARG_2;
+    }
+
+    if (nullptr == sData) {
+        return ER_BAD_ARG_3;
+    }
+
+    if (ECC_COORDINATE_SZ != sSize) {
+        return ER_BAD_ARG_4;
+    }
+
+    QCC_ASSERT(sizeof(r) >= rSize);
+    QCC_ASSERT(sizeof(s) >= sSize);
+    memcpy(r, rData, rSize);
+    memcpy(s, sData, sSize);
+
+    return ER_OK;
+}
+
+size_t ECCSignature::GetSize() const
+{
+    return 2 * ECC_COORDINATE_SZ;
+}
+
+QStatus ECCSignature::Export(uint8_t* data, size_t* size) const
+{
+    if (nullptr == data) {
+        return ER_BAD_ARG_1;
+    }
+
+    if (nullptr == size) {
+        return ER_BAD_ARG_2;
+    }
+
+    if ((2 * ECC_COORDINATE_SZ) > *size) {
+        *size = (2 * ECC_COORDINATE_SZ);
+        return ER_BUFFER_TOO_SMALL;
+    }
+
+    *size = (2 * ECC_COORDINATE_SZ);
+    memcpy(data, r, ECC_COORDINATE_SZ);
+    memcpy(data + ECC_COORDINATE_SZ, s, ECC_COORDINATE_SZ);
+
+    return ER_OK;
 }
 
 } /* namespace qcc */
