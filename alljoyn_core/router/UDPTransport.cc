@@ -4474,6 +4474,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     ardpConfig.totalAppTimeout = config->GetLimit("udp_total_app_timeout", UDP_TOTAL_APP_TIMEOUT);
     ardpConfig.linkTimeout = config->GetLimit("udp_link_timeout", UDP_LINK_TIMEOUT);
     ardpConfig.keepaliveRetries = config->GetLimit("udp_keepalive_retries", UDP_KEEPALIVE_RETRIES);
+    ARDP_AdjustProbeTimeoutSettings(ardpConfig.linkTimeout, ardpConfig.keepaliveRetries);
     ardpConfig.fastRetransmitAckCounter = config->GetLimit("udp_fast_retransmit_ack_counter", UDP_FAST_RETRANSMIT_ACK_COUNTER);
     ardpConfig.delayedAckTimeout = config->GetLimit("udp_delayed_ack_timeout", UDP_DELAYED_ACK_TIMEOUT);
     ardpConfig.timewait = config->GetLimit("udp_timewait", UDP_TIMEWAIT);
