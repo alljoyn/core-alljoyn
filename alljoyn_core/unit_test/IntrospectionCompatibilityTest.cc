@@ -555,6 +555,90 @@ static const char* xmlNestedNodesWithDescriptionDe =
     "  </node>"
     "</node>\n";
 
+const char* xmlLifx =
+    "<node name=\"/org/allseen/LSF/Lamp\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" "
+    "xsi:noNamespaceSchemaLocation=\"https://allseenalliance.org/schemas/introspect.xsd\">"
+    "    <interface name=\"org.freedesktop.DBus.Properties\">" // Standard DBus interface. Should be ignored.
+    "        <method name=\"Get\">"
+    "            <arg type=\"s\" direction=\"in\"/>"
+    "            <arg type=\"s\" direction=\"in\"/>"
+    "            <arg type=\"v\" direction=\"out\"/>"
+    "        </method>"
+    "        <method name=\"Set\">"
+    "            <arg type=\"s\" direction=\"in\"/>"
+    "            <arg type=\"s\" direction=\"in\"/>"
+    "            <arg type=\"v\" direction=\"in\"/>"
+    "        </method>"
+    "        <method name=\"GetAll\">"
+    "            <arg type=\"s\" direction=\"in\"/>"
+    "            <arg type=\"a{sv}\" direction=\"out\"/>"
+    "        </method>"
+    "    </interface>"
+    "    <interface name=\"org.allseen.LSF.LampService\">"
+    "        <property name=\"Version\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"LampServiceVersion\" type=\"u\" access=\"read\"/>"
+    "        <method name=\"ClearLampFault\">"
+    "            <arg name=\"LampFaultCode\" type=\"u\" direction=\"in\"/>"
+    "            <arg name=\"LampResponseCode\" type=\"u\" direction=\"out\"/>"
+    "            <arg name=\"LampFaultCode\" type=\"u\" direction=\"out\"/>"
+    "        </method>"
+    "        <property name=\"LampFaults\" type=\"au\" access=\"read\"/>"
+    "    </interface>"
+    "    <interface name=\"org.allseen.LSF.LampParameters\">"
+    "        <property name=\"Version\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"Energy_Usage_Milliwatts\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"Brightness_Lumens\" type=\"u\" access=\"read\"/>"
+    "    </interface>"
+    "    <interface name=\"org.allseen.LSF.LampDetails\">"
+    "        <property name=\"Version\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"Make\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"Model\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"Type\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"LampType\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"LampBaseType\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"LampBeamAngle\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"Dimmable\" type=\"b\" access=\"read\"/>"
+    "        <property name=\"Color\" type=\"b\" access=\"read\"/>"
+    "        <property name=\"VariableColorTemp\" type=\"b\" access=\"read\"/>"
+    "        <property name=\"HasEffects\" type=\"b\" access=\"read\"/>"
+    "        <property name=\"MinVoltage\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"MaxVoltage\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"Wattage\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"IncandescentEquivalent\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"MaxLumens\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"MinTemperature\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"MaxTemperature\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"ColorRenderingIndex\" type=\"u\" access=\"read\"/>"
+    "        <property name=\"LampID\" type=\"s\" access=\"read\"/>"
+    "    </interface>"
+    "    <interface name=\"org.allseen.LSF.LampState\">"
+    "        <property name=\"Version\" type=\"u\" access=\"read\"/>"
+    "        <method name=\"TransitionLampState\">"
+    "            <arg name=\"Timestamp\" type=\"t\" direction=\"in\"/>"
+    "            <arg name=\"NewState\" type=\"a{sv}\" direction=\"in\"/>"
+    "            <arg name=\"TransitionPeriod\" type=\"u\" direction=\"in\"/>"
+    "            <arg name=\"LampResponseCode\" type=\"u\" direction=\"out\"/>"
+    "        </method>"
+    "        <method name=\"ApplyPulseEffect\">"
+    "            <arg name=\"FromState\" type=\"a{sv}\" direction=\"in\"/>"
+    "            <arg name=\"ToState\" type=\"a{sv}\" direction=\"in\"/>"
+    "            <arg name=\"period\" type=\"u\" direction=\"in\"/>"
+    "            <arg name=\"duration\" type=\"u\" direction=\"in\"/>"
+    "            <arg name=\"numPulses\" type=\"u\" direction=\"in\"/>"
+    "            <arg name=\"timestamp\" type=\"t\" direction=\"in\"/>"
+    "            <arg name=\"LampResponseCode\" type=\"u\" direction=\"out\"/>"
+    "        </method>"
+    "        <signal name=\"LampStateChanged\">"
+    "            <arg name=\"LampID\" type=\"s\"/>"
+    "        </signal>"
+    "        <property name=\"OnOff\" type=\"b\" access=\"readwrite\"/>"
+    "        <property name=\"Hue\" type=\"u\" access=\"readwrite\"/>"
+    "        <property name=\"Saturation\" type=\"u\" access=\"readwrite\"/>"
+    "        <property name=\"ColorTemp\" type=\"u\" access=\"readwrite\"/>"
+    "        <property name=\"Brightness\" type=\"u\" access=\"readwrite\"/>"
+    "    </interface>"
+    "</node>";
+
 typedef struct XmlSet {
     const char* introspectWithoutDescription;   // Introspect() output - no description.
     const char* introspectWithDescriptionEn;    // IntrospectWithDescription("en") output.
@@ -984,4 +1068,35 @@ TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWi
     EXPECT_STREQ("English Nested Method Description", description.c_str());
     ASSERT_TRUE(nestedIntf->GetMemberDescriptionForLanguage("TestMethod", description, "de"));
     EXPECT_STREQ("German Nested Method Description", description.c_str());
+}
+
+TEST_F(IntrospectionCompatibilityTest, IntrospectRemoteObject_FakeLegacyObjectWithStandardDbusInterface_CreatesNonDbusInterfaces) {
+    static const char* LAMPSERVICE_INTERFACE_NAME = "org.allseen.LSF.LampService";
+    static const char* LAMPDETAILS_INTERFACE_NAME = "org.allseen.LSF.LampDetails";
+    static const char* LAMPSTATE_INTERFACE_NAME = "org.allseen.LSF.LampState";
+
+    InterfaceDescription* intf = nullptr;
+    ASSERT_EQ(ER_OK, serverAttachment->CreateInterface(LAMPSERVICE_INTERFACE_NAME, intf));
+    ASSERT_NE(nullptr, intf);
+    ASSERT_EQ(ER_OK, serverAttachment->CreateInterface(LAMPDETAILS_INTERFACE_NAME, intf));
+    ASSERT_NE(nullptr, intf);
+    ASSERT_EQ(ER_OK, serverAttachment->CreateInterface(LAMPSTATE_INTERFACE_NAME, intf));
+    ASSERT_NE(nullptr, intf);
+
+    const XmlSet xmlWithDbusInterface = { xmlLifx, nullptr, nullptr };
+    fakeObject.reset(new FakeLegacyObjectWithoutDescription(MAIN_PATH, xmlWithDbusInterface));
+    ASSERT_NE(nullptr, fakeObject);
+    ASSERT_EQ(ER_OK, serverAttachment->RegisterBusObject(*fakeObject));
+    ASSERT_EQ(ER_OK, serverAttachment->Connect());
+
+    proxyObject.reset(new ProxyBusObject(*clientAttachment, serverAttachment->GetUniqueName().c_str(), MAIN_PATH, 0));
+    ASSERT_NE(nullptr, proxyObject);
+    EXPECT_EQ(ER_OK, proxyObject->IntrospectRemoteObject());
+
+    const InterfaceDescription* remoteIntf = proxyObject->GetInterface(LAMPSERVICE_INTERFACE_NAME);
+    EXPECT_NE(nullptr, remoteIntf);
+    remoteIntf = proxyObject->GetInterface(LAMPDETAILS_INTERFACE_NAME);
+    EXPECT_NE(nullptr, remoteIntf);
+    remoteIntf = proxyObject->GetInterface(LAMPSTATE_INTERFACE_NAME);
+    EXPECT_NE(nullptr, remoteIntf);
 }
