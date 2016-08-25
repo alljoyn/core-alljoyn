@@ -1579,9 +1579,15 @@ uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn)
     return (GetDataTimeout(handle, conn) + 2 * handle->config.initialDataTimeout);
 }
 
-void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t& timeoutMilliseconds)
+/*
+ * Adjust given probe timeout settings, so that they are not below minimum values.
+ */
+uint32_t ARDP_AdjustProbeTimeoutSettings(uint32_t& timeoutMilliseconds, uint32_t& retries)
 {
-    QCC_DbgTrace(("ARDP_UpdateProbeTimeout(handle=%p, conn=%p, timeout=%u)", handle, conn, timeoutMilliseconds));
+    QCC_DbgTrace(("ARDP_AdjustProbeTimeoutSettings(timeoutMilliseconds=%u, retries=%u)",
+                  timeoutMilliseconds, retries));
+    uint32_t intervalMilliseconds = 0;
+
     if (timeoutMilliseconds < ARDP_MIN_PROBE_TIMEOUT) {
         /*
          * Apply lower timeout limit.
@@ -1590,9 +1596,8 @@ void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t&
                                   __FUNCTION__, ARDP_MIN_PROBE_TIMEOUT));
         timeoutMilliseconds = ARDP_MIN_PROBE_TIMEOUT;
     }
-    uint32_t retries = handle->config.keepaliveRetries;
     QCC_ASSERT(retries > 0u);
-    uint32_t intervalMilliseconds = timeoutMilliseconds / retries;
+    intervalMilliseconds = timeoutMilliseconds / retries;
     if (intervalMilliseconds < ARDP_MIN_PROBE_INTERVAL) {
         /*
          * Apply lower interval limit.
@@ -1615,6 +1620,17 @@ void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t&
         retries = MAX(1, retries);
     }
 
+    QCC_DbgTrace(("%s: After adjustment: timeoutMilliseconds=%u, retries=%u, intervalMilliseconds=%u",
+                  __FUNCTION__, timeoutMilliseconds, retries, intervalMilliseconds));
+    return intervalMilliseconds;
+}
+
+void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t& timeoutMilliseconds)
+{
+    QCC_DbgTrace(("ARDP_UpdateProbeTimeout(handle=%p, conn=%p, timeout=%u)", handle, conn, timeoutMilliseconds));
+    uint32_t retries = handle->config.keepaliveRetries;
+
+    uint32_t intervalMilliseconds = ARDP_AdjustProbeTimeoutSettings(timeoutMilliseconds, retries);
     UpdateTimer(handle, conn, &conn->probeTimer, intervalMilliseconds, retries);
 }
 

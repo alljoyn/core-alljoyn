@@ -241,6 +241,7 @@ QStatus ARDP_Send(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32
 void ARDP_SetSendCb(ArdpHandle* handle, ARDP_SEND_CB SendCb);
 void ARDP_SetSendWindowCb(ArdpHandle* handle, ARDP_SEND_WINDOW_CB SendWindowCb);
 uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn);
+uint32_t ARDP_AdjustProbeTimeoutSettings(uint32_t& timeoutMilliseconds, uint32_t& retries);
 void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t& timeoutMilliseconds);
 
 #if ARDP_TESTHOOKS
