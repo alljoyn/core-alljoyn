@@ -65,7 +65,6 @@ env.Append(CFLAGS=[
             '-Wunused-value'])
             
 env.Append(CXXFLAGS=[
-            '-fno-rtti',
             '-fno-exceptions',
             '-Wc++11-extensions'])
 
