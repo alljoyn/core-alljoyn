@@ -75,6 +75,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, InterfaceDescription& 
         return status;
     }
 
+    intf.SetName(ifName);
     /*
      * Due to a bug in AllJoyn 14.06 and previous, we need to ignore
      * the introspected versions of the standard D-Bus interfaces.
@@ -82,8 +83,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, InterfaceDescription& 
      * this code and 14.06.  This hack should be removed when
      * interface evolution is better supported.
      */
-    if ((ifName == org::freedesktop::DBus::InterfaceName) ||
-        (ifName == org::freedesktop::DBus::Properties::InterfaceName)) {
+    if (IsStandardDbusInterface(intf)) {
         return ER_OK;
     }
 
@@ -103,7 +103,6 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, InterfaceDescription& 
         secPolicy = AJ_IFC_SECURITY_INHERIT;
     }
 
-    intf.SetName(ifName);
     status = intf.SetSecurityPolicy(secPolicy);
     if (status != ER_OK) {
         QCC_LogError(status, ("Failed to set security policy annotation for interface \"%s\"", ifName.c_str()));
@@ -314,6 +313,12 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, InterfaceDescription& 
     return status;
 }
 
+bool XmlHelper::IsStandardDbusInterface(const InterfaceDescription& intf) const
+{
+    return ((intf.name == org::freedesktop::DBus::InterfaceName) ||
+            (intf.name == org::freedesktop::DBus::Properties::InterfaceName));
+}
+
 QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj, const XmlToLanguageMap* legacyDescriptions)
 {
     QStatus status = ER_OK;
@@ -334,6 +339,12 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj, const 
         if (elemName == "interface") {
             InterfaceDescription intf;
             status = ParseInterface(elem, intf);
+            if (IsStandardDbusInterface(intf)) {
+                /* Skip the introspected versions of the standard D-Bus interfaces.
+                 * See comment in ParseInterface().
+                 */
+                continue;
+            }
             if ((status == ER_OK) && (legacyDescriptions != nullptr) && (!legacyDescriptions->empty())) {
                 /* Legacy descriptions present. This means that we are dealing with a pre-16.04
                  * object and we need to get the descriptions for this interface from the
