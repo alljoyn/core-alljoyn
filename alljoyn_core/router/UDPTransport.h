@@ -823,7 +823,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         STATE_MANAGED           /**< The state of the endpoints has been managed by the main thread */
     };
 
-    ManageState m_manage;       /**< Flag used for synchronization of ManageEndpoints() */
+    std::atomic<ManageState> m_manage;       /**< Flag used for synchronization of ManageEndpoints() */
 
     std::map<qcc::String, uint16_t> m_listenPortMap; /**< If m_isListening, a map of the ports on which we are listening on different interfaces/addresses */
 

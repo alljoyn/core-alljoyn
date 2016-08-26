@@ -114,7 +114,7 @@ class NamedPipeClientTransport : public ClientTransport {
     static void Shutdown();
 
   private:
-    BusAttachment& m_bus;               /**< The message bus for this transport */
+//    BusAttachment& m_bus;               /**< The message bus for this transport */
 };
 
 } // namespace ajn

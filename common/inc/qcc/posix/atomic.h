@@ -38,6 +38,16 @@ namespace qcc {
 
 #if defined(QCC_OS_ANDROID)
 
+  /**
+ * Fetch an int32_t and return its value atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @return  Value of *mem
+ */
+inline int32_t AtomicFetch(volatile int32_t* mem) {
+    return __sync_add_and_fetch(mem, 0);
+}
+
 /**
  * Increment an int32_t and return its new value atomically.
  *
@@ -105,6 +115,16 @@ inline bool CompareAndExchangePointer(void* volatile* mem, void* expectedValue, 
 }
 
 #elif defined(QCC_OS_LINUX)
+
+/**
+ * Fetch an int32_t and return its value atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @return  Value of *mem
+ */
+inline int32_t AtomicFetch(volatile int32_t* mem) {
+    return __sync_add_and_fetch(mem, 0);
+}
 
 /**
  * Increment an int32_t and return its new value atomically.

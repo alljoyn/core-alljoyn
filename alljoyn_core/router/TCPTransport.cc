@@ -2606,7 +2606,11 @@ void TCPTransport::UpdateDynamicScoreInstance(ListenRequest& listenRequest)
 
     ConfigDB* config = ConfigDB::GetConfigDB();
     uint32_t maxConn = config->GetLimit("max_completed_connections", ALLJOYN_MAX_COMPLETED_CONNECTIONS_TCP_DEFAULT);
+    
+    m_endpointListLock.Lock(MUTEX_CONTEXT);
     uint32_t availConn = maxConn - (m_authList.size() + m_endpointList.size());
+    m_endpointListLock.Unlock(MUTEX_CONTEXT);
+    
     uint32_t availRemoteClientsTcp = m_maxRemoteClientsTcp - m_numUntrustedClients;
     availRemoteClientsTcp = std::min(availRemoteClientsTcp, availConn);
 

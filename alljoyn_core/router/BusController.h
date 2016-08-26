@@ -26,6 +26,7 @@
 #ifndef _ALLJOYN_BUSCONTROLLER_H
 #define _ALLJOYN_BUSCONTROLLER_H
 
+#include <atomic>
 #include <qcc/platform.h>
 
 #include <alljoyn/MsgArg.h>
@@ -139,7 +140,7 @@ class BusController {
 #endif
 
     /** Event to wait on while initialization completes */
-    bool initComplete;
+    std::atomic<bool> initComplete;
 };
 
 }

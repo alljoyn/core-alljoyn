@@ -21,6 +21,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string>
+#include <atomic>
 
 #include <alljoyn/Status.h>
 #include <alljoyn/AboutObj.h>
@@ -128,8 +129,8 @@ static QStatus SetupBusAttachment(BusAttachment& bus, AboutData& aboutData)
 
 class Door : public BusObject {
   private:
-    uint32_t code;
-    bool open;
+    std::atomic<uint32_t> code;
+    std::atomic<bool> open;
     string location;
 
     BusAttachment& bus;
@@ -170,11 +171,11 @@ class Door : public BusObject {
         }
 
         if (!strcmp(propName, "IsOpen")) {
-            val.Set("b", open);
+            val.Set("b", bool(open));
         } else if (!strcmp(propName, "Location")) {
             val.Set("s", location.c_str());
         } else if (!strcmp(propName, "KeyCode")) {
-            val.Set("u", code);
+            val.Set("u", uint32_t(code));
         } else {
             return ER_FAIL;
         }
@@ -194,7 +195,7 @@ class Door : public BusObject {
         } else {
             cout << "\t... and it was closed, so we can comply." << endl;
             open = true;
-            MsgArg propval("b", open);
+            MsgArg propval("b", bool(open));
             EmitPropChanged(INTF_NAME, "IsOpen", propval, SESSION_ID_ALL_HOSTED);
             MethodReply(msg, NULL, (size_t)0);
         }
@@ -210,7 +211,7 @@ class Door : public BusObject {
         if (open) {
             cout << "\t... and it was open, so we can comply." << endl;
             open = false;
-            MsgArg propval("b", open);
+            MsgArg propval("b", bool(open));
             EmitPropChanged(INTF_NAME, "IsOpen", propval, SESSION_ID_ALL_HOSTED);
             MethodReply(msg, NULL, (size_t)0);
         } else {
@@ -232,12 +233,12 @@ class Door : public BusObject {
             cout << "Someone knocked on door @ " << location.c_str() << endl;
             cout << "\t... opening door" << endl;
             open = true;
-            MsgArg propval("b", open);
+            MsgArg propval("b", bool(open));
             EmitPropChanged(INTF_NAME, "IsOpen", propval, SESSION_ID_ALL_HOSTED);
             cout << "\t... GRRRR nobody there!!!" << endl;
             cout << "\t... slamming door shut" << endl;
             open = false;
-            MsgArg propval2("b", open);
+            MsgArg propval2("b", bool(open));
             EmitPropChanged(INTF_NAME, "IsOpen", propval2, SESSION_ID_ALL_HOSTED);
         } else {
             // door was open while knocking
@@ -251,7 +252,7 @@ class Door : public BusObject {
         const char* action = open ? "Closing" : "Opening";
         cout << action << " door @ " << location.c_str() << "." << endl;
         open = !open;
-        MsgArg propval("b", open);
+        MsgArg propval("b", bool(open));
         EmitPropChanged(INTF_NAME, "IsOpen", propval, SESSION_ID_ALL_HOSTED);
     }
 

@@ -32,6 +32,7 @@
 
 #include <set>
 #include <map>
+#include <atomic>
 
 #if defined(QCC_OS_GROUP_POSIX)
 #include <qcc/posix/Thread.h>
@@ -300,15 +301,16 @@ class Thread {
     /**
      * Enumeration of thread states.
      */
-    enum {
+    enum State{
         INITIAL,  /**< Initial thread state - no underlying OS thread */
         STARTED,  /**< Thread has started */
         RUNNING,  /**< Thread is running the thread function */
         STOPPING, /**< Thread has completed the thread function and is cleaning up */
         DEAD      /**< Underlying OS thread is gone */
-    } state;
+    };
+    std::atomic<State> state;
 
-    bool isStopping;                ///< Thread has received a stop request
+    std::atomic<bool> isStopping;   ///< Thread has received a stop request
     char funcName[80];              ///< Function name (used mostly in debug output).
     ThreadFunction function;        ///< Thread entry point or NULL is using Run() as entry point
     ThreadHandle handle;            ///< Thread handle.

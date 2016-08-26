@@ -94,7 +94,8 @@ inline void IncrementPerfCounter(PerfCounterIndex index)
      * update the counter, if two or more threads are updating the same
      * counter at the same time.
      */
-    s_PerfCounters[index]++;
+    IncrementAndFetch((volatile int32_t*)&s_PerfCounters[index]);
+    //s_PerfCounters[index]++;
 }
 
 }

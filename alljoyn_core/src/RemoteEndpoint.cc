@@ -44,6 +44,8 @@
 #include <qcc/time.h>
 #endif
 
+#include <atomic>
+
 #define QCC_MODULE "ALLJOYN"
 
 using namespace std;
@@ -1389,7 +1391,7 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 #ifndef NDEBUG
 #undef QCC_MODULE
 #define QCC_MODULE "TXSTATS"
-    static uint32_t lastTime = 0;
+    static std::atomic<uint32_t> lastTime = {0};
     uint32_t now = GetTimestamp();
     if ((now - lastTime) > 1000) {
         QCC_DbgPrintf(("Tx queue size (%s) = %d", GetUniqueName().c_str(), count));

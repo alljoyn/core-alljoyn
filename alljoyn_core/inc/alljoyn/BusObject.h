@@ -35,6 +35,8 @@
 #include <alljoyn/Status.h>
 #include <alljoyn/Translator.h>
 
+#include <atomic>
+
 namespace ajn {
 
 /// @cond ALLJOYN_DEV
@@ -704,7 +706,7 @@ class BusObject : public MessageReceiver {
     BusObject* parent;
 
     /** true if object's ObjectRegistered callback has been called */
-    bool isRegistered;
+    std::atomic<bool> isRegistered;
 
     /** true if object is a placeholder (i.e. only exists to be the parent of a more meaningful object instance) */
     bool isPlaceholder;

@@ -341,7 +341,7 @@ BusAttachment::~BusAttachment(void)
      * callers of BusAttachment::StopInternal() to exit before deleting the
      * object
      */
-    while (busInternal->stopCount) {
+    while (AtomicFetch(&busInternal->stopCount)) {
         /*
          * We want to allow other calling threads to complete.  This means we
          * need to yield the CPU.  Sleep(0) yields the CPU to all threads of
@@ -2862,9 +2862,9 @@ QStatus BusAttachment::RegisterApplicationStateListener(ApplicationStateListener
 {
     QStatus status = ER_OK;
 
-    if (nullptr == &applicationStateListener) {
-        status = ER_INVALID_ADDRESS;
-    }
+//    if (nullptr == &applicationStateListener) {
+//        status = ER_INVALID_ADDRESS;
+//    }
 
     if (ER_OK == status) {
         status = busInternal->AddApplicationStateListener(applicationStateListener);
@@ -2882,9 +2882,9 @@ QStatus BusAttachment::UnregisterApplicationStateListener(ApplicationStateListen
 {
     QStatus status = ER_OK;
 
-    if (nullptr == &applicationStateListener) {
-        status = ER_INVALID_ADDRESS;
-    }
+//    if (nullptr == &applicationStateListener) {
+//        status = ER_INVALID_ADDRESS;
+//    }
 
     if (ER_OK == status) {
         status = busInternal->RemoveApplicationStateListener(applicationStateListener);
