@@ -768,6 +768,10 @@ static jclass CLS_BusAttachment = NULL;
 static jclass CLS_SessionOpts = NULL;
 static jclass CLS_AboutDataListener = NULL;
 
+jclass CLS_ECCPublicKey = NULL;
+jclass CLS_ECCPrivateKey = NULL;
+jclass CLS_JAVA_UTIL_UUID = NULL;
+
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
 static jmethodID MID_BusException_log = NULL;
@@ -809,18 +813,7 @@ static void DeleteEnv(jint result)
     }
 }
 
-/*
- * Note that some JNI calls do not set the returned value to NULL when
- * an exception occurs.  In that case we must explicitly set the
- * reference here to NULL to prevent calling DeleteLocalRef on an
- * invalid reference.
- *
- * The list of such functions used in this file is:
- * - CallObjectMethod
- * - CallStaticObjectMethod
- * - GetObjectArrayElement
- */
-static jobject CallObjectMethod(JNIEnv* env, jobject obj, jmethodID methodID, ...)
+jobject CallObjectMethod(JNIEnv* env, jobject obj, jmethodID methodID, ...)
 {
     va_list args;
     va_start(args, methodID);
@@ -1010,6 +1003,24 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_SessionOpts = (jclass)env->NewGlobalRef(clazz);
 
+        clazz = env->FindClass("org/alljoyn/bus/common/ECCPublicKey");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_ECCPublicKey = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/common/ECCPrivateKey");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_ECCPrivateKey = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("java/util/UUID");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_JAVA_UTIL_UUID = (jclass)env->NewGlobalRef(clazz);
+
         return JNI_VERSION_1_2;
     }
 }
@@ -1065,25 +1076,6 @@ JScopedEnv::~JScopedEnv()
     }
     DeleteEnv(detached);
 }
-
-/**
- * Helper function to wrap StringUTFChars to ensure proper release of resource.
- *
- * @warning NULL is a valid value, so exceptions must be checked for explicitly
- * by the caller after constructing the JString.
- */
-class JString {
-  public:
-    JString(jstring s);
-    virtual ~JString();
-    const char* c_str() { return str; }
-  protected:
-    jstring jstr;
-    const char* str;
-  private:
-    JString(const JString& other);
-    JString& operator =(const JString& other);
-};
 
 /**
  * Construct a representation of a string with wrapped StringUTFChars.
@@ -12973,10 +12965,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create(JNIEnv* env, jobject
 {
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
     if (env->ExceptionCheck() || busPtr == NULL) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_create(): Exception or NULL bus pointer"));
+        QCC_LogError(ER_FAIL, ("AboutObj_create(): Exception or NULL bus pointer"));
         return;
     }
-    QCC_DbgPrintf(("BusAttachment_unregisterBusListener(): Refcount on busPtr is %d", busPtr->GetRef()));
+    QCC_DbgPrintf(("AboutObj_create(): Refcount on busPtr is %d", busPtr->GetRef()));
 
     JAboutObject* aboutObj;
     if (isAboutAnnounced == JNI_TRUE) {
