@@ -18,6 +18,13 @@
 #define _ALLJOYN_ALLJOYN_JNI_HELPER_H
 
 #include <jni.h>
+#include <stdlib.h>
+
+extern jclass CLS_BusException;
+
+extern jclass CLS_ECCPublicKey;
+extern jclass CLS_ECCPrivateKey;
+extern jclass CLS_JAVA_UTIL_UUID;
 
 /**
  * Get a valid JNIEnv pointer.
@@ -116,5 +123,48 @@ T GetHandle(jobject jobj)
 
     return reinterpret_cast<T>(handle);
 }
+
+jbyteArray ToJByteArray(const unsigned char* byteArray, size_t len);
+
+/**
+ * Users of this function need to free the memory of the returned pointer
+ * after using it.
+ *
+ * @return a byte array
+ *
+ */
+unsigned char* ToByteArray(jbyteArray jbArray);
+
+/*
+ * Note that some JNI calls do not set the returned value to NULL when
+ * an exception occurs.  In that case we must explicitly set the
+ * reference here to NULL to prevent calling DeleteLocalRef on an
+ * invalid reference.
+ *
+ * The list of such functions used in this file is:
+ * - CallObjectMethod
+ * - CallStaticObjectMethod
+ * - GetObjectArrayElement
+ */
+jobject CallObjectMethod(JNIEnv* env, jobject obj, jmethodID methodID, ...);
+
+/**
+ * Helper function to wrap StringUTFChars to ensure proper release of resource.
+ *
+ * @warning NULL is a valid value, so exceptions must be checked for explicitly
+ * by the caller after constructing the JString.
+ */
+class JString {
+  public:
+    JString(jstring s);
+    virtual ~JString();
+    const char* c_str() { return str; }
+  protected:
+    jstring jstr;
+    const char* str;
+  private:
+    JString(const JString& other);
+    JString& operator =(const JString& other);
+};
 
 #endif
