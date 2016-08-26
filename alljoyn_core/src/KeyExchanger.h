@@ -368,7 +368,7 @@ class KeyExchangerECDHE_PSK : public KeyExchangerECDHE {
     }
     QStatus ReplyWithVerifier(Message& msg);
     QStatus GenerateLocalVerifier(uint8_t* verifier, size_t verifierLen);
-    QStatus GenerateRemoteVerifier(uint8_t* peerPskName, size_t peerPskNameLen, uint8_t* verifier, size_t verifierLen);
+    QStatus GenerateRemoteVerifier2(uint8_t* peerPskName, size_t peerPskNameLen, uint8_t* verifier, size_t verifierLen);
     QStatus ValidateRemoteVerifierVariant(const char* peerName, MsgArg* variant, uint8_t* authorized);
 
     QStatus KeyAuthentication(KeyExchangerCB& callback, const char* peerName, uint8_t* authorized);
