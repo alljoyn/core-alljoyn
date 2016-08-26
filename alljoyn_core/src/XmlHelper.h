@@ -149,6 +149,22 @@ class XmlHelper {
 
     /**
      * @internal
+     * Checks the given interface against the standard DBus interface names.
+     *
+     * Standard DBus interfaces should be ignored by our introspection code
+     * due to bugs in legacy Alljoyn versions (please see the comment in
+     * XmlHelper::ParseInterface()).
+     *
+     * @param[in] intf The InterfaceDescription to be checked.
+     *
+     * @return
+     *       - True if a standard DBus interface is provided.
+     *       - False otherwise.
+     */
+    bool IsStandardDbusInterface(const InterfaceDescription& intf) const;
+
+    /**
+     * @internal
      * Adds descriptions stored in the legacyDescriptions map to the interface.
      *
      * The purpose of this function is to provide compatibility with pre-16.04 objects.
