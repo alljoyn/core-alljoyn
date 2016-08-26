@@ -239,7 +239,7 @@ static MyAboutData g_aboutData("en");
 
 class MyAboutListener : public AboutListener {
   public:
-    MyAboutListener(MyBusListener& myBusListener) : busListener(&myBusListener), sessionId(0) { }
+    MyAboutListener(MyBusListener& myBusListener) : busListener(&myBusListener)/*, sessionId(0)*/ { }
     void Announced(const char* busName, uint16_t version, SessionPort port,
                    const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
         QCC_UNUSED(version);
@@ -265,7 +265,7 @@ class MyAboutListener : public AboutListener {
     }
   private:
     MyBusListener* busListener;
-    SessionId sessionId;
+//    SessionId sessionId;
 };
 
 class LocalTestObject : public BusObject {
