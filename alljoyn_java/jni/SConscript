@@ -11,12 +11,12 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('env')
 
 # JNI library sources
-srcs = ['alljoyn_java.cc']
+srcs = ['alljoyn_java.cc', 'alljoyn_jni_helper.cc', 'CryptoECC.cc']
 
 # JNI library
 bdenv = env.Clone()
