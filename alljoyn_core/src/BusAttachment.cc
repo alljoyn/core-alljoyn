@@ -2862,9 +2862,9 @@ QStatus BusAttachment::RegisterApplicationStateListener(ApplicationStateListener
 {
     QStatus status = ER_OK;
 
-    if (nullptr == &applicationStateListener) {
-        status = ER_INVALID_ADDRESS;
-    }
+//    if (nullptr == &applicationStateListener) {
+//        status = ER_INVALID_ADDRESS;
+//    }
 
     if (ER_OK == status) {
         status = busInternal->AddApplicationStateListener(applicationStateListener);
@@ -2882,9 +2882,9 @@ QStatus BusAttachment::UnregisterApplicationStateListener(ApplicationStateListen
 {
     QStatus status = ER_OK;
 
-    if (nullptr == &applicationStateListener) {
-        status = ER_INVALID_ADDRESS;
-    }
+//    if (nullptr == &applicationStateListener) {
+//        status = ER_INVALID_ADDRESS;
+//    }
 
     if (ER_OK == status) {
         status = busInternal->RemoveApplicationStateListener(applicationStateListener);

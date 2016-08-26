@@ -727,14 +727,17 @@ QStatus IODispatch::DisableReadCallback(const Source* source)
         return ER_INVALID_STREAM;
     }
     it->second.readEnable = false;
-    lock.Unlock();
+    
     Thread::Alert();
     /* Wait until the IODispatch::Run thread reloads the set of check events
      * since we are disabling read.
      */
     while (!reload && crit && isRunning) {
-        Sleep(10);
+      lock.Unlock();
+      Sleep(10);
+      lock.Lock();
     }
+    lock.Unlock();
     return ER_OK;
 }
 
@@ -858,14 +861,16 @@ QStatus IODispatch::DisableWriteCallback(const Sink* sink)
     }
     it->second.writeEnable = false;
 
-    lock.Unlock();
     Thread::Alert();
     /* Wait until the IODispatch::Run thread reloads the set of check events
      * since we are disabling write.
      */
     while (!reload && crit && isRunning) {
-        Sleep(10);
+      lock.Unlock();
+      Sleep(10);
+      lock.Lock();
     }
+    lock.Unlock();
     return ER_OK;
 }
 

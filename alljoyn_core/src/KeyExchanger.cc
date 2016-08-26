@@ -1088,7 +1088,7 @@ QStatus KeyExchangerECDHE_PSK::GenerateLocalVerifier(uint8_t* verifier, size_t v
     }
 }
 
-QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier(uint8_t* peerPskName, size_t peerPskNameLength, uint8_t* verifier, size_t verifierLen)
+QStatus KeyExchangerECDHE_PSK::GenerateRemoteVerifier2(uint8_t* peerPskName, size_t peerPskNameLength, uint8_t* verifier, size_t verifierLen)
 {
     qcc::String label;
     if (IsInitiator()) {
@@ -1150,7 +1150,7 @@ QStatus KeyExchangerECDHE_PSK::ValidateRemoteVerifierVariant(const char* peerNam
         return ER_INVALID_DATA;
     }
     uint8_t computedRemoteVerifier[AUTH_VERIFIER_LEN];
-    status = GenerateRemoteVerifier(peerPskName, peerPskNameLen, computedRemoteVerifier, sizeof(computedRemoteVerifier));
+    status = GenerateRemoteVerifier2(peerPskName, peerPskNameLen, computedRemoteVerifier, sizeof(computedRemoteVerifier));
     if (status != ER_OK) {
         return status;
     }
