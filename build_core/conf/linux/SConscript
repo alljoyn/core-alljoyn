@@ -20,6 +20,7 @@ import os
 vars = Variables()
 vars.Add(BoolVariable('GCOV', 'Compile with gcov support', 'no'))
 vars.Add(BoolVariable('ASAN', 'Enable Address Sanitizer runtime checks', 'no'))
+vars.Add(BoolVariable('TSAN', 'Enable Thread Sanitizer runtime checks', 'no'))
 vars.Update(env)
 
 Help(vars.GenerateHelpText(env))
@@ -68,11 +69,13 @@ if env['VARIANT'] == 'debug':
    env.Append(CFLAGS = '-g')
    env.Append(CXXFLAGS = '-g')
    env.Append(JAVACFLAGS = '-g')
-   env.Append(CPPDEFINES = ['_GLIBCXX_DEBUG', '_GLIBCXX_DEBUG_PEDANTIC'])
 else:
    env.Append(CFLAGS = '-Os')
    env.Append(CXXFLAGS = '-Os')
    env.Append(LINKFLAGS = ['-s', '-Wl,--gc-sections'])
+
+if (env['VARIANT'] == 'debug' and env['TSAN'] == 'no' ):
+   env.Append(CPPDEFINES = ['_GLIBCXX_DEBUG', '_GLIBCXX_DEBUG_PEDANTIC'])
 
 # Code coverage control
 if env['GCOV']:
