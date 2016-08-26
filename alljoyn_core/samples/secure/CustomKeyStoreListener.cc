@@ -34,6 +34,15 @@
 
 #define QCC_MODULE "ALLJOYN_AUTH"
 
+#include <limits>
+#ifndef SIZE_MAX
+# ifdef __SIZE_MAX__
+#  define SIZE_MAX __SIZE_MAX__
+# else
+#  define SIZE_MAX std::numeric_limits<size_t>::max()
+# endif
+#endif
+
 using namespace qcc;
 using namespace ajn;
 

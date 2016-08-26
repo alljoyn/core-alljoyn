@@ -94,9 +94,9 @@ QStatus MutexInternal::Lock()
         return ER_INIT_FAILED;
     }
 
-    AcquiringLock();
     QStatus status = PlatformSpecificLock();
     if (status == ER_OK) {
+        AcquiringLock();
         LockAcquired();
     }
 
