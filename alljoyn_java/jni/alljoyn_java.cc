@@ -44,6 +44,7 @@
 #include <CoreObserver.h>
 #include <BusInternal.h>
 
+#include "JBusAttachment.h"
 #include "alljoyn_java.h"
 #include "alljoyn_jni_helper.h"
 
@@ -766,11 +767,12 @@ static jclass CLS_Status = NULL;
 static jclass CLS_Variant = NULL;
 static jclass CLS_BusAttachment = NULL;
 static jclass CLS_SessionOpts = NULL;
-static jclass CLS_AboutDataListener = NULL;
 
+jclass CLS_AboutDataListener = NULL;
 jclass CLS_ECCPublicKey = NULL;
 jclass CLS_ECCPrivateKey = NULL;
 jclass CLS_JAVA_UTIL_UUID = NULL;
+jclass CLS_ErrorReplyBusException = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
@@ -783,7 +785,6 @@ static jmethodID MID_MsgArg_unmarshal_array = NULL;
 
 // predeclare some methods as necessary
 static jobject Unmarshal(const MsgArg* arg, jobject jtype);
-static MsgArg* Marshal(const char* signature, jobject jarg, MsgArg* arg);
 
 JNIEnv* GetEnv(jint* result)
 {
@@ -1037,23 +1038,6 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm,
 }
 
 /**
- * A scoped JNIEnv pointer to ensure proper release.
- */
-class JScopedEnv {
-  public:
-    JScopedEnv();
-    ~JScopedEnv();
-    JNIEnv* operator->() { return env; }
-    operator JNIEnv*() { return env; }
-  private:
-    JScopedEnv(const JScopedEnv& other);
-    JScopedEnv& operator =(const JScopedEnv& other);
-
-    JNIEnv* env;
-    jint detached;
-};
-
-/**
  * Construct a scoped JNIEnv pointer.
  */
 JScopedEnv::JScopedEnv()
@@ -1200,411 +1184,10 @@ static jobject JStatus(QStatus status)
     return CallStaticObjectMethod(env, CLS_Status, mid, status);
 }
 
-class JBusAttachment;
-
-/**
- * This is classes primary responsibility is to convert the value returned from
- * the Java AboutDataListener to a C++ values expected for a C++ AboutDataListener
- *
- * This class also implements the C++ AboutObj so that for every Java AboutObj
- * an instance of this AboutDataListener also exists.
- */
-class JAboutObject : public AboutObj, public AboutDataListener {
-  public:
-    JAboutObject(JBusAttachment* bus, AnnounceFlag isAboutIntfAnnounced) :
-        AboutObj(*reinterpret_cast<BusAttachment*>(bus), isAboutIntfAnnounced), busPtr(bus) {
-        QCC_DbgPrintf(("JAboutObject::JAboutObject"));
-        MID_getAboutData = NULL;
-        MID_getAnnouncedAboutData = NULL;
-        jaboutDataListenerRef = NULL;
-        jaboutObjGlobalRef = NULL;
-    }
-
-    QStatus announce(JNIEnv* env, jobject thiz, jshort sessionPort, jobject jaboutDataListener) {
-        QCC_UNUSED(thiz);
-        // Make sure the jaboutDataListener is the latest version of the Java AboutDataListener
-        if (env->IsInstanceOf(jaboutDataListener, CLS_AboutDataListener)) {
-            JLocalRef<jclass> clazz = env->GetObjectClass(jaboutDataListener);
-
-            MID_getAboutData = env->GetMethodID(clazz, "getAboutData", "(Ljava/lang/String;)Ljava/util/Map;");
-            if (!MID_getAboutData) {
-                return ER_FAIL;
-            }
-            MID_getAnnouncedAboutData = env->GetMethodID(clazz, "getAnnouncedAboutData", "()Ljava/util/Map;");
-            if (!MID_getAnnouncedAboutData) {
-                return ER_FAIL;
-            }
-        } else {
-            return ER_FAIL;
-        }
-        QCC_DbgPrintf(("AboutObj_announce jaboutDataListener is an instance of CLS_AboutDataListener"));
-
-
-        /*
-         * The weak global reference jaboutDataListener cannot be directly used.  We
-         * have to get a "hard" reference to it and then use that.  If you try to
-         * use a weak reference directly you will crash and burn.
-         */
-        //The user can change the AboutDataListener between calls check to see
-        // we already have a a jaboutDataListenerRef if we do delete that ref
-        // and create a new one.
-        if (jaboutDataListenerRef != NULL) {
-            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
-            jaboutDataListenerRef = NULL;
-        }
-        jaboutDataListenerRef = env->NewGlobalRef(jaboutDataListener);
-        if (!jaboutDataListenerRef) {
-            QCC_LogError(ER_FAIL, ("Can't get new local reference to AboutDataListener"));
-            return ER_FAIL;
-        }
-
-        return Announce(static_cast<SessionPort>(sessionPort), *this);
-    }
-
-    ~JAboutObject() {
-        QCC_DbgPrintf(("JAboutObject::~JAboutObject"));
-        if (jaboutDataListenerRef != NULL) {
-            GetEnv()->DeleteGlobalRef(jaboutDataListenerRef);
-            jaboutDataListenerRef = NULL;
-        }
-    }
-
-    QStatus GetAboutData(MsgArg* msgArg, const char* language)
-    {
-        QCC_DbgPrintf(("JAboutObject::GetMsgArg"));
-
-        /*
-         * JScopedEnv will automagically attach the JVM to the current native
-         * thread.
-         */
-        JScopedEnv env;
-
-        // Note we don't check that if the jlanguage is null because null is an
-        // acceptable value for the getAboutData Method call.
-        JLocalRef<jstring> jlanguage = env->NewStringUTF(language);
-
-        QStatus status = ER_FAIL;
-        if (jaboutDataListenerRef != NULL && MID_getAboutData != NULL) {
-            QCC_DbgPrintf(("Calling getAboutData for %s language.", language));
-            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAboutData, (jstring)jlanguage);
-            QCC_DbgPrintf(("JAboutObj::GetMsgArg Made Java Method call getAboutData"));
-            // check for ErrorReplyBusException exception
-            status = CheckForThrownException(env);
-            if (ER_OK == status) {
-                // Marshal the returned value
-                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
-                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
-                    return ER_FAIL;
-                }
-            } else {
-                QCC_DbgPrintf(("JAboutObj::GetMsgArg exception with status %s", QCC_StatusText(status)));
-                return status;
-            }
-        }
-        return ER_OK;
-    }
-
-    QStatus GetAnnouncedAboutData(MsgArg* msgArg)
-    {
-        QCC_DbgPrintf(("JAboutObject::~GetMsgArgAnnounce"));
-        QStatus status = ER_FAIL;
-        if (jaboutDataListenerRef != NULL && MID_getAnnouncedAboutData != NULL) {
-            QCC_DbgPrintf(("AboutObj_announce obtained jo local ref of jaboutDataListener"));
-            /*
-             * JScopedEnv will automagically attach the JVM to the current native
-             * thread.
-             */
-            JScopedEnv env;
-
-            JLocalRef<jobject> jannounceArg = CallObjectMethod(env, jaboutDataListenerRef, MID_getAnnouncedAboutData);
-            QCC_DbgPrintf(("AboutObj_announce Made Java Method call getAnnouncedAboutData"));
-            // check for ErrorReplyBusException exception
-            status = CheckForThrownException(env);
-            if (ER_OK == status) {
-                if (!Marshal("a{sv}", jannounceArg, msgArg)) {
-                    QCC_LogError(ER_FAIL, ("JAboutData(): GetMsgArgAnnounce() marshaling error"));
-                    return ER_FAIL;
-                }
-            } else {
-                QCC_DbgPrintf(("JAboutObj::GetAnnouncedAboutData exception with status %s", QCC_StatusText(status)));
-                return status;
-            }
-        }
-        return status;
-    }
-
-    /**
-     * This will check if the last method call threw an exception Since we are
-     * looking for ErrorReplyBusExceptions we know that the exception thrown
-     * correlates to a QStatus that we are trying to get.  If ER_FAIL is returned
-     * then we had an issue resolving the java method calls.
-     *
-     * @return QStatus indicating the status that was thrown from the ErrReplyBusException
-     */
-    QStatus CheckForThrownException(JScopedEnv& env) {
-        JLocalRef<jthrowable> ex = env->ExceptionOccurred();
-        if (ex) {
-            env->ExceptionClear();
-            JLocalRef<jclass> clazz = env->GetObjectClass(ex);
-            if (env->IsInstanceOf(ex, CLS_ErrorReplyBusException) && clazz != NULL) {
-                jmethodID mid = env->GetMethodID(clazz, "getErrorStatus", "()Lorg/alljoyn/bus/Status;");
-                if (!mid) {
-                    return ER_FAIL;
-                }
-                JLocalRef<jobject> jstatus = CallObjectMethod(env, ex, mid);
-                if (env->ExceptionCheck()) {
-                    return ER_FAIL;
-                }
-                JLocalRef<jclass> statusClazz = env->GetObjectClass(jstatus);
-                mid = env->GetMethodID(statusClazz, "getErrorCode", "()I");
-                if (!mid) {
-                    return ER_FAIL;
-                }
-                QStatus errorCode = (QStatus)env->CallIntMethod(jstatus, mid);
-                if (env->ExceptionCheck()) {
-                    return ER_FAIL;
-                }
-                return errorCode;
-            }
-            return ER_FAIL;
-        }
-        return ER_OK;
-    }
-    JBusAttachment* busPtr;
-    jmethodID MID_getAboutData;
-    jmethodID MID_getAnnouncedAboutData;
-    jobject jaboutDataListenerRef;
-    jobject jaboutObjGlobalRef;
-};
-
 class JBusObject;
-class JSignalHandler;
-class JKeyStoreListener;
 class JAuthListener;
 class PendingAsyncJoin;
 class PendingAsyncPing;
-
-
-/**
- * The C++ class that backs the Java BusAttachment class and provides the
- * plumbing connection from AllJoyn out to Java-land.
- */
-class JBusAttachment : public BusAttachment {
-  public:
-    JBusAttachment(const char* applicationName, bool allowRemoteMessages, int concurrency);
-    QStatus Connect(const char* connectArgs, jobject jkeyStoreListener, const char* authMechanisms,
-                    jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
-    void Disconnect();
-    QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
-    QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces,
-                              jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jtranslator);
-    void UnregisterBusObject(jobject jbusObject);
-
-    template <typename T>
-    QStatus RegisterSignalHandler(const char* ifaceName, const char* signalName,
-                                  jobject jsignalHandler, jobject jmethod, const char* ancillary);
-    void UnregisterSignalHandler(jobject jsignalHandler, jobject jmethod);
-
-    bool IsLocalBusObject(jobject jbusObject);
-    void ForgetLocalBusObject(jobject jbusObject);
-
-    /**
-     * A mutex to serialize access to bus attachment critical sections.  It
-     * doesn't seem worthwhile to have any finer granularity than this.  Note
-     * that this member is public since we trust that the native binding we
-     * wrote will use it correctly.
-     */
-    Mutex baCommonLock;
-
-    /**
-     * A mutex to serialize method call, property, etc., access in any attached
-     * ProxyBusObject.  This is a blunt instrument, but support for
-     * multi-threading on client and service sides has not been completely
-     * implemented, so we simply disallow it for now.
-     */
-    Mutex baProxyLock;
-
-    /**
-     * A vector of all of the C++ "halves" of the signal handler objects
-     * associated with this bus attachment.  Note that this member is public
-     * since we trust that the native binding we wrote will use it correctly.
-     */
-    vector<pair<jobject, JSignalHandler*> > signalHandlers;
-
-    /*
-     * The single (optionsl) KeyStoreListener associated with this bus
-     * attachment.  The KeyStoreListener and AuthListener work together to deal
-     * with security exchanges over secure interfaces.  Note that this member is
-     * public since we trust that the native binding we wrote will usse it
-     * correctly.  When keyStoreListener is set, there must be a corresponding
-     * strong reference to the associated Java Object set in
-     * jkeyStoreListenerRef.
-     */
-    JKeyStoreListener* keyStoreListener;
-
-    /**
-     * A JNI strong global reference to The single (optional) Java KeyStoreListener
-     * that has been associated with this bus attachment.  When jkeystoreListenerRef is
-     * set, there must be a corresponding object pointer to an associated
-     * C++ backing object set in keyStoreListener.
-     */
-    jobject jkeyStoreListenerRef;
-
-    /**
-     * The single (optional) C++ backing class for a provided AuthListener that
-     * has been associated with this bus attachment.  The KeyStoreListener and
-     * AuthListener work together to deal with security exchanges over secure
-     * interfaces.  Note that this member is public since we trust that the
-     * native binding we wrote will use it correctly.  When authListener is
-     * set, there must be a corresponding strong reference to the associated
-     * Java Object set in jauthListenerRef.
-     */
-    JAuthListener* authListener;
-
-    /**
-     * The single (optional) C++ backing class for JAboutObject. The aboutObj
-     * contain a global ref jaboutObjGlobalRef that must be cleared when the
-     * BusAttachment is disconnected.
-     */
-    JAboutObject* aboutObj;
-
-    /**
-     * A JNI strong global reference to The single (optional) Java AuthListener
-     * that has been associated with this bus attachment.  When jauthListenerRef is
-     * set, there must be a corresponding object pointer to an associated
-     * C++ backing object set in authListener.
-     */
-    jobject jauthListenerRef;
-
-    /**
-     * A dedicated mutex to serialize access to the authListener,
-     * authListenerRef, keyStoreListener and keyStoreListenerRef.  This is
-     * required since we can't hold the common lock during callouts to Alljoyn
-     * that may result in callins.  This describes the authentication process.
-     * In order to prevent users from calling in right in the middle of an
-     * authentication session and changing the authentication listeners out
-     * from under us, we dedicate a lock that must be taken in order to make
-     * a change.  This lock is held during the authentication process and during
-     * the change process.
-     */
-    Mutex baAuthenticationChangeLock;
-
-    /**
-     * A list of strong references to Java bus listener objects.
-     *
-     * If clients use the unnamed parameter / unnamed class idiom to provide bus
-     * listeners to registerBusListener, they can forget that the listeners
-     * exist after the register call and never explicitly call unregister.
-     *
-     * Since we need these Java objects around, we need to hold a strong
-     * reference to them to keep them from being garbage collected.
-     *
-     * Note that this member is public since we trust that the native binding we
-     * wrote will use it correctly.
-     */
-    list<jobject> busListeners;
-
-    /**
-     * A list of strong references to Java translator objects.
-     *
-     * If clients use the unnamed parameter / unnamed class idiom to provide bus
-     * listeners to setDescriptionTranslator, they can forget that the listeners
-     * exist after the register call and never explicitly call unregister.
-     *
-     * Since we need these Java objects around, we need to hold a strong
-     * reference to them to keep them from being garbage collected.
-     *
-     * Note that this member is public since we trust that the native binding we
-     * wrote will usse it correctly.
-     */
-    list<jobject> translators;
-
-    /**
-     * A list of strong references to Java Bus Objects we use to indicate that
-     * we have a part ownership in a given object.  Used during destruction.
-     *
-     */
-    list<jobject> busObjects;
-
-    /**
-     * A map from session ports to their associated Java session port listeners.
-     *
-     * This mapping must be on a per-bus attachment basis since the scope of the
-     * uniqueness of a session port is per-bus attachment
-     *
-     * Note that this member is public since we trust that the native binding we
-     * wrote will usse it correctly.
-     */
-    map<SessionPort, jobject> sessionPortListenerMap;
-
-    typedef struct {
-        jobject jhostedListener;
-        jobject jjoinedListener;
-        jobject jListener;
-    }BusAttachmentSessionListeners;
-
-    /**
-     * A map from sessions to their associated Java session listeners.
-     *
-     * This mapping must be on a per-bus attachment basis since the uniqueness of a
-     * session is per-bus attachment.
-     *
-     * Note that this member is public since we trust that the native binding we
-     * wrote will usse it correctly.
-     */
-
-    map<SessionId, BusAttachmentSessionListeners> sessionListenerMap;
-
-    /**
-     * A List of pending asynchronous join operation informations.  We store
-     * Java object references here while AllJoyn mulls over what it can do about
-     * the operation. Note that this member is public since we trust that the
-     * native binding we wrote will use it correctly.
-     */
-    list<PendingAsyncJoin*> pendingAsyncJoins;
-
-    /**
-     * A List of pending asynchronous ping operation informations.  We store
-     * Java object references here while AllJoyn mulls over what it can do about
-     * the operation. Note that this member is public since we trust that the
-     * native binding we wrote will use it correctly.
-     */
-    list<PendingAsyncPing*> pendingAsyncPings;
-
-    int32_t IncRef(void)
-    {
-        return IncrementAndFetch(&refCount);
-    }
-
-    int32_t DecRef(void)
-    {
-        int32_t refs = DecrementAndFetch(&refCount);
-        if (refs == 0) {
-            delete this;
-        }
-        return refs;
-    }
-
-    int32_t GetRef(void)
-    {
-        return refCount;
-    }
-
-  private:
-    JBusAttachment(const JBusAttachment& other);
-    JBusAttachment& operator =(const JBusAttachment& other);
-
-    /*
-     * An intrusive reference count
-     */
-    volatile int32_t refCount;
-
-    /*
-     * Destructor is marked private since it should only be called from DecRef.
-     */
-    virtual ~JBusAttachment();
-
-};
 
 /**
  * The C++ class that implements the BusListener functionality.
@@ -1761,173 +1344,6 @@ class JSessionPortListener : public SessionPortListener {
 };
 
 /**
- * The C++ class that imlements the KeyStoreListener functionality.
- *
- * For historical reasons, the KeyStoreListener follows a different pattern than
- * most of the listeners found in the bindings. Typically there is a one-to-one
- * correspondence between the methods of the C++ listener objects and the Java
- * listener objects.  That is not the case here.
- *
- * The C++ object has two methods, LoadRequest and StoreRequest, which take a
- * reference to a C++ KeyStore object.  The Java bindings break these requests
- * out into more primitive operations.  The upside is that this approach is
- * thought to correspond more closely to the "Java Way."  The downsides are that
- * Java clients work differently than other clients, and by breaking the operations
- * up into more primitive calls, we have created possible consistency problems.
- *
- * A LoadRequest callback to the C++ object is implemented as the following call
- * sequence:
- *
- * - Call into the Java client KeyStoreListener.getKeys() to get the keys from
- *   a local KeyStore, typically a filesystem operation.
- * - Call into the Java client KeyStoreListener.getPassword() to get the
- *   password used to encrypt the keys.  This is remembered somehow, probably
- *   needing a filesystem operation to recall.
- * - Call into the Bindings' BusAttachment.encode() to encode the keys byte
- *   array as UTF-8 characters.  This is a quick local operation.
- * - Call into the C++ KeyStoreListener::PutKeys() to give the encoded keys
- *   and password back to AllJoyn which passes them on to the authentication
- *   engine.
- *
- * The KeyStore and KeyStoreListener are responsible for ensuring the
- * consistency of the information, in what might be a farily complicated
- * way.  Here in the bindings we don't attempt this, but trust that what we
- * get will make sense.
- *
- * A StoreRequest callback to the C++ object is implemented as one call into
- * the client Java object, but the keys are provided as a byte array instead
- * of as a reference to a key store object, and the method name called is
- * changed from the C++ version.
- *
- * - Call into C++ KeyStoreListener::GetKeys to get the newly updated keys
- *   from AllJoyn.
- * - Call into the Java client KeyStoreListener.putKeys() to save the keys
- *   into the local KeyStore, probably using a filesystem operation.
- *
- * The standard idiom here is that whenever we have a C++ object in the AllJoyn
- * API, it has a corresponding Java object.  If the objects serve as callback
- * handlers, the C++ object needs to call into the Java object as a result of
- * an invocation by the AllJoyn code.
- *
- * As mentioned in the memory management sidebar (at the start of this file) we
- * have an idiom in which the C++ object is allocated and holds a reference to
- * the corresponding Java object.  This reference is a weak reference so we
- * don't interfere with Java garbage collection.
- *
- * Think of the weak reference as the counterpart to the handle pointer found in
- * the Java objects that need to call into C++.  Java objects use the handle to
- * get at the C++ objects, and C++ objects use a weak object reference to get at
- * the Java objects.
- *
- * This object translates C++ callbacks from the KeyStoreListener to its Java
- * counterpart.  Because of this, the constructor performs reflection on the
- * provided Java object to determine the methods that need to be called.  When
- * The callback from C++ is executed, we make corresponding Java calls using
- * the weak reference to the java object and the reflection information we
- * discovered in the constructor.
- *
- * Objects of this class are expected to be MT-Safe between construction and
- * destruction.
- */
-class JKeyStoreListener : public KeyStoreListener {
-  public:
-    JKeyStoreListener(jobject jlistener);
-    ~JKeyStoreListener();
-    QStatus LoadRequest(KeyStore& keyStore);
-    QStatus StoreRequest(KeyStore& keyStore);
-  private:
-    JKeyStoreListener(const JKeyStoreListener& other);
-    JKeyStoreListener& operator =(const JKeyStoreListener& other);
-    jweak jkeyStoreListener;
-    jmethodID MID_getKeys;
-    jmethodID MID_getPassword;
-    jmethodID MID_putKeys;
-    jmethodID MID_encode;
-};
-
-/**
- * The C++ class that imlements the AuthListener functionality.
- *
- * The standard idiom here is that whenever we have a C++ object in the AllJoyn
- * API, it has a corresponding Java object.  If the objects serve as callback
- * handlers, the C++ object needs to call into the Java object as a result of
- * an invocation by the AllJoyn code.
- *
- * As mentioned in the memory management sidebar (at the start of this file) we
- * have an idiom in which the C++ object is allocated and holds a reference to
- * the corresponding Java object.  This reference is a weak reference so we
- * don't interfere with Java garbage collection.  See the member variable
- * jbusListener for this reference.  The bindings hold separate strong references
- * to prevent the listener from being garbage collected in the presence of the
- * anonymous class idiom.
- *
- * Think of the weak reference as the counterpart to the handle pointer found in
- * the Java objects that need to call into C++.  Java objects use the handle to
- * get at the C++ objects, and C++ objects use a weak object reference to get at
- * the Java objects.
- *
- * This object translates C++ callbacks from the AuthListener to its Java
- * counterpart.  Because of this, the constructor performs reflection on the
- * provided Java object to determine the methods that need to be called.  When
- * The callback from C++ is executed, we make corresponding Java calls using the
- * weak reference to the java object and the reflection information we
- * discovered in the constructor.
- *
- * Objects of this class are expected to be MT-Safe between construction and
- * destruction.
- */
-class JAuthListener : public AuthListener {
-  public:
-    JAuthListener(JBusAttachment* ba, jobject jlistener);
-    ~JAuthListener();
-    bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount,
-                            const char* userName, uint16_t credMask, Credentials& credentials);
-    bool VerifyCredentials(const char* authMechanism, const char* peerName, const Credentials& credentials);
-    void SecurityViolation(QStatus status, const Message& msg);
-    void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success);
-  private:
-    JAuthListener(const JAuthListener& other);
-    JAuthListener& operator =(const JAuthListener& other);
-
-    JBusAttachment* busPtr;
-    jweak jauthListener;
-    jmethodID MID_requestCredentials;
-    jmethodID MID_verifyCredentials;
-    jmethodID MID_securityViolation;
-    jmethodID MID_authenticationComplete;
-};
-
-/**
- * A C++ class to hold the Java object references required for an asynchronous
- * join operation while AllJoyn mulls over what it can do about the operation.
- *
- * An instance of this class is given to the C++ JoinSessionAsync method as the
- * context object.  Note well that the context object passed around in the C++
- * side of things is *not* the same as the Java context object passed into
- * joinSessionAsync.
- *
- * Another thing to keep in mind is that since the Java objects have been taken
- * into the JNI fold, they are referenced by JNI global references to the
- * objects provided by Java which may be different than the references seen by
- * the Java code.  Compare using JNI IsSameObject() to see if they are really
- * referencing the same object..
- */
-class PendingAsyncJoin {
-  public:
-    PendingAsyncJoin(jobject jsessionListener, jobject jonJoinSessionListener, jobject jcontext) {
-        this->jsessionListener = jsessionListener;
-        this->jonJoinSessionListener = jonJoinSessionListener;
-        this->jcontext = jcontext;
-    }
-    jobject jsessionListener;
-    jobject jonJoinSessionListener;
-    jobject jcontext;
-  private:
-    PendingAsyncJoin(const PendingAsyncJoin& other);
-    PendingAsyncJoin& operator =(const PendingAsyncJoin& other);
-};
-
-/**
  * The C++ class that imlements the OnJoinSessionListener functionality.
  *
  * The standard idiom here is that whenever we have a C++ object in the AllJoyn
@@ -1976,39 +1392,6 @@ class JOnJoinSessionListener : public BusAttachment::JoinSessionAsyncCB {
 
     jmethodID MID_onJoinSession;
     JBusAttachment* busPtr;
-};
-
-/**
- * A C++ class to hold the Java object references required for an asynchronous
- * ping operation while AllJoyn mulls over what it can do about the operation.
- *
- * An instance of this class is given to the C++ PingAsync method as the context
- * object.  Note well that the context object passed around in the C++ side of
- * things is **not** the same as the Java context object passed into pingAsync.
- *
- * Another thing to keep in mind is that since the Java objects have been taken
- * into the JNI fold, they are referenced by JNI global references to the
- * objects provided by Java which may be different than the references seen by
- * the Java code.  Compare using JNI IsSameObject() to see if they are really
- * referencing the same object..
- */
-class PendingAsyncPing {
-  public:
-    PendingAsyncPing(jobject jonPingListener, jobject jcontext) {
-        this->jonPingListener = jonPingListener;
-        this->jcontext = jcontext;
-    }
-    jobject jonPingListener;
-    jobject jcontext;
-  private:
-    /**
-     * private copy constructor this object can not be copied or assigned
-     */
-    PendingAsyncPing(const PendingAsyncPing& other);
-    /**
-     * private assignment operator this object can not be copied or assigned
-     */
-    PendingAsyncPing& operator =(const PendingAsyncPing& other);
 };
 
 /**
@@ -2408,26 +1791,6 @@ class JPropertiesChangedListener : public ProxyBusObject::PropertiesChangedListe
     jobject jinvalidatedType;
 };
 
-
-class JSignalHandler : public MessageReceiver {
-  public:
-    JSignalHandler(jobject jobj, jobject jmethod);
-    virtual ~JSignalHandler();
-    bool IsSameObject(jobject jobj, jobject jmethod);
-    virtual QStatus Register(BusAttachment& bus, const char* ifaceName, const char* signalName, const char* ancillary);
-    virtual void Unregister(BusAttachment& bus) = 0;
-    void SignalHandler(const InterfaceDescription::Member* member, const char* sourcePath, Message& msg);
-  protected:
-    jweak jsignalHandler;
-    jobject jmethod;
-    const InterfaceDescription::Member* member;
-    String ancillary_data; /* can be both source or matchRule; */
-
-  private:
-    JSignalHandler(const JSignalHandler& other);
-    JSignalHandler& operator =(const JSignalHandler& other);
-
-};
 
 class JSignalHandlerWithSrc : public JSignalHandler {
 
@@ -8826,16 +8189,7 @@ QStatus JBusObject::AddInterfaces(const jobjectArray jbusInterfaces)
     return ER_OK;
 }
 
-/**
- * Marshal an Object into a MsgArg.
- *
- * @param[in] signature the signature of the Object
- * @param[in] jarg the Object
- * @param[in] arg the MsgArg to marshal into
- * @return the marshalled MsgArg or NULL if the marshalling failed.  This will
- *         be the same as @param arg if marshalling succeeded.
- */
-static MsgArg* Marshal(const char* signature, jobject jarg, MsgArg* arg)
+MsgArg* Marshal(const char* signature, jobject jarg, MsgArg* arg)
 {
     JNIEnv* env = GetEnv();
     JLocalRef<jstring> jsignature = env->NewStringUTF(signature);
