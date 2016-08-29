@@ -71,5 +71,5 @@ public @interface BusInterface {
      *
      * @return descriptionTranslator specified in the BusInterface annotation
      */
-    String descriptionTranslator() default "";
+    @Deprecated String descriptionTranslator() default "";
 }

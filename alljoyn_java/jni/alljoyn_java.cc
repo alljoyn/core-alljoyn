@@ -10728,7 +10728,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addPropertyA
     return JStatus(status);
 }
 
-// TODO: DEPRECATED by ASACORE-3118 in release 16.10
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionLanguage(
     JNIEnv*env, jobject thiz, jstring language)
 {
@@ -10769,7 +10769,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionL
 #endif
 }
 
-// TODO: DEPRECATED by ASACORE-3118 in release 16.10
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
     JNIEnv*env, jobject thiz, jstring description)
 {
@@ -10810,7 +10810,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
 #endif
 }
 
-// TODO: DEPRECATED by ASACORE-3118 in release 16.10
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator(
     JNIEnv*env, jobject thiz, jobject jbus, jobject jtranslator)
 {
@@ -10895,7 +10895,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionT
 #endif
 }
 
-// TODO: DEPRECATED by ASACORE-3118 in release 16.10
+// DEPRECATED
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescription(JNIEnv*env, jobject thiz,
                                                                                          jstring jmember, jstring jdesc, jboolean isSessionless)
 {
@@ -10943,7 +10943,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
     return JStatus(status);
 }
 
-// TODO: DEPRECATED by ASACORE-3118 in release 16.10
+// DEPRECATED
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyDescription(
     JNIEnv*env, jobject thiz, jstring jpropName, jstring jdesc)
 {
