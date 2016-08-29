@@ -9984,6 +9984,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addPropertyA
     return JStatus(status);
 }
 
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionLanguage(
     JNIEnv*env, jobject thiz, jstring language)
 {
@@ -10024,6 +10025,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionL
 #endif
 }
 
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
     JNIEnv*env, jobject thiz, jstring description)
 {
@@ -10064,6 +10066,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
 #endif
 }
 
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator(
     JNIEnv*env, jobject thiz, jobject jbus, jobject jtranslator)
 {
@@ -10148,6 +10151,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionT
 #endif
 }
 
+// DEPRECATED
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescription(JNIEnv*env, jobject thiz,
                                                                                          jstring jmember, jstring jdesc, jboolean isSessionless)
 {
@@ -10195,6 +10199,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
     return JStatus(status);
 }
 
+// DEPRECATED
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyDescription(
     JNIEnv*env, jobject thiz, jstring jpropName, jstring jdesc)
 {
