@@ -111,21 +111,29 @@ QStatus UART(const qcc::String& devName, uint32_t baud, uint8_t databits, const 
         speed = B2000000;
         break;
 
+#ifdef B2500000
     case 2500000:
         speed = B2500000;
         break;
+#endif
 
+#ifdef B3000000
     case 3000000:
         speed = B3000000;
         break;
+#endif
 
+#ifdef B3500000
     case 3500000:
         speed = B3500000;
         break;
+#endif
 
+#ifdef B4000000
     case 4000000:
         speed = B4000000;
         break;
+#endif
 
     default:
         QCC_LogError(ER_BAD_ARG_2, ("Invalid baud %d", baud));
