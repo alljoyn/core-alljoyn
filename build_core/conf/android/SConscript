@@ -23,10 +23,15 @@ import platform
 min_api_level = 16
 # Minimal required NDK version
 min_ndk_version = "r9b"
-# NDK should be equal to or lower as min_api_level
-ndk_level = min_api_level
 
 Import('env', 'CheckCXXFlag')
+
+# for 64-bit architecture, min ndk level is 21 (lollipop)
+if 'x86_64' == env['CPU'] or 'arm64' == env['CPU']:
+   ndk_level = 21
+else:
+   # NDK should be equal to or lower as min_api_level
+   ndk_level = min_api_level
 
 env['ANDROID_STL'] = 'gnustl_static'
 
@@ -119,7 +124,9 @@ if 'win32' == env.subst('$HOST_OS') or 'Darwin' == platform.system():
 if not GetOption('help') and env.has_key('ANDROID_NDK'):
    abi_map = { 'arm': 'armeabi',
                'mips': 'mips',
-               'x86': 'x86' }
+               'x86': 'x86',
+               'arm64': 'arm64-v8a',
+               'x86_64': 'x86_64' }
    curdir = env.Dir('.').srcnode()
 
    if 'win32' == env.subst('$HOST_OS'):
