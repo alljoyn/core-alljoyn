@@ -25,9 +25,13 @@ extern jclass CLS_BusException;
 
 extern jclass CLS_ECCPublicKey;
 extern jclass CLS_ECCPrivateKey;
+extern jclass CLS_KeyInfoNISTP256;
 extern jclass CLS_JAVA_UTIL_UUID;
 extern jclass CLS_ErrorReplyBusException;
+extern jclass CLS_BusException;
 extern jclass CLS_AboutDataListener;
+extern jclass CLS_PermissionConfiguratorApplicationState;
+extern jclass CLS_CertificateX509CertificateType;
 
 /**
  * Marshal an Object into a MsgArg.
@@ -138,7 +142,7 @@ T GetHandle(jobject jobj)
     return reinterpret_cast<T>(handle);
 }
 
-jbyteArray ToJByteArray(const unsigned char* byteArray, size_t len);
+jbyteArray ToJByteArray(const uint8_t* byteArray, size_t len);
 
 /**
  * Users of this function need to free the memory of the returned pointer
@@ -147,7 +151,7 @@ jbyteArray ToJByteArray(const unsigned char* byteArray, size_t len);
  * @return a byte array
  *
  */
-unsigned char* ToByteArray(jbyteArray jbArray);
+uint8_t* ToByteArray(jbyteArray jbArray);
 
 /*
  * Note that some JNI calls do not set the returned value to NULL when
@@ -198,4 +202,5 @@ class JScopedEnv {
     jint detached;
 };
 
+jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index);
 #endif
