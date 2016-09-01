@@ -71,7 +71,7 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
     if env['VARIANT'] == 'debug':
         ccld = [
                 '-g',
-                '-arch', 'i686',
+                '-arch', 'i386',
                 '-miphoneos-version-min=9.0',
                 '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
                 '-isysroot', '$SDKROOT'
@@ -79,7 +79,7 @@ if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
         print 'Using iOS debug configuration'
     else:
         ccld = [
-                '-arch', 'i686',
+                '-arch', 'i386',
                 '-miphoneos-version-min=9.0',
                 '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
                 '-isysroot', '$SDKROOT'
