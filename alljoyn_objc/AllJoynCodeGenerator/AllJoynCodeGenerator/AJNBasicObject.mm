@@ -1628,13 +1628,16 @@ void BasicStringsDelegateSignalHandlerImpl::UnregisterSignalHandler(ajn::BusAtta
 
 void BasicStringsDelegateSignalHandlerImpl::TestStringPropertyChangedSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
+    // Allocate signalMessage outside of autoreleasepool to allow the async
+    // call to deallocate it once it is done with it.
+    AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
+
     @autoreleasepool {
         
     qcc::String inArg0 = msg->GetArg(0)->v_string.str;
         
     qcc::String inArg1 = msg->GetArg(1)->v_string.str;
         
-        AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
         AJNSessionId sessionId = msg->GetSessionId();        
         NSLog(@"Received TestStringPropertyChanged signal from %@ on path %@ for session id %u [%s > %s]", [signalMessage senderName], objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
@@ -1642,6 +1645,8 @@ void BasicStringsDelegateSignalHandlerImpl::TestStringPropertyChangedSignalHandl
         dispatch_async(dispatch_get_main_queue(), ^{
             
             [(id<BasicStringsDelegateSignalHandler>)m_delegate didReceiveTestStringPropertyChangedFrom:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] to:[NSString stringWithCString:inArg1.c_str() encoding:NSUTF8StringEncoding] inSession:sessionId message:signalMessage];
+            // Release signalMessage now that we are done with it
+            signalMessage = nil;
                 
         });
         
@@ -1650,11 +1655,11 @@ void BasicStringsDelegateSignalHandlerImpl::TestStringPropertyChangedSignalHandl
 
 void BasicStringsDelegateSignalHandlerImpl::TestSignalWithComplexArgsSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
+    AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
     @autoreleasepool {
         
     AJNMessageArgument* inArg0 = [[AJNMessageArgument alloc] initWithHandle:(AJNHandle)new MsgArg(*(msg->GetArg(0))) shouldDeleteHandleOnDealloc:YES];        
         
-        AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
         AJNSessionId sessionId = msg->GetSessionId();        
         NSLog(@"Received TestSignalWithComplexArgs signal from %@ on path %@ for session id %u [%s > %s]", [signalMessage senderName], objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
@@ -1662,6 +1667,7 @@ void BasicStringsDelegateSignalHandlerImpl::TestSignalWithComplexArgsSignalHandl
         dispatch_async(dispatch_get_main_queue(), ^{
             
             [(id<BasicStringsDelegateSignalHandler>)m_delegate didReceiveTestSignalWithComplexArgs:inArg0 inSession:sessionId message:signalMessage];
+            signalMessage = nil;
                 
         });
         
@@ -1670,9 +1676,10 @@ void BasicStringsDelegateSignalHandlerImpl::TestSignalWithComplexArgsSignalHandl
 
 void BasicStringsDelegateSignalHandlerImpl::TestSignalWithNoArgsSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
+    AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
+
     @autoreleasepool {
         
-        AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
         AJNSessionId sessionId = msg->GetSessionId();        
         NSLog(@"Received TestSignalWithNoArgs signal from %@ on path %@ for session id %u [%s > %s]", [signalMessage senderName], objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
@@ -1680,6 +1687,7 @@ void BasicStringsDelegateSignalHandlerImpl::TestSignalWithNoArgsSignalHandler(co
         dispatch_async(dispatch_get_main_queue(), ^{
             
             [(id<BasicStringsDelegateSignalHandler>)m_delegate didReceiveTestSignalWithNoArgsInSession:sessionId message:signalMessage];
+            signalMessage = nil;
                 
         });
         
@@ -1814,11 +1822,12 @@ void BasicChatDelegateSignalHandlerImpl::UnregisterSignalHandler(ajn::BusAttachm
 
 void BasicChatDelegateSignalHandlerImpl::ChatSignalHandler(const ajn::InterfaceDescription::Member* member, const char* srcPath, ajn::Message& msg)
 {
+    AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
+
     @autoreleasepool {
         
     qcc::String inArg0 = msg->GetArg(0)->v_string.str;
         
-        AJNMessage *signalMessage = [[AJNMessage alloc] initWithHandle:&msg];
         NSString *objectPath = [NSString stringWithCString:msg->GetObjectPath() encoding:NSUTF8StringEncoding];
         AJNSessionId sessionId = msg->GetSessionId();        
         NSLog(@"Received Chat signal from %@ on path %@ for session id %u [%s > %s]", [signalMessage senderName], objectPath, msg->GetSessionId(), msg->GetRcvEndpointName(), msg->GetDestination() ? msg->GetDestination() : "broadcast");
@@ -1826,6 +1835,7 @@ void BasicChatDelegateSignalHandlerImpl::ChatSignalHandler(const ajn::InterfaceD
         dispatch_async(dispatch_get_main_queue(), ^{
             
             [(id<BasicChatDelegateSignalHandler>)m_delegate didReceiveMessage:[NSString stringWithCString:inArg0.c_str() encoding:NSUTF8StringEncoding] inSession:sessionId message:signalMessage];
+            signalMessage = nil;
                 
         });
         
