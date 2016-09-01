@@ -25,9 +25,13 @@ extern jclass CLS_BusException;
 
 extern jclass CLS_ECCPublicKey;
 extern jclass CLS_ECCPrivateKey;
+extern jclass CLS_KeyInfoNISTP256;
 extern jclass CLS_JAVA_UTIL_UUID;
 extern jclass CLS_ErrorReplyBusException;
+extern jclass CLS_BusException;
 extern jclass CLS_AboutDataListener;
+extern jclass CLS_PermissionConfiguratorApplicationState;
+extern jclass CLS_CertificateX509CertificateType;
 
 /**
  * Marshal an Object into a MsgArg.
@@ -198,4 +202,5 @@ class JScopedEnv {
     jint detached;
 };
 
+jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index);
 #endif
