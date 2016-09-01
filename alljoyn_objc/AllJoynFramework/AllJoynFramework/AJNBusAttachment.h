@@ -676,7 +676,7 @@ typedef void (^ AJNLeaveSessionBlock)(QStatus status, void *context);
  *          - ER_BUS_NOT_CONNECTED if the %BusAttachment is not connected to the bus
  *          - Other error status codes indicating a failure
  */
-- (QStatus)disconnectWithArguments:(NSString *)connectionArguments;
+- (QStatus)disconnectWithArguments:(NSString *)connectionArguments __attribute__((deprecated));
 
 
 /**

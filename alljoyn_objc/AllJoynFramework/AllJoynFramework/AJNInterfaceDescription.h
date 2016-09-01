@@ -62,7 +62,7 @@
  *
  * The set contains the sum of the language tags for the interface description, interface property, interface member and member argument descriptions.
 */
-@property (readonly, nonatomic) NSSet *languages;
+@property (readonly, nonatomic) NSSet *languages __attribute__((deprecated));
 
 /** Get the Translator that provies this InterfaceDescription's introspection descprition in multiple lanauges */
 @property (readonly, nonatomic) id<AJNTranslator> translator;
@@ -354,14 +354,14 @@ typedef enum AJNInterfaceSecurityPolicy{
  *
  * @param language the language of this Interface's descriptions
  */
-- (void)setDescriptionLanguage:(NSString *)language;
+- (void)setDescriptionLanguage:(NSString *)language __attribute__((deprecated));
 
 /**
  * Set the introspection description for this InterfaceDescription.
  *
  * @param description This Interface's description
  */
-- (void)setDescription:(NSString *)description;
+- (void)setDescription:(NSString *)description __attribute__((deprecated));
 
 /**
  * Set the introspection description for this InterfaceDescription in the given language.
@@ -416,7 +416,7 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_INTERFACE_NO_SUCH_MEMBER if the method or signal does not exist
  *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
  */
-- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member;
+- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member __attribute__((deprecated));
 
 /**
  * Set the introspection description for "member" of this InterfaceDescription.
@@ -429,7 +429,7 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_INTERFACE_NO_SUCH_MEMBER if the method or signal does not exist
  *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
  */
-- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless;
+- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless __attribute__((deprecated));
 
 /**
  * Set the introspection description for member "memberName" of this InterfaceDescription
@@ -488,7 +488,7 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
  *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
  */
-- (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName;
+- (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName __attribute__((deprecated));
 
 /**
  * Set the introspection description for the interface property "propertyName"
@@ -548,7 +548,7 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_INTERFACE_NO_SUCH_MEMBER if the method or signal does not exist
  *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
  */
-- (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member;
+- (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member __attribute__((deprecated));
 
 /**
  * Set the introspection description for the argument "argName" of the member "memberName"
@@ -604,7 +604,7 @@ typedef enum AJNInterfaceSecurityPolicy{
  *
  * @param translator The AJNTranslator
  */
-- (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
+- (void)setDescriptionTranslator:(id<AJNTranslator>)translator __attribute__((deprecated));
 
 /**
  * Check for existence of a member. Optionally check the signature also.
