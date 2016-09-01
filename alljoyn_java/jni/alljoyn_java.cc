@@ -771,6 +771,7 @@ jclass CLS_AboutDataListener = NULL;
 jclass CLS_ECCPublicKey = NULL;
 jclass CLS_ECCPrivateKey = NULL;
 jclass CLS_JAVA_UTIL_UUID = NULL;
+jclass CLS_PermissionConfiguratorApplicationState = NULL;
 jclass CLS_ErrorReplyBusException = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
@@ -837,7 +838,7 @@ static jobject CallStaticObjectMethod(JNIEnv* env, jclass clazz, jmethodID metho
     return ret;
 }
 
-static jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index)
+jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index)
 {
     jobject ret = env->GetObjectArrayElement(array, index);
     if (env->ExceptionCheck()) {
@@ -1020,6 +1021,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_JAVA_UTIL_UUID = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/PermissionConfigurator$ApplicationState");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_PermissionConfiguratorApplicationState = (jclass)env->NewGlobalRef(clazz);
 
         return JNI_VERSION_1_2;
     }

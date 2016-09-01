@@ -1,4 +1,4 @@
-/*
+/******************************************************************************
  * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -12,39 +12,28 @@
  *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- */
+ ******************************************************************************/
+
 package org.alljoyn.bus.common;
 
+import org.alljoyn.bus.annotation.Position;
 import java.util.Arrays;
 
-public class ECCPublicKey {
+/**
+ */
+public class IdentityCertificate {
+
+    /** 
+     * the encoding of the certificate
+    */
+    public byte encoding;
 
     /**
-     * The x coordinate of the elliptic curve point
+     * encoded certificate
      */
-    private byte x[];
+    public byte[] certificate;
 
-    /**
-     * The y coordinate of the elliptic curve point
-     */
-    private byte y[];
-
-    private ECCPublicKey(byte x_coor[], byte y_coor[]) {
-        x = x_coor;
-        y = y_coor;
-    }
-
-    public long getCoordinateSize() {
-        assert x.length == y.length;
-        return x.length;
-    }
-
-    public long getSize() {
-        return getCoordinateSize() * 2;
-    }
-
-    @Override
     public String toString() {
-        return Arrays.toString(x) + ", " + Arrays.toString(y);
+        return Byte.toString(encoding) + ", " + Arrays.toString(certificate);
     }
 }
