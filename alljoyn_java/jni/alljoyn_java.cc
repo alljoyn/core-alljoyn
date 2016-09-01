@@ -755,7 +755,7 @@ static jclass CLS_Object = NULL;
 static jclass CLS_String = NULL;
 
 /** org/alljoyn/bus */
-static jclass CLS_BusException = NULL;
+jclass CLS_BusException = NULL;
 static jclass CLS_IntrospectionListener = NULL;
 static jclass CLS_IntrospectionWithDescListener = NULL;
 static jclass CLS_BusObjectListener = NULL;
@@ -771,7 +771,10 @@ jclass CLS_AboutDataListener = NULL;
 jclass CLS_ECCPublicKey = NULL;
 jclass CLS_ECCPrivateKey = NULL;
 jclass CLS_JAVA_UTIL_UUID = NULL;
+jclass CLS_PermissionConfiguratorApplicationState = NULL;
+jclass CLS_CertificateX509CertificateType = NULL;
 jclass CLS_ErrorReplyBusException = NULL;
+jclass CLS_KeyInfoNISTP256 = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
@@ -837,7 +840,7 @@ static jobject CallStaticObjectMethod(JNIEnv* env, jclass clazz, jmethodID metho
     return ret;
 }
 
-static jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index)
+jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index)
 {
     jobject ret = env->GetObjectArrayElement(array, index);
     if (env->ExceptionCheck()) {
@@ -920,6 +923,12 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_ErrorReplyBusException = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/common/KeyInfoNISTP256");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_KeyInfoNISTP256 = (jclass)env->NewGlobalRef(clazz);
 
         clazz = env->FindClass("org/alljoyn/bus/IntrospectionListener");
         if (!clazz) {
@@ -1020,6 +1029,18 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_JAVA_UTIL_UUID = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/PermissionConfigurator$ApplicationState");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_PermissionConfiguratorApplicationState = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/common/CertificateX509$CertificateType");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_CertificateX509CertificateType = (jclass)env->NewGlobalRef(clazz);
 
         return JNI_VERSION_1_2;
     }
