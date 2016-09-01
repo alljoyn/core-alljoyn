@@ -13,38 +13,21 @@
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
-package org.alljoyn.bus.common;
 
-import java.util.Arrays;
+package org.alljoyn.bus;
 
-public class ECCPublicKey {
+import org.alljoyn.bus.common.KeyInfoNISTP256;
 
-    /**
-     * The x coordinate of the elliptic curve point
-     */
-    private byte x[];
+public class IdentityCertificateId {
 
     /**
-     * The y coordinate of the elliptic curve point
+     * serial Identity certificate's serial
      */
-    private byte y[];
+    String serial;
 
-    private ECCPublicKey(byte x_coor[], byte y_coor[]) {
-        x = x_coor;
-        y = y_coor;
-    }
+    /**
+     * keyInfo Identity certificate's KeyInfoNISTP256 structure
+     */
+    KeyInfoNISTP256 issuerKeyInfo;
 
-    public long getCoordinateSize() {
-        assert x.length == y.length;
-        return x.length;
-    }
-
-    public long getSize() {
-        return getCoordinateSize() * 2;
-    }
-
-    @Override
-    public String toString() {
-        return Arrays.toString(x) + ", " + Arrays.toString(y);
-    }
 }
