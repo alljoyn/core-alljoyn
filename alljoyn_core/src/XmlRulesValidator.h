@@ -83,7 +83,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_FAIL if the rules are not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the rules are not following the schema.
      */
     QStatus ValidateRules(const PermissionPolicy::Rule* rules, const size_t rulesCount);
 
@@ -95,7 +95,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus Validate(const qcc::XmlElement* rootElement);
 
@@ -171,7 +171,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus ValidateNode(const qcc::XmlElement* node, std::unordered_set<std::string>& nodeNames);
 
@@ -184,9 +184,21 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus ValidateNodeCommon(const qcc::XmlElement* node, std::unordered_set<std::string>& nodeNames);
+
+    /**
+     * Validates the "node" XML element's name is unique.
+     *
+     * @param[in]   node        A XML "node" element.
+     * @param[in]   nodeNames   A set to validated against.
+     *
+     * @return
+     *            #ER_OK if the input is correct.
+     *            #ER_XML_OBJECT_PATH_NOT_UNIQUE otherwise.
+     */
+    QStatus ValidateNodeNameUnique(const qcc::XmlElement* node, std::unordered_set<std::string>& nodeNames);
 
     /**
      * Validates that the XML "node" element's annotations are valid.
@@ -195,7 +207,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     virtual QStatus ValidateNodeAnnotations(const std::vector<qcc::XmlElement*>& annotations);
 
@@ -207,7 +219,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus ValidateInterfaces(const std::vector<qcc::XmlElement*>& interfaces);
 
@@ -220,7 +232,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus ValidateInterface(const qcc::XmlElement* singleInterface, std::unordered_set<std::string>& interfaceNames);
 
@@ -233,9 +245,21 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus ValidateInterfaceCommon(const qcc::XmlElement* singleInterface, std::unordered_set<std::string>& interfaceNames);
+
+    /**
+     * Validates the "interface" XML element's name is unique.
+     *
+     * @param[in]   singleInterface  A XML "interface" element.
+     * @param[in]   interfaceNames   A collection of names for already verified interfaces.
+     *
+     * @return
+     *            #ER_OK if the input is correct.
+     *            #ER_XML_INTERFACE_NAME_NOT_UNIQUE otherwise.
+     */
+    QStatus ValidateInterfaceNameUnique(const qcc::XmlElement* singleInterface, std::unordered_set<std::string>& interfaceNames);
 
     /**
      * Validates that the XML "interface" element's annotations are valid.
@@ -244,7 +268,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     virtual QStatus ValidateInterfaceAnnotations(const std::vector<qcc::XmlElement*>& annotations);
 
@@ -256,7 +280,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus ValidateMembers(const std::vector<qcc::XmlElement*>& members);
 
@@ -269,7 +293,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     QStatus ValidateMember(const qcc::XmlElement* member, MemberValidatorFactory& memberValidatorFactory);
 
@@ -281,7 +305,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_FAIL otherwise.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
      */
     QStatus ValidateObject(const std::map<std::string, std::vector<PermissionPolicy::Rule> >& objectToRulesMap);
 
@@ -293,7 +317,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_FAIL otherwise.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
      */
     QStatus ValidateRules(const std::vector<PermissionPolicy::Rule>& rules);
 
@@ -306,7 +330,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_FAIL otherwise.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
      */
     QStatus ValidateRule(const PermissionPolicy::Rule& rule, std::unordered_set<std::string>& interfaceNames);
 
@@ -319,7 +343,7 @@ class XmlRulesValidator : public XmlValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_FAIL otherwise.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
      */
     QStatus ValidateMembers(const PermissionPolicy::Rule& rule);
 
@@ -343,7 +367,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_XML_MALFORMED otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus Validate(const qcc::XmlElement* member);
 
@@ -354,7 +378,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_FAIL otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus Validate(const PermissionPolicy::Rule::Member& member);
 
@@ -367,7 +391,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_XML_MALFORMED if the XML is not a valid member.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not a valid member.
          */
         static QStatus GetValidMemberType(const qcc::XmlElement* member, PermissionPolicy::Rule::Member::MemberType* memberType);
 
@@ -389,15 +413,39 @@ class XmlRulesValidator : public XmlValidator {
         virtual uint8_t GetValidActions() = 0;
 
         /**
+         * Validates the XML member's name is unique.
+         *
+         * @param[in]   member      Member XML element.
+         * @param[in]   memberNames A collection of names for already verified interfaces.
+         *
+         * @return
+         *            #ER_OK if the input is correct.
+         *            #ER_XML_MEMBER_NAME_NOT_UNIQUE otherwise.
+         */
+        QStatus ValidateMemberNameUnique(const qcc::XmlElement* member, std::unordered_set<std::string>& memberNames);
+
+        /**
          * Validates a collection of "annotation" XML elements inside the member element.
          *
          * @param[in]    member  Member XML element.
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_XML_MALFORMED otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus ValidateMemberAnnotations(const qcc::XmlElement* member);
+
+        /**
+         * Validates the XML annotation element is unique.
+         *
+         * @param[in]   annotation          Validated annotation.
+         * @param[in]   presentAnnotations  Values of previous annotations in the given memeber.
+         *
+         * @return
+         *            #ER_OK if the input is correct.
+         *            #ER_XML_ANNOTATION_NOT_UNIQUE otherwise.
+         */
+        QStatus ValidateAnnotationUnique(const qcc::XmlElement* annotation, std::unordered_set<std::string>& presentAnnotations);
 
         /**
          * Validates a single "annotation" XML element inside the member element.
@@ -407,7 +455,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_XML_MALFORMED otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus ValidateAnnotation(qcc::XmlElement* annotation, std::unordered_set<std::string>& presentAnnotations);
 
@@ -419,7 +467,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_XML_MALFORMED otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus ValidateAnnotationAllowed(qcc::XmlElement* annotation, std::unordered_set<std::string>& presentAnnotations);
 
@@ -431,7 +479,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_XML_MALFORMED otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus ValidateAnnotationAllowedForMember(qcc::XmlElement* annotation);
 
@@ -443,7 +491,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_XML_MALFORMED otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus ValidateDenyAnnotation(std::unordered_set<std::string>& presentAnnotations);
 
@@ -454,7 +502,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_FAIL otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus ValidateMemberName(AJ_PCSTR name);
 
@@ -465,7 +513,7 @@ class XmlRulesValidator : public XmlValidator {
          *
          * @return
          *            #ER_OK if the input is correct.
-         *            #ER_FAIL otherwise.
+         *            One of the #ER_XML_CONVERTER_ERROR group if the input is invalid.
          */
         QStatus ValidateActionMask(uint8_t actionMask);
     };

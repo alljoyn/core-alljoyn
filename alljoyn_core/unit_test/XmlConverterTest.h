@@ -14,6 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include <alljoyn/Status.h>
 #include <qcc/platform.h>
 
 struct SizeParams {
@@ -24,6 +25,18 @@ struct SizeParams {
     SizeParams(AJ_PCSTR xml, size_t integer) :
         m_xml(xml),
         m_integer(integer)
+    {
+    }
+};
+
+struct StatusParams {
+  public:
+    AJ_PCSTR m_xml;
+    QStatus m_status;
+
+    StatusParams(AJ_PCSTR xml, QStatus status) :
+        m_xml(xml),
+        m_status(status)
     {
     }
 };
