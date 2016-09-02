@@ -360,10 +360,16 @@ class TestSessionlessObj : public SessionlessObj {
     virtual ~TestSessionlessObj()  { }
     virtual void AddRule(const qcc::String& epName, Rule& rule) { QCC_UNUSED(epName); QCC_UNUSED(rule); }
     virtual void RemoveRule(const qcc::String& epName, Rule& rule) { QCC_UNUSED(epName); QCC_UNUSED(rule); }
-    virtual QStatus PushMessage(Message& msg) { MsgDeliveryHelper(msg, true); pushed = true; return ER_OK; }
-    virtual void RouteSessionlessMessage(uint32_t sid, Message& msg)
+    virtual QStatus PushMessage(Message& msg, const set<String>& skippedEndpoints) {
+        QCC_UNUSED(skippedEndpoints);
+        MsgDeliveryHelper(msg, true);
+        pushed = true;
+        return ER_OK;
+    }
+    virtual void RouteSessionlessMessage(uint32_t sid, Message& msg, const set<String>& skippedEndpoints)
     {
         QCC_UNUSED(sid);
+        QCC_UNUSED(skippedEndpoints);
         MsgDeliveryHelper(msg, false);
         routed = true;
     }

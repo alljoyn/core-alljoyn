@@ -407,7 +407,6 @@ class DaemonRouter : public Router {
      */
     bool IsSessionDeliverable(SessionId id, BusEndpoint& src, BusEndpoint& dest);
 
-
 #ifdef ENABLE_OLD_PUSHMESSAGE_COMPATIBILITY
     /**
      * This function adapts the decision about which endpoints receive a given

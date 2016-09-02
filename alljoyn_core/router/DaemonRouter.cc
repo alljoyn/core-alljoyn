@@ -324,7 +324,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
     const bool srcAllowsRemote =      src->AllowRemoteMessages();
 
     vector<BusEndpoint> allEps;
-    deque<BusEndpoint> destEps;
+    set<BusEndpoint> destEps;
+    set<String> skippedEndpoints;
 
     bool blocked = false;
     bool blockedReply = false;
@@ -419,6 +420,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
         if (!add) {
             QCC_DbgPrintf(("    policy rejected"));
             policyRejected = true;
+            skippedEndpoints.insert(dest->GetUniqueName());
             continue;
         }
 #endif
@@ -498,7 +500,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
 #endif
 
         if (add) {
-            destEps.push_back(dest);
+            destEps.insert(dest);
             QCC_DbgPrintf(("    dest %s added: %u", dest->GetUniqueName().c_str(), destEps.size()));
         }
     }
@@ -524,7 +526,7 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
      *               to get the message via localEndpoint and decide how to
      *               handle the sessionless message on its own.
      */
-    if (msgIsSessionless && !policyRejected && (isBroadcast || srcIsB2b)) {
+    if (msgIsSessionless) {
         if (srcIsB2b) {
             QCC_DbgPrintf(("sessionless msg delivered via sessionlessObj"));
             /*
@@ -540,10 +542,10 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
              * get the sessionId from the endpoint if possible.
              */
             RemoteEndpoint rep = RemoteEndpoint::cast(src);
-            sessionlessObj->RouteSessionlessMessage(rep->GetSessionId(), msg);
+            sessionlessObj->RouteSessionlessMessage(rep->GetSessionId(), msg, skippedEndpoints);
             status = ER_OK;
         } else if (isBroadcast) {
-            status = sessionlessObj->PushMessage(msg);
+            status = sessionlessObj->PushMessage(msg, skippedEndpoints);
         }
     }
 
@@ -555,8 +557,8 @@ QStatus DaemonRouter::PushMessage(Message& msg, BusEndpoint& src)
          * over the session being detached.
          */
         sessionId = (detachId != 0) ? detachId : sessionId;
-        for (deque<BusEndpoint>::iterator it = destEps.begin(); it != destEps.end(); ++it) {
-            BusEndpoint& ep = *it;
+        for (set<BusEndpoint>::iterator it = destEps.begin(); it != destEps.end(); ++it) {
+            BusEndpoint ep = *it;
             QStatus tStatus = SendThroughEndpoint(msg, ep, sessionId);
             QCC_DbgPrintf(("msg delivered via SendThroughEndpoint() to %s: %s",
                            ep->GetUniqueName().c_str(), QCC_StatusText(tStatus)));
