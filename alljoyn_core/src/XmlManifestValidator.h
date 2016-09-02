@@ -58,7 +58,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    manifestXml   Signed manifest in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus Validate(const qcc::XmlElement* manifestXml);
 
@@ -76,7 +76,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    version   Signed manifest version in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateManifestVersion(const qcc::XmlElement* version);
 
@@ -86,7 +86,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    version   Signed manifest version in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateManifestVersionContent(const qcc::XmlElement* version);
 
@@ -96,7 +96,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    signature   Signed manifest version in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateManifestSignature(const qcc::XmlElement* signature);
 
@@ -106,7 +106,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    rules   Rules in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateRules(const qcc::XmlElement* rules);
 
@@ -116,7 +116,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    thumbprint   Single manifest thumbprint in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateManifestThumbprint(const qcc::XmlElement* thumbprint);
 
@@ -126,7 +126,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    oid   Signed manifest oid in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateOid(const qcc::XmlElement* xmlOid, AJ_PCSTR oid);
 
@@ -137,7 +137,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    oid     Expected OID value.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateOidContent(const qcc::XmlElement* xmlOid, AJ_PCSTR oid);
 
@@ -147,7 +147,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    value   Signed manifest "value" element in XML format.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the XML does not follow the signed manifest XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the XML does not follow the signed manifest XML schema.
      */
     static QStatus ValidateValueElement(const qcc::XmlElement* value);
 
@@ -157,7 +157,7 @@ class XmlManifestValidator : public XmlValidator {
      * @param[in]    value   Base64 value to validate.
      *
      * @return   #ER_OK if XML is valid.
-     *           #ER_XML_MALFORMED if the value is not a valid base64 value.
+     *           One of the #ER_XML_CONVERTER_ERROR group if the value is not a valid base64 value.
      */
     static QStatus ValidateBase64Value(const qcc::String& value);
 };

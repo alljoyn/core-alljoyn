@@ -14,6 +14,8 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 
+#include "XmlConverterTest.h"
+
 #define VALID_RULES_ELEMENT \
     "<rules>" \
     "<node>" \
