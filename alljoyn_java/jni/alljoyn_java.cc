@@ -35,7 +35,6 @@
 #include <alljoyn/PasswordManager.h>
 #include <MsgArgUtils.h>
 #include <SignatureUtils.h>
-#include "alljoyn_java.h"
 #include <alljoyn/BusObject.h>
 #include <alljoyn/Translator.h>
 #include <alljoyn/AllJoynStd.h>
@@ -44,6 +43,9 @@
 #include <alljoyn/Init.h>
 #include <CoreObserver.h>
 #include <BusInternal.h>
+
+#include "alljoyn_java.h"
+#include "alljoyn_jni_helper.h"
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
@@ -752,7 +754,7 @@ static jclass CLS_Object = NULL;
 static jclass CLS_String = NULL;
 
 /** org/alljoyn/bus */
-static jclass CLS_BusException = NULL;
+jclass CLS_BusException = NULL;
 static jclass CLS_ErrorReplyBusException = NULL;
 static jclass CLS_IntrospectionListener = NULL;
 static jclass CLS_IntrospectionWithDescListener = NULL;
@@ -765,6 +767,10 @@ static jclass CLS_Variant = NULL;
 static jclass CLS_BusAttachment = NULL;
 static jclass CLS_SessionOpts = NULL;
 static jclass CLS_AboutDataListener = NULL;
+
+jclass CLS_ECCPublicKey = NULL;
+jclass CLS_ECCPrivateKey = NULL;
+jclass CLS_JAVA_UTIL_UUID = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
@@ -779,16 +785,7 @@ static jmethodID MID_MsgArg_unmarshal_array = NULL;
 static jobject Unmarshal(const MsgArg* arg, jobject jtype);
 static MsgArg* Marshal(const char* signature, jobject jarg, MsgArg* arg);
 
-/**
- * Get a valid JNIEnv pointer.
- *
- * A JNIEnv pointer is only valid in an associated JVM thread.  In a callback
- * function (from C++), there is no associated JVM thread, so we need to obtain
- * a valid JNIEnv.  This is a helper function to make that happen.
- *
- * @return The JNIEnv pointer valid in the calling context.
- */
-static JNIEnv* GetEnv(jint* result = 0)
+JNIEnv* GetEnv(jint* result)
 {
     JNIEnv* env;
     jint ret = jvm->GetEnv((void**)&env, JNI_VERSION_1_2);
@@ -816,18 +813,7 @@ static void DeleteEnv(jint result)
     }
 }
 
-/*
- * Note that some JNI calls do not set the returned value to NULL when
- * an exception occurs.  In that case we must explicitly set the
- * reference here to NULL to prevent calling DeleteLocalRef on an
- * invalid reference.
- *
- * The list of such functions used in this file is:
- * - CallObjectMethod
- * - CallStaticObjectMethod
- * - GetObjectArrayElement
- */
-static jobject CallObjectMethod(JNIEnv* env, jobject obj, jmethodID methodID, ...)
+jobject CallObjectMethod(JNIEnv* env, jobject obj, jmethodID methodID, ...)
 {
     va_list args;
     va_start(args, methodID);
@@ -1017,6 +1003,24 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_SessionOpts = (jclass)env->NewGlobalRef(clazz);
 
+        clazz = env->FindClass("org/alljoyn/bus/common/ECCPublicKey");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_ECCPublicKey = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/common/ECCPrivateKey");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_ECCPrivateKey = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("java/util/UUID");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_JAVA_UTIL_UUID = (jclass)env->NewGlobalRef(clazz);
+
         return JNI_VERSION_1_2;
     }
 }
@@ -1031,34 +1035,6 @@ JNIEXPORT void JNI_OnUnload(JavaVM* vm,
 #endif
     AllJoynShutdown();
 }
-
-/**
- * A helper class to wrap local references ensuring proper release.
- */
-template <class T>
-class JLocalRef {
-  public:
-    JLocalRef() : jobj(NULL) { }
-    JLocalRef(const T& obj) : jobj(obj) { }
-    ~JLocalRef() { if (jobj) { GetEnv()->DeleteLocalRef(jobj); } }
-    JLocalRef& operator=(T obj)
-    {
-        if (jobj) {
-            GetEnv()->DeleteLocalRef(jobj);
-        }
-        jobj = obj;
-        return *this;
-    }
-    operator T() { return jobj; }
-    T move()
-    {
-        T ret = jobj;
-        jobj = NULL;
-        return ret;
-    }
-  private:
-    T jobj;
-};
 
 /**
  * A scoped JNIEnv pointer to ensure proper release.
@@ -1102,25 +1078,6 @@ JScopedEnv::~JScopedEnv()
 }
 
 /**
- * Helper function to wrap StringUTFChars to ensure proper release of resource.
- *
- * @warning NULL is a valid value, so exceptions must be checked for explicitly
- * by the caller after constructing the JString.
- */
-class JString {
-  public:
-    JString(jstring s);
-    virtual ~JString();
-    const char* c_str() { return str; }
-  protected:
-    jstring jstr;
-    const char* str;
-  private:
-    JString(const JString& other);
-    JString& operator =(const JString& other);
-};
-
-/**
  * Construct a representation of a string with wrapped StringUTFChars.
  *
  * @param s the string to wrap.
@@ -1140,10 +1097,7 @@ JString::~JString()
     }
 }
 
-/**
- * Helper function to throw an exception
- */
-static void Throw(const char* name, const char* msg)
+void Throw(const char* name, const char* msg)
 {
     JNIEnv* env = GetEnv();
     JLocalRef<jclass> clazz = env->FindClass(name);
@@ -1202,58 +1156,7 @@ static void ThrowErrorReplyBusException(const char* name, const char* message)
     }
 }
 
-/**
- * Get the native C++ handle of a given Java object.
- *
- * If we have an object that has a native counterpart, we need a way to get at
- * the native object from the Java object.  We do this by storing the native
- * pointer as an opaque handle in a Java field named "handle".  We use Java
- * reflection to pull the field out and return the handle value.
- *
- * Think of this handle as the counterpart to the object reference found in
- * the C++ objects that need to call into Java.  Java objects use the handle to
- * get at the C++ objects, and C++ objects use an object reference to get at
- * the Java objects.
- *
- * @return The handle value as a pointer.  NULL is a valid value.
- *
- * @warning This method makes native calls which may throw exceptions.  In the
- *          usual idiom, exceptions must be checked for explicitly by the caller
- *          after *every* call to GetHandle.  Since NULL is a valid value to
- *          return, validity of the returned pointer must be checked as well.
- */
-template <typename T>
-static T GetHandle(jobject jobj)
-{
-    JNIEnv* env = GetEnv();
-    if (!jobj) {
-        Throw("java/lang/NullPointerException", "failed to get native handle on null object");
-        return NULL;
-    }
-    JLocalRef<jclass> clazz = env->GetObjectClass(jobj);
-    jfieldID fid = env->GetFieldID(clazz, "handle", "J");
-    void* handle = NULL;
-    if (fid) {
-        handle = (void*)env->GetLongField(jobj, fid);
-    }
-
-    return reinterpret_cast<T>(handle);
-}
-
-/**
- * Set the native C++ handle of a given Java object.
- *
- * If we have an object that has a native counterpart, we need a way to get at
- * the native object from the Java object.  We do this by storing the native
- * pointer as an opaque handle in a Java field named "handle".  We use Java
- * reflection to determine the field out and set the handle value.
- *
- * @param jobj The Java object which needs to have its handle set.
- * @param handle The pointer to the C++ object which is the handle value.
- *
- * @warning May throw an exception.
- */
-static void SetHandle(jobject jobj, void* handle)
+void SetHandle(jobject jobj, void* handle)
 {
     JNIEnv* env = GetEnv();
     if (!jobj) {
@@ -13062,10 +12965,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_AboutObj_create(JNIEnv* env, jobject
 {
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
     if (env->ExceptionCheck() || busPtr == NULL) {
-        QCC_LogError(ER_FAIL, ("BusAttachment_create(): Exception or NULL bus pointer"));
+        QCC_LogError(ER_FAIL, ("AboutObj_create(): Exception or NULL bus pointer"));
         return;
     }
-    QCC_DbgPrintf(("BusAttachment_unregisterBusListener(): Refcount on busPtr is %d", busPtr->GetRef()));
+    QCC_DbgPrintf(("AboutObj_create(): Refcount on busPtr is %d", busPtr->GetRef()));
 
     JAboutObject* aboutObj;
     if (isAboutAnnounced == JNI_TRUE) {
