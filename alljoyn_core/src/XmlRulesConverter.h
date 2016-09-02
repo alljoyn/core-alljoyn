@@ -68,7 +68,7 @@ class XmlRulesConverter {
      * @param[out]   rules      Extracted rules.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_XML_MALFORMED if the XML does not follow the policy XML schema.
+     *           Other if the XML does not follow the policy XML schema.
      */
     QStatus XmlToRules(AJ_PCSTR rulesXml, std::vector<PermissionPolicy::Rule>& rules);
 
@@ -81,7 +81,7 @@ class XmlRulesConverter {
      * @param[in]    rootName   Name of the root element.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_FAIL if the rules do not map to an XML valid according to the rules XML schema.
+     *           Other if the rules do not map to an XML valid according to the rules XML schema.
      */
     QStatus RulesToXml(const PermissionPolicy::Rule* rules,
                        const size_t rulesCount,
@@ -96,7 +96,7 @@ class XmlRulesConverter {
      *                           Must be freed by calling "delete".
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_FAIL if the rules do not map to an XML valid according to the rules XML schema.
+     *           Other if the rules do not map to an XML valid according to the rules XML schema.
      */
     QStatus RulesToXml(const PermissionPolicy::Rule* rules,
                        const size_t rulesCount,

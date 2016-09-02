@@ -27,6 +27,8 @@
 #include "XmlManifestTemplateConverter.h"
 #include "XmlManifestTemplateValidator.h"
 
+#define QCC_MODULE "MANIFEST_TEMPLATE_CONVERTER"
+
 using namespace qcc;
 using namespace std;
 
@@ -37,6 +39,8 @@ map<PermissionPolicy::Rule::SecurityLevel, string>* XmlManifestTemplateConverter
 
 void XmlManifestTemplateConverter::Init()
 {
+    QCC_DbgPrintf(("%s: Performing converter init.", __FUNCTION__));
+
     QCC_ASSERT((nullptr == s_converter) && (nullptr == s_inverseSecurityLevelMap));
     s_converter = new XmlManifestTemplateConverter();
 
@@ -48,6 +52,8 @@ void XmlManifestTemplateConverter::Init()
 
 void XmlManifestTemplateConverter::Shutdown()
 {
+    QCC_DbgPrintf(("%s: Performing converter cleanup.", __FUNCTION__));
+
     delete s_converter;
     s_converter = nullptr;
 

@@ -21,6 +21,8 @@
 
 #include "XmlValidator.h"
 
+#define QCC_MODULE "XML_VALIDATOR"
+
 #define DBUS_ANNOTATION_ELEMENT_NAME "annotation"
 
 using namespace qcc;
@@ -33,7 +35,15 @@ QStatus XmlValidator::ValidateNameAttributeValue(const XmlElement* xmlElement, A
     string nameAttribute;
     ExtractAttributeOrWildcard(xmlElement, NAME_XML_ATTRIBUTE, &nameAttribute);
 
-    return (nameAttribute == name) ? ER_OK : ER_FAIL;
+    if (nameAttribute != name) {
+        QCC_LogError(ER_INVALID_XML_ATTRIBUTE_VALUE,
+                     ("%s: Unexpected \"%s\" element's \"name\" attribute value. Expected: %s. Was: %s.",
+                      __FUNCTION__, xmlElement->GetName().c_str(), name, nameAttribute.c_str()));
+
+        return ER_INVALID_XML_ATTRIBUTE_VALUE;
+    }
+
+    return ER_OK;
 }
 
 void XmlValidator::SeparateAnnotations(const XmlElement* xmlElement, vector<XmlElement*>& annotations, vector<XmlElement*>& other)
@@ -65,7 +75,16 @@ QStatus XmlValidator::ValidateAttributeValueUnique(const XmlElement* xmlElement,
     string attribute;
     ExtractAttributeOrWildcard(xmlElement, attributeName, &attribute);
 
-    return InsertUniqueOrFail(attribute, valuesSet);
+    QStatus status = InsertUniqueOrFail(attribute, valuesSet);
+    if (ER_OK != status) {
+        QCC_LogError(status,
+                     ("%s: The \"%s\" element's attribute value(%s) not unique.",
+                      __FUNCTION__, xmlElement->GetName().c_str(), attribute.c_str()));
+
+        return status;
+    }
+
+    return ER_OK;
 }
 
 #ifdef REGEX_SUPPORTED
@@ -75,7 +94,16 @@ QStatus XmlValidator::ValidateNameAttributeValue(const XmlElement* xmlElement, c
     string nameAttribute;
     ExtractAttributeOrWildcard(xmlElement, NAME_XML_ATTRIBUTE, &nameAttribute);
 
-    return ValidateString(nameAttribute, namePattern, maxNameLength);
+    QStatus status = ValidateString(nameAttribute, namePattern, maxNameLength);
+    if (ER_OK != status) {
+        QCC_LogError(ER_INVALID_XML_ATTRIBUTE_VALUE,
+                     ("%s: The \"%s\" element's \"name\" attribute value(%s) did not match the expected pattern or exceeded %u characters.",
+                      __FUNCTION__, xmlElement->GetName().c_str(), nameAttribute.c_str(), maxNameLength));
+
+        return ER_INVALID_XML_ATTRIBUTE_VALUE;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlValidator::ValidateString(string input, const regex& pattern, size_t maxLength)
@@ -93,17 +121,43 @@ QStatus XmlValidator::ValidateString(string input, const regex& pattern, size_t 
 
 QStatus XmlValidator::ValidateElementName(const XmlElement* xmlElement, AJ_PCSTR name)
 {
-    return (xmlElement->GetName() == name) ? ER_OK : ER_XML_MALFORMED;
+    String actualName = xmlElement->GetName();
+    if (actualName != name) {
+        QCC_LogError(ER_INVALID_XML_ELEMENT_NAME,
+                     ("%s: Unexpected XML element name. Expected: %s. Was: %s.",
+                      __FUNCTION__, name, actualName.c_str()));
+
+        return ER_INVALID_XML_ELEMENT_NAME;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlValidator::ValidateChildrenCountPositive(const XmlElement* xmlElement)
 {
-    return (xmlElement->GetChildren().size() > 0) ? ER_OK : ER_XML_MALFORMED;
+    if (xmlElement->GetChildren().size() == 0) {
+        QCC_LogError(ER_INVALID_XML_ELEMENT_CHILDREN_COUNT,
+                     ("%s: XML element \"%s\" should have at least one child.",
+                      __FUNCTION__, xmlElement->GetName().c_str()));
+
+        return ER_INVALID_XML_ELEMENT_CHILDREN_COUNT;
+    }
+
+    return ER_OK;
 }
 
-QStatus XmlValidator::ValidateChildrenCountEqual(const XmlElement* xmlElement, uint8_t expectedChildrenCount)
+QStatus XmlValidator::ValidateChildrenCountEqual(const XmlElement* xmlElement, size_t expectedChildrenCount)
 {
-    return (xmlElement->GetChildren().size() == expectedChildrenCount) ? ER_OK : ER_XML_MALFORMED;
+    size_t childrenCount = xmlElement->GetChildren().size();
+    if (childrenCount != expectedChildrenCount) {
+        QCC_LogError(ER_INVALID_XML_ELEMENT_CHILDREN_COUNT,
+                     ("%s: XML element \"%s\" has got an invalid number of children. Expected: %u. Was: %u.",
+                      __FUNCTION__, xmlElement->GetName().c_str(), expectedChildrenCount, childrenCount));
+
+        return ER_INVALID_XML_ELEMENT_CHILDREN_COUNT;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlValidator::InsertUniqueOrFail(const string& value, unordered_set<string>& valuesSet)
