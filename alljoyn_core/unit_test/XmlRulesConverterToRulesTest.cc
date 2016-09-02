@@ -227,10 +227,10 @@ static AJ_PCSTR s_sameNameSignals =
     "<node>"
     "<interface>"
     "<signal name = \"Signal\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
     "</signal>"
     "<signal name = \"Signal\">"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
     "</signal>"
     "</interface>"
     "</node>"
@@ -266,10 +266,10 @@ static AJ_PCSTR s_sameNamelessSignals =
     "<node>"
     "<interface>"
     "<signal>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
     "</signal>"
     "<signal>"
-    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
     "</signal>"
     "</interface>"
     "</node>"
@@ -585,9 +585,20 @@ class XmlRulesConverterToRulesBasicTest : public testing::TestWithParam<AJ_PCSTR
     { }
 };
 
-class XmlRulesConverterToRulesInvalidRulesTest : public XmlRulesConverterToRulesBasicTest { };
+class XmlRulesConverterToRulesInvalidRulesTest : public testing::TestWithParam<StatusParams> {
+public:
+    vector<PermissionPolicy::Rule> m_rules;
+    AJ_PCSTR m_rulesXml;
+    QStatus m_expectedStatus;
 
-class XmlRulesConverterToRulesInvalidNamesTest : public XmlRulesConverterToRulesBasicTest { };
+    XmlRulesConverterToRulesInvalidRulesTest() :
+        m_rulesXml(GetParam().m_xml),
+        m_expectedStatus(GetParam().m_status)
+    {
+    }
+};
+
+class XmlRulesConverterToRulesInvalidNamesTest : public XmlRulesConverterToRulesInvalidRulesTest { };
 
 class XmlRulesConverterToRulesPassTest : public XmlRulesConverterToRulesBasicTest { };
 
@@ -739,71 +750,71 @@ TEST_F(XmlRulesConverterToRulesDetailedTest, shouldGetValidSpecificInterfaceName
 
 INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesInvalidRulesSet,
                         XmlRulesConverterToRulesInvalidRulesTest,
-                        ::testing::Values(s_emptyRulesElement,
-                                          s_emptyNodeElement,
-                                          s_emptyInterfaceElement,
-                                          s_emptyMemberElement,
-                                          s_annotationElementUnderRules,
-                                          s_annotationElementUnderNode,
-                                          s_annotationElementUnderInterface,
-                                          s_bothNodeAndAnnotationElements,
-                                          s_bothInterfaceAndAnnotationElements,
-                                          s_bothMemberAndAnnotationElements,
-                                          s_annotationWithMissingValue,
-                                          s_annotationWithInvalidName,
-                                          s_repeatedSameAnnotation,
-                                          s_methodWithObserve,
-                                          s_signalWithModify,
-                                          s_sameNameNodes,
-                                          s_sameNamelessNodes,
-                                          s_sameNameInterfaces,
-                                          s_sameNamelessInterfaces,
-                                          s_sameNameMethods,
-                                          s_sameNameProperties,
-                                          s_sameNameSignals,
-                                          s_sameNamelessMethods,
-                                          s_sameNamelessProperties,
-                                          s_sameNamelessSignals,
-                                          s_methodWithDoubleDeny,
-                                          s_methodWithDenyAndOther,
-                                          s_signalWithDoubleDeny,
-                                          s_signalWithDenyAndOther,
-                                          s_propertyWithDoubleDeny,
-                                          s_propertyWithDenyAndOther,
-                                          s_anyWithDoubleDeny,
-                                          s_anyWithDenyAndOther,
-                                          s_needAllManifestTemplateWithNodeSecurityLevelAnnotation,
-                                          s_needAllManifestTemplateWithInterfaceSecurityLevelAnnotation));
+                        ::testing::Values(StatusParams(s_emptyRulesElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_emptyNodeElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_emptyInterfaceElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_emptyMemberElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_annotationElementUnderRules, ER_INVALID_XML_ELEMENT_NAME),
+                                          StatusParams(s_annotationElementUnderNode, ER_INVALID_ANNOTATIONS_COUNT),
+                                          StatusParams(s_annotationElementUnderInterface, ER_INVALID_ANNOTATIONS_COUNT),
+                                          StatusParams(s_bothNodeAndAnnotationElements, ER_INVALID_XML_ELEMENT_NAME),
+                                          StatusParams(s_bothInterfaceAndAnnotationElements, ER_INVALID_ANNOTATIONS_COUNT),
+                                          StatusParams(s_bothMemberAndAnnotationElements, ER_INVALID_ANNOTATIONS_COUNT),
+                                          StatusParams(s_annotationWithMissingValue, ER_INVALID_MEMBER_ACTION),
+                                          StatusParams(s_annotationWithInvalidName, ER_INVALID_XML_ATTRIBUTE_VALUE),
+                                          StatusParams(s_repeatedSameAnnotation, ER_ANNOTATION_NOT_UNIQUE),
+                                          StatusParams(s_methodWithObserve, ER_INVALID_MEMBER_ACTION),
+                                          StatusParams(s_signalWithModify, ER_INVALID_MEMBER_ACTION),
+                                          StatusParams(s_sameNameNodes, ER_OBJECT_PATH_NOT_UNIQUE),
+                                          StatusParams(s_sameNamelessNodes, ER_OBJECT_PATH_NOT_UNIQUE),
+                                          StatusParams(s_sameNameInterfaces, ER_INTERFACE_NAME_NOT_UNIQUE),
+                                          StatusParams(s_sameNamelessInterfaces, ER_INTERFACE_NAME_NOT_UNIQUE),
+                                          StatusParams(s_sameNameMethods, ER_MEMBER_NAME_NOT_UNIQUE),
+                                          StatusParams(s_sameNameProperties, ER_MEMBER_NAME_NOT_UNIQUE),
+                                          StatusParams(s_sameNameSignals, ER_MEMBER_NAME_NOT_UNIQUE),
+                                          StatusParams(s_sameNamelessMethods, ER_MEMBER_NAME_NOT_UNIQUE),
+                                          StatusParams(s_sameNamelessProperties, ER_MEMBER_NAME_NOT_UNIQUE),
+                                          StatusParams(s_sameNamelessSignals, ER_MEMBER_NAME_NOT_UNIQUE),
+                                          StatusParams(s_methodWithDoubleDeny, ER_ANNOTATION_NOT_UNIQUE),
+                                          StatusParams(s_methodWithDenyAndOther, ER_MEMBER_DENY_ACTION_WITH_OTHER),
+                                          StatusParams(s_signalWithDoubleDeny, ER_ANNOTATION_NOT_UNIQUE),
+                                          StatusParams(s_signalWithDenyAndOther, ER_MEMBER_DENY_ACTION_WITH_OTHER),
+                                          StatusParams(s_propertyWithDoubleDeny, ER_ANNOTATION_NOT_UNIQUE),
+                                          StatusParams(s_propertyWithDenyAndOther, ER_MEMBER_DENY_ACTION_WITH_OTHER),
+                                          StatusParams(s_anyWithDoubleDeny, ER_ANNOTATION_NOT_UNIQUE),
+                                          StatusParams(s_anyWithDenyAndOther, ER_MEMBER_DENY_ACTION_WITH_OTHER),
+                                          StatusParams(s_needAllManifestTemplateWithNodeSecurityLevelAnnotation, ER_INVALID_XML_ELEMENT_NAME),
+                                          StatusParams(s_needAllManifestTemplateWithInterfaceSecurityLevelAnnotation, ER_INVALID_XML_ELEMENT_NAME)));
 TEST_P(XmlRulesConverterToRulesInvalidRulesTest, shouldReturnErrorForInvalidRulesSet)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
+    EXPECT_EQ(m_expectedStatus, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
 }
 
 #ifdef REGEX_SUPPORTED
 
 INSTANTIATE_TEST_CASE_P(XmlRulesConverterToRulesInvalidNames,
                         XmlRulesConverterToRulesInvalidNamesTest,
-                        ::testing::Values(s_nodeNameEndingWithSlash,
-                                          s_nodeNameMultipleSlash,
-                                          s_nodeNameWithoutSlash,
-                                          s_nodeNameWithSpecialCharacter,
-                                          s_nodeNameWildcardInMiddle,
-                                          s_nodeNameDoubleWildcard,
-                                          s_interfaceNameDoubleDot,
-                                          s_interfaceNameElementStartingWithDigit,
-                                          s_interfaceNameEndingWithDot,
-                                          s_interfaceNameJustOneElement,
-                                          s_interfaceNameOver_255_CHARACTERS,
-                                          s_interfaceNameSpecialCharacter,
-                                          s_interfaceNameWildcardInMiddle,
-                                          s_interfaceNameDoubleWildcard,
-                                          s_memberNameDoubleWildcard,
-                                          s_memberNameSpecialCharacter,
-                                          s_memberNameStartingWithDigit,
-                                          s_memberNameWildcardInMiddle));
+                        ::testing::Values(StatusParams(s_nodeNameEndingWithSlash, ER_INVALID_OBJECT_PATH),
+                                          StatusParams(s_nodeNameMultipleSlash, ER_INVALID_OBJECT_PATH),
+                                          StatusParams(s_nodeNameWithoutSlash, ER_INVALID_OBJECT_PATH),
+                                          StatusParams(s_nodeNameWithSpecialCharacter, ER_INVALID_OBJECT_PATH),
+                                          StatusParams(s_nodeNameWildcardInMiddle, ER_INVALID_OBJECT_PATH),
+                                          StatusParams(s_nodeNameDoubleWildcard, ER_INVALID_OBJECT_PATH),
+                                          StatusParams(s_interfaceNameDoubleDot, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_interfaceNameElementStartingWithDigit, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_interfaceNameEndingWithDot, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_interfaceNameJustOneElement, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_interfaceNameOver_255_CHARACTERS, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_interfaceNameSpecialCharacter, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_interfaceNameWildcardInMiddle, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_interfaceNameDoubleWildcard, ER_INVALID_INTERFACE_NAME),
+                                          StatusParams(s_memberNameDoubleWildcard, ER_INVALID_MEMBER_NAME),
+                                          StatusParams(s_memberNameSpecialCharacter, ER_INVALID_MEMBER_NAME),
+                                          StatusParams(s_memberNameStartingWithDigit, ER_INVALID_MEMBER_NAME),
+                                          StatusParams(s_memberNameWildcardInMiddle, ER_INVALID_MEMBER_NAME)));
 TEST_P(XmlRulesConverterToRulesInvalidNamesTest, shouldReturnErrorForInvalidNames)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
+    EXPECT_EQ(m_expectedStatus, XmlRulesConverter::GetInstance()->XmlToRules(m_rulesXml, m_rules));
 }
 
 #endif /* REGEX_SUPPORTED */

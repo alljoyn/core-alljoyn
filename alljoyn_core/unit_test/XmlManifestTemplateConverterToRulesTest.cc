@@ -204,13 +204,15 @@ static AJ_PCSTR s_invalidSecurityLevelAnnotationValueInInterface =
     "</node>"
     "</manifest>";
 
-class XmlManifestTemplateConverterToRulesInvalidSecurityLevelAnnotationTest : public testing::TestWithParam<AJ_PCSTR>{
+class XmlManifestTemplateConverterToRulesInvalidSecurityLevelAnnotationTest : public testing::TestWithParam<StatusParams>{
   public:
     AJ_PCSTR m_manifestTemplateXml;
     vector<PermissionPolicy::Rule> m_rules;
+    QStatus m_expectedStatus;
 
     XmlManifestTemplateConverterToRulesInvalidSecurityLevelAnnotationTest() :
-        m_manifestTemplateXml(GetParam())
+        m_manifestTemplateXml(GetParam().m_xml),
+        m_expectedStatus(GetParam().m_status)
     { }
 };
 
@@ -259,12 +261,12 @@ TEST_P(XmlManifestTemplateConverterToRulesSecurityLevelAnnotationTest, shouldSet
 
 INSTANTIATE_TEST_CASE_P(XmlManifestTemplateConverterToRulesInvalidSecurityLevelAnnotations,
                         XmlManifestTemplateConverterToRulesInvalidSecurityLevelAnnotationTest,
-                        ::testing::Values(s_doubleSecurityLevelAnnotationInNode,
-                                          s_doubleSecurityLevelAnnotationInInterface,
-                                          s_securityLevelAnnotationInMember,
-                                          s_invalidSecurityLevelAnnotationValueInNode,
-                                          s_invalidSecurityLevelAnnotationValueInInterface));
+                        ::testing::Values(StatusParams(s_doubleSecurityLevelAnnotationInNode, ER_INVALID_ANNOTATIONS_COUNT),
+                                          StatusParams(s_doubleSecurityLevelAnnotationInInterface, ER_INVALID_ANNOTATIONS_COUNT),
+                                          StatusParams(s_securityLevelAnnotationInMember, ER_INVALID_XML_ATTRIBUTE_VALUE),
+                                          StatusParams(s_invalidSecurityLevelAnnotationValueInNode, ER_INVALID_SECURITY_LEVEL_ANNOTATION_VALUE),
+                                          StatusParams(s_invalidSecurityLevelAnnotationValueInInterface, ER_INVALID_SECURITY_LEVEL_ANNOTATION_VALUE)));
 TEST_P(XmlManifestTemplateConverterToRulesInvalidSecurityLevelAnnotationTest, shouldReturnErrorForInvalidSecurityLevelAnnotations)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlManifestTemplateConverter::GetInstance()->XmlToRules(m_manifestTemplateXml, m_rules));
+    EXPECT_EQ(m_expectedStatus, XmlManifestTemplateConverter::GetInstance()->XmlToRules(m_manifestTemplateXml, m_rules));
 }

@@ -26,6 +26,8 @@
 #include "KeyInfoHelper.h"
 #include "XmlRulesValidator.h"
 
+#define QCC_MODULE "RULES_VALIDATOR"
+
 using namespace qcc;
 using namespace std;
 
@@ -45,6 +47,8 @@ const regex XmlRulesValidator::s_memberNameRegex = regex("(\\*|([a-zA-Z_][a-zA-Z
 
 void XmlRulesValidator::Init()
 {
+    QCC_DbgPrintf(("%s: Performing validator init.", __FUNCTION__));
+
     QCC_ASSERT((nullptr == s_validator) && (nullptr == s_memberTypeMap));
     s_validator = new XmlRulesValidator();
 
@@ -56,6 +60,8 @@ void XmlRulesValidator::Init()
 
 void XmlRulesValidator::Shutdown()
 {
+    QCC_DbgPrintf(("%s: Performing validator cleanup.", __FUNCTION__));
+
     delete s_validator;
     s_validator = nullptr;
 
@@ -70,6 +76,8 @@ XmlRulesValidator* XmlRulesValidator::GetInstance()
 
 void XmlRulesValidator::MemberTypeMapInit()
 {
+    QCC_DbgPrintf(("%s: Performing s_memberTypeMap init.", __FUNCTION__));
+
     s_memberTypeMap = new unordered_map<string, PermissionPolicy::Rule::Member::MemberType>();
 
     (*s_memberTypeMap)[METHOD_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::METHOD_CALL;
@@ -85,6 +93,8 @@ string XmlRulesValidator::GetRootElementName()
 
 void XmlRulesValidator::MethodsValidator::Init()
 {
+    QCC_DbgPrintf(("%s: Performing validator's subclass init.", __FUNCTION__));
+
     QCC_ASSERT(nullptr == s_actionsMap);
 
     s_actionsMap = new unordered_map<string, uint8_t>();
@@ -96,12 +106,16 @@ void XmlRulesValidator::MethodsValidator::Init()
 
 void XmlRulesValidator::MethodsValidator::Shutdown()
 {
+    QCC_DbgPrintf(("%s: Performing validator's subclass cleanup.", __FUNCTION__));
+
     delete s_actionsMap;
     s_actionsMap = nullptr;
 }
 
 void XmlRulesValidator::PropertiesValidator::Init()
 {
+    QCC_DbgPrintf(("%s: Performing validator's subclass init.", __FUNCTION__));
+
     QCC_ASSERT(nullptr == s_actionsMap);
 
     s_actionsMap = new unordered_map<string, uint8_t>();
@@ -114,12 +128,16 @@ void XmlRulesValidator::PropertiesValidator::Init()
 
 void XmlRulesValidator::PropertiesValidator::Shutdown()
 {
+    QCC_DbgPrintf(("%s: Performing validator's subclass cleanup.", __FUNCTION__));
+
     delete s_actionsMap;
     s_actionsMap = nullptr;
 }
 
 void XmlRulesValidator::SignalsValidator::Init()
 {
+    QCC_DbgPrintf(("%s: Performing validator's subclass init.", __FUNCTION__));
+
     QCC_ASSERT(nullptr == s_actionsMap);
 
     s_actionsMap = new unordered_map<string, uint8_t>();
@@ -131,6 +149,8 @@ void XmlRulesValidator::SignalsValidator::Init()
 
 void XmlRulesValidator::SignalsValidator::Shutdown()
 {
+    QCC_DbgPrintf(("%s: Performing validator's subclass cleanup.", __FUNCTION__));
+
     delete s_actionsMap;
     s_actionsMap = nullptr;
 }
@@ -138,41 +158,46 @@ void XmlRulesValidator::SignalsValidator::Shutdown()
 QStatus XmlRulesValidator::Validate(const XmlElement* rootElement)
 {
     QCC_ASSERT(nullptr != rootElement);
+    QCC_DbgHLPrintf(("%s: Validating rules XML:%s", __FUNCTION__, rootElement->Generate().c_str()));
 
     unordered_set<string> nodeNames;
     string rootElementName = GetRootElementName();
     QStatus status = ValidateElementName(rootElement, rootElementName.c_str());
-
-    if (ER_OK == status) {
-        // For no children we will skip the loop and a valid XML has at least one child.
-        status = ER_XML_MALFORMED;
-
-        for (auto node : rootElement->GetChildren()) {
-            status = ValidateNode(node, nodeNames);
-
-            if (ER_OK != status) {
-                break;
-            }
+    if (ER_OK != status) {
+        return status;
+    }
+    
+    // For no children we will skip the loop and a valid XML has at least one child.
+    status = ER_INVALID_XML_ELEMENT_CHILDREN_COUNT;
+    for (auto node : rootElement->GetChildren()) {
+        status = ValidateNode(node, nodeNames);
+        if (ER_OK != status) {
+            return status;
         }
     }
 
-    return (ER_OK == status) ? ER_OK : ER_XML_MALFORMED;
+    if (ER_OK != status) {
+        QCC_LogError(status, ("%s: There must be at least one 'node' element.", __FUNCTION__));
+    }
+
+    return status;
 }
 
 QStatus XmlRulesValidator::ValidateRules(const PermissionPolicy::Rule* rules, const size_t rulesCount)
 {
     QCC_ASSERT(nullptr != rules);
+    QCC_DbgHLPrintf(("%s: Validating  %u rule objects.", __FUNCTION__, rulesCount));
 
-    QStatus status = (rulesCount > 0) ? ER_OK : ER_FAIL;
+    if (0 == rulesCount) {
+        QCC_LogError(ER_INVALID_RULES_COUNT, ("%s: There must be at least one rule object.", __FUNCTION__));
 
-    if (ER_OK == status) {
-        map<string, vector<PermissionPolicy::Rule> > objectToRulesMap;
-        AssignRulesToObjects(rules, rulesCount, objectToRulesMap);
-
-        status = ValidateObject(objectToRulesMap);
+        return ER_INVALID_RULES_COUNT;
     }
 
-    return (ER_OK == status) ? ER_OK : ER_FAIL;
+    map<string, vector<PermissionPolicy::Rule> > objectToRulesMap;
+    AssignRulesToObjects(rules, rulesCount, objectToRulesMap);
+
+    return ValidateObject(objectToRulesMap);
 }
 
 void XmlRulesValidator::AssignRulesToObjects(const PermissionPolicy::Rule* rules, const size_t rulesCount, map<string, vector<PermissionPolicy::Rule> >& objectToRulesMap)
@@ -184,55 +209,64 @@ void XmlRulesValidator::AssignRulesToObjects(const PermissionPolicy::Rule* rules
 
 QStatus XmlRulesValidator::ValidateObject(const map<string, vector<PermissionPolicy::Rule> >& objectToRulesMap)
 {
-    QStatus status = ER_OK;
     for (auto rulesUnderObject : objectToRulesMap) {
-        status = ValidateRules(rulesUnderObject.second);
-
+        QStatus status = ValidateRules(rulesUnderObject.second);
         if (ER_OK != status) {
-            break;
+            return status;
         }
     }
 
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::ValidateRules(const vector<PermissionPolicy::Rule>& rules)
 {
-    QStatus status = ER_OK;
     unordered_set<string> interfaceNames;
 
     for (auto rule : rules) {
-        status = ValidateRule(rule, interfaceNames);
-
+        QStatus status = ValidateRule(rule, interfaceNames);
         if (ER_OK != status) {
-            break;
+            return status;
         }
     }
 
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::ValidateRule(const PermissionPolicy::Rule& rule, unordered_set<string>& interfaceNames)
 {
-    QStatus status = ER_OK;
+    QStatus status;
 
 #ifdef REGEX_SUPPORTED
     status = ValidateString(rule.GetObjPath().c_str(), s_objectPathRegex);
+    if (ER_OK != status) {
+        QCC_LogError(ER_INVALID_OBJECT_PATH,
+                     ("%s: Invalid object path: %s.",
+                      __FUNCTION__, rule.GetObjPath().c_str()));
 
-    if (ER_OK == status) {
-        status = ValidateString(rule.GetInterfaceName().c_str(), s_interfaceNameRegex, MAX_INTERFACE_NAME_LENGTH);
+        return ER_INVALID_OBJECT_PATH;
+    }
+
+    status = ValidateString(rule.GetInterfaceName().c_str(), s_interfaceNameRegex, MAX_INTERFACE_NAME_LENGTH);
+    if (ER_OK != status) {
+        QCC_LogError(ER_INVALID_INTERFACE_NAME,
+                     ("%s: Invalid interface name: %s.",
+                      __FUNCTION__, rule.GetInterfaceName().c_str()));
+
+        return ER_INVALID_INTERFACE_NAME;
     }
 #endif /* REGEX_SUPPORTED */
 
-    if (ER_OK == status) {
-        status = InsertUniqueOrFail(rule.GetInterfaceName().c_str(), interfaceNames);
+    status = InsertUniqueOrFail(rule.GetInterfaceName().c_str(), interfaceNames);
+    if (ER_OK != status) {
+        QCC_LogError(ER_INTERFACE_NAME_NOT_UNIQUE,
+                     ("%s: An interface with the same name already exists: %s.",
+                      __FUNCTION__, rule.GetInterfaceName().c_str()));
+
+        return ER_INTERFACE_NAME_NOT_UNIQUE;
     }
 
-    if (ER_OK == status) {
-        status = ValidateMembers(rule);
-    }
-
-    return status;
+    return ValidateMembers(rule);
 }
 
 QStatus XmlRulesValidator::ValidateMembers(const PermissionPolicy::Rule& rule)
@@ -241,19 +275,21 @@ QStatus XmlRulesValidator::ValidateMembers(const PermissionPolicy::Rule& rule)
     size_t membersSize = rule.GetMembersSize();
     const PermissionPolicy::Rule::Member* members = rule.GetMembers();
 
-    // There must be at least one member.
-    QStatus status = ER_FAIL;
+    if (0 == membersSize) {
+        QCC_LogError(ER_INTERFACE_MEMBERS_MISSING, ("%s: There must be at least one member object.", __FUNCTION__));
+
+        return ER_INTERFACE_MEMBERS_MISSING;
+    }
 
     for (size_t index = 0; index < membersSize; index++) {
         const PermissionPolicy::Rule::Member& member = members[index];
-        status = memberValidatorFactory.ForType(member.GetMemberType())->Validate(member);
-
+        QStatus status = memberValidatorFactory.ForType(member.GetMemberType())->Validate(member);
         if (ER_OK != status) {
-            break;
+            return status;
         }
     }
 
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::ValidateNode(const XmlElement* node, unordered_set<string>& nodeNames)
@@ -261,44 +297,70 @@ QStatus XmlRulesValidator::ValidateNode(const XmlElement* node, unordered_set<st
     vector<XmlElement*> annotations;
     vector<XmlElement*> interfaces;
     QStatus status = ValidateNodeCommon(node, nodeNames);
+    if (ER_OK != status) {
+        return status;
+    }
 
     SeparateAnnotations(node, annotations, interfaces);
-
-    if (ER_OK == status) {
-        status = ValidateNodeAnnotations(annotations);
+    status = ValidateNodeAnnotations(annotations);
+    if (ER_OK != status) {
+        return status;
     }
 
-    if (ER_OK == status) {
-        status = ValidateInterfaces(interfaces);
-    }
-
-    return status;
+    return ValidateInterfaces(interfaces);
 }
 
 QStatus XmlRulesValidator::ValidateNodeCommon(const XmlElement* node, unordered_set<string>& nodeNames)
 {
     QStatus status = ValidateElementName(node, NODE_XML_ELEMENT);
-
-    if (ER_OK == status) {
-        status = ValidateAttributeValueUnique(node, nodeNames, NAME_XML_ATTRIBUTE);
+    if (ER_OK != status) {
+        return status;
     }
 
-    if (ER_OK == status) {
-        status = ValidateChildrenCountPositive(node);
+    status = ValidateNodeNameUnique(node, nodeNames);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    status = ValidateChildrenCountPositive(node);
+    if (ER_OK != status) {
+        return status;
     }
 
 #ifdef REGEX_SUPPORTED
-    if (ER_OK == status) {
-        status = XmlValidator::ValidateNameAttributeValue(node, s_objectPathRegex);
+    status = ValidateNameAttributeValue(node, s_objectPathRegex);
+    if (ER_OK != status) {
+        return ER_INVALID_OBJECT_PATH;
     }
 #endif /* REGEX_SUPPORTED */
 
-    return status;
+    return ER_OK;
+}
+
+QStatus XmlRulesValidator::ValidateNodeNameUnique(const XmlElement* node, unordered_set<string>& nodeNames)
+{
+    QStatus status = ValidateAttributeValueUnique(node, nodeNames, NAME_XML_ATTRIBUTE);
+
+    if (ER_OK != status) {
+        QCC_LogError(ER_OBJECT_PATH_NOT_UNIQUE, ("%s: An object with the same path already exists.", __FUNCTION__));
+
+        return ER_OBJECT_PATH_NOT_UNIQUE;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::ValidateNodeAnnotations(const vector<XmlElement*>& annotations)
 {
-    return (annotations.size() == 0) ? ER_OK : ER_XML_MALFORMED;
+    if (!annotations.empty()) {
+        QCC_LogError(ER_INVALID_ANNOTATIONS_COUNT,
+                     ("%s: Policy or signed manifest rules' nodes should not contain any annotations.",
+                      __FUNCTION__));
+
+        return ER_INVALID_ANNOTATIONS_COUNT;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::ValidateInterfaces(const vector<XmlElement*>& interfaces)
@@ -306,14 +368,16 @@ QStatus XmlRulesValidator::ValidateInterfaces(const vector<XmlElement*>& interfa
     unordered_set<string> interfaceNames;
 
     // There must be at least one interface.
-    QStatus status = ER_XML_MALFORMED;
-
+    QStatus status = ER_INVALID_XML_ELEMENT_CHILDREN_COUNT;
     for (auto singleInterface : interfaces) {
         status = ValidateInterface(singleInterface, interfaceNames);
-
         if (ER_OK != status) {
-            break;
+            return status;
         }
+    }
+
+    if (ER_OK != status) {
+        QCC_LogError(status, ("%s: Node must have at least one 'interface' element.", __FUNCTION__));
     }
 
     return status;
@@ -324,44 +388,65 @@ QStatus XmlRulesValidator::ValidateInterface(const XmlElement* singleInterface, 
     vector<XmlElement*> annotations;
     vector<XmlElement*> members;
     QStatus status = ValidateInterfaceCommon(singleInterface, interfaceNames);
+    if (ER_OK != status) {
+        return status;
+    }
 
     SeparateAnnotations(singleInterface, annotations, members);
-
-    if (ER_OK == status) {
-        status = ValidateInterfaceAnnotations(annotations);
+    status = ValidateInterfaceAnnotations(annotations);
+    if (ER_OK != status) {
+        return status;
     }
 
-    if (ER_OK == status) {
-        status = ValidateMembers(members);
-    }
-
-    return status;
+    return ValidateMembers(members);
 }
 
 QStatus XmlRulesValidator::ValidateInterfaceCommon(const XmlElement* singleInterface, unordered_set<string>& interfaceNames)
 {
     QStatus status = ValidateElementName(singleInterface, INTERFACE_XML_ELEMENT);
+    if (ER_OK != status) {
+        return status;
+    }
 
-    if (ER_OK == status) {
-        status = ValidateAttributeValueUnique(singleInterface, interfaceNames, NAME_XML_ATTRIBUTE);
+    status = ValidateInterfaceNameUnique(singleInterface, interfaceNames);
+    if (ER_OK != status) {
+        return status;
     }
 
 #ifdef REGEX_SUPPORTED
-    if (ER_OK == status) {
-        status = XmlValidator::ValidateNameAttributeValue(singleInterface, s_interfaceNameRegex, MAX_INTERFACE_NAME_LENGTH);
+    status = XmlValidator::ValidateNameAttributeValue(singleInterface, s_interfaceNameRegex, MAX_INTERFACE_NAME_LENGTH);
+    if (ER_OK != status) {
+        return ER_INVALID_INTERFACE_NAME;
     }
 #endif /* REGEX_SUPPORTED */
 
-    if (ER_OK == status) {
-        status = ValidateChildrenCountPositive(singleInterface);
+    return ValidateChildrenCountPositive(singleInterface);
+}
+
+QStatus XmlRulesValidator::ValidateInterfaceNameUnique(const XmlElement* singleInterface, unordered_set<string>& interfaceNames)
+{
+    QStatus status = ValidateAttributeValueUnique(singleInterface, interfaceNames, NAME_XML_ATTRIBUTE);
+
+    if (ER_OK != status) {
+        QCC_LogError(ER_INTERFACE_NAME_NOT_UNIQUE, ("%s: An interface with the same name already exists in this object.", __FUNCTION__));
+
+        return ER_INTERFACE_NAME_NOT_UNIQUE;
     }
 
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::ValidateInterfaceAnnotations(const vector<XmlElement*>& annotations)
 {
-    return (annotations.size() == 0) ? ER_OK : ER_XML_MALFORMED;
+    if (!annotations.empty()) {
+        QCC_LogError(ER_INVALID_ANNOTATIONS_COUNT,
+                     ("%s: Policy or signed manifest rules' interfaces should not contain any annotations.",
+                      __FUNCTION__));
+
+        return ER_INVALID_ANNOTATIONS_COUNT;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::ValidateMembers(const vector<XmlElement*>& members)
@@ -369,14 +454,16 @@ QStatus XmlRulesValidator::ValidateMembers(const vector<XmlElement*>& members)
     MemberValidatorFactory memberValidatorFactory;
 
     // There must be at least one member.
-    QStatus status = ER_XML_MALFORMED;
-
+    QStatus status = ER_INVALID_XML_ELEMENT_CHILDREN_COUNT;
     for (auto member : members) {
         status = ValidateMember(member, memberValidatorFactory);
-
         if (ER_OK != status) {
-            break;
+            return status;
         }
+    }
+
+    if (ER_OK != status) {
+        QCC_LogError(status, ("%s: Interface must have at least one member.", __FUNCTION__));
     }
 
     return status;
@@ -387,106 +474,153 @@ QStatus XmlRulesValidator::ValidateMember(const XmlElement* member, MemberValida
     PermissionPolicy::Rule::Member::MemberType type;
 
     QStatus status = MemberValidator::GetValidMemberType(member, &type);
-    if (ER_OK == status) {
-        status = memberValidatorFactory.ForType(type)->Validate(member);
+    if (ER_OK != status) {
+        return status;
     }
 
-    return status;
+    return memberValidatorFactory.ForType(type)->Validate(member);
 }
 
 QStatus XmlRulesValidator::MemberValidator::Validate(const XmlElement* member)
 {
-    QStatus status = ValidateAttributeValueUnique(member, memberNames, NAME_XML_ATTRIBUTE);
+    QStatus status = ValidateMemberNameUnique(member, memberNames);
+    if (ER_OK != status) {
+        return status;
+    }
 
 #ifdef REGEX_SUPPORTED
-    if (ER_OK == status) {
-        status = XmlValidator::ValidateNameAttributeValue(member, s_memberNameRegex, MAX_MEMBER_NAME_LENGTH);
+    status = XmlValidator::ValidateNameAttributeValue(member, s_memberNameRegex, MAX_MEMBER_NAME_LENGTH);
+    if (ER_OK != status) {
+        return ER_INVALID_MEMBER_NAME;
     }
 #endif /* REGEX_SUPPORTED */
 
-    if (ER_OK == status) {
-        status = ValidateMemberAnnotations(member);
-    }
-
-    return status;
+    return ValidateMemberAnnotations(member);
 }
 
 QStatus XmlRulesValidator::MemberValidator::Validate(const PermissionPolicy::Rule::Member& member)
 {
     QStatus status = ValidateMemberName(member.GetMemberName().c_str());
-
-    if (ER_OK == status) {
-        status = ValidateActionMask(member.GetActionMask());
+    if (ER_OK != status) {
+        return status;
     }
 
-    return status;
+    return ValidateActionMask(member.GetActionMask());
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateMemberName(AJ_PCSTR name)
 {
-    QStatus status = ER_OK;
-
+    QStatus status;
 #ifdef REGEX_SUPPORTED
     status = ValidateString(name, s_memberNameRegex, MAX_MEMBER_NAME_LENGTH);
+    if (ER_OK != status) {
+        QCC_LogError(ER_INVALID_MEMBER_NAME,
+                     ("%s: Invalid member name: %s.",
+                      __FUNCTION__, name));
+
+        return ER_INVALID_MEMBER_NAME;
+    }
 #endif /* REGEX_SUPPORTED */
 
-    if (ER_OK == status) {
-        status = InsertUniqueOrFail(name, memberNames);
+    status = InsertUniqueOrFail(name, memberNames);
+    if (ER_OK != status) {
+        QCC_LogError(ER_MEMBER_NAME_NOT_UNIQUE,
+            ("%s: A member with the same name already exists: %s.",
+                __FUNCTION__, name));
+
+        return ER_MEMBER_NAME_NOT_UNIQUE;
     }
 
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateActionMask(uint8_t actionMask)
 {
     uint8_t validActions = GetValidActions();
-    return ((validActions | actionMask) == validActions) ? ER_OK : ER_FAIL;
+    if ((validActions | actionMask) != validActions) {
+        QCC_LogError(ER_INVALID_MEMBER_ACTION,
+                     ("%s: Action mask %hhx not allowed for this member. Valid actions are: %hhx",
+                      __FUNCTION__, actionMask, validActions));
+
+        return ER_INVALID_MEMBER_ACTION;
+    }
+
+    return ER_OK;
+}
+
+QStatus XmlRulesValidator::MemberValidator::ValidateMemberNameUnique(const XmlElement* member, unordered_set<string>& memberNames)
+{
+    QStatus status = ValidateAttributeValueUnique(member, memberNames, NAME_XML_ATTRIBUTE);
+
+    if (ER_OK != status) {
+        QCC_LogError(ER_MEMBER_NAME_NOT_UNIQUE, ("%s: A member with the same name already exists in this interface.", __FUNCTION__));
+
+        return ER_MEMBER_NAME_NOT_UNIQUE;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateMemberAnnotations(const XmlElement* member)
 {
     unordered_set<string> presentAnnotations;
-    QStatus status = ValidateChildrenCountPositive(member);
 
+    QStatus status = ER_INVALID_XML_ELEMENT_CHILDREN_COUNT;
     for (auto annotation : member->GetChildren()) {
         status = ValidateAnnotation(annotation, presentAnnotations);
-
         if (ER_OK != status) {
-            break;
+            return status;
         }
     }
 
+    if (ER_OK != status) {
+        QCC_LogError(status, ("%s: Member must have at least one annotation.", __FUNCTION__));
+    }
+
     return status;
+}
+
+QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationUnique(const XmlElement* annotation, unordered_set<string>& presentAnnotations)
+{
+    QStatus status = ValidateAttributeValueUnique(annotation, presentAnnotations, VALUE_XML_ATTRIBUTE);
+
+    if (ER_OK != status) {
+        QCC_LogError(ER_ANNOTATION_NOT_UNIQUE, ("%s: The same annotation already exists in this XML element.", __FUNCTION__));
+
+        return ER_ANNOTATION_NOT_UNIQUE;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateAnnotation(XmlElement* annotation, unordered_set<string>& presentAnnotations)
 {
     QStatus status = ValidateElementName(annotation, ANNOTATION_XML_ELEMENT);
-
-    if (ER_OK == status) {
-        status = ValidateNameAttributeValue(annotation, ACTION_ANNOTATION_NAME);
+    if (ER_OK != status) {
+        return status;
     }
 
-    if (ER_OK == status) {
-        status = ValidateAttributeValueUnique(annotation, presentAnnotations, VALUE_XML_ATTRIBUTE);
+    status = ValidateNameAttributeValue(annotation, ACTION_ANNOTATION_NAME);
+    if (ER_OK != status) {
+        return status;
     }
 
-    if (ER_OK == status) {
-        status = ValidateAnnotationAllowed(annotation, presentAnnotations);
+    status = ValidateAnnotationUnique(annotation, presentAnnotations);
+    if (ER_OK != status) {
+        return status;
     }
 
-    return status;
+    return ValidateAnnotationAllowed(annotation, presentAnnotations);
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowed(XmlElement* annotation, unordered_set<string>& presentAnnotations)
 {
     QStatus status = ValidateAnnotationAllowedForMember(annotation);
-
-    if (ER_OK == status) {
-        status = ValidateDenyAnnotation(presentAnnotations);
+    if (ER_OK != status) {
+        return status;
     }
 
-    return status;
+    return ValidateDenyAnnotation(presentAnnotations);
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowedForMember(XmlElement* annotation)
@@ -494,28 +628,46 @@ QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowedForMember(X
     String action = annotation->GetAttribute(VALUE_XML_ATTRIBUTE);
     auto foundAction = GetActionsMap()->find(action.c_str());
 
-    return (foundAction == GetActionsMap()->end()) ? ER_XML_MALFORMED : ER_OK;
+    if (foundAction == GetActionsMap()->end()) {
+        QCC_LogError(ER_INVALID_MEMBER_ACTION,
+                     ("%s: Invalid action for this member: '%s'.",
+                      __FUNCTION__, action.c_str()));
+
+        return ER_INVALID_MEMBER_ACTION;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateDenyAnnotation(unordered_set<string>& presentAnnotations)
 {
-    bool denyAbsent = (presentAnnotations.find(DENY_MEMBER_MASK) == presentAnnotations.end());
+    bool denyPresent = (presentAnnotations.find(DENY_MEMBER_MASK) != presentAnnotations.end());
 
-    return (denyAbsent ||
-            presentAnnotations.size() == 1U) ? ER_OK : ER_XML_MALFORMED;
+    if (denyPresent && (presentAnnotations.size() > 1U)) {
+        QCC_LogError(ER_MEMBER_DENY_ACTION_WITH_OTHER,
+                     ("%s: Member cannot have the 'Deny' action along with other ones.",
+                      __FUNCTION__));
+
+        return ER_MEMBER_DENY_ACTION_WITH_OTHER;
+    }
+
+    return ER_OK;
 }
 
 QStatus XmlRulesValidator::MemberValidator::GetValidMemberType(const XmlElement* member, PermissionPolicy::Rule::Member::MemberType* memberType)
 {
-    QStatus status = ER_OK;
     auto foundType = s_memberTypeMap->find(member->GetName().c_str());
     if (foundType != s_memberTypeMap->end()) {
         *memberType = foundType->second;
     } else {
-        status = ER_XML_MALFORMED;
+        QCC_LogError(ER_INVALID_MEMBER_TYPE,
+                     ("%s: Invalid member type '%s'.",
+                      __FUNCTION__, member->GetName().c_str()));
+
+        return ER_INVALID_MEMBER_TYPE;
     }
 
-    return status;
+    return ER_OK;
 }
 
 const unordered_map<string, uint8_t>* XmlRulesValidator::MethodsValidator::GetActionsMap()

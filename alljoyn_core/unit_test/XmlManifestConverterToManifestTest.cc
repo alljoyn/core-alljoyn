@@ -258,15 +258,17 @@ class XmlManifestConverterToManifestDetailedTest : public testing::Test {
     Manifest m_retrievedManifest;
 };
 
-class XmlManifestConverterToManifestInvalidXmlTest : public testing::TestWithParam<AJ_PCSTR> {
+class XmlManifestConverterToManifestInvalidXmlTest : public testing::TestWithParam<StatusParams> {
   public:
     XmlManifestConverterToManifestInvalidXmlTest() :
-        m_manifestXml(GetParam())
+        m_manifestXml(GetParam().m_xml),
+        m_expectedStatus(GetParam().m_status)
     { }
 
   protected:
     Manifest m_retrievedManifest;
     AJ_PCSTR m_manifestXml;
+    QStatus m_expectedStatus;
 };
 
 TEST(XmlManifestConverterToManifestTest, shouldReturnErrorForNonWellFormedXml)
@@ -326,26 +328,26 @@ TEST_F(XmlManifestConverterToManifestDetailedTest, shouldHaveSetSignature)
 
 INSTANTIATE_TEST_CASE_P(XmlManifestConverterToRulesInvalidXml,
                         XmlManifestConverterToManifestInvalidXmlTest,
-                        ::testing::Values(s_emptyManifestElement,
-                                          s_missingVersionElement,
-                                          s_missingRulesElement,
-                                          s_missingThumbprintElement,
-                                          s_missingSignatureElement,
-                                          s_missingVersionContent,
-                                          s_invalidVersionNumber,
-                                          s_missingThumbprintContent,
-                                          s_missingThumbprintOid,
-                                          s_missingThumbprintValue,
-                                          s_invalidThumbprintOid,
-                                          s_invalidThumbprintValueNotBase64,
-                                          s_invalidThumbprintValueNotBinary,
-                                          s_missingSignatureContent,
-                                          s_missingSignatureOid,
-                                          s_missingSignatureValue,
-                                          s_invalidSignatureOid,
-                                          s_invalidSignatureValueNotBase64,
-                                          s_invalidSignatureValueNotBinary));
+                        ::testing::Values(StatusParams(s_emptyManifestElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingVersionElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingRulesElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingThumbprintElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingSignatureElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingVersionContent, ER_INVALID_MANIFEST_VERSION),
+                                          StatusParams(s_invalidVersionNumber, ER_INVALID_MANIFEST_VERSION),
+                                          StatusParams(s_missingThumbprintContent, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingThumbprintOid, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingThumbprintValue, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_invalidThumbprintOid, ER_INVALID_OID),
+                                          StatusParams(s_invalidThumbprintValueNotBase64, ER_INVALID_BASE64),
+                                          StatusParams(s_invalidThumbprintValueNotBinary, ER_INVALID_BASE64),
+                                          StatusParams(s_missingSignatureContent, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingSignatureOid, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingSignatureValue, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_invalidSignatureOid, ER_INVALID_OID),
+                                          StatusParams(s_invalidSignatureValueNotBase64, ER_INVALID_BASE64),
+                                          StatusParams(s_invalidSignatureValueNotBinary, ER_INVALID_BASE64)));
 TEST_P(XmlManifestConverterToManifestInvalidXmlTest, shouldReturnErrorForInvalidManifestXml)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlManifestConverter::XmlToManifest(m_manifestXml, m_retrievedManifest));
+    EXPECT_EQ(m_expectedStatus, XmlManifestConverter::XmlToManifest(m_manifestXml, m_retrievedManifest));
 }
