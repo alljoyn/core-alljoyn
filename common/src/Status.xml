@@ -95,5 +95,38 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_SLAP_OTHER_END_CLOSED" value="0x102B" comment="Other end closed the SLAP connection"/>
   <status name="ER_TIMER_NOT_ALLOWED" value="0x102C" comment="Timer EnableReentrancy call not allowed"/>
   <status name="ER_NOT_CONN" value="0x102D" comment="Socket not connected"/>
+
+  <status name="ER_XML_CONVERTER_ERROR" value="0x2000" comment="An error related to XML &lt;--&gt; object conversion."/>
+  <status name="ER_XML_INVALID_RULES_COUNT" value="0x2001" comment="There must be at least one rule object."/>
+  <status name="ER_XML_INTERFACE_MEMBERS_MISSING" value="0x2002" comment="There must be at least one member object."/>
+  <status name="ER_XML_INVALID_MEMBER_TYPE" value="0x2003" comment="Member type must be one of: method, property, signal, all."/>
+  <status name="ER_XML_INVALID_MEMBER_ACTION" value="0x2004" comment="Member cannot have the given action annotation."/>
+  <status name="ER_XML_MEMBER_DENY_ACTION_WITH_OTHER" value="0x2005" comment="Member cannot have the 'Deny' action along with other ones."/>
+  <status name="ER_XML_INVALID_ANNOTATIONS_COUNT" value="0x2006" comment="The XML element contains an invalid number of annotations."/>
+  <status name="ER_XML_INVALID_ELEMENT_NAME" value="0x2007" comment="XML element has got an incorrect name."/>
+  <status name="ER_XML_INVALID_ATTRIBUTE_VALUE" value="0x2008" comment="XML attribute has got an incorrect name."/>
+  <status name="ER_XML_INVALID_SECURITY_LEVEL_ANNOTATION_VALUE" value="0x2009" comment="Security level annotation value incorrect."/>
+  <status name="ER_XML_INVALID_ELEMENT_CHILDREN_COUNT" value="0x200A" comment="XML element has go an incorrect number of children."/>
+  <status name="ER_XML_INVALID_POLICY_VERSION" value="0x200B" comment="Security policy version is different than the expected value."/>
+  <status name="ER_XML_INVALID_POLICY_SERIAL_NUMBER" value="0x200C" comment="Security policy serial number is different than the expected value."/>
+  <status name="ER_XML_INVALID_ACL_PEER_TYPE" value="0x200D" comment="Security policy ACL peer must be one of: ALL, ANY_TRUSTED, FROM_CERTIFICATE_AUTHORITY, WITH_MEMBERSHIP, WITH_PUBLIC_KEY."/>
+  <status name="ER_XML_INVALID_ACL_PEER_CHILDREN_COUNT" value="0x200E" comment="Security policy ACL peer children count is different than expected."/>
+  <status name="ER_XML_ACL_ALL_TYPE_PEER_WITH_OTHERS" value="0x200F" comment="Security policy ACL 'ALL' type peer present along with other types."/>
+  <status name="ER_XML_INVALID_ACL_PEER_PUBLIC_KEY" value="0x2010" comment="Security policy ACL peer's public key is not in valid PEM formator is missing."/>
+  <status name="ER_XML_ACL_PEER_NOT_UNIQUE" value="0x2011" comment="The same security policy ACL peer already present inside this ACL."/>
+  <status name="ER_XML_ACL_PEER_PUBLIC_KEY_SET" value="0x2012" comment="Security policy ACL peer's public key should not be set for this peer type."/>
+  <status name="ER_XML_ACLS_MISSING" value="0x2013" comment="Security policy must contain at least one ACL."/>
+  <status name="ER_XML_ACL_PEERS_MISSING" value="0x2014" comment="Security policy ACL must contain at least one peer."/>
+  <status name="ER_XML_INVALID_OBJECT_PATH" value="0x2015" comment="Object path does not follow D-bus specification."/>
+  <status name="ER_XML_INVALID_INTERFACE_NAME" value="0x2016" comment="Interface name does not follow D-bus specification."/>
+  <status name="ER_XML_INVALID_MEMBER_NAME" value="0x2017" comment="Member name does not follow D-bus specification."/>
+  <status name="ER_XML_INVALID_MANIFEST_VERSION" value="0x2018" comment="Signed manifest version is different than the expected value."/>
+  <status name="ER_XML_INVALID_OID" value="0x2019" comment="OID value different than expected."/>
+  <status name="ER_XML_INVALID_BASE64" value="0x201A" comment="Input is not a valid base64 value."/>
+  <status name="ER_XML_INTERFACE_NAME_NOT_UNIQUE" value="0x201B" comment="The same interface name already exists inside this object."/>
+  <status name="ER_XML_MEMBER_NAME_NOT_UNIQUE" value="0x201C" comment="The same member name already exists inside this interface."/>
+  <status name="ER_XML_OBJECT_PATH_NOT_UNIQUE" value="0x201D" comment="An object with the same path already exists."/>
+  <status name="ER_XML_ANNOTATION_NOT_UNIQUE" value="0x201E" comment="This annotation can appear only once in the given XML element."/>
+    
   <status name="ER_NONE" value="0xffff" comment="No error code to report"/>
 </status_block>

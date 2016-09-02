@@ -228,14 +228,14 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForInvalidPo
 {
     m_validPolicy.SetSpecificationVersion(0);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_INVALID_POLICY_VERSION, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForZeroAcls)
 {
     m_validPolicy.SetAcls(0, nullptr);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACLS_MISSING, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForZeroPeers)
@@ -243,7 +243,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForZeroPeers
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeers(0, nullptr, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_PEERS_MISSING, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAllTypePeerWithOthers)
@@ -251,7 +251,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAllTypePe
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeerType(ANY_TRUSTED_PEER_INDEX, PermissionPolicy::Peer::PEER_ALL, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_ALL_TYPE_PEER_WITH_OTHERS, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAnyTrustedTypePeerTwice)
@@ -260,7 +260,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAnyTruste
     PolicyOverwriteUtils::ChangePeerType(FIRST_FROM_CA_PEER_INDEX, PermissionPolicy::Peer::PEER_ANY_TRUSTED, m_validPolicy);
     PolicyOverwriteUtils::ChangePeerPublicKey(FIRST_FROM_CA_PEER_INDEX, nullptr, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_PEER_NOT_UNIQUE, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAnyTrustedPeerWithPublicKey)
@@ -268,7 +268,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAnyTruste
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeerPublicKey(ANY_TRUSTED_PEER_INDEX, FIRST_VALID_PUBLIC_KEY, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_PEER_PUBLIC_KEY_SET, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAllTypePeerWithPublicKey)
@@ -277,7 +277,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForAllTypePe
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeers(1, &allPeer, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_PEER_PUBLIC_KEY_SET, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForWithPublicKeyPeerTypeWithoutPublicKey)
@@ -285,7 +285,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForWithPubli
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeerPublicKey(FIRST_WITH_PUBLIC_KEY_PEER_INDEX, nullptr, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_INVALID_ACL_PEER_PUBLIC_KEY, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForWithMembershipPeerTypeWithoutPublicKey)
@@ -293,7 +293,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForWithMembe
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeerPublicKey(FIRST_WITH_MEMBERSHIP_PEER_INDEX, nullptr, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_INVALID_ACL_PEER_PUBLIC_KEY, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForCAPeerTypeWithoutPublicKey)
@@ -301,7 +301,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForCAPeerTyp
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeerPublicKey(FIRST_FROM_CA_PEER_INDEX, nullptr, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_INVALID_ACL_PEER_PUBLIC_KEY, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForTwoSameWithMembershipPeers)
@@ -310,7 +310,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForTwoSameWi
     PolicyOverwriteUtils::ChangePeerPublicKey(SECOND_WITH_MEMBERSHIP_PEER_INDEX, FIRST_VALID_PUBLIC_KEY, m_validPolicy);
     PolicyOverwriteUtils::ChangePeerSgId(SECOND_WITH_MEMBERSHIP_PEER_INDEX, FIRST_VALID_GUID, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_PEER_NOT_UNIQUE, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForTwoSameWithPublicKeyPeers)
@@ -318,7 +318,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForTwoSameWi
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeerPublicKey(SECOND_WITH_PUBLIC_KEY_PEER_INDEX, FIRST_VALID_PUBLIC_KEY, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_PEER_NOT_UNIQUE, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForTwoSameCAPeers)
@@ -326,7 +326,7 @@ TEST_F(XmlPolicyConverterToXmlDetailedFailureTest, shouldReturnErrorForTwoSameCA
     ASSERT_GT(m_validPolicy.GetAclsSize(), 0U);
     PolicyOverwriteUtils::ChangePeerPublicKey(SECOND_FROM_CA_PEER_INDEX, FIRST_VALID_PUBLIC_KEY, m_validPolicy);
 
-    EXPECT_EQ(ER_FAIL, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
+    EXPECT_EQ(ER_XML_ACL_PEER_NOT_UNIQUE, XmlPoliciesConverter::ToXml(m_validPolicy, m_retrievedPolicyXml));
 }
 
 TEST_F(XmlPolicyConverterToXmlDetailedPassTest, shouldGetSamePolicyAfterTwoConversions)
