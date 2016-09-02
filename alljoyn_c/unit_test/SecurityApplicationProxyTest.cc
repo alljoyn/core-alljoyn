@@ -674,10 +674,10 @@ TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassDestroyingValidProxy)
 
 TEST_F(SecurityApplicationProxyPreProxyTest, shouldReturnErrorWhenSigningInvalidManifest)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, alljoyn_securityapplicationproxy_signmanifest(s_invalidManifest,
-                                                                              m_securityManagerIdentityCertificate,
-                                                                              m_securityManagerPrivateKey,
-                                                                              &m_signedManifestXml));
+    EXPECT_EQ(ER_INVALID_XML_ELEMENT_CHILDREN_COUNT, alljoyn_securityapplicationproxy_signmanifest(s_invalidManifest,
+                                                                                                   m_securityManagerIdentityCertificate,
+                                                                                                   m_securityManagerPrivateKey,
+                                                                                                   &m_signedManifestXml));
 }
 
 #ifdef NDEBUG

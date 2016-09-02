@@ -27,6 +27,8 @@
 #include "XmlRulesConverter.h"
 #include "XmlManifestTemplateValidator.h"
 
+#define QCC_MODULE "RULES_CONVERTER"
+
 using namespace qcc;
 using namespace std;
 
@@ -38,6 +40,8 @@ unordered_map<string, uint8_t>* XmlRulesConverter::s_memberMasksMap = nullptr;
 
 void XmlRulesConverter::Init()
 {
+    QCC_DbgPrintf(("%s: Performing converter init.", __FUNCTION__));
+
     QCC_ASSERT((nullptr == s_converter) &&
                (nullptr == s_inverseMemberTypeMap) &&
                (nullptr == s_memberMasksMap));
@@ -49,6 +53,8 @@ void XmlRulesConverter::Init()
 
 void XmlRulesConverter::Shutdown()
 {
+    QCC_DbgPrintf(("%s: Performing converter cleanup.", __FUNCTION__));
+
     delete s_converter;
     s_converter = nullptr;
 
@@ -115,63 +121,82 @@ XmlRulesValidator* XmlRulesConverter::GetValidator()
 
 QStatus XmlRulesConverter::XmlToRules(AJ_PCSTR rulesXml, vector<PermissionPolicy::Rule>& rules)
 {
+    QCC_DbgHLPrintf(("%s: Converting XML rules to rule objects:\n%s",
+                     __FUNCTION__, rulesXml));
     QCC_ASSERT(nullptr != rulesXml);
 
     XmlElement* root = nullptr;
     QStatus status = XmlElement::GetRoot(rulesXml, &root);
+    if (ER_OK != status) {
+        QCC_LogError(status,
+                     ("%s: Failed to retrieve XmlElement from rules XML:\n%s",
+                      __FUNCTION__, rulesXml));
 
-    if (ER_OK == status) {
-        status = GetValidator()->Validate(root);
+        return status;
     }
 
-    if (ER_OK == status) {
-        BuildRules(root, rules);
+    status = GetValidator()->Validate(root);
+    if (ER_OK != status) {
+        delete root;
+        return status;
     }
+
+    BuildRules(root, rules);
+    QCC_DbgPrintf(("%s: Conversion successful.", __FUNCTION__));
 
     delete root;
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules,
                                       const size_t rulesCount,
                                       string& rulesXml)
 {
+    QCC_DbgHLPrintf(("%s: Converting rule objects into XML.", __FUNCTION__));
     QCC_ASSERT(nullptr != rules);
 
     XmlElement* rulesXmlElement = nullptr;
     QStatus status = RulesToXml(rules,
                                 rulesCount,
                                 &rulesXmlElement);
-
-    if (ER_OK == status) {
-        rulesXml = rulesXmlElement->Generate();
+    if (ER_OK != status) {
+        delete rulesXmlElement;
+        return status;
     }
 
+    rulesXml = rulesXmlElement->Generate();
     delete rulesXmlElement;
+    QCC_DbgPrintf(("%s: Conversion successful:%s",
+                   __FUNCTION__, rulesXml.c_str()));
 
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlRulesConverter::RulesToXml(const PermissionPolicy::Rule* rules,
                                       const size_t rulesCount,
                                       XmlElement** rulesXml)
 {
+    QCC_DbgHLPrintf(("%s: Converting rule objects into XmlElement.", __FUNCTION__));
     QCC_ASSERT(nullptr != rulesXml);
     QCC_ASSERT(nullptr != rules);
 
     QStatus status = GetValidator()->ValidateRules(rules, rulesCount);
-
-    if (ER_OK == status) {
-        *rulesXml = new XmlElement(GetRootElementName());
-
-        BuildRulesContents(rules, rulesCount, *rulesXml);
+    if (ER_OK != status) {
+        return status;
     }
 
-    return status;
+    *rulesXml = new XmlElement(GetRootElementName());
+    BuildRulesContents(rules, rulesCount, *rulesXml);
+    QCC_DbgPrintf(("%s: Conversion successful:%s",
+                   __FUNCTION__, (*rulesXml)->Generate().c_str()));
+
+    return ER_OK;
 }
 
 void XmlRulesConverter::BuildRules(const XmlElement* root, vector<PermissionPolicy::Rule>& rules)
 {
+    QCC_DbgPrintf(("%s: Building rules.", __FUNCTION__));
+
     for (auto node : root->GetChildren()) {
         AddRules(node, rules);
     }
@@ -179,6 +204,8 @@ void XmlRulesConverter::BuildRules(const XmlElement* root, vector<PermissionPoli
 
 void XmlRulesConverter::AddRules(const XmlElement* node, vector<PermissionPolicy::Rule>& rules)
 {
+    QCC_DbgPrintf(("%s: Adding rules for each interface.", __FUNCTION__));
+
     string objectPath;
     vector<XmlElement*> objectAnnotations;
     vector<XmlElement*> interfaces;
@@ -196,6 +223,9 @@ void XmlRulesConverter::AddRule(const XmlElement* singleInterface,
                                 const vector<XmlElement*>& objectAnnotations,
                                 vector<PermissionPolicy::Rule>& rules)
 {
+    QCC_DbgPrintf(("%s: Adding a single rule for object path: %s.",
+                   __FUNCTION__, objectPath.c_str()));
+
     PermissionPolicy::Rule rule;
     BuildRule(singleInterface, objectPath, objectAnnotations, rule);
     rules.push_back(rule);
@@ -222,11 +252,18 @@ void XmlRulesConverter::SetInterfaceName(const XmlElement* singleInterface, Perm
 {
     string interfaceName;
     XmlRulesValidator::ExtractAttributeOrWildcard(singleInterface, NAME_XML_ATTRIBUTE, &interfaceName);
+
+    QCC_DbgPrintf(("%s: Setting interface name: %s.",
+                   __FUNCTION__, interfaceName.c_str()));
+
     rule.SetInterfaceName(interfaceName.c_str());
 }
 
 void XmlRulesConverter::AddMembers(const vector<XmlElement*>& xmlMembers, PermissionPolicy::Rule& rule)
 {
+    QCC_DbgPrintf(("%s: Adding rule members.",
+                   __FUNCTION__));
+
     vector<PermissionPolicy::Rule::Member> members;
 
     for (auto xmlMember : xmlMembers) {
@@ -253,6 +290,9 @@ void XmlRulesConverter::UpdateRuleSecurityLevel(const map<string, string>& annot
 {
     auto nameToValuePair = annotationsMap.find(SECURITY_LEVEL_ANNOTATION_NAME);
     if (nameToValuePair != annotationsMap.end()) {
+        QCC_DbgPrintf(("%s: Setting rule's security level to \"%s\".",
+                       __FUNCTION__, nameToValuePair->second.c_str()));
+
         rule.SetRecommendedSecurityLevel(XmlManifestTemplateValidator::s_securityLevelMap->at(nameToValuePair->second));
     }
 }
@@ -275,12 +315,20 @@ void XmlRulesConverter::SetMemberName(const XmlElement* xmlMember, PermissionPol
 {
     string name;
     XmlRulesValidator::ExtractAttributeOrWildcard(xmlMember, NAME_XML_ATTRIBUTE, &name);
+
+    QCC_DbgPrintf(("%s: Setting member's name to \"%s\".",
+                   __FUNCTION__, name.c_str()));
+
     member.SetMemberName(name.c_str());
 }
 
 void XmlRulesConverter::SetMemberType(const XmlElement* xmlMember, PermissionPolicy::Rule::Member& member)
 {
     AJ_PCSTR type = xmlMember->GetName().c_str();
+
+    QCC_DbgPrintf(("%s: Setting member's type to \"%s\".",
+                   __FUNCTION__, type));
+
     member.SetMemberType(XmlRulesValidator::s_memberTypeMap->at(type));
 }
 
@@ -288,6 +336,10 @@ void XmlRulesConverter::SetMemberMask(const XmlElement* xmlMember, PermissionPol
 {
     uint8_t mask = 0;
     BuildActionMask(xmlMember, &mask);
+
+    QCC_DbgPrintf(("%s: Setting member's mask to %hhu.",
+                   __FUNCTION__, mask));
+
     member.SetActionMask(mask);
 }
 
@@ -311,6 +363,8 @@ void XmlRulesConverter::BuildRulesContents(const PermissionPolicy::Rule* rules, 
 
 void XmlRulesConverter::BuildXmlNode(const vector<PermissionPolicy::Rule>& rules, XmlElement* rulesElement)
 {
+    QCC_DbgPrintf(("%s: Building XML \"" NODE_XML_ELEMENT "\" element.", __FUNCTION__));
+
     XmlElement* nodeElement = nullptr;
     CreateChildWithNameAttribute(rulesElement, NODE_XML_ELEMENT, rules[0].GetObjPath().c_str(), &nodeElement);
 
@@ -321,6 +375,8 @@ void XmlRulesConverter::BuildXmlNode(const vector<PermissionPolicy::Rule>& rules
 
 void XmlRulesConverter::BuildXmlInterface(const PermissionPolicy::Rule& rule, XmlElement* nodeElement)
 {
+    QCC_DbgPrintf(("%s: Building XML \"" INTERFACE_XML_ELEMENT "\" element.", __FUNCTION__));
+
     XmlElement* interfaceElement = nullptr;
     CreateChildWithNameAttribute(nodeElement, INTERFACE_XML_ELEMENT, rule.GetInterfaceName().c_str(), &interfaceElement);
 
@@ -342,6 +398,10 @@ void XmlRulesConverter::BuildXmlMember(const PermissionPolicy::Rule::Member& mem
 {
     XmlElement* memberElement = nullptr;
     string xmlType = s_inverseMemberTypeMap->at(member.GetMemberType());
+
+    QCC_DbgPrintf(("%s: Building XML \"%s\" element.",
+                   __FUNCTION__, xmlType.c_str()));
+
     CreateChildWithNameAttribute(interfaceElement, xmlType.c_str(), member.GetMemberName().c_str(), &memberElement);
 
     BuilXmlAnnotations(member.GetActionMask(), memberElement);
@@ -373,6 +433,9 @@ void XmlRulesConverter::CreateChildWithNameAttribute(XmlElement* parent,
 
 void XmlRulesConverter::AddChildAnnotation(XmlElement* parent, AJ_PCSTR annotationName, AJ_PCSTR annotationValue)
 {
+    QCC_DbgPrintf(("%s: Adding an \"" ANNOTATION_XML_ELEMENT "\" element with name=\"%s\" and value=\"%s\".",
+                   __FUNCTION__, annotationName, annotationValue));
+
     XmlElement* annotation = nullptr;
     CreateChildWithNameAttribute(parent, ANNOTATION_XML_ELEMENT, annotationName, &annotation);
     annotation->AddAttribute(VALUE_XML_ATTRIBUTE, annotationValue);

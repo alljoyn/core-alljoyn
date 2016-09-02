@@ -26,6 +26,8 @@
 #include "XmlPoliciesConverter.h"
 #include "XmlRulesConverter.h"
 
+#define QCC_MODULE "POLICIES_CONVERTER"
+
 using namespace qcc;
 using namespace std;
 
@@ -35,6 +37,8 @@ map<PermissionPolicy::Peer::PeerType, string>* XmlPoliciesConverter::s_inversePe
 
 void XmlPoliciesConverter::Init()
 {
+    QCC_DbgPrintf(("%s: Performing converter init.", __FUNCTION__));
+
     QCC_ASSERT(nullptr == s_inversePeerTypeMap);
 
     s_inversePeerTypeMap = new map<PermissionPolicy::Peer::PeerType, string>();
@@ -48,6 +52,8 @@ void XmlPoliciesConverter::Init()
 
 void XmlPoliciesConverter::Shutdown()
 {
+    QCC_DbgPrintf(("%s: Performing converter cleanup.", __FUNCTION__));
+
     delete s_inversePeerTypeMap;
     s_inversePeerTypeMap = nullptr;
 }

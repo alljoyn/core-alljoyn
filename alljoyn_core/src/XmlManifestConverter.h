@@ -45,7 +45,7 @@ class XmlManifestConverter {
      * @param[out]   manifest      Reference to the new manifest.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_XML_MALFORMED if the XML does not follow the manifest XML schema.
+     *           Other if the XML does not follow the manifest XML schema.
      */
     static QStatus XmlToManifest(AJ_PCSTR manifestXml, Manifest& manifest);
 
@@ -56,7 +56,7 @@ class XmlManifestConverter {
      * @param[out]   manifestXml   Manifest in XML format.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_FAIL if the manifest contains incorrect data.
+     *           Other if the manifest contains incorrect data.
      */
     static QStatus ManifestToXml(const Manifest& manifest, std::string& manifestXml);
 
@@ -68,7 +68,7 @@ class XmlManifestConverter {
      * @param[out]   manifests      Vector to receive converted manifests. On failure, this will be empty.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_FAIL if one of the XMLs contains incorrect data.
+     *           Other if one of the XMLs contains incorrect data.
      */
     static QStatus XmlArrayToManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, std::vector<Manifest>& manifests);
 
@@ -80,7 +80,7 @@ class XmlManifestConverter {
      * @param[out]   manifestsXmls  Vector to receive XML strings. On failure, this will be empty.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_FAIL if one of the XMLs contains incorrect data.
+     *           Other if one of the XMLs contains incorrect data.
      */
     static QStatus ManifestsToXmlArray(const Manifest* manifests, size_t manifestsCount, std::vector<std::string>& manifestsXmls);
 
