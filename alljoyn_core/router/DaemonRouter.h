@@ -407,6 +407,15 @@ class DaemonRouter : public Router {
      */
     bool IsSessionDeliverable(SessionId id, BusEndpoint& src, BusEndpoint& dest);
 
+    /**
+     * Helper function to extract skipped endpoints' names from a collection of all endpoints.
+     *
+     * @param[in]   allEndpoints            All analyzed endpoints.
+     * @param[in]   destinationEndpoints    Endpoints, which should receive a message.
+     * @param[out]  skippedEndpoints        Skipped endpoints' extracted names.
+     */
+    void ExtractSkippedEndpoints(const std::vector<BusEndpoint>& allEndpoints, const std::set<BusEndpoint>& destinationEndpoints, std::set<qcc::String>& skippedEndpoints);
+
 
 #ifdef ENABLE_OLD_PUSHMESSAGE_COMPATIBILITY
     /**

@@ -406,8 +406,8 @@ void SessionlessObj::RemoveRuleWork::Run()
     slObj.router.UnlockNameTable();
 }
 
-SessionlessObj::PushMessageWork::PushMessageWork(SessionlessObj& slObj, Message& msg)
-    : Work(slObj), msg(msg)
+SessionlessObj::PushMessageWork::PushMessageWork(SessionlessObj& slObj, Message& msg, const set<String>& skippedEndpoints)
+    : Work(slObj), m_msg(msg), m_skippedEndpoints(skippedEndpoints)
 {
 }
 
@@ -443,11 +443,11 @@ void SessionlessObj::PushMessageWork::Run()
     /* Match the message against any existing implicit rules */
     uint32_t fromRulesId = slObj.nextRulesId - (numeric_limits<uint32_t>::max() >> 1);
     uint32_t toRulesId = slObj.nextRulesId;
-    SessionlessMessage slm(msg);
-    slObj.SendMatchingThroughEndpoint(0, slm, fromRulesId, toRulesId);
+    SessionlessMessage slm(m_msg);
+    slObj.SendMatchingThroughEndpoint(0, slm, fromRulesId, toRulesId, m_skippedEndpoints);
 
     /* Put the message in the local cache */
-    String key = MakeSessionlessMessageKey(msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath());
+    String key = MakeSessionlessMessageKey(m_msg->GetSender(), m_msg->GetInterface(), m_msg->GetMemberName(), m_msg->GetObjectPath());
     slObj.advanceChangeId = true;
     slm->changeId = slObj.curChangeId;
     LocalCache::iterator it = slObj.localCache.find(key);
@@ -461,7 +461,7 @@ void SessionlessObj::PushMessageWork::Run()
     slObj.router.UnlockNameTable();
 }
 
-QStatus SessionlessObj::PushMessage(Message& msg)
+QStatus SessionlessObj::PushMessage(Message& msg, const set<String>& skippedEndpoints)
 {
     QCC_DbgPrintf(("PushMessage(msg={sender='%s',interface='%s',member='%s',path='%s'})",
                    msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath()));
@@ -471,11 +471,11 @@ QStatus SessionlessObj::PushMessage(Message& msg)
         return ER_FAIL;
     }
 
-    ScheduleWork(new PushMessageWork(*this, msg));
+    ScheduleWork(new PushMessageWork(*this, msg, skippedEndpoints));
     return ER_OK;
 }
 
-void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
+void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg, const set<String>& skippedEndpoints)
 {
     QCC_DbgPrintf(("RouteSessionlessMessage(sid=%u,msg={sender='%s',interface='%s',member='%s',path='%s'})",
                    sid, msg->GetSender(), msg->GetInterface(), msg->GetMemberName(), msg->GetObjectPath()));
@@ -502,86 +502,129 @@ void SessionlessObj::RouteSessionlessMessage(SessionId sid, Message& msg)
     }
 
     SessionlessMessage slm(msg);
-    SendMatchingThroughEndpoint(sid, slm, cache.fromRulesId, cache.toRulesId);
+    SendMatchingThroughEndpoint(sid, slm, cache.fromRulesId, cache.toRulesId, skippedEndpoints);
 
     lock.Unlock();
     router.UnlockNameTable();
     return;
 }
 
+bool SessionlessObj::DestinationEndpointMayReceive(BusEndpoint& endpoint, const Message& message)
+{
+    if (endpoint->IsValid()) {
+        if (endpoint->AllowRemoteMessages()) {
+            return true;
+        } else {
+            /**
+             * Destination endpoint doesn't allow remote messages, so check
+             * if this is a local message (i.e. from a leaf node connected to
+             * this router).
+             */
+            BusEndpoint srcEp = router.FindEndpoint(message->GetRcvEndpointName());
+            bool srcEpTypeIsLeaf = (srcEp->GetEndpointType() == ENDPOINT_TYPE_NULL || srcEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE);
+            return srcEpTypeIsLeaf;
+        }
+    }
+
+    return false;
+}
+
 void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid, SessionlessMessage slm, uint32_t fromRulesId, uint32_t toRulesId)
+{
+    RuleIterator rit = rules.begin();
+
+    while (rit != rules.end()) {
+        String destinationEndpointName = rit->first;
+
+        SendMatchingThroughEndpoint(sid, slm, fromRulesId, toRulesId, destinationEndpointName);
+        rit = rules.upper_bound(destinationEndpointName);
+    }
+}
+
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid,
+                                                 SessionlessMessage slm,
+                                                 uint32_t fromRulesId,
+                                                 uint32_t toRulesId,
+                                                 const set<String>& skippedEndpoints)
+{
+    RuleIterator rit = rules.begin();
+
+    while (rit != rules.end()) {
+        String destinationEndpointName = rit->first;
+
+        if (skippedEndpoints.find(destinationEndpointName) == skippedEndpoints.end()) {
+            SendMatchingThroughEndpoint(sid, slm, fromRulesId, toRulesId, destinationEndpointName);
+        }
+        rit = rules.upper_bound(destinationEndpointName);
+    }
+}
+
+void SessionlessObj::SendMatchingThroughEndpoint(SessionId sid,
+                                                 SessionlessMessage slm,
+                                                 uint32_t fromRulesId,
+                                                 uint32_t toRulesId,
+                                                 const String& destinationEndpointName)
 {
     Message& msg = slm->msg;
     bool isAnnounce = (0 == strcmp(msg->GetInterface(), "org.alljoyn.About")) && (0 == strcmp(msg->GetMemberName(), "Announce"));
     uint32_t rulesRangeLen = toRulesId - fromRulesId;
-    RuleIterator rit = rules.begin();
-    while (rit != rules.end()) {
-        bool isExplicitMatch = false;
-        String dstEpName = rit->first;
-        BusEndpoint dstEp = router.FindEndpoint(dstEpName);
-        bool dstEpCanReceive = false;
-        if (dstEp->IsValid()) {
-            if (dstEp->AllowRemoteMessages()) {
-                dstEpCanReceive = true;
-            } else {
-                /*
-                 * Destination endpoint doesn't allow remote messages, so check
-                 * if this is a local message (i.e. from a leaf node connected to
-                 * this router).
-                 */
-                BusEndpoint srcEp = router.FindEndpoint(msg->GetRcvEndpointName());
-                bool srcEpTypeIsLeaf = (srcEp->GetEndpointType() == ENDPOINT_TYPE_NULL || srcEp->GetEndpointType() == ENDPOINT_TYPE_REMOTE);
-                dstEpCanReceive = srcEpTypeIsLeaf;
-            }
-        }
-        RuleIterator end = rules.upper_bound(dstEpName);
-        for (; rit != end; ++rit) {
-            if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id) && dstEpCanReceive) {
-                if (rit->second.IsMatch(msg, slm->cachedWhoImplements)) {
-                    isExplicitMatch = true;
-                    if (isAnnounce && !rit->second.implements.empty()) {
-                        /*
-                         * Add an implicit rule so that we will receive Announce
-                         * signals if the interface of interest is removed from the
-                         * Announce signal.
-                         */
-                        String ruleStr = String("sender='") + msg->GetSender() + "',interface='org.alljoyn.About',member='Announce'";
-                        Rule rule(ruleStr.c_str());
-                        AddImplicitRule(rule, rit);
-                    }
-                } else if (rit->second == legacyRule) {
-                    /*
-                     * Legacy clients will add the "type='error',sessionless='t'"
-                     * rule.  In that case the expected behavior is that incoming
-                     * sessionless signals will route through the daemon router's
-                     * rule table.
+    RuleIterator rit = rules.lower_bound(destinationEndpointName);
+    bool isExplicitMatch = false;
+    String dstEpName = rit->first;
+    BusEndpoint dstEp = router.FindEndpoint(dstEpName);
+
+    if (!DestinationEndpointMayReceive(dstEp, msg)) {
+        return;
+    }
+
+    RuleIterator end = rules.upper_bound(dstEpName);
+    for (; rit != end; ++rit) {
+        if (IN_WINDOW(uint32_t, fromRulesId, rulesRangeLen, rit->second.id)) {
+            if (rit->second.IsMatch(msg, slm->cachedWhoImplements)) {
+                isExplicitMatch = true;
+                if (isAnnounce && !rit->second.implements.empty()) {
+                    /**
+                     * Add an implicit rule so that we will receive Announce
+                     * signals if the interface of interest is removed from the
+                     * Announce signal.
                      */
-                    router.GetRuleTable().Lock();
-                    for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(dstEp);
-                         !isExplicitMatch && (drit != router.GetRuleTable().End()) && (drit->first == dstEp);
-                         ++drit) {
-                        isExplicitMatch = drit->second.IsMatch(msg, slm->cachedWhoImplements);
-                    }
-                    router.GetRuleTable().Unlock();
+                    String ruleStr = String("sender='") + msg->GetSender() + "',interface='org.alljoyn.About',member='Announce'";
+                    Rule rule(ruleStr.c_str());
+                    AddImplicitRule(rule, rit);
                 }
+            } else if (rit->second == legacyRule) {
+                /**
+                 * Legacy clients will add the "type='error',sessionless='t'"
+                 * rule.  In that case the expected behavior is that incoming
+                 * sessionless signals will route through the daemon router's
+                 * rule table.
+                 */
+                router.GetRuleTable().Lock();
+                for (ajn::RuleIterator drit = router.GetRuleTable().FindRulesForEndpoint(dstEp);
+                     !isExplicitMatch && (drit != router.GetRuleTable().End()) && (drit->first == dstEp);
+                     ++drit) {
+                    isExplicitMatch = drit->second.IsMatch(msg, slm->cachedWhoImplements);
+                }
+                router.GetRuleTable().Unlock();
             }
         }
+    }
 
-        bool isImplicitMatch = false;
-        if (isAnnounce && !isExplicitMatch && dstEpCanReceive) {
-            /* The message did not match any rules for this endpoint.
-             * Check if it matches (only) an implicit rule. */
-            isImplicitMatch = IsOnlyImplicitMatch(dstEpName, slm);
-        }
+    bool isImplicitMatch = false;
+    if (isAnnounce && !isExplicitMatch) {
+        /**
+         * The message did not match any rules for this endpoint.
+         * Check if it matches (only) an implicit rule.
+         */
+        isImplicitMatch = IsOnlyImplicitMatch(dstEpName, slm);
+    }
 
-        if (isExplicitMatch || isImplicitMatch) {
-            lock.Unlock();
-            router.UnlockNameTable();
-            SendThroughEndpoint(msg, dstEp, sid);
-            router.LockNameTable();
-            lock.Lock();
-            rit = rules.upper_bound(dstEpName);
-        }
+    if (isExplicitMatch || isImplicitMatch) {
+        lock.Unlock();
+        router.UnlockNameTable();
+        SendThroughEndpoint(msg, dstEp, sid);
+        router.LockNameTable();
+        lock.Lock();
     }
 }
 
