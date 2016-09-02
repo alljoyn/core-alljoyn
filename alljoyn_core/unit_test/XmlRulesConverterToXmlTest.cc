@@ -277,7 +277,7 @@ class XmlRulesConverterToXmlSeparateInterfaceMemberNamesTest : public XmlRulesCo
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForNonPositiveRulesCount)
 {
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, 0, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_RULES_COUNT, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, 0, m_retrievedRulesXml));
 }
 
 #ifdef REGEX_SUPPORTED
@@ -286,21 +286,21 @@ TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMissingNod
 {
     m_validRules[0].SetObjPath("");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_OBJECT_PATH, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMissingInterfaceName)
 {
     m_validRules[0].SetInterfaceName("");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_INTERFACE_NAME, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMissingMemberName)
 {
     PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], METHOD_MEMBER_INDEX, "");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_MEMBER_NAME, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 #endif /* REGEX_SUPPORTED */
@@ -309,7 +309,7 @@ TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForRuleWithZe
 {
     m_validRules[0].SetMembers(0, nullptr);
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INTERFACE_MEMBERS_MISSING, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameInterfacesInSeparateSameNameNodes)
@@ -317,56 +317,56 @@ TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameIn
     m_validRules[2].SetObjPath("/Node0");
     m_validRules[2].SetInterfaceName("org.interface0");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INTERFACE_NAME_NOT_UNIQUE, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameInterfacesInSameNode)
 {
     m_validRules[1].SetInterfaceName("org.interface0");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INTERFACE_NAME_NOT_UNIQUE, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameMethods)
 {
     PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], METHOD_MEMBER_INDEX, "Method1");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_MEMBER_NAME_NOT_UNIQUE, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameProperties)
 {
     PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], PROPERTY_MEMBER_INDEX, "Property1");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_MEMBER_NAME_NOT_UNIQUE, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameSignals)
 {
     PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], SIGNAL_MEMBER_INDEX, "Signal1");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_MEMBER_NAME_NOT_UNIQUE, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSameNameAnyMemberType)
 {
     PolicyOverwriteUtils::ChangeMemberName(m_validRules[0], ANY_MEMBER_INDEX, "Any1");
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_MEMBER_NAME_NOT_UNIQUE, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForMethodWithObserve)
 {
     PolicyOverwriteUtils::ChangeMemberActionMask(m_validRules[0], METHOD_MEMBER_INDEX, PermissionPolicy::Rule::Member::ACTION_OBSERVE);
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_MEMBER_ACTION, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedFailureTest, shouldReturnErrorForSignalWithModify)
 {
     PolicyOverwriteUtils::ChangeMemberActionMask(m_validRules[0], SIGNAL_MEMBER_INDEX, PermissionPolicy::Rule::Member::ACTION_MODIFY);
 
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_MEMBER_ACTION, XmlRulesConverter::GetInstance()->RulesToXml(m_validRules, m_rulesCount, m_retrievedRulesXml));
 }
 
 TEST_F(XmlRulesConverterToXmlDetailedPassTest, shouldGetSameRulesCountAfterTwoConversions)
@@ -490,7 +490,7 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlInvalidObjectPaths,
                                           "/Node**"));
 TEST_P(XmlRulesConverterToXmlInvalidObjectPathsTest, shouldReturnErrorForInvalidObjectPath)
 {
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_rulesWithFlaw, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_OBJECT_PATH, XmlRulesConverter::GetInstance()->RulesToXml(m_rulesWithFlaw, m_rulesCount, m_retrievedRulesXml));
 }
 
 
@@ -506,7 +506,7 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlInvalidNames,
                                           "org.interface.**"));
 TEST_P(XmlRulesConverterToXmlInvalidInterfaceNamesTest, shouldReturnErrorForInvalidInterfaceName)
 {
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_rulesWithFlaw, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_INTERFACE_NAME, XmlRulesConverter::GetInstance()->RulesToXml(m_rulesWithFlaw, m_rulesCount, m_retrievedRulesXml));
 }
 
 INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlInvalidNames,
@@ -517,7 +517,7 @@ INSTANTIATE_TEST_CASE_P(XmlRulesConverterToXmlInvalidNames,
                                           "Meth*d"));
 TEST_P(XmlRulesConverterToXmlInvalidMemberNamesTest, shouldReturnErrorForInvalidMemberName)
 {
-    EXPECT_EQ(ER_FAIL, XmlRulesConverter::GetInstance()->RulesToXml(m_rulesWithFlaw, m_rulesCount, m_retrievedRulesXml));
+    EXPECT_EQ(ER_XML_INVALID_MEMBER_NAME, XmlRulesConverter::GetInstance()->RulesToXml(m_rulesWithFlaw, m_rulesCount, m_retrievedRulesXml));
 }
 
 #endif /* REGEX_SUPPORTED */

@@ -28,6 +28,8 @@
 #include "XmlRulesConverter.h"
 #include "XmlRulesValidator.h"
 
+#define QCC_MODULE "XML_CONVERTER"
+
 using namespace qcc;
 using namespace std;
 
@@ -38,34 +40,47 @@ QStatus XmlManifestConverter::XmlToManifest(AJ_PCSTR manifestXml, Manifest& mani
     QCC_ASSERT(nullptr != manifestXml);
     QCC_ASSERT(nullptr != &manifest);
 
+    QCC_DbgHLPrintf(("%s: Converting signed manifest XML into a Manifest object: %s",
+                     __FUNCTION__, manifestXml));
+
     XmlElement* root = nullptr;
     QStatus status = XmlElement::GetRoot(manifestXml, &root);
-
-    if (ER_OK == status) {
-        status = XmlManifestValidator::Validate(root);
+    if (ER_OK != status) {
+        return status;
     }
 
-    if (ER_OK == status) {
-        BuildManifest(root, manifest);
+    status = XmlManifestValidator::Validate(root);
+    if (ER_OK != status) {
+        delete root;
+        return status;
     }
+
+    BuildManifest(root, manifest);
 
     delete root;
-    return status;
+    return ER_OK;
 }
 
 QStatus XmlManifestConverter::ManifestToXml(const Manifest& manifest, string& manifestXml)
 {
-    QStatus status = XmlRulesValidator::GetInstance()->ValidateRules(manifest->GetRules().data(), manifest->GetRules().size());
+    QCC_DbgHLPrintf(("%s: Converting a Manifest object into a signed manifest XML: %s",
+                     __FUNCTION__, manifest->ToString().c_str()));
 
-    if (ER_OK == status) {
-        BuildManifest(manifest, manifestXml);
+    QStatus status = XmlRulesValidator::GetInstance()->ValidateRules(manifest->GetRules().data(), manifest->GetRules().size());
+    if (ER_OK != status) {
+        return status;
     }
 
-    return status;
+    BuildManifest(manifest, manifestXml);
+
+    return ER_OK;
 }
 
 QStatus XmlManifestConverter::XmlArrayToManifests(AJ_PCSTR* manifestsXmls, size_t manifestsCount, vector<Manifest>& manifests)
 {
+    QCC_DbgHLPrintf(("%s: Converting an array of %u signed manifest XMLs into Manifest objects",
+                     __FUNCTION__, manifestsCount));
+
     manifests.resize(manifestsCount);
     for (size_t i = 0; i < manifestsCount; i++) {
         QStatus status = XmlToManifest(manifestsXmls[i], manifests[i]);
@@ -80,6 +95,9 @@ QStatus XmlManifestConverter::XmlArrayToManifests(AJ_PCSTR* manifestsXmls, size_
 
 QStatus XmlManifestConverter::ManifestsToXmlArray(const Manifest* manifests, size_t manifestsCount, vector<string>& manifestsXmls)
 {
+    QCC_DbgHLPrintf(("%s: Converting an array of %u Manifest objects into signed manifest XMLs.",
+                     __FUNCTION__, manifestsCount));
+
     manifestsXmls.resize(manifestsCount);
     for (size_t i = 0; i < manifestsCount; i++) {
         QStatus status = ManifestToXml(manifests[i], manifestsXmls[i]);
@@ -101,6 +119,7 @@ void XmlManifestConverter::BuildManifest(const XmlElement* root, Manifest& manif
 
 void XmlManifestConverter::SetRules(const XmlElement* rulesXml, Manifest& manifest)
 {
+    QCC_DbgTrace(("%s: Setting the manifest rules.", __FUNCTION__));
     vector<PermissionPolicy::Rule> rules;
 
     QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->XmlToRules(rulesXml->Generate().c_str(), rules));
@@ -110,6 +129,8 @@ void XmlManifestConverter::SetRules(const XmlElement* rulesXml, Manifest& manife
 
 void XmlManifestConverter::SetThumbprint(const XmlElement* thumbprintXml, Manifest& manifest)
 {
+    QCC_DbgTrace(("%s: Setting the manifest thumbprint.", __FUNCTION__));
+
     SetThumbprintOid(thumbprintXml, manifest);
     SetThumbprintValue(thumbprintXml, manifest);
 }
@@ -128,6 +149,8 @@ void XmlManifestConverter::SetThumbprintValue(const XmlElement* thumbprintXml, M
 
 void XmlManifestConverter::SetSignature(const XmlElement* signatureXml, Manifest& manifest)
 {
+    QCC_DbgTrace(("%s: Setting the manifest signature.", __FUNCTION__));
+
     SetSignatureOid(signatureXml, manifest);
     SetSignatureValue(signatureXml, manifest);
 }
@@ -164,11 +187,15 @@ void XmlManifestConverter::BuildXmlManifestContents(const Manifest& manifest, Xm
 
 void XmlManifestConverter::BuildVersion(const Manifest& manifest, XmlElement* manifestElement)
 {
+    QCC_DbgTrace(("%s: Setting the manifest XML version.", __FUNCTION__));
+
     manifestElement->CreateChild(MANIFEST_VERSION_XML_ELEMENT)->AddContent(U32ToString(manifest->GetVersion()));
 }
 
 void XmlManifestConverter::BuildRules(const Manifest& manifest, XmlElement* manifestElement)
 {
+    QCC_DbgTrace(("%s: Setting the manifest XML rules.", __FUNCTION__));
+
     XmlElement* rulesXml = nullptr;
     QCC_VERIFY(ER_OK == XmlRulesConverter::GetInstance()->RulesToXml(manifest->GetRules().data(),
                                                                      manifest->GetRules().size(),
@@ -178,6 +205,8 @@ void XmlManifestConverter::BuildRules(const Manifest& manifest, XmlElement* mani
 
 void XmlManifestConverter::BuildThumbprint(const Manifest& manifest, XmlElement* manifestElement)
 {
+    QCC_DbgTrace(("%s: Setting the manifest XML thumbprint.", __FUNCTION__));
+
     XmlElement* thumbprintElement = manifestElement->CreateChild(THUMBPRINT_XML_ELEMENT);
 
     BuildThumbprintContent(manifest, thumbprintElement);
@@ -191,6 +220,8 @@ void XmlManifestConverter::BuildThumbprintContent(const Manifest& manifest, XmlE
 
 void XmlManifestConverter::BuildSignature(const Manifest& manifest, XmlElement* manifestElement)
 {
+    QCC_DbgTrace(("%s: Setting the manifest XML signature.", __FUNCTION__));
+
     XmlElement* signatureElement = manifestElement->CreateChild(SIGNATURE_XML_ELEMENT);
 
     BuildSignatureContent(manifest, signatureElement);

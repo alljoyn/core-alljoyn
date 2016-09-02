@@ -95,12 +95,12 @@ class XmlValidator {
      * Validates the qcc::XmlElement's name attribute exists
      * and is equal to the expected value.
      *
-     * @param[in]    xmlElement  Xml element being verified.
+     * @param[in]    xmlElement  XML element being verified.
      * @param[in]    name        Expected name attribute value.
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
+     *            #ER_XML_INVALID_ATTRIBUTE_VALUE otherwise.
      */
     static QStatus ValidateNameAttributeValue(const qcc::XmlElement* xmlElement, AJ_PCSTR name);
 
@@ -110,13 +110,13 @@ class XmlValidator {
      * Validates the qcc::XmlElement's name attribute exists,
      * follows the correct pattern and is of correct size.
      *
-     * @param[in]    xmlElement      Xml element being verified.
+     * @param[in]    xmlElement      XML element being verified.
      * @param[in]    namePattern     Pattern the attribute must follow.
      * @param[in]    maxNameLength   Maximum lenght of the attribute.
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
+     *            #ER_XML_INVALID_ATTRIBUTE_VALUE otherwise.
      */
     static QStatus ValidateNameAttributeValue(const qcc::XmlElement* xmlElement, const std::regex& namePattern, size_t maxNameLength = SIZE_MAX);
 
@@ -138,50 +138,50 @@ class XmlValidator {
     /**
      * Validates the qcc::XmlElement's attribute is unique in the given set.
      *
-     * @param[in]    xmlElement      Xml element being verified.
+     * @param[in]    xmlElement      XML element being verified.
      * @param[in]    valuesSet       A set to validated against.
      * @param[in]    attributeName   The attribute, which uniqueness will be checked.
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
+     *            #ER_FAIL otherwise.
      */
     static QStatus ValidateAttributeValueUnique(const qcc::XmlElement* xmlElement, std::unordered_set<std::string>& valuesSet, AJ_PCSTR attributeName);
 
     /**
      * Validates if the qcc::XmlElement's name is equal to the expected name.
      *
-     * @param[in]    xmlElement  Xml element being verified.
+     * @param[in]    xmlElement  XML element being verified.
      * @param[in]    name        Expeceted element name.
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
+     *            #ER_XML_INVALID_ELEMENT_NAME otherwise.
      */
     static QStatus ValidateElementName(const qcc::XmlElement* xmlElement, AJ_PCSTR name);
 
     /**
      * Validates if the qcc::XmlElement contains at least one child.
      *
-     * @param[in]    xmlElement              Xml element being verified.
+     * @param[in]    xmlElement              XML element being verified.
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
+     *            #ER_XML_INVALID_ELEMENT_CHILDREN_COUNT otherwise.
      */
     static QStatus ValidateChildrenCountPositive(const qcc::XmlElement* xmlElement);
 
     /**
      * Validates if the qcc::XmlElement contains the correct number of children.
      *
-     * @param[in]    xmlElement              Xml element being verified.
+     * @param[in]    xmlElement              XML element being verified.
      * @param[in]    expectedChildrenCount   Expeceted number of children elements.
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED otherwise.
+     *            #ER_XML_INVALID_ELEMENT_CHILDREN_COUNT otherwise.
      */
-    static QStatus ValidateChildrenCountEqual(const qcc::XmlElement* xmlElement, uint8_t expectedChildrenCount);
+    static QStatus ValidateChildrenCountEqual(const qcc::XmlElement* xmlElement, size_t expectedChildrenCount);
 
     /**
      * Helper function to add a value to the set or detect duplicates.

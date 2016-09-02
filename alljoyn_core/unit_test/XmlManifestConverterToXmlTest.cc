@@ -43,7 +43,7 @@ class XmlManifestConverterToXmlDetailedTest : public testing::Test {
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldFailForManifestWithNoRules)
 {
     m_validManifest->SetRules(nullptr, 0);
-    EXPECT_EQ(ER_FAIL, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
+    EXPECT_EQ(ER_XML_INVALID_RULES_COUNT, XmlManifestConverter::ManifestToXml(m_validManifest, m_retrievedManifestXml));
 }
 
 TEST_F(XmlManifestConverterToXmlDetailedTest, shouldPassForValidManifest)
