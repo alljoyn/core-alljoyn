@@ -314,10 +314,10 @@ static AJ_PCSTR s_allTypeWithOther =
     "<acl>"
     "<peers>"
     "<peer>"
-    "<type>ALL</type>"
+    "<type>ANY_TRUSTED</type>"
     "</peer>"
     "<peer>"
-    "<type>ANY_TRUSTED</type>"
+    "<type>ALL</type>"
     "</peer>"
     "</peers>"
     BASIC_VALID_RULES
@@ -402,7 +402,6 @@ static AJ_PCSTR s_sameWithMembershipTwice =
     "<publicKey>"
     FIRST_VALID_PUBLIC_KEY
     "</publicKey>"
-    "<type>WITH_MEMBERSHIP</type>"
     "<sgID>" FIRST_VALID_GUID "</sgID>"
     "</peer>"
     "<peer>"
@@ -545,7 +544,18 @@ class XmlPoliciesConverterFromXmlBasicTest : public testing::TestWithParam<AJ_PC
     { }
 };
 
-class XmlPoliciesConverterFromXmlFailureTest : public XmlPoliciesConverterFromXmlBasicTest { };
+class XmlPoliciesConverterFromXmlFailureTest : public testing::TestWithParam<StatusParams> {
+  public:
+    PermissionPolicy m_policy;
+    AJ_PCSTR m_policyXml;
+    QStatus m_expectedStatus;
+
+    XmlPoliciesConverterFromXmlFailureTest() :
+        m_policyXml(GetParam().m_xml),
+        m_expectedStatus(GetParam().m_status)
+    {
+    }
+};
 
 class XmlPoliciesConverterFromXmlPassTest : public XmlPoliciesConverterFromXmlBasicTest { };
 
@@ -665,35 +675,35 @@ TEST_F(XmlPoliciesConverterFromXmlDetailedTest, shouldGetValidPeerForWithMembers
 
 INSTANTIATE_TEST_CASE_P(XmlPoliciesConverterInvalidRulesSet,
                         XmlPoliciesConverterFromXmlFailureTest,
-                        ::testing::Values(s_emptyPolicyElement,
-                                          s_emptyPolicyVersionElement,
-                                          s_emptySerialNumberElement,
-                                          s_emptyTypeElement,
-                                          s_missingAclsElement,
-                                          s_missingAclElement,
-                                          s_missingPeersElement,
-                                          s_missingPeerElement,
-                                          s_missingPolicyVersionElement,
-                                          s_missingSerialNumberElement,
-                                          s_missingTypeElement,
-                                          s_policyElementsIncorrectOrder,
-                                          s_aclElementsIncorrectOrder,
-                                          s_peerElementsIncorrectOrder,
-                                          s_invalidPublicKey,
-                                          s_invalidSgId,
-                                          s_policyVersionNotOne,
-                                          s_policyVersionNotNumeric,
-                                          s_serialNumberNegative,
-                                          s_serialNumberNotNumeric,
-                                          s_unknownPeerType,
-                                          s_allTypeWithOther,
-                                          s_anyTrustedTwice,
-                                          s_sameFromCaTwice,
-                                          s_sameWithPublicKeyTwice,
-                                          s_sameWithMembershipTwice));
+                        ::testing::Values(StatusParams(s_emptyPolicyElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_emptyPolicyVersionElement, ER_INVALID_POLICY_VERSION),
+                                          StatusParams(s_emptySerialNumberElement, ER_INVALID_POLICY_SERIAL_NUMBER),
+                                          StatusParams(s_emptyTypeElement, ER_INVALID_ACL_PEER_TYPE),
+                                          StatusParams(s_missingAclsElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingAclElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingPeersElement, ER_INVALID_XML_ELEMENT_NAME),
+                                          StatusParams(s_missingPeerElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingPolicyVersionElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingSerialNumberElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_missingTypeElement, ER_INVALID_XML_ELEMENT_CHILDREN_COUNT),
+                                          StatusParams(s_policyElementsIncorrectOrder, ER_INVALID_XML_ELEMENT_NAME),
+                                          StatusParams(s_aclElementsIncorrectOrder, ER_INVALID_XML_ELEMENT_NAME),
+                                          StatusParams(s_peerElementsIncorrectOrder, ER_INVALID_XML_ELEMENT_NAME),
+                                          StatusParams(s_invalidPublicKey, ER_INVALID_ACL_PEER_PUBLIC_KEY),
+                                          StatusParams(s_invalidSgId, ER_INVALID_GUID),
+                                          StatusParams(s_policyVersionNotOne, ER_INVALID_POLICY_VERSION),
+                                          StatusParams(s_policyVersionNotNumeric, ER_INVALID_POLICY_VERSION),
+                                          StatusParams(s_serialNumberNegative, ER_INVALID_POLICY_SERIAL_NUMBER),
+                                          StatusParams(s_serialNumberNotNumeric, ER_INVALID_POLICY_SERIAL_NUMBER),
+                                          StatusParams(s_unknownPeerType, ER_INVALID_ACL_PEER_TYPE),
+                                          StatusParams(s_allTypeWithOther, ER_ACL_ALL_TYPE_PEER_WITH_OTHERS),
+                                          StatusParams(s_anyTrustedTwice, ER_ACL_PEER_NOT_UNIQUE),
+                                          StatusParams(s_sameFromCaTwice, ER_ACL_PEER_NOT_UNIQUE),
+                                          StatusParams(s_sameWithPublicKeyTwice, ER_ACL_PEER_NOT_UNIQUE),
+                                          StatusParams(s_sameWithMembershipTwice, ER_ACL_PEER_NOT_UNIQUE)));
 TEST_P(XmlPoliciesConverterFromXmlFailureTest, shouldReturnErrorForInvalidRulesSet)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, XmlPoliciesConverter::FromXml(m_policyXml, m_policy));
+    EXPECT_EQ(m_expectedStatus, XmlPoliciesConverter::FromXml(m_policyXml, m_policy));
 }
 
 INSTANTIATE_TEST_CASE_P(XmlPoliciesConverterPass,

@@ -96,7 +96,7 @@ class XmlManifestTemplateValidator : public XmlRulesValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     virtual QStatus ValidateNodeAnnotations(const std::vector<qcc::XmlElement*>& annotations);
 
@@ -107,7 +107,7 @@ class XmlManifestTemplateValidator : public XmlRulesValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     virtual QStatus ValidateInterfaceAnnotations(const std::vector<qcc::XmlElement*>& annotations);
 
@@ -118,7 +118,7 @@ class XmlManifestTemplateValidator : public XmlRulesValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     virtual QStatus ValidateSecurityLevelAnnotation(const qcc::XmlElement* annotation);
 
@@ -129,7 +129,7 @@ class XmlManifestTemplateValidator : public XmlRulesValidator {
      *
      * @return
      *            #ER_OK if the input is correct.
-     *            #ER_XML_MALFORMED if the XML is not following the schema.
+     *            One of the #ER_XML_CONVERTER_ERROR group if the XML is not following the schema.
      */
     virtual QStatus ValidateSecurityLevelAnnotationValue(const qcc::XmlElement* annotation);
 };
