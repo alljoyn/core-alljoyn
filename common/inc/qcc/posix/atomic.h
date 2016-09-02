@@ -26,10 +26,6 @@
 
 #include <qcc/platform.h>
 
-#ifdef QCC_OS_ANDROID
-#include <sys/atomics.h>
-#endif
-
 #if defined(QCC_OS_DARWIN)
 #include <libkern/OSAtomic.h>
 #endif
@@ -47,12 +43,12 @@ namespace qcc {
 inline int32_t IncrementAndFetch(volatile int32_t* mem)
 {
     /*
-     * Androids built in __atomic_inc operation returns the previous value
+     * The __sync_fetch_and_add operation returns the previous value
      * stored in mem. This value has been changed in memory.  Since we expect
      * the value after the increment to be returned we add one to the value
-     * returned by __atomic_inc.
+     * returned by __sync_fetch_and_add.
      */
-    return __atomic_inc(mem) + 1;
+    return __sync_fetch_and_add(mem, 1) + 1;
 }
 
 /**
@@ -64,12 +60,12 @@ inline int32_t IncrementAndFetch(volatile int32_t* mem)
 inline int32_t DecrementAndFetch(volatile int32_t* mem)
 {
     /*
-     * Androids built in __atomic_dec operation returns the previous value
+     * The __sync_fetch_and_sub operation returns the previous value
      * stored in mem. This value has been changed in memory.  Since we expect
      * the value after the decrement to be returned we subtract one from the
-     * value returned by __atomic_dec.
+     * value returned by __sync_fetch_and_sub.
      */
-    return __atomic_dec(mem) - 1;
+    return __sync_fetch_and_sub(mem, 1) - 1;
 }
 
 /**
