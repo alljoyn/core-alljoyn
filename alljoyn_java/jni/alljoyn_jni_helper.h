@@ -19,12 +19,26 @@
 
 #include <jni.h>
 #include <stdlib.h>
+#include <alljoyn/MsgArg.h>
 
 extern jclass CLS_BusException;
 
 extern jclass CLS_ECCPublicKey;
 extern jclass CLS_ECCPrivateKey;
 extern jclass CLS_JAVA_UTIL_UUID;
+extern jclass CLS_ErrorReplyBusException;
+extern jclass CLS_AboutDataListener;
+
+/**
+ * Marshal an Object into a MsgArg.
+ *
+ * @param[in] signature the signature of the Object
+ * @param[in] jarg the Object
+ * @param[in] arg the MsgArg to marshal into
+ * @return the marshalled MsgArg or NULL if the marshalling failed.  This will
+ *         be the same as @param arg if marshalling succeeded.
+ */
+ajn::MsgArg* Marshal(const char* signature, jobject jarg, ajn::MsgArg* arg);
 
 /**
  * Get a valid JNIEnv pointer.
@@ -165,6 +179,23 @@ class JString {
   private:
     JString(const JString& other);
     JString& operator =(const JString& other);
+};
+
+/**
+ * A scoped JNIEnv pointer to ensure proper release.
+ */
+class JScopedEnv {
+  public:
+    JScopedEnv();
+    ~JScopedEnv();
+    JNIEnv* operator->() { return env; }
+    operator JNIEnv*() { return env; }
+  private:
+    JScopedEnv(const JScopedEnv& other);
+    JScopedEnv& operator =(const JScopedEnv& other);
+
+    JNIEnv* env;
+    jint detached;
 };
 
 #endif
