@@ -41,7 +41,7 @@ if platform.system() == 'Linux':
         default_target_cpu = 'x86_64'
     else:
         default_target_cpu = 'x86'
-    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'openwrt')
+    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'arm64', 'openwrt')
 
     default_msvc_version = None
 
@@ -56,7 +56,7 @@ elif platform.system() == 'Windows':
         default_target_cpu = 'x86_64'
     else:
         default_target_cpu = 'x86'
-    allowed_target_cpus = ('x86', 'x86_64', 'arm')
+    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'arm64')
 
     default_msvc_version = '12.0'
 

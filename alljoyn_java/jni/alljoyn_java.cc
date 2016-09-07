@@ -9984,6 +9984,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_addPropertyA
     return JStatus(status);
 }
 
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionLanguage(
     JNIEnv*env, jobject thiz, jstring language)
 {
@@ -10024,6 +10025,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionL
 #endif
 }
 
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
     JNIEnv*env, jobject thiz, jstring description)
 {
@@ -10064,6 +10066,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescription(
 #endif
 }
 
+// DEPRECATED
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionTranslator(
     JNIEnv*env, jobject thiz, jobject jbus, jobject jtranslator)
 {
@@ -10148,6 +10151,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionT
 #endif
 }
 
+// DEPRECATED
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescription(JNIEnv*env, jobject thiz,
                                                                                          jstring jmember, jstring jdesc, jboolean isSessionless)
 {
@@ -10181,8 +10185,9 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
 #pragma warning(disable: 4996)
 #endif
     /*
-     * This call to a deprecated C++ function is required to support the
-     * deprecated Java API.  This should be removed for the 17.10 release.
+     * We need to call a deprecated C++ accessor from this Java accessor, which is also to be deprecated
+     * (see ASACORE-3117, ASACORE-3118).
+     * This call and the entire function will be removed when the deprecation phase is over.
      */
     QStatus status = intf->SetMemberDescription(member.c_str(), desc.c_str(), isSessionless);
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -10194,6 +10199,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDes
     return JStatus(status);
 }
 
+// DEPRECATED
 JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyDescription(
     JNIEnv*env, jobject thiz, jstring jpropName, jstring jdesc)
 {
@@ -10238,6 +10244,420 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyD
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
+    return JStatus(status);
+}
+
+/*
+ * Return the set of all description languages used in descriptions on the interface,
+ * and on the interface's members, properties, and arguments.
+ */
+JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_InterfaceDescription_getDescriptionLanguages(
+    JNIEnv* env, jobject thiz)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_getDescriptionLanguages()"));
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionLanguages(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionLanguages(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    // Make the AllJoyn call
+    std::set<qcc::String> result = intf->GetDescriptionLanguages();
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionLanguages(): Exception"));
+        return NULL;
+    }
+
+    JLocalRef<jobjectArray> jlangArray = env->NewObjectArray(result.size(), CLS_String, NULL);
+    if (!jlangArray) {
+        return env->NewObjectArray(0, CLS_String, NULL);
+    }
+
+    // Copy the retrieved std::set into a jobjectArray to be returned from this function
+    uint16_t count = 0;
+    std::set<qcc::String>::iterator it;
+    for (it = result.begin(); it != result.end(); ++it) {
+        qcc::String element = *it;
+
+        JLocalRef<jstring> jlang = env->NewStringUTF(element.c_str());
+        if (!jlang) {
+            return env->NewObjectArray(0, CLS_String, NULL);
+        }
+
+        env->SetObjectArrayElement(jlangArray, count++, jlang);
+        if (env->ExceptionCheck()) {
+            QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionLanguages(): Exception"));
+            return NULL;
+        }
+    }
+
+    return jlangArray.move();
+}
+
+/*
+ * Return the interface description for the given languageTag.
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_InterfaceDescription_getDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_getDescriptionForLanguage()"));
+    if (jlanguageTag == NULL) {
+        return NULL;
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    // Make the AllJoyn call to retrieve the description
+    qcc::String description;
+    bool found = intf->GetDescriptionForLanguage(description, languageTag.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getDescriptionForLanguage(): Exception"));
+        return NULL;
+    } else if (!found) {
+        return NULL;
+    }
+
+    return env->NewStringUTF(description.c_str());
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jdescription, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_setDescriptionForLanguage()"));
+    if (jdescription == NULL || jlanguageTag == NULL) {
+        return JStatus(ER_FAIL);
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString description(jdescription);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    QStatus status = intf->SetDescriptionForLanguage(description.c_str(), languageTag.c_str());
+    return JStatus(status);
+}
+
+/*
+ * Return the description for the given interface member and languageTag,
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_InterfaceDescription_getMemberDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jmember, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_getMemberDescriptionForLanguage()"));
+    if (jmember == NULL || jlanguageTag == NULL) {
+        return NULL;
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getMemberDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString member(jmember);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    // Make the AllJoyn call to retrieve the description
+    qcc::String description;
+    bool found = intf->GetMemberDescriptionForLanguage(member.c_str(), description, languageTag.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    } else if (!found) {
+        return NULL;
+    }
+
+    return env->NewStringUTF(description.c_str());
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setMemberDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jmember, jstring jdesc, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_setMemberDescriptionForLanguage()"));
+    if (jmember == NULL || jdesc == NULL || jlanguageTag == NULL) {
+        return JStatus(ER_FAIL);
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString member(jmember);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString desc(jdesc);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setMemberDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    QStatus status = intf->SetMemberDescriptionForLanguage(member.c_str(), desc.c_str(), languageTag.c_str());
+    return JStatus(status);
+}
+
+/*
+ * Return the description for the given interface property and languageTag.
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_InterfaceDescription_getPropertyDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jpropName, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_getPropertyDescriptionForLanguage()"));
+    if (jpropName == NULL || jlanguageTag == NULL) {
+        return NULL;
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getPropertyDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString propName(jpropName);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    // Make the AllJoyn call to retrieve the description
+    qcc::String description;
+    bool found = intf->GetPropertyDescriptionForLanguage(propName.c_str(), description, languageTag.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    } else if (!found) {
+        return NULL;
+    }
+
+    return env->NewStringUTF(description.c_str());
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setPropertyDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jpropName, jstring jdesc, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_setPropertyDescriptionForLanguage()"));
+    if (jpropName == NULL || jdesc == NULL || jlanguageTag == NULL) {
+        return JStatus(ER_FAIL);
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString propName(jpropName);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString desc(jdesc);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setPropertyDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    QStatus status = intf->SetPropertyDescriptionForLanguage(propName.c_str(), desc.c_str(), languageTag.c_str());
+    return JStatus(status);
+}
+
+/*
+ * Return the description for the given interface member, argument, and languageTag.
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_InterfaceDescription_getArgDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jmember, jstring jarg, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_getArgDescriptionForLanguage()"));
+    if (jmember == NULL || jarg == NULL || jlanguageTag == NULL) {
+        return NULL;
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getArgDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString member(jmember);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString arg(jarg);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    // Make the AllJoyn call to retrieve the description
+    qcc::String description;
+    bool found = intf->GetArgDescriptionForLanguage(member.c_str(), arg.c_str(), description, languageTag.c_str());
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_getArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    } else if (!found) {
+        return NULL;
+    }
+
+    return env->NewStringUTF(description.c_str());
+}
+
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_InterfaceDescription_setArgDescriptionForLanguage(
+    JNIEnv* env, jobject thiz, jstring jmember, jstring jarg, jstring jdesc, jstring jlanguageTag)
+{
+    //QCC_DbgPrintf(("InterfaceDescription_setArgDescriptionForLanguage()"));
+    if (jmember == NULL || jarg == NULL || jdesc == NULL || jlanguageTag == NULL) {
+        return JStatus(ER_FAIL);
+    }
+
+    InterfaceDescription* intf = GetHandle<InterfaceDescription*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    if (intf == NULL) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setArgDescriptionForLanguage(): NULL interface pointer"));
+        env->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
+
+    JString member(jmember);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString arg(jarg);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString desc(jdesc);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    JString languageTag(jlanguageTag);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("InterfaceDescription_setArgDescriptionForLanguage(): Exception"));
+        return NULL;
+    }
+
+    QStatus status = intf->SetArgDescriptionForLanguage(member.c_str(), arg.c_str(), desc.c_str(), languageTag.c_str());
     return JStatus(status);
 }
 
