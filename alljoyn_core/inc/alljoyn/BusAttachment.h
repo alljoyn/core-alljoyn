@@ -815,6 +815,23 @@ class BusAttachment : public MessageReceiver {
      * @param isShared             This parameter is not used as of 16.04. It is ignored internally (always shared).
      * @param permissionConfigurationListener   Passes security 2.0 callbacks to the application.
      *
+     * @remark                     The application must Join the bus attachment before destroying the @p authListener.
+     *
+     * For Security 2.0 applications, after the application has been claimed, it is recommended that only
+     * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter. If the application is unclaimed but will
+     * be claimed locally via the PermissionConfigurator::Claim call, it is also recommended that only
+     * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter, and that the claim capabilities be left as
+     * default, to prevent possible claiming over the network by a rogue security manager.
+     *
+     * If this application will be claimed over the network, peer security should first be enabled with
+     * ALLJOYN_ECDHE_ECDSA and the supported mechanisms for claiming. After it is claimed, and the application
+     * received the EndManagement callback, the application should then re-enable peer security with only
+     * ALLJOYN_ECDHE_ECDSA.
+     *
+     * Unless a bus attachment will be used by a security manager to claim other applications, or will interact
+     * with applications using Security 1.0, and so will need to negotiate other authentication mechanisms,
+     * only ALLJOYN_ECDHE_ECDSA should be enabled while claimed.
+     *
      * @return
      *      - #ER_OK if peer security was enabled.
      *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
@@ -849,6 +866,11 @@ class BusAttachment : public MessageReceiver {
     /**
      * Set a key store listener to listen for key store load and store requests.
      * This overrides the internal key store listener.
+     *
+     * @remarks
+     *  It is an application who owns the @p listener. Once registered, it can be released when security has been
+     *  disabled or when matching UnregisterKeyStoreListener() was called for every bus attachment which was using
+     *  this @p listener, or on the application shutdown when the @p listener is no longer referenced by the Alljoyn.
      *
      * @param listener  The key store listener to set.
      *
@@ -885,6 +907,18 @@ class BusAttachment : public MessageReceiver {
      * when establishing secure peer connections.
      */
     void ClearKeyStore();
+
+    /**
+     * Deletes the key store of the specified application.
+     * To avoid errors, app should only call this function after all instances of BusAttachment are deleted.
+     *
+     * @param[in] applicationName Name of the application specified in BusAttachment constructor.
+     *
+     * @return  - ER_OK if the file was not present, or if it has been deleted successfully
+     *          - ER_OS_ERROR if the OS fails to delete the key store
+     *          - Other errors
+     */
+    static QStatus DeleteDefaultKeyStore(const char* applicationName);
 
     /**
      * Clear the keys associated with a specific remote peer as identified by its peer GUID. The

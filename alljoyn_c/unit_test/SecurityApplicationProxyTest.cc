@@ -25,6 +25,7 @@
 #include <qcc/Util.h>
 #include <qcc/StringUtil.h>
 #include <qcc/XmlElement.h>
+#include <qcc/Crypto.h>
 #include "ajTestCommon.h"
 #include "InMemoryKeyStore.h"
 #include "SecurityApplicationProxyTestHelper.h"
@@ -69,6 +70,7 @@ static AJ_PCSTR s_validSecurityManagerManifestTemplate =
     "<manifest>"
     "<node>"
     "<interface>"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
     "<method>"
     "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Modify\"/>"
     "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Provide\"/>"
@@ -90,6 +92,7 @@ static AJ_PCSTR s_validManagedAppManifestTemplate =
     "<manifest>"
     "<node name=\"/Node0\">"
     "<interface name=\"org.test.alljoyn.Interface\">"
+    SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)
     "<method name=\"MethodName\">"
     "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Modify\"/>"
     "</method>"
@@ -155,6 +158,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
         m_securityManagerPublicKey(nullptr),
         m_securityManagerPrivateKey(nullptr),
         m_signedManifestXml(nullptr),
+        m_manifestDigest(nullptr),
         m_defaultEcdheAuthListener(nullptr),
         m_securityManagerPermissionConfigurationListener(nullptr)
     { }
@@ -162,8 +166,8 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
     virtual void SetUp()
     {
         SetUpCallbacks();
+        SetUpAuthListener();
 
-        m_defaultEcdheAuthListener = (alljoyn_authlistener) new DefaultECDHEAuthListener();
         m_securityManagerPermissionConfigurationListener = alljoyn_permissionconfigurationlistener_create(&m_callbacks, nullptr);
         BasicBusSetup(&m_securityManager,
                       SECURITY_MANAGER_BUS_NAME,
@@ -189,13 +193,17 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
             alljoyn_securityapplicationproxy_manifest_destroy(m_signedManifestXml);
         }
 
+        if (nullptr != m_manifestDigest) {
+            alljoyn_securityapplicationproxy_digest_destroy(m_manifestDigest);
+        }
+
         SecurityApplicationProxyTestHelper::DestroyCertificate(m_securityManagerIdentityCertificate);
         SecurityApplicationProxyTestHelper::DestroyKey(m_securityManagerPublicKey);
         SecurityApplicationProxyTestHelper::DestroyKey(m_securityManagerPrivateKey);
-        alljoyn_authlistenerasync_destroy(m_defaultEcdheAuthListener);
 
         alljoyn_permissionconfigurationlistener_destroy(m_securityManagerPermissionConfigurationListener);
         BasicBusTearDown(m_securityManager);
+        alljoyn_authlistener_destroy(m_defaultEcdheAuthListener);
     }
 
   protected:
@@ -213,6 +221,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
     AJ_PSTR m_securityManagerPublicKey;
     AJ_PSTR m_securityManagerPrivateKey;
     AJ_PSTR m_signedManifestXml;
+    uint8_t* m_manifestDigest;
 
     void BasicBusSetup(alljoyn_busattachment* bus,
                        AJ_PCSTR busName,
@@ -248,7 +257,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
                                                                      ALLJOYN_TRANSPORT_ANY);
         ASSERT_EQ(ER_OK, alljoyn_busattachment_joinsession(fromBus,
                                                            toBusUniqueName,
-                                                           PERMISSION_MANAGEMENT_SESSION_PORT,
+                                                           alljoyn_securityapplicationproxy_getpermissionmanagementsessionport(),
                                                            nullptr,
                                                            sessionId,
                                                            sessionOpts));
@@ -288,6 +297,12 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
         s_endManagementHappened = true;
     }
 
+    void SetUpAuthListener()
+    {
+        alljoyn_authlistener_callbacks callbacks = { nullptr, nullptr, nullptr, nullptr };
+        m_defaultEcdheAuthListener = alljoyn_authlistener_create(&callbacks, nullptr);
+    }
+
     void SetUpCallbacks()
     {
         memset(&m_callbacks, 0, sizeof(m_callbacks));
@@ -305,7 +320,7 @@ class SecurityApplicationProxyPreProxyTest : public testing::Test {
     void SetUpManifest(alljoyn_busattachment bus, AJ_PCSTR manifestTemplate)
     {
         alljoyn_permissionconfigurator configurator = alljoyn_busattachment_getpermissionconfigurator(bus);
-        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifestfromxml(configurator, manifestTemplate));
+        ASSERT_EQ(ER_OK, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(configurator, manifestTemplate));
     }
 };
 
@@ -532,21 +547,24 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
   public:
     SecurityApplicationProxyFullSetupTest() : SecurityApplicationProxyPostClaimTest(),
         m_oldPolicy(nullptr),
-        m_newPolicy(nullptr)
+        m_newPolicy(nullptr),
+        m_retrievedPolicy(nullptr)
     { }
 
     virtual void SetUp()
     {
         SecurityApplicationProxyPostClaimTest::SetUp();
-        InstallAdminGroupMembership();
 
+        InstallAdminGroupMembership();
         SetUpPolicies();
+        EndRemoteAppsManagement();
     }
 
     virtual void TearDown()
     {
         DestroyStringCopy(m_newPolicy);
         DestroyStringCopy(m_oldPolicy);
+        DestroyStringCopy(m_retrievedPolicy);
 
         SecurityApplicationProxyPostClaimTest::TearDown();
     }
@@ -555,6 +573,7 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
 
     AJ_PSTR m_oldPolicy;
     AJ_PSTR m_newPolicy;
+    AJ_PSTR m_retrievedPolicy;
 
     void ModifyManagedAppIdentityCertAndManifests()
     {
@@ -606,6 +625,11 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
     {
         ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_installmembership(m_securityManagerSecurityApplicationProxy, m_adminGroupMembershipCertificate));
         ASSERT_EQ(ER_OK, alljoyn_proxybusobject_secureconnection((alljoyn_proxybusobject)m_managedAppSecurityApplicationProxy, true));
+    }
+
+    void EndRemoteAppsManagement()
+    {
+        ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_endmanagement(m_managedAppSecurityApplicationProxy));
     }
 };
 
@@ -740,6 +764,30 @@ TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenDestroyingSignedManif
 
     alljoyn_securityapplicationproxy_manifesttemplate_destroy(m_signedManifestXml);
     m_signedManifestXml = nullptr;
+}
+
+TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenComputingManifestDigest)
+{
+    size_t digestSize;
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_computemanifestdigest(s_validSecurityManagerManifestTemplate,
+                                                                            m_securityManagerIdentityCertificate,
+                                                                            &m_manifestDigest,
+                                                                            &digestSize));
+    EXPECT_EQ(32U, digestSize);
+    EXPECT_NE(nullptr, m_manifestDigest);
+}
+
+TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenSettingManifestSignature)
+{
+    uint8_t signatureBytes[2 * ECC_COORDINATE_SZ];
+    /* The signature doesn't actually have to be valid, so a set of random bytes will do fine. */
+    ASSERT_EQ(ER_OK, Crypto_GetRandomBytes(signatureBytes, sizeof(signatureBytes)));
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_setmanifestsignature(s_validSecurityManagerManifestTemplate,
+                                                                           m_securityManagerIdentityCertificate,
+                                                                           signatureBytes,
+                                                                           sizeof(signatureBytes),
+                                                                           &m_signedManifestXml));
 }
 
 TEST_F(SecurityApplicationProxySelfClaimTest, shouldReturnErrorWhenClaimingWithInvalidProxy)
@@ -879,7 +927,7 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldGetDefaultClaimCapabilities)
 {
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getclaimcapabilities(m_managedAppSecurityApplicationProxy, &m_retrievedManagedAppClaimCapabilities));
 
-    EXPECT_EQ(CLAIM_CAPABILITIES_DEFAULT, m_retrievedManagedAppClaimCapabilities);
+    EXPECT_EQ(alljoyn_permissionconfigurator_getdefaultclaimcapabilities(), m_retrievedManagedAppClaimCapabilities);
 }
 
 TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhileGettingClaimCapabilitiesAdditionalInfoWithInvalidProxy)
@@ -1238,4 +1286,14 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldNotResetAppToClaimableStateA
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getapplicationstate(m_managedAppSecurityApplicationProxy, &m_retrievedManagedAppApplicationState));
 
     EXPECT_EQ(CLAIMED, m_retrievedManagedAppApplicationState);
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicy(m_managedAppSecurityApplicationProxy, &m_retrievedPolicy));
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetDefaultPolicy)
+{
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getdefaultpolicy(m_managedAppSecurityApplicationProxy, &m_retrievedPolicy));
 }

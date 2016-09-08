@@ -5805,7 +5805,7 @@ bool AllJoynObj::ResponseHandler(TransportMask transport, MDNSPacket response, u
         return false;
     }
 
-    QCC_DbgPrintf(("Recieved a ping response for name %s", pingRData->GetWellKnownName().c_str()));
+    QCC_DbgPrintf(("Received a ping response for name %s", pingRData->GetWellKnownName().c_str()));
     const String& name = pingRData->GetWellKnownName();
     uint32_t replyCode;
     if (pingRData->GetReplyCode() == "ALLJOYN_PING_REPLY_SUCCESS") {

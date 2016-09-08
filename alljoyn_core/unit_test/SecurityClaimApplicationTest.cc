@@ -87,7 +87,7 @@ class SecurityClaimApplicationTest : public testing::Test {
         manifestTemplate[0].SetObjPath("*");
         manifestTemplate[0].SetInterfaceName("*");
         manifestTemplate[0].SetMembers(1, member);
-        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifest(manifestTemplate, manifestSize));
+        EXPECT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifestTemplate(manifestTemplate, manifestSize));
     }
 
 
@@ -768,7 +768,7 @@ TEST_F(SecurityClaimApplicationTest, Claim_using_ECDHE_NULL_caKey_not_same_as_ad
     Manifest manifests[1];
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    // peer2 will become the the one signing the identity certificate.
+    // peer2 will become the one signing the identity certificate.
     EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(peer2Bus,
                                                                   "1215",
                                                                   caGuid.ToString(),

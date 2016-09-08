@@ -138,6 +138,10 @@ if env['VARIANT'] == 'debug':
    env.Append(CXXFLAGS=['/MDd', '/Od', '/Ob1', '/W4', '/WX'])
    env.Append(LINKFLAGS=['/debug'])
    env.Append(JAVACFLAGS='-g -Xlint -Xlint:-serial')
+
+   # Define needed to do automatic memory dumps for Jenkins builds
+   if os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
+      env.Append(CPPDEFINES=['ALLJOYN_CRASH_DUMP_SUPPORT'])
 else:
    # MSVC 2010 and newer require _ITERATOR_DEBUG_LEVEL specified
    env.Append(CPPDEFINES=[('_ITERATOR_DEBUG_LEVEL', 0)])
@@ -147,15 +151,11 @@ else:
    env.Append(LINKFLAGS=['/opt:ref'])
    env.Append(JAVACFLAGS='-Xlint -Xlint:-serial')
 
-# Include needed to do automatic memory dumps for Jenkins builds
-if env['VARIANT'] == 'debug' and os.environ.has_key('ALLJOYN_CRASH_DUMP_SUPPORT'):
-    env.Append(CXXFLAGS = '-FIqcc/${OS_GROUP}/CrashDumpSupport.h')
-
 vars = Variables()
 vars.Add(PathVariable('OPENSSL_BASE', 'Base OpenSSL directory (windows only)', os.environ.get('OPENSSL_BASE')))
 vars.Update(env)
 Help(vars.GenerateHelpText(env))
-env.AppendUnique(LIBS = ['setupapi', 'user32', 'winmm', 'ws2_32', 'iphlpapi', 'secur32', 'Advapi32'])
+env.AppendUnique(LIBS = ['setupapi', 'user32', 'winmm', 'ws2_32', 'iphlpapi', 'secur32', 'Advapi32', 'ole32', 'shell32'])
 
 if env['OS'] == 'win10':
     env.AppendUnique(LIBS = ['msajapi'])

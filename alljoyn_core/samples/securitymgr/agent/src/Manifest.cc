@@ -160,6 +160,15 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
     return manifest->SetRules(manifestRules, manifestRulesNumber);
 }
 
+QStatus Manifest::SetFromManifestTemplateXml(AJ_PCSTR manifestTemplateXml)
+{
+    if (nullptr == manifestTemplateXml) {
+        return ER_BAD_ARG_1;
+    }
+
+    return manifest->SetRules(manifestTemplateXml);
+}
+
 QStatus Manifest::SetFromSignedManifest(const ajn::Manifest& signedManifest)
 {
     manifest = signedManifest;
@@ -273,9 +282,14 @@ QStatus Manifest::Difference(const Manifest& rhs,
 
 bool Manifest::TemplateEquals(const Manifest& other) const {
     ajn::Manifest otherManifest = other.manifest;
+    vector<PermissionPolicy::Rule> manifestTemplateRules;
+    vector<PermissionPolicy::Rule> otherManifestTemplateRules;
+
+    PermissionPolicy::ChangeRulesType(manifest->GetRules(), PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE, manifestTemplateRules);
+    PermissionPolicy::ChangeRulesType(otherManifest->GetRules(), PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE, otherManifestTemplateRules);
 
     return ((manifest->GetVersion() == otherManifest->GetVersion()) &&
-            (manifest->GetRules() == otherManifest->GetRules()));
+            (manifestTemplateRules == otherManifestTemplateRules));
 }
 
 ajn::Manifest Manifest::GetManifest() const

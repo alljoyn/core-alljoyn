@@ -16,7 +16,6 @@
 
 #include "secure_door_common.h"
 
-#include <qcc/Thread.h>
 #include <alljoyn/PermissionPolicy.h>
 
 #if defined(QCC_OS_GROUP_WINDOWS)
@@ -30,21 +29,22 @@ namespace sample {
 namespace secure {
 namespace door {
 
-void DoorCommonPCL::PolicyChanged()
+void DoorCommonPCL::StartManagement()
 {
+    printf("StartManagement called.\n");
+}
+
+void DoorCommonPCL::EndManagement()
+{
+    printf("EndManagement called.\n");
     lock.Lock();
     QStatus status;
     PermissionConfigurator::ApplicationState appState;
     if (ER_OK == (status = ba.GetPermissionConfigurator().GetApplicationState(appState))) {
         if (PermissionConfigurator::ApplicationState::CLAIMED == appState) {
-            qcc::Sleep(250); // Allow SecurityMgmtObj to send method reply (see ASACORE-2331)
-            // Upon a policy update, existing connections are invalidated
-            // and one needs to make them valid again.
-            if (ER_OK != (status = ba.SecureConnectionAsync(nullptr, true))) {
-                fprintf(stderr, "Attempt to secure the connection - status (%s)\n",
-                        QCC_StatusText(status));
-            }
             sem.Signal();
+        } else {
+            fprintf(stderr, "App not claimed after management finished. Continuing to wait.\n");
         }
     } else {
         fprintf(stderr, "Failed to GetApplicationState - status (%s)\n", QCC_StatusText(status));
@@ -287,9 +287,11 @@ static void CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const u
 
 }
 
-QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
+QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
 {
     CreateInterface();
+
+    pcl = inPcl;
 
     QStatus status = ba->Start();
     if (ER_OK != status) {
@@ -304,7 +306,6 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     }
 
     GUID128 psk;
-    DefaultECDHEAuthListener* authListener;
     if (provider) {
         authListener = new DefaultECDHEAuthListener();
         CallDeprecatedSetPSK(authListener, psk.GetBytes(), GUID128::SIZE);
@@ -359,9 +360,9 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
         manifestRule.SetMembers(1, &member);
     }
 
-    status = ba->GetPermissionConfigurator().SetPermissionManifest(&manifestRule, 1);
+    status = ba->GetPermissionConfigurator().SetPermissionManifestTemplate(&manifestRule, 1);
     if (ER_OK != status) {
-        fprintf(stderr, "Failed to SetPermissionManifest - status (%s)\n", QCC_StatusText(status));
+        fprintf(stderr, "Failed to SetPermissionManifestTemplate - status (%s)\n", QCC_StatusText(status));
         return status;
     }
 
@@ -383,13 +384,30 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* pcl)
     return HostSession();
 }
 
+QStatus DoorCommon::SetSecurityForClaimedMode()
+{
+    QStatus status = ba->EnablePeerSecurity("", nullptr, nullptr, true);
+    if (ER_OK != status) {
+        fprintf(stderr, "SetSecurityForClaimedMode: Could not clear peer security - status (%s)\n", QCC_StatusText(status));
+        return status;
+    }
+
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA, authListener, nullptr, false, pcl);
+    if (ER_OK != status) {
+        fprintf(stderr, "SetSecurityForClaimedMode: Could not reset peer security - status (%s)\n", QCC_StatusText(status));
+        return status;
+    }
+
+    return ER_OK;
+}
+
 QStatus DoorCommon::UpdateManifest(const PermissionPolicy::Acl& manifest)
 {
     PermissionPolicy::Rule* rules = const_cast<PermissionPolicy::Rule*> (manifest.GetRules());
 
-    QStatus status = ba->GetPermissionConfigurator().SetPermissionManifest(rules, manifest.GetRulesSize());
+    QStatus status = ba->GetPermissionConfigurator().SetPermissionManifestTemplate(rules, manifest.GetRulesSize());
     if (ER_OK != status) {
-        fprintf(stderr, "Failed to SetPermissionManifest - status (%s)\n", QCC_StatusText(status));
+        fprintf(stderr, "Failed to SetPermissionManifestTemplate - status (%s)\n", QCC_StatusText(status));
         return status;
     }
 
@@ -410,6 +428,9 @@ void DoorCommon::Fini()
      * so previously claimed apps can still be so after restarting.
      **/
     ba->EnablePeerSecurity("", nullptr, nullptr, true);
+
+    delete authListener;
+    authListener = nullptr;
 
     delete aboutObj;
     aboutObj = nullptr;

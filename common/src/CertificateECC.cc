@@ -1345,7 +1345,7 @@ bool CertificateX509::IsDNEqual(const CertificateX509& other) const
     return (this->IsDNEqual(other.GetSubjectCN(), other.GetSubjectCNLength(), other.GetSubjectOU(), other.GetSubjectOULength()));
 }
 
-bool CertificateX509::IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const
+bool CertificateX509::IsDNEqual(const uint8_t* cn, size_t cnLength, const uint8_t* ou, size_t ouLength) const
 {
     QCC_ASSERT((cnLength > 0) || (nullptr == cn));
     QCC_ASSERT((ouLength > 0) || (nullptr == ou));
@@ -1434,6 +1434,40 @@ QStatus CertificateX509::GetSHA256Thumbprint(uint8_t* thumbprint) const
     }
 
     return hash.GetDigest(thumbprint, false);
+}
+
+static const size_t SERIAL_NUMBER_LENGTH = 20; /* RFC 5280 4.1.2.2 */
+
+QStatus CertificateX509::GenerateRandomSerial()
+{
+    uint8_t serialNumber[SERIAL_NUMBER_LENGTH];
+
+    QStatus status = Crypto_GetRandomBytes(serialNumber, sizeof(serialNumber));
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not generate random serial number"));
+        return status;
+    }
+
+    /* Clear the high order bit to avoid that leading zero when ASN.1-encoded. */
+    serialNumber[0] &= 0x7F;
+
+    SetSerial(serialNumber, sizeof(serialNumber));
+
+    return ER_OK;
+}
+
+QStatus CertificateX509::EncodeCertificateTBS(String& tbsder)
+{
+    QStatus status = EncodeCertificateTBS();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not generate certificate's TBS"));
+        return status;
+    }
+
+    /* This does a deep copy of the contents. */
+    tbsder = tbs;
+
+    return ER_OK;
 }
 
 }

@@ -207,7 +207,7 @@
  * TCP-related work and also provide for authenticating the endpoint before it
  * is allowed to start pumping messages.  Authentication means running some
  * mysterious (to us) process that may involve some unknown number of challenge
- * and response messsages being exchanged between the client and server side of
+ * and response messages being exchanged between the client and server side of
  * the connection.  Since we cannot block a caller waiting for authentication,
  * this must done on another thread; and this must be done before the
  * RemoteEndpoint is Start()ed and registered with IODispatch --
@@ -3093,7 +3093,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
             for (uint32_t i = 0; i < entries.size(); ++i) {
                 QCC_DbgHLPrintf(("TCPTransport::Connect(): Checking interface %s", entries[i].m_name.c_str()));
                 if (entries[i].m_flags & qcc::IfConfigEntry::UP) {
-                    QCC_DbgHLPrintf(("TCPTransport::Connect(): Interface UP with addresss %s", entries[i].m_addr.c_str()));
+                    QCC_DbgHLPrintf(("TCPTransport::Connect(): Interface UP with address %s", entries[i].m_addr.c_str()));
                     IPAddress foundAddr(entries[i].m_addr);
                     if (foundAddr == ipAddr) {
                         QCC_DbgHLPrintf(("TCPTransport::Connect(): Attempted connection to self; exiting"));

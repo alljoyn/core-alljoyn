@@ -17,7 +17,6 @@
 		7DCBEE481A254D6400A53A83 /* AJNAboutListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE3E1A254D6400A53A83 /* AJNAboutListenerImpl.mm */; };
 		7DCBEE491A254D6400A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE411A254D6400A53A83 /* AJNAboutProxy.mm */; };
 		7DCBEE4C1A254D7600A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE4B1A254D7600A53A83 /* AJNPasswordManager.mm */; };
-		7DEA2F331AC402EA007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F321AC402EA007ECE82 /* libc++.dylib */; };
 		7DEA2F361AC40311007ECE82 /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1D97EE150E7FBE0005211D /* libstdc++.dylib */; };
 		83B0F434193B13BE0091ACDD /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83B0F433193B13BE0091ACDD /* AJNTranslatorImpl.mm */; };
 		AC11566A150EA89200359BDC /* BasicClientViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC115669150EA89200359BDC /* BasicClientViewController.m */; };
@@ -58,10 +57,7 @@
 		AC8D8ECD1614EA2100361742 /* AJNVersion.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8EB61614EA2100361742 /* AJNVersion.mm */; };
 		AC8D8ED91614EFFB00361742 /* AJNBasicObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8ED61614EFFB00361742 /* AJNBasicObject.mm */; };
 		AC8D8EDA1614EFFB00361742 /* BasicObject.m in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8ED81614EFFB00361742 /* BasicObject.m */; };
-		AC8D8F381614F50400361742 /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F371614F50400361742 /* libcrypto.dylib */; };
 		AC8D8F3A1614F54900361742 /* libobjc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F391614F54900361742 /* libobjc.dylib */; };
-		AC8D8F3C1614F56300361742 /* libssl.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F3B1614F56300361742 /* libssl.0.9.8.dylib */; };
-		AC8D8F3E1614F56A00361742 /* libcrypto.0.9.8.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F3D1614F56A00361742 /* libcrypto.0.9.8.dylib */; };
 		ACFCF77D1566A4AF00BC922D /* SConscript in Resources */ = {isa = PBXBuildFile; fileRef = ACFCF77C1566A4AF00BC922D /* SConscript */; };
 /* End PBXBuildFile section */
 
@@ -98,7 +94,6 @@
 		7DCBEE411A254D6400A53A83 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
 		7DCBEE4A1A254D7600A53A83 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
 		7DCBEE4B1A254D7600A53A83 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
-		7DEA2F321AC402EA007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		7DEA2F341AC40306007ECE82 /* libstdc++.6.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.6.dylib"; path = "usr/lib/libstdc++.6.dylib"; sourceTree = SDKROOT; };
 		83B0F431193B13BE0091ACDD /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		83B0F432193B13BE0091ACDD /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
@@ -186,12 +181,8 @@
 		AC8D8ED61614EFFB00361742 /* AJNBasicObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNBasicObject.mm; path = ../../../iOS/BasicClient/BasicClient/AJNBasicObject.mm; sourceTree = "<group>"; };
 		AC8D8ED71614EFFB00361742 /* BasicObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BasicObject.h; path = ../../../iOS/BasicClient/BasicClient/BasicObject.h; sourceTree = "<group>"; };
 		AC8D8ED81614EFFB00361742 /* BasicObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = BasicObject.m; path = ../../../iOS/BasicClient/BasicClient/BasicObject.m; sourceTree = "<group>"; };
-		AC8D8F371614F50400361742 /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = usr/lib/libcrypto.dylib; sourceTree = SDKROOT; };
 		AC8D8F391614F54900361742 /* libobjc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjc.dylib; path = usr/lib/libobjc.dylib; sourceTree = SDKROOT; };
-		AC8D8F3B1614F56300361742 /* libssl.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.0.9.8.dylib; path = usr/lib/libssl.0.9.8.dylib; sourceTree = SDKROOT; };
-		AC8D8F3D1614F56A00361742 /* libcrypto.0.9.8.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.0.9.8.dylib; path = usr/lib/libcrypto.0.9.8.dylib; sourceTree = SDKROOT; };
 		ACC30415156AE901006D9A40 /* basic_client-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "basic_client-Prefix.pch"; sourceTree = "<group>"; };
-		ACC3042E156C235F006D9A40 /* libssl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.dylib; path = usr/lib/libssl.dylib; sourceTree = SDKROOT; };
 		ACFCF77C1566A4AF00BC922D /* SConscript */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SConscript; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -200,12 +191,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7DEA2F331AC402EA007ECE82 /* libc++.dylib in Frameworks */,
-				AC8D8F3E1614F56A00361742 /* libcrypto.0.9.8.dylib in Frameworks */,
-				AC8D8F3C1614F56300361742 /* libssl.0.9.8.dylib in Frameworks */,
 				AC8D8F3A1614F54900361742 /* libobjc.dylib in Frameworks */,
 				7DEA2F361AC40311007ECE82 /* libstdc++.dylib in Frameworks */,
-				AC8D8F381614F50400361742 /* libcrypto.dylib in Frameworks */,
 				AC1D97ED150E7F340005211D /* libpthread.dylib in Frameworks */,
 				AC1D97B6150E7C980005211D /* Cocoa.framework in Frameworks */,
 			);
@@ -246,14 +233,9 @@
 			isa = PBXGroup;
 			children = (
 				7DEA2F341AC40306007ECE82 /* libstdc++.6.dylib */,
-				7DEA2F321AC402EA007ECE82 /* libc++.dylib */,
 				AC1D97EE150E7FBE0005211D /* libstdc++.dylib */,
-				AC8D8F371614F50400361742 /* libcrypto.dylib */,
-				AC8D8F3D1614F56A00361742 /* libcrypto.0.9.8.dylib */,
-				AC8D8F3B1614F56300361742 /* libssl.0.9.8.dylib */,
 				AC8D8F391614F54900361742 /* libobjc.dylib */,
 				AC1D97EC150E7F340005211D /* libpthread.dylib */,
-				ACC3042E156C235F006D9A40 /* libssl.dylib */,
 				AC1D97B5150E7C980005211D /* Cocoa.framework */,
 				AC1D97D3150E7C990005211D /* SenTestingKit.framework */,
 				AC1D97B7150E7C980005211D /* Other Frameworks */,
@@ -637,7 +619,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
@@ -664,7 +646,7 @@
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
@@ -682,13 +664,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "basic_client/basic_client-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "basic_client/basic_client-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
@@ -707,13 +689,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "basic_client/basic_client-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "basic_client/basic_client-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",

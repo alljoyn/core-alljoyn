@@ -130,7 +130,7 @@
  * Object consults the transports on the transport list (the UDP transport is
  * one of those) and eventually sends an advertisement request to each specified
  * transport by calling each transport's EnableAdvertisement() method.  We
- * transnslate this call to a call to the the IpNameService::AdvertiseName()
+ * transnslate this call to a call to the IpNameService::AdvertiseName()
  * method we call since we are an IP-based transport.  The IP name service will
  * multicast the advertisements to other daemons listening on our device's
  * connected networks.
@@ -284,9 +284,12 @@
  * to.  This Bus::StartListen() call is translated into a transport
  * StartListen() call which is provided with the string described above, which
  * we call a "listen spec".  Our UDPTransport::StartListen() will arange to
- * create a Socket, bind the socket to the address and port provided and save
- * the new socket on a list of "listenFds" (we may listen on separate sockets
- * corresponding to multiple network interfaces).  Another of the many
+ * create two sockets: one for incoming connections (sessions hosted by us) and
+ * one for outgoing connections (sessions hosted by other routing nodes).
+ * Both sockets will be bound to the address provided. The socket for incoming
+ * connections will be bound to the port provided, the socket for outgoing
+ * connections is always bound to an ephemeral port. Both sockets will be
+ * added to a list of "listenFds".  Another of the many
  * complications we have to deal with is that the Android Compatibility Test
  * Suite (CTS) requires that an idle phone not have any sockets listening for
  * inbound data.  In order to pass the CTS in the case of the pre-installed
@@ -2071,21 +2074,27 @@ class _UDPEndpoint : public _RemoteEndpoint {
     }
 
     /**
-     * Set the link timeout for this connection
-     *
-     * TODO: How does the link timeout set by the application play with the
-     * default link timeout managed by the protocol.  We certainly don't want to
-     * trigger the link timeout functionality of the remote endpoint since it is
-     * going to expect all of the usual stream, thread, event functionality.
-     *
-     * For now, we just silently ignore SetLinkTimeout() and use the underlhing
-     * ARDP mechanism.
+     * Set the link timeout for this connection.
+     * A call to this function will modify the timeout used
+     * for this endpoint by the probe mechanism, i.e. the mechanism
+     * which sends keepalive ("NUL") packets. If no response to the
+     * keepalives has been received in <linktimeoutSeconds> seconds,
+     * the link is considered dead and the session is lost. The set timeout will
+     * also determine the interval at which the keepalives are sent:
+     * interval = linkTimeout / keepaliveRetries.
+     * Default linkTimeout and keepaliveRetries are read from the
+     * routing node configuration XML (elements udp_linktimeout and
+     * udp_keepalive_retries in the XML).
      */
-    QStatus SetLinkTimeout(uint32_t& linkTimeout)
+    QStatus SetLinkTimeout(uint32_t& linkTimeoutSeconds)
     {
-        QCC_UNUSED(linkTimeout);
-        QCC_DbgTrace(("_UDPEndpoint::SetLinkTimeout(linkTimeout=%d.)", linkTimeout));
-        QCC_DbgPrintf(("_UDPEndpoint::SetLinkTimeout(): Ignored", linkTimeout));
+        QCC_DbgTrace(("_UDPEndpoint::SetLinkTimeout(linkTimeout=%d.)", linkTimeoutSeconds));
+
+        m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
+        uint32_t linkTimeoutMilliseconds = linkTimeoutSeconds * 1000;
+        ARDP_UpdateProbeTimeout(GetHandle(), GetConn(), linkTimeoutMilliseconds);
+        m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
+
         return ER_OK;
     }
 
@@ -4426,8 +4435,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_connLock(LOCK_LEVEL_UDPTRANSPORT_CONNLOCK), m_dynamicScoreUpdater(*this),
     /* Workaround for known deadlock prediction break ASACORE-2678 */
     m_ardpLock(LOCK_LEVEL_CHECKING_DISABLED),
-    /* Workaround for known deadlock ASACORE-2094 */
-    m_cbLock(LOCK_LEVEL_CHECKING_DISABLED),
+    m_cbLock(LOCK_LEVEL_UDPTRANSPORT_CBLOCK),
     m_handle(NULL), m_dispatcher(NULL), m_exitDispatcher(NULL),
     m_workerCommandQueue(), m_workerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_WORKERCOMMANDQUEUELOCK),
     m_exitWorkerCommandQueue(), m_exitWorkerCommandQueueLock(LOCK_LEVEL_UDPTRANSPORT_EXITWORKERCOMMANDQUEUELOCK)
@@ -4466,6 +4474,7 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     ardpConfig.totalAppTimeout = config->GetLimit("udp_total_app_timeout", UDP_TOTAL_APP_TIMEOUT);
     ardpConfig.linkTimeout = config->GetLimit("udp_link_timeout", UDP_LINK_TIMEOUT);
     ardpConfig.keepaliveRetries = config->GetLimit("udp_keepalive_retries", UDP_KEEPALIVE_RETRIES);
+    ARDP_AdjustProbeTimeoutSettings(ardpConfig.linkTimeout, ardpConfig.keepaliveRetries);
     ardpConfig.fastRetransmitAckCounter = config->GetLimit("udp_fast_retransmit_ack_counter", UDP_FAST_RETRANSMIT_ACK_COUNTER);
     ardpConfig.delayedAckTimeout = config->GetLimit("udp_delayed_ack_timeout", UDP_DELAYED_ACK_TIMEOUT);
     ardpConfig.timewait = config->GetLimit("udp_timewait", UDP_TIMEWAIT);
@@ -5075,7 +5084,7 @@ QStatus UDPTransport::Start()
      * variable that allows us to only release the singleton on the first transport
      * Join()
      */
-    QCC_DbgPrintf(("UDPTransport::Start(): Aquire instance of NS"));
+    QCC_DbgPrintf(("UDPTransport::Start(): Acquire instance of NS"));
     m_nsReleaseCount = 0;
     IpNameService::Instance().Acquire(guidStr);
 
@@ -5674,16 +5683,16 @@ QStatus UDPTransport::GetListenAddresses(const SessionOpts& opts, std::vector<qc
         interfaceSet.insert(INTERFACES_DEFAULT);
         haveWildcard = true;
     } else {
-        for (std::map<qcc::String, qcc::IPEndpoint>::const_iterator it = m_requestedInterfaces.begin();
+        for (std::map<qcc::String, InterfaceInfo>::const_iterator it = m_requestedInterfaces.begin();
              it != m_requestedInterfaces.end(); it++) {
-            if (it->first != "*" && it->second.GetAddress().ToString() != "0.0.0.0") {
+            if (it->first != "*" && it->second.m_address.ToString() != "0.0.0.0") {
                 interfaceSet.insert(it->first);
             }
         }
-        for (std::map<qcc::String, qcc::String>::const_iterator it = m_requestedAddresses.begin();
+        for (std::map<qcc::String, AddressInfo>::const_iterator it = m_requestedAddresses.begin();
              it != m_requestedAddresses.end(); it++) {
-            if (it->first != "0.0.0.0" && !it->second.empty()) {
-                interfaceSet.insert(it->second);
+            if (it->first != "0.0.0.0" && !it->second.m_interface.empty()) {
+                interfaceSet.insert(it->second.m_interface);
             }
         }
     }
@@ -6287,9 +6296,10 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
              * take the endpoint state change lock and hold it while we consider
              * makeing state changes to prevent possible inconsistencies.
              *
-             * Lock order is always endpointListLock then stateLock.  We have
-             * the endpointListLock so we are okay.
+             * Lock order is always endpointListLock, cbLock, then stateLock.  We
+             * already have the endpointListLock so we are okay.
              */
+            m_cbLock.Lock(MUTEX_CONTEXT);
             ep->StateLock(MUTEX_CONTEXT);
             if (ep->IsEpStopping()) {
                 if (ep->IsEpWaitEnabled()) {
@@ -6414,6 +6424,8 @@ void UDPTransport::ManageEndpoints(uint32_t authTimeout, uint32_t sessionSetupTi
 
             }
             ep->StateUnlock(MUTEX_CONTEXT);
+            m_cbLock.Unlock(MUTEX_CONTEXT);
+
 
             /*
              * If we are in EP_STOPPING state then we have 1) either
@@ -7107,7 +7119,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
     /*
      * The Function HelloReply creates and marshals the BusHello reply for the
      * remote side.  Once it is marshaled, there is a buffer associated with the
-     * message that contains the on-the-wire version of the messsage.  The ARDP
+     * message that contains the on-the-wire version of the message.  The ARDP
      * code copies this data in to deal with the possibility of having to
      * retransmit it; So we need to remember to deal with freeing the buffer.
      */
@@ -8657,11 +8669,22 @@ void* UDPTransport::Run(void* arg)
 
             uint32_t ms;
             QStatus ardpStatus;
+            bool socketIsAccepting = false;
+            if (readReady) {
+                m_listenFdsLock.Lock(MUTEX_CONTEXT);
+                /* There is data to be read from the socket. Find out if the socket
+                 * can accept incoming connections and then pass this information on to ARDP.
+                 * Make sure that IsSocketAccepting() could find the socket on the FD list.
+                 * If the socket is not on the list, something very odd has happened.
+                 */
+                QCC_VERIFY(IsSocketAccepting((*i)->GetFD(), socketIsAccepting) == ER_OK);
+                m_listenFdsLock.Unlock(MUTEX_CONTEXT);
+            }
             m_ardpLock.Lock(MUTEX_CONTEXT);
             if (socketReady) {
-                ardpStatus = ARDP_Run(m_handle, (*i)->GetFD(), readReady, writeReady, &ms);
+                ardpStatus = ARDP_Run(m_handle, (*i)->GetFD(), readReady, writeReady, socketIsAccepting, &ms);
             } else {
-                ardpStatus = ARDP_Run(m_handle, qcc::INVALID_SOCKET_FD, false, false, &ms);
+                ardpStatus = ARDP_Run(m_handle, qcc::INVALID_SOCKET_FD, false, false, false, &ms);
             }
             m_ardpLock.Unlock(MUTEX_CONTEXT);
 
@@ -9137,9 +9160,12 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
-                qcc::String normSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
-                QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", normSpec.c_str()));
-                DoStopListen(normSpec);
+                qcc::String acceptingNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
+                QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", acceptingNormSpec.c_str()));
+                DoStopListen(acceptingNormSpec);
+                qcc::String activeNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
+                QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", activeNormSpec.c_str()));
+                DoStopListen(activeNormSpec);
             } else if (argMap.find("addr") != argMap.end()) {
                 QCC_DbgPrintf(("UDPTransport::DisableAdvertisementInstance(): DoStopListen(\"%s\")", i->c_str()));
                 DoStopListen(*i);
@@ -9295,9 +9321,12 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
             QCC_UNUSED(status);
             if (argMap.find("iface") != argMap.end()) {
                 qcc::String interface = argMap["iface"];
-                qcc::String normSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
-                QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", normSpec.c_str()));
-                DoStopListen(normSpec);
+                qcc::String acceptingNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
+                QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", acceptingNormSpec.c_str()));
+                DoStopListen(acceptingNormSpec);
+                qcc::String activeNormSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
+                QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", activeNormSpec.c_str()));
+                DoStopListen(activeNormSpec);
             } else if (argMap.find("addr") != argMap.end()) {
                 QCC_DbgPrintf(("UDPTransport::DisableDiscoveryInstance(): DoStopListen(\"%s\")", i->c_str()));
                 DoStopListen(*i);
@@ -9813,6 +9842,18 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         QCC_DbgPrintf(("UDPTransport::Connect(): Checking listenSpec %s", i->m_normSpec.c_str()));
 
         /*
+         * We do not want to use sockets which accept incoming connections for outgoing ones.
+         * A user may want to block an accepting port on his firewall to prevent his consumer application
+         * from accepting join session requests. If that port was used for outgoing connections, outgoing packets
+         * (e.g., keepalive probes) would make the firewall open the port and expose it, even though it was
+         * explicitly blocked by the user.
+         */
+        if (i->m_accepting) {
+            QCC_DbgPrintf(("UDPTransport::Connect(): Skipping accepting FD %d", i->m_sockFd));
+            continue;
+        }
+
+        /*
          * If the provided connectSpec is already explicitly listened to, it is
          * an error.
          */
@@ -9878,7 +9919,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
         for (uint32_t i = 0; i < entries.size(); ++i) {
             QCC_DbgPrintf(("UDPTransport::Connect(): Checking interface %s", entries[i].m_name.c_str()));
             if (entries[i].m_flags & qcc::IfConfigEntry::UP) {
-                QCC_DbgPrintf(("UDPTransport::Connect(): Interface UP with addresss %s", entries[i].m_addr.c_str()));
+                QCC_DbgPrintf(("UDPTransport::Connect(): Interface UP with address %s", entries[i].m_addr.c_str()));
                 IPAddress foundAddr(entries[i].m_addr);
                 if (foundAddr == ipAddr) {
                     QCC_DbgPrintf(("UDPTransport::Connect(): Attempted connection to self; exiting"));
@@ -9928,6 +9969,17 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     QCC_DbgPrintf(("UDPTransport::Connect(): Look for socket corresponding to destination network"));
     m_listenFdsLock.Lock(MUTEX_CONTEXT);
     for (list<ListenFdEntry>::iterator i = m_listenFds.begin(); i != m_listenFds.end(); ++i) {
+        /*
+         * We do not want to use sockets which accept incoming connections for outgoing ones.
+         * A user may want to block an accepting port on his firewall to prevent his consumer application
+         * from accepting join session requests. If that port was used for outgoing connections, outgoing packets
+         * (e.g., keepalive probes) would make the firewall open the port and expose it, even though it was
+         * explicitly blocked by the user.
+         */
+        if (i->m_accepting) {
+            QCC_DbgPrintf(("UDPTransport::Connect(): Skipping accepting FD %d", i->m_sockFd));
+            continue;
+        }
         /*
          * Get the local address of the socket in question.
          */
@@ -10070,7 +10122,7 @@ QStatus UDPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     /*
      * The Function HelloMessage creates and marshals the BusHello Message for
      * the remote side.  Once it is marshaled, there is a buffer associated with
-     * the message that contains the on-the-wire version of the messsage.
+     * the message that contains the on-the-wire version of the message.
      */
     size_t buflen = hello->GetBufferSize();
 #ifndef NDEBUG
@@ -10596,16 +10648,19 @@ QStatus UDPTransport::DoStartListen(qcc::String& normSpec)
         addr = IPAddress(argMap["addr"]);
     }
 
+    /*
+     * Request the port we have obtained from the caller for the accepting socket and an ephemeral port (0)
+     * for the active socket.
+     */
+    if (!interface.empty()) {
+        m_requestedInterfaces[interface] = InterfaceInfo("0.0.0.0", listenPort, 0);
+    } else if (addr.Size() && addr.IsIPv4()) {
+        m_requestedAddresses[addr.ToString()] = AddressInfo("", listenPort, 0);
+    }
+
     /* We first determine whether a network interface name or an IP address was
      * specified and then we invoke the appropriate name service method.
      */
-    if (!interface.empty()) {
-        m_requestedInterfaces[interface] = qcc::IPEndpoint("0.0.0.0", listenPort);
-        m_listenPortMap[interface] = listenPort;
-    } else if (addr.Size() && addr.IsIPv4()) {
-        m_requestedAddresses[addr.ToString()] = "";
-        m_requestedAddressPortMap[addr.ToString()] = listenPort;
-    }
     if (!interface.empty()) {
         status = IpNameService::Instance().OpenInterface(TRANSPORT_UDP, interface);
     } else if (addr.Size() && addr.IsIPv4()) {
@@ -11197,6 +11252,121 @@ void UDPTransport::QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAd
     DecrementAndFetch(&m_refCount);
 }
 
+QStatus UDPTransport::SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port)
+{
+    QCC_DbgTrace(("UDPTransport::SetupSocket(): addr=%s, port=%d", addr.ToString().c_str(), port));
+
+    QStatus status;
+
+    socketFd = INVALID_SOCKET_FD;
+    status = Socket(QCC_AF_INET, QCC_SOCK_DGRAM, socketFd);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::SetupSocket(): Socket() failed"));
+        return status;
+    }
+
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): Socket(): socketFd=%d.", socketFd));
+
+    /*
+     * Listener sockets get closed every once in a while - see the DoStopListen code path.
+     * Allow Bind to succeed later on, by enabling SO_REUSEADDR or SO_REUSEPORT.
+     */
+    status = qcc::SetReusePort(socketFd, true);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::SetupSocket(): SetReusePort() failed"));
+        if (status != ER_NOT_IMPLEMENTED) {
+            qcc::Close(socketFd);
+            return status;
+        }
+    }
+
+    /*
+     * ARDP expects us to use select and non-blocking sockets.
+     */
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): SetBlocking(socketFd=%d, false)", socketFd));;
+    status = qcc::SetBlocking(socketFd, false);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::SetupSocket(): SetBlocking() failed"));
+        qcc::Close(socketFd);
+        return status;
+    }
+
+    /*
+     * We are going to use UDP, and the socket buffers for UDP sockets are
+     * most likely set unnecessarily low by default.  IN the optimal case,
+     * we are going to want to spew out SEGBMAX * SEGMAX bytes of data on
+     * each connection.  Typical values might be 65535 bytes per buffer * 50
+     * buffers = 3,276,800 bytes.  Since there may be N connections running
+     * over that single socket, it would imply a requirement to buffer N * 3
+     * megabytes total.  Unlikely.  We set the buffer large enough to buffer
+     * enough in-flight data to service one fully utilized connection
+     * completely.  After the buffer fills, we share capacity.
+     *
+     * Just because we ask for this amount of buffer does not mean we will
+     * get it.  Systems provide a maximum number.  On Linux, for example,
+     * you can find the maximum value in /proc/sys/net/core/wmem_max.  On my
+     * Fedora 20- box it is set to 131071, so the doubled value returned by
+     * GetSndBuf() would be 262142.  Consider changing this value on a
+     * server-class system.
+     *
+     * Note that this is not a fatal error if it fails.  We just may get less
+     * buffer capacity than we might like.
+     */
+    size_t sndSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): SetSndBuf(socketFd=%d, %u.)", socketFd, sndSize));
+    status = qcc::SetSndBuf(socketFd, sndSize);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::SetupSocket(): SetSndbuf() failed"));
+    }
+
+#ifndef NDEBUG
+    sndSize = 0;
+    QCC_VERIFY(qcc::GetSndBuf(socketFd, sndSize) == ER_OK);
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): GetSndBuf(socketFd=%d) <= %u. bytes)", socketFd, sndSize));
+#endif
+
+    /*
+     * Ditto for the receive side.  The remote sides of connections may
+     * conspire against us to have N fully utilized connections inbound from
+     * different remotes to our single instance, but we cannot simply
+     * allocate 300 megabytes of buffering, so we set the receive buffer to
+     * SEGBMAX * SEGMAX as well, and limit buffer usage by letting UDP drop
+     * inbound messages to rate limit overrunning connections.
+     *
+     * Just because we ask for this amount of buffer does not mean we will
+     * get it.  Systems provide a maximum number.  On Linux, for example,
+     * you can find the maximum value in /proc/sys/net/core/rmem_max.  On my
+     * Fedora 20- box it is set to 131071, so the doubled value returned by
+     * GetRcvBuf() would be 262142.  Consider changing this value on a
+     * server-class system.
+     *
+     * Note that this is not a fatal error if it fails.  We just may get less
+     * buffer capacity than we might like.
+     */
+    size_t rcvSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): SetSndBuf(socketFd=%d, %u.)", socketFd, rcvSize));
+    status = qcc::SetRcvBuf(socketFd, rcvSize);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::SetupSocket(): SetRcvBuf() failed"));
+    }
+
+#ifndef NDEBUG
+    rcvSize = 0;
+    QCC_VERIFY(qcc::GetRcvBuf(socketFd, rcvSize) == ER_OK);
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): GetRcvBuf(socketFd=%d) <= %u. bytes)", socketFd, rcvSize));
+#endif
+
+    QCC_DbgPrintf(("UDPTransport::SetupSocket(): Bind(socketFd=%d., addr=\"%s\", port=%u.)",
+                   socketFd, addr.ToString().c_str(), port));
+    status = qcc::Bind(socketFd, addr, port);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("UDPTransport::SetupSocket(): Bind() failed"));
+        qcc::Close(socketFd);
+    }
+
+    return status;
+}
+
 /* This is the callback handler that is invoked when the name service detects that a network interface
  * has become IFF_UP or a network interface's IP address has changed. When we invoke the OpenInterface()
  * method of the name service from the DoStartListen() method, it will also trigger the name service to
@@ -11214,7 +11384,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
     QStatus status = ER_OK;
     IncrementAndFetch(&m_refCount);
     list<String> replacedList;
-    list<pair<qcc::String, SocketFd> > addedList;
+    list<ListenFdEntry> addedList;
     bool wildcardIfaceRequested = (m_requestedInterfaces.find("*") != m_requestedInterfaces.end());
     bool wildcardAddressRequested = (m_requestedAddresses.find("0.0.0.0") != m_requestedAddresses.end());
 
@@ -11270,219 +11440,198 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         }
 
         if (!wildcardIfaceRequested && currentIfaceRequested &&
-            m_requestedInterfaces[interface].GetAddress() == address) {
+            m_requestedInterfaces[interface].m_address == address) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): not wildcard iface, not current iface but requested addr"));
             continue;
         }
 
         if (!wildcardAddressRequested && currentAddressRequested &&
-            m_requestedAddresses[addressStr] == interface) {
+            m_requestedAddresses[addressStr].m_interface == interface) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): wildcard addr, not current addr but requested iface"));
             continue;
         }
 
         if (!wildcardIfaceRequested && currentIfaceRequested) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current iface requested"));
-            if (m_requestedInterfaces[interface].GetAddress() != qcc::IPAddress("0.0.0.0")) {
+            if (m_requestedInterfaces[interface].m_address != qcc::IPAddress("0.0.0.0")) {
                 QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current iface addr not INADDR_ANY"));
-                qcc::String replacedSpec = "udp:addr=" + m_requestedInterfaces[interface].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].GetPort());
-                if (m_requestedAddresses.find(m_requestedInterfaces[interface].GetAddress().ToString()) != m_requestedAddresses.end()) {
-                    m_requestedAddresses.erase(m_requestedInterfaces[interface].GetAddress().ToString());
+                if (m_requestedAddresses.find(m_requestedInterfaces[interface].m_address.ToString()) != m_requestedAddresses.end()) {
+                    m_requestedAddresses.erase(m_requestedInterfaces[interface].m_address.ToString());
                 }
-                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Replace \"%s\"", replacedSpec.c_str()));
-                replacedList.push_back(replacedSpec);
+                qcc::String replacedAcceptingSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_acceptingPort);
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Replacing accepting spec \"%s\"", replacedAcceptingSpec.c_str()));
+                replacedList.push_back(replacedAcceptingSpec);
+                qcc::String replacedActiveSpec = "udp:addr=" + m_requestedInterfaces[interface].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[interface].m_activePort);
+                QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Replacing active spec \"%s\"", replacedActiveSpec.c_str()));
+                replacedList.push_back(replacedActiveSpec);
             }
-            m_requestedInterfaces[interface] = qcc::IPEndpoint(address, m_requestedInterfaces[interface].GetPort());
+            m_requestedInterfaces[interface] = InterfaceInfo(address, m_requestedInterfaces[interface].m_acceptingPort, m_requestedInterfaces[interface].m_activePort);
         }
 
         if (!wildcardAddressRequested && currentAddressRequested) {
             QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Current address requested"));
-            if (!m_requestedAddresses[addressStr].empty()) {
-                m_requestedAddresses[addressStr] = interface;
+            if (!m_requestedAddresses[addressStr].m_interface.empty()) {
+                m_requestedAddresses[addressStr].m_interface = interface;
                 QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set interface \"%s\" for address", interface.c_str()));
                 continue;
             }
-            m_requestedAddresses[addressStr] = interface;
+            m_requestedAddresses[addressStr].m_interface = interface;
         }
 
         qcc::IPAddress listenAddr;
-        uint16_t listenPort = 0;
+        uint16_t requestedAcceptingPort = 0;
+        uint16_t requestedActivePort = 0;
         if (wildcardIfaceRequested) {
             listenAddr = qcc::IPAddress("0.0.0.0");
-            listenPort = m_requestedInterfaces["*"].GetPort();
+            requestedAcceptingPort = m_requestedInterfaces["*"].m_acceptingPort;
+            requestedActivePort = m_requestedInterfaces["*"].m_activePort;
         } else if (wildcardAddressRequested) {
             listenAddr = qcc::IPAddress("0.0.0.0");
-            listenPort = m_requestedAddressPortMap["0.0.0.0"];
+            requestedAcceptingPort = m_requestedAddresses["0.0.0.0"].m_acceptingPort;
+            requestedActivePort = m_requestedAddresses["0.0.0.0"].m_activePort;
         } else {
             if (!listenAddr.Size() && currentIfaceRequested) {
-                listenAddr = m_requestedInterfaces[interface].GetAddress();
-                listenPort = m_requestedInterfaces[interface].GetPort();
+                listenAddr = m_requestedInterfaces[interface].m_address;
+                requestedAcceptingPort = m_requestedInterfaces[interface].m_acceptingPort;
+                requestedActivePort = m_requestedInterfaces[interface].m_activePort;
             } else if (!listenAddr.Size() && currentAddressRequested) {
                 listenAddr = address;
-                listenPort = m_requestedAddressPortMap[addressStr];
+                requestedAcceptingPort = m_requestedAddresses[addressStr].m_acceptingPort;
+                requestedActivePort = m_requestedAddresses[addressStr].m_activePort;
             } else {
                 continue;
             }
         }
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): listenAddr=\"%s\", listenPort=%d.",
-                       listenAddr.ToString().c_str(), listenPort));
+        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): listenAddr=\"%s\", requestedAcceptingPort=%d, requestedActivePort=%d.",
+                       listenAddr.ToString().c_str(), requestedAcceptingPort, requestedActivePort));
         if (!listenAddr.Size() || !listenAddr.IsIPv4()) {
             continue;
         }
 
         /*
-         * We have the name service work out of the way, so we can now create the
-         * TCP listener sockets and set SO_REUSEADDR/SO_REUSEPORT so we don't have
-         * to wait for four minutes to relaunch the daemon if it crashes.
+         * Open two separate sockets: acceptingFd for incoming connection requests (for sessions hosted by us)
+         * and activeFd for sessions we have joined, hosted by other routing nodes.
          */
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Setting up socket"));
-
-        SocketFd listenFd = INVALID_SOCKET_FD;
-        status = Socket(QCC_AF_INET, QCC_SOCK_DGRAM, listenFd);
+        qcc::SocketFd acceptingFd = INVALID_SOCKET_FD;
+        status = SetupSocket(acceptingFd, listenAddr, requestedAcceptingPort);
         if (status != ER_OK) {
+            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetupSocket() for accepting FD failed"));
             continue;
         }
 
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Socket(): listenFd=%d.", listenFd));
-
-        /*
-         * ARDP expects us to use select and non-blocking sockets.
-         */
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetBlocking(listenFd=%d, false)", listenFd));;
-        status = qcc::SetBlocking(listenFd, false);
+        qcc::SocketFd activeFd = INVALID_SOCKET_FD;
+        status = SetupSocket(activeFd, listenAddr, requestedActivePort);
         if (status != ER_OK) {
-            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetBlocking() failed"));
-            qcc::Close(listenFd);
+            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetupSocket() for active FD failed"));
+            if (acceptingFd != INVALID_SOCKET_FD) {
+                qcc::Close(acceptingFd);
+            }
             continue;
         }
 
-        /*
-         * We are going to use UDP, and the socket buffers for UDP sockets are
-         * most likely set unnecessarily low by default.  IN the optimal case,
-         * we are going to want to spew out SEGBMAX * SEGMAX bytes of data on
-         * each connection.  Typical values might be 65535 bytes per buffer * 50
-         * buffers = 3,276,800 bytes.  Since there may be N connections running
-         * over that single socket, it would imply a requirement to buffer N * 3
-         * megabytes total.  Unlikely.  We set the buffer large enough to buffer
-         * enough in-flight data to service one fully utilized connection
-         * completely.  After the buffer fills, we share capacity.
-         *
-         * Just because we ask for this amount of buffer does not mean we will
-         * get it.  Systems provide a maximum number.  On Linux, for example,
-         * you can find the maximum value in /proc/sys/net/core/wmem_max.  On my
-         * Fedora 20- box it is set to 131071, so the doubled value returned by
-         * GetSndBuf() would be 262142.  Consider changing this value on a
-         * server-class system.
-         *
-         * Note that this is not a fatal error if it fails.  We just may get less
-         * buffer capacity than we might like.
-         */
-        size_t sndSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %u.)", listenFd, sndSize));
-        status = qcc::SetSndBuf(listenFd, sndSize);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetSndbuf() failed"));
-        }
-
-#ifndef NDEBUG
-        sndSize = 0;
-        qcc::GetSndBuf(listenFd, sndSize);
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetSndBuf(listenFd=%d) <= %u. bytes)", listenFd, sndSize));
-#endif
-
-        /*
-         * Ditto for the receive side.  The remote sides of connections may
-         * conspire against us to have N fully utilized connections inbound from
-         * different remotes to our single instance, but we cannot simply
-         * allocate 300 megabytes of buffering, so we set the receive buffer to
-         * SEGBMAX * SEGMAX as well, and limit buffer usage by letting UDP drop
-         * inbound messages to rate limit overrunning connections.
-         *
-         * Just because we ask for this amount of buffer does not mean we will
-         * get it.  Systems provide a maximum number.  On Linux, for example,
-         * you can find the maximum value in /proc/sys/net/core/rmem_max.  On my
-         * Fedora 20- box it is set to 131071, so the doubled value returned by
-         * GetRcvBuf() would be 262142.  Consider changing this value on a
-         * server-class system.
-         *
-         * Note that this is not a fatal error if it fails.  We just may get less
-         * buffer capacity than we might like.
-         */
-        size_t rcvSize = m_ardpConfig.segmax * m_ardpConfig.segbmax;
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): SetSndBuf(listenFd=%d, %u.)", listenFd, rcvSize));
-        status = qcc::SetRcvBuf(listenFd, rcvSize);
-        if (status != ER_OK) {
-            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): SetRcvBuf() failed"));
-        }
-
-#ifndef NDEBUG
-        rcvSize = 0;
-        qcc::GetRcvBuf(listenFd, rcvSize);
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): GetRcvBuf(listenFd=%d) <= %u. bytes)", listenFd, rcvSize));
-#endif
-
-        QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Bind(listenFd=%d., listenAddr=\"%s\", listenPort=%u.)",
-                       listenFd, listenAddr.ToString().c_str(), listenPort));
-        status = Bind(listenFd, listenAddr, listenPort);
-
+        uint16_t acceptingPort = 0;
+        uint16_t activePort = 0;
         if (status == ER_OK) {
             /*
              * If the port was not set (or set to zero) then we will have bound an ephemeral port. If
              * so call GetLocalAddress() to update the connect spec with the port allocated by bind.
              */
-            if (listenPort == 0) {
-                qcc::GetLocalAddress(listenFd, listenAddr, listenPort);
+            if (requestedAcceptingPort == 0) {
+                status = qcc::GetLocalAddress(acceptingFd, listenAddr, acceptingPort);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): GetLocalAddress() for accepting FD failed"));
+                    if (acceptingFd != INVALID_SOCKET_FD) {
+                        qcc::Close(acceptingFd);
+                    }
+                    if (activeFd != INVALID_SOCKET_FD) {
+                        qcc::Close(activeFd);
+                    }
+                    continue;
+                }
+            } else {
+                acceptingPort = requestedAcceptingPort;
             }
+
+            if (requestedActivePort == 0) {
+                status = qcc::GetLocalAddress(activeFd, listenAddr, activePort);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): GetLocalAddress() for active FD failed"));
+                    if (acceptingFd != INVALID_SOCKET_FD) {
+                        qcc::Close(acceptingFd);
+                    }
+                    if (activeFd != INVALID_SOCKET_FD) {
+                        qcc::Close(activeFd);
+                    }
+                    continue;
+                }
+            } else {
+                activePort = requestedActivePort;
+            }
+
             if (wildcardIfaceRequested) {
-                m_requestedInterfaces["*"] = qcc::IPEndpoint("0.0.0.0", listenPort);
+                m_requestedInterfaces["*"] = InterfaceInfo("0.0.0.0", acceptingPort, activePort);
             } else if (wildcardAddressRequested) {
-                m_requestedAddressPortMap["0.0.0.0"] = listenPort;
+                m_requestedAddresses["0.0.0.0"].m_acceptingPort = acceptingPort;
+                m_requestedAddresses["0.0.0.0"].m_activePort = activePort;
             } else {
                 if (currentIfaceRequested) {
-                    m_requestedInterfaces[interface] = qcc::IPEndpoint(m_requestedInterfaces[interface].GetAddress().ToString(), listenPort);
+                    m_requestedInterfaces[interface] = InterfaceInfo(m_requestedInterfaces[interface].m_address.ToString(), acceptingPort, activePort);
                 } else if (currentAddressRequested) {
-                    m_requestedAddressPortMap[addressStr] = listenPort;
+                    m_requestedAddresses[addressStr].m_acceptingPort = acceptingPort;
+                    m_requestedAddresses[addressStr].m_activePort = activePort;
                 }
             }
-            qcc::String normSpec = "udp:addr=" + listenAddr.ToString() + ",port=" + U32ToString(listenPort);
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): New normSpec=\"%s\"", normSpec.c_str()));
+            qcc::String acceptingSpec = "udp:addr=" + listenAddr.ToString() + ",port=" + U32ToString(acceptingPort);
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): New accepting normSpec: \"%s\"", acceptingSpec.c_str()));
+            qcc::String activeSpec = "udp:addr=" + listenAddr.ToString() + ",port=" + U32ToString(activePort);
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): New active normSpec: \"%s\"", activeSpec.c_str()));
 
             /*
-             * Okay, we're ready to receive datagrams on this socket now.  Tell the
+             * Okay, we're ready to receive datagrams on the sockets now.  Tell the
              * maintenance thread that something happened here and it needs to reload
              * its FDs.
-             */
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): addedList.push_back(normSpec=\"%s\", listenFd=%d)", normSpec.c_str(), listenFd));
-
-            /* We make a list of the new listen specs on which we are listening so
+             * We make a list of the new listen specs on which we are listening so
              * that we can add those to the m_listenFds when we're done procesing
-             * the list of network interfaces.
+             * the list of network interfaces. ActiveFd is still technically a listen FD
+             * as it listens for replies and other traffic from the routing node which
+             * hosts the session we have joined. We only set the m_accepting parameter for activeFd
+             * to false, so that the ARDP layer does not accept new connection requests appearing
+             * on that socket. For acceptingFd, this parameter is set to true, so that ARDP
+             * does accept new connections on that socket, but does not use it for new outgoing connections.
              */
-            addedList.push_back(pair<qcc::String, SocketFd>(normSpec, listenFd));
-        } else {
-            QCC_LogError(status, ("UDPTransport::HandleNetworkEventInstance(): Failed to bind to %s/%d", listenAddr.ToString().c_str(), listenPort));
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): addedList.push_back(normSpec=\"%s\", listenFd=%d, accepting=true)", acceptingSpec.c_str(), acceptingFd));
+            addedList.push_back(ListenFdEntry(acceptingSpec, acceptingFd, true));
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): addedList.push_back(normSpec=\"%s\", listenFd=%d, accepting=false)", activeSpec.c_str(), activeFd));
+            addedList.push_back(ListenFdEntry(activeSpec, activeFd, false));
         }
 
         /* We update the map of interface names to port numbers
          * here to account for ephemeral ports since only at
          * this point do we know the actual ephemeral port number
          * after we call Bind() and are actually listening.
+         * m_listenPortMap tells the name service which ports should
+         * be advertised as accepting join session requests. We only
+         * add accepting ports to this map. Active ports are used only for
+         * traffic belonging to sessions hosted by other nodes.
+         * They do not accept incoming connection requests and it is impossible
+         * for other nodes to join sessions hosted by us via these ports,
+         * hence they should not be advertised.
          */
         if (wildcardIfaceRequested) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"*\"] to listenFd %d.", listenFd));
-            m_listenPortMap["*"] = listenPort;
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"*\"] to listenFd %d.", acceptingFd));
+            m_listenPortMap["*"] = acceptingPort;
         } else if (wildcardAddressRequested) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"0.0.0.0\"] to listenFd %d.", listenFd));
-            m_listenPortMap["0.0.0.0"] = listenPort;
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"0.0.0.0\"] to listenFd %d.", acceptingFd));
+            m_listenPortMap["0.0.0.0"] = acceptingPort;
         } else {
             if (currentIfaceRequested) {
                 QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.",
-                               interface.c_str(), listenFd));
-                m_listenPortMap[interface] = listenPort;
+                               interface.c_str(), acceptingFd));
+                m_listenPortMap[interface] = acceptingPort;
             } else if (currentAddressRequested) {
                 QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): set m_listenPortMap[\"%s\"] to listenFd %d.",
-                               addressStr.c_str(), listenFd));
-                m_listenPortMap[addressStr] = listenPort;
+                               addressStr.c_str(), acceptingFd));
+                m_listenPortMap[addressStr] = acceptingPort;
             }
         }
 
@@ -11544,30 +11693,32 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
          */
         if (wildcardIfaceRequested) {
             m_wildcardIfaceProcessed = true;
-            for (std::map<qcc::String, qcc::IPEndpoint>::const_iterator iter = m_requestedInterfaces.begin(); iter != m_requestedInterfaces.end(); iter++) {
-                if (iter->first != "*" && iter->second.GetAddress() != qcc::IPAddress("0.0.0.0")) {
-                    qcc::String replacedSpec = "udp:addr=" + m_requestedInterfaces[iter->first].GetAddress().ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].GetPort());
+            for (std::map<qcc::String, InterfaceInfo>::const_iterator iter = m_requestedInterfaces.begin(); iter != m_requestedInterfaces.end(); iter++) {
+                if (iter->first != "*" && iter->second.m_address != qcc::IPAddress("0.0.0.0")) {
                     m_listenPortMap.erase(iter->first);
-                    replacedList.push_back(replacedSpec);
+                    qcc::String replacedAcceptingSpec = "udp:addr=" + m_requestedInterfaces[iter->first].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_acceptingPort);
+                    replacedList.push_back(replacedAcceptingSpec);
+                    qcc::String replacedActiveSpec = "udp:addr=" + m_requestedInterfaces[iter->first].m_address.ToString() + ",port=" + U32ToString(m_requestedInterfaces[iter->first].m_activePort);
+                    replacedList.push_back(replacedActiveSpec);
                 }
             }
             m_requestedInterfaces.clear();
             m_requestedAddresses.clear();
-            m_requestedAddressPortMap.clear();
-            m_requestedInterfaces["*"] = qcc::IPEndpoint("0.0.0.0", listenPort);
+            m_requestedInterfaces["*"] = InterfaceInfo("0.0.0.0", acceptingPort, activePort);
             break;
         } else if (wildcardAddressRequested) {
             m_wildcardAddressProcessed = true;
-            for (std::map<qcc::String, qcc::String>::const_iterator iter = m_requestedAddresses.begin(); iter != m_requestedAddresses.end(); iter++) {
-                if (iter->first != "0.0.0.0" && !iter->second.empty()) {
-                    qcc::String replacedSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(m_listenPortMap[iter->first]);
+            for (std::map<qcc::String, AddressInfo>::const_iterator iter = m_requestedAddresses.begin(); iter != m_requestedAddresses.end(); iter++) {
+                if (iter->first != "0.0.0.0" && !iter->second.m_interface.empty()) {
                     m_listenPortMap.erase(iter->first);
-                    replacedList.push_back(replacedSpec);
+                    qcc::String replacedAcceptingSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_acceptingPort);
+                    replacedList.push_back(replacedAcceptingSpec);
+                    qcc::String replacedActiveSpec = "udp:addr=" + iter->first + ",port=" + U32ToString(iter->second.m_activePort);
+                    replacedList.push_back(replacedActiveSpec);
                 }
             }
             m_requestedAddresses.clear();
-            m_requestedAddressPortMap.clear();
-            m_requestedAddresses["0.0.0.0"] = "*";
+            m_requestedAddresses["0.0.0.0"] = AddressInfo("*", acceptingPort, activePort);
             break;
         }
     }
@@ -11577,11 +11728,10 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      */
     if (!addedList.empty()) {
         m_listenFdsLock.Lock(MUTEX_CONTEXT);
-        for (list<pair<qcc::String, SocketFd> >::iterator it = addedList.begin(); it != addedList.end(); it++) {
-            ListenFdEntry entry(it->first, it->second);
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Adding normalized listen spec \"%s\", sockFd %d. to m_listenFds",
-                           it->first.c_str(), it->second));
-            m_listenFds.push_back(entry);
+        for (list<ListenFdEntry>::iterator it = addedList.begin(); it != addedList.end(); it++) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Adding normalized listen spec \"%s\", sockFd %d, accepting: %s to m_listenFds",
+                           it->m_normSpec.c_str(), it->m_sockFd, (it->m_accepting ? "y" : "n")));
+            m_listenFds.push_back(*it);
             m_reload = STATE_RELOADING;
         }
 
@@ -11605,9 +11755,9 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
      */
     if (m_advertising.empty() && m_discovering.empty()) {
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Not advertising or discovering"));
-        for (list<pair<qcc::String, SocketFd> >::iterator it = addedList.begin(); it != addedList.end(); it++) {
-            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): send \"%s\" to replacedList", it->first.c_str()));
-            replacedList.push_back(it->first);
+        for (list<ListenFdEntry>::iterator it = addedList.begin(); it != addedList.end(); it++) {
+            QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): send \"%s\" to replacedList", it->m_normSpec.c_str()));
+            replacedList.push_back(it->m_normSpec);
         }
         QCC_DbgPrintf(("UDPTransport::HandleNetworkEventInstance(): Disable NS"));
         IpNameService::Instance().Enable(TRANSPORT_UDP, std::map<qcc::String, uint16_t>(), 0, m_listenPortMap, 0, false, false, false, false);
@@ -11667,6 +11817,18 @@ void UDPTransport::CheckEndpointLocalMachine(UDPEndpoint endpoint)
 #else
     QCC_UNUSED(endpoint);
 #endif
+}
+
+QStatus UDPTransport::IsSocketAccepting(qcc::SocketFd socketFd, bool& isAccepting) const
+{
+    for (list<ListenFdEntry>::const_iterator i = m_listenFds.begin(); i != m_listenFds.end(); i++) {
+        if (i->m_sockFd == socketFd) {
+            isAccepting = i->m_accepting;
+            return ER_OK;
+        }
+    }
+
+    return ER_FAIL;
 }
 
 ThreadReturn STDCALL UDPTransport::DynamicScoreUpdater::Run(void* arg) {

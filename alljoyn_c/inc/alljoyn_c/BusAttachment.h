@@ -66,6 +66,7 @@ typedef void (AJ_CALL * alljoyn_busattachment_joinsessioncb_ptr)(QStatus status,
  * @param context      User defined context which will be passed as-is to callback.
  */
 typedef void (AJ_CALL * alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus status, uint32_t timeout, void* context);
+
 /**
  * Allocate an alljoyn_busattachment.
  *
@@ -103,7 +104,6 @@ extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(const c
  * @return the allocated alljoyn_busattachment
  */
 extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create_concurrency(const char* applicationName, QCC_BOOL allowRemoteMessages, uint32_t concurrency);
-
 
 /**
  * Free an allocated alljoyn_busattachment.
@@ -147,7 +147,7 @@ extern AJ_API void AJ_CALL alljoyn_busattachment_destroy(alljoyn_busattachment b
  * gracefully brought down together.
  *
  * The alljoyn_busattachment function alljoyn_busattachment_start(),
- * alljoyn_busattachment_stop() and alljoyn_busattacment_join() all work together to
+ * alljoyn_busattachment_stop() and alljoyn_busattachment_join() all work together to
  * manage the autonomous activities that can happen in an alljoyn_busattachment.
  * These activities are carried out by so-called hardware threads.  POSIX
  * defines functions used to control hardware threads, which it calls
@@ -716,6 +716,22 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unbindsessionport(alljoyn_bu
  *                         key store implementation.
  *
  * @param isShared         This parameter is not used as of 16.04. It is ignored internally (always shared).
+ *
+ * @remark
+ * For Security 2.0 applications, after the application has been claimed, it is recommended that only
+ * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter. If the application is unclaimed but will
+ * be claimed locally via the alljoyn_permissionconfigurator_claim call, it is also recommended that only
+ * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter, and that the claim capabilities be left as
+ * default, to prevent possible claiming over the network by a rogue security manager.
+ *
+ * If this application will be claimed over the network, peer security should first be enabled with
+ * ALLJOYN_ECDHE_ECDSA and the supported mechanisms for claiming. After it is claimed, and the application
+ * received the EndManagement callback, the application should then re-enable peer security with only
+ * ALLJOYN_ECDHE_ECDSA.
+ *
+ * Unless a bus attachment will be used by a security manager to claim other applications, or will interact
+ * with applications using Security 1.0, and so will need to negotiate other authentication mechanisms,
+ * only ALLJOYN_ECDHE_ECDSA should be enabled while claimed.
  *
  * @return
  *      - #ER_OK if peer security was enabled.
@@ -1548,6 +1564,20 @@ extern AJ_API QStatus AJ_CALL alljoyn_busattachment_registerapplicationstatelist
  */
 extern AJ_API QStatus AJ_CALL alljoyn_busattachment_unregisterapplicationstatelistener(alljoyn_busattachment bus,
                                                                                        alljoyn_applicationstatelistener listener);
+
+/*
+ * Deletes the key store of the specified application.
+ *
+ * @note To avoid errors, app should only call this function after all instances of alljoyn_busattachment are destroyed.
+ *
+ * @param[in] application the application name used when constructing a BusAttachment.
+ *
+ * @return
+ *      - #ER_OK if the key store was not present, or if it has been deleted successfully.
+ *      - #ER_OS_ERROR if the OS fails to delete the key store.
+ *      - An error status otherwise
+ */
+extern AJ_API QStatus AJ_CALL alljoyn_busattachment_deletedefaultkeystore(const char* applicationName);
 
 #ifdef __cplusplus
 } /* extern "C" */

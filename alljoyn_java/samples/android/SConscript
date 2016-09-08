@@ -18,6 +18,10 @@ Import('env')
 # Set the ABI based on the CPU
 if(env['CPU'] == 'arm'):
     android_eabi = 'armeabi'
+elif(env['CPU'] == 'arm64'):
+    android_eabi = 'arm64-v8a'
+elif(env['CPU'] == 'x86_64'):
+    android_eabi = 'x86_64'
 else:
     android_eabi = 'x86'
 

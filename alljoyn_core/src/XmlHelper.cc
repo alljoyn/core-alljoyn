@@ -47,7 +47,6 @@ using namespace std;
 
 namespace ajn {
 
-
 const qcc::String& GetSecureAnnotation(const XmlElement* elem)
 {
     vector<XmlElement*>::const_iterator ifIt = elem->GetChildren().begin();
@@ -61,7 +60,7 @@ const qcc::String& GetSecureAnnotation(const XmlElement* elem)
     return qcc::String::Empty;
 }
 
-QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
+QStatus XmlHelper::ParseInterface(const XmlElement* elem, InterfaceDescription& intf)
 {
     QStatus status = ER_OK;
     InterfaceSecurityPolicy secPolicy;
@@ -76,6 +75,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
         return status;
     }
 
+    intf.SetName(ifName);
     /*
      * Due to a bug in AllJoyn 14.06 and previous, we need to ignore
      * the introspected versions of the standard D-Bus interfaces.
@@ -83,8 +83,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
      * this code and 14.06.  This hack should be removed when
      * interface evolution is better supported.
      */
-    if ((ifName == org::freedesktop::DBus::InterfaceName) ||
-        (ifName == org::freedesktop::DBus::Properties::InterfaceName)) {
+    if (IsStandardDbusInterface(intf)) {
         return ER_OK;
     }
 
@@ -104,8 +103,11 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
         secPolicy = AJ_IFC_SECURITY_INHERIT;
     }
 
-    /* Create a new interface */
-    InterfaceDescription intf(ifName.c_str(), secPolicy);
+    status = intf.SetSecurityPolicy(secPolicy);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Failed to set security policy annotation for interface \"%s\"", ifName.c_str()));
+        return status;
+    }
 
     /* Iterate over <method>, <signal> and <property> elements */
     vector<XmlElement*>::const_iterator ifIt = elem->GetChildren().begin();
@@ -130,9 +132,7 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 bool isGlobalBroadcastSignal = false;
                 const vector<XmlElement*>& argChildren = ifChildElem->GetChildren();
                 vector<XmlElement*>::const_iterator argIt = argChildren.begin();
-                map<qcc::String, qcc::String> argDescriptions;
                 map<pair<qcc::String, qcc::String>, qcc::String> argAnnotations;
-                qcc::String memberDescription;
 
                 if (isSignal) {
                     const qcc::String& sessioncastStr = ifChildElem->GetAttribute("sessioncast");
@@ -174,13 +174,10 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                                     const qcc::String& argValueAtt = (*it)->GetAttribute("value");
                                     pair<qcc::String, qcc::String> item(nameAtt, argNameAtt);
                                     argAnnotations[item] = argValueAtt;
-                                    if ((*it)->GetAttribute("name").compare_std(0, docString.length(), docString) == 0) {
-                                        argDescriptions.insert(pair<qcc::String, qcc::String>(nameAtt, (*it)->GetAttribute("value")));
-                                    }
                                 } else if ((*it)->GetName() == "description") {
                                     const qcc::String& desc = (*it)->GetContent();
-                                    argDescriptions.insert(pair<qcc::String, qcc::String>(nameAtt, desc));
                                     const qcc::String& lang = (*it)->GetAttribute("language");
+                                    /* Add argument description as annotation. */
                                     if (!lang.empty()) {
                                         const pair<qcc::String, qcc::String> item(nameAtt, docString + "." + lang);
                                         argAnnotations[item] = desc;
@@ -197,11 +194,6 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                     } else if (argElem->GetName() == "annotation") {
                         const qcc::String& nameAtt = argElem->GetAttribute("name");
                         const qcc::String& valueAtt = argElem->GetAttribute("value");
-
-                        /* Treat annotation DocString as description */
-                        if (nameAtt.compare_std(0, docString.length(), docString) == 0) {
-                            memberDescription = valueAtt;
-                        }
                         annotations[nameAtt] = valueAtt;
 
                         /* Unified XML signal emission behaviors */
@@ -217,8 +209,8 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                             }
                         }
                     } else if (argElem->GetName() == "description") {
-                        memberDescription = argElem->GetContent();
-                        /* Add description to annotation */
+                        const qcc::String& memberDescription = argElem->GetContent();
+                        /* Add description as annotation */
                         const qcc::String& lang = argElem->GetAttribute("language");
                         if (!lang.empty()) {
                             const qcc::String nameAtt = docString + "." + lang;
@@ -251,14 +243,6 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
 
                     for (std::map<String, String>::const_iterator it = annotations.begin(); it != annotations.end(); ++it) {
                         intf.AddMemberAnnotation(memberName.c_str(), it->first, it->second);
-                    }
-
-                    if (!memberDescription.empty()) {
-                        intf.SetMemberDescription(memberName.c_str(), memberDescription.c_str());
-                    }
-
-                    for (std::map<String, String>::const_iterator it = argDescriptions.begin(); it != argDescriptions.end(); it++) {
-                        intf.SetArgDescription(memberName.c_str(), it->first.c_str(), it->second.c_str());
                     }
 
                     for (std::map<std::pair<qcc::String, qcc::String>, qcc::String>::const_iterator it = argAnnotations.begin(); it != argAnnotations.end(); it++) {
@@ -297,9 +281,6 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                 while ((ER_OK == status) && (argIt != argChildren.end())) {
                     const XmlElement* argElem = *argIt++;
                     if (argElem->GetName() == "annotation") {
-                        if (argElem->GetAttribute("name").compare_std(0, docString.length(), docString) == 0) {
-                            intf.SetPropertyDescription(memberName.c_str(), argElem->GetAttribute("value").c_str());
-                        }
                         status = intf.AddPropertyAnnotation(memberName, argElem->GetAttribute("name"), argElem->GetAttribute("value"));
                     } else if (argElem->GetName() == "description") {
                         const qcc::String& content = argElem->GetContent();
@@ -307,29 +288,18 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
                         if (!lang.empty()) {
                             intf.AddPropertyAnnotation(memberName, docString + "." + lang, content);
                         }
-                        status = intf.SetPropertyDescription(memberName.c_str(), content.c_str());
                     }
                 }
             }
         } else if (ifChildName == "annotation") {
             const qcc::String& nameAtt = ifChildElem->GetAttribute("name");
             const qcc::String& valueAtt = ifChildElem->GetAttribute("value");
-
-            /* Treat annotation DocString as description (for example, "org.alljoyn.Bus.DocString.En") */
-            if (nameAtt.compare_std(0, docString.length(), docString) == 0) {
-                if ((nameAtt.length() > 26) && (nameAtt[25] == '.')) {
-                    qcc::String const& language = nameAtt.substr(26);
-                    intf.SetDescriptionLanguage(language.c_str());
-                }
-                intf.SetDescription(valueAtt.c_str());
-            }
             status = intf.AddAnnotation(nameAtt, valueAtt);
         } else if (ifChildName == "description") {
             qcc::String const& description = ifChildElem->GetContent();
             qcc::String const& language = ifChildElem->GetAttribute("language");
-            intf.SetDescriptionLanguage(language.c_str());
-            intf.SetDescription(description.c_str());
             if (!language.empty()) {
+                /* Add description as annotation */
                 const qcc::String nameAtt = docString + "." + language;
                 intf.AddAnnotation(nameAtt, description);
             }
@@ -339,42 +309,17 @@ QStatus XmlHelper::ParseInterface(const XmlElement* elem, ProxyBusObject* obj)
             break;
         }
     }
-    /* Add the interface with all its methods, signals and properties */
-    if (ER_OK == status) {
-        InterfaceDescription* newIntf = NULL;
-        status = bus->CreateInterface(intf.GetName(), newIntf);
-        if (ER_OK == status) {
-            /* Assign new interface */
-            *newIntf = intf;
-            newIntf->Activate();
-            if (obj) {
-                obj->AddInterface(*newIntf);
-            }
-        } else if (ER_BUS_IFACE_ALREADY_EXISTS == status) {
-            /* Make sure definition matches existing one */
-            const InterfaceDescription* existingIntf = bus->GetInterface(intf.GetName());
-            if (existingIntf) {
-                if (*existingIntf == intf) {
-                    if (obj) {
-                        obj->AddInterface(*existingIntf);
-                    }
-                    status = ER_OK;
-                } else {
-                    status = ER_BUS_INTERFACE_MISMATCH;
-                    QCC_LogError(status, ("XML interface does not match existing definition for \"%s\"", intf.GetName()));
-                }
-            } else {
-                status = ER_FAIL;
-                QCC_LogError(status, ("Failed to retrieve existing interface \"%s\"", intf.GetName()));
-            }
-        } else {
-            QCC_LogError(status, ("Failed to create new inteface \"%s\"", intf.GetName()));
-        }
-    }
+
     return status;
 }
 
-QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
+bool XmlHelper::IsStandardDbusInterface(const InterfaceDescription& intf) const
+{
+    return ((intf.name == org::freedesktop::DBus::InterfaceName) ||
+            (intf.name == org::freedesktop::DBus::Properties::InterfaceName));
+}
+
+QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj, const XmlToLanguageMap* legacyDescriptions)
 {
     QStatus status = ER_OK;
 
@@ -392,7 +337,29 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
         const XmlElement* elem = *it++;
         const qcc::String& elemName = elem->GetName();
         if (elemName == "interface") {
-            status = ParseInterface(elem, obj);
+            InterfaceDescription intf;
+            status = ParseInterface(elem, intf);
+            if (IsStandardDbusInterface(intf)) {
+                /* Skip the introspected versions of the standard D-Bus interfaces.
+                 * See comment in ParseInterface().
+                 */
+                continue;
+            }
+            if ((status == ER_OK) && (legacyDescriptions != nullptr) && (!legacyDescriptions->empty())) {
+                /* Legacy descriptions present. This means that we are dealing with a pre-16.04
+                 * object and we need to get the descriptions for this interface from the
+                 * legacyDescriptions map. See ASACORE-2744 and the documentation for
+                 * ajn::ProxyBusObject::ParseLegacyXml().
+                 */
+                status = AddLegacyDescriptions(intf, legacyDescriptions);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("Failed to add legacy descriptions for interface \"%s\"",
+                                          intf.GetName()));
+                }
+            }
+            if (status == ER_OK) {
+                status = AddInterface(intf, obj);
+            }
         } else if (elemName == "node") {
             if (obj) {
                 const qcc::String& relativePath = elem->GetAttribute("name");
@@ -405,10 +372,10 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
                     /* Check for existing child with the same name. Use this child if found, otherwise create a new one */
                     ProxyBusObject* childObj = obj->GetChild(relativePath.c_str());
                     if (childObj) {
-                        status = ParseNode(elem, childObj);
+                        status = ParseNode(elem, childObj, legacyDescriptions);
                     } else {
                         ProxyBusObject newChild(*bus, obj->GetServiceName().c_str(), obj->GetUniqueName().c_str(), childObjPath.c_str(), obj->GetSessionId(), obj->IsSecure());
-                        status = ParseNode(elem, &newChild);
+                        status = ParseNode(elem, &newChild, legacyDescriptions);
                         if (ER_OK == status) {
                             obj->AddChild(newChild);
                         }
@@ -421,11 +388,302 @@ QStatus XmlHelper::ParseNode(const XmlElement* root, ProxyBusObject* obj)
                     QCC_LogError(status, ("Illegal child object name \"%s\" specified in introspection for %s", relativePath.c_str(), ident));
                 }
             } else {
-                status = ParseNode(elem, NULL);
+                status = ParseNode(elem, nullptr, legacyDescriptions);
             }
         }
     }
     return status;
+}
+
+QStatus XmlHelper::AddInterface(const InterfaceDescription& interface, ProxyBusObject* obj)
+{
+    QStatus status;
+    InterfaceDescription* newIntf = nullptr;
+
+    status = bus->CreateInterface(interface.GetName(), newIntf);
+    if (status == ER_OK) {
+        /* Assign new interface */
+        *newIntf = interface;
+        newIntf->Activate();
+        if (obj) {
+            obj->AddInterface(*newIntf);
+        }
+    } else if (ER_BUS_IFACE_ALREADY_EXISTS == status) {
+        /* Make sure definition matches existing one */
+        const InterfaceDescription* existingIntf = bus->GetInterface(interface.GetName());
+        if (existingIntf) {
+            if (*existingIntf == interface) {
+                if (obj) {
+                    obj->AddInterface(*existingIntf);
+                }
+                status = ER_OK;
+            } else {
+                status = ER_BUS_INTERFACE_MISMATCH;
+                QCC_LogError(status, ("XML interface does not match existing definition for \"%s\"", interface.GetName()));
+            }
+        } else {
+            status = ER_FAIL;
+            QCC_LogError(status, ("Failed to retrieve existing interface \"%s\"", interface.GetName()));
+        }
+    } else {
+        QCC_LogError(status, ("Failed to create new interface \"%s\"", interface.GetName()));
+    }
+
+    return status;
+}
+
+QStatus XmlHelper::AddLegacyDescriptions(InterfaceDescription& interface,
+                                         const XmlToLanguageMap* legacyDescriptions) const
+{
+    QStatus status;
+    if (legacyDescriptions == nullptr) {
+        status = ER_INVALID_ADDRESS;
+        QCC_LogError(status, ("Legacy descriptions not available."));
+        return status;
+    }
+
+    for (XmlToLanguageMap::const_iterator itD = legacyDescriptions->begin();
+         itD != legacyDescriptions->end();
+         itD++) {
+        const qcc::String& language = itD->first;
+        const qcc::XmlParseContext& xmlWithDescriptions = *(itD->second);
+
+        /* Find the interface in the XML with descriptions to parse descriptions for the interface
+         * and all its children.
+         */
+        const qcc::XmlElement* interfaceElement = FindInterfaceElement(xmlWithDescriptions.GetRoot(), interface.GetName());
+        if (interfaceElement == nullptr) {
+            /* No description in this language for this interface - OK, continue.
+             */
+            continue;
+        }
+
+        status = AddLegacyDescriptionsForLanguage(interface, language, interfaceElement);
+        if (status != ER_OK) {
+            QCC_LogError(status, ("Failed to add legacy description in language \"%s\" for interface \"%s\".",
+                                  language.c_str(), interface.GetName()));
+            return ER_BUS_BAD_XML;
+        }
+    }
+    return ER_OK;
+}
+
+QStatus XmlHelper::AddLegacyDescriptionsForLanguage(InterfaceDescription& interface,
+                                                    const qcc::String& languageTag,
+                                                    const qcc::XmlElement* interfaceElement) const
+{
+    QStatus status = ER_OK;
+    QCC_ASSERT(languageTag.size() > 0u);
+    QCC_ASSERT(interfaceElement);
+
+    vector<XmlElement*>::const_iterator itCh = interfaceElement->GetChildren().begin();
+    while ((status == ER_OK) && (itCh != interfaceElement->GetChildren().end())) {
+        const XmlElement* ifChildElem = *itCh;
+        const qcc::String& ifChildName = ifChildElem->GetName();
+
+        if (ifChildName == "description") {
+            const qcc::String& description = ifChildElem->GetContent();
+            status = SetDescriptionForInterface(interface, description, languageTag);
+            if (status != ER_OK) {
+                return status;
+            }
+        } else if ((ifChildName == "method") || (ifChildName == "signal")) {
+            status = AddLegacyMemberDescriptions(interface, languageTag, ifChildElem);
+            if (status != ER_OK) {
+                return status;
+            }
+        } else if (ifChildName == "property") {
+            status = AddLegacyPropertyDescription(interface, languageTag, ifChildElem);
+            if (status != ER_OK) {
+                return status;
+            }
+        } else if (ifChildName != "annotation") {
+            status = ER_FAIL;
+            QCC_LogError(status, ("Unknown element \"%s\" found in introspection data from %s", ifChildName.c_str(), ident));
+            return status;
+        }
+        itCh++;
+    }
+    return status;
+}
+
+QStatus XmlHelper::AddLegacyMemberDescriptions(InterfaceDescription& interface,
+                                               const qcc::String& languageTag,
+                                               const qcc::XmlElement* memberElem) const
+{
+    QStatus status = ER_OK;
+    const qcc::String& memberName = memberElem->GetAttribute("name");
+    if (!IsLegalMemberName(memberName.c_str())) {
+        status = ER_BUS_BAD_MEMBER_NAME;
+        QCC_LogError(status, ("Illegal member name \"%s\" introspection data for %s", memberName.c_str(), ident));
+        return status;
+    }
+
+    const vector<XmlElement*>& memberChildren = memberElem->GetChildren();
+    vector<XmlElement*>::const_iterator itCh = memberChildren.begin();
+
+    while ((status == ER_OK) && (itCh != memberChildren.end())) {
+        const XmlElement* memberChildElem = *itCh;
+        const qcc::String& memberChildName = memberChildElem->GetName();
+        if (memberChildName == "description") {
+            const qcc::String& description = memberChildElem->GetContent();
+            status = SetMemberDescriptionForInterface(interface, memberName, description, languageTag);
+            if (status != ER_OK) {
+                return status;
+            }
+        } else if (memberChildName == "arg") {
+            status = AddLegacyArgDescription(interface, languageTag, memberName, memberChildElem);
+            if (status != ER_OK) {
+                return status;
+            }
+        }
+        itCh++;
+    }
+
+    return status;
+}
+
+QStatus XmlHelper::AddLegacyArgDescription(InterfaceDescription& interface,
+                                           const qcc::String& languageTag,
+                                           const qcc::String& parentName,
+                                           const qcc::XmlElement* argElem) const
+{
+    QStatus status;
+    const qcc::String& argType = argElem->GetAttribute("type");
+    if (argType.empty()) {
+        status = ER_BUS_BAD_XML;
+        QCC_LogError(status, ("Malformed <arg> tag (bad attributes)"));
+        return status;
+    }
+    const qcc::String& argName = argElem->GetAttribute("name");
+    if (argName.empty()) {
+        status = ER_BUS_BAD_BUS_NAME;
+        QCC_LogError(status, ("Invalid name attribute for argument in introspection data from %s", ident));
+        return status;
+    }
+
+    vector<XmlElement*>::const_iterator itArgCh = argElem->GetChildren().begin();
+    for (; itArgCh != argElem->GetChildren().end(); itArgCh++) {
+        if ((*itArgCh)->GetName() == "description") {
+            const qcc::String& description = (*itArgCh)->GetContent();
+            return SetArgDescriptionForInterface(interface, parentName, argName, description, languageTag);
+        }
+    }
+    return ER_OK;
+}
+
+QStatus XmlHelper::AddLegacyPropertyDescription(InterfaceDescription& interface,
+                                                const qcc::String& languageTag,
+                                                const qcc::XmlElement* propertyElem) const
+{
+    QStatus status;
+    const qcc::String& sig = propertyElem->GetAttribute("type");
+    const qcc::String& propertyName = propertyElem->GetAttribute("name");
+    if (!SignatureUtils::IsCompleteType(sig.c_str())) {
+        status = ER_BUS_BAD_SIGNATURE;
+        QCC_LogError(status, ("Invalid signature for property %s in introspection data from %s",
+                              propertyName.empty() ? "(Undefined name)" : propertyName.c_str(), ident));
+        return status;
+    }
+    if (propertyName.empty()) {
+        status = ER_BUS_BAD_BUS_NAME;
+        QCC_LogError(status, ("Invalid name attribute for property in introspection data from %s", ident));
+        return status;
+    }
+
+    const vector<XmlElement*>& propertyChildren = propertyElem->GetChildren();
+    vector<XmlElement*>::const_iterator itCh = propertyChildren.begin();
+    while (itCh != propertyChildren.end()) {
+        const XmlElement* propertyChildElem = *itCh++;
+        if (propertyChildElem->GetName() == "description") {
+            const qcc::String& description = propertyChildElem->GetContent();
+            return SetPropertyDescriptionForInterface(interface, propertyName, description, languageTag);
+        }
+    }
+    return ER_OK;
+}
+
+QStatus XmlHelper::SetDescriptionForInterface(InterfaceDescription& interface,
+                                              const qcc::String& description,
+                                              const qcc::String& languageTag) const
+{
+    QStatus status = interface.SetDescriptionForLanguage(description, languageTag);
+    if ((status != ER_OK) && (status != ER_BUS_DESCRIPTION_ALREADY_EXISTS)) {
+        QCC_LogError(status, ("Failed to set description for interface \"%s\"",
+                              interface.GetName()));
+        return status;
+    }
+
+    return ER_OK;
+}
+
+QStatus XmlHelper::SetMemberDescriptionForInterface(InterfaceDescription& interface,
+                                                    const qcc::String& memberName,
+                                                    const qcc::String& description,
+                                                    const qcc::String& languageTag) const
+{
+    QStatus status = interface.SetMemberDescriptionForLanguage(memberName, description, languageTag);
+    if ((status != ER_OK) && (status != ER_BUS_DESCRIPTION_ALREADY_EXISTS)) {
+        QCC_LogError(status, ("Failed to set description for member \"%s\" of interface \"%s\"",
+                              memberName.c_str(), interface.GetName()));
+        return status;
+    }
+
+    return ER_OK;
+}
+
+QStatus XmlHelper::SetArgDescriptionForInterface(InterfaceDescription& interface,
+                                                 const qcc::String& parentName,
+                                                 const qcc::String& argName,
+                                                 const qcc::String& description,
+                                                 const qcc::String& languageTag) const
+{
+    QStatus status = interface.SetArgDescriptionForLanguage(parentName, argName, description, languageTag);
+    if ((status != ER_OK) && (status != ER_BUS_DESCRIPTION_ALREADY_EXISTS)) {
+        QCC_LogError(status, ("Failed to set description for argument \"%s\" of member \"%s\" of interface \"%s\"",
+                              argName.c_str(), parentName.c_str(), interface.GetName()));
+        return status;
+    }
+
+    return ER_OK;
+}
+
+QStatus XmlHelper::SetPropertyDescriptionForInterface(InterfaceDescription& interface,
+                                                      const qcc::String& propertyName,
+                                                      const qcc::String& description,
+                                                      const qcc::String& languageTag) const
+{
+    QStatus status = interface.SetPropertyDescriptionForLanguage(propertyName, description, languageTag);
+    if ((status != ER_OK) && (status != ER_BUS_DESCRIPTION_ALREADY_EXISTS)) {
+        QCC_LogError(status, ("Failed to set description for property \"%s\" of interface \"%s\"",
+                              propertyName.c_str(), interface.GetName()));
+        return status;
+    }
+
+    return ER_OK;
+}
+
+const qcc::XmlElement* XmlHelper::FindInterfaceElement(const qcc::XmlElement* root, const qcc::String& interfaceName) const
+{
+    QCC_ASSERT(root->GetName() == "node");
+
+    const vector<XmlElement*>& rootChildren = root->GetChildren();
+    for (std::vector<XmlElement*>::const_iterator itCh = rootChildren.begin();
+         itCh != rootChildren.end(); itCh++) {
+        const XmlElement* elem = *itCh;
+        const qcc::String& elemName = elem->GetName();
+        if (elemName == "interface") {
+            if (elem->GetAttribute("name") == interfaceName) {
+                return elem;
+            }
+        } else if (elemName == "node") {
+            const XmlElement* interfaceInNode = FindInterfaceElement(elem, interfaceName);
+            if (interfaceInNode != nullptr) {
+                return interfaceInNode;
+            }
+        }
+    }
+    return nullptr;
 }
 
 } // ajn::

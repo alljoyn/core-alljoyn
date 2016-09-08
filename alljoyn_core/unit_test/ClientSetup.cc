@@ -235,7 +235,7 @@ QStatus ClientSetup::AsyncMethodCall(int noOfCalls, int type)
             status = remoteObj.MethodCallAsync(::cl::org::alljoyn::alljoyn_test::InterfaceName, "my_ping",
                                                this, static_cast<MessageReceiver::ReplyHandler>(&ClientSetup::AsyncCallReplyHandler),
                                                &pingStr, 1);
-            //don't clog up the the queue sending signals too quickly
+            //don't clog up the queue sending signals too quickly
             qcc::Sleep(CLIENT_TEST_WAIT_TIME);
             EXPECT_EQ(ER_OK, status) << " Problem while calling remote method";
             if (status != ER_OK) {
@@ -310,7 +310,7 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
     mysignal_2 = intf->GetMember("my_signal_string");
     QCC_ASSERT(mysignal_2);
 
-    /* register the signal handler for the the 'my_signal' signal */
+    /* register the signal handler for the 'my_signal' signal */
     status =  clientMsgBus.RegisterSignalHandler(this,
                                                  static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler),
                                                  mysignal,
@@ -320,7 +320,7 @@ QStatus ClientSetup::SignalHandler(int noOfCalls, int type)
         return status;
     }
 
-    /* register the signal handler for the the 'my_signal' signal */
+    /* register the signal handler for the 'my_signal' signal */
     status =  clientMsgBus.RegisterSignalHandler(this,
                                                  static_cast<MessageReceiver::SignalHandler>(&ClientSetup::MySignalHandler2),
                                                  mysignal_2,

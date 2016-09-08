@@ -15,6 +15,7 @@
 Import('env')
 
 lib_env = env.Clone()
+lib_env.Append(CPPPATH = [env['INCDIR_COMMON']])
 
 sqlite_dir = lib_env['SQLITE_DIR']
 

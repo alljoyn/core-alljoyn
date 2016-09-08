@@ -1,0 +1,137 @@
+# Copyright AllSeen Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for any
+#    purpose with or without fee is hereby granted, provided that the above
+#    copyright notice and this permission notice appear in all copies.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#
+
+Import('env')
+import os
+
+s = os.environ.get('CONFIGURATION')
+#Command line does not pass CONFIGURATION variable to SConscript,this uses the
+#VARIANT which will be either debug or release.  Left 'CONFIGURATION' in place to
+#avoid breaking anything
+
+if None is s:
+     s = env['VARIANT']
+
+s = s.lower()
+
+platform_name = os.environ.get('PLATFORM_NAME')
+if platform_name == 'macosx':
+    platform_name = ''
+
+env['OBJDIR']  = '#build/${OS}/${CPU}/' + platform_name + '/' + s + '/obj'
+env['DISTDIR'] = '#build/${OS}/${CPU}/' + platform_name + '/' + s + '/dist'
+env['TESTDIR'] = '#build/${OS}/${CPU}/' + platform_name + '/' + s + '/test'
+
+vars = Variables()
+vars.Add(PathVariable('SDKROOT', ' Base directory of Mac/iOS SDK for target', os.environ.get('SDKROOT')))
+vars.Add(PathVariable('SYSTEM_DEVELOPER_DIR', ' Base directory for developer tools', os.environ.get('SYSTEM_DEVELOPER_DIR')))
+vars.Update(env)
+Help(vars.GenerateHelpText(env))
+
+# Verify dependencies
+if '' == env.subst('$SDKROOT'):
+   print 'SDKROOT variable is required'
+   if not GetOption('help'):
+      Exit(1)
+
+if '' == env.subst('$SYSTEM_DEVELOPER_DIR'):
+    env['SYSTEM_DEVELOPER_DIR'] = '/Developer'
+
+# Darwing specific flags
+
+env['IPHONEOS_PLATFORM_DIR'] = '$SYSTEM_DEVELOPER_DIR/Platforms/iPhoneOS.platform'
+
+env['PATH'] = '$DT_TOOLCHAIN_DIR/usr/bin:$IPHONE_OS_PLATFORM_DIR/Developer/usr/bin:$SYSTEM_DEVELOPER_DIR/usr/bin:$PATH'
+
+env['CC'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang'
+env['CXX'] = '$DT_TOOLCHAIN_DIR/usr/bin/clang++'
+
+env.Append(CFLAGS=[
+            '-fdiagnostics-show-category=id',
+            '-fdiagnostics-parseable-fixits',
+            '-fpascal-strings',
+            '-Wreturn-type',
+            '-Wparentheses',
+            '-Wswitch',
+            '-Wno-unused-parameter',
+            '-Wunused-variable',
+            '-Wunused-value'])
+
+env.Append(CXXFLAGS=[
+            '-fno-exceptions',
+            '-Wc++11-extensions'])
+
+if os.environ.get('PLATFORM_NAME') == 'iphonesimulator':
+    print 'Using flags for iOS simulator...'
+
+    env.Append(CPPDEFINES=['QCC_OS_IPHONE'])
+    env.Append(CPPDEFINES=['QCC_OS_IPHONE_SIMULATOR'])
+
+    print env['VARIANT']
+    if env['VARIANT'] == 'debug':
+        ccld = [
+                '-g',
+                '-arch', 'x86_64',
+                '-miphoneos-version-min=9.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
+                '-isysroot', '$SDKROOT'
+                ]
+        print 'Using iOS debug configuration'
+    else:
+        ccld = [
+                '-arch', 'x86_64',
+                '-miphoneos-version-min=9.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
+                '-isysroot', '$SDKROOT'
+                ]
+        ld = [
+                '-framework', 'SystemConfiguration',
+                '-framework', 'Foundation'
+                ]
+        print 'Using iOS release configuration'
+
+elif os.environ.get('PLATFORM_NAME') == 'iphoneos':
+    print 'Using flags for iOS devices (x86_64)...'
+
+    env.Append(CPPDEFINES=['QCC_OS_IPHONE'])
+
+    if env['VARIANT'] == 'debug':
+        ccld = [
+                '-g',
+                '-arch', 'x86_64',
+                '-miphoneos-version-min=9.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
+                '-isysroot', '$SDKROOT'
+                ]
+        print 'Using iOS debug configuration'
+    else:
+        ccld = [
+                '-arch', 'x86_64',
+                '-miphoneos-version-min=9.0',
+                '-D__IPHONE_OS_VERSION_MIN_REQUIRED=90000',
+                '-isysroot', '$SDKROOT'
+                ]
+        ld = [
+                '-framework', 'SystemConfiguration',
+                '-framework', 'Foundation'
+                ]
+
+        print 'Using iOS release configuration'
+else:
+    ccld = ['-arch', 'i386', '-arch', 'x86_64', '-mmacosx-version-min=10.9']
+
+env.Append(CXXFLAGS=ccld)
+env.Append(CFLAGS=ccld)
+env.Append(LINKFLAGS=ccld)

@@ -23,10 +23,15 @@ import platform
 min_api_level = 16
 # Minimal required NDK version
 min_ndk_version = "r9b"
-# NDK should be equal to or lower as min_api_level
-ndk_level = min_api_level
 
 Import('env', 'CheckCXXFlag')
+
+# for 64-bit architecture, min ndk level is 21 (lollipop)
+if 'x86_64' == env['CPU'] or 'arm64' == env['CPU']:
+   ndk_level = 21
+else:
+   # NDK should be equal to or lower as min_api_level
+   ndk_level = min_api_level
 
 env['ANDROID_STL'] = 'gnustl_static'
 
@@ -64,7 +69,10 @@ if env.get('ANDROID_SDK', '') != '':
    # It should be pretty safe always to compile with the latest one.
    # This should not be done for minSdkVersion or targetSdkVersion!
    api_levels = [ level
-                  for level in set([ int(d.split('-')[-1]) for d in os.listdir(env['ANDROID_SDK'] + '/platforms') ])
+                  for level in set([ 
+                      int(d.split('-')[-1]) 
+                      for d in os.listdir(env['ANDROID_SDK'] + '/platforms') 
+                      if (d.split('-')[-1]).isdigit() ])
                   if level >= min_api_level ]
 
    api_levels.sort()
@@ -73,6 +81,7 @@ if env.get('ANDROID_SDK', '') != '':
    vars2.Add('ANDROID_API_LEVEL', 'Android API level', os.environ.get('ANDROID_API_LEVEL', str(api_levels[-1])))
    vars2.Update(env)
    Help(vars2.GenerateHelpText(env))
+   print "ANDROID_API_LEVEL is " + env.subst('$ANDROID_API_LEVEL')
 
 #take ndk_level same as SDK level
 ndk_platform_path = env['ANDROID_NDK'] + '/platforms/android-' + str(ndk_level)
@@ -115,7 +124,9 @@ if 'win32' == env.subst('$HOST_OS') or 'Darwin' == platform.system():
 if not GetOption('help') and env.has_key('ANDROID_NDK'):
    abi_map = { 'arm': 'armeabi',
                'mips': 'mips',
-               'x86': 'x86' }
+               'x86': 'x86',
+               'arm64': 'arm64-v8a',
+               'x86_64': 'x86_64' }
    curdir = env.Dir('.').srcnode()
 
    if 'win32' == env.subst('$HOST_OS'):
@@ -189,6 +200,10 @@ if not GetOption('help') and env.has_key('ANDROID_NDK'):
       env.Append(LIBPATH = '$ANDROID_SRC/out/target/product/$ANDROID_TARGET/system/lib')
 
    env.Append(CPPDEFINES = 'QCC_OS_ANDROID')
+
+   # Keep copy of android-specific paths separate.
+   # Needed in alljoyn_core/samples SConscript when excluding private include paths.
+   env.Append(ANDROID_CPPPATH = env['CPPPATH'])
 
    config = Configure(env, custom_tests = { 'CheckCXXFlag' : CheckCXXFlag })
    if not config.CheckCXXFlag('-std=c++11'):

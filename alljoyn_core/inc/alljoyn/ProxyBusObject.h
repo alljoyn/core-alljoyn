@@ -24,6 +24,7 @@
  ******************************************************************************/
 
 #include <qcc/platform.h>
+#include <memory>
 #include <set>
 #include <qcc/String.h>
 #include <alljoyn/InterfaceDescription.h>
@@ -52,11 +53,14 @@ class BusAttachment;
  * remotely located DBus objects.
  */
 class ProxyBusObject : public MessageReceiver {
+    class LegacyIntrospectionHandler;
+
     friend class XmlHelper;
     friend class AllJoynObj;
     friend class AllJoynPeerObj;
     friend class KeyExchangerCB;
     friend class MatchRuleTracker;
+    friend class LegacyIntrospectionHandler;
 
   public:
 
@@ -936,9 +940,16 @@ class ProxyBusObject : public MessageReceiver {
     BusAttachment& GetBusAttachment() const;
 
   private:
-
     class Internal;
     qcc::ManagedObj<Internal> internal; /**< Internal ProxyBusObject state */
+
+    /**
+     * @internal
+     * Helper object which retrieves introspection descriptions from pre-16.04 nodes.
+     *
+     * @see ASACORE-2744
+     */
+    std::unique_ptr<LegacyIntrospectionHandler> legacyIntrospectionHandler;
 
     bool isExiting;             /**< true iff ProxyBusObject is in the process of being destroyed */
 
@@ -1005,36 +1016,6 @@ class ProxyBusObject : public MessageReceiver {
      * @param b2bEp the RemoteEndpoint for Bus to Bus communication
      */
     void SetB2BEndpoint(RemoteEndpoint& b2bEp);
-
-    /**
-     * @internal
-     * Internal introspection xml parse tree type.
-     */
-    struct IntrospectionXml;
-
-    /**
-     * @internal
-     * Parse a single introspection @<node@> element.
-     *
-     * @param node  XML element (must be a @<node@>).
-     *
-     * @return
-     *       - #ER_OK if completely successful.
-     *       - An error status otherwise
-     */
-    static QStatus ParseNode(const IntrospectionXml& node);
-
-    /**
-     * @internal
-     * Parse a single introspection @<interface@> element.
-     *
-     * @param ifc  XML element (must be an @<interface@>).
-     *
-     * @return
-     *       - #ER_OK if completely successful.
-     *       - An error status otherwise
-     */
-    static QStatus ParseInterface(const IntrospectionXml& ifc);
 };
 
 /**

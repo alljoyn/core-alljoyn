@@ -94,6 +94,35 @@ class AJNKeyStoreListenerImpl : public ajn::KeyStoreListener {
      */
     QStatus PutKeys(ajn::KeyStore& keyStore, const qcc::String& source, const qcc::String& password);
 
+    /**
+     * Request to acquire exclusive lock (e.g., file lock) on the keyStore.
+     *
+     * @remark Best practice is to call `AcquireExclusiveLock(MUTEX_CONTEXT)`
+     *
+     * @see MUTEX_CONTEXT
+     *
+     * @param file the name of the file this lock was called from
+     * @param line the line number of the file this lock was called from
+     *
+     * @return
+     *      - #ER_OK if successful
+     *      - An error status otherwise
+     */
+    QStatus AcquireExclusiveLock(const char* file, uint32_t line);
+
+    /**
+     * Release the exclusive lock (e.g., file lock) of the keyStore.
+     *
+     * @remark Best practice is to call `ReleaseExclusiveLock(MUTEX_CONTEXT)`
+     *
+     * @see MUTEX_CONTEXT
+     *
+     * @param file the name of the file this lock was called from
+     * @param line the line number of the file this lock was called from
+     *
+     */
+    void ReleaseExclusiveLock(const char* file, uint32_t line);
+
 
     /**
      * Accessor for Objective-C delegate.

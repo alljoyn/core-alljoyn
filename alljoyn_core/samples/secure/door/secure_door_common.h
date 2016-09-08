@@ -61,7 +61,9 @@ class DoorCommonPCL : public PermissionConfigurationListener {
   public:
     DoorCommonPCL(BusAttachment& _ba) : ba(_ba) { }
 
-    void PolicyChanged();
+    void StartManagement();
+
+    void EndManagement();
 
     QStatus WaitForClaimedState();
 
@@ -130,13 +132,15 @@ class DoorCommon {
     DoorCommon(string _appName) :
         appName(_appName),
         ba(new BusAttachment(_appName.c_str(), true)),
-        aboutData("en"), aboutObj(new AboutObj(*ba))
+        aboutData("en"), aboutObj(new AboutObj(*ba)),
+        authListener(nullptr),
+        pcl(nullptr)
     {
     }
 
     ~DoorCommon();
 
-    QStatus Init(bool provider, PermissionConfigurationListener* pcl = nullptr);
+    QStatus Init(bool provider, PermissionConfigurationListener* inPcl = nullptr);
 
     void Fini();
 
@@ -154,6 +158,8 @@ class DoorCommon {
 
     QStatus UpdateManifest(const PermissionPolicy::Acl& manifest);
 
+    QStatus SetSecurityForClaimedMode();
+
   private:
     QStatus CreateInterface();
 
@@ -166,6 +172,8 @@ class DoorCommon {
     AboutData aboutData;
     AboutObj* aboutObj;
     SPListener spl;
+    DefaultECDHEAuthListener* authListener;
+    PermissionConfigurationListener* pcl;
 };
 }
 }

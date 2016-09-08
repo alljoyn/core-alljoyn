@@ -56,7 +56,7 @@ QStatus ProxyObjectManager::GetProxyObject(ManagedProxyObject& managedProxy,
     if (sessionType == ECDHE_NULL) {
         bus->EnablePeerSecurity(KEYX_ECDHE_NULL, &listener);
     } else if (sessionType == ECDHE_DSA) {
-        bus->EnablePeerSecurity(ECDHE_KEYX, &listener);
+        bus->EnablePeerSecurity(KEYX_ECDHE_ECDSA, &listener);
     } else if (sessionType == ECDHE_PSK) {
         bus->EnablePeerSecurity(KEYX_ECDHE_PSK, authListener ? authListener : &listener);
     }
@@ -289,30 +289,26 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetManifestTemplate(Manifest& ma
         return status;
     }
 
-    PermissionPolicy::Rule* manifestRules = nullptr;
-    size_t manifestRulesCount;
-    status = PermissionPolicy::ParseRules(rulesMsgArg, &manifestRules, &manifestRulesCount);
+    vector<PermissionPolicy::Rule> manifestRules;
+    status = PermissionPolicy::MsgArgToManifestTemplate(rulesMsgArg, manifestRules);
     if (ER_OK != status) {
-        QCC_LogError(status, ("Failed to ParseRules"));
-        goto Exit;
+        QCC_LogError(status, ("Failed to MsgArgToManifestTemplate"));
+        return status;
     }
 
-    if (0 == manifestRulesCount) {
+    if (0 == manifestRules.size()) {
         status = ER_MANIFEST_NOT_FOUND;
         QCC_LogError(status, ("Manifest does not contain rules"));
-        goto Exit;
+        return status;
     }
 
-    status = manifest.SetFromRules(manifestRules, manifestRulesCount);
+    status = manifest.SetFromRules(manifestRules.data(), manifestRules.size());
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to SetFromRules"));
-        goto Exit;
+        return status;
     }
 
-Exit:
-    delete[] manifestRules;
-    manifestRules = nullptr;
-    return status;
+    return ER_OK;
 }
 
 QStatus ProxyObjectManager::ManagedProxyObject::GetPublicKey(ECCPublicKey& publicKey)
@@ -322,6 +318,28 @@ QStatus ProxyObjectManager::ManagedProxyObject::GetPublicKey(ECCPublicKey& publi
     if (ER_OK != status) {
         QCC_LogError(status, ("Failed to GetPublicKey"));
     }
+    return status;
+}
+
+QStatus ProxyObjectManager::ManagedProxyObject::StartManagement()
+{
+    CheckReAuthenticate();
+    QStatus status = remoteObj->StartManagement();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to StartManagement"));
+    }
+
+    return status;
+}
+
+QStatus ProxyObjectManager::ManagedProxyObject::EndManagement()
+{
+    CheckReAuthenticate();
+    QStatus status = remoteObj->EndManagement();
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Failed to EndManagement"));
+    }
+
     return status;
 }
 

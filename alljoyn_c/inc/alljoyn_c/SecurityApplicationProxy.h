@@ -31,15 +31,17 @@ extern "C" {
 #endif
 
 /**
- * Session port reserved for SecurityApplicationProxy connections.
- */
-extern const alljoyn_sessionport PERMISSION_MANAGEMENT_SESSION_PORT;
-
-/**
  * alljoyn_securityapplicationproxy is a handle which exposes Security 2.0
  * proxy object used to managed the remote application's security settings.
  */
 typedef struct _alljoyn_securityapplicationproxy_handle* alljoyn_securityapplicationproxy;
+
+/**
+ * Get the session port reserved for SecurityApplicationProxy connections.
+ *
+ * @return alljoyn_sessionport with the value of the reserved port.
+ */
+AJ_API alljoyn_sessionport AJ_CALL alljoyn_securityapplicationproxy_getpermissionmanagementsessionport();
 
 /**
  * Creates a Security 2.0 proxy object used to manage the remote application's security settings.
@@ -67,6 +69,12 @@ AJ_API void AJ_CALL alljoyn_securityapplicationproxy_destroy(alljoyn_securityapp
  * its own cert as the leaf. The application automatically installs the policy to
  * allow all communication from the provided admin group.
  * The application's manifests are installed as well.
+ *
+ * Note: After this call the remote application should wait for the
+ * "alljoyn_securityapplicationproxy_endmanagement" call before it can begin regular operation.
+ * Since "alljoyn_securityapplicationproxy_startmanagement" calls are not possible before the
+ * application is claimed, that call is made internally on the application's side before
+ * the claiming procedure begins.
  *
  * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
  * @param[in]    caKey                      Null-terminated C string representing the CA's PEM-encoded public key.
@@ -98,23 +106,23 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_claim(alljoyn_securityap
 /**
  * Retrieves the manifest template in XML form from the application.
  *
- * @param[in]    proxy           The alljoyn_securityapplicationproxy connected to the managed application.
- * @param[out]   manifestXml     A null-terminated C string with the manifest template in XML format.
- *                               The string is managed by the caller and must be later destroyed
- *                               using alljoyn_securityapplicationproxy_manifesttemplate_destroy.
+ * @param[in]    proxy                  The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   manifestTemplateXml    A null-terminated C string with the manifest template in XML format.
+ *                                      The string is managed by the caller and must be later destroyed
+ *                                      using alljoyn_securityapplicationproxy_manifesttemplate_destroy.
  *
  * @return
  *          - #ER_OK If successful.
  *          - Other error status codes indicating a failure.
  */
-AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplate(alljoyn_securityapplicationproxy proxy, AJ_PSTR* manifestXml);
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplate(alljoyn_securityapplicationproxy proxy, AJ_PSTR* manifestTemplateXml);
 
 /**
  * Frees the memory allocated for the manifest template inside alljoyn_securityapplicationproxy_get_manifest_template.
  *
- * @param[in]   manifestXml     Manifest string created using alljoyn_securityapplicationproxy_get_manifest_template.
+ * @param[in]   manifestTemplateXml Manifest string created using alljoyn_securityapplicationproxy_getmanifesttemplate.
  */
-AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestXml);
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestTemplateXml);
 
 /**
  * Representation of the current state of the application.
@@ -156,6 +164,42 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilities(all
  *          - Other error status codes indicating a failure.
  */
 AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilitiesadditionalinfo(alljoyn_securityapplicationproxy proxy, alljoyn_claimcapabilitiesadditionalinfo* additionalInfo);
+
+/**
+ * This method allows the admin to retrieve the active policy from an application.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   policyXml                  The active policy in XML format. This string must be freed using
+ *                                          alljoyn_securityapplicationproxy_policy_destroy.
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicy(alljoyn_securityapplicationproxy proxy,
+                                                                  AJ_PSTR* policyXml);
+
+/**
+ * This method allows the admin to retrieve the default policy from an application.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   policyXml                  The default policy in XML format. This string must be freed using
+ *                                          alljoyn_securityapplicationproxy_policy_destroy.
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getdefaultpolicy(alljoyn_securityapplicationproxy proxy,
+                                                                         AJ_PSTR* policyXml);
+
+/**
+ * This method deallocates strings returned by a call to alljoyn_securityapplicationproxy_getpolicy or
+ * alljoyn_securityapplicationproxy_getdefaultpolicy.
+ *
+ * @param[in]    policyXml                  A string containing a policy in XML format returned by a call to either
+ *                                          alljoyn_securityapplicationproxy_getpolicy or
+ *                                          alljoyn_securityapplicationproxy_getdefaultpolicy.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_policy_destroy(AJ_PSTR policyXml);
 
 /**
  * This method allows an admin to install the permission policy to the
@@ -242,6 +286,9 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_installmembership(alljoy
  * prior to claim. The application's security 2.0 related configuration is
  * discarded. The application is no longer claimed, but this is not a complete factory reset.
  * The managed application keeps its private key.
+ *
+ * Note: After this call the remote application will automatically call
+ * "alljoyn_securityapplicationproxy_endmanagement" on itself.
  *
  * @param[in]    proxy  The alljoyn_securityapplicationproxy connected to the managed application.
  *
@@ -342,6 +389,61 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR un
  * @param[in]   signedManifestXml   The signed manifest returned by alljoyn_securityapplicationproxy_signmanifest.
  */
 AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml);
+
+/**
+ * Adds an identity certificate thumbprint and retrieves the digest of the manifest XML for signing.
+ *
+ * @param[in]    unsignedManifestXml    The unsigned manifest in XML format. The XML schema can be found
+ *                                      under alljoyn_core/docs/manifest_template.xsd.
+ * @param[in]    identityCertificatePem The identity certificate of the remote application that will use
+ *                                      the signed manifest.
+ * @param[out]   digest                 Pointer to receive the byte array containing the digest to be
+ *                                      signed with ECDSA-SHA256. This array is managed by the caller and must
+ *                                      be later destroyed using alljoyn_securityapplicationproxy_digest_destroy.
+ * @param[out]   digestSize             size_t to receive the size of the digest array.
+ *
+ * @return
+ *          - #ER_OK            If successful.
+ *          - #ER_XML_MALFORMED If the unsigned manifest is not compliant with the required format.
+ *          - Other error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_computemanifestdigest(AJ_PCSTR unsignedManifestXml,
+                                                                              AJ_PCSTR identityCertificatePem,
+                                                                              uint8_t** digest,
+                                                                              size_t* digestSize);
+
+/**
+ * Destroys a digest buffer returned by a call to alljoyn_securityapplicationproxy_computemanifestdigest.
+ *
+ * @param[in]   digest                   Digest array returned by alljoyn_securityapplicationproxy_computemanifestdigest.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_digest_destroy(uint8_t* digest);
+
+/**
+ * Adds an identity certificate thumbprint and sets the signature to a provided signature. The signature should
+ * have been generated by an earlier call to alljoyn_securityapplicationproxy_computemanifestdigest using
+ * the same values for the unsignedManifestXml and identityCertificatePem parameters.
+ *
+ * @param[in]    unsignedManifestXml    The unsigned manifest in XML format. The XML schema can be found
+ *                                      under alljoyn_core/docs/manifest_template.xsd.
+ * @param[in]    identityCertificatePem The identity certificate of the remote application that will use
+ *                                      the signed manifest.
+ * @param[in]    signature              Caller-generated ECDSA-SHA256 signature of the manifest.
+ * @param[in]    signatureSize          Size of the signature array.
+ * @param[out]   signedManifestXml      The signed manifest in XML format.
+ *                                      The string is managed by the caller and must be later destroyed
+ *                                      using alljoyn_securityapplicationproxy_manifest_destroy.
+ *
+ * @return
+ *          - #ER_OK            If successful.
+ *          - #ER_XML_MALFORMED If the unsigned manifest is not compliant with the required format.
+ *          - Other error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_PCSTR unsignedManifestXml,
+                                                                             AJ_PCSTR identityCertificatePem,
+                                                                             const uint8_t* signature,
+                                                                             size_t signatureSize,
+                                                                             AJ_PSTR* signedManifestXml);
 
 #ifdef __cplusplus
 } /* extern "C" */

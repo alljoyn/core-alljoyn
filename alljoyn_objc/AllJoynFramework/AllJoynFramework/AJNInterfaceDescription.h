@@ -55,6 +55,18 @@
 /** An XML description of the interface */
 @property (readonly, nonatomic) NSString *xmlDescription;
 
+/** Get the language tag for the introspection descriptions of this InterfaceDescription */
+@property (readonly, nonatomic) NSString *language;
+
+/** Get the set of all available description languages.
+ *
+ * The set contains the sum of the language tags for the interface description, interface property, interface member and member argument descriptions.
+*/
+@property (readonly, nonatomic) NSSet *languages;
+
+/** Get the Translator that provies this InterfaceDescription's introspection descprition in multiple lanauges */
+@property (readonly, nonatomic) id<AJNTranslator> translator;
+
 /**
  * Indicates if this interface is secure. Secure interfaces require end-to-end authentication.
  * The arguments for methods calls made to secure interfaces and signals emitted by secure
@@ -69,6 +81,14 @@
  * @return  true if interface has any properties.
  */
 @property (readonly, nonatomic) BOOL hasProperties;
+
+/**
+ * Check for existence of any cacheable properties.
+ */
+@property (readonly, nonatomic) BOOL hasCacheableProperties;
+
+/** Does this interface have at least one description on an element. */
+@property (readonly, nonatomic) BOOL hasDescription;
 
 @property (nonatomic) AJNBusAttachment *bus;
 
@@ -96,6 +116,38 @@ typedef enum AJNInterfaceSecurityPolicy{
 
 - (id)initWithHandle:(AJNHandle)handle;
 - (id)initWithHandle:(AJNHandle)handle shouldDeleteHandleOnDealloc:(BOOL)deletionFlag;
+
+/**
+ * Add a member to the interface.
+ *
+ * @param type        Message type.
+ * @param name        Name of member.
+ * @param inputSig    Signature of input parameters or NULL for none.
+ * @param outSig      Signature of output parameters or NULL for none.
+ * @param argNames    Comma separated list of input and then output arg names used in annotation XML.
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
+ */
+- (QStatus)addMember:(AJNMessageType)type name:(NSString*)name inputSig:(NSString*)inputSig outSig:(NSString*)outSig argNames:(NSString*)argNames;
+
+/**
+ * Add a member to the interface.
+ *
+ * @param type        Message type.
+ * @param name        Name of member.
+ * @param inputSig    Signature of input parameters or NULL for none.
+ * @param outSig      Signature of output parameters or NULL for none.
+ * @param argNames    Comma separated list of input and then output arg names used in annotation XML.
+ * @param annotation  Annotation flags.
+ * @param accessPerms Required permissions to invoke this call
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
+ */
+- (QStatus)addMember:(AJNMessageType)type name:(NSString*)name inputSig:(NSString*)inputSig outSig:(NSString*)outSig argNames:(NSString*)argNames annotation:(uint8_t)annotation accessPerms:(NSString*)accessPerms;
 
 
 
@@ -151,7 +203,17 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (AJNInterfaceMember *)methodWithName:(NSString *)methodName;
 
 /**
- * Add a signal member to the interface.
+ * Add a signal member to the interface. (Deprecated)
+ *
+ * @param name              Name of method call member.
+ *
+ * @return  - ER_OK if successful
+ *          - ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
+ */
+- (QStatus)addSignalWithName:(NSString *)name;
+
+/**
+ * Add a signal member to the interface. (Deprecated)
  *
  * @param name              Name of method call member.
  * @param inputSignature    Signature of parameters or NULL for none.
@@ -161,19 +223,6 @@ typedef enum AJNInterfaceSecurityPolicy{
  *          - ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
  */
 - (QStatus)addSignalWithName:(NSString *)name inputSignature:(NSString *)inputSignature argumentNames:(NSArray *)arguments;
-
-/**
- * Add a signal member to the interface.
- *
- * @param name              Name of method call member.
- * @param inputSignature    Signature of parameters or NULL for none.
- * @param arguments         Comma separated list of arg names used in annotation XML.
- * @param annotation        Annotation flags.
- *
- * @return  - ER_OK if successful
- *          - ER_BUS_MEMBER_ALREADY_EXISTS if member already exists
- */
-- (QStatus)addSignalWithName:(NSString *)name inputSignature:(NSString *)inputSignature argumentNames:(NSArray *)arguments annotation:(AJNInterfaceAnnotationFlags)annotation;
 
 /**
  * Add a signal member to the interface.
@@ -203,16 +252,6 @@ typedef enum AJNInterfaceSecurityPolicy{
  *
  * @param name          Name of property.
  * @param signature     Property type.
- * @return  - ER_OK if successful.
- *          - ER_BUS_PROPERTY_ALREADY_EXISTS if the property can not be added because it already exists.
- */
-- (QStatus)addPropertyWithName:(NSString*)name signature:(NSString*)signature;
-
-/**
- * Add a property to the interface.
- *
- * @param name          Name of property.
- * @param signature     Property type.
  * @param permissions   Access permission - Read Only, Read/Write, or Write Only
  * @return  - ER_OK if successful.
  *          - ER_BUS_PROPERTY_ALREADY_EXISTS if the property can not be added because it already exists.
@@ -220,12 +259,20 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)addPropertyWithName:(NSString *)name signature:(NSString *)signature accessPermissions:(AJNInterfacePropertyAccessPermissionsFlags)permissions;
 
 /**
- * Check for existence of a property.
+ * Lookup a property description by name.
  *
  * @param propertyName       Name of the property to lookup
  * @return An object representing the property if the property exists, otherwise nil.
  */
 - (AJNInterfaceProperty *)propertyWithName:(NSString *)propertyName;
+
+/**
+ * Check for existence of a property.
+ *
+ * @param propertyName       Name of the property to lookup
+ * @return true if the property exists.
+ */
+- (BOOL)hasPropertyWithName:(NSString*)propertyName;
 
 /**
  * Lookup a member description by name
@@ -257,7 +304,7 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue;
 
 /**
- * Get the annotation value for a member (signal or method).
+ * Get annotation to an existing member (signal or method).
  *
  * @param annotationName    Name of annotation
  * @param memberName        Name of member
@@ -265,10 +312,10 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return  - string value of annotation if found
  *          - nil if annotation not found
  */
-- (NSString *)annotationWithName:(NSString *)annotationName forMemberWithName:(NSString *)memberName;
+- (NSString *)memberAnnotationWithName:(NSString *)annotationName forMemberWithName:(NSString *)memberName;
 
 /**
- * Add an annotation to a member (signal or method).
+ * Add an annotation to an exisiting member (signal or method).
  *
  * @param annotationName    Name of annotation
  * @param annotationValue   Value of annotation
@@ -277,7 +324,7 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return  - ER_OK if successful
  *          - ER_BUS_MEMBER_ALREADY_EXISTS if annotation already exists
  */
-- (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forMemberWithName:(NSString *)memberName;
+- (QStatus)addMemberAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forMemberWithName:(NSString *)memberName;
 
 /**
  * Get the annotation value for a property.
@@ -291,7 +338,7 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (NSString *)annotationWithName:(NSString *)annotationName forPropertyWithName:(NSString *)propertyName;
 
 /**
- * Add an annotation to a property.
+ * Add annotation to an existing property.
  *
  * @param annotationName    Name of annotation
  * @param annotationValue   Value of annotation
@@ -300,24 +347,79 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return  - ER_OK if successful
  *          - ER_BUS_MEMBER_ALREADY_EXISTS if annotation already exists
  */
-- (QStatus)addAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forPropertyWithName:(NSString *)propertyName;
+- (QStatus)addPropertyAnnotationWithName:(NSString *)annotationName value:(NSString *)annotationValue forPropertyWithName:(NSString *)propertyName;
 
 /**
- * Set the description language for this Interface
+ * Set the language tag for the introspection descriptions of this InterfaceDescription.
  *
  * @param language the language of this Interface's descriptions
  */
 - (void)setDescriptionLanguage:(NSString *)language;
 
 /**
- * Set this Interface's description
- * 
+ * Set the introspection description for this InterfaceDescription.
+ *
  * @param description This Interface's description
  */
 - (void)setDescription:(NSString *)description;
 
 /**
- * Set a description for a method or signal of this Interface
+ * Set the introspection description for this InterfaceDescription in the given language.
+ *
+ * The description that was set can be retrieved by calling GetDescriptionForLanguage() OR GetAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetDescriptionForLanguage("This is the interface", "en") can be retrieved by calling:
+ *      - GetDescriptionForLanguage(description, "en") OR
+ *      - GetAnnotation("org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface already has a description.
+ */
+- (QStatus)setDescriptionForLanguage:(NSString*)description forLanguage:(NSString*)languageTag;
+
+/**
+ * Get the introspection description for this InterfaceDescription in the given language.
+ *
+ * To obtain the description, the method searches for the best match of the given language tag
+ * using the lookup algorithm in RFC 4647 section 3.4.
+ * For example, if descriptionForLanguage("en-US") is called, the method will:
+ *       - Search for a description with the same language tag ("en-US"), return the description
+ *       if such a description is found; else:
+ *       - Search for a description with a less specific language tag ("en"), return the description
+ *       if such a description is found; else:
+ *       - Return nil.
+ *
+ * The method will also provide descriptions which have been set as description annotations
+ * (set by calling AddAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+ * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+ *
+ * @param languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - description for the given language
+ *      - nil otherwise.
+ */
+- (NSString*)descriptionForLanguage:(NSString*)languageTag;
+
+/**
+ * Set the introspection description for "member" of this InterfaceDescription.
+ *
+ * @param description The description of the method or signal
+ * @param member The name of the method or signal
+ *
+ * @return  - ER_OK if successful
+ *          - ER_BUS_INTERFACE_NO_SUCH_MEMBER if the method or signal does not exist
+ *          - ER_BUS_INTERFACE_ACTIVATED if this interface has already activated
+ */
+- (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member;
+
+/**
+ * Set the introspection description for "member" of this InterfaceDescription.
  *
  * @param description The description of the method or signal
  * @param member The name of the method or signal
@@ -330,7 +432,54 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)setMemberDescription:(NSString *)description forMemberWithName:(NSString *)member sessionlessSignal:(BOOL)sessionless;
 
 /**
- * Set a description for a property of this Interface
+ * Set the introspection description for member "memberName" of this InterfaceDescription
+ * in the given language.
+ *
+ * The set description can be retrieved by calling GetMemberDescriptionForLanguage() OR GetMemberAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetMemberDescriptionForLanguage("MethodName", "This is the method", "en") can be retrieved by calling:
+ *      - GetMemberDescriptionForLanguage("MethodName", description, "en") OR
+ *      - GetMemberAnnotation("MethodName", "org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] memberName The name of the member.
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface member already has a description.
+ */
+ - (QStatus)setMemberDescriptionForLanguage:(NSString*)member withDescription:(NSString*)description forLanguage:(NSString*)languageTag;
+
+ /**
+  * Get the introspection description for the member "member" of this InterfaceDescription
+  * in the given language.
+  *
+  * To obtain the description, the method searches for the best match of the given language tag
+  * using the lookup algorithm in RFC 4647 section 3.4.
+  * For example, if GetMemberDescriptionForLanguage("MethodName", "en-US") is called, the method will:
+  *       - Search for a description with the same language tag ("en-US"), return the description
+  *       if such a description is found; else:
+  *       - Search for a description with a less specific language tag ("en"), return the description
+  *       if such a description is found; else:
+  *       - Return nil.
+  *
+  * The method will also provide descriptions which have been set as description annotations
+  * (set by calling AddMemberAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+  * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+  *
+  * @param[in] memberName The name of the member.
+  * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+  * @return
+  *      - description for given language
+  *      - nil otherwise.
+  */
+- (NSString*)memberDescriptionForLanguage:(NSString*)memberName forLanguage:(NSString*)languageTag;
+
+/**
+ * Set the introspection description for "property" of this InterfaceDescription.
  *
  * @param description The description of the property
  * @param propName The name of the property
@@ -342,7 +491,54 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)setPropertyDescription:(NSString *)description forPropertyWithName:(NSString *)propName;
 
 /**
- * Set a description for an argument of a method or signal of this Interface
+ * Set the introspection description for the interface property "propertyName"
+ * of this InterfaceDescription in the given language.
+ *
+ * The set description can be retrieved by calling GetPropertyDescription() OR GetPropertyAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetPropertyDescriptionForLanguage("PropertyName", "This is the property", "en") can be retrieved by calling:
+ *      - GetPropertyDescriptionForLanguage("PropertyName", description, "en") OR
+ *      - GetPropertyAnnotation("PropertyName", "org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] propertyName The name of the property.
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface property already has a description.
+ */
+- (QStatus)setPropertyDescriptionForLanguage:(NSString*)propertyName withDescription:(NSString*)description withLanguage:(NSString*)languageTag;
+
+/**
+ * Get the introspection description for for the property "propertyName"
+ * of this InterfaceDescription in the given language.
+ *
+ * To obtain the description, the method searches for the best match of the given language tag
+ * using the lookup algorithm in RFC 4647 section 3.4.
+ * For example, if propertyDescriptionForLanguage("PropertyName", "en-US") is called, the method will:
+ *       - Search for a description with the same language tag ("en-US"), return the description
+ *       if such a description is found; else:
+ *       - Search for a description with a less specific language tag ("en"), return the description
+ *       if such a description is found; else:
+ *       - Return nil.
+ *
+ * The method will also provide descriptions which have been set as description annotations
+ * (set by calling AddPropertyAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+ * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] propertyName The name of the property.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - description for the given language.
+ *      - nil otherwise.
+ */
+- (NSString*)propertyDescriptionForLanguage:(NSString*)propertyName withLanguage:(NSString*)languageTag;
+
+/**
+ * Set the introspection description for the argument "arg of member" of this InterfaceDescription.
  *
  * @param description The description of the argument
  * @param argName The name of the argument
@@ -355,8 +551,57 @@ typedef enum AJNInterfaceSecurityPolicy{
 - (QStatus)setArgDescription:(NSString *)description forArgument:(NSString *)argName ofMember:(NSString *)member;
 
 /**
- * Set this Interface's AJNTransalator
- * 
+ * Set the introspection description for the argument "argName" of the member "memberName"
+ * of this InterfaceDescription in the given language.
+ *
+ * The set description can be retrieved by calling GetArgDescriptionForLanguage() OR GetArgAnnotation()
+ * for an "org.alljoyn.Bus.DocString" annotation with the desired language tag
+ * (e.g., "org.alljoyn.Bus.DocString.en").
+ * For example, a description set by calling
+ * SetArgDescriptionForLanguage("MethodName", "ArgName", "This is the argument", "en") can be retrieved by calling:
+ *      - GetArgDescriptionForLanguage("MethodName", "ArgName", description, "en") OR
+ *      - GetArgAnnotation("MethodName", "ArgName", "org.alljoyn.Bus.DocString.en", description).
+ *
+ * @param[in] memberName The name of the member.
+ * @param[in] argName The name of the argument.
+ * @param[in] description The introspection description.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - #ER_OK if successful.
+ *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
+ *      - #ER_BUS_DESCRIPTION_ALREADY_EXISTS If the interface member argument already has a description.
+ */
+- (QStatus)setArgDescriptionForLanguage:(NSString*)memberName forArg:(NSString*)argName withDescription:(NSString*)description withLanguage:(NSString*)languageTag;
+
+/**
+ * Get the introspection description for the argument "argName" of the member "memberName"
+ * of this InterfaceDescription in the given language.
+ *
+ * To obtain the description, the method searches for the best match of the given language tag
+ * using the lookup algorithm in RFC 4647 section 3.4.
+ * For example, if argDescriptionForLanguage("MethodName", "ArgName", "en-US") is called, the method will:
+ *       - Search for a description with the same language tag ("en-US"), return the description
+ *       if such a description is found; else:
+ *       - Search for a description with a less specific language tag ("en"), return the description
+ *       if such a description is found; else:
+ *       - Return nil.
+ *
+ * The method will also provide descriptions which have been set as description annotations
+ * (set by calling AddArgAnnotation() with the annotation name set to "org.alljoyn.Bus.DocString"
+ * plus the desired language tag, e.g., "org.alljoyn.Bus.DocString.en").
+ *
+ * @param[in] memberName The name of the member.
+ * @param[in] argName The name of the argument.
+ * @param[in] languageTag The language of the description (language tag as defined in RFC 5646, e.g., "en-US").
+ * @return
+ *      - description for the given language
+ *      - nil otherwise.
+ */
+- (NSString*)argDescriptionForLanguage:(NSString*)memberName forArg:(NSString*)argName withLanguage:(NSString*)languageTag;
+
+/**
+ * Set the Translator that provides this InterfaceDescription's introspection description in multiple lauanges.
+ *
  * @param translator The AJNTranslator
  */
 - (void)setDescriptionTranslator:(id<AJNTranslator>)translator;
@@ -374,6 +619,34 @@ typedef enum AJNInterfaceSecurityPolicy{
  * @return TRUE if the member name exists, otherwise returns FALSE.
  */
 - (BOOL)hasMemberWithName:(NSString *)name inputSignature:(NSString *)inputs outputSignature:(NSString *)outputs;
+
+/**
+ * Add an annotation to an existing argument.
+ *
+ * @param member     Name of member.
+ * @param arg        Name of the argument.
+ * @param name       Name of annotation.
+ * @param value      Value for the annotation.
+ *
+ * @return
+ *      - #ER_OK if successful
+ *      - #ER_BUS_ANNOTATION_ALREADY_EXISTS if annotation already exists
+ */
+- (QStatus)addArgAnnotationWithName:(NSString*)member arg:(NSString*)arg name:(NSString*)name value:(NSString*)value;
+
+/**
+ * Get annotation from an existing argument.
+ *
+ * @param member     Name of member.
+ * @param arg        Name of the argument.
+ * @param name       Name of annotation.
+ * @param value      Output value for the annotation.
+ *
+ * @return
+ *      - annotaiton value if found
+ *      - nil if annotation not found
+ */
+- (NSString*)getArgAnnotationWithName:(NSString*)member arg:(NSString*)arg name:(NSString*)name;
 
 /**
  * Activate this interface. An interface must be activated before it can be used. Activating an

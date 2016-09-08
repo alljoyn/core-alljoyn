@@ -28,6 +28,9 @@
 #include "BusInternal.h"
 #include "KeyStoreListener.h"
 #include "NamedPipeClientTransport.h"
+#include "XmlManifestTemplateConverter.h"
+#include "XmlManifestTemplateValidator.h"
+#include "XmlPoliciesConverter.h"
 #include "XmlPoliciesValidator.h"
 #include "XmlRulesConverter.h"
 #include "XmlRulesValidator.h"
@@ -48,6 +51,9 @@ class StaticGlobals {
         AutoPingerInternal::Init();
         PasswordManager::Init();
         BusAttachment::Internal::Init();
+        XmlManifestTemplateValidator::Init();
+        XmlManifestTemplateConverter::Init();
+        XmlPoliciesConverter::Init();
         XmlPoliciesValidator::Init();
         XmlRulesConverter::Init();
         XmlRulesValidator::Init();
@@ -57,6 +63,12 @@ class StaticGlobals {
     static void Shutdown()
     {
         PermissionPolicyShutdown();
+        XmlRulesValidator::Shutdown();
+        XmlRulesConverter::Shutdown();
+        XmlPoliciesValidator::Shutdown();
+        XmlPoliciesConverter::Shutdown();
+        XmlManifestTemplateConverter::Shutdown();
+        XmlManifestTemplateValidator::Shutdown();
         BusAttachment::Internal::Shutdown();
         PasswordManager::Shutdown();
         AutoPingerInternal::Shutdown();

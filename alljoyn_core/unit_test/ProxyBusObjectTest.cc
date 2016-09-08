@@ -27,7 +27,6 @@
 #include <alljoyn/InterfaceDescription.h>
 #include <alljoyn/DBusStd.h>
 #include <qcc/Thread.h>
-#include "KeyStore.h"
 
 #define PBO_TEST_TIMEOUT_100 (100 * s_globalTimerMultiplier)
 #define PBO_TEST_TIMEOUT_1000 (1000 * s_globalTimerMultiplier)
@@ -117,8 +116,8 @@ class ProxyBusObjectTest : public testing::Test {
         proxyBusObjectTestAuthListenerOne(NULL),
         proxyBusObjectTestAuthListenerTwo(NULL)
     {
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("ProxyBusObjectTest"));
-        EXPECT_EQ(ER_OK, DeleteDefaultKeyStoreFile("ProxyBusObjectTestservice"));
+        EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("ProxyBusObjectTest"));
+        EXPECT_EQ(ER_OK, BusAttachment::DeleteDefaultKeyStore("ProxyBusObjectTestservice"));
     }
 
     virtual void SetUp() {

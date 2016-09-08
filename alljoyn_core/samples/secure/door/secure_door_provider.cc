@@ -18,8 +18,6 @@
 
 #include <vector>
 
-#include <qcc/Crypto.h>
-
 #include <alljoyn/Init.h>
 
 using namespace sample::secure::door;
@@ -110,6 +108,14 @@ int CDECL_CALL main(int argc, char** argv)
         status = pcl.WaitForClaimedState();
         if (ER_OK != status) {
             fprintf(stderr, "Failed to WaitForClaimedState - status (%s)\n",
+                    QCC_StatusText(status));
+            goto Exit;
+        }
+
+        // After claiming, only allow ALLJOYN_ECDHE_ECDSA connections
+        status = common.SetSecurityForClaimedMode();
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to SetSecurityForClaimedMode - status (%s)\n",
                     QCC_StatusText(status));
             goto Exit;
         }

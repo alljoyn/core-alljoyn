@@ -27,6 +27,7 @@
 #endif
 
 #include <memory>
+#include <vector>
 
 #include <alljoyn/BusObject.h>
 #include <alljoyn/AllJoynStd.h>
@@ -191,7 +192,7 @@ class PermissionMgmtObj : public BusObject {
         TrustAnchor(TrustAnchorType use) : use(use), securityGroupId(0)
         {
         }
-        TrustAnchor(TrustAnchorType use, qcc::KeyInfoNISTP256& keyInfo) : use(use), keyInfo(keyInfo), securityGroupId(0)
+        TrustAnchor(TrustAnchorType use, const qcc::KeyInfoNISTP256& keyInfo) : use(use), keyInfo(keyInfo), securityGroupId(0)
         {
         }
     };
@@ -346,9 +347,13 @@ class PermissionMgmtObj : public BusObject {
     /**
      * Reset the Permission module by removing all the trust anchors, DSA keys,
      * installed policy and certificates.
+     *
+     * @param[in]   endManagement   Switch indicating whether to call "EndManagement" or
+     *                              not after reset has finished.
+     *
      * @return ER_OK if successful; otherwise, an error code.
      */
-    QStatus Reset();
+    QStatus Reset(bool endManagement = true);
 
     /**
      * Get the connected peer authentication metadata.
@@ -399,10 +404,39 @@ class PermissionMgmtObj : public BusObject {
     void Load();
 
     QStatus InstallTrustAnchor(TrustAnchor* trustAnchor);
-    QStatus StoreIdentityCertChain(MsgArg& certArg);
+    QStatus StoreIdentityCertChain(size_t certChainCount, const qcc::CertificateX509* certs);
+    QStatus RetrievePolicy(PermissionPolicy& policy, bool defaultPolicy = false);
     QStatus StorePolicy(PermissionPolicy& policy, bool defaultPolicy = false);
     QStatus StoreMembership(const MsgArg& certArg);
-    QStatus StoreManifests(MsgArg& signedManifestsArg, bool append);
+    QStatus StoreManifests(size_t manifestCount, const Manifest* signedManifests, bool append);
+    QStatus GetMembershipSummaries(MsgArg& arg);
+
+    /**
+     * Retrieve certificates in a MsgArg used to transmit certificates in the standard format,
+     * used by Claim and GetIdentity.
+     *
+     * @param[in] certArg MsgArg containing the wire-format certificates
+     * @param[out] certs Vector to receive the certificates
+     *
+     * @return
+     *    - #ER_OK if certificates are successfully retrieved into certs
+     *    - other error indicating failure
+     */
+    QStatus RetrieveCertsFromMsgArg(const MsgArg& certArg, std::vector<qcc::CertificateX509>& certs);
+
+    /**
+     * Retrieve manifests in a MsgArg used to transmit manifests in the standard format, as used
+     * by Claim and InstallManifests.
+     *
+     * @param[in] signedManifestsArg MsgArg containing the wire-format signed manifests
+     * @param[out] manifests Vector to receive the manifests
+     *
+     * @return
+     *    - #ER_OK if manifests are successfully retrieved into manifests
+     *    - other error code indicating failure
+     */
+    QStatus RetrieveManifestsFromMsgArg(const MsgArg& signedManifestsArg, std::vector<Manifest>& manifests);
+
 
     /**
      * Generate the SHA-256 digest for the manifest data.
@@ -413,7 +447,6 @@ class PermissionMgmtObj : public BusObject {
      * @param[out] digestSize the size of the buffer.  Expected to be Crypto_SHA256::DIGEST_SIZE
      * @return ER_OK for success; error code otherwise.
      */
-
     static QStatus GenerateManifestDigest(BusAttachment& bus, const PermissionPolicy::Rule* rules, size_t count, uint8_t* digest, size_t digestSize);
 
     /**
@@ -568,16 +601,174 @@ class PermissionMgmtObj : public BusObject {
      */
     QStatus SendManifests(const ProxyBusObject* remotePeerObj, Message* msg);
 
+    /**
+     * Perform claiming of this app locally/offline.
+     *
+     * @param[in]   certificateAuthority    Certificate authority trust anchor information
+     * @param[in]   adminGroupAuthority     Admin group authority trust anchor information
+     * @param[in]   certs                   Identity cert chain
+     * @param[in]   certCount               Count of certs array
+     * @param[in]   manifests               Signed manifests
+     * @param[in]   manifestCount           Count of manifests array
+     * @param[in]   startManagement         Switch indicating whether to call "StartManagement" or
+     *                                      not before claiming begins.
+     *
+     * @return
+     *   - #ER_OK if the app was successfully claimed
+     *   - #ER_FAIL if the app could not be claimed, but could not then be reset back to original state.
+     *              App will be in unknown state in this case.
+     *   - other error code indicating failure, but app is returned to reset state
+     */
+    QStatus Claim(
+        const TrustAnchor& certificateAuthority,
+        const TrustAnchor& adminGroupAuthority,
+        const qcc::CertificateX509* certs,
+        size_t certCount,
+        const Manifest* manifests,
+        size_t manifestCount,
+        bool startManagement = true);
+
+    /**
+     * Perform a local UpdateIdentity.
+     *
+     * @param[in] certs Identity cert chain to be installed
+     * @param[in] certCount Number of certificates in certs array
+     * @param[in] manifests Signed manifests to be installed
+     * @param[in] manifestCount Number of signed manifests in manifests array
+     *
+     * @return
+     *    - #ER_OK if the identity was successfully updated
+     *    - other error code indicating failure
+     */
+    QStatus UpdateIdentity(
+        const qcc::CertificateX509* certs,
+        size_t certCount,
+        const Manifest* manifests,
+        size_t manifestCount);
+
+    /**
+     * Retrieve the local app's identity certificate chain.
+     *
+     * @param[out] certChain A vector containing the identity certificate chain
+     *
+     * @return
+     *    - #ER_OK if the chain is successfully stored in certChain
+     *    - other error indicating failure
+     */
+    QStatus GetIdentity(std::vector<qcc::CertificateX509>& certChain);
+
+    /**
+     * Reset the local app's policy.
+     *
+     * @return
+     *    - #ER_OK if the policy was successfully reset
+     *    - other error code indicating failure
+     */
+    QStatus ResetPolicy();
+
+    /**
+     * Remove a membership certificate.
+     *
+     * @param[in] serial Serial number of the certificate
+     * @param[in] issuerPubKey Certificate issuer's public key
+     * @param[in] issuerAki Certificate issuer's AKI
+     *
+     * @return
+     *    - #ER_OK if the certificate was found and removed
+     *    - #ER_CERTIFICATE_NOT_FOUND if the certificate was not found
+     *    - other error code indicating failure
+     */
+    QStatus RemoveMembership(const qcc::String& serial, const qcc::ECCPublicKey* issuerPubKey, const qcc::String& issuerAki);
+
+    /**
+     * Signal the app locally that management is starting.
+     *
+     * NOTE: The application must assume any kind of possible Security 2.0
+     * configuration changes, including a full reset. It is strongly advised
+     * to put all current actions on hold and close all open sessions as they
+     * might need to be reauthenticated or security policies might change.
+     * The application should wait for "EndManagement" to be called before
+     * attempting to start or continue its operation. The caller will wait
+     * for this call to return until a regular method call timeout is hit.
+     * It is thus advised to return from this callback as quickly as possible.
+     *
+     * @return
+     *    - #ER_OK if the start management signal was sent
+     *    - #ER_MANAGEMENT_ALREADY_STARTED if the app is already in this state
+     */
+    QStatus StartManagement();
+
+    /**
+     * Signal the app locally that management is ending. The caller will wait
+     * for this call to return until a regular method call timeout is hit.
+     * It is thus advised to return from this callback as quickly as possible.
+     * At this point the application may conclude one of two things has occurred,
+     * depending on its current state:
+     *
+     * CLAIMED state - all Security 2.0-related provisioning
+     * has finished and it's safe to resume or begin regular operation.
+     * CLAIMABLE state - the application has been reset and cannot establish any
+     * sessions to claimed applications until it is claimed once more.
+     *
+     * @return
+     *    - #ER_OK if the start management signal was sent
+     *    - #ER_MANAGEMENT_NOT_STARTED if the app was not in the management state
+     */
+    QStatus EndManagement();
+
+    /**
+     * Retrieve the IdentityCertificateId property.
+     *
+     * @param[out] serial Identity certificate's serial
+     * @param[out] keyInfo Identity certificate's KeyInfoNISTP256 structure
+     *
+     * @return
+     *    - #ER_OK if the identity certificate information is placed in the parameters
+     *    - #ER_CERTIFICATE_NOT_FOUND if no identity certificate is installed
+     *    - other error code indicating failure
+     */
+    QStatus RetrieveIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
+
+    /**
+     * Install a new active policy.
+     *
+     * @param[in] policy Policy to install
+     *
+     * @return
+     *    - #ER_OK if the policy is successfully installed
+     *    - other error code indicating failure
+     */
+    QStatus InstallPolicy(const PermissionPolicy& policy);
+
+    /**
+     * Get the manifest template.
+     *
+     * @param[out] manifestTemplate Vector to receive the set of rules from the manifest template.
+     *
+     * @return
+     *    - #ER_OK if the manifest template is successfully retrieved
+     *    - other error code indicating failure
+     */
+    QStatus GetManifestTemplate(std::vector<PermissionPolicy::Rule>& manifestTemplate);
+
   protected:
     void Claim(const InterfaceDescription::Member* member, Message& msg);
+    QStatus ClaimInternal(
+        const TrustAnchor& certificateAuthority,
+        const TrustAnchor& adminGroupAuthority,
+        const qcc::CertificateX509* certs,
+        size_t certCount,
+        const Manifest* manifests,
+        size_t manifestCount,
+        bool startManagement = true);
+    QStatus RemoveMembershipInternal(const qcc::String& serial, const qcc::ECCPublicKey* issuerPubKey, const qcc::String& issuerAki);
     BusAttachment& bus;
     QStatus GetIdentity(MsgArg& arg);
     QStatus GetIdentityLeafCert(qcc::IdentityCertificate& cert);
-    QStatus RetrieveIdentityCertificateId(qcc::String& serial, qcc::KeyInfoNISTP256& issuerKeyInfo);
     void Reset(const InterfaceDescription::Member* member, Message& msg);
     void InstallIdentity(const InterfaceDescription::Member* member, Message& msg);
     void InstallPolicy(const InterfaceDescription::Member* member, Message& msg);
-    QStatus RetrievePolicy(PermissionPolicy& policy, bool defaultPolicy = false);
+
     QStatus GetPolicy(MsgArg& msgArg);
     QStatus RebuildDefaultPolicy(PermissionPolicy& defaultPolicy);
     QStatus GetDefaultPolicy(MsgArg& msgArg);
@@ -587,7 +778,6 @@ class PermissionMgmtObj : public BusObject {
     void StartManagement(const InterfaceDescription::Member* member, Message& msg);
     void EndManagement(const InterfaceDescription::Member* member, Message& msg);
     void InstallManifests(const InterfaceDescription::Member* member, Message& msg);
-    QStatus GetMembershipSummaries(MsgArg& arg);
     QStatus GetManifestTemplate(MsgArg& arg);
     QStatus GetManifestTemplateDigest(MsgArg& arg);
     PermissionConfigurator::ApplicationState applicationState;
@@ -638,7 +828,7 @@ class PermissionMgmtObj : public BusObject {
     };
 
     void GetPublicKey(const InterfaceDescription::Member* member, Message& msg);
-    QStatus GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& guid);
+    void GetACLKey(ACLEntryType aclEntryType, KeyStore::Key& guid);
     QStatus StoreTrustAnchors();
     QStatus LoadTrustAnchors();
 
@@ -655,7 +845,7 @@ class PermissionMgmtObj : public BusObject {
     void PolicyChanged(PermissionPolicy* policy);
     QStatus StoreConfiguration(const Configuration& config);
     QStatus GetConfiguration(Configuration& config);
-    QStatus PerformReset(bool keepForClaim);
+    QStatus PerformReset(bool keepForClaim, bool endManagement = true);
     QStatus SameSubjectPublicKey(const qcc::CertificateX509& cert, bool& outcome);
     bool IsTrustAnchor(const qcc::ECCPublicKey* publicKey);
     QStatus ManageTrustAnchors(PermissionPolicy* policy);
@@ -663,7 +853,7 @@ class PermissionMgmtObj : public BusObject {
     QStatus RetrieveIdentityCertChain(MsgArg** certArgs, size_t* count);
     QStatus RetrieveIdentityCertChainPEM(qcc::String& pem);
     QStatus StoreApplicationState();
-    QStatus LoadManifestTemplate(PermissionPolicy& policy);
+    QStatus LoadManifestTemplate(std::vector<PermissionPolicy::Rule>& manifestTemplate);
     bool HasDefaultPolicy();
     bool IsRelevantMembershipCert(std::vector<MsgArg*>& membershipChain, std::vector<qcc::ECCPublicKey> peerIssuers);
     QStatus LookForManifestTemplate(bool& exist);

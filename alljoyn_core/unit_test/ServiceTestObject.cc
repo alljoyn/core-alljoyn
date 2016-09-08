@@ -38,7 +38,7 @@ void ServiceTestObject::RegisterForNameAcquiredSignals()
     QStatus status = ER_OK;
     const InterfaceDescription* intf = myBus.GetInterface("org.freedesktop.DBus");
     QCC_ASSERT(intf);
-    /* register the signal handler for the the 'NameAcquired' signal */
+    /* register the signal handler for the 'NameAcquired' signal */
     status =  myBus.RegisterSignalHandler(this,
                                           static_cast<MessageReceiver::SignalHandler>(&ServiceTestObject::NameAcquiredSignalHandler),
                                           intf->GetMember("NameAcquired"),

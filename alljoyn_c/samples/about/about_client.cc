@@ -100,9 +100,9 @@ typedef struct my_about_listener_t {
     alljoyn_aboutlistener aboutlistener;
 }my_about_listener;
 
-static void alljoyn_sessionlistener_connect_lost_cb(const void* context,
-                                                    alljoyn_sessionid sessionId,
-                                                    alljoyn_sessionlostreason reason)
+static void AJ_CALL alljoyn_sessionlistener_connect_lost_cb(const void* context,
+                                                            alljoyn_sessionid sessionId,
+                                                            alljoyn_sessionlostreason reason)
 {
     QCC_UNUSED(context);
     printf("SessionLost sessionId = %u, Reason = %d\n", sessionId, reason);
@@ -120,12 +120,12 @@ static alljoyn_sessionlistener create_my_alljoyn_sessionlistener()
     return alljoyn_sessionlistener_create(callbacks, NULL);
 }
 
-static void announced_cb(const void* context,
-                         const char* busName,
-                         uint16_t version,
-                         alljoyn_sessionport port,
-                         const alljoyn_msgarg objectDescriptionArg,
-                         const alljoyn_msgarg aboutDataArg)
+static void AJ_CALL announced_cb(const void* context,
+                                 const char* busName,
+                                 uint16_t version,
+                                 alljoyn_sessionport port,
+                                 const alljoyn_msgarg objectDescriptionArg,
+                                 const alljoyn_msgarg aboutDataArg)
 {
     my_about_listener* mylistener = (my_about_listener*) context;
     alljoyn_aboutobjectdescription objectDescription = alljoyn_aboutobjectdescription_create();

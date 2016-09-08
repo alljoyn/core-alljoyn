@@ -1928,7 +1928,7 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize, 
     size_t size = m_rrDomainName.Deserialize(buffer, bufsize, compressedOffsets, headerOffset);
     if (size == 0 || bufsize < 8) {
         //error
-        QCC_DbgPrintf((" MDNSResourceRecord::Deserialize() Error occured while deserializing domain name or insufficient buffer"));
+        QCC_DbgPrintf((" MDNSResourceRecord::Deserialize() Error occurred while deserializing domain name or insufficient buffer"));
         return 0;
     }
 
@@ -1990,7 +1990,7 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize, 
     uint8_t const* p = &buffer[size];
     size_t processed = m_rdata->Deserialize(p, bufsize, compressedOffsets, headerOffset);
     if (!processed) {
-        QCC_DbgPrintf(("MDNSResourceRecord::Deserialize() Error occured while deserializing resource data"));
+        QCC_DbgPrintf(("MDNSResourceRecord::Deserialize() Error occurred while deserializing resource data"));
         return 0;
     }
     size += processed;
@@ -2347,7 +2347,7 @@ size_t MDNSARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& o
     uint8_t* p = &buffer[2];
     QStatus status = qcc::IPAddress::StringToIPv4(m_ipv4Addr, p, 4);
     if (status != ER_OK) {
-        QCC_DbgPrintf(("MDNSARData::Serialize Error occured during conversion of String to IPv4 address"));
+        QCC_DbgPrintf(("MDNSARData::Serialize Error occurred during conversion of String to IPv4 address"));
         return 0;
     }
     return 6;
@@ -2870,8 +2870,10 @@ String MDNSSearchRData::GetSearchCriterion(int index)
 
 
 }
-void MDNSSearchRData::RemoveSearchCriterion(int index)
+
+bool MDNSSearchRData::RemoveSearchCriterion(int index)
 {
+    bool removed = false;
     Fields::iterator it = m_fields.begin();
     String ret = "";
     while (it != m_fields.end() && index > 0) {
@@ -2902,15 +2904,18 @@ void MDNSSearchRData::RemoveSearchCriterion(int index)
             key = key.substr(0, key.find_last_of_std('_'));
             if (key == ";") {
                 m_fields.erase(it);
+                removed = true;
                 break;
             } else if (key == "txtvers") {
                 it++;
             } else {
                 m_fields.erase(it++);
+                removed = true;
             }
         }
 
     }
+    return removed;
 }
 std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
 {
@@ -3600,7 +3605,7 @@ size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
     size_t size = m_header.Deserialize(buffer, bufsize);
     size_t ret;
     if (size == 0) {
-        QCC_DbgPrintf(("Error occured while deserializing header"));
+        QCC_DbgPrintf(("Error occurred while deserializing header"));
         return size;
     }
     if (m_header.GetQRType() == MDNSHeader::MDNS_QUERY && m_header.GetQDCount() == 0) {

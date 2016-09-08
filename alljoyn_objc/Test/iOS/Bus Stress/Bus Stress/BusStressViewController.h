@@ -31,6 +31,7 @@
 @property (weak, nonatomic) IBOutlet UIButton *stopButton;
 @property (weak, nonatomic) IBOutlet UIActivityIndicatorView *stressTestActivityIndicatorView;
 @property (weak, nonatomic) IBOutlet UISegmentedControl *transportTypeSegmentedControl;
+@property (nonatomic) BOOL hasTestStarted;
 
 - (IBAction)didTouchStartButton:(id)sender;
 - (IBAction)didTouchStopButton:(id)sender;

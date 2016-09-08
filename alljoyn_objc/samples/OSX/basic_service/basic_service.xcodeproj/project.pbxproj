@@ -17,7 +17,6 @@
 		7DCBEE651A254DC500A53A83 /* AJNAboutListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE5B1A254DC500A53A83 /* AJNAboutListenerImpl.mm */; };
 		7DCBEE661A254DC500A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE5E1A254DC500A53A83 /* AJNAboutProxy.mm */; };
 		7DCBEE691A254DDA00A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE681A254DDA00A53A83 /* AJNPasswordManager.mm */; };
-		7DEA2F381AC4033A007ECE82 /* libc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 7DEA2F371AC4033A007ECE82 /* libc++.dylib */; };
 		833CA3E219229A1800D8C62B /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 833CA3E119229A1800D8C62B /* AJNTranslatorImpl.mm */; };
 		AC11566E150EB7D300359BDC /* BasicService.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC11566D150EB7D300359BDC /* BasicService.mm */; };
 		AC115675150EC23E00359BDC /* BasicServiceViewController.m in Sources */ = {isa = PBXBuildFile; fileRef = AC115674150EC23E00359BDC /* BasicServiceViewController.m */; };
@@ -32,7 +31,6 @@
 		AC1D9829150E84E60005211D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1D9809150E84E60005211D /* Cocoa.framework */; };
 		AC1D9831150E84E60005211D /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = AC1D982F150E84E60005211D /* InfoPlist.strings */; };
 		AC1D9834150E84E60005211D /* basic_serviceTests.m in Sources */ = {isa = PBXBuildFile; fileRef = AC1D9833150E84E60005211D /* basic_serviceTests.m */; };
-		AC1D9856150E86E50005211D /* libcrypto.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1D9855150E86E50005211D /* libcrypto.dylib */; };
 		AC1D985A150E870B0005211D /* libpthread.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC1D9859150E870B0005211D /* libpthread.dylib */; };
 		AC67D64C152BA9E8009DBFA9 /* libobjc.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC67D64B152BA9E8009DBFA9 /* libobjc.dylib */; };
 		AC8D8F171614F3ED00361742 /* AJNAuthenticationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8EE21614F3ED00361742 /* AJNAuthenticationListenerImpl.mm */; };
@@ -59,7 +57,6 @@
 		AC8D8F2C1614F3ED00361742 /* AJNTransportMask.m in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8F131614F3ED00361742 /* AJNTransportMask.m */; };
 		AC8D8F2D1614F3ED00361742 /* AJNVersion.mm in Sources */ = {isa = PBXBuildFile; fileRef = AC8D8F161614F3ED00361742 /* AJNVersion.mm */; };
 		AC8D8F331614F4D200361742 /* libstdc++.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F321614F4D100361742 /* libstdc++.dylib */; };
-		AC8D8F351614F4E600361742 /* libssl.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8D8F341614F4E500361742 /* libssl.dylib */; };
 		ACB063A715115CA800026AF7 /* BasicSampleObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = ACB063A615115CA800026AF7 /* BasicSampleObject.mm */; };
 		ACF131021520E09E00F04504 /* BasicSampleObjectImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = ACF131011520E09E00F04504 /* BasicSampleObjectImpl.mm */; };
 		ACFCF7801566A4D000BC922D /* SConscript in Resources */ = {isa = PBXBuildFile; fileRef = ACFCF77F1566A4D000BC922D /* SConscript */; };
@@ -98,7 +95,6 @@
 		7DCBEE5E1A254DC500A53A83 /* AJNAboutProxy.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutProxy.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAboutProxy.mm; sourceTree = "<group>"; };
 		7DCBEE671A254DDA00A53A83 /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
 		7DCBEE681A254DDA00A53A83 /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
-		7DEA2F371AC4033A007ECE82 /* libc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libc++.dylib"; path = "usr/lib/libc++.dylib"; sourceTree = SDKROOT; };
 		833CA3DF19229A1800D8C62B /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		833CA3E019229A1800D8C62B /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		833CA3E119229A1800D8C62B /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
@@ -126,7 +122,6 @@
 		AC1D9830150E84E60005211D /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		AC1D9832150E84E60005211D /* basic_serviceTests.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = basic_serviceTests.h; sourceTree = "<group>"; };
 		AC1D9833150E84E60005211D /* basic_serviceTests.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = basic_serviceTests.m; sourceTree = "<group>"; };
-		AC1D9855150E86E50005211D /* libcrypto.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libcrypto.dylib; path = usr/lib/libcrypto.dylib; sourceTree = SDKROOT; };
 		AC1D9859150E870B0005211D /* libpthread.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libpthread.dylib; path = usr/lib/libpthread.dylib; sourceTree = SDKROOT; };
 		AC67D64B152BA9E8009DBFA9 /* libobjc.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libobjc.dylib; path = usr/lib/libobjc.dylib; sourceTree = SDKROOT; };
 		AC8D8EE01614F3ED00361742 /* AJNAuthenticationListener.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNAuthenticationListener.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNAuthenticationListener.h; sourceTree = "<group>"; };
@@ -185,7 +180,6 @@
 		AC8D8F151614F3ED00361742 /* AJNVersion.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNVersion.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNVersion.h; sourceTree = "<group>"; };
 		AC8D8F161614F3ED00361742 /* AJNVersion.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNVersion.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNVersion.mm; sourceTree = "<group>"; };
 		AC8D8F321614F4D100361742 /* libstdc++.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = "libstdc++.dylib"; path = "usr/lib/libstdc++.dylib"; sourceTree = SDKROOT; };
-		AC8D8F341614F4E500361742 /* libssl.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libssl.dylib; path = usr/lib/libssl.dylib; sourceTree = SDKROOT; };
 		ACB063A515115CA800026AF7 /* BasicSampleObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = BasicSampleObject.h; sourceTree = "<group>"; };
 		ACB063A615115CA800026AF7 /* BasicSampleObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = BasicSampleObject.mm; sourceTree = "<group>"; };
 		ACBA19E815645BC1005F2409 /* basic_service-Prefix.pch */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "basic_service-Prefix.pch"; sourceTree = "<group>"; };
@@ -199,12 +193,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				7DEA2F381AC4033A007ECE82 /* libc++.dylib in Frameworks */,
-				AC8D8F351614F4E600361742 /* libssl.dylib in Frameworks */,
 				AC8D8F331614F4D200361742 /* libstdc++.dylib in Frameworks */,
 				AC67D64C152BA9E8009DBFA9 /* libobjc.dylib in Frameworks */,
 				AC1D985A150E870B0005211D /* libpthread.dylib in Frameworks */,
-				AC1D9856150E86E50005211D /* libcrypto.dylib in Frameworks */,
 				AC1D980A150E84E60005211D /* Cocoa.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -243,12 +234,9 @@
 		AC1D9808150E84E60005211D /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				7DEA2F371AC4033A007ECE82 /* libc++.dylib */,
 				AC67D64B152BA9E8009DBFA9 /* libobjc.dylib */,
-				AC8D8F341614F4E500361742 /* libssl.dylib */,
 				AC8D8F321614F4D100361742 /* libstdc++.dylib */,
 				AC1D9859150E870B0005211D /* libpthread.dylib */,
-				AC1D9855150E86E50005211D /* libcrypto.dylib */,
 				AC1D9809150E84E60005211D /* Cocoa.framework */,
 				AC1D9827150E84E60005211D /* SenTestingKit.framework */,
 				AC1D980B150E84E60005211D /* Other Frameworks */,
@@ -626,7 +614,7 @@
 				CLANG_WARN_INT_CONVERSION = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
@@ -644,7 +632,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
@@ -668,7 +656,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
@@ -679,7 +667,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				MACOSX_DEPLOYMENT_TARGET = 10.7;
+				MACOSX_DEPLOYMENT_TARGET = 10.9;
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
@@ -696,13 +684,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "basic_service/basic_service-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "basic_service/basic_service-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
@@ -722,13 +710,13 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "basic_service/basic_service-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc/alljoyn\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "basic_service/basic_service-Info.plist";
 				LIBRARY_SEARCH_PATHS = (
 					"$(inherited)",
-					"\"$(SRCROOT)/../../../../build/darwin/x86/$(CONFIGURATION)/dist/cpp/lib\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(CONFIGURATION)/dist/cpp/lib\"",
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",

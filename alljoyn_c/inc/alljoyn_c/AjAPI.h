@@ -72,19 +72,30 @@
 
 #if (__GNUC__ >= 4) || ((__GNUC__ == 3) && (__GNUC_MINOR__ >= 1))
 #define QCC_DEPRECATED(func) func __attribute__((deprecated)) /**< mark a function as deprecated in gcc. */
+#define QCC_DEPRECATED_ON(func, date) QCC_DEPRECATED(func) /**< same as above but with date of the AllJoyn release applying this macro (date format: YY.MM). */
+
+#if (GCC_VERSION >= 40500L)
+#define QCC_DEPRECATED_MSG(func, msg, date) func __attribute__((deprecated(msg))) /**< same as QCC_DEPRECATED_ON, but with user-defined text message to be displayed. */
+#else
+#define QCC_DEPRECATED_MSG(func, msg, date) QCC_DEPRECATED_ON(func, date) /**< gcc versions older than 4.5 do not support the text message. */
+#endif // GCC version >= 4.5
+
 #else
 #define QCC_DEPRECATED(func) func /**< not all gcc versions support the deprecated attribute. */
-#endif
-
+#define QCC_DEPRECATED_ON(func, date) func /**< not all gcc versions support the deprecated attribute. */
+#endif // GCC version >= 3.1
 
 #elif defined(_MSC_VER)
 
 #define QCC_DEPRECATED(func) __declspec(deprecated) func /**< mark a function as deprecated in msvc. */
-
+#define QCC_DEPRECATED_ON(func, date) QCC_DEPRECATED(func) /**< same as above but with date of the AllJoyn release applying this macro (date format: YY.MM). */
+#define QCC_DEPRECATED_MSG(func, msg, date) __declspec(deprecated(msg)) func /**< same as QCC_DEPRECATED_ON, but with user-defined text message to be displayed. */
 
 #else /* Some unknown compiler */
 
-#define QCC_DEPRECATED(func); /**< mark a function as deprecated. */
+#define QCC_DEPRECATED(func) func
+#define QCC_DEPRECATED_ON(func, date) func
+#define QCC_DEPRECATED_MSG(func, msg, date) func
 
 #endif /* Compiler type */
 

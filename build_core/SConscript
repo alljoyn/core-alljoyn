@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 import os
 import platform
@@ -41,7 +41,7 @@ if platform.system() == 'Linux':
         default_target_cpu = 'x86_64'
     else:
         default_target_cpu = 'x86'
-    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'openwrt')
+    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'arm64', 'openwrt')
 
     default_msvc_version = None
 
@@ -56,7 +56,7 @@ elif platform.system() == 'Windows':
         default_target_cpu = 'x86_64'
     else:
         default_target_cpu = 'x86'
-    allowed_target_cpus = ('x86', 'x86_64', 'arm')
+    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'arm64')
 
     default_msvc_version = '12.0'
 
@@ -67,9 +67,8 @@ elif platform.system() == 'Darwin':
     default_target_os = 'darwin'
     allowed_target_oss = ('darwin', 'android', 'openwrt')
 
-    # Darwin maps both 32-bit and 64-bit x86 CPUs to "x86"
-    default_target_cpu = 'x86'
-    allowed_target_cpus = ('x86', 'arm', 'armv7', 'armv7s', 'arm64', 'openwrt')
+    default_target_cpu = 'x86_64'
+    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'armv7', 'armv7s', 'arm64', 'openwrt')
 
     default_msvc_version = None
 
@@ -84,7 +83,7 @@ vars.Add(EnumVariable('OS', 'Target OS', default_target_os, allowed_values = all
 vars.Add(EnumVariable('CPU', 'Target CPU', default_target_cpu, allowed_values = allowed_target_cpus))
 vars.Add(EnumVariable('VARIANT', 'Build variant', 'debug', allowed_values=('debug', 'release'), ignorecase=2))
 vars.Add(EnumVariable('BR', 'Have bundled router built-in for C++ test samples', 'on', allowed_values=('on', 'off')))
-vars.Add(EnumVariable('DOCS', '''Output doc type. Setting the doc type to "dev" will produce HTML 
+vars.Add(EnumVariable('DOCS', '''Output doc type. Setting the doc type to "dev" will produce HTML
     output that includes all developer files not just the public API.
     ''', 'none', allowed_values=('none', 'pdf', 'html', 'dev', 'chm', 'sandcastle')))
 vars.Add(EnumVariable('WS', 'Whitespace Policy Checker', 'off', allowed_values=('check', 'detail', 'fix', 'off')))
@@ -124,7 +123,7 @@ if target_os in ['win10', 'win7']:
         path = os.path.normpath(os.environ['MIKTEX_HOME'] + '/bin')
 
     msvc_version = ARGUMENTS.get('MSVC_VERSION')
-    env = Environment(variables = vars, TARGET_ARCH=target_cpu, MSVC_VERSION=msvc_version, tools = ['default', 'jar'], ENV = {'PATH' : path})
+    env = Environment(variables = vars, TARGET_ARCH=target_cpu, MSVC_VERSION=msvc_version, tools = ['default', 'jar', 'javah'], ENV = {'PATH' : path})
 
 else:
     env = Environment(variables = vars, tools = ['gnulink', 'gcc', 'g++', 'ar', 'as', 'javac', 'javah', 'jar', 'pdf', 'pdflatex'])

@@ -39,13 +39,13 @@ class CertChainAgentStorageWrapper :
     }
 
     QStatus RegisterAgent(const KeyInfoNISTP256& agentKey,
-                          const ajn::securitymgr::Manifest& manifest,
+                          AJ_PCSTR unsignedManifestXml,
                           GroupInfo& adminGroup,
                           IdentityCertificateChain& identityCertificates,
-                          ajn::Manifest& signedManifest,
+                          string& signedManifestXml,
                           vector<MembershipCertificateChain>& adminGroupMemberships)
     {
-        QStatus status = ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, signedManifest, adminGroupMemberships);
+        QStatus status = ca->RegisterAgent(agentKey, unsignedManifestXml, adminGroup, identityCertificates, signedManifestXml, adminGroupMemberships);
         if (ER_OK == status) {
             identityCertificates.push_back(rootIdCert);
             agentIdChain = identityCertificates;
@@ -355,7 +355,7 @@ TEST_F(CertChainHandlingTests, RegisterAgent) {
 
     IdentityCertificateChain idChain;
     DefaultECDHEAuthListener dal;
-    ba->EnablePeerSecurity(ECDHE_KEYX, &dal); //make sure our bus DSA enabled.
+    ba->EnablePeerSecurity(KEYX_ECDHE_ECDSA, &dal); //make sure our bus DSA enabled.
     ASSERT_EQ(ER_OK, GetIdentity(agent, idChain));
     ASSERT_EQ(wrappedCa->agentIdChain.size(), idChain.size());
     ASSERT_EQ((size_t)2, idChain.size()); //extra check to make sure the test passed the full chain.

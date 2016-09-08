@@ -183,6 +183,15 @@ class CertificateX509 {
     QStatus EncodeCertificateDER(qcc::String& der) const;
 
     /**
+     * Export only the TBS section of the certificate as DER encoded.
+     * This is suitable for using to generate a signature outside of this class.
+     *
+     * @param[out] tbsder The binary DER-encoded TBS portion of the certificate.
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus EncodeCertificateTBS(qcc::String& tbsder);
+
+    /**
      * Encode the private key in a PEM string.
      *
      * @deprecated May 2015 for 15.08 release
@@ -274,6 +283,20 @@ class CertificateX509 {
     QStatus Sign(const ECCPrivateKey* key);
 
     /**
+     * Set the signature to a provided byte array, when signing the certificate externally.
+     * This method does not verify the signature is valid, please use Verify with the
+     * corresponding public key to make sure.
+     *
+     * @see qcc::CertificateX509::Verify(const ECCPublicKey* key);
+     *
+     * @param[in] signature An ECCSignature containing the signature.
+     */
+    void SetSignature(const ECCSignature& sig)
+    {
+        signature = sig;
+    }
+
+    /**
      * Sign the certificate and generate the authority key identifier.
      * @param privateKey the ECDSA private key.
      * @param publicKey the ECDSA public key to generate the authority key
@@ -313,7 +336,7 @@ class CertificateX509 {
      * @param serialNumber The serial number
      * @param len          Length of the serial array
      */
-    void SetSerial(const uint8_t* serialNumber, const size_t len)
+    void SetSerial(const uint8_t* serialNumber, size_t len)
     {
         serialLen = len;
         delete[] this->serial;
@@ -324,6 +347,18 @@ class CertificateX509 {
             this->serial = NULL;
         }
     }
+
+    /**
+     * Set the serial number to be a random 20-byte string. Callers using this
+     * functionality in a Certificate Authority are responsible for keeping track of
+     * used serial numbers from previous certificate issuances, checking the serial
+     * number after a successful call to this method, and generating new ones until
+     * an unused serial number is generated. Repeated failure to generate an unused
+     * serial number may suggest a problem with the platform randomness generator.
+     *
+     * @return ER_OK for success; otherwise, error code.
+     */
+    QStatus GenerateRandomSerial();
 
     /**
      * Get the serial number
@@ -622,7 +657,7 @@ class CertificateX509 {
      * @param ouLength Length of the ou array. Zero if null.
      * @return true if so.
      */
-    bool IsDNEqual(const uint8_t* cn, const size_t cnLength, const uint8_t* ou, const size_t ouLength) const;
+    bool IsDNEqual(const uint8_t* cn, size_t cnLength, const uint8_t* ou, size_t ouLength) const;
 
     /**
      * Is the subject DN of this certificate equal to a given certificate's DN?
