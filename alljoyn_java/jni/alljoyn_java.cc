@@ -770,9 +770,12 @@ static jclass CLS_SessionOpts = NULL;
 jclass CLS_AboutDataListener = NULL;
 jclass CLS_ECCPublicKey = NULL;
 jclass CLS_ECCPrivateKey = NULL;
+jclass CLS_ECCSignature = NULL;
 jclass CLS_JAVA_UTIL_UUID = NULL;
 jclass CLS_PermissionConfiguratorApplicationState = NULL;
 jclass CLS_CertificateX509CertificateType = NULL;
+jclass CLS_CertificateX509 = NULL;
+jclass CLS_CertificateId = NULL;
 jclass CLS_ErrorReplyBusException = NULL;
 jclass CLS_KeyInfoNISTP256 = NULL;
 
@@ -784,6 +787,16 @@ static jmethodID MID_MsgArg_marshal_array = NULL;
 static jmethodID MID_MsgArg_unmarshal = NULL;
 static jmethodID MID_MsgArg_unmarshal_array = NULL;
 
+jfieldID FID_ECCPrivateKey_d = NULL;
+jfieldID FID_ECCPublicKey_x = NULL;
+jfieldID FID_ECCPublicKey_y = NULL;
+jfieldID FID_ECCSignature_r = NULL;
+jfieldID FID_ECCSignature_s = NULL;
+
+jobject PermissionConfiguratorApplicationState_NOT_CLAIMABLE = NULL;
+jobject PermissionConfiguratorApplicationState_CLAIMABLE = NULL;
+jobject PermissionConfiguratorApplicationState_CLAIMED = NULL;
+jobject PermissionConfiguratorApplicationState_NEED_UPDATE = NULL;
 
 // predeclare some methods as necessary
 static jobject Unmarshal(const MsgArg* arg, jobject jtype);
@@ -1018,11 +1031,42 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_ECCPublicKey = (jclass)env->NewGlobalRef(clazz);
 
+        FID_ECCPublicKey_x = env->GetFieldID(CLS_ECCPublicKey, "x", "[B");
+        if (!FID_ECCPublicKey_x) {
+            return JNI_ERR;
+        }
+
+        FID_ECCPublicKey_y = env->GetFieldID(CLS_ECCPublicKey, "y", "[B");
+        if (!FID_ECCPublicKey_y) {
+            return JNI_ERR;
+        }
+
         clazz = env->FindClass("org/alljoyn/bus/common/ECCPrivateKey");
         if (!clazz) {
             return JNI_ERR;
         }
         CLS_ECCPrivateKey = (jclass)env->NewGlobalRef(clazz);
+
+        FID_ECCPrivateKey_d = env->GetFieldID(CLS_ECCPrivateKey, "d", "[B");
+        if (!FID_ECCPrivateKey_d) {
+            return JNI_ERR;
+        }
+
+        clazz = env->FindClass("org/alljoyn/bus/common/ECCSignature");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_ECCSignature = (jclass)env->NewGlobalRef(clazz);
+
+        FID_ECCSignature_r = env->GetFieldID(CLS_ECCSignature, "r", "[B");
+        if (!FID_ECCSignature_r) {
+            return JNI_ERR;
+        }
+
+        FID_ECCSignature_s = env->GetFieldID(CLS_ECCSignature, "s", "[B");
+        if (!FID_ECCSignature_s) {
+            return JNI_ERR;
+        }
 
         clazz = env->FindClass("java/util/UUID");
         if (!clazz) {
@@ -1036,11 +1080,63 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_PermissionConfiguratorApplicationState = (jclass)env->NewGlobalRef(clazz);
 
+        jfieldID fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "NOT_CLAIMABLE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!fidAppState) {
+            return JNI_ERR;
+        }
+
+        PermissionConfiguratorApplicationState_NOT_CLAIMABLE = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
+        if (!PermissionConfiguratorApplicationState_NOT_CLAIMABLE) {
+            return JNI_ERR;
+        }
+
+        fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "CLAIMABLE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!fidAppState) {
+            return JNI_ERR;
+        }
+
+        PermissionConfiguratorApplicationState_CLAIMABLE = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
+        if (!PermissionConfiguratorApplicationState_CLAIMABLE) {
+            return JNI_ERR;
+        }
+
+        fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "CLAIMED", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!fidAppState) {
+            return JNI_ERR;
+        }
+
+        PermissionConfiguratorApplicationState_CLAIMED = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
+        if (!PermissionConfiguratorApplicationState_CLAIMED) {
+            return JNI_ERR;
+        }
+
+        fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "NEED_UPDATE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!fidAppState) {
+            return JNI_ERR;
+        }
+
+        PermissionConfiguratorApplicationState_NEED_UPDATE = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
+        if (!PermissionConfiguratorApplicationState_NEED_UPDATE) {
+            return JNI_ERR;
+        }
+
         clazz = env->FindClass("org/alljoyn/bus/common/CertificateX509$CertificateType");
         if (!clazz) {
             return JNI_ERR;
         }
         CLS_CertificateX509CertificateType = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/common/CertificateX509");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_CertificateX509 = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/CertificateId");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_CertificateId = (jclass)env->NewGlobalRef(clazz);
 
         return JNI_VERSION_1_2;
     }
