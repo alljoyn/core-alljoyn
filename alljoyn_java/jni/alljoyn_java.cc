@@ -773,6 +773,8 @@ jclass CLS_ECCPrivateKey = NULL;
 jclass CLS_JAVA_UTIL_UUID = NULL;
 jclass CLS_PermissionConfiguratorApplicationState = NULL;
 jclass CLS_CertificateX509CertificateType = NULL;
+jclass CLS_CertificateX509 = NULL;
+jclass CLS_CertificateId = NULL;
 jclass CLS_ErrorReplyBusException = NULL;
 jclass CLS_KeyInfoNISTP256 = NULL;
 
@@ -1041,6 +1043,18 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_CertificateX509CertificateType = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/common/CertificateX509");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_CertificateX509 = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/CertificateId");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_CertificateId = (jclass)env->NewGlobalRef(clazz);
 
         return JNI_VERSION_1_2;
     }
