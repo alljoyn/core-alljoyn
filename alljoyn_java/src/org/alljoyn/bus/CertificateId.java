@@ -23,11 +23,23 @@ public class CertificateId {
     /**
      * serial Identity certificate's serial
      */
-    String serial;
+    String m_serial;
 
     /**
      * keyInfo Identity certificate's KeyInfoNISTP256 structure
      */
-    KeyInfoNISTP256 issuerKeyInfo;
+    KeyInfoNISTP256 m_issuerKeyInfo;
 
+    private CertificateId(String serial, KeyInfoNISTP256 issuerKeyInfo){
+        m_serial = serial;
+        m_issuerKeyInfo = issuerKeyInfo;
+    }
+
+    public KeyInfoNISTP256 getIssuerKeyInfo() {
+        return m_issuerKeyInfo;
+    }
+
+    public String getSerial() {
+        return m_serial;
+    }
 }
