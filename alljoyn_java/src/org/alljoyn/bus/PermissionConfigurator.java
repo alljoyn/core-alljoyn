@@ -58,7 +58,7 @@ public class PermissionConfigurator {
         NEED_UPDATE
     }
 
-     public static final int CLAIM_CAPABILITY_CAPABLE_ECDHE_NULL = 0x01;
+     public static final short CLAIM_CAPABILITY_CAPABLE_ECDHE_NULL = 0x01;
      /**
       * @deprecated in Alljoyn 15.09, needs to be supported 16.04 and 16.10
       */
@@ -131,7 +131,29 @@ public class PermissionConfigurator {
      *      - #ER_INVALID_APPLICATION_STATE if the state can't be changed
      *      - #ER_NOT_IMPLEMENTED if the method is not implemented
      */
-    public native void setApplicationState(ApplicationState newState) throws BusException;
+    public void setApplicationState(ApplicationState newState) throws BusException {
+        if (newState == ApplicationState.NOT_CLAIMABLE) {
+            setApplicationState(1);
+        } else if (newState == ApplicationState.CLAIMABLE) {
+            setApplicationState(2);
+        } else if (newState == ApplicationState.CLAIMED) {
+            setApplicationState(3);
+        } else if (newState == ApplicationState.NEED_UPDATE) {
+            setApplicationState(4);
+        } else {
+            throw new BusException(Status.INVALID_APPLICATION_STATE.toString());
+        }
+    }
+
+    /**
+     * Set the application state.  The state can't be changed from CLAIMED to
+     * CLAIMABLE.
+     * @param newState The new application state
+     * @throws BusException
+     *      - #ER_INVALID_APPLICATION_STATE if the state can't be changed
+     *      - #ER_NOT_IMPLEMENTED if the method is not implemented
+     */
+    private native void setApplicationState(int newState) throws BusException;
 
     /**
      * Retrieve the public key info for the signing key.
@@ -180,7 +202,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native void setClaimCapabilities(int claimCapabilities) throws BusException;
+    public native void setClaimCapabilities(short claimCapabilities) throws BusException;
 
     /**
      * Get the authentication mechanisms the application supports for the
@@ -191,7 +213,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native int getClaimCapabilities() throws BusException;
+    public native short getClaimCapabilities() throws BusException;
 
     /**
      * Set the additional information on the claim capabilities.
@@ -207,7 +229,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native void setClaimCapabilityAdditionalInfo(int additionalInfo) throws BusException;
+    public native void setClaimCapabilityAdditionalInfo(short additionalInfo) throws BusException;
 
     /**
      * Get the additional information on the claim capabilities.
@@ -216,7 +238,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native int getClaimCapabilityAdditionalInfo() throws BusException;
+    public native short getClaimCapabilityAdditionalInfo() throws BusException;
 
     /**
      * Perform claiming of this app locally/offline.

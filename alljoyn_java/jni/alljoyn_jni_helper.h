@@ -32,6 +32,8 @@ extern jclass CLS_BusException;
 extern jclass CLS_AboutDataListener;
 extern jclass CLS_PermissionConfiguratorApplicationState;
 extern jclass CLS_CertificateX509CertificateType;
+extern jclass CLS_CertificateX509;
+extern jclass CLS_CertificateId;
 
 /**
  * Marshal an Object into a MsgArg.
