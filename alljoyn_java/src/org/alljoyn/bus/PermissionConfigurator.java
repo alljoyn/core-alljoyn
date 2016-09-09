@@ -58,7 +58,7 @@ public class PermissionConfigurator {
         NEED_UPDATE
     }
 
-     public static final int CLAIM_CAPABILITY_CAPABLE_ECDHE_NULL = 0x01;
+     public static final short CLAIM_CAPABILITY_CAPABLE_ECDHE_NULL = 0x01;
      /**
       * @deprecated in Alljoyn 15.09, needs to be supported 16.04 and 16.10
       */
@@ -180,7 +180,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native void setClaimCapabilities(int claimCapabilities) throws BusException;
+    public native void setClaimCapabilities(short claimCapabilities) throws BusException;
 
     /**
      * Get the authentication mechanisms the application supports for the
@@ -191,7 +191,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native int getClaimCapabilities() throws BusException;
+    public native short getClaimCapabilities() throws BusException;
 
     /**
      * Set the additional information on the claim capabilities.
@@ -207,7 +207,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native void setClaimCapabilityAdditionalInfo(int additionalInfo) throws BusException;
+    public native void setClaimCapabilityAdditionalInfo(short additionalInfo) throws BusException;
 
     /**
      * Get the additional information on the claim capabilities.
@@ -216,7 +216,7 @@ public class PermissionConfigurator {
      * @throws BusException
      *  - an error status indicating failure
      */
-    public native int getClaimCapabilityAdditionalInfo() throws BusException;
+    public native short getClaimCapabilityAdditionalInfo() throws BusException;
 
     /**
      * Perform claiming of this app locally/offline.

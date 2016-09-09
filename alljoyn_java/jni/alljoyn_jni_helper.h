@@ -25,6 +25,7 @@ extern jclass CLS_BusException;
 
 extern jclass CLS_ECCPublicKey;
 extern jclass CLS_ECCPrivateKey;
+extern jclass CLS_ECCSignature;
 extern jclass CLS_KeyInfoNISTP256;
 extern jclass CLS_JAVA_UTIL_UUID;
 extern jclass CLS_ErrorReplyBusException;
@@ -32,6 +33,19 @@ extern jclass CLS_BusException;
 extern jclass CLS_AboutDataListener;
 extern jclass CLS_PermissionConfiguratorApplicationState;
 extern jclass CLS_CertificateX509CertificateType;
+extern jclass CLS_CertificateX509;
+extern jclass CLS_CertificateId;
+
+extern jfieldID FID_ECCPrivateKey_d;
+extern jfieldID FID_ECCPublicKey_x;
+extern jfieldID FID_ECCPublicKey_y;
+extern jfieldID FID_ECCSignature_r;
+extern jfieldID FID_ECCSignature_s;
+
+extern jobject PermissionConfiguratorApplicationState_NOT_CLAIMABLE;
+extern jobject PermissionConfiguratorApplicationState_CLAIMABLE;
+extern jobject PermissionConfiguratorApplicationState_CLAIMED;
+extern jobject PermissionConfiguratorApplicationState_NEED_UPDATE;
 
 /**
  * Marshal an Object into a MsgArg.

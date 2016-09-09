@@ -578,41 +578,29 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_claim(JNIEn
     certificateAuthority.SetKeyId(adminGroupKeyID, jenv->GetArrayLength(jadminGroupKeyID));
 
     CertificateX509* certChain = new CertificateX509[jcertChainCount];
+    size_t maniCount = (size_t) jmaniCount;
+    const char** manifests = new const char*[maniCount];
+    jstring* jmanifests = new jstring[maniCount];
 
     for (long i = 0; i < jcertChainCount; ++i) {
         jobject jcertX509 = GetObjectArrayElement(jenv, jcertArray, i);
         if (jenv->ExceptionCheck()) {
-            delete [] eccX;
-            delete [] eccY;
-            delete [] keyID;
-            delete [] adminGroupEccX;
-            delete [] adminGroupEccY;
-            delete [] adminGroupKeyID;
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-            return;
+            goto exit;
         }
 
         QCC_ASSERT(jcertX509);
 
         CertificateX509* certX509 = GetHandle<CertificateX509*>(jcertX509);
         if (jenv->ExceptionCheck()) {
-            delete [] eccX;
-            delete [] eccY;
-            delete [] keyID;
-            delete [] adminGroupEccX;
-            delete [] adminGroupEccY;
-            delete [] adminGroupKeyID;
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-            return;
+            goto exit;
         }
         QCC_ASSERT(certX509);
 
         certChain[i] = *certX509;
     }
 
-    size_t maniCount = (size_t) jmaniCount;
-    const char** manifests = new const char*[maniCount];
-    jstring* jmanifests = new jstring[maniCount];
     memset(manifests, 0, maniCount * sizeof(manifests[0]));
     memset(jmanifests, 0, maniCount * sizeof(jmanifests[0]));
 
@@ -632,12 +620,6 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_claim(JNIEn
     status = secPtr->Claim(certificateAuthority, adminGroupId, adminGroup, certChain, jcertChainCount, manifests, jmaniCount);
 
 exit:
-    /*
-     * Java garbage collector will trigger CertificateX509
-     * destroy function to take care of memory
-     * occupied by individual certificates
-     */
-    certChain = NULL;
 
     for (size_t i = 0; i < maniCount; ++i) {
         if (manifests[i]) {
@@ -645,6 +627,7 @@ exit:
         }
     }
 
+    delete [] certChain;
     delete [] manifests;
     delete [] jmanifests;
     delete [] eccX;
@@ -745,12 +728,14 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_updateIdent
     QStatus status = ER_OK;
 
     CertificateX509* certArray = new CertificateX509[jcertCount];
+    const char** manifests = new const char*[jmaniCount];
+    jstring* jmanifests = new jstring[jmaniCount];
 
     for (long i = 0; i < jcertCount; ++i) {
         jobject jcertX509 = GetObjectArrayElement(jenv, jcertArray, i);
         if (jenv->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-            return;
+            goto exit;
         }
 
         QCC_ASSERT(jcertX509);
@@ -758,15 +743,13 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_updateIdent
         CertificateX509* certX509 = GetHandle<CertificateX509*>(jcertX509);
         if (jenv->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-            return;
+            goto exit;
         }
         QCC_ASSERT(certX509);
 
         certArray[i] = *certX509;
     }
 
-    const char** manifests = new const char*[jmaniCount];
-    jstring* jmanifests = new jstring[jmaniCount];
     memset(manifests, 0, jmaniCount * sizeof(manifests[0]));
     memset(jmanifests, 0, jmaniCount * sizeof(jmanifests[0]));
 
@@ -787,18 +770,13 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_updateIdent
 
 exit:
 
-    /*
-     * Java garbage collector will trigger CertificateX509
-     * destroy function to take care of memory
-     * occupied by individual certificates
-     */
-    certArray = NULL;
-
     for (jlong i = 0; i < jmaniCount; ++i) {
         if (manifests[i]) {
             jenv->ReleaseStringUTFChars(jmanifests[i], manifests[i]);
         }
     }
+
+    delete [] certArray;
     delete [] manifests;
     delete [] jmanifests;
 
@@ -898,6 +876,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_installMemb
         jobject jcertX509 = GetObjectArrayElement(jenv, jcertArray, i);
         if (jenv->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+            delete [] certArray;
             return;
         }
 
@@ -906,6 +885,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_installMemb
         CertificateX509* certX509 = GetHandle<CertificateX509*>(jcertX509);
         if (jenv->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+            delete [] certArray;
             return;
         }
         QCC_ASSERT(certX509);
@@ -915,12 +895,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_installMemb
 
     QStatus status = secPtr->InstallMembership(certArray, jcertCount);
 
-    /*
-     * Java garbage collector will trigger CertificateX509
-     * destroy function to take care of memory
-     * occupied by individual certificates
-     */
-    certArray = NULL;
+    delete [] certArray;
 
     if (status != ER_OK) {
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
