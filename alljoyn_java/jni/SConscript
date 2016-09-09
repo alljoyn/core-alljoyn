@@ -16,7 +16,7 @@
 Import('env')
 
 # JNI library sources
-srcs = ['alljoyn_java.cc', 'alljoyn_jni_helper.cc', 'CryptoECC.cc', 'SecurityApplicationProxy.cc']
+srcs = ['alljoyn_java.cc', 'alljoyn_jni_helper.cc', 'CryptoECC.cc', 'SecurityApplicationProxy.cc', 'PermissionConfigurator.cc']
 
 # JNI library
 bdenv = env.Clone()
