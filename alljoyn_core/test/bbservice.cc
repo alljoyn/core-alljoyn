@@ -23,6 +23,9 @@
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
+#include <fstream>
+#include <string>
+#include <streambuf>
 
 #include <qcc/Debug.h>
 #include <qcc/Log.h>
@@ -86,6 +89,8 @@ static const char* g_alternatePSK = NULL;
 static const char* g_defaultPSK = "faaa0af3dd3f1e0379da046a3ab6ca44";
 
 static volatile sig_atomic_t g_interrupt = false;
+
+static string g_customRouterConfig;
 
 static void CDECL_CALL SigIntHandler(int sig)
 {
@@ -743,22 +748,28 @@ static void usage(void)
     printf("   -runtime #            = runtime of the program in ms. After this time has passed, the application will exit automatically. \n");
     printf("   -psk <psk>            = Use the supplied pre-shared key instead of the built in one.\n");
     printf("                           For interop with tests in version <= 14.12 pass '123456'.\n");
+    printf("   -f <config file>      = Router config file path (for boundled router).\n");
     printf("\n");
 }
 
 /** Main entry point */
 int CDECL_CALL main(int argc, char** argv)
 {
+    QStatus status = ER_OK;
     if (AllJoynInit() != ER_OK) {
         return 1;
     }
 #ifdef ROUTER
-    if (AllJoynRouterInit() != ER_OK) {
+    if (g_customRouterConfig.empty()) {
+        status = AllJoynRouterInit();
+    } else {
+        status = AllJoynRouterInitWithConfig(g_customRouterConfig.c_str());
+    }
+    if (status != ER_OK) {
         AllJoynShutdown();
         return 1;
     }
 #endif
-    QStatus status = ER_OK;
     InterfaceSecurityPolicy secPolicy = AJ_IFC_SECURITY_INHERIT;
     bool objSecure = false;
     unsigned long reportInterval = 1000;
@@ -883,8 +894,26 @@ int CDECL_CALL main(int argc, char** argv)
             } else {
                 g_alternatePSK = argv[i];
             }
+        }  else if (0 == strcmp("-f", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option \"-f\" requires a parameter\n");
+                usage();
+                exit(1);
+            } else {
+#ifndef ROUTER
+                printf("Ignoring option \"-f\" for standalone router\n");
+#else
+                ifstream in(argv[i]);
+                if (!in) {
+                    printf("Error: failed to open router config file \"%s\"\n", argv[i]);
+                    exit(1);
+                } else {
+                    g_customRouterConfig = string(istreambuf_iterator<char>(in), istreambuf_iterator<char>());
+                }
+#endif
+            }
         } else {
-            status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
             usage();
             exit(1);
