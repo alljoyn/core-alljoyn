@@ -639,41 +639,6 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * RemoteEndpoint users should not call this method.
      */
     void ExitCallback();
-
-    /**
-     * Helper function used by PushMessageRouter() and PushMessageLeaf()
-     *
-     * @param[in]  msg      Message to be sent
-     * @param[out] count    Number of messages in txQueue
-     * @param[in]  isLeaf   True if message comes from a Leaf Node
-     *                      False if it comes from a Routing Node
-     * @return
-     *                      - ER_OK if successful
-     *                      - An error status otherwise
-     */
-    QStatus PushMessageCommon(Message& msg, size_t& count, bool isLeaf);
-
-    /**
-     * Send an outgoing message.
-     *
-     * @param[in] msg   Message to be sent.
-     * @param[out] count   Number of messages in txQueue
-     * @return
-     *      - ER_OK if successful.
-     *      - An error status otherwise
-     */
-    virtual QStatus PushMessageRouter(Message& msg, size_t& count);
-
-    /**
-     * Send an outgoing message.
-     *
-     * @param[in] msg   Message to be sent.
-     * @param[out] count   Number of messages in txQueue
-     * @return
-     *      - ER_OK if successful.
-     *      - An error status otherwise
-     */
-    virtual QStatus PushMessageLeaf(Message& msg, size_t& count);
 };
 
 }
