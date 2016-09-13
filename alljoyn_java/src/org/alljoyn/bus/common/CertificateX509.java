@@ -26,16 +26,6 @@ public class CertificateX509 {
     public static final long AUTHORITY_KEY_ID_SZ = 8;
 
     /**
-     * The validity period
-     */
-    public class ValidPeriod {
-        long validFrom; /**< the date time when the cert becomes valid
-                                expressed in the number of seconds in EPOCH Jan 1, 1970 */
-        long validTo;  /**< the date time after which the cert becomes invalid
-                                expressed in the number of seconds in EPOCH Jan 1, 1970 */
-    }
-
-    /**
      * encoding format
      */
     public enum EncodingType {
@@ -101,10 +91,21 @@ public class CertificateX509 {
     /**
      * Decode a PEM encoded certificate.
      * @param pem the encoded certificate.
+     * @param pemlen the encoded certificate length.
      * @throws BusException
      * error code.
      */
-    public native void decodeCertificatePEM(String pem) throws BusException;
+    private native void decodeCertificatePEM(String pem, long pemlen) throws BusException;
+
+    /**
+     * Decode a PEM encoded certificate.
+     * @param pem the encoded certificate.
+     * @throws BusException
+     * error code.
+     */
+    public void decodeCertificatePEM(String pem) throws BusException {
+        decodeCertificatePEM(pem, pem.length());
+    }
 
     /**
      * Export the certificate as PEM encoded.
@@ -117,10 +118,21 @@ public class CertificateX509 {
     /**
      * Decode a DER encoded certificate.
      * @param der the encoded certificate.
+     * @param derlen the encoded certificate length.
+     * @throws BusException
+     * error code.
+     */
+    private native void decodeCertificateDER(byte[] der, long derlen) throws BusException;
+
+    /**
+     * Decode a DER encoded certificate.
+     * @param der the encoded certificate.
      * @throws BusException 
      * error code.
      */
-    public native void decodeCertificateDER(String der) throws BusException;
+    public void decodeCertificateDER(byte[] der) throws BusException {
+        decodeCertificateDER(der, der.length);
+    }
 
     /**
      * Export the certificate as DER encoded.
@@ -128,7 +140,7 @@ public class CertificateX509 {
      * @throws BusException 
      * error code.
      */
-    public native String encodeCertificateDER() throws BusException;
+    public native byte[] encodeCertificateDER() throws BusException;
 
     /**
      * Export only the TBS section of the certificate as DER encoded.
@@ -138,7 +150,7 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public native String encodeCertificateTBS() throws BusException;
+    public native byte[] encodeCertificateTBS() throws BusException;
 
     /**
      * Encode the private key in a PEM string.
@@ -228,7 +240,10 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public native void verify(KeyInfoNISTP256 trustAnchor) throws BusException;
+    public void verify(KeyInfoNISTP256 trustAnchor) throws BusException {
+        verifyValidity();
+        verify(trustAnchor.getPublicKey());
+    }
 
     /**
      * Verify the validity period of the certificate.
@@ -245,7 +260,18 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public native void setSerial(byte[] serialNumber, long len) throws BusException;
+    private native void setSerial(byte[] serialNumber, long len) throws BusException;
+
+    /**
+     * Set the serial number field
+     * @param serialNumber The serial number
+     *
+     * @throws BusException
+     * error code.
+     */
+    public void setSerial(byte[] serialNumber) throws BusException {
+        setSerial(serialNumber, serialNumber.length);
+    }
 
     /**
      * Set the serial number to be a random 20-byte string. Callers using this
@@ -264,86 +290,114 @@ public class CertificateX509 {
      * Get the serial number
      * @return the serial number
      *
-     * @throws BusException
-     * error code.
      */
-    public native byte[] getSerial() throws BusException;
+    public native byte[] getSerial();
 
     /**
      * Set the issuer organization unit field
      * @param ou the organization unit
      * @param len the length of the organization unit field
      *
-     * @throws BusException
-     * error code.
      */
-    public native void setIssuerOU(byte[] ou, long len) throws BusException;
+    private native void setIssuerOU(byte[] ou, long len);
+
+    /**
+     * Set the issuer organization unit field
+     * @param ou the organization unit
+     *
+     */
+    public void setIssuerOU(byte[] ou) {
+        setIssuerOU(ou, ou.length);
+    }
 
     /**
      * Get the issuer organization unit field
      * @return the issuer organization unit field
      *
-     * @throws BusException
-     * error code.
      */
-    public native byte getIssuerOU() throws BusException;
+    public native byte[] getIssuerOU();
 
     /**
      * Set the issuer common name field
      * @param cn the common name
      * @param len the length of the common name field
      *
-     * @throws BusException
-     * error code.
      */
-    public native void setIssuerCN(byte[] cn, long len) throws BusException;
+    private native void setIssuerCN(byte[] cn, long len);
+
+    /**
+     * Set the issuer common name field
+     * @param cn the common name
+     *
+     */
+    public void setIssuerCN(byte[] cn) {
+        setIssuerCN(cn, cn.length);
+    }
 
     /**
      * Get the issuer common name field
      * @return the issuer common name field
      *
-     * @throws BusException
-     * error code.
      */
-    public native byte[] getIssuerCN() throws BusException;
+    public native byte[] getIssuerCN();
 
     /**
      * Set the subject organization unit field
      * @param ou the organization unit
      * @param len the length of the organization unit field
      *
-     * @throws BusException
-     * error code.
      */
-    public native void setSubjectOU(byte[] ou, long len) throws BusException;
+    private native void setSubjectOU(byte[] ou, long len);
+
+    /**
+     * Set the subject organization unit field
+     * @param ou the organization unit
+     *
+     */
+    public void setSubjectOU(byte[] ou) {
+        setSubjectOU(ou, ou.length);
+    }
 
     /**
      * Get the subject organization unit field
      * @return the subject organization unit field
      *
-     * @throws BusException
-     * error code.
      */
-    public native byte[] getSubjectOU() throws BusException;
+    public native byte[] getSubjectOU();
 
     /**
      * Set the subject common name field
      * @param cn the common name
      * @param len the length of the common name field
      *
-     * @throws BusException
-     * error code.
      */
-    public native void setSubjectCN(byte[] cn, long len) throws BusException;
+    private native void setSubjectCN(byte[] cn, long len);
+
+    /**
+     * Set the subject common name field
+     * @param cn the common name
+     *
+     */
+    public void setSubjectCN(byte[] cn){
+        setSubjectCN(cn, cn.length);
+    }
 
     /**
      * Get the subject common name field
      * @return the subject common name field
      *
+     */
+    public native byte[] getSubjectCN();
+
+    /**
+     * Set the subject alt name field
+     * @param subjectAltName the subject alt name
+     * @param subjectLength the subject alt name
+     *
      * @throws BusException
      * error code.
      */
-    public native byte[] getSubjectCN() throws BusException;
+    private native void setSubjectAltName(String subjectAltName, long subjectLength) throws BusException;
 
     /**
      * Set the subject alt name field
@@ -352,7 +406,9 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public native void setSubjectAltName(String subjectAltName) throws BusException;
+    public void setSubjectAltName(String subjectAltName) throws BusException {
+        setSubjectAltName(subjectAltName, subjectAltName.length());
+    }
 
     /**
      * Get the subject alt name field
@@ -395,29 +451,60 @@ public class CertificateX509 {
      * Updates the current AuthorityKeyId with a new one.
      *
      * @param newAki the new AuthorityKeyId for this certificate.
+     * @param newAkiLength the new AuthorityKeyId for this certificate.
      *
      * @throws BusException
      * error code.
      */
-    public native void setAuthorityKeyId(String newAki) throws BusException;
+    private native void setAuthorityKeyId(String newAki, long newAkiLength) throws BusException;
+
+    /**
+     * Updates the current AuthorityKeyId with a new one.
+     *
+     * @param newAki the new AuthorityKeyId for this certificate.
+     *
+     * @throws BusException
+     * error code.
+     */
+    public void setAuthorityKeyId(String newAki) throws BusException {
+        setAuthorityKeyId(newAki, newAki.length());
+    }
 
     /**
      * Set the validity field
-     * @param validPeriod the validity period
+     * @param validFrom
+     * the date time when the cert becomes valid
+     * expressed in the number of seconds in EPOCH Jan 1, 1970
+     * @param validTo
+     * the date time after which the cert becomes invalid
+     * expressed in the number of seconds in EPOCH Jan 1, 1970
      *
      * @throws BusException
      * error code.
      */
-    public native void setValidity(ValidPeriod validPeriod) throws BusException;
+    public native void setValidity(long validFrom, long validTo) throws BusException;
 
     /**
-     * Get the validity period.
-     * @return the validity period
+     * Get the validity start date.
+     * @return
+     * the date time when the cert becomes valid
+     * expressed in the number of seconds in EPOCH Jan 1, 1970
      *
      * @throws BusException
      * error code.
      */
-    public native ValidPeriod getValidity() throws BusException;
+    public native long getValidFrom() throws BusException;
+
+    /**
+     * Get the validity end date.
+     * @return
+     * the date time when the cert becomes valid
+     * expressed in the number of seconds in EPOCH Jan 1, 1970
+     *
+     * @throws BusException
+     * error code.
+     */
+    public native long getValidTo() throws BusException;
 
     /**
      * Set the subject public key field
@@ -463,7 +550,18 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public native void setDigest(byte[] digest, long size) throws BusException;
+    private native void setDigest(byte[] digest, long size) throws BusException;
+
+    /**
+     * Set the digest of the external data.
+     * @param digest the digest of the external data
+     *
+     * @throws BusException
+     * error code.
+     */
+    public void setDigest(byte[] digest) throws BusException {
+        setDigest(digest, digest.length);
+    }
 
     /**
      * Get the digest of the external data.
@@ -533,7 +631,20 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public native boolean isDNEqual(byte[] cn, long cnLength, byte[] ou, long ouLength) throws BusException;
+    private native boolean isDNEqual(byte[] cn, long cnLength, byte[] ou, long ouLength) throws BusException;
+
+    /**
+     * Is the subject DN of this certificate equal to a given DN?
+     * @param cn Common Name component of the DN to compare to.
+     * @param ou Organizational Unit component of the DN to compare to.
+     * @return true if so.
+     *
+     * @throws BusException
+     * error code.
+     */
+    public boolean isDNEqual(byte[] cn, byte[] ou) throws BusException {
+        return isDNEqual(cn, cn.length, ou, ou.length);
+    }
 
     /**
      * Is the subject DN of this certificate equal to a given certificate's DN?
@@ -567,13 +678,12 @@ public class CertificateX509 {
     /**
      * Retrieve the number of X.509 certificates in a PEM string representing a cert chain.
      * @param encoded the input string holding the PEM string
-     * @param certChain the input string holding the array of certs.
      * @param count the expected number of certs
      *
      * @throws BusException
      * error code.
      */
-    public native static CertificateX509[] decodeCertChainPEM(String encoded, CertificateX509[] certChain, long count) throws BusException;
+    public native static CertificateX509[] decodeCertChainPEM(String encoded, long count) throws BusException;
 
     /**
      * Validate the certificate type of each cert in the certificate chain.
@@ -587,7 +697,22 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public native static boolean validateCertificateTypeInCertChain(CertificateX509[] certChain, long count) throws BusException;
+    private native static boolean validateCertificateTypeInCertChain(CertificateX509[] certChain, long count) throws BusException;
+
+    /**
+     * Validate the certificate type of each cert in the certificate chain.
+     * The end-entity cert must have a type.
+     * Any signing cert in the chain must have the same type or unrestricted
+     * type in order to sign the next cert in the chain.
+     * @param certChain the array of certs.
+     * @return true if valid; false, otherwise;
+     *
+     * @throws BusException
+     * error code.
+     */
+    public boolean validateCertificateTypeInCertChain(CertificateX509[] certChain) throws BusException {
+        return validateCertificateTypeInCertChain(certChain, certChain.length);
+    }
 
     /** The native connection handle. */
     private long handle;
