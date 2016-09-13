@@ -62,6 +62,28 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_create(JNIEnv* jenv
 
 /*
  * Class:     org_alljoyn_bus_common_CryptoECC
+ * Method:    destroy
+ * Signature: ()V
+ */
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_destroy(JNIEnv* jenv, jobject thiz)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return;
+    }
+
+    QCC_ASSERT(cryptoPtr);
+    delete cryptoPtr;
+
+    SetHandle(thiz, NULL);
+    return;
+}
+
+/*
+ * Class:     org_alljoyn_bus_common_CryptoECC
  * Method:    generateDHKeyPair
  * Signature: ()V
  */
