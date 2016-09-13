@@ -34,11 +34,18 @@ import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.annotation.BusSignal;
 import org.alljoyn.bus.annotation.Secure;
 
+import org.alljoyn.bus.defs.BaseDef;
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.MethodDef;
+import org.alljoyn.bus.defs.PropertyDef;
+import org.alljoyn.bus.defs.PropertyDef.ChangedSignalPolicy;
+import org.alljoyn.bus.defs.SignalDef;
+
 /**
  * InterfaceDescription represents a message bus interface.
  * This class is used internally by registered bus objects.
  */
-class InterfaceDescription {
+public class InterfaceDescription {
 
     private static final int INVALID     = 0; /**< An invalid member type. */
     private static final int METHOD_CALL = 1; /**< A method call member. */
@@ -52,8 +59,22 @@ class InterfaceDescription {
     private static final int AJ_IFC_SECURITY_REQUIRED  = 1; /**< Security is required for an interface */
     private static final int AJ_IFC_SECURITY_OFF       = 2; /**< Security does not apply to this interface */
 
+    private static final int MEMBER_ANNOTATE_NO_REPLY         = 1; /**< If used on method type member, don't expect a reply to the method call */
+    private static final int MEMBER_ANNOTATE_DEPRECATED       = 2; /**< If used, indicates that the member has been deprecated */
+    private static final int MEMBER_ANNOTATE_SESSIONCAST      = 4; /**< Signal sessioncast annotate flag */
+    private static final int MEMBER_ANNOTATE_SESSIONLESS      = 8; /**< Signal sessionless annotate flag */
+    private static final int MEMBER_ANNOTATE_UNICAST          = 16; /**< Signal unicast annotate flag */
+    private static final int MEMBER_ANNOTATE_GLOBAL_BROADCAST = 32; /**< Signal global-broadcast annotate flag */
+
+    private static final int PROP_ANNOTATE_EMIT_CHANGED_SIGNAL             = 1; /**< EmitsChangedSignal annotate flag. */
+    private static final int PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES = 2; /**< EmitsChangedSignal annotate flag for notifying invalidation of property instead of value. */
+    private static final int PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_CONST       = 4; /**< EmitsChangedSignal annotate flag for const property. */
+
+
     private static Map<String, Translator> translatorCache = new HashMap<String, Translator>();
     private class Property {
+
+        public String interfaceName = "";
 
         public String name;
 
@@ -84,13 +105,44 @@ class InterfaceDescription {
      */
     private long handle;
 
-    /** The members of this interface. */
+    /**
+     * The dynamic bus object using this interface. This is needed when the interface implements
+     * bus operations, and the dynamic bus object is required in order to initially retrieve the
+     * interface's associated implementation Methods (which will then be cached in dynamicMembers).
+     */
+    private DynamicBusObject dynamicBusObject = null;
+
+    /**
+     * The dynamic members of this interface. A map of implementation Methods associated with
+     * dynamic members of this interface (Key: method name, Value: implementation Method).
+     */
+    private Map<String, Method> dynamicMembers = null;
+
+    /** The members of this interface (for use with static interface definitions). */
     private List<Method> members;
 
     /** The properties of this interface. */
     private Map<String, Property> properties;
 
-    public InterfaceDescription() {
+    protected InterfaceDescription() {
+        members = new ArrayList<Method>();
+        properties = new HashMap<String, Property>();
+    }
+
+    /**
+     * Constructor. Create this interface using a dynamic bus object, which has 
+     * dynamic interface definitions instead of using static class annotations.
+     *
+     * @param dynamicBusObject the dynamic bus object. May be null when the interface does
+     *                         not need to implement any bus operations directly. For example,
+     *                         when creating an interface simply to relay messages via a proxy
+     *                         (e.g. ProxyBusObject or SignalEmitter), since in this case
+     *                         it does not call any local dynamic member Methods directly.
+     */
+    public InterfaceDescription(DynamicBusObject dynamicBusObject) {
+        this.dynamicBusObject = dynamicBusObject;
+        this.dynamicMembers = new HashMap<String,Method>();
+
         members = new ArrayList<Method>();
         properties = new HashMap<String, Property>();
     }
@@ -141,9 +193,18 @@ class InterfaceDescription {
      * implementations.
      */
     private Method getMember(String name) {
-        for (Method m : members) {
-            if (InterfaceDescription.getName(m).equals(name)) {
-                return m;
+        // Check if using dynamic member definitions
+        if ( dynamicMembers != null ) {
+            Method member = dynamicMembers.get(name);
+            if (member != null ) {
+                return member;
+            }
+        } else {
+            // Otherwise, interface is using definitions based on static class Annotations
+            for (Method m : members) {
+                if (InterfaceDescription.getName(m).equals(name)) {
+                    return m;
+                }
             }
         }
         return null;
@@ -558,4 +619,255 @@ class InterfaceDescription {
         }
         return -1;
     }
+
+    // *********************************************************************************
+
+    /**
+     * @return whether this object represents a dynamic interface.
+     */
+    public boolean isDynamicInterface() {
+        return dynamicMembers != null;
+    }
+
+    /**
+     * Create the native interface description for the given interface definition.
+     *
+     * @param busAttachment the connection the interface is on
+     * @param interfaceDef a dynamic interface definition that the BusObject is expected to implement
+     */
+    public Status create(BusAttachment busAttachment, InterfaceDef interfaceDef) {
+        if (dynamicMembers == null) {
+            throw new IllegalArgumentException("Not a dynamic interface description");
+        }
+
+        Status status = getProperties(interfaceDef);
+        if (status != Status.OK) {
+            return status;
+        }
+
+        status = getMembers(interfaceDef);
+        if (status != Status.OK) {
+            return status;
+        }
+
+        int securePolicy = interfaceDef.isSecureInherit() ? AJ_IFC_SECURITY_INHERIT :
+                (interfaceDef.isSecureRequired() ? AJ_IFC_SECURITY_REQUIRED : AJ_IFC_SECURITY_OFF);
+
+        status = create(busAttachment, interfaceDef.getName(), securePolicy, properties.size(),
+                        dynamicMembers.size());
+        if (status != Status.OK) {
+            return status;
+        }
+
+        status = addProperties(interfaceDef);
+        if (status != Status.OK) {
+            return status;
+        }
+        status = addMembers(interfaceDef);
+        if (status != Status.OK) {
+            return status;
+        }
+
+        // now we need to add the DBus annotations for the interface;
+        // this must be done *before* calling create
+        Map<String,String> busAnnotations = interfaceDef.getAnnotationList();
+        for (Map.Entry<String,String> busAnnotation : busAnnotations.entrySet()) {
+            addAnnotation(busAnnotation.getKey(), busAnnotation.getValue());
+        }
+
+        announced = interfaceDef.isAnnounced();
+        activate();
+        return Status.OK;
+    }
+
+    /* Populating property implementation Methods for the interface's property definitions. */
+    private Status getProperties(InterfaceDef interfaceDef) {
+        if (dynamicBusObject == null) {
+            // Dynamic bus object not provided. Assumes interface does not implement member Methods directly.
+            return Status.OK;
+        }
+
+        for (PropertyDef propertyDef : interfaceDef.getProperties()) {
+            Property property = properties.get(propertyDef.getName());
+            TreeMap<String, String> annotations = new TreeMap<String, String>();
+
+            Map<String,String> propetryAnnotations = propertyDef.getAnnotationList();
+            for (Map.Entry<String,String> propertyAnnotation : propetryAnnotations.entrySet()) {
+                annotations.put(propertyAnnotation.getKey(), propertyAnnotation.getValue());
+            }
+
+            if (property == null) {
+                property = new Property(propertyDef.getName(), propertyDef.getType(), annotations);
+            } else if (!property.signature.equals(propertyDef.getType())) {
+                return Status.BAD_ANNOTATION;
+            }
+
+            property.interfaceName = propertyDef.getInterfaceName();
+            property.get = null;
+            property.set = null;
+
+            Method[] propertyMember = dynamicBusObject.getPropertyMember( propertyDef.getInterfaceName(), propertyDef.getName());
+            if ( propertyMember != null ) {
+                if (propertyDef.isReadAccess()) {
+                    property.get = propertyMember[0];
+                } else if (propertyDef.isWriteAccess()) {
+                    property.set = propertyMember[1];
+                } else if (propertyDef.isReadWriteAccess()) {
+                    property.get = propertyMember[0];
+                    property.set = propertyMember[1];
+                }
+            }
+            properties.put(propertyDef.getName(), property);
+        }
+        return Status.OK;
+    }
+
+    private Status addProperties(InterfaceDef interfaceDef) {
+        for (Property property : properties.values()) {
+            int access = ((property.get != null) ? READ : 0) | ((property.set != null) ? WRITE : 0);
+            int annotation = 0;
+
+            for (PropertyDef propertyDef : interfaceDef.getProperties()) {
+                if ( propertyDef.getName().equals(property.name)) {
+                    // Found match. Set the int annotation flag and the property annotations map accordingly
+                    if (propertyDef.isEmitsChangedSignal()) {
+                        annotation |= PROP_ANNOTATE_EMIT_CHANGED_SIGNAL;
+                        property.annotations.put( PropertyDef.ANNOTATION_PROPERTY_EMITS_CHANGED_SIGNAL,
+                                                  ChangedSignalPolicy.TRUE.text );
+                    } else if (propertyDef.isEmitsChangedSignalInvalidates()) {
+                        annotation |= PROP_ANNOTATE_EMIT_CHANGED_SIGNAL_INVALIDATES;
+                        property.annotations.put( PropertyDef.ANNOTATION_PROPERTY_EMITS_CHANGED_SIGNAL,
+                                                  ChangedSignalPolicy.INVALIDATES.text );
+                    }
+                    break;
+                }
+            }
+
+            Status status = addProperty(property.name, property.signature, access, annotation);
+            if (status != Status.OK) {
+                return status;
+            }
+
+            // loop through the map of property annotations and add them via native code
+            for (Entry<String, String> entry : property.annotations.entrySet()) {
+                addPropertyAnnotation(property.name, entry.getKey(), entry.getValue());
+            }
+        }
+        return Status.OK;
+    }
+
+    /* Populating member implementation Methods for the interface's method and signal definitions. */
+    private Status getMembers(InterfaceDef interfaceDef) {
+        if (dynamicBusObject == null) {
+            // Dynamic bus object not provided. Assumes interface does not implement member Methods directly.
+            return Status.OK;
+        }
+
+        for ( MethodDef methodDef : interfaceDef.getMethods() ) {
+            Method m = dynamicBusObject.getMethodMember( methodDef.getInterfaceName(), methodDef.getName(), methodDef.getSignature() );
+            if ( m != null ) {
+                dynamicMembers.put( methodDef.getName(), m );
+            } else {
+                // Could not register dynamic member Method (no implementation Method matching this methodDef's signature)
+                return Status.BUS_CANNOT_ADD_HANDLER;
+            }
+        }
+
+        for ( SignalDef signalDef : interfaceDef.getSignals() ) {
+            Method m = dynamicBusObject.getSignalMember( signalDef.getInterfaceName(), signalDef.getName(), signalDef.getSignature() );
+            if ( m != null ) {
+                dynamicMembers.put( signalDef.getName(), m );
+            } else {
+                // Could not register dynamic member Method (no implementation Method matching this signalDef's signature)
+                return Status.BUS_CANNOT_ADD_HANDLER;
+            }
+        }
+
+        return Status.OK;
+    }
+
+    private Status addMembers(InterfaceDef interfaceDef) {
+        ArrayList<BaseDef> memberDefs = new ArrayList<BaseDef>();
+        memberDefs.addAll(interfaceDef.getMethods());
+        memberDefs.addAll(interfaceDef.getSignals());
+
+        for (BaseDef def : memberDefs) {
+            int type = INVALID;
+            int annotation = 0;
+            String accessPerm = null; //Android access permission string currently not supported (retrieve from dbusAnnotations?)
+            String inSignature = "";
+            String outSignature = "";
+            Map<String,String> dbusAnnotations = null;
+
+            if (def instanceof MethodDef) {
+                MethodDef m = (MethodDef)def;
+                type = METHOD_CALL;
+                inSignature = m.getSignature();
+                outSignature = m.getReplySignature();
+                if (m.isNoReply()) annotation |= MEMBER_ANNOTATE_NO_REPLY;
+                if (m.isDeprecated()) annotation |= MEMBER_ANNOTATE_DEPRECATED;
+                dbusAnnotations = m.getAnnotationList();
+            } else if (def instanceof SignalDef) {
+                SignalDef s = (SignalDef)def;
+                type = SIGNAL;
+                inSignature = s.getSignature();
+                if (s.isDeprecated()) annotation |= MEMBER_ANNOTATE_DEPRECATED;
+                if (s.isSessionless()) annotation |= MEMBER_ANNOTATE_SESSIONLESS;
+                if (s.isSessioncast()) annotation |= MEMBER_ANNOTATE_SESSIONCAST;
+                if (s.isUnicast()) annotation |= MEMBER_ANNOTATE_UNICAST;
+                if (s.isGlobalBroadcast()) annotation |= MEMBER_ANNOTATE_GLOBAL_BROADCAST;
+                dbusAnnotations = s.getAnnotationList();
+            }
+            if ( type != INVALID ) {
+                Status status = addMember(type, def.getName(), inSignature, outSignature, annotation, accessPerm);
+                if (status != Status.OK) {
+                    return status;
+                }
+
+                // pull out the DBus annotations
+                if (dbusAnnotations != null) {
+                    for (Map.Entry<String,String> busAnnotation : dbusAnnotations.entrySet()) {
+                        addMemberAnnotation(def.getName(), busAnnotation.getKey(), busAnnotation.getValue());
+                    }
+                }
+            }
+        }
+        return Status.OK;
+    }
+
+    /**
+     * Create the native interface descriptions needed for the given DynamicBusObject's interface definitions.
+     * The interface descriptions will also be initialized to reference the appropriate member implementation
+     * Methods for given bus object. The created interface descriptions are returned in the descs list parameter.
+     *
+     * @param busAttachment The connection the interfaces are on.
+     * @param dynamicBusObject The DynamicBusObject which implements a list of interfaces to be created.
+     * @param descs The returned interface descriptions (populated by the create method itself).
+     */
+    public static Status create(BusAttachment busAttachment, DynamicBusObject dynamicBusObject, List<InterfaceDescription> descs) {
+        if (busAttachment == null || dynamicBusObject == null || descs == null) {
+            return Status.FAIL;
+        }
+
+        List<InterfaceDef> interfaceDefs = dynamicBusObject.getInterfaces();
+        for (InterfaceDef intf : interfaceDefs) {
+            if ("org.freedesktop.DBus.Properties".equals(intf.getName())) {
+                // The Properties interface is handled automatically by the underlying library
+                continue;
+            }
+
+            InterfaceDescription desc = new InterfaceDescription(dynamicBusObject);
+
+            Status status = desc.create(busAttachment, intf);
+            if (status == Status.BUS_IFACE_ALREADY_EXISTS) {
+                continue;
+            } else if (status != Status.OK) {
+                return status;
+            }
+            descs.add(desc);
+        }
+
+        return Status.OK;
+    }
+
 }

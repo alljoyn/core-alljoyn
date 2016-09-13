@@ -21,9 +21,22 @@ import org.alljoyn.bus.BusException;
 import org.alljoyn.bus.BusObject;
 import org.alljoyn.bus.Status;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
+
+import org.alljoyn.bus.DynamicBusObject;
+import org.alljoyn.bus.InterfaceDescription;
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.InterfaceDef.SecurityPolicy;
+import org.alljoyn.bus.defs.MethodDef;
+import org.alljoyn.bus.defs.SignalDef;
+import org.alljoyn.bus.defs.PropertyDef;
+import org.alljoyn.bus.defs.PropertyDef.ChangedSignalPolicy;
+import org.alljoyn.bus.defs.ArgDef;
+
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.lang.reflect.Method;
 
 import junit.framework.TestCase;
 
@@ -56,6 +69,95 @@ public class InterfaceDescriptionTest extends TestCase {
         public String ping(String inStr) throws BusException { return inStr; }
         public String pong(String inStr) throws BusException { return inStr; }
     }
+
+    public class DynamicService implements DynamicBusObject {
+        @Override
+        public String getPath() {
+            return "/org/alljoyn/bus/DBOTest";
+        }
+
+        @Override
+        public List<InterfaceDef> getInterfaces() {
+            List<InterfaceDef> ifaces = new ArrayList<InterfaceDef>();
+            ifaces.add( buildDynamicInterfaceDef() );
+            return ifaces;
+        }
+
+        @Override
+        public Method getMethodMember(String interfaceName, String methodName, String signature) {
+            // implementation specific - determine and return the appropriate implementation Method
+            if (signature.length() != 0) return null;
+            try {
+                return getClass().getDeclaredMethod( "myMethod", new Class[]{} );
+            } catch (java.lang.NoSuchMethodException ex) {
+                return null;
+            }
+        }
+
+        @Override
+        public Method getSignalMember(String interfaceName, String signalName, String signature) {
+            // implementation specific - determine and return the appropriate implementation Method
+            if (signature.length() != 1) return null;
+            try {
+                return getClass().getDeclaredMethod( "mySignal", new Class[]{Object.class} );
+            } catch (java.lang.NoSuchMethodException ex) {
+                return null;
+            }
+        }
+
+        @Override
+        public Method[] getPropertyMember(String interfaceName, String propertyName) {
+            // implementation specific - determine and return the appropriate implementation Methods
+            try {
+                return new Method[] {
+                    getClass().getDeclaredMethod( "getMyProperty", new Class[]{} ),
+                    getClass().getDeclaredMethod( "setMyProperty", new Class[]{Object.class} )};
+            } catch (java.lang.NoSuchMethodException ex) {
+                return null;
+            }
+        }
+
+        // My implementation handler for the MethodDef("DoSomething", "", "") method
+        public void myMethod() {
+        }
+
+        // My implementation handler for the SignalDef("Ping", "s") signal
+        public void mySignal(Object value) {
+        }
+
+        // My implementation handler for the PropertyDef("Color", "s") set property 
+        public void setMyProperty(Object value) {
+        }
+
+        // My implementation handler for the PropertyDef("Color", "s") get property 
+        public Object getMyProperty() {
+            return "SomeValue";
+        }
+
+        private InterfaceDef buildDynamicInterfaceDef() {
+            String ifaceName = "org.alljoyn.bus.DynamicInterfaceTest";
+            boolean announced = true;
+
+            MethodDef methodDef = new MethodDef("DoSomething", "", "", ifaceName);
+            methodDef.addAnnotation(MethodDef.ANNOTATION_METHOD_NOREPLY, "true");
+
+            SignalDef signalDef = new SignalDef("Ping", "s", ifaceName);
+            signalDef.addArg( new ArgDef("value", "s") );
+            signalDef.addAnnotation(SignalDef.ANNOTATION_SIGNAL_SESSIONLESS, "true");
+
+            PropertyDef propertyDef = new PropertyDef("Color", "s", PropertyDef.ACCESS_READWRITE, ifaceName);
+            propertyDef.addAnnotation(PropertyDef.ANNOTATION_PROPERTY_EMITS_CHANGED_SIGNAL, ChangedSignalPolicy.TRUE.text);
+
+            InterfaceDef interfaceDef = new InterfaceDef(ifaceName, announced, null);
+            interfaceDef.addAnnotation(InterfaceDef.ANNOTATION_SECURE, SecurityPolicy.OFF.text);
+            interfaceDef.addMethod(methodDef);
+            interfaceDef.addSignal(signalDef);
+            interfaceDef.addProperty(propertyDef);
+
+            return interfaceDef;
+        }
+    }
+
 
     private BusAttachment bus;
 
@@ -137,6 +239,37 @@ public class InterfaceDescriptionTest extends TestCase {
         assertTrue(thrown);
 
         bus.unregisterBusObject(service);
+    }
+
+    public void testCreateDynamicInterfaceFromInterfaceDef() throws Exception {
+        // Create dynamic bus object
+        DynamicBusObject busObj = new DynamicService();
+        assertNotNull(busObj.getInterfaces());
+        assertEquals(1, busObj.getInterfaces().size());
+
+        // Create dynamic interface description
+        InterfaceDescription desc = new InterfaceDescription(busObj);
+        Status status = desc.create(bus, busObj.getInterfaces().get(0));
+
+        assertEquals(Status.OK, status);
+        assertTrue(desc.isDynamicInterface());
+        assertTrue(desc.isAnnounced());
+    }
+
+    public void testCreateDynamicInterfacesFromDynamicBusObject() throws Exception {
+        // Create dynamic bus object
+        DynamicBusObject busObj = new DynamicService();
+        assertNotNull(busObj.getInterfaces());
+        assertEquals(1, busObj.getInterfaces().size());
+
+        // Create dynamic interface descriptions
+        List<InterfaceDescription> descs = new ArrayList<InterfaceDescription>();
+        Status status = InterfaceDescription.create(bus, busObj, descs);
+
+        assertEquals(Status.OK, status);
+        assertEquals(1, descs.size());
+        assertTrue(descs.get(0).isDynamicInterface());
+        assertTrue(descs.get(0).isAnnounced());
     }
 
     public void testGetDescriptionForLanguage_withAutoSet() throws Exception {
