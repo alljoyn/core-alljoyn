@@ -23,6 +23,8 @@
 #include "alljoyn_java.h"
 #include "alljoyn_jni_helper.h"
 
+#define QCC_MODULE "ALLJOYN_JAVA"
+
 using namespace ajn;
 using namespace qcc;
 
