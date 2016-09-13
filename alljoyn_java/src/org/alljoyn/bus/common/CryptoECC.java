@@ -41,6 +41,15 @@ public class CryptoECC {
     }
 
     /**
+     * Let the Java garbage collector release resources.
+     */
+    @Override
+    protected void finalize() throws Throwable {
+        destroy();
+        super.finalize();
+    }
+
+    /**
      * Generates the Ephemeral Diffie-Hellman key pair.
      *
      * @throws BusException
