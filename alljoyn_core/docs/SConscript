@@ -53,7 +53,7 @@ elif docenv['DOCS'] == 'pdf':
     # we build the pdf in the docs folder then copy the final file into the
     # distribution folder. This way we don't get meaningless output in the
     # distribution folder.
-    output = docenv.PDF('./pdf/alljoyn_api_manual.pdf', './latex/refman.tex')
+    output = docenv.PDF('./pdf/alljoyn_api_manual.pdf', '$CPP_DISTDIR/docs/latex/refman.tex')
     installedDocs = docenv.Install('$CPP_DISTDIR/docs/pdf', output)
     docenv.Clean('Doxygen_pdf', Dir('pdf'))
     docenv.Depends(installedDocs, output)
