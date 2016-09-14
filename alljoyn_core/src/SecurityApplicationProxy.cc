@@ -536,7 +536,7 @@ QStatus SecurityApplicationProxy::InstallMembership(const qcc::CertificateX509* 
     QStatus status = ER_OK;
     Message reply(GetBusAttachment());
 
-    if ((certificateChainCount >= 0) && (certificateChain[0].GetType() != qcc::CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+    if ((certificateChainCount > 0) && (certificateChain[0].GetType() != qcc::CertificateX509::MEMBERSHIP_CERTIFICATE)) {
         QCC_DbgHLPrintf(("Leaf certificate in membership chain is not of type MEMBERSHIP_CERTIFICATE. This is not recommended."));
     }
 
