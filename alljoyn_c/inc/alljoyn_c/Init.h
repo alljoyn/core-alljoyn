@@ -53,8 +53,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_init(void);
  */
 extern AJ_API QStatus AJ_CALL alljoyn_shutdown(void);
 
-#ifdef DOXYGEN_DOC
-
 /**
  * This must be called before using any AllJoyn router functionality.
  *
@@ -142,28 +140,6 @@ extern AJ_API QStatus AJ_CALL alljoyn_routerinitwithconfig(AJ_PCSTR configXml);
  *  - error code indicating failure otherwise
  */
 extern AJ_API QStatus AJ_CALL alljoyn_routershutdown(void);
-
-#else
-
-/*
- * For usage, see the docs above for alljoyn_routerinit() and
- * alljoyn_routershutdown().
- *
- * The macro magic here is to allow compilation with or without router support.
- *
- * When router support is not compiled in, alljoyn_routerinit is not used and
- * there is no undefined reference to AllJoynRouterInit.  When router support is
- * compiled in, alljoyn_routerinit is used and the reference to
- * AllJoynRouterInit is contained in the router library.
- */
-extern AJ_API QStatus AJ_CALL AllJoynRouterInit(void);
-#define alljoyn_routerinit AllJoynRouterInit
-extern AJ_API QStatus AJ_CALL AllJoynRouterInitWithConfig(const char* configXml);
-#define alljoyn_routerinitwithconfig(xml) AllJoynRouterInitWithConfig(xml)
-extern AJ_API QStatus AJ_CALL AllJoynRouterShutdown(void);
-#define alljoyn_routershutdown AllJoynRouterShutdown
-
-#endif
 
 #ifdef __cplusplus
 } /* extern "C" */
