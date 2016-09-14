@@ -15,6 +15,10 @@
 
 Import('env')
 
+# Build with bundled daemon support
+if env['BR'] == 'on':
+    env.Prepend(LIBS = [env['ajrlib']])
+
 # AllJoyn Sources
 srcs = env.Glob('*.cc')
 

@@ -75,3 +75,34 @@ QStatus AJ_CALL alljoyn_shutdown(void)
 
     return status;
 }
+
+QStatus AJ_CALL alljoyn_routerinit(void)
+{
+#ifdef ROUTER
+    return AllJoynRouterInit();
+#else
+    QCC_ASSERT(false);
+    return ER_NOT_IMPLEMENTED;
+#endif
+}
+
+QStatus AJ_CALL alljoyn_routerinitwithconfig(AJ_PCSTR configXml)
+{
+#ifdef ROUTER
+    return AllJoynRouterInitWithConfig(configXml);
+#else
+    QCC_ASSERT(false);
+    QCC_UNUSED(configXml);
+    return ER_NOT_IMPLEMENTED;
+#endif
+}
+
+QStatus AJ_CALL alljoyn_routershutdown(void)
+{
+#ifdef ROUTER
+    return AllJoynRouterShutdown();
+#else
+    QCC_ASSERT(false);
+    return ER_NOT_IMPLEMENTED;
+#endif
+}
