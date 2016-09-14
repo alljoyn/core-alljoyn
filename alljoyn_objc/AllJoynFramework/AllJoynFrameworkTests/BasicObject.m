@@ -39,21 +39,21 @@
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
 - (void)methodWithOnlyOutString:(NSString**)outStr1 outString2:(NSString**)outStr2
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
 - (void)methodWithNoReturnAndNoArgs
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
 
@@ -72,7 +72,7 @@
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
 
