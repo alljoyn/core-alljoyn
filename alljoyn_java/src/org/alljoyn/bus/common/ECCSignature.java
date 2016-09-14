@@ -16,4 +16,21 @@
 package org.alljoyn.bus.common;
 
 public class ECCSignature {
+    private byte[] r;
+    private byte[] s;
+
+    private static final long ECC_COORDINATE_SZ = 32;
+
+    public ECCSignature() {
+        r = new byte[(int) ECC_COORDINATE_SZ];
+        s = new byte[(int) ECC_COORDINATE_SZ];
+    }
+
+    public byte[] getR() {
+        return r;
+    }
+
+    public byte[] getS() {
+        return s;
+    }
 }
