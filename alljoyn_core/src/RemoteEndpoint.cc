@@ -1181,14 +1181,59 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
     return status;
 }
 
-QStatus _RemoteEndpoint::PushMessageCommon(Message& msg, size_t& count, bool isLeaf)
+QStatus _RemoteEndpoint::PushMessage(Message& msg)
 {
+    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
+    QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
+
     QStatus status = ER_OK;
+
     static const size_t MAX_DATA_MESSAGES = 1;
     static const size_t MAX_TX_QUEUE_SIZE = 1;
-    count = internal->txQueue.size();
+    size_t count = internal->txQueue.size();
     bool wasEmpty = (count == 0);
     bool threadWait = true;
+    bool isLeaf = true;
+
+    if (!internal) {
+        return ER_BUS_NO_ENDPOINT;
+    }
+
+    internal->lock.Lock(MUTEX_CONTEXT);
+
+    /*
+     * Don't continue if this endpoint is in the process of being closed
+     * Otherwise we risk deadlock when sending NameOwnerChanged signal to
+     * this dying endpoint
+     */
+    if (internal->state != Internal::STARTED) {
+        internal->lock.Unlock(MUTEX_CONTEXT);
+        return ER_BUS_ENDPOINT_CLOSING;
+    }
+
+    if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
+        isLeaf = false;
+
+        if (IsControlMessage(msg)) {
+            if (internal->numControlMessages < internal->maxControlMessages) {
+                internal->txQueue.push_front(msg);
+                internal->numControlMessages++;
+                if (wasEmpty) {
+                    internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
+                }
+            } else {
+                QCC_LogError(ER_BUS_ENDPOINT_CLOSING, ("Endpoint Tx failed (%s)", GetUniqueName().c_str()));
+                internal->stream->Abort();
+                internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+                SetState(Internal::EXIT_WAIT);
+                Invalidate();
+                status = ER_BUS_ENDPOINT_CLOSING;
+            }
+            internal->lock.Unlock(MUTEX_CONTEXT);
+
+            return status;
+        }
+    }
 
     /* If the txWaitQueue is not empty, dont queue the message.
      * There are other threads that are blocked trying to send a message to
@@ -1313,79 +1358,8 @@ QStatus _RemoteEndpoint::PushMessageCommon(Message& msg, size_t& count, bool isL
         internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
     }
 
-    return status;
-}
-
-QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
-{
-    QStatus status = ER_OK;
-
-    internal->lock.Lock(MUTEX_CONTEXT);
-    count = internal->txQueue.size();
-    bool wasEmpty = (count == 0);
-
-    if (IsControlMessage(msg)) {
-        if (internal->numControlMessages < internal->maxControlMessages) {
-            internal->txQueue.push_front(msg);
-            internal->numControlMessages++;
-            if (wasEmpty) {
-                internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
-            }
-        } else {
-            QCC_LogError(ER_BUS_ENDPOINT_CLOSING, ("Endpoint Tx failed (%s)", GetUniqueName().c_str()));
-            internal->stream->Abort();
-            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
-            SetState(Internal::EXIT_WAIT);
-            Invalidate();
-            status = ER_BUS_ENDPOINT_CLOSING;
-        }
-    } else {
-        status = PushMessageCommon(msg, count, false);
-    }
-
     internal->lock.Unlock(MUTEX_CONTEXT);
 
-    return status;
-}
-
-QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
-{
-    QStatus status = ER_OK;
-
-    internal->lock.Lock(MUTEX_CONTEXT);
-    status = PushMessageCommon(msg, count, true);
-    internal->lock.Unlock(MUTEX_CONTEXT);
-    return status;
-}
-
-QStatus _RemoteEndpoint::PushMessage(Message& msg)
-{
-    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
-    QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
-
-    QStatus status = ER_OK;
-    size_t count;
-
-    if (!internal) {
-        return ER_BUS_NO_ENDPOINT;
-    }
-    /*
-     * Don't continue if this endpoint is in the process of being closed
-     * Otherwise we risk deadlock when sending NameOwnerChanged signal to
-     * this dying endpoint
-     */
-    internal->lock.Lock(MUTEX_CONTEXT);
-    if (internal->state != Internal::STARTED) {
-        internal->lock.Unlock(MUTEX_CONTEXT);
-        return ER_BUS_ENDPOINT_CLOSING;
-    }
-    internal->lock.Unlock(MUTEX_CONTEXT);
-
-    if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
-        status = PushMessageRouter(msg, count);
-    } else {
-        status = PushMessageLeaf(msg, count);
-    }
 #ifndef NDEBUG
 #undef QCC_MODULE
 #define QCC_MODULE "TXSTATS"
@@ -1398,6 +1372,7 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 #undef QCC_MODULE
 #define QCC_MODULE "ALLJOYN"
 #endif
+
     return status;
 }
 

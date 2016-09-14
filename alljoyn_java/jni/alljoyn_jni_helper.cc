@@ -18,7 +18,7 @@
 
 #include "alljoyn_jni_helper.h"
 
-jbyteArray ToJByteArray(const unsigned char* byteArray, size_t len)
+jbyteArray ToJByteArray(const uint8_t* byteArray, size_t len)
 {
     JNIEnv* env = GetEnv();
     jbyteArray array = env->NewByteArray(len);
@@ -26,11 +26,11 @@ jbyteArray ToJByteArray(const unsigned char* byteArray, size_t len)
     return array;
 }
 
-unsigned char* ToByteArray(jbyteArray array)
+uint8_t* ToByteArray(jbyteArray array)
 {
     JNIEnv* env = GetEnv();
     int len = env->GetArrayLength(array);
-    unsigned char* buf = new unsigned char[len];
+    uint8_t* buf = new uint8_t[len];
     env->GetByteArrayRegion(array, 0, len, reinterpret_cast<jbyte*>(buf));
     return buf;
 }

@@ -119,8 +119,6 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_generateSPEKEKeyPai
         return;
     }
 
-    uint8_t* pw = ToByteArray(jpw);
-
     jmethodID mid = jenv->GetMethodID(CLS_JAVA_UTIL_UUID, "toString", "()Ljava/lang/String;");
     if (!mid) {
         QCC_LogError(ER_FAIL, ("%s: Can't find UUID.toString", __FUNCTION__));
@@ -157,13 +155,15 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_generateSPEKEKeyPai
     GUID128 clientGUID(clguid);
     GUID128 serviceGUID(seguid);
 
+    uint8_t* pw = ToByteArray(jpw);
+
     QStatus status = cryptoPtr->GenerateSPEKEKeyPair(pw, jpwLen, clientGUID, serviceGUID);
+
+    delete [] pw;
 
     if (status != ER_OK) {
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
     }
-
-    delete pw;
 
 }
 

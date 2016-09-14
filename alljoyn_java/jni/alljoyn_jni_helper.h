@@ -25,9 +25,27 @@ extern jclass CLS_BusException;
 
 extern jclass CLS_ECCPublicKey;
 extern jclass CLS_ECCPrivateKey;
+extern jclass CLS_ECCSignature;
+extern jclass CLS_KeyInfoNISTP256;
 extern jclass CLS_JAVA_UTIL_UUID;
 extern jclass CLS_ErrorReplyBusException;
+extern jclass CLS_BusException;
 extern jclass CLS_AboutDataListener;
+extern jclass CLS_PermissionConfiguratorApplicationState;
+extern jclass CLS_CertificateX509CertificateType;
+extern jclass CLS_CertificateX509;
+extern jclass CLS_CertificateId;
+
+extern jfieldID FID_ECCPrivateKey_d;
+extern jfieldID FID_ECCPublicKey_x;
+extern jfieldID FID_ECCPublicKey_y;
+extern jfieldID FID_ECCSignature_r;
+extern jfieldID FID_ECCSignature_s;
+
+extern jobject PermissionConfiguratorApplicationState_NOT_CLAIMABLE;
+extern jobject PermissionConfiguratorApplicationState_CLAIMABLE;
+extern jobject PermissionConfiguratorApplicationState_CLAIMED;
+extern jobject PermissionConfiguratorApplicationState_NEED_UPDATE;
 
 /**
  * Marshal an Object into a MsgArg.
@@ -138,7 +156,7 @@ T GetHandle(jobject jobj)
     return reinterpret_cast<T>(handle);
 }
 
-jbyteArray ToJByteArray(const unsigned char* byteArray, size_t len);
+jbyteArray ToJByteArray(const uint8_t* byteArray, size_t len);
 
 /**
  * Users of this function need to free the memory of the returned pointer
@@ -147,7 +165,7 @@ jbyteArray ToJByteArray(const unsigned char* byteArray, size_t len);
  * @return a byte array
  *
  */
-unsigned char* ToByteArray(jbyteArray jbArray);
+uint8_t* ToByteArray(jbyteArray jbArray);
 
 /*
  * Note that some JNI calls do not set the returned value to NULL when
@@ -198,4 +216,5 @@ class JScopedEnv {
     jint detached;
 };
 
+jobject GetObjectArrayElement(JNIEnv* env, jobjectArray array, jsize index);
 #endif

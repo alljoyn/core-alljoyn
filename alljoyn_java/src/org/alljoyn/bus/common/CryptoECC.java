@@ -53,7 +53,6 @@ public class CryptoECC {
      * Generates the Ephemeral Diffie-Hellman key pair.
      *
      * @throws BusException
-     *      ER_OK if the key pair is successfully generated.
      *      ER_FAIL otherwise
      *      Other error status.
      */
@@ -67,7 +66,6 @@ public class CryptoECC {
      * @param clientGUID  The client's GUID
      * @param serviceGUID The service's GUID
      * @throws BusException
-     *      ER_OK if the key pair is successfully generated.
      *      ER_FAIL otherwise
      *      Other error status.
      */
@@ -78,7 +76,6 @@ public class CryptoECC {
      * @param   peerPublicKey the peer's public key
      * @param   secret the output shared secret
      * @throws BusException
-     *      ER_OK if the shared secret is successfully generated.
      *      ER_FAIL otherwise
      *      Other error status.
      */
@@ -144,7 +141,6 @@ public class CryptoECC {
      * Generates the DSA key pair.
      *
      * @throws BusException
-     *      ER_OK if the key pair is successfully generated.
      *      ER_FAIL otherwise
      *      Other error status.
      */
@@ -156,7 +152,6 @@ public class CryptoECC {
      * @param len The digest len
      * @param sig The output signature
      * @throws BusException
-     *      ER_OK if the signing process succeeds
      *      ER_FAIL otherwise
      *      Other error status.
      */
@@ -168,7 +163,6 @@ public class CryptoECC {
      * @param len The buffer len
      * @param sig The output signature
      * @throws BusException
-     *      ER_OK if the signing process succeeds
      *      ER_FAIL otherwise
      *      Other error status.
      */
@@ -180,7 +174,6 @@ public class CryptoECC {
      * @param len The digest len
      * @param sig The signature
      * @throws BusException
-     *          - ER_OK if the signature verification succeeds
      *          - ER_FAIL otherwise
      *          - Other error status.
      */
@@ -192,7 +185,6 @@ public class CryptoECC {
      * @param len The buffer len
      * @param sig The signature
      * @throws BusException
-     *      ER_OK if the signature verification succeeds
      *      ER_FAIL otherwise
      *      Other error status.
      */
