@@ -3267,7 +3267,7 @@ class MDNSSenderRData : public MDNSTextRData {
      * @brief Set the ipv4Addr for this Sender RData.
      * @param ipv4Addr The ipv4Addr to set.
      */
-    void SetIPV4ResponseAddr(qcc::String ipv4Addr);
+    void SetIPV4ResponseAddr(const qcc::String& ipv4Addr);
 
     /**
      * @internal
@@ -3295,7 +3295,7 @@ class MDNSSenderRData : public MDNSTextRData {
      * @brief Set the ipv6Addr for this Sender RData.
      * @param ipv6Addr The ipv6Addr to set.
      */
-    void SetIPV6ResponseAddr(qcc::String ipv6Addr);
+    void SetIPV6ResponseAddr(const qcc::String& ipv6Addr);
 
     /**
      * @internal
