@@ -26,6 +26,9 @@
 #include <signal.h>
 #include <stdio.h>
 #include <vector>
+#include <fstream>
+#include <string>
+#include <streambuf>
 
 #include <qcc/Environ.h>
 #include <qcc/Event.h>
@@ -80,6 +83,7 @@ static uint32_t joinEndTime = 0;
 static uint32_t keyExpiration = 0xFFFFFFFF;
 static String g_testAboutApplicationName = "bbservice";
 static bool g_useAboutFeatureDiscovery = false;
+static string g_customRouterConfig;
 
 static const char* g_alternatePSK = NULL;
 static const char* g_defaultPSK = "faaa0af3dd3f1e0379da046a3ab6ca44";
@@ -259,6 +263,7 @@ static void usage(void)
     printf("   -about [name]             = use the about feature for discovery (optional application name to join).\n");
     printf("   -psk <psk>                = Use the supplied pre-shared key instead of the built in one.\n");
     printf("                               For interop with tests in version <= 14.12 pass '123456'.\n");
+    printf("   -f <config file>          = Router config file path (for bundled router).\n");
     printf("\n");
 }
 
@@ -644,8 +649,26 @@ int CDECL_CALL main(int argc, char** argv)
             } else {
                 g_alternatePSK = argv[i];
             }
+        } else if (0 == strcmp("-f", argv[i])) {
+            ++i;
+            if (i == argc) {
+                printf("option \"-f\" requires a parameter\n");
+                usage();
+                exit(1);
+            } else {
+#ifndef ROUTER
+                printf("Ignoring option \"-f\" for standalone router\n");
+#else
+                ifstream in(argv[i]);
+                if (!in) {
+                    printf("Error: failed to open router config file \"%s\"\n", argv[i]);
+                    exit(1);
+                } else {
+                    g_customRouterConfig = string(istreambuf_iterator<char>(in), istreambuf_iterator<char>());
+                }
+#endif
+            }
         } else {
-            status = ER_FAIL;
             printf("Unknown option %s\n", argv[i]);
             usage();
             exit(1);
@@ -656,7 +679,12 @@ int CDECL_CALL main(int argc, char** argv)
         return 1;
     }
 #ifdef ROUTER
-    if (AllJoynRouterInit() != ER_OK) {
+    if (g_customRouterConfig.empty()) {
+        status = AllJoynRouterInit();
+    } else {
+        status = AllJoynRouterInitWithConfig(g_customRouterConfig.c_str());
+    }
+    if (status != ER_OK) {
         AllJoynShutdown();
         return 1;
     }
