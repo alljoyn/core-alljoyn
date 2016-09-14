@@ -623,7 +623,7 @@ QStatus IpNameServiceImpl::OpenInterface(TransportMask transportMask, const qcc:
     m_mutex.Lock(MUTEX_CONTEXT);
 
     if (name == INTERFACES_WILDCARD) {
-        QCC_DbgPrintf(("IpNameServiceImpl::OpenInterface(): Wildcard iterface"));
+        QCC_DbgPrintf(("IpNameServiceImpl::OpenInterface(): Wildcard interface"));
         m_any[transportIndex] = true;
         m_processTransport[transportIndex] = true;
         m_forceLazyUpdate = true;

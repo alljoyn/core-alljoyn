@@ -135,7 +135,7 @@ class IPAddress {
      * Test if IP address is an IPv6 link-local address by comparing
      * its first 64 bits with link-local address prefix (fe80::/64).
      *
-     * @return  "true" if IP address is a IPv6 link local address.
+     * @return  "true" if IP address is an IPv6 link local address.
      */
     bool IsIPv6LinkLocal(void) const
     {
