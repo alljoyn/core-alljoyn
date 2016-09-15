@@ -1,4 +1,5 @@
 /******************************************************************************
+ *
  * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -318,9 +319,51 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
         return NULL;
     }
 
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
-    //TODO ASACORE-3233 need to convert msgarg to certificate x509 array
-    return NULL;
+    size_t certChainSize = 0;
+    MsgArg* certArgs;
+    status = manufacturerCertificate.Get("a(yay)", &certChainSize, &certArgs);
+    if (ER_OK != status) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return NULL;
+    }
+
+    CertificateX509* certChain = new CertificateX509[certChainSize];
+
+    status = secPtr->MsgArgToIdentityCertChain(manufacturerCertificate, certChain, certChainSize);
+    if (ER_OK != status) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        delete [] certChain;
+        return NULL;
+    }
+
+    jmethodID mid = jenv->GetMethodID(CLS_CertificateX509, "<init>", "()V");
+
+    JLocalRef<jobjectArray> retObj = jenv->NewObjectArray(certChainSize, CLS_CertificateX509, NULL);
+
+    for (size_t i = 0; i < certChainSize; i++) {
+        JLocalRef<jobject> jidcert = jenv->NewObject(CLS_CertificateX509, mid);
+        if (!jidcert) {
+            delete [] certChain;
+            return NULL;
+        }
+
+        CertificateX509* certTemp = new CertificateX509();
+        *certTemp = certChain[i];
+        SetHandle(jidcert, certTemp);
+        if (jenv->ExceptionCheck()) {
+            delete [] certChain;
+            return NULL;
+        }
+
+        jenv->SetObjectArrayElement(retObj, i, jidcert);
+        if (jenv->ExceptionCheck()) {
+            delete [] certChain;
+            return NULL;
+        }
+    }
+
+    delete [] certChain;
+    return retObj.move();
 }
 
 /*
@@ -1067,9 +1110,51 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
         return 0;
     }
 
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
-    //TODO ASACORE-3233 need to convert msgarg to certificate x509 array
-    return NULL;
+    size_t certChainSize = 0;
+    MsgArg* certArgs;
+    status = identity.Get("a(yay)", &certChainSize, &certArgs);
+    if (ER_OK != status) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return NULL;
+    }
+
+    CertificateX509* certChain = new CertificateX509[certChainSize];
+
+    status = secPtr->MsgArgToIdentityCertChain(identity, certChain, certChainSize);
+    if (ER_OK != status) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        delete [] certChain;
+        return NULL;
+    }
+
+    jmethodID mid = jenv->GetMethodID(CLS_CertificateX509, "<init>", "()V");
+
+    JLocalRef<jobjectArray> retObj = jenv->NewObjectArray(certChainSize, CLS_CertificateX509, NULL);
+
+    for (size_t i = 0; i < certChainSize; i++) {
+        JLocalRef<jobject> jidcert = jenv->NewObject(CLS_CertificateX509, mid);
+        if (!jidcert) {
+            delete [] certChain;
+            return NULL;
+        }
+
+        CertificateX509* certTemp = new CertificateX509();
+        *certTemp = certChain[i];
+        SetHandle(jidcert, certTemp);
+        if (jenv->ExceptionCheck()) {
+            delete [] certChain;
+            return NULL;
+        }
+
+        jenv->SetObjectArrayElement(retObj, i, jidcert);
+        if (jenv->ExceptionCheck()) {
+            delete [] certChain;
+            return NULL;
+        }
+    }
+
+    delete [] certChain;
+    return retObj.move();
 }
 
 /*
