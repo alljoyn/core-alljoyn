@@ -873,7 +873,8 @@ TCPTransport::TCPTransport(BusAttachment& bus)
     m_foundCallback(m_listener), m_networkEventCallback(*this),
     m_isAdvertising(false), m_isDiscovering(false), m_isListening(false),
     m_isNsEnabled(false), m_reload(STATE_RELOADING),
-    m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
+    m_nsReleaseCount(0),
+    m_wildcardIfaceProcessed(false), m_wildcardAddressProcessed(false),
     m_maxRemoteClientsTcp(0), m_numUntrustedClients(0), m_dynamicScoreUpdater(*this)
 {
     QCC_DbgTrace(("TCPTransport::TCPTransport()"));
@@ -2410,6 +2411,7 @@ void TCPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
+        m_wildcardAddressProcessed = false;
     }
 
     if (isEmpty) {
@@ -2568,6 +2570,7 @@ void TCPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
+        m_wildcardAddressProcessed = false;
     }
 
     if (isEmpty) {
@@ -4498,6 +4501,7 @@ void TCPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
+        m_wildcardAddressProcessed = false;
     }
     for (list<String>::iterator it = replacedList.begin(); it != replacedList.end(); it++) {
         DoStopListen(*it);

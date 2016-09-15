@@ -4440,7 +4440,8 @@ UDPTransport::UDPTransport(BusAttachment& bus) :
     m_connecting(0),
     m_reload(STATE_RELOADING),
     m_manage(STATE_MANAGE),
-    m_nsReleaseCount(0), m_wildcardIfaceProcessed(false),
+    m_nsReleaseCount(0),
+    m_wildcardIfaceProcessed(false), m_wildcardAddressProcessed(false),
     m_routerName(), m_maxRemoteClientsUdp(0), m_numUntrustedClients(0),
     m_authTimeout(0), m_sessionSetupTimeout(0),
     m_maxAuth(0), m_maxConn(0), m_currAuth(0), m_currConn(0),
@@ -9190,6 +9191,7 @@ void UDPTransport::DisableAdvertisementInstance(ListenRequest& listenRequest)
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
+        m_wildcardAddressProcessed = false;
     }
 
     if (isEmpty) {
@@ -9354,6 +9356,7 @@ void UDPTransport::DisableDiscoveryInstance(ListenRequest& listenRequest)
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
+        m_wildcardAddressProcessed = false;
     }
 
     if (isEmpty) {
@@ -11909,6 +11912,7 @@ void UDPTransport::HandleNetworkEventInstance(ListenRequest& listenRequest)
         m_pendingDiscoveries.clear();
         m_pendingAdvertisements.clear();
         m_wildcardIfaceProcessed = false;
+        m_wildcardAddressProcessed = false;
     }
 
     /*
