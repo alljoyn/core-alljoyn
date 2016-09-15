@@ -31,8 +31,38 @@
 #define QCC_MODULE "ALLJOYN_SECURITY"
 
 using namespace std;
+using namespace qcc;
 
 namespace ajn {
+
+static QStatus SetManifestRules(vector<PermissionPolicy::Rule>& rules, Manifest& manifest)
+{
+    for (auto& rule : rules) {
+        rule.SetRuleType(PermissionPolicy::Rule::MANIFEST_POLICY_RULE);
+    }
+    return manifest->SetRules(rules.data(), rules.size());
+}
+
+static QStatus BuildSignedManifest(const CertificateX509& identityCertificate,
+                                   const ECCPrivateKey& privateKey,
+                                   AJ_PCSTR unsignedManifestXml,
+                                   Manifest& manifest)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    vector<PermissionPolicy::Rule> rules;
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
+
+    if (ER_OK == status) {
+        status = SetManifestRules(rules, manifest);
+    }
+
+    if (ER_OK == status) {
+        status = manifest->ComputeThumbprintAndSign(identityCertificate, &privateKey);
+    }
+
+    return status;
+}
+
 SecurityApplicationProxy::SecurityApplicationProxy(BusAttachment& bus, const char* busName, SessionId sessionId) :
     ProxyBusObject(bus, busName, org::alljoyn::Bus::Security::ObjectPath, sessionId)
 {
@@ -506,7 +536,7 @@ QStatus SecurityApplicationProxy::InstallMembership(const qcc::CertificateX509* 
     QStatus status = ER_OK;
     Message reply(GetBusAttachment());
 
-    if ((certificateChainCount >= 0) && (certificateChain[0].GetType() != qcc::CertificateX509::MEMBERSHIP_CERTIFICATE)) {
+    if ((certificateChainCount > 0) && (certificateChain[0].GetType() != qcc::CertificateX509::MEMBERSHIP_CERTIFICATE)) {
         QCC_DbgHLPrintf(("Leaf certificate in membership chain is not of type MEMBERSHIP_CERTIFICATE. This is not recommended."));
     }
 
@@ -692,6 +722,85 @@ QStatus SecurityApplicationProxy::MsgArgToCertificateIds(const MsgArg& arg, qcc:
         serials[cnt].assign_std((const char*) serialVal, serialLen);
     }
     return status;
+}
+
+QStatus SecurityApplicationProxy::SignManifest(const CertificateX509& identityCertificate,
+                                               const ECCPrivateKey& privateKey,
+                                               AJ_PCSTR unsignedManifestXml,
+                                               AJ_PSTR* signedManifestXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    string signedManifest;
+    Manifest manifest;
+    QStatus status = BuildSignedManifest(identityCertificate,
+                                         privateKey,
+                                         unsignedManifestXml,
+                                         manifest);
+
+    if (ER_OK == status) {
+        status = XmlManifestConverter::ManifestToXml(manifest, signedManifest);
+    }
+
+    if (ER_OK == status) {
+        *signedManifestXml = CreateStringCopy(signedManifest);
+
+        if (nullptr == *signedManifestXml) {
+            status = ER_OUT_OF_MEMORY;
+        }
+    }
+
+    return status;
+}
+
+void SecurityApplicationProxy::DestroySignedManifest(AJ_PSTR signedManifestXml)
+{
+    DestroyStringCopy(signedManifestXml);
+}
+
+QStatus SecurityApplicationProxy::ComputeManifestDigest(AJ_PCSTR unsignedManifestXml,
+                                                        const CertificateX509& identityCertificate,
+                                                        uint8_t** digest,
+                                                        size_t* digestSize)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+    Manifest manifest;
+    vector<PermissionPolicy::Rule> rules;
+
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(unsignedManifestXml, rules);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not convert manifest XML to rules"));
+        return status;
+    }
+
+    status = SetManifestRules(rules, manifest);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not set manifest rules"));
+        return status;
+    }
+
+    vector<uint8_t> digestVector;
+    status = manifest->ComputeThumbprintAndDigest(identityCertificate, digestVector);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not ComputeThumbprintAndDigest"));
+        return status;
+    }
+
+    *digest = new (std::nothrow) uint8_t[digestVector.size()];
+    if (nullptr == *digest) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Out of memory allocating digest"));
+        return ER_OUT_OF_MEMORY;
+    }
+
+    memcpy(*digest, digestVector.data(), digestVector.size());
+    *digestSize = digestVector.size();
+
+    return status;
+}
+
+void SecurityApplicationProxy::DestroyManifestDigest(uint8_t* digest)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    delete[] digest;
 }
 
 QStatus SecurityApplicationProxy::GetIdentity(MsgArg& identityCertificate)

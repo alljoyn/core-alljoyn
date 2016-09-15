@@ -74,9 +74,11 @@ AJ_API alljoyn_claimcapabilities AJ_CALL alljoyn_permissionconfigurator_getdefau
  * Struct used to return identifying information about a certificate.
  */
 typedef struct {
-    AJ_PSTR serial;                         /**< The certificate's serial number. */
+    uint8_t* serial;                        /**< The certificate's serial number. */
+    size_t serialLen;                       /**< The certificate's serial number length. */
     AJ_PSTR issuerPublicKey;                /**< The certificate issuer's public key in PEM format. */
-    AJ_PSTR issuerAki;                      /**< The certificate issuer's AKI. */
+    uint8_t* issuerAki;                     /**< The certificate issuer's AKI. */
+    size_t issuerAkiLen;                    /**< The certificate issuer's AKI length. */
 } alljoyn_certificateid;
 
 /**
@@ -245,7 +247,19 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_reset(alljoyn_permissionco
  * Claims the application. The application is provided an identity certificate chain with
  * its own cert as the leaf. The application automatically installs the policy to
  * allow all communication from the provided admin group.
- * The application's manifests are installed as well.
+ * The application's manifests are installed as well. Peer security must first be enabled on the bus attachment.
+ *
+ * To prevent a potential security-critical race condition, before claiming a bus attachment with this method,
+ * it is recommended to call alljoyn_busattachment_enablepersecurity on an unclaimed bus attachment with
+ * "ALLJOYN_ECDHE_ECDSA" only in the authMechanisms parameter. The default claim capabilities do not allow
+ * ALLJOYN_ECDHE_ECDSA for claiming, and this will guarantee a rogue security manager on the same bus can't
+ * claim this bus attachment before this function is called. Do not set claim capabilities on a bus attachment
+ * that will be claimed with this function.
+ *
+ * After the bus attachment is claimed, alljoyn_busattachment_enablepeersecurity can be called again if any of
+ * ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK, or ALLJOYN_ECDHE_SPEKE are required; this will usually only be required
+ * if the bus attachment will be used by a security manager to claim other apps over the bus. See the documentation
+ * for alljoyn_busattachment_enablepeersecurity for details on changing authentication mechanisms.
  *
  * @param[in]    configurator               The alljoyn_permissionconfigurator for the application's bus attachment.
  * @param[in]    caKey                      Null-terminated C string representing the CA's PEM-encoded public key.
@@ -526,9 +540,11 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_installmembership(alljoyn_
  * This method allows the app to remove a membership certificate chain from itself.
  *
  * @param[in]    configurator               The alljoyn_permissionconfigurator for the application's bus attachment.
- * @param[in]    serial                     Null-terminated C string of the certificate's serial number.
+ * @param[in]    serial                     Certificate's serial number.
+ * @param[in]    serialLen                  Certificate's serial number length.
  * @param[in]    issuerPublicKey            PEM-encoded public key of the certificate's issuer.
  * @param[in]    issuerAki                  Certificate issuer's AKI.
+ * @param[in]    issuerAkiLen               Certificate issuer's AKI length.
  *
  * @return
  *          - #ER_OK                    If successful.
@@ -536,9 +552,11 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_installmembership(alljoyn_
  *          - An error status indicating failure.
  */
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_removemembership(alljoyn_permissionconfigurator configurator,
-                                                                       AJ_PCSTR serial,
+                                                                       const uint8_t* serial,
+                                                                       size_t serialLen,
                                                                        AJ_PCSTR issuerPublicKey,
-                                                                       AJ_PCSTR issuerAki);
+                                                                       const uint8_t* issuerAki,
+                                                                       size_t issuerAkiLen);
 
 /**
  * This method allows the app to signal itself that management is starting.

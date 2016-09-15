@@ -31,11 +31,11 @@ using namespace std;
 
 namespace ajn {
 
-XmlRulesValidator* XmlRulesValidator::s_validator;
-unordered_map<string, PermissionPolicy::Rule::Member::MemberType> XmlRulesValidator::s_memberTypeMap;
-unordered_map<string, uint8_t> XmlRulesValidator::MethodsValidator::s_actionsMap;
-unordered_map<string, uint8_t> XmlRulesValidator::PropertiesValidator::s_actionsMap;
-unordered_map<string, uint8_t> XmlRulesValidator::SignalsValidator::s_actionsMap;
+XmlRulesValidator* XmlRulesValidator::s_validator = nullptr;
+unordered_map<string, PermissionPolicy::Rule::Member::MemberType>* XmlRulesValidator::s_memberTypeMap = nullptr;
+unordered_map<string, uint8_t>* XmlRulesValidator::MethodsValidator::s_actionsMap = nullptr;
+unordered_map<string, uint8_t>* XmlRulesValidator::PropertiesValidator::s_actionsMap = nullptr;
+unordered_map<string, uint8_t>* XmlRulesValidator::SignalsValidator::s_actionsMap = nullptr;
 
 #ifdef REGEX_SUPPORTED
 const regex XmlRulesValidator::s_objectPathRegex = regex("(\\*|/(\\*)?|(/[a-zA-Z0-9_]+)+(/?\\*)?)");
@@ -45,7 +45,7 @@ const regex XmlRulesValidator::s_memberNameRegex = regex("(\\*|([a-zA-Z_][a-zA-Z
 
 void XmlRulesValidator::Init()
 {
-    QCC_ASSERT(nullptr == s_validator);
+    QCC_ASSERT((nullptr == s_validator) && (nullptr == s_memberTypeMap));
     s_validator = new XmlRulesValidator();
 
     MemberTypeMapInit();
@@ -58,6 +58,9 @@ void XmlRulesValidator::Shutdown()
 {
     delete s_validator;
     s_validator = nullptr;
+
+    delete s_memberTypeMap;
+    s_memberTypeMap = nullptr;
 }
 
 XmlRulesValidator* XmlRulesValidator::GetInstance()
@@ -67,10 +70,12 @@ XmlRulesValidator* XmlRulesValidator::GetInstance()
 
 void XmlRulesValidator::MemberTypeMapInit()
 {
-    s_memberTypeMap[METHOD_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::METHOD_CALL;
-    s_memberTypeMap[PROPERTY_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::PROPERTY;
-    s_memberTypeMap[SIGNAL_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::SIGNAL;
-    s_memberTypeMap[NOT_SPECIFIED_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED;
+    s_memberTypeMap = new unordered_map<string, PermissionPolicy::Rule::Member::MemberType>();
+
+    (*s_memberTypeMap)[METHOD_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::METHOD_CALL;
+    (*s_memberTypeMap)[PROPERTY_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::PROPERTY;
+    (*s_memberTypeMap)[SIGNAL_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::SIGNAL;
+    (*s_memberTypeMap)[NOT_SPECIFIED_MEMBER_TYPE] = PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED;
 }
 
 string XmlRulesValidator::GetRootElementName()
@@ -80,24 +85,54 @@ string XmlRulesValidator::GetRootElementName()
 
 void XmlRulesValidator::MethodsValidator::Init()
 {
-    s_actionsMap[DENY_MEMBER_MASK] = 0;
-    s_actionsMap[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
-    s_actionsMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+    QCC_ASSERT(nullptr == s_actionsMap);
+
+    s_actionsMap = new unordered_map<string, uint8_t>();
+
+    (*s_actionsMap)[DENY_MEMBER_MASK] = 0;
+    (*s_actionsMap)[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+    (*s_actionsMap)[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+}
+
+void XmlRulesValidator::MethodsValidator::Shutdown()
+{
+    delete s_actionsMap;
+    s_actionsMap = nullptr;
 }
 
 void XmlRulesValidator::PropertiesValidator::Init()
 {
-    s_actionsMap[DENY_MEMBER_MASK] = 0;
-    s_actionsMap[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
-    s_actionsMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
-    s_actionsMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+    QCC_ASSERT(nullptr == s_actionsMap);
+
+    s_actionsMap = new unordered_map<string, uint8_t>();
+
+    (*s_actionsMap)[DENY_MEMBER_MASK] = 0;
+    (*s_actionsMap)[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+    (*s_actionsMap)[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+    (*s_actionsMap)[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+}
+
+void XmlRulesValidator::PropertiesValidator::Shutdown()
+{
+    delete s_actionsMap;
+    s_actionsMap = nullptr;
 }
 
 void XmlRulesValidator::SignalsValidator::Init()
 {
-    s_actionsMap[DENY_MEMBER_MASK] = 0;
-    s_actionsMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
-    s_actionsMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+    QCC_ASSERT(nullptr == s_actionsMap);
+
+    s_actionsMap = new unordered_map<string, uint8_t>();
+
+    (*s_actionsMap)[DENY_MEMBER_MASK] = 0;
+    (*s_actionsMap)[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+    (*s_actionsMap)[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+}
+
+void XmlRulesValidator::SignalsValidator::Shutdown()
+{
+    delete s_actionsMap;
+    s_actionsMap = nullptr;
 }
 
 QStatus XmlRulesValidator::Validate(const XmlElement* rootElement)
@@ -457,9 +492,9 @@ QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowed(XmlElement
 QStatus XmlRulesValidator::MemberValidator::ValidateAnnotationAllowedForMember(XmlElement* annotation)
 {
     String action = annotation->GetAttribute(VALUE_XML_ATTRIBUTE);
-    auto foundAction = GetActionsMap().find(action.c_str());
+    auto foundAction = GetActionsMap()->find(action.c_str());
 
-    return (foundAction == GetActionsMap().end()) ? ER_XML_MALFORMED : ER_OK;
+    return (foundAction == GetActionsMap()->end()) ? ER_XML_MALFORMED : ER_OK;
 }
 
 QStatus XmlRulesValidator::MemberValidator::ValidateDenyAnnotation(unordered_set<string>& presentAnnotations)
@@ -473,8 +508,8 @@ QStatus XmlRulesValidator::MemberValidator::ValidateDenyAnnotation(unordered_set
 QStatus XmlRulesValidator::MemberValidator::GetValidMemberType(const XmlElement* member, PermissionPolicy::Rule::Member::MemberType* memberType)
 {
     QStatus status = ER_OK;
-    auto foundType = s_memberTypeMap.find(member->GetName().c_str());
-    if (foundType != s_memberTypeMap.end()) {
+    auto foundType = s_memberTypeMap->find(member->GetName().c_str());
+    if (foundType != s_memberTypeMap->end()) {
         *memberType = foundType->second;
     } else {
         status = ER_XML_MALFORMED;
@@ -483,7 +518,7 @@ QStatus XmlRulesValidator::MemberValidator::GetValidMemberType(const XmlElement*
     return status;
 }
 
-const unordered_map<string, uint8_t>& XmlRulesValidator::MethodsValidator::GetActionsMap()
+const unordered_map<string, uint8_t>* XmlRulesValidator::MethodsValidator::GetActionsMap()
 {
     return s_actionsMap;
 }
@@ -494,7 +529,7 @@ uint8_t XmlRulesValidator::MethodsValidator::GetValidActions()
            PermissionPolicy::Rule::Member::ACTION_MODIFY;
 }
 
-const unordered_map<string, uint8_t>& XmlRulesValidator::PropertiesValidator::GetActionsMap()
+const unordered_map<string, uint8_t>* XmlRulesValidator::PropertiesValidator::GetActionsMap()
 {
     return s_actionsMap;
 }
@@ -506,7 +541,7 @@ uint8_t XmlRulesValidator::PropertiesValidator::GetValidActions()
            PermissionPolicy::Rule::Member::ACTION_MODIFY;
 }
 
-const unordered_map<string, uint8_t>& XmlRulesValidator::SignalsValidator::GetActionsMap()
+const unordered_map<string, uint8_t>* XmlRulesValidator::SignalsValidator::GetActionsMap()
 {
     return s_actionsMap;
 }

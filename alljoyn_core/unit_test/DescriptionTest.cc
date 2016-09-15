@@ -827,6 +827,14 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObject_LegacyAccessors) {
     ASSERT_TRUE(intf != NULL);
 
     intf->AddProperty("name", "s", PROP_ACCESS_RW);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     intf->SetDescriptionLanguage("");
     intf->SetDescription(ifcId);
     intf->SetPropertyDescription("name", propId);
@@ -835,6 +843,13 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObject_LegacyAccessors) {
 
     ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
     m_testObj->SetDescriptionTranslator(&translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
     ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
 
@@ -857,6 +872,14 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectGlobalTranslator_LegacyAc
     ASSERT_TRUE(intf != NULL);
 
     intf->AddProperty("name", "s", PROP_ACCESS_RW);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     intf->SetDescriptionLanguage("");
     intf->SetDescription(ifcId);
     intf->SetPropertyDescription("name", propId);
@@ -864,6 +887,13 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectGlobalTranslator_LegacyAc
 
     ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
     s_msgBusServer->SetDescriptionTranslator(&translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
     ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
 
@@ -884,6 +914,14 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectDefaultTranslator_LegacyA
     ASSERT_TRUE(intf != NULL);
 
     intf->AddProperty("name", "s", PROP_ACCESS_RW);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     intf->SetDescriptionLanguage("");
     intf->SetDescription(ifcId);
     intf->SetPropertyDescription("name", propId);
@@ -898,6 +936,13 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectDefaultTranslator_LegacyA
 
     ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
     m_testObj->SetDescriptionTranslator(translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
     ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
 
@@ -918,6 +963,14 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoTranslate_LegacyAccesso
     EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
     ASSERT_TRUE(intf != NULL);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     intf->SetDescriptionLanguage("");
     intf->SetDescription(ifcId);
 
@@ -928,6 +981,12 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoTranslate_LegacyAccesso
     intf->SetMemberDescription("Ping", methId);
 
     intf->SetDescriptionTranslator(&translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     intf->Activate();
 
     ASSERT_TRUE((m_testObj = new DescriptionObjectNoTranslate(*intf, SERVICE_PATH)) != NULL);
@@ -951,10 +1010,24 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectNoIntfTranslate_LegacyAcc
     EXPECT_EQ(ER_OK, s_msgBusServer->CreateInterface(INTERFACE_NAME, intf));
     ASSERT_TRUE(intf != NULL);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     intf->AddProperty("name", "s", PROP_ACCESS_RW);
     intf->SetDescriptionLanguage("");
     intf->SetDescription(ifcId);
     intf->SetPropertyDescription("name", propId);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     intf->Activate();
 
     ASSERT_TRUE((m_testObj = new DescriptionObjectNoIntfTranslate(*intf, SERVICE_PATH)) != NULL);
@@ -979,10 +1052,25 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObjectWithAnnotations_LegacyAcc
     ASSERT_TRUE(intf != NULL);
 
     intf->AddProperty("name", "s", PROP_ACCESS_RW);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     intf->SetDescriptionLanguage("");
     intf->SetDescription(ifcId);
     intf->SetPropertyDescription("name", propId);
     intf->SetDescriptionTranslator(&translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     for (size_t i = 0; i < ArraySize(tags); i++) {
         qcc::String annotName = qcc::String("org.alljoyn.Bus.DocString.") + tags[i];
         qcc::String annotValue(namePropDescription[i]);
@@ -1027,12 +1115,6 @@ TEST_F(DescriptionTest, SignalTypes)
 
     ASSERT_EQ(ER_OK, intf->AddSignal("legacySessionlessSignal", "s", NULL));
     ASSERT_EQ(ER_OK, intf->SetMemberDescription("legacySessionlessSignal", "legacy sessionless signal", true));
-#if defined(QCC_OS_GROUP_WINDOWS)
-#pragma warning(pop)
-#endif
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
 
     ASSERT_EQ(ER_OK, intf->AddSignal("sessioncastSignal", "s", NULL, MEMBER_ANNOTATE_SESSIONCAST));
     ASSERT_EQ(ER_OK, intf->AddSignal("sessionlessSignal", "s", NULL, MEMBER_ANNOTATE_SESSIONLESS));
@@ -1045,6 +1127,13 @@ TEST_F(DescriptionTest, SignalTypes)
 
     ASSERT_TRUE((m_testObj = new DescriptionObject(*intf, SERVICE_PATH)) != NULL);
     m_testObj->SetDescriptionTranslator(&translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     ASSERT_EQ(ER_OK, s_msgBusServer->RegisterBusObject(*m_testObj));
     ASSERT_EQ(ER_OK, s_msgBusServer->Connect());
 
@@ -1486,10 +1575,24 @@ TEST_F(DescriptionTest, GetDescriptionLanguages_LegacyDescriptionsInDifferentLan
     ASSERT_TRUE(intf != NULL);
 
     intf->AddProperty("name", "s", PROP_ACCESS_RW);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     intf->SetDescriptionLanguage("");
     intf->SetDescription(ifcId);
     intf->SetPropertyDescription("name", propId);
     intf->SetDescriptionTranslator(&translator);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
     for (size_t i = 0; i < ArraySize(tags); ++i) {
         expectedLanguages.insert(tags[i]);
@@ -1507,7 +1610,21 @@ TEST_F(DescriptionTest, IntrospectableDescriptionObject)
     ASSERT_TRUE(intf != NULL);
 
     intf->AddProperty("name", "s", PROP_ACCESS_RW);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
     Translator* translator = intf->GetDescriptionTranslator();
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
     for (size_t i = 0; i < ArraySize(tags); i++) {
         intf->SetDescriptionForLanguage(ifcDescription[i], tags[i]);

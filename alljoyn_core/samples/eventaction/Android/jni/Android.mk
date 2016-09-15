@@ -1,23 +1,34 @@
-# Define ALLJOYN_DIST before building. It should point to the "dist/cpp" directory for the appropriate
-# platform and version (debug or release). For example:
-# <AJ_ROOT>/core/alljoyn/build/android/arm/debug/dist/cpp
-
 LOCAL_PATH := $(call my-dir)
 
+# An ALLJOYN_DIST environment variable may be provided in order to
+# locate the cpp distribution files. The referenced directory must
+# contain the /lib and /inc directories of the desired build variant;
+# e.g. $(AJ_ROOT)/core/alljoyn/build/android/arm/$(APP_OPTIM)/dist/cpp
+# If ALLJOYN_DIST is not defined, then relative paths are defaulted
+# here that reference the /lib and /inc directories in order to work
+# with the Jenkins build.
+#
+ifndef $(ALLJOYN_DIST)
+    ALLJOYN_DIST_LIB := ../../../../lib
+    ALLJOYN_DIST_INC := ../../../inc
+else
+    ALLJOYN_DIST_LIB := $(ALLJOYN_DIST)/lib
+    ALLJOYN_DIST_INC := $(ALLJOYN_DIST)/inc
+endif
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := ajrouter
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/libajrouter.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/libajrouter.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := alljoyn
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/liballjoyn.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := alljoyn_about
-LOCAL_SRC_FILES := $(ALLJOYN_DIST)/lib/liballjoyn_about.a
+LOCAL_SRC_FILES := $(ALLJOYN_DIST_LIB)/liballjoyn_about.a
 include $(PREBUILT_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
@@ -27,9 +38,9 @@ LOCAL_MODULE := MyAllJoynCode
 TARGET_PLATFORM := android-16
 
 LOCAL_C_INCLUDES := \
-	$(ALLJOYN_DIST)/../cpp/inc \
-	$(ALLJOYN_DIST)/../cpp/inc/alljoyn \
-	$(ALLJOYN_DIST)/../about/inc
+	$(ALLJOYN_DIST_INC) \
+	$(ALLJOYN_DIST_INC)/alljoyn \
+	$(ALLJOYN_DIST_INC)/alljoyn/about
 
 LOCAL_CFLAGS := -std=c++11 -Wno-psabi -Wno-write-strings -DANDROID_NDK -DTARGET_ANDROID -DLINUX -DQCC_OS_GROUP_POSIX -DQCC_OS_ANDROID -DANDROID
 

@@ -31,19 +31,25 @@ using namespace std;
 
 namespace ajn {
 
-map<PermissionPolicy::Peer::PeerType, string> XmlPoliciesConverter::s_inversePeerTypeMap;
+map<PermissionPolicy::Peer::PeerType, string>* XmlPoliciesConverter::s_inversePeerTypeMap = nullptr;
 
 void XmlPoliciesConverter::Init()
 {
-    s_inversePeerTypeMap[PermissionPolicy::Peer::PeerType::PEER_ALL] = XML_PEER_ALL;
-    s_inversePeerTypeMap[PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED] = XML_PEER_ANY_TRUSTED;
-    s_inversePeerTypeMap[PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY] = XML_PEER_FROM_CERTIFICATE_AUTHORITY;
-    s_inversePeerTypeMap[PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP] = XML_PEER_WITH_MEMBERSHIP;
-    s_inversePeerTypeMap[PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY] = XML_PEER_WITH_PUBLIC_KEY;
+    QCC_ASSERT(nullptr == s_inversePeerTypeMap);
+
+    s_inversePeerTypeMap = new map<PermissionPolicy::Peer::PeerType, string>();
+
+    (*s_inversePeerTypeMap)[PermissionPolicy::Peer::PeerType::PEER_ALL] = XML_PEER_ALL;
+    (*s_inversePeerTypeMap)[PermissionPolicy::Peer::PeerType::PEER_ANY_TRUSTED] = XML_PEER_ANY_TRUSTED;
+    (*s_inversePeerTypeMap)[PermissionPolicy::Peer::PeerType::PEER_FROM_CERTIFICATE_AUTHORITY] = XML_PEER_FROM_CERTIFICATE_AUTHORITY;
+    (*s_inversePeerTypeMap)[PermissionPolicy::Peer::PeerType::PEER_WITH_MEMBERSHIP] = XML_PEER_WITH_MEMBERSHIP;
+    (*s_inversePeerTypeMap)[PermissionPolicy::Peer::PeerType::PEER_WITH_PUBLIC_KEY] = XML_PEER_WITH_PUBLIC_KEY;
 }
 
 void XmlPoliciesConverter::Shutdown()
 {
+    delete s_inversePeerTypeMap;
+    s_inversePeerTypeMap = nullptr;
 }
 
 QStatus XmlPoliciesConverter::FromXml(AJ_PCSTR policyXml, ajn::PermissionPolicy& policy)
@@ -166,7 +172,7 @@ void XmlPoliciesConverter::BuildPeer(const XmlElement* peerXml, PermissionPolicy
 void XmlPoliciesConverter::SetPeerType(const XmlElement* peerXml, PermissionPolicy::Peer& peer)
 {
     AJ_PCSTR typeName = peerXml->GetChildren()[PEER_TYPE_INDEX]->GetContent().c_str();
-    PermissionPolicy::Peer::PeerType peerType = XmlPoliciesValidator::s_peerTypeMap.find(typeName)->second;
+    PermissionPolicy::Peer::PeerType peerType = XmlPoliciesValidator::s_peerTypeMap->at(typeName);
 
     peer.SetType(peerType);
 }
@@ -260,7 +266,7 @@ void XmlPoliciesConverter::AddPeer(const PermissionPolicy::Peer& peer, XmlElemen
 
 void XmlPoliciesConverter::SetPeerType(const PermissionPolicy::Peer& peer, XmlElement* peerXml)
 {
-    peerXml->CreateChild(TYPE_XML_ELEMENT)->SetContent(s_inversePeerTypeMap.find(peer.GetType())->second);
+    peerXml->CreateChild(TYPE_XML_ELEMENT)->SetContent(s_inversePeerTypeMap->at(peer.GetType()));
 }
 
 void XmlPoliciesConverter::SetPeerPublicKey(const PermissionPolicy::Peer& peer, XmlElement* peerXml)

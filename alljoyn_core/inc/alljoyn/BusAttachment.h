@@ -817,6 +817,21 @@ class BusAttachment : public MessageReceiver {
      *
      * @remark                     The application must Join the bus attachment before destroying the @p authListener.
      *
+     * For Security 2.0 applications, after the application has been claimed, it is recommended that only
+     * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter. If the application is unclaimed but will
+     * be claimed locally via the PermissionConfigurator::Claim call, it is also recommended that only
+     * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter, and that the claim capabilities be left as
+     * default, to prevent possible claiming over the network by a rogue security manager.
+     *
+     * If this application will be claimed over the network, peer security should first be enabled with
+     * ALLJOYN_ECDHE_ECDSA and the supported mechanisms for claiming. After it is claimed, and the application
+     * received the EndManagement callback, the application should then re-enable peer security with only
+     * ALLJOYN_ECDHE_ECDSA.
+     *
+     * Unless a bus attachment will be used by a security manager to claim other applications, or will interact
+     * with applications using Security 1.0, and so will need to negotiate other authentication mechanisms,
+     * only ALLJOYN_ECDHE_ECDSA should be enabled while claimed.
+     *
      * @return
      *      - #ER_OK if peer security was enabled.
      *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called

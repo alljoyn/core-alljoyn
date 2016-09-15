@@ -554,9 +554,10 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
     virtual void SetUp()
     {
         SecurityApplicationProxyPostClaimTest::SetUp();
-        InstallAdminGroupMembership();
 
+        InstallAdminGroupMembership();
         SetUpPolicies();
+        EndRemoteAppsManagement();
     }
 
     virtual void TearDown()
@@ -624,6 +625,11 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
     {
         ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_installmembership(m_securityManagerSecurityApplicationProxy, m_adminGroupMembershipCertificate));
         ASSERT_EQ(ER_OK, alljoyn_proxybusobject_secureconnection((alljoyn_proxybusobject)m_managedAppSecurityApplicationProxy, true));
+    }
+
+    void EndRemoteAppsManagement()
+    {
+        ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_endmanagement(m_managedAppSecurityApplicationProxy));
     }
 };
 

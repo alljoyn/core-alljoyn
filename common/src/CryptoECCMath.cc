@@ -198,9 +198,6 @@ static jacobian_point_t const jacobian_infinity = { { { 1, 0, 0, 0, 0, 0, 0 } },
                                                     { { 1, 0, 0, 0, 0, 0, 0 } },
                                                     { { 0, 0, 0, 0, 0, 0, 0 } } };
 
-static bigval_t const b_P256 =
-{ { 0x27d2604b, 0x3bce3c3e, 0xcc53b0f6, 0x651d06b0,
-    0x769886bc, 0xb3ebbd55, 0xaa3a93e7, 0x5ac635d8, 0x00000000 } };
 #ifdef ECDSA
 static dblbigval_t const orderDBL256 =
 { { 0xfc632551LL - 0x100000000LL,
@@ -216,7 +213,6 @@ static dblbigval_t const orderDBL256 =
 
 
 #define orderDBL orderDBL256
-#define curve_b b_P256
 
 
 
@@ -1743,7 +1739,7 @@ void ec_get_REDP_basepoints(ecpoint_t* Q1, ecpoint_t* Q2, curveid_t curveid)
     fpcopy_p256(y2, Q2->y);
 }
 
-static QStatus GenerateSPEKEKeyPair_inner(ecpoint_t* publicKey, digit256_t privateKey, const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
+static QStatus GenerateSPEKEKeyPair_inner(ecpoint_t* publicKey, digit256_t privateKey, const uint8_t* pw, size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
 {
     QStatus status;
     Crypto_SHA256 hash;
@@ -1810,7 +1806,7 @@ Exit:
     return status;
 }
 
-QStatus Crypto_ECC_GenerateSPEKEKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey, const uint8_t* pw, const size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
+QStatus Crypto_ECC_GenerateSPEKEKeyPair(ECCPublicKey* publicKey, ECCPrivateKey* privateKey, const uint8_t* pw, size_t pwLen, const GUID128 clientGUID, const GUID128 serviceGUID)
 {
     QStatus status;
     ecpoint_t pub;

@@ -160,6 +160,15 @@ QStatus Manifest::SetFromRules(const PermissionPolicy::Rule* manifestRules, cons
     return manifest->SetRules(manifestRules, manifestRulesNumber);
 }
 
+QStatus Manifest::SetFromManifestTemplateXml(AJ_PCSTR manifestTemplateXml)
+{
+    if (nullptr == manifestTemplateXml) {
+        return ER_BAD_ARG_1;
+    }
+
+    return manifest->SetRules(manifestTemplateXml);
+}
+
 QStatus Manifest::SetFromSignedManifest(const ajn::Manifest& signedManifest)
 {
     manifest = signedManifest;

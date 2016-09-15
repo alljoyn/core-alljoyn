@@ -131,6 +131,8 @@ class ApplicationUpdater :
     SecurityAgentImpl* securityAgentImpl;
 
     TaskQueue<SecurityEvent*, ApplicationUpdater> queue;
+
+    void NotifyAboutSyncError(const OnlineApplication& app, QStatus errorStatus, SyncErrorType errorType);
 };
 }
 }

@@ -56,7 +56,7 @@ class XmlRulesValidator : public XmlValidator {
     /**
      * Mapping between the member types in string format and PermissionPolicy::Rule::Member::MemberType enum.
      */
-    static std::unordered_map<std::string, PermissionPolicy::Rule::Member::MemberType> s_memberTypeMap;
+    static std::unordered_map<std::string, PermissionPolicy::Rule::Member::MemberType>* s_memberTypeMap;
 
     /**
      * Initializes the static members.
@@ -381,7 +381,7 @@ class XmlRulesValidator : public XmlValidator {
         /**
          * @return A string -> action mask map of actions valid for the current member type.
          */
-        virtual const std::unordered_map<std::string, uint8_t>& GetActionsMap() = 0;
+        virtual const std::unordered_map<std::string, uint8_t>* GetActionsMap() = 0;
 
         /**
          * @return A mask of actions valid for the current member type.
@@ -478,14 +478,19 @@ class XmlRulesValidator : public XmlValidator {
          */
         static void Init();
 
+        /*
+         * Destroy the static members.
+         */
+        static void Shutdown();
+
       private:
 
         /**
          * A string -> action mask map of actions valid for methods.
          */
-        static std::unordered_map<std::string, uint8_t> s_actionsMap;
+        static std::unordered_map<std::string, uint8_t>* s_actionsMap;
 
-        virtual const std::unordered_map<std::string, uint8_t>& GetActionsMap();
+        virtual const std::unordered_map<std::string, uint8_t>* GetActionsMap();
 
         virtual uint8_t GetValidActions();
     };
@@ -498,14 +503,19 @@ class XmlRulesValidator : public XmlValidator {
          */
         static void Init();
 
+        /*
+         * Destroy the static members.
+         */
+        static void Shutdown();
+
       private:
 
         /**
          * A string -> action mask map of actions valid for properties.
          */
-        static std::unordered_map<std::string, uint8_t> s_actionsMap;
+        static std::unordered_map<std::string, uint8_t>* s_actionsMap;
 
-        virtual const std::unordered_map<std::string, uint8_t>& GetActionsMap();
+        virtual const std::unordered_map<std::string, uint8_t>* GetActionsMap();
 
         virtual uint8_t GetValidActions();
     };
@@ -518,14 +528,19 @@ class XmlRulesValidator : public XmlValidator {
          */
         static void Init();
 
+        /*
+         * Destroy the static members.
+         */
+        static void Shutdown();
+
       private:
 
         /**
          * A string -> action mask map of actions valid for signals.
          */
-        static std::unordered_map<std::string, uint8_t> s_actionsMap;
+        static std::unordered_map<std::string, uint8_t>* s_actionsMap;
 
-        virtual const std::unordered_map<std::string, uint8_t>& GetActionsMap();
+        virtual const std::unordered_map<std::string, uint8_t>* GetActionsMap();
 
         virtual uint8_t GetValidActions();
     };

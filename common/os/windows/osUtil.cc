@@ -29,7 +29,13 @@
 #define SECURITY_WIN32
 #include <security.h>
 #include <secext.h>
+
+#if defined(NTDDI_VERSION) && defined(NTDDI_WIN10_RS2) && (NTDDI_VERSION >= NTDDI_WIN10_RS2)
+#include <shlobj_core.h>
+#else
 #include <shlobj.h>
+#endif
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 

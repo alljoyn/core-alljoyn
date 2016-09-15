@@ -113,17 +113,19 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
     /**
      * Push a sessionless signal.
      *
-     * @param msg    Message to be pushed.
+     * @param[in]   msg                 Message to be pushed.
+     * @param[in]   skippedEndpoints    Endpoints not allowed to receive the message.
      */
-    virtual QStatus PushMessage(Message& msg);
+    virtual QStatus PushMessage(Message& msg, const std::set<qcc::String>& skippedEndpoints);
 
     /**
      * Route an incoming sessionless signal if possible.
      *
-     * @param sid   Session ID associated with sessionless message.
-     * @param msg   Sesionless message to be routed.
+     * @param[in]   sid                 Session ID associated with sessionless message.
+     * @param[in]   msg                 Sesionless message to be routed.
+     * @param[in]   skippedEndpoints    Endpoints not allowed to receive the message.
      */
-    virtual void RouteSessionlessMessage(uint32_t sid, Message& msg);
+    virtual void RouteSessionlessMessage(uint32_t sid, Message& msg, const std::set<qcc::String>& skippedEndpoints);
 
     /**
      * Remove a sessionless signal with a given serial number from the store/forward cache.
@@ -499,7 +501,18 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      */
     QStatus SendThroughEndpoint(Message& msg, BusEndpoint& ep, SessionId sid);
 
-    /*
+    /**
+     * Checks if the destination endpoint is allowed to receive the given message.
+     *
+     * @param[in] endpoint  The destination endpoint
+     * @param[in] message   The message that's supposed to be delivered to the endpoint.
+     *
+     * @return  True, if the endpoint is allowed to receive the message.
+     *          False otherwise.
+     */
+    bool DestinationEndpointMayReceive(BusEndpoint& endpoint, const Message& message);
+
+    /**
      * Internal helper for sending sessionless signals filtered by our rule table.
      *
      * @param[in] sid Session ID
@@ -508,6 +521,36 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
      * @param[in] toRulesId End of rules ID range (exclusive)
      */
     void SendMatchingThroughEndpoint(SessionId sid, SessionlessMessage slm, uint32_t fromRulesId, uint32_t toRulesId);
+
+    /**
+     * Internal helper for sending sessionless signals filtered by our rule table and endpoints list.
+     *
+     * @param[in] sid               Session ID.
+     * @param[in] slm               The sessionless signal.
+     * @param[in] fromRulesId       Beginning of rules ID range (inclusive).
+     * @param[in] toRulesId         End of rules ID range (exclusive).
+     * @param[in] skippedEndpoints  Endpoints not allowed to receive the message.
+     */
+    void SendMatchingThroughEndpoint(SessionId sid,
+                                     SessionlessMessage slm,
+                                     uint32_t fromRulesId,
+                                     uint32_t toRulesId,
+                                     const std::set<qcc::String>& skippedEndpoints);
+
+    /**
+     * Internal helper for sending sessionless signals for a single endpoint filtered by our rule table.
+     *
+     * @param[in] sid                       Session ID.
+     * @param[in] slm                       The sessionless signal.
+     * @param[in] fromRulesId               Beginning of rules ID range (inclusive).
+     * @param[in] toRulesId                 End of rules ID range (exclusive).
+     * @param[in] destinationEndpointName   Name of the destination endpoint
+     */
+    void SendMatchingThroughEndpoint(SessionId sid,
+                                     SessionlessMessage slm,
+                                     uint32_t fromRulesId,
+                                     uint32_t toRulesId,
+                                     const qcc::String& destinationEndpointName);
 
     /** Rule iterator */
     typedef std::multimap<qcc::String, TimestampedRule>::iterator RuleIterator;
@@ -696,8 +739,9 @@ class SessionlessObj : public BusObject, public NameListener, public SessionList
 
     class PushMessageWork : public Work {
       public:
-        Message msg;
-        PushMessageWork(SessionlessObj& slObj, Message& msg);
+        Message m_msg;
+        std::set<qcc::String> m_skippedEndpoints;
+        PushMessageWork(SessionlessObj& slObj, Message& msg, const std::set<qcc::String>& skippedEndpoints);
         virtual void Run();
     };
 

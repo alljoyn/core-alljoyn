@@ -33,12 +33,14 @@ using namespace std;
 namespace ajn {
 
 XmlRulesConverter* XmlRulesConverter::s_converter = nullptr;
-map<PermissionPolicy::Rule::Member::MemberType, string> XmlRulesConverter::s_inverseMemberTypeMap;
-unordered_map<string, uint8_t> XmlRulesConverter::s_memberMasksMap;
+map<PermissionPolicy::Rule::Member::MemberType, string>* XmlRulesConverter::s_inverseMemberTypeMap = nullptr;
+unordered_map<string, uint8_t>* XmlRulesConverter::s_memberMasksMap = nullptr;
 
 void XmlRulesConverter::Init()
 {
-    QCC_ASSERT(nullptr == s_converter);
+    QCC_ASSERT((nullptr == s_converter) &&
+               (nullptr == s_inverseMemberTypeMap) &&
+               (nullptr == s_memberMasksMap));
     s_converter = new XmlRulesConverter();
 
     InitInverseMemberTypeMap();
@@ -49,6 +51,12 @@ void XmlRulesConverter::Shutdown()
 {
     delete s_converter;
     s_converter = nullptr;
+
+    delete s_inverseMemberTypeMap;
+    s_inverseMemberTypeMap = nullptr;
+
+    delete s_memberMasksMap;
+    s_memberMasksMap = nullptr;
 }
 
 XmlRulesConverter* XmlRulesConverter::GetInstance()
@@ -62,18 +70,22 @@ XmlRulesConverter::~XmlRulesConverter()
 
 void XmlRulesConverter::InitInverseMemberTypeMap()
 {
-    s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::METHOD_CALL] = METHOD_MEMBER_TYPE;
-    s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::PROPERTY] = PROPERTY_MEMBER_TYPE;
-    s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::SIGNAL] = SIGNAL_MEMBER_TYPE;
-    s_inverseMemberTypeMap[PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED] = NOT_SPECIFIED_MEMBER_TYPE;
+    s_inverseMemberTypeMap = new map<PermissionPolicy::Rule::Member::MemberType, string>();
+
+    (*s_inverseMemberTypeMap)[PermissionPolicy::Rule::Member::MemberType::METHOD_CALL] = METHOD_MEMBER_TYPE;
+    (*s_inverseMemberTypeMap)[PermissionPolicy::Rule::Member::MemberType::PROPERTY] = PROPERTY_MEMBER_TYPE;
+    (*s_inverseMemberTypeMap)[PermissionPolicy::Rule::Member::MemberType::SIGNAL] = SIGNAL_MEMBER_TYPE;
+    (*s_inverseMemberTypeMap)[PermissionPolicy::Rule::Member::MemberType::NOT_SPECIFIED] = NOT_SPECIFIED_MEMBER_TYPE;
 }
 
 void XmlRulesConverter::InitMemberMasksMap()
 {
-    s_memberMasksMap[DENY_MEMBER_MASK] = 0;
-    s_memberMasksMap[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
-    s_memberMasksMap[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
-    s_memberMasksMap[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
+    s_memberMasksMap = new unordered_map<string, uint8_t>();
+
+    (*s_memberMasksMap)[DENY_MEMBER_MASK] = 0;
+    (*s_memberMasksMap)[MODIFY_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_MODIFY;
+    (*s_memberMasksMap)[PROVIDE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_PROVIDE;
+    (*s_memberMasksMap)[OBSERVE_MEMBER_MASK] = PermissionPolicy::Rule::Member::ACTION_OBSERVE;
 }
 
 XmlRulesConverter::XmlRulesConverter()
@@ -241,7 +253,7 @@ void XmlRulesConverter::UpdateRuleSecurityLevel(const map<string, string>& annot
 {
     auto nameToValuePair = annotationsMap.find(SECURITY_LEVEL_ANNOTATION_NAME);
     if (nameToValuePair != annotationsMap.end()) {
-        rule.SetRecommendedSecurityLevel(XmlManifestTemplateValidator::s_securityLevelMap[nameToValuePair->second]);
+        rule.SetRecommendedSecurityLevel(XmlManifestTemplateValidator::s_securityLevelMap->at(nameToValuePair->second));
     }
 }
 
@@ -269,7 +281,7 @@ void XmlRulesConverter::SetMemberName(const XmlElement* xmlMember, PermissionPol
 void XmlRulesConverter::SetMemberType(const XmlElement* xmlMember, PermissionPolicy::Rule::Member& member)
 {
     AJ_PCSTR type = xmlMember->GetName().c_str();
-    member.SetMemberType(XmlRulesValidator::s_memberTypeMap.find(type)->second);
+    member.SetMemberType(XmlRulesValidator::s_memberTypeMap->at(type));
 }
 
 void XmlRulesConverter::SetMemberMask(const XmlElement* xmlMember, PermissionPolicy::Rule::Member& member)
@@ -283,7 +295,7 @@ void XmlRulesConverter::BuildActionMask(const XmlElement* xmlMember, uint8_t* ma
 {
     for (auto annotation : xmlMember->GetChildren()) {
         String maskString = annotation->GetAttribute(VALUE_XML_ATTRIBUTE);
-        *mask |= s_memberMasksMap.find(maskString.c_str())->second;
+        *mask |= s_memberMasksMap->at(maskString.c_str());
     }
 }
 
@@ -329,7 +341,7 @@ void XmlRulesConverter::BuildXmlInterfaceAnnotations(const PermissionPolicy::Rul
 void XmlRulesConverter::BuildXmlMember(const PermissionPolicy::Rule::Member& member, XmlElement* interfaceElement)
 {
     XmlElement* memberElement = nullptr;
-    string xmlType = s_inverseMemberTypeMap.find(member.GetMemberType())->second;
+    string xmlType = s_inverseMemberTypeMap->at(member.GetMemberType());
     CreateChildWithNameAttribute(interfaceElement, xmlType.c_str(), member.GetMemberName().c_str(), &memberElement);
 
     BuilXmlAnnotations(member.GetActionMask(), memberElement);

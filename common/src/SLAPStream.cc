@@ -465,7 +465,7 @@ void SLAPStream::ProcessControlPacket()
             /*
              * Check that the configuration response is valid.
              */
-            if (m_linkParams.packetSize > m_linkParams.packetSize) {
+            if (m_linkParams.packetSize > m_linkParams.maxPacketSize) {
                 QCC_LogError(ER_FAIL, ("Configuration failed - device is not configuring link correctly %d %d", m_linkParams.packetSize, m_linkParams.maxPacketSize));
                 m_linkState = LINK_DEAD;
                 return;

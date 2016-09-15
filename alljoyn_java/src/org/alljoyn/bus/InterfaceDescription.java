@@ -117,11 +117,21 @@ class InterfaceDescription {
     /** Add an annotation to the interface */
     private native Status addAnnotation(String annotation, String value);
 
-    private native void setDescriptionLanguage(String language);
-    private native void setDescription(String Description);
-    private native void setDescriptionTranslator(BusAttachment busAttachment, Translator dt);
-    private native Status setMemberDescription(String member, String description, boolean isSessionlessSignal);
-    private native Status setPropertyDescription(String propName, String description);
+    @Deprecated private native void setDescriptionLanguage(String language);
+    @Deprecated private native void setDescription(String Description);
+    @Deprecated private native void setDescriptionTranslator(BusAttachment busAttachment, Translator dt);
+    @Deprecated private native Status setMemberDescription(String member, String description, boolean isSessionlessSignal);
+    @Deprecated private native Status setPropertyDescription(String propName, String description);
+
+    public native String[] getDescriptionLanguages();
+    public native String getDescriptionForLanguage(String languageTag);
+    public native Status setDescriptionForLanguage(String description, String languageTag);
+    public native String getMemberDescriptionForLanguage(String member, String languageTag);
+    public native Status setMemberDescriptionForLanguage(String member, String description, String languageTag);
+    public native String getPropertyDescriptionForLanguage(String property, String languageTag);
+    public native Status setPropertyDescriptionForLanguage(String property, String description, String languageTag);
+    public native String getArgDescriptionForLanguage(String member, String arg, String languageTag);
+    public native Status setArgDescriptionForLanguage(String member, String arg, String description, String languageTag);
 
     /** Activate the interface on the bus. */
     private native void activate();

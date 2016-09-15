@@ -33,7 +33,7 @@
 
 #define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
 #define KEYX_ECDHE_PSK "ALLJOYN_ECDHE_PSK"
-#define ECDHE_KEYX "ALLJOYN_ECDHE_ECDSA"
+#define KEYX_ECDHE_ECDSA "ALLJOYN_ECDHE_ECDSA"
 
 using namespace qcc;
 using namespace std;
@@ -104,6 +104,10 @@ class ProxyObjectManager :
         QStatus Reset();
 
         QStatus GetPublicKey(ECCPublicKey& publicKey);
+
+        QStatus StartManagement();
+
+        QStatus EndManagement();
 
         const OnlineApplication& GetApplication()
         {

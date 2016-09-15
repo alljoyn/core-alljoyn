@@ -51,7 +51,7 @@ using namespace ajn::securitymgr;
 #define GROUP_ID_MAX 32
 
 static map<string, KeyInfoNISTP256> keys;
-static Mutex lock;
+static Mutex keysLock;
 static map<string, ApplicationMetaData> aboutCache; // Key is busname
 static Mutex aboutCachelock;
 static vector<ManifestUpdate> manifestUpdates;
@@ -67,27 +67,27 @@ static string toKeyID(const KeyInfoNISTP256& key)
 static string addKeyID(const KeyInfoNISTP256& key)
 {
     string id = toKeyID(key);
-    lock.Lock(__FILE__, __LINE__);
+    keysLock.Lock(__FILE__, __LINE__);
     map<string, KeyInfoNISTP256>::iterator it = keys.find(id);
 
     if (it == keys.end()) {
         keys[id] = key;
     }
-    lock.Unlock(__FILE__, __LINE__);
+    keysLock.Unlock(__FILE__, __LINE__);
     return id;
 }
 
 static bool getKey(string appId, KeyInfoNISTP256& key)
 {
     string id(appId.c_str());
-    lock.Lock(__FILE__, __LINE__);
+    keysLock.Lock(__FILE__, __LINE__);
     map<string, KeyInfoNISTP256>::iterator it = keys.find(id);
     bool found = false;
     if (it != keys.end()) {
         key = it->second;
         found = true;
     }
-    lock.Unlock(__FILE__, __LINE__);
+    keysLock.Unlock(__FILE__, __LINE__);
     return found;
 }
 

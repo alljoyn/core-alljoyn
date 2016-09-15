@@ -48,9 +48,3 @@ if env['VARIANT'] == 'debug' :
     env.Jar('$JARDIR/alljoyn-sources.jar', source = ['.'])
 Return('alljoyn_jar')
 
-
-	
-	
-
-
-

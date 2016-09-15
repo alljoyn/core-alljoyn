@@ -43,6 +43,16 @@ class AgentStorageWrapper :
         return ca->RegisterAgent(agentKey, manifest, adminGroup, identityCertificates, signedManifest, adminGroupMemberships);
     }
 
+    virtual QStatus RegisterAgent(const KeyInfoNISTP256& agentKey,
+                                  AJ_PCSTR unsignedManifestXml,
+                                  GroupInfo& adminGroup,
+                                  IdentityCertificateChain& identityCertificates,
+                                  std::string& signedManifestXml,
+                                  vector<MembershipCertificateChain>& adminGroupMemberships)
+    {
+        return ca->RegisterAgent(agentKey, unsignedManifestXml, adminGroup, identityCertificates, signedManifestXml, adminGroupMemberships);
+    }
+
     virtual QStatus StartApplicationClaiming(const Application& app,
                                              const IdentityInfo& idInfo,
                                              const ajn::securitymgr::Manifest& manifest,

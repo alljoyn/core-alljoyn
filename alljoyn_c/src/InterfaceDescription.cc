@@ -671,14 +671,50 @@ void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(alljoyn_interfa
     if ((language != nullptr) && (language[0] != '\0')) {
         ajn::translatorC.AddTargetLanguage(language);
     }
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     ((ajn::InterfaceDescription*)iface)->SetDescriptionLanguage(language);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoyn_interfacedescription iface, const char** languages, size_t size)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     size_t count = 0;
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     ajn::Translator* translator = ((const ajn::InterfaceDescription*)iface)->GetDescriptionTranslator();
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
     if (translator == &ajn::translatorC) {
         /* Get description languages from translator */
         size_t numTargetLanguages = translator->NumTargetLanguages();
@@ -690,7 +726,21 @@ size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoy
         if (languages == nullptr) {
             count = 1;
         } else if (size > 0) {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
             languages[0] = ((const ajn::InterfaceDescription*)iface)->GetDescriptionLanguage();
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
             count = 1;
         } else {
             count = 0;
@@ -740,7 +790,25 @@ size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages2(
 void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     ((ajn::InterfaceDescription*)iface)->SetDescription(description);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 QStatus AJ_CALL alljoyn_interfacedescription_setdescriptionforlanguage(alljoyn_interfacedescription iface, const char* description, const char* languageTag)
@@ -772,7 +840,25 @@ size_t AJ_CALL alljoyn_interfacedescription_getdescriptionforlanguage(alljoyn_in
 QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     return ((ajn::InterfaceDescription*)iface)->SetMemberDescription(member, description);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescriptionforlanguage(
@@ -804,7 +890,25 @@ size_t AJ_CALL alljoyn_interfacedescription_getmemberdescriptionforlanguage(
 QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     return ((ajn::InterfaceDescription*)iface)->SetArgDescription(member, argName, description);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 QStatus AJ_CALL alljoyn_interfacedescription_setargdescriptionforlanguage(
@@ -836,7 +940,25 @@ size_t AJ_CALL alljoyn_interfacedescription_getargdescriptionforlanguage(
 QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     return ((ajn::InterfaceDescription*)iface)->SetPropertyDescription(name, description);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescriptionforlanguage(
@@ -870,13 +992,50 @@ void AJ_CALL alljoyn_interfacedescription_setdescriptiontranslationcallback(allj
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     ajn::translatorC.SetTranslationCallback(translation_callback);
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     ((ajn::InterfaceDescription*)iface)->SetDescriptionTranslator(&ajn::translatorC);
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 }
 
 alljoyn_interfacedescription_translation_callback_ptr AJ_CALL alljoyn_interfacedescription_getdescriptiontranslationcallback(const alljoyn_interfacedescription iface)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#endif
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+    /*
+     * We need to call a deprecated C++ accessor from this deprecated C accessor.
+     * This call and the entire function will be removed when the deprecation phase is over.
+     */
     ajn::Translator* translator = ((const ajn::InterfaceDescription*)iface)->GetDescriptionTranslator();
+#if defined(QCC_OS_GROUP_WINDOWS)
+#pragma warning(pop)
+#endif
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
+
     if (translator == &ajn::translatorC) {
         return ajn::translatorC.GetTranslationCallback();
     }

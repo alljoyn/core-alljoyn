@@ -379,7 +379,7 @@ TEST_F(ApplicationUpdaterTests, SyncErReset) {
     // install the invalid policy
     ASSERT_EQ(ER_OK, storage->UpdatePolicy(testAppInfo, invalidPolicy));
     ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_PENDING));
-    ASSERT_TRUE(WaitForState(PermissionConfigurator::CLAIMED, SYNC_OK));
+    ASSERT_TRUE(WaitForSyncError(SYNC_ER_REMOTE, ER_PERMISSION_DENIED));
 
     // stop the test application
     ASSERT_EQ(ER_OK, testApp.Stop());

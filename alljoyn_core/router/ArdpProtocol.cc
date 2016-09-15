@@ -1579,6 +1579,61 @@ uint32_t ARDP_GetDataTimeout(ArdpHandle* handle, ArdpConnRecord* conn)
     return (GetDataTimeout(handle, conn) + 2 * handle->config.initialDataTimeout);
 }
 
+/*
+ * Adjust given probe timeout settings, so that they are not below minimum values.
+ */
+uint32_t ARDP_AdjustProbeTimeoutSettings(uint32_t& timeoutMilliseconds, uint32_t& retries)
+{
+    QCC_DbgTrace(("ARDP_AdjustProbeTimeoutSettings(timeoutMilliseconds=%u, retries=%u)",
+                  timeoutMilliseconds, retries));
+    uint32_t intervalMilliseconds = 0;
+
+    if (timeoutMilliseconds < ARDP_MIN_PROBE_TIMEOUT) {
+        /*
+         * Apply lower timeout limit.
+         */
+        QCC_LogError(ER_WARNING, ("%s: Requested timeout too low, applying minimum of %u ms",
+                                  __FUNCTION__, ARDP_MIN_PROBE_TIMEOUT));
+        timeoutMilliseconds = ARDP_MIN_PROBE_TIMEOUT;
+    }
+    QCC_ASSERT(retries > 0u);
+    intervalMilliseconds = timeoutMilliseconds / retries;
+    if (intervalMilliseconds < ARDP_MIN_PROBE_INTERVAL) {
+        /*
+         * Apply lower interval limit.
+         */
+        QCC_LogError(ER_WARNING, ("%s: Resulting probe interval too low, applying minimum of %u ms",
+                                  __FUNCTION__, ARDP_MIN_PROBE_INTERVAL));
+        intervalMilliseconds = ARDP_MIN_PROBE_INTERVAL;
+        /*
+         * Timeout = retries * interval.
+         * Usually, we keep the number of retries as configured and
+         * adjust the interval to get the required timeout (see above).
+         * Now the interval has reached rock-bottom and we cannot
+         * manipulate it any more. Hence, we need to adjust the retry count
+         * to obtain the required timeout.
+         */
+        retries = timeoutMilliseconds / ARDP_MIN_PROBE_INTERVAL;
+        /*
+         * Make sure we have at least one attempt.
+         */
+        retries = MAX(1, retries);
+    }
+
+    QCC_DbgTrace(("%s: After adjustment: timeoutMilliseconds=%u, retries=%u, intervalMilliseconds=%u",
+                  __FUNCTION__, timeoutMilliseconds, retries, intervalMilliseconds));
+    return intervalMilliseconds;
+}
+
+void ARDP_UpdateProbeTimeout(ArdpHandle* handle, ArdpConnRecord* conn, uint32_t& timeoutMilliseconds)
+{
+    QCC_DbgTrace(("ARDP_UpdateProbeTimeout(handle=%p, conn=%p, timeout=%u)", handle, conn, timeoutMilliseconds));
+    uint32_t retries = handle->config.keepaliveRetries;
+
+    uint32_t intervalMilliseconds = ARDP_AdjustProbeTimeoutSettings(timeoutMilliseconds, retries);
+    UpdateTimer(handle, conn, &conn->probeTimer, intervalMilliseconds, retries);
+}
+
 static ArdpConnRecord* NewConnRecord(void)
 {
     QCC_DbgTrace(("NewConnRecord()"));
@@ -2999,7 +3054,6 @@ static void ArdpMachine(ArdpHandle* handle, ArdpConnRecord* conn, ArdpSeg* seg, 
                 if (status == ER_WOULDBLOCK) {
                     UpdateTimer(handle, conn, &conn->ackTimer, 0, 1);
                 }
-
             } else if (seg->DLEN) {
                 isDuplicate = (SEQ32_LT(seg->SEQ, conn->rcv.CUR + 1)) ? true : isDuplicate;
                 QCC_DbgHLPrintf(("ArdpMachine(): OPEN: Got %d bytes of Data with SEQ %u, rcv.CUR = %u (%s)).", seg->DLEN, seg->SEQ, conn->rcv.CUR, isDuplicate ? "duplicate" : "new"));
@@ -3358,17 +3412,18 @@ static bool IsDuplicateConnRequest(ArdpHandle* handle, uint16_t foreign, qcc::IP
     return false;
 }
 
-QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool sockWrite, uint32_t* ms)
+QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool sockWrite, bool sockAccepts, uint32_t* ms)
 {
     const size_t bufferSize = 65536;      /* UDP packet can be up to 64K long */
     uint32_t buf32[bufferSize >> 2];
     uint8_t* buf = reinterpret_cast<uint8_t*>(buf32);
     qcc::IPAddress address;               /* The IP address of the foreign side */
-    uint16_t port;                        /* Will be the UDP port of the foreign side */
+    uint16_t port = 0;                    /* Will be the UDP port of the foreign side */
     size_t nbytes;                        /* The number of bytes actually received */
     QStatus status = ER_OK;
 
-    //QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d., socketRead=%d., socketWrite=%d., ms=%p)", handle, sock, sockRead, sockWrite, ms));
+    QCC_DbgTrace(("ARDP_Run(handle=%p, sock=%d, socketRead=%d, socketWrite=%d, ms=%p, sockAccepts: %s)",
+                  handle, sock, sockRead, sockWrite, ms, (sockAccepts ? "y" : "n")));
     if (sockWrite) {
         handle->trafficJam = false;
     }
@@ -3389,7 +3444,7 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                 uint16_t local, foreign;
                 ProtocolDemux(buf, nbytes, &local, &foreign);
                 if (local == 0) {
-                    if (handle->accepting && handle->cb.AcceptCb) {
+                    if (sockAccepts && handle->accepting && handle->cb.AcceptCb) {
                         if (!IsDuplicateConnRequest(handle, foreign, address)) {
                             ArdpConnRecord* conn = NewConnRecord();
                             status = InitConnRecord(handle, conn, sock, address, port, foreign);
@@ -3408,6 +3463,9 @@ QStatus ARDP_Run(ArdpHandle* handle, qcc::SocketFd sock, bool sockRead, bool soc
                            */
 
                     } else {
+                        if (sockAccepts == false) {
+                            QCC_LogError(status, ("Attempt to connect to non-accepting sock %d", sock));
+                        }
                         status = ER_ARDP_INVALID_STATE;
                     }
                     if (status != ER_OK) {

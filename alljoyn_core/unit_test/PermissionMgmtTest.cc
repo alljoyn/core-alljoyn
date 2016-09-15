@@ -191,6 +191,28 @@ QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const q
     return issuerBus.GetPermissionConfigurator().ComputeThumbprintAndSignManifest(subjectCertificate, manifest);
 }
 
+QStatus ajn::PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const qcc::CertificateX509& subjectCertificate, AJ_PCSTR unsignedManifestXml, string& signedManifestXml)
+{
+    CredentialAccessor ca(issuerBus);
+    ECCPrivateKey privateKey;
+    AJ_PSTR signedManifestXmlC = nullptr;
+    QStatus status = ca.GetDSAPrivateKey(privateKey);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    status = SecurityApplicationProxy::SignManifest(subjectCertificate, privateKey, unsignedManifestXml, &signedManifestXmlC);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    signedManifestXml = signedManifestXmlC;
+    SecurityApplicationProxy::DestroySignedManifest(signedManifestXmlC);
+
+    return ER_OK;
+}
+
 QStatus PermissionMgmtTestHelper::SignManifest(BusAttachment& issuerBus, const std::vector<uint8_t>& subjectThumbprint, Manifest& manifest)
 {
     return issuerBus.GetPermissionConfigurator().SignManifest(subjectThumbprint, manifest);

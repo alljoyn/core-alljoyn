@@ -46,7 +46,13 @@ class BundledRouter : public RouterLauncher, public TransportFactoryContainer {
 
   public:
 
-    BundledRouter();
+    /**
+     * Constructor.
+     *
+     * @param[in] configXml XML string with the configuration to be used by the router.
+     *            If the parameter is an empty string, default configuration will be used.
+     */
+    BundledRouter(AJ_PCSTR configXml);
 
     ~BundledRouter();
 
