@@ -561,6 +561,11 @@ QStatus Crypto_ECC::DSAVerify(const uint8_t* buf, uint16_t len, const ECCSignatu
 
 const ECCPublicKey* Crypto_ECC::GetDHPublicKey() const
 {
+    if (eccState->dhPublicKey.empty()) {
+        QCC_ASSERT(!"GetDHPublicKey called without first generating or loading a key");
+        return nullptr;
+    }
+
     return &eccState->dhPublicKey;
 }
 
@@ -571,6 +576,12 @@ void Crypto_ECC::SetDHPublicKey(const ECCPublicKey* pubKey)
 
 const ECCPrivateKey* Crypto_ECC::GetDHPrivateKey() const
 {
+    ECCPrivateKey emptyPrivateKey;
+    if (eccState->dhPrivateKey == emptyPrivateKey) {
+        QCC_ASSERT(!"GetDHPrivateKey called without first generating or loading a key");
+        return nullptr;
+    }
+
     return &eccState->dhPrivateKey;
 }
 
@@ -581,6 +592,11 @@ void Crypto_ECC::SetDHPrivateKey(const ECCPrivateKey* privateKey)
 
 const ECCPublicKey* Crypto_ECC::GetDSAPublicKey() const
 {
+    if (eccState->dsaPublicKey.empty()) {
+        QCC_ASSERT(!"GetDSAPublicKey called without first generating or loading a key");
+        return nullptr;
+    }
+
     return &eccState->dsaPublicKey;
 }
 
@@ -591,6 +607,12 @@ void Crypto_ECC::SetDSAPublicKey(const ECCPublicKey* pubKey)
 
 const ECCPrivateKey* Crypto_ECC::GetDSAPrivateKey() const
 {
+    ECCPrivateKey emptyPrivateKey;
+    if (eccState->dsaPrivateKey == emptyPrivateKey) {
+        QCC_ASSERT(!"GetDSAPrivateKey called without first generating or loading a key");
+        return nullptr;
+    }
+
     return &eccState->dsaPrivateKey;
 }
 
@@ -704,7 +726,7 @@ QStatus ECCPublicKey::Import(const uint8_t* xData, size_t xSize, const uint8_t* 
     binary_to_bigval(yData, &pub.y, ySize);
 
     if (!EC_point_validation(&pub)) {
-        QCC_LogError(ER_CORRUPT_KEYBLOB, ("Failed to import ECCPublicKey."));
+        QCC_LogError(ER_CORRUPT_KEYBLOB, ("Failed to import ECCPublicKey. Public key is not valid."));
         return ER_CORRUPT_KEYBLOB;
     }
 

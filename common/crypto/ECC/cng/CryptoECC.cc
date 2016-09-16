@@ -759,6 +759,7 @@ const ECCPublicKey* Crypto_ECC::GetDHPublicKey() const
 
     if (NULL == eccState->ecdhPublicKey) {
         /* No key set. */
+        QCC_ASSERT(!"GetDHPublicKey called without first generating or loading a key");
         goto Exit;
     }
 
@@ -798,6 +799,7 @@ const ECCPrivateKey* Crypto_ECC::GetDHPrivateKey() const
     QCC_DbgTrace(("Crypto_ECC::GetDHPrivateKey"));
 
     if (NULL == eccState->ecdhPrivateKey) {
+        QCC_ASSERT(!"GetDHPrivateKey called without first generating or loading a key");
         goto Exit;
     }
 
@@ -933,6 +935,7 @@ const ECCPublicKey* Crypto_ECC::GetDSAPublicKey() const
 
     if (NULL == eccState->ecdsaPublicKey) {
         /* No key set. */
+        QCC_ASSERT(!"GetDSAPublicKey called without first generating or loading a key");
         goto Exit;
     }
 
@@ -973,6 +976,7 @@ const ECCPrivateKey* Crypto_ECC::GetDSAPrivateKey() const
     QCC_DbgTrace(("Crypto_ECC::GetDSAPrivateKey"));
 
     if (NULL == eccState->ecdsaPrivateKey) {
+        QCC_ASSERT(!"GetDSAPrivateKey called without first generating or loading a key");
         goto Exit;
     }
 
@@ -1434,6 +1438,7 @@ QStatus ECCPublicKey::Import(const uint8_t* xData, size_t xSize, const uint8_t* 
 
     if (ER_OK != ECCPublicKey_Validate(this)) {
         /* Restore previous values. */
+        QCC_LogError(ER_CORRUPT_KEYBLOB, ("Failed to import ECCPublicKey. Public key is not valid."));
         memcpy(x, xBackup.data(), xSize);
         memcpy(y, yBackup.data(), ySize);
 
