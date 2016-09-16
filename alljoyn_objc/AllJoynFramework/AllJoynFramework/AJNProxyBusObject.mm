@@ -109,6 +109,29 @@ public:
     }
 
     /**
+    * Callback registered with GetPropertyAsync()
+    *
+    * @param status            - ER_OK if the property get request was successful or:
+    *                          - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+    *                          - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+    *                          - Other error status codes indicating the reason the get request failed
+    * @param obj               Remote bus object that was introspected
+    * @param value             If status is ER_OK a MsgArg containing the returned property value
+    * @param errorName         Error name
+    * @param errorDescription  Error description
+    * @param context           Caller provided context passed in to GetPropertyAsync()
+    */
+    void GetPropertyAsyncCallback(QStatus status, ProxyBusObject* obj, const MsgArg& value, const qcc::String& errorName, const qcc::String& errorDescription, void* context)
+    {
+        if ([m_delegate respondsToSelector:@selector(didReceiveValueForPropertyAndErrors:ofObject:completionStatus:context:)]) {
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [theDelegate didReceiveValueAndErrorsForProperty:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&value] ofObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context withErrorName:[NSString stringWithCString:errorName.c_str() encoding:NSUTF8StringEncoding] withErrorDescription:[NSString stringWithCString:errorDescription.c_str() encoding:NSUTF8StringEncoding] ];
+            });
+        }
+    }
+
+    /**
      * Callback registered with GetAllPropertiesAsync()
      *
      * @param status      - ER_OK if the get all properties request was successfull or:
@@ -130,6 +153,29 @@ public:
     }
 
     /**
+     * Callback registered with GetAllPropertiesAsync()
+     *
+     * @param status           - ER_OK if the get all properties request was successful or:
+     *                         - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+     *                         - Other error status codes indicating the reason the get request failed
+     * @param obj              Remote bus object that was introspected
+     * @param[out] values      If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties
+     * @param errorName        Error name
+     * @param errorDescription Error description
+     * @param context          Caller provided context passed in to GetPropertyAsync()
+     */
+    void GetAllPropertiesAsyncCallback(QStatus status, ProxyBusObject* obj, const MsgArg& values, const qcc::String& errorName, const qcc::String& errorDescription, void* context)
+    {
+        if ([m_delegate respondsToSelector:@selector(didReceiveValuesForAllProperties:ofObject:completionStatus:context:)]) {
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [theDelegate didReceiveValuesAndErrorsForAllProperties:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&values] ofObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context withErrorName:[NSString stringWithCString:errorName.c_str() encoding:NSUTF8StringEncoding] withErrorDescription:[NSString stringWithCString:errorDescription.c_str() encoding:NSUTF8StringEncoding] ];
+            });
+        }
+        delete this;
+    }
+
+    /**
      * Callback registered with SetPropertyAsync()
      *
      * @param status    - ER_OK if the property was successfully set or:
@@ -144,7 +190,30 @@ public:
         if ([m_delegate respondsToSelector:@selector(didComleteSetPropertyOnObject:completionStatus:context:)]) {
             __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
             dispatch_async(dispatch_get_main_queue(), ^{
-                [theDelegate didComleteSetPropertyOnObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context];
+                [theDelegate didCompleteSetPropertyOnObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context];
+            });
+        }
+        delete this;
+    }
+
+    /**
+     * Callback registered with SetPropertyAsync()
+     *
+     * @param status    - ER_OK if the property was successfully set or:
+     *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *                  - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     *                  - Other error status codes indicating the reason the set request failed.
+     * @param obj       Remote bus object that was introspected
+     * @param errorName        Error name
+     * @param errorDescription Error description
+     * @param context   Caller provided context passed in to SetPropertyAsync()
+     */
+    void SetPropertyAsyncCallback(QStatus status, ProxyBusObject* obj, const qcc::String& errorName, const qcc::String& errorDescription, void* context)
+    {
+        if ([m_delegate respondsToSelector:@selector(didComleteSetPropertyOnObject:completionStatus:context:)]) {
+            __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
+            dispatch_async(dispatch_get_main_queue(), ^{
+                [theDelegate didCompleteSetPropertyOnObjectAndReturnedErrors:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context withErrorName:[NSString stringWithCString:errorName.c_str() encoding:NSUTF8StringEncoding] withErrorDescription:[NSString stringWithCString:errorDescription.c_str() encoding:NSUTF8StringEncoding]];
             });
         }
         delete this;
@@ -156,7 +225,7 @@ class AJNPropertiesChangedListenerImpl : public ajn::ProxyBusObject::PropertiesC
         AJNPropertiesChangedListenerImpl(id<AJNPropertiesChangedDelegate> delegate): m_delegate(delegate) {}
         void PropertiesChanged(ajn::ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
         {
-        
+
         }
     private:
         __weak id<AJNPropertiesChangedDelegate> m_delegate;
@@ -488,6 +557,22 @@ using namespace ajn;
     return [[AJNMessageArgument alloc] initWithHandle:pArg];
 }
 
+- (QStatus)propertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName withValue:(AJNMessageArgument**)value withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription fetchTimeout:(uint32_t)timeout
+{
+    qcc::String ajErrorName;
+    qcc::String ajErrorDescription;
+    MsgArg *pArg = new MsgArg;
+    QStatus status = self.proxyBusObject->GetProperty([interfaceName UTF8String], [propertyName UTF8String], *pArg, ajErrorName, ajErrorDescription, timeout);
+
+    *value = [[AJNMessageArgument alloc] initWithHandle:pArg];
+
+    *errorName = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+    *errorDescription = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+
+    return status;
+}
+
+
 - (QStatus)propertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout
 {
     QStatus status;
@@ -499,6 +584,18 @@ using namespace ajn;
     return status;
 }
 
+- (QStatus)propertyWithNameAndErrors:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(void*)context timeout:(uint32_t)timeout
+{
+    QStatus status;
+    AJNProxyBusObjectAsyncCallbackImpl *callbackImpl = new AJNProxyBusObjectAsyncCallbackImpl(delegate);
+    status = self.proxyBusObject->GetPropertyAsync([interfaceName UTF8String], [propertyName UTF8String], callbackImpl, (ProxyBusObject::Listener::GetPropertyAsyncCB)(&AJNProxyBusObjectAsyncCallbackImpl::GetPropertyAsyncCallback), context, timeout);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNProxyBusObject::propertyWithName:forInterfaceName:completionDelegate:context:timeout: failed. %@.", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+
 - (QStatus)propertyValues:(AJNMessageArgument**)values ofInterfaceWithName:(NSString*)interfaceName
 {
     MsgArg *pArg = new MsgArg;
@@ -506,6 +603,22 @@ using namespace ajn;
     *values = [[AJNMessageArgument alloc] initWithHandle:pArg];
     return status;
 }
+
+- (QStatus)propertyValues:(AJNMessageArgument **)values ofInterfaceWithName:(NSString*)interfaceName withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription timeout:(uint32_t)timeout
+{
+    qcc::String ajErrorName;
+    qcc::String ajErrorDescription;
+    MsgArg *pArg = new MsgArg;
+
+    QStatus status = self.proxyBusObject->GetAllProperties([interfaceName UTF8String], *pArg, ajErrorName, ajErrorDescription);
+
+    *values = [[AJNMessageArgument alloc] initWithHandle:pArg];
+    *errorName = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+    *errorDescription = [NSString stringWithCString:ajErrorDescription.c_str() encoding:NSUTF8StringEncoding];
+
+    return status;
+}
+
 
 - (QStatus)propertyValuesForInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout
 {
@@ -518,6 +631,18 @@ using namespace ajn;
     return status;
 }
 
+- (QStatus)propertyValuesAndErrorsForInterfaceWithName:(NSString *)interfaceName completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout
+{
+    QStatus status;
+    AJNProxyBusObjectAsyncCallbackImpl *callbackImpl = new AJNProxyBusObjectAsyncCallbackImpl(delegate);
+    status = self.proxyBusObject->GetAllPropertiesAsync([interfaceName UTF8String], callbackImpl, (ProxyBusObject::Listener::GetAllPropertiesAsyncCB)(&AJNProxyBusObjectAsyncCallbackImpl::GetAllPropertiesAsyncCallback), context, timeout);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNProxyBusObject::propertyValuesForInterfaceWithName:completionDelegate:context:timeout: failed. %@.", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
+}
+
+
 - (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toValue:(AJNMessageArgument*)value
 {
     return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg);
@@ -526,6 +651,19 @@ using namespace ajn;
 - (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toValue:(AJNMessageArgument*)value setTimeout:(uint32_t)timeout
 {
     return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg, timeout);
+}
+
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toValue:(AJNMessageArgument*)value withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription setTimeout:(uint32_t)timeout
+{
+    qcc::String ajErrorName;
+    qcc::String ajErrorDescription;
+    QStatus status = self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg, ajErrorName, ajErrorDescription, timeout);
+
+    *errorName = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+    *errorDescription = [NSString stringWithCString:ajErrorDescription.c_str() encoding:NSUTF8StringEncoding];
+
+    return status;
+
 }
 
 - (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout
@@ -539,14 +677,67 @@ using namespace ajn;
     return status;
 }
 
-- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toIntValue:(NSInteger)value
+- (QStatus)setPropertyWithNameAndReturnErrors:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toValue:(AJNMessageArgument *)value completionDelegate:(id<AJNProxyBusObjectDelegate>)delegate context:(AJNHandle)context timeout:(uint32_t)timeout
 {
-    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], (int32_t)value);
+    QStatus status;
+    AJNProxyBusObjectAsyncCallbackImpl *callbackImpl = new AJNProxyBusObjectAsyncCallbackImpl(delegate);
+    status = self.proxyBusObject->SetPropertyAsync([interfaceName UTF8String], [propertyName UTF8String], *value.msgArg, callbackImpl, (ProxyBusObject::Listener::SetPropertyAsyncCB)(&AJNProxyBusObjectAsyncCallbackImpl::SetPropertyAsyncCallback), context, timeout);
+    if (status != ER_OK) {
+        NSLog(@"ERROR: AJNProxyBusObject::propertyValuesForInterfaceWithName:completionDelegate:context:timeout: failed. %@.", [AJNStatus descriptionForStatusCode:status]);
+    }
+    return status;
 }
+
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toUIntValue:(uint32_t)value
+{
+    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], value);
+}
+
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString *)interfaceName toUIntValue:(uint32_t)value witErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription
+{
+    qcc::String ajErrorName;
+    qcc::String ajErrorDescription;
+    QStatus status = self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], value, ajErrorName, ajErrorDescription);
+
+    *errorName = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+    *errorDescription = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+
+    return status;
+}
+
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toIntValue:(int32_t)value
+{
+    return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], value);
+}
+
+- (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString *)interfaceName toIntValue:(int32_t)value witErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription
+{
+    qcc::String ajErrorName;
+    qcc::String ajErrorDescription;
+    QStatus status = self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], value, ajErrorName, ajErrorDescription);
+
+    *errorName = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+    *errorDescription = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+
+    return status;
+}
+
 
 - (QStatus)setPropertyWithName:(NSString*)propertyName forInterfaceWithName:(NSString*)interfaceName toStringValue:(NSString*)value
 {
     return self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], [value UTF8String]);
+}
+
+- (QStatus)setPropertyWithName:(NSString *)propertyName forInterfaceWithName:(NSString *)interfaceName toStringValue:(NSString *)value withErrorName:(NSString**)errorName withErrorDescription:(NSString**)errorDescription
+{
+    qcc::String ajErrorName;
+    qcc::String ajErrorDescription;
+    QStatus status = self.proxyBusObject->SetProperty([interfaceName UTF8String], [propertyName UTF8String], [value UTF8String], ajErrorName, ajErrorDescription);
+
+    *errorName = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+    *errorDescription = [NSString stringWithCString:ajErrorName.c_str() encoding:NSUTF8StringEncoding];
+
+    return status;
 }
 
 - (QStatus)registerPropertiesChangedListener:(NSString*)iface properties:(NSArray*)properties delegate:(id<AJNPropertiesChangedDelegate>)listener context:(AJNHandle*)context
