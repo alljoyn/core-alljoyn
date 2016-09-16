@@ -574,7 +574,13 @@ class Crypto_ECC {
 
     /**
      * Retrieve the DH public key
-     * @return  the DH public key.  It's a pointer to an internal buffer. Its lifetime is the same as the object's lifetime.
+     *
+     * Caller must first call GenerateDHKeyPair to generate a new key pair or SetDHPublicKey to load an existing
+     * public key before calling GetDHPublicKey.
+     *
+     * @return
+     *      nullptr if the public key has not been generated or loaded
+     *      Otherwise, pointer to the DH public key. Pointer is to a buffer with the same lifetime as this Crypto_ECC object.
      */
     const ECCPublicKey* GetDHPublicKey() const;
 
@@ -586,7 +592,13 @@ class Crypto_ECC {
 
     /**
      * Retrieve the DH private key
-     * @return  the DH private key.  Same lifetime as the object.
+     *
+     * Caller must first call GenerateDHKeyPair to generate a new key pair or SetDHPrivateKey to load an existing
+     * private key before calling GetDHPrivateKey.
+     *
+     * @return
+     *      nullptr if the private key has not been generated or loaded
+     *      Otherwise, pointer to the DH private key. Pointer is to a buffer with the same lifetime as this Crypto_ECC object.
      */
     const ECCPrivateKey* GetDHPrivateKey() const;
 
@@ -598,7 +610,13 @@ class Crypto_ECC {
 
     /**
      * Retrieve the DSA public key
-     * @return  the DSA public key.  Same lifetime as the object.
+     *
+     * Caller must first call GenerateDSAKeyPair to generate a new key pair or SetDSAPublicKey to load an existing
+     * public key before calling GetDSAPublicKey.
+     *
+     * @return
+     *      nullptr if the public key has not been generated or loaded
+     *      Otherwise, pointer to the DSA public key. Pointer is for a buffer with the same lifetime as this Crypto_ECC object.
      */
     const ECCPublicKey* GetDSAPublicKey() const;
 
@@ -610,7 +628,13 @@ class Crypto_ECC {
 
     /**
      * Retrieve the DSA private key
-     * @return  the DSA private key.  Same lifetime as the object.
+     *
+     * Caller must first call GenerateDSAKeyPair to generate a new key pair or SetDSAPrivateKey to load an existing
+     * private key before calling GetDSAPrivateKey.
+     *
+     * @return
+     *      nullptr if the private key has not been generated or loaded
+     *      Otherwise, pointer to the DSA private key. Pointer is for a buffer with the same lifetime as this Crypto_ECC object.
      */
     const ECCPrivateKey* GetDSAPrivateKey() const;
 
