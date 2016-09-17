@@ -772,6 +772,7 @@ jclass CLS_ECCPublicKey = NULL;
 jclass CLS_ECCPrivateKey = NULL;
 jclass CLS_ECCSignature = NULL;
 jclass CLS_JAVA_UTIL_UUID = NULL;
+jclass CLS_PermissionConfigurator = NULL;
 jclass CLS_PermissionConfiguratorApplicationState = NULL;
 jclass CLS_CertificateX509CertificateType = NULL;
 jclass CLS_CertificateX509 = NULL;
@@ -781,6 +782,7 @@ jclass CLS_KeyInfoNISTP256 = NULL;
 
 jmethodID MID_ECCPublicKey_cnstrctr = NULL;
 jmethodID MID_ECCPrivateKey_cnstrctr = NULL;
+jmethodID MID_PermissionConfigurator_cnstrctr = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
@@ -1091,6 +1093,17 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_JAVA_UTIL_UUID = (jclass)env->NewGlobalRef(clazz);
+
+        clazz = env->FindClass("org/alljoyn/bus/PermissionConfigurator");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_PermissionConfigurator = (jclass)env->NewGlobalRef(clazz);
+
+        MID_PermissionConfigurator_cnstrctr = env->GetMethodID(CLS_PermissionConfigurator, "<init>", "()V");
+        if (!MID_PermissionConfigurator_cnstrctr) {
+            return JNI_ERR;
+        }
 
         clazz = env->FindClass("org/alljoyn/bus/PermissionConfigurator$ApplicationState");
         if (!clazz) {
@@ -9938,6 +9951,38 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_enableConcurrentCallba
     busPtr->EnableConcurrentCallbacks();
 
     return;
+}
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    getPermissionConfigurator
+ * Signature: ()Lorg/alljoyn/bus/PermissionConfigurator;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getPermissionConfigurator(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return NULL;
+    }
+    QCC_ASSERT(busPtr);
+
+    jobject retObj = env->NewObject(CLS_PermissionConfigurator, MID_PermissionConfigurator_cnstrctr);
+
+    if (!retObj) {
+        return NULL;
+    }
+
+    SetHandle(retObj, &(busPtr->GetPermissionConfigurator()));
+
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return NULL;
+    }
+
+    return retObj;
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslator(
