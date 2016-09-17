@@ -1905,6 +1905,13 @@ public class BusAttachment {
     public native void enableConcurrentCallbacks();
 
     /**
+     * Get the permission configurator for the bus attachment.
+     *
+     * @return the permission configurator
+     */
+    public native PermissionConfigurator getPermissionConfigurator();
+
+    /**
      * The maximum length of an AllJoyn packet.
      *
      * AllJoyn limits the total size of a packetized Message to 2^17 bytes.
