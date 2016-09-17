@@ -18,98 +18,15 @@
 #include <jni.h>
 #include <qcc/Debug.h>
 #include <alljoyn/PermissionConfigurator.h>
+#include <algorithm>
 
 #include "alljoyn_jni_helper.h"
-#include "JBusAttachment.h"
 #include "alljoyn_java.h"
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
 using namespace ajn;
 using namespace qcc;
-
-class JBusAttachment;
-
-/*
- * Class:     org_alljoyn_bus_PermissionConfigurator
- * Method:    create
- * Signature: (Lorg/alljoyn/bus/BusAttachment;)V
- */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_PermissionConfigurator_create(JNIEnv* jenv, jobject thiz, jobject jbus)
-{
-    QCC_DbgTrace(("%s", __FUNCTION__));
-
-    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
-    if (jenv->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception or NULL bus pointer", __FUNCTION__));
-        return;
-    }
-
-    if (busPtr == NULL) {
-        QCC_LogError(ER_FAIL, ("%s: NULL bus pointer", __FUNCTION__));
-        Throw("java/lang/NullPointerException", "NULL bus pointer");
-        return;
-    }
-
-    QCC_DbgPrintf(("%s: Refcount on busPtr is %d", __FUNCTION__, busPtr->GetRef()));
-
-    /*
-     * Create a new C++ backing object for the Java PermissionConfigurator.
-     */
-    PermissionConfigurator* pconfPtr = new PermissionConfigurator(*busPtr);
-    if (!pconfPtr) {
-        Throw("java/lang/OutOfMemoryError", NULL);
-        return;
-    }
-
-    SetHandle(thiz, pconfPtr);
-
-    if (jenv->ExceptionCheck()) {
-        busPtr->DecRef();
-        delete pconfPtr;
-        pconfPtr = NULL;
-    }
-}
-
-/*
- * Class:     org_alljoyn_bus_PermissionConfigurator
- * Method:    destroy
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_PermissionConfigurator_destroy(JNIEnv* jenv, jobject thiz, jobject jbus)
-{
-    QCC_DbgTrace(("%s", __FUNCTION__));
-
-    PermissionConfigurator* pconfPtr = GetHandle<PermissionConfigurator*>(thiz);
-    if (jenv->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-        return;
-    }
-
-    if (pconfPtr == NULL) {
-        QCC_DbgPrintf(("%s: Already destroyed. Returning.", __FUNCTION__));
-        return;
-    }
-
-    delete pconfPtr;
-    pconfPtr = NULL;
-
-    SetHandle(thiz, NULL);
-
-    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
-    if (jenv->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-        return;
-    }
-
-    if (busPtr == NULL) {
-        QCC_DbgPrintf(("%s: Already destroyed. Returning.", __FUNCTION__));
-        return;
-    }
-
-    // Decrement the ref pointer so the BusAttachment can be released.
-    busPtr->DecRef();
-}
 
 /*
  * Class:     org_alljoyn_bus_PermissionConfigurator
