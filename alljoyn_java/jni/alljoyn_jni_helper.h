@@ -31,6 +31,7 @@ extern jclass CLS_JAVA_UTIL_UUID;
 extern jclass CLS_ErrorReplyBusException;
 extern jclass CLS_BusException;
 extern jclass CLS_AboutDataListener;
+extern jclass CLS_PermissionConfigurator;
 extern jclass CLS_PermissionConfiguratorApplicationState;
 extern jclass CLS_CertificateX509CertificateType;
 extern jclass CLS_CertificateX509;
@@ -38,6 +39,7 @@ extern jclass CLS_CertificateId;
 
 extern jmethodID MID_ECCPublicKey_cnstrctr;
 extern jmethodID MID_ECCPrivateKey_cnstrctr;
+extern jmethodID MID_PermissionConfigurator_cnstrctr;
 
 extern jfieldID FID_ECCPrivateKey_d;
 extern jfieldID FID_ECCPublicKey_x;
