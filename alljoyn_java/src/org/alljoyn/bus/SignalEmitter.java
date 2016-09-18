@@ -20,8 +20,14 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
+import java.util.List;
 
 import org.alljoyn.bus.ifaces.Properties;
+import org.alljoyn.bus.defs.BusObjectInfo;
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.SignalDef;
+import org.alljoyn.bus.defs.ArgDef;
+import org.alljoyn.bus.GenericInterface;
 
 /**
  * A helper proxy used by BusObjects to send signals.  A SignalEmitter
@@ -57,7 +63,8 @@ public class SignalEmitter {
     }
 
     /**
-     * Constructs a SignalEmitter.
+     * Constructs a SignalEmitter. If using a dynamic bus object, the emitter
+     * will use the GenericInterface.class to relay supported bus signals.
      *
      * @param source the source object of any signals sent from this emitter
      * @param destination well-known or unique name of destination for signal
@@ -75,10 +82,32 @@ public class SignalEmitter {
                 ? this.flags | GLOBAL_BROADCAST
                 : this.flags & ~GLOBAL_BROADCAST;
 
-        Class<?>[] interfaces = source.getClass().getInterfaces();
-        Class<?>[] interfacesNew = Arrays.copyOf(interfaces, interfaces.length + 1);
-        interfacesNew[interfaces.length] = Properties.class;
-        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(), interfacesNew, new Emitter());
+        Class<?>[] interfaces;
+        Class<?>[] interfacesNew;
+
+        // Check if using dynamic interface definitions (versus static AllJoyn class annotations)
+        InvocationHandler handler;
+        if (source instanceof DynamicBusObject) {
+            interfacesNew = new Class<?>[] {GenericInterface.class};
+
+            // Add support for Properties.PropertiesChanged() signal
+            List<InterfaceDef> ifaceDefs = ((DynamicBusObject)source).getInterfaces();
+            ifaceDefs.add( buildPropertiesSignalInterface() );
+
+            // Create emit handler that relies on dynamic interface definitions
+            handler = new DynamicEmitter(ifaceDefs);
+        } else {
+            interfaces = source.getClass().getInterfaces();
+            interfacesNew = Arrays.copyOf(interfaces, interfaces.length + 1);
+
+            // Add support for Properties.PropertiesChanged() signal
+            interfacesNew[interfaces.length] = Properties.class;
+
+            // Create emit handler that relies on AllJoyn class annotations
+            handler = new Emitter();
+        }
+
+        proxy = Proxy.newProxyInstance(source.getClass().getClassLoader(), interfacesNew, handler);
         msgContext = new MessageContext();
     }
 
@@ -112,6 +141,20 @@ public class SignalEmitter {
      */
     public SignalEmitter(BusObject source) {
         this(source, null, BusAttachment.SESSION_ID_ANY, GlobalBroadcast.Off);
+    }
+
+    /** @returns interface definition containing the 'PropertiesChanged' signal of the Properties bus interface. */
+    private InterfaceDef buildPropertiesSignalInterface() {
+        String interfaceName = InterfaceDescription.getName(Properties.class);
+        InterfaceDef interfaceDef = new InterfaceDef(interfaceName);
+
+        SignalDef signalDef = new SignalDef("PropertiesChanged", "sa{sv}as", interfaceName);
+        signalDef.addArg( new ArgDef("iface", "s") );
+        signalDef.addArg( new ArgDef("changedProps", "a{sv}") );
+        signalDef.addArg( new ArgDef("invalidatedProps", "as") );
+
+        interfaceDef.addSignal( signalDef );
+        return interfaceDef;
     }
 
     /** Sends the signal. */
@@ -220,4 +263,80 @@ public class SignalEmitter {
         T p = (T) proxy;
         return p;
     }
+
+
+    /**
+     * Emits bus signals that are based on dynamic SignalDef definitions.
+     *
+     * The handler receives an invoke request of GenericInterface.signal(interfaceName, signalName, args...).
+     * The {interfaceName, signalName, args...} arguments represent the actual bus signal to be emitted.
+     *
+     * The DynamicEmitter is initialized with a list of permitted InterfaceDef (and underlying SignalDef
+     * definitions). For a requested bus signal to emitted, the corresponding dynamic SignalDef must be
+     * present in this list.
+     */
+    private class DynamicEmitter implements InvocationHandler {
+
+        final private List<InterfaceDef> interfaceDefs;
+
+        /**
+         * Constructor.
+         *
+         * @param interfaceDefs the definitions that describe the interfaces whose signals can be sent.
+         * @throws IllegalArgumentException invalid argument was specified.
+         */
+        DynamicEmitter(List<InterfaceDef> interfaceDefs) {
+            if (interfaceDefs == null) {
+                throw new IllegalArgumentException("Null interfaceDefs");
+            }
+            this.interfaceDefs = interfaceDefs;
+        }
+
+        /**
+         * Send a bus signal based on the specified args and their corresponding SignalDef definition.
+         *
+         * @param proxy The proxy being called (instance of GenericInterface).
+         * @param method The proxy Method being called. Should be GenericInterface.signal(...)
+         * @param args an array containing {interfaceName, signalName, args...}, that represent the
+         *             actual bus signal to be emitted. Must correspond to a known SignalDef.
+         * @return null (bus signals are void operations)
+         * @throws IllegalArgumentException invalid proxy Method was specified.
+         * @throws BusException if the native call to signal throws one.
+         */
+        public Object invoke(Object proxy, Method method, Object[] args) throws BusException {
+            // Check that the called method is one of the accepted GenericInterface operations
+            if (!method.getDeclaringClass().equals(GenericInterface.class) || !method.getName().equals("signal")) {
+                throw new IllegalArgumentException(
+                        "Invalid emitter method. This signal emitter only supports GenericInterface signal calls.");
+            }
+
+            String interfaceName = (String)getArg(args, 0, null);
+            String signalName = (String)getArg(args, 1, null);
+
+            // Check that the requested bus signal corresponds to a known SignalDef, and if so emit it
+            SignalDef signalDef = BusObjectInfo.getDefinition(interfaceDefs,
+                    interfaceName, signalName, SignalDef.class);
+            if (signalDef != null) {
+                Object[] signalArgs = (Object[])getArg(args, 2, new Object[]{});
+                signal(source,
+                       destination,
+                       sessionId,
+                       signalDef.getInterfaceName(),
+                       signalDef.getName(),
+                       signalDef.getSignature(),
+                       signalArgs,
+                       timeToLive,
+                       flags,
+                       msgContext);
+            }
+            return null;
+        }
+
+        /** Return the indexed arg. If invalid index, return the given default value. */
+        private Object getArg(Object[] args, int index, Object defaultValue) {
+            if (index < 0) return defaultValue;
+            return (args != null && args.length >= index+1) ? args[index] : defaultValue;
+        }
+    }
+
 }
