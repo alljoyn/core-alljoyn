@@ -45,6 +45,7 @@
 #include <BusInternal.h>
 
 #include "JBusAttachment.h"
+#include "JPermissionConfigurationListener.h"
 #include "alljoyn_java.h"
 #include "alljoyn_jni_helper.h"
 
@@ -762,7 +763,7 @@ static jclass CLS_BusObjectListener = NULL;
 static jclass CLS_MessageContext = NULL;
 static jclass CLS_MsgArg = NULL;
 static jclass CLS_Signature = NULL;
-static jclass CLS_Status = NULL;
+jclass CLS_Status = NULL;
 static jclass CLS_Variant = NULL;
 static jclass CLS_BusAttachment = NULL;
 static jclass CLS_SessionOpts = NULL;
@@ -4082,7 +4083,7 @@ void JBusAttachment::Disconnect()
     gBusObjectMapLock.Unlock();
 }
 
-QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared)
+QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared, JPermissionConfigurationListener jpcl)
 {
     QCC_DbgPrintf(("JBusAttachment::EnablePeerSecurity()"));
 
@@ -4169,7 +4170,7 @@ QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject j
     QCC_DbgPrintf(("JBusAttachment::EnablePeerSecurity(): Releasing Bus Attachment common lock"));
     baCommonLock.Unlock();
 
-    QStatus status = BusAttachment::EnablePeerSecurity(authMechanisms, authListener, keyStoreFileName, isShared);
+    QStatus status = BusAttachment::EnablePeerSecurity(authMechanisms, authListener, keyStoreFileName, isShared, &jpcl);
 
     /*
      * We're back, and depending on what has happened out from under us we
@@ -8053,8 +8054,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_nativeDisconnect(JNIEn
     busPtr->Disconnect();
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(JNIEnv* env, jobject thiz, jstring jauthMechanisms, jobject jauthListener,
-                                                                                jstring jkeyStoreFileName, jboolean isShared)
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(JNIEnv* env, jobject thiz, jstring jauthMechanisms, jobject jauthListener, jstring jkeyStoreFileName, jboolean isShared, jobject jpclistener)
 {
     QCC_DbgPrintf(("BusAttachment_enablePeerSecurity()"));
 
@@ -8066,6 +8066,12 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
     JString keyStoreFileName(jkeyStoreFileName);
     if (env->ExceptionCheck()) {
         return NULL;
+    }
+
+    JPermissionConfigurationListener permListener(jpclistener);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        permListener = NULL;
     }
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
@@ -8085,7 +8091,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
 
     QCC_DbgPrintf(("BusAttachment_enablePeerSecurity(): Refcount on busPtr is %d", busPtr->GetRef()));
 
-    QStatus status = busPtr->EnablePeerSecurity(authMechanisms.c_str(), jauthListener, keyStoreFileName.c_str(), isShared);
+    QStatus status = busPtr->EnablePeerSecurity(authMechanisms.c_str(), jauthListener, keyStoreFileName.c_str(), isShared, permListener);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_enablePeerSecurity(): Exception"));
         return NULL;
