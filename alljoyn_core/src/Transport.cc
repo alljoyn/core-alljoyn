@@ -22,6 +22,7 @@
  ******************************************************************************/
 #include <qcc/platform.h>
 #include <qcc/String.h>
+#include <qcc/Debug.h>
 #include "Transport.h"
 
 #define QCC_MODULE "ALLJOYN"
@@ -33,29 +34,29 @@ namespace ajn {
 
 QStatus Transport::ParseArguments(const char* transportName,
                                   const char* args,
-                                  map<qcc::String, qcc::String>& argMap)
+                                  map<String, String>& argMap)
 {
-    qcc::String tpNameStr(transportName);
+    String tpNameStr(transportName);
     tpNameStr.push_back(':');
-    qcc::String argStr(args);
+    String argStr(args);
 
     /* Skip to the first param */
     size_t pos = argStr.find(tpNameStr);
 
-    if (qcc::String::npos == pos) {
+    if (String::npos == pos) {
         return ER_BUS_BAD_TRANSPORT_ARGS;
     } else {
         pos += tpNameStr.size();
     }
 
     size_t endPos = 0;
-    while (qcc::String::npos != endPos) {
+    while (String::npos != endPos) {
         size_t eqPos = argStr.find_first_of('=', pos);
-        endPos = (eqPos == qcc::String::npos) ? qcc::String::npos : argStr.find_first_of(",;", eqPos);
-        if (qcc::String::npos != eqPos) {
-            qcc::String keyStr = argStr.substr(pos, eqPos - pos);
-            qcc::String valStr;
-            if (qcc::String::npos == endPos) {
+        endPos = (eqPos == String::npos) ? String::npos : argStr.find_first_of(",;", eqPos);
+        if (String::npos != eqPos) {
+            String keyStr = argStr.substr(pos, eqPos - pos);
+            String valStr;
+            if (String::npos == endPos) {
                 if ((eqPos + 1) < argStr.size()) {
                     valStr = argStr.substr(eqPos + 1);
                 }
@@ -63,6 +64,10 @@ QStatus Transport::ParseArguments(const char* transportName,
                 if (endPos > (eqPos + 1)) {
                     valStr = argStr.substr(eqPos + 1, endPos - eqPos - 1);
                 }
+            }
+            if (argMap.count(keyStr) > 0) {
+                QCC_LogError(ER_WARNING, ("Transport::ParseArguments(): argMap[%s] already exists, changing old value '%s' to new value '%s'",
+                                          keyStr.c_str(), argMap[keyStr].c_str(), valStr.c_str()));
             }
             argMap[keyStr] = valStr;
         }
