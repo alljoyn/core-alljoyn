@@ -22,6 +22,7 @@
 #include <alljoyn/MsgArg.h>
 
 extern jclass CLS_BusException;
+extern jclass CLS_Status;
 
 extern jclass CLS_ECCPublicKey;
 extern jclass CLS_ECCPrivateKey;

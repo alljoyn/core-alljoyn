@@ -203,15 +203,20 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getSigning
         return NULL;
     }
 
-    KeyInfoECC keyInfoECC;
-    QStatus status = pconfPtr->GetSigningPublicKey(keyInfoECC);
+    KeyInfoNISTP256 keyInfo;
+    QStatus status = pconfPtr->GetSigningPublicKey(keyInfo);
 
     if (status != ER_OK) {
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return NULL;
     }
 
-    const ECCPublicKey* retKey = keyInfoECC.GetPublicKey();
+    const ECCPublicKey* retKey = keyInfo.GetPublicKey();
+    if (retKey == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: retKey is null", __FUNCTION__));
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
+        return NULL;
+    }
 
     jmethodID mid = jenv->GetMethodID(CLS_KeyInfoNISTP256, "<init>", "()V");
     if (!mid) {
@@ -232,7 +237,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getSigning
 
     jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, midC, arrayX.move(), arrayY.move());
 
-    jmethodID midSet = jenv->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)");
+    jmethodID midSet = jenv->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)V");
     if (!midSet) {
         QCC_LogError(ER_FAIL, ("%s: Can't find setPublicKey", __FUNCTION__));
         return NULL;

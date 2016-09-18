@@ -112,7 +112,7 @@ public class PermissionConfigurator {
      * @return keyInfo the public key info
      * @throws BusException an error code.
      */
-    public native KeyInfoECC getSigningPublicKey() throws BusException;
+    public native KeyInfoNISTP256 getSigningPublicKey() throws BusException;
 
     /**
      * Sign the X509 certificate using the signing key
