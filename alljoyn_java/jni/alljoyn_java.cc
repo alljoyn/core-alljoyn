@@ -46,6 +46,7 @@
 
 #include "JBusAttachment.h"
 #include "JPermissionConfigurationListener.h"
+#include "JApplicationStateListener.h"
 #include "alljoyn_java.h"
 #include "alljoyn_jni_helper.h"
 
@@ -784,6 +785,8 @@ jclass CLS_KeyInfoNISTP256 = NULL;
 jmethodID MID_ECCPublicKey_cnstrctr = NULL;
 jmethodID MID_ECCPrivateKey_cnstrctr = NULL;
 jmethodID MID_PermissionConfigurator_cnstrctr = NULL;
+jmethodID MID_KeyInfoNISTP256_cnstrctr = NULL;
+jmethodID MID_KeyInfoNISTP256_setPublicKey = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
@@ -953,6 +956,16 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_KeyInfoNISTP256 = (jclass)env->NewGlobalRef(clazz);
+
+        MID_KeyInfoNISTP256_cnstrctr = env->GetMethodID(CLS_KeyInfoNISTP256, "<init>", "()V");
+        if (!MID_KeyInfoNISTP256_cnstrctr) {
+            return JNI_ERR;
+        }
+
+        MID_KeyInfoNISTP256_setPublicKey = env->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)V");
+        if (!MID_KeyInfoNISTP256_setPublicKey) {
+            return JNI_ERR;
+        }
 
         clazz = env->FindClass("org/alljoyn/bus/IntrospectionListener");
         if (!clazz) {
@@ -9851,6 +9864,52 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getPermissionConfig
     }
 
     return retObj;
+}
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    registerApplicationStateListener
+ * Signature: (Lorg/alljoyn/bus/ApplicationStateListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerApplicationStateListener(JNIEnv* env, jobject thiz, jobject jappstatelistener)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return JStatus(ER_FAIL);
+    }
+    QCC_ASSERT(busPtr);
+
+    JApplicationStateListener jASListener(jappstatelistener);
+
+    QStatus status = busPtr->RegisterApplicationStateListener(jASListener);
+
+    return JStatus(status);
+}
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    unregisterApplicationStateListener
+ * Signature: (Lorg/alljoyn/bus/ApplicationStateListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterApplicationStateListener(JNIEnv* env, jobject thiz, jobject jappstatelistener)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return JStatus(ER_FAIL);
+    }
+    QCC_ASSERT(busPtr);
+
+    JApplicationStateListener jASListener(jappstatelistener);
+
+    QStatus status = busPtr->UnregisterApplicationStateListener(jASListener);
+
+    return JStatus(status);
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslator(
