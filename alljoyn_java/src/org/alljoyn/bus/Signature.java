@@ -22,6 +22,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.GenericArrayType;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -36,6 +37,17 @@ final class Signature {
                                                             BusException {
         Class<?> type = struct.getClass();
         Field[] fields = type.getFields();
+
+        /*
+         * If the given struct is an instance of Object[], there is no implementation class from
+         * which Position annotations can be obtained. Therefore, assume field positions are the
+         * same as element-positions in the array, and return a shallow copy of the struct array.
+         */
+        if (type.isInstance(new Object[]{})) {
+            Object[] objArray = (Object[])struct;
+            return Arrays.copyOf(objArray, objArray.length);
+        }
+
         Object[] args = new Object[fields.length];
         for (Field field : fields) {
             Position position = field.getAnnotation(Position.class);
