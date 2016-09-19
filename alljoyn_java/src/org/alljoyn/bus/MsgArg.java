@@ -23,6 +23,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
+import java.util.AbstractMap;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -54,6 +55,7 @@ final class MsgArg {
     private static final int ALLJOYN_VARIANT          = 'v';
     private static final int ALLJOYN_INT64            = 'x';
     private static final int ALLJOYN_BYTE             = 'y';
+    private static final int ALLJOYN_HANDLE           = 'h';
 
     private static final int ALLJOYN_STRUCT_OPEN      = '(';
     private static final int ALLJOYN_STRUCT_CLOSE     = ')';
@@ -76,7 +78,7 @@ final class MsgArg {
      * Marshals an {@code int} value into a Java {@code Enum}.
      *
      * @param type the type of the {@code Enum}
-     * @param int the ordinal value of the enum
+     * @param value the ordinal value of the enum
      * @return an {@code Enum} object of type {@code type} if the marshalling
      *         succeeds.  Otherwise {@code null} is returned.
      * @throws BusException if {@code type} is an {@code Enum}, but the enum
@@ -224,11 +226,18 @@ final class MsgArg {
         if (msgArg == 0) {
             throw new MarshalBusException("cannot marshal invalid MsgArg into " + type);
         }
- 
+
         try {
             Object object;
             switch (getTypeId(msgArg)) {
             case ALLJOYN_ARRAY:
+                /*
+                 * If the type parameter is an instance of Object (i.e. generic/unspecified),
+                 * then recompute the actual type based on the msgArg signature.
+                 */
+                if (type == Object.class) {
+                    type = toType(getSignature(new long[]{msgArg}));
+                }
                 if (getElemSig(msgArg).charAt(0) == ALLJOYN_DICT_ENTRY_OPEN) {
                     Type rawType = ((ParameterizedType) type).getRawType();
                     rawType = (rawType == Map.class) ? HashMap.class : rawType;
@@ -323,20 +332,41 @@ final class MsgArg {
             case ALLJOYN_STRING:
                 return getString(msgArg);
             case ALLJOYN_STRUCT:
-                Type[] types = Signature.structTypes((Class<?>) type);
-                if (types.length != getNumMembers(msgArg)) {
-                    throw new MarshalBusException(
-                        "cannot marshal '" + getSignature(new long[] { msgArg }) + "' with "
-                        + getNumMembers(msgArg) + " members into " + type + " with "
-                        + types.length + " fields");
+                /*
+                 * If the type parameter is an instance of Object or Object[] (i.e. generic/unspecified),
+                 * there is no implementation class on which to do reflection, so Type[] and Field[]
+                 * values can't be obtained. Instead, determine structure based on the msgArg signature.
+                 */
+                if (type == Object.class || type == Object[].class) {
+                    String signature = getSignature(new long[] {msgArg});
+                    String[] sigs = Signature.split(signature.substring(1,signature.length()-1));
+                    if (sigs.length != getNumMembers(msgArg)) {
+                        throw new MarshalBusException(
+                            "cannot marshal '" + signature + "' with "
+                            + getNumMembers(msgArg) + " members into " + type + " with "
+                            + sigs.length + " fields");
+                    }
+                    Object[] array = (Object[]) Array.newInstance(Object.class, sigs.length);
+                    for (int i = 0; i < getNumMembers(msgArg); ++i) {
+                        array[i] = unmarshal(getMember(msgArg, i), toType(sigs[i]));
+                    }
+                    return array; // returned structure represented as a generic Object[]
+                } else {
+                    Type[] types = Signature.structTypes((Class<?>) type);
+                    if (types.length != getNumMembers(msgArg)) {
+                        throw new MarshalBusException(
+                            "cannot marshal '" + getSignature(new long[] { msgArg }) + "' with "
+                            + getNumMembers(msgArg) + " members into " + type + " with "
+                            + types.length + " fields");
+                    }
+                    object = ((Class<?>) type).newInstance();
+                    Field[] fields = Signature.structFields((Class<?>) type);
+                    for (int i = 0; i < getNumMembers(msgArg); ++i) {
+                        Object value = unmarshal(getMember(msgArg, i), types[i]);
+                        fields[i].set(object, value);
+                    }
+                    return object;
                 }
-                object = ((Class<?>) type).newInstance();
-                Field[] fields = Signature.structFields((Class<?>) type);
-                for (int i = 0; i < getNumMembers(msgArg); ++i) {
-                    Object value = unmarshal(getMember(msgArg, i), types[i]);
-                    fields[i].set(object, value);
-                }
-                return object;
             case ALLJOYN_UINT16:
                 object = getEnumObject(type, (int) getUint16(msgArg));
                 if (object == null) {
@@ -561,4 +591,129 @@ final class MsgArg {
             marshal(getMember(msgArg, i), sigs[i], args[i]);
         }
     }
+
+    /**
+     * Return the Type that corresponds to the given signature. For example,
+     * 's' is String, and 'as' is String[]. A null or empty signature is invalid.
+     *
+     * @param sig the signature that describes an object's underlying data type
+     * @return the Type of the signature
+     * @throws BusException if the signature is invalid or its Java Type cannot be determined.
+     */
+    public static Type toType(String sig) throws BusException {
+        if (sig == null || sig.isEmpty()) {
+            throw new BusException("null or empty signature");
+        }
+
+        // Check if sig describes loose fields not in a container (then need to treat it as a struct)
+        if (Signature.split(sig).length > 1) {
+            sig = "(" + sig + ")";
+        }
+
+        Type result = null;
+        try {
+            switch (sig.charAt(0)) {
+                case ALLJOYN_ARRAY: {
+                    final Type componentType = toType(sig.substring(1));
+                    // Check if signature is actually an array of dict-entries (a map)
+                    if (sig.charAt(1) == ALLJOYN_DICT_ENTRY_OPEN) {
+                        result = new ParameterizedType() {
+                            public Type getRawType() { return HashMap.class; }
+                            public Type getOwnerType() { return null; }
+                            public Type[] getActualTypeArguments() {
+                                return ((ParameterizedType)componentType).getActualTypeArguments();
+                            }
+                        };
+                    } else {
+                        Class<?> componentClass;
+                        if (componentType instanceof ParameterizedType) {
+                            Type rawType = ((ParameterizedType) componentType).getRawType();
+                            rawType = (rawType == Map.class) ? HashMap.class : rawType;
+                            componentClass = (Class<?>) rawType;
+                        } else {
+                            componentClass = (Class<?>) componentType;
+                        }
+                        result = Array.newInstance(componentClass,0).getClass();
+                    }
+                    break;
+                }
+                case ALLJOYN_DICT_ENTRY_OPEN: {
+                    String[] sigs = Signature.split(sig.substring(1, sig.length()-1));
+                    final Type keyType = toType(sigs[0]);
+                    final Type valueType = toType(sigs[1]);
+                    result = new ParameterizedType() {
+                        public Type getRawType() { return AbstractMap.SimpleEntry.class; }
+                        public Type getOwnerType() { return HashMap.class; }
+                        public Type[] getActualTypeArguments() {
+                            return new Type[] { keyType, valueType };
+                        }
+                    };
+                    break;
+                }
+                case ALLJOYN_BOOLEAN:
+                    result = Boolean.class;
+                    break;
+                case ALLJOYN_BYTE:
+                    result = Byte.class;
+                    break;
+                case ALLJOYN_INT16:
+                case ALLJOYN_UINT16:
+                    result = Short.class;
+                    break;
+                case ALLJOYN_INT32:
+                case ALLJOYN_UINT32:
+                    result = Integer.class;
+                    break;
+                case ALLJOYN_INT64:
+                case ALLJOYN_UINT64:
+                    result = Long.class;
+                    break;
+                case ALLJOYN_DOUBLE:
+                    result = Double.class;
+                    break;
+                case ALLJOYN_STRING:
+                case ALLJOYN_SIGNATURE:
+                case ALLJOYN_OBJECT_PATH:
+                    result = String.class;
+                    break;
+                case ALLJOYN_STRUCT_OPEN:
+                    result = Object[].class;
+                    break;
+                case ALLJOYN_VARIANT:
+                    result = Variant.class;
+                    break;
+                case ALLJOYN_HANDLE:
+                    result = Long.class;
+                    break;
+                case ALLJOYN_BOOLEAN_ARRAY:
+                    result = boolean[].class;
+                    break;
+                case ALLJOYN_BYTE_ARRAY:
+                    result = byte[].class;
+                    break;
+                case ALLJOYN_INT16_ARRAY:
+                case ALLJOYN_UINT16_ARRAY:
+                    result = short[].class;
+                    break;
+                case ALLJOYN_INT32_ARRAY:
+                case ALLJOYN_UINT32_ARRAY:
+                    result = int[].class;
+                    break;
+                case ALLJOYN_INT64_ARRAY:
+                case ALLJOYN_UINT64_ARRAY:
+                    result = long[].class;
+                    break;
+                case ALLJOYN_DOUBLE_ARRAY:
+                    result = double[].class;
+                    break;
+                default:
+                    throw new BusException("unimplemented signature '" + sig + "'");
+            }
+        } catch (Throwable th) {
+            throw new BusException("cannot handle signature '" + sig + "'", th);
+        }
+
+        return result;
+    }
+
 }
