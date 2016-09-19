@@ -243,17 +243,58 @@ QStatus AJ_CALL XmlElement::Parse(XmlParseContext& ctx)
             }
             break;
 
-        case XmlParseContext::IN_ELEMENT_START:
-            if (ctx.skip) {
-                if ('>' == c) {
-                    ctx.parseState = XmlParseContext::IN_ELEMENT;
-                    ctx.skip = false;
+        case XmlParseContext::IN_SKIP:
+            if ('-' == c) {
+                if (ctx.foundHyphen) {
+                    ctx.parseState = XmlParseContext::IN_SKIP_START;
+                    ctx.foundHyphen = false;
+                    ctx.isDoctype = false;
+                } else {
+                    ctx.foundHyphen = true;
                 }
-            } else if (ctx.elemName.empty() && !ctx.isEndTag) {
+            } else if (IsWhite(c)) {
+                if (ctx.doctypeStr == "DOCTYPE") {
+                    ctx.isDoctype = true;
+                    ctx.doctypeStr = "";
+                    ctx.parseState = XmlParseContext::IN_SKIP_START;
+                } else {
+                    return ER_XML_MALFORMED;
+                }
+            } else {
+                ctx.doctypeStr += c;
+            }
+            break;
+        case XmlParseContext::IN_SKIP_START:
+            if (!ctx.isDoctype) {
+                if (c == '-') {
+                    if (ctx.foundHyphen) {
+                        ctx.isCommentDelim = true;
+                    } else {
+                        ctx.foundHyphen = true;
+                    }
+                } else if (ctx.isCommentDelim) {
+                    if (c == '>') {
+                        ctx.parseState = XmlParseContext::IN_ELEMENT;
+                        ctx.isCommentDelim = false;
+                        ctx.foundHyphen = false;
+                    } else {
+                        ctx.isCommentDelim = false;
+                        ctx.foundHyphen = false;
+                    }
+                } else {
+                    ctx.foundHyphen = false;
+                }
+            } else if ('>' == c) {
+                ctx.parseState = XmlParseContext::IN_ELEMENT;
+                ctx.isDoctype = false;
+            }
+            break;
+        case XmlParseContext::IN_ELEMENT_START:
+            if (ctx.elemName.empty() && !ctx.isEndTag) {
                 if ('/' == c) {
                     ctx.isEndTag = true;
                 } else if (('!' == c) || ('?' == c)) {
-                    ctx.skip = true;
+                    ctx.parseState = XmlParseContext::IN_SKIP;
                 } else if (!IsWhite(c)) {
                     ctx.isEndTag = false;
                     ctx.elemName.push_back(c);
