@@ -23,6 +23,7 @@ import junit.framework.TestCase;
 import org.alljoyn.bus.annotation.BusSignalHandler;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Introspectable;
+import org.alljoyn.bus.common.KeyInfoNISTP256;
 
 public class BusAttachmentTest extends TestCase {
     static {
@@ -1985,4 +1986,28 @@ public class BusAttachmentTest extends TestCase {
      * cancelAdvertiseName -  is being tested by the testFindMultipleNames
      * releaseName - is being tested in the tearDown of every test
      */
+
+    public void testUnregisterApplicationStateListener() throws Exception {
+        bus = new BusAttachment(getClass().getName(),
+                BusAttachment.RemoteMessage.Receive);
+        bus.connect();
+        assertEquals(Status.APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.unregisterApplicationStateListener(appStateListener));
+    }
+
+    public void testRegisterApplicationStateListener() throws Exception {
+        bus = new BusAttachment(getClass().getName(),
+                BusAttachment.RemoteMessage.Receive);
+        bus.connect();
+        assertEquals(Status.OK, bus.registerApplicationStateListener(appStateListener));
+        assertEquals(Status.APPLICATION_STATE_LISTENER_ALREADY_EXISTS, bus.registerApplicationStateListener(appStateListener));
+        assertEquals(Status.OK, bus.unregisterApplicationStateListener(appStateListener));
+    }
+
+    private ApplicationStateListener appStateListener = new ApplicationStateListener() {
+
+        public void state(String busName, KeyInfoNISTP256 publicKeyInfo, PermissionConfigurator.ApplicationState state) {
+            System.out.println("state callback was called on this bus " + busName);
+        }
+
+    };
 }
