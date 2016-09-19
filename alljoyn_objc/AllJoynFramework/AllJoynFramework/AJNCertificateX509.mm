@@ -223,11 +223,7 @@ size_t CRYPTO_SHA256_DIGEST_SIZE = 32;
 
 - (void)setValidity:(AJNValidPeriod*)validity
 {
-    if (validity == nil) {
-        return ER_BAD_ARG_1;
-    }
-
-    return self.certificate->SetValidity((CertificateX509::ValidPeriod*)validity);
+    self.certificate->SetValidity((CertificateX509::ValidPeriod*)validity);
 }
 
 - (AJNECCPublicKey*)subjectPublicKey
@@ -550,7 +546,7 @@ size_t CRYPTO_SHA256_DIGEST_SIZE = 32;
 
 - (BOOL)isSubjectPublicKeyEqual:(AJNECCPublicKey*)publicKey
 {
-    if (other == nil) {
+    if (publicKey == nil) {
         return ER_BAD_ARG_1;
     }
 
