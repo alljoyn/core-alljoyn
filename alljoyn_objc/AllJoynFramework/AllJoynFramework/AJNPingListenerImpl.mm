@@ -22,6 +22,11 @@ AJNPingListenerImpl::AJNPingListenerImpl(id<AJNPingListener> aDelegate):
 {
 }
 
+AJNPingListenerImpl::~AJNPingListenerImpl()
+{
+    m_delegate = nil;
+}
+
 void AJNPingListenerImpl::DestinationLost(const qcc::String& group, const qcc::String& destination)
 {
     if ([m_delegate respondsToSelector:@selector(destinationLost:group:destination:)]) {

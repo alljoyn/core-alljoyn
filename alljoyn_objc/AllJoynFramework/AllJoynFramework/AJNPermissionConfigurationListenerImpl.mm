@@ -21,6 +21,11 @@ AJNPermissionConfigurationListenerImpl::AJNPermissionConfigurationListenerImpl(i
 {
 }
 
+AJNPermissionConfigurationListenerImpl::~AJNPermissionConfigurationListenerImpl()
+{
+    m_delegate = nil;
+}
+
 QStatus AJNPermissionConfigurationListenerImpl::FactoryReset()
 {
     if ([m_delegate respondsToSelector:@selector(factoryReset)]) {
