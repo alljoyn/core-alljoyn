@@ -218,31 +218,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getSigning
         return NULL;
     }
 
-    jmethodID mid = jenv->GetMethodID(CLS_KeyInfoNISTP256, "<init>", "()V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find KeyInfoNISTP256 constructor", __FUNCTION__));
-        return NULL;
-    }
-
-    JLocalRef<jobject> retObj = jenv->NewObject(CLS_KeyInfoNISTP256, mid);
-
-    jmethodID midC = jenv->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
-    if (!midC) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        return NULL;
-    }
+    JLocalRef<jobject> retObj = jenv->NewObject(CLS_KeyInfoNISTP256, MID_KeyInfoNISTP256_cnstrctr);
 
     JLocalRef<jbyteArray> arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
     JLocalRef<jbyteArray> arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
 
-    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, midC, arrayX.move(), arrayY.move());
+    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX.move(), arrayY.move());
 
-    jmethodID midSet = jenv->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)V");
-    if (!midSet) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find setPublicKey", __FUNCTION__));
-        return NULL;
-    }
-    CallObjectMethod(jenv, retObj, midSet, jretKey);
+    CallObjectMethod(jenv, retObj, MID_KeyInfoNISTP256_setPublicKey, jretKey);
 
     return retObj;
 }

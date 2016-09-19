@@ -40,6 +40,8 @@ extern jclass CLS_CertificateId;
 extern jmethodID MID_ECCPublicKey_cnstrctr;
 extern jmethodID MID_ECCPrivateKey_cnstrctr;
 extern jmethodID MID_PermissionConfigurator_cnstrctr;
+extern jmethodID MID_KeyInfoNISTP256_cnstrctr;
+extern jmethodID MID_KeyInfoNISTP256_setPublicKey;
 
 extern jfieldID FID_ECCPrivateKey_d;
 extern jfieldID FID_ECCPublicKey_x;
