@@ -24,6 +24,8 @@ import org.alljoyn.bus.annotation.BusSignalHandler;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Introspectable;
 
+import org.alljoyn.bus.GenericInterface;
+
 import org.alljoyn.bus.defs.BusObjectInfo;
 import org.alljoyn.bus.defs.InterfaceDef;
 import org.alljoyn.bus.defs.MethodDef;
@@ -41,6 +43,7 @@ public class BusAttachmentTest extends TestCase {
         System.loadLibrary("alljoyn_java");
     }
 
+    int receivedSimpleServicePing;
     int receivedGetSignalHandler;
     int receivedGetMethodHandler;
     int receivedGetPropertyHandler;
@@ -67,6 +70,7 @@ public class BusAttachmentTest extends TestCase {
 
     public class SimpleService implements SimpleInterface, BusObject {
         public String ping(String str) {
+            receivedSimpleServicePing++;
             MessageContext ctx = bus.getMessageContext();
             assertEquals(false, ctx.isUnreliable);
             assertEquals("/simple", ctx.objectPath);
@@ -163,6 +167,7 @@ public class BusAttachmentTest extends TestCase {
 
         onPinged = false;
 
+        receivedSimpleServicePing = 0;
         receivedGetSignalHandler = 0;
         receivedGetMethodHandler = 0;
         receivedGetPropertyHandler = 0;
@@ -1987,6 +1992,126 @@ public class BusAttachmentTest extends TestCase {
                 bus.registerBusObject(emitter, "/bad path"));
 
         assertEquals(Status.OK, bus.registerBusObject(emitter, "/goodpath"));
+    }
+
+    public void testGetDynamicProxyBusObject() throws Exception {
+        String ifaceName = "org.alljoyn.bus.SimpleInterface";
+
+        // Usual BusAttachment and DBusProxyObj setup
+
+        bus = new BusAttachment(getClass().getName());
+        assertEquals(Status.OK, bus.connect());
+
+        DBusProxyObj control = bus.getDBusProxyObj();
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                control.RequestName("org.alljoyn.bus.BusAttachmentTest",
+                        DBusProxyObj.REQUEST_NAME_NO_FLAGS));
+
+        SimpleService service = new SimpleService();
+        assertEquals(Status.OK, bus.registerBusObject(service, "/simple"));
+
+        // Test getting/calling proxy using dynamic interface definition and GenericInterface invocation
+
+        InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
+        MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
+        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
+        interfaceDef.addMethod(methodDef);
+
+        ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
+                "/simple",
+                BusAttachment.SESSION_ID_ANY,
+                Arrays.asList( new InterfaceDef[]{interfaceDef} ));
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+        String result = (String)proxy.methodCall(ifaceName, "Ping", "hello");
+
+        assertEquals(1, receivedSimpleServicePing);
+        assertEquals("hello", result);
+
+        // Test getting/calling dynamic proxy with secure parameter
+
+        proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
+                "/simple",
+                BusAttachment.SESSION_ID_ANY,
+                Arrays.asList( new InterfaceDef[]{interfaceDef} ),
+                false );
+        proxy = proxyObj.getInterface(GenericInterface.class);
+        result = (String)proxy.methodCall(ifaceName, "Ping", "hello again");
+
+        assertEquals(2, receivedSimpleServicePing);
+        assertEquals("hello again", result);
+
+        // Test that the bus method args can also be sent as an Object[]
+
+        result = (String)proxy.methodCall(ifaceName, "Ping", new Object[]{"arg array of size 1"});
+        assertEquals(3, receivedSimpleServicePing);
+        assertEquals("arg array of size 1", result);
+    }
+
+    public void testGetDynamicProxyBusObject_invalidInvoke() throws Exception {
+        String ifaceName = "org.alljoyn.bus.SimpleInterface";
+
+        // Usual BusAttachment and DBusProxyObj setup
+
+        bus = new BusAttachment(getClass().getName());
+        assertEquals(Status.OK, bus.connect());
+
+        DBusProxyObj control = bus.getDBusProxyObj();
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                control.RequestName("org.alljoyn.bus.BusAttachmentTest",
+                        DBusProxyObj.REQUEST_NAME_NO_FLAGS));
+
+        SimpleService service = new SimpleService();
+        assertEquals(Status.OK, bus.registerBusObject(service, "/simple"));
+
+        // Get proxy using dynamic interface definition and GenericInterface
+
+        InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
+        MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
+        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
+        interfaceDef.addMethod(methodDef);
+
+        ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
+                "/simple",
+                BusAttachment.SESSION_ID_ANY,
+                Arrays.asList( new InterfaceDef[]{interfaceDef} ));
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+
+        // Test proxy method call with invalid bus interface name
+
+        try {
+            proxy.methodCall("org.alljoyn.bus.BogusInterface", "Ping", "hello");
+            fail("Expected BusException('No such method')");
+        } catch (BusException e) {
+            assertTrue(e.getMessage().startsWith("No such method"));
+        }
+
+        // Test proxy method call with invalid bus method name
+
+        try {
+            proxy.methodCall(ifaceName, "BogusMethod", "hello");
+            fail("Expected BusException('No such method')");
+        } catch (BusException e) {
+            assertTrue(e.getMessage().startsWith("No such method"));
+        }
+
+        // Test proxy method call with missing bus method arg
+
+        try {
+            proxy.methodCall(ifaceName, "Ping"/*, "hello"*/); // omitting Ping's arg
+            fail("Expected BusException due to too few args specified");
+        } catch (BusException e) {
+            assertEquals("ER_BUS_UNEXPECTED_SIGNATURE", e.getMessage());
+        }
+
+        // Test proxy method call with too many bus method args
+
+        try {
+            proxy.methodCall(ifaceName, "Ping", "expected arg", "unexpected arg");
+            fail("Expected ArrayIndexOutOfBoundsException due to too many args specified");
+        } catch (java.lang.ArrayIndexOutOfBoundsException e) {
+        }
     }
 
     public void testRegisterDynamicBusObject() {
