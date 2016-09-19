@@ -237,23 +237,81 @@ QStatus AJ_CALL XmlElement::Parse(XmlParseContext& ctx)
                 ctx.parseState = XmlParseContext::IN_ELEMENT_START;
                 ctx.elemName.clear();
                 ctx.isEndTag = false;
-                ctx.skip = false;
             } else {
                 ctx.rawContent.push_back(c);
             }
             break;
 
-        case XmlParseContext::IN_ELEMENT_START:
-            if (ctx.skip) {
+        case XmlParseContext::IN_SKIP:
+            if ('-' == c) {
+                if (ctx.foundHyphen) {
+                    ctx.parseState = XmlParseContext::IN_SKIP_START;
+                    ctx.foundHyphen = false;
+                    ctx.isDoctype = false;
+                } else {
+                    ctx.foundHyphen = true;
+                }
+            } else if (IsWhite(c) || (c == '>')) {
+                if (ctx.doctypeStr == "DOCTYPE") {
+                    ctx.isDoctype = true;
+                    ctx.doctypeStr = "";
+                    ctx.parseState = XmlParseContext::IN_SKIP_START;
+                } else {
+                    return ER_XML_MALFORMED;
+                }
+            } else {
+                ctx.doctypeStr += c;
+            }
+            break;
+
+        case XmlParseContext::IN_SKIP_START:
+            if (ctx.isTextDecleration) {
+                if (c == '?') {
+                    ctx.foundTxtDeclDelim = true;
+                } else if (c == '>') {
+                    if (ctx.foundTxtDeclDelim) {
+                        ctx.parseState = XmlParseContext::IN_ELEMENT;
+                        ctx.isTextDecleration = false;
+                    } else {
+                        return ER_XML_MALFORMED;
+                    }
+                }
+            } else if (ctx.isDoctype) {
                 if ('>' == c) {
                     ctx.parseState = XmlParseContext::IN_ELEMENT;
-                    ctx.skip = false;
+                    ctx.isDoctype = false;
                 }
-            } else if (ctx.elemName.empty() && !ctx.isEndTag) {
+            } else {
+                if (c == '-') {
+                    if (ctx.foundHyphen) {
+                        ctx.isCommentDelim = true;
+                    } else {
+                        ctx.foundHyphen = true;
+                    }
+                } else if (ctx.isCommentDelim) {
+                    if (c == '>') {
+                        ctx.parseState = XmlParseContext::IN_ELEMENT;
+                        ctx.isCommentDelim = false;
+                        ctx.foundHyphen = false;
+                    } else {
+                        ctx.isCommentDelim = false;
+                        ctx.foundHyphen = false;
+                    }
+                } else {
+                    ctx.foundHyphen = false;
+                }
+            }
+            break;
+
+        case XmlParseContext::IN_ELEMENT_START:
+            if (ctx.elemName.empty() && !ctx.isEndTag) {
                 if ('/' == c) {
                     ctx.isEndTag = true;
-                } else if (('!' == c) || ('?' == c)) {
-                    ctx.skip = true;
+                } else if ('!' == c) {
+                    ctx.parseState = XmlParseContext::IN_SKIP;
+                } else if ('?' == c) {
+                    ctx.parseState = XmlParseContext::IN_SKIP_START;
+                    ctx.isTextDecleration = true;
                 } else if (!IsWhite(c)) {
                     ctx.isEndTag = false;
                     ctx.elemName.push_back(c);

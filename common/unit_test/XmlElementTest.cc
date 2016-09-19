@@ -30,23 +30,27 @@ class XmlElementTest : public testing::Test {
   public:
     XmlElementTest() :
         parent(nullptr),
-        child(nullptr)
+        child(nullptr),
+        root(nullptr)
     { };
 
     virtual void SetUp()
     {
         ASSERT_EQ(ER_OK, XmlElement::GetRoot(VALID_ROOT_XML, &parent));
         ASSERT_EQ(ER_OK, XmlElement::GetRoot(VALID_CHILD_XML, &child));
+        ASSERT_EQ(ER_OK, XmlElement::GetRoot(VALID_ROOT_XML, &root));
     }
 
     virtual void TearDown()
     {
         delete parent;
+        delete root;
     }
 
   protected:
     XmlElement* parent;
     XmlElement* child;
+    XmlElement* root;
 };
 
 TEST(XmlElement, ShouldFailGetRootForInvalidXml)
@@ -303,4 +307,83 @@ TEST(XmlElement, GetRootInvalidXml)
 
     EXPECT_EQ(String::Empty, root->GetName().c_str());
     EXPECT_EQ((size_t)0, root->GetChildren().size());
+}
+
+TEST_F(XmlElementTest, ShouldPassWithValidComment)
+{
+    String xml = "<config>\
+                      <foo>\
+                          <value first='hello'/>\
+                          <!-- foo></foo -->\
+                          <value second='world'/>\
+                      </foo>\
+                  </config>";
+
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(xml.c_str(), &root));
+    /*
+     * Test that parsing the comment ended with the "-->" tag
+     * and we can access the attributes of the following tag.
+     * See ASACORE-3177
+     */
+    EXPECT_STREQ("world", root->GetChild("foo")->GetChildren()[1]->GetAttribute("second").c_str());
+
+    xml = "<!-- Example: <config></config>. See docs  -->\
+           <root/>";
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(xml.c_str(), &root));
+
+    xml = "<!-- TODO: Review -->\
+           <root/>";
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(xml.c_str(), &root));
+}
+
+TEST_F(XmlElementTest, ShouldFailWithInvalidComment)
+{
+    String xml = "<config>\
+                      <foo>\
+                          <value first='hello'/>\
+                          <!-- \
+                          <value second='world'/>\
+                      </foo>\
+                  </config>";
+    EXPECT_EQ(ER_EOF, XmlElement::GetRoot(xml.c_str(), &root));
+}
+
+TEST_F(XmlElementTest, ShouldPassWithTextDecleration)
+{
+    String xml = "<?xml version='1.0'?> \
+                  <config>\
+                      <foo>\
+                          <value first='hello'/>\
+                          <value second='world'/>\
+                      </foo>\
+                  </config>";
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(xml.c_str(), &root));
+}
+
+TEST_F(XmlElementTest, ShouldPassWithDoctype)
+{
+    String xml = "<!DOCTYPE busconfig PUBLIC '-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN' \
+                   'http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd'> \
+                  <config>\
+                      <foo>\
+                          <value first='hello'/>\
+                          <value second='world'/>\
+                      </foo>\
+                  </config>";
+    EXPECT_EQ(ER_OK, XmlElement::GetRoot(xml.c_str(), &root));
+}
+
+TEST_F(XmlElementTest, ShouldFailWithInvalidTextDecleration)
+{
+
+    /* This is not a valid text declereation. This should fail gracefully */
+    String xml = "<?>";
+    EXPECT_EQ(ER_XML_MALFORMED, XmlElement::GetRoot(xml.c_str(), &root));
+}
+
+TEST_F(XmlElementTest, ShouldFailWithInvalidDefinitionTag)
+{
+    /* This is not a valid doctype or comment. This should fail gracefully. */
+    String xml = "<!>";
+    EXPECT_EQ(ER_XML_MALFORMED, XmlElement::GetRoot(xml.c_str(), &root));
 }
