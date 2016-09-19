@@ -41,7 +41,7 @@ using namespace qcc;
 
 namespace ajn {
 _Packet::_Packet()
-    : m_timer(0), m_destination("0.0.0.0", 0), m_destinationSet(false), m_interfaceIndex((uint32_t)-1), m_interfaceIndexSet(false), m_addressFamily(qcc::QCC_AF_UNSPEC), m_addressFamilySet(false), m_retries(0), m_tick(0), m_version(0)
+    : m_timer(0), m_destination("0.0.0.0", 0), m_destinationSet(false), m_interfaceIndex((uint32_t)-1), m_interfaceIndexSet(false), m_addressFamily(QCC_AF_UNSPEC), m_addressFamilySet(false), m_retries(0), m_tick(0), m_version(0)
 {
 }
 
@@ -57,13 +57,13 @@ StringData::~StringData()
 {
 }
 
-void StringData::Set(qcc::String string)
+void StringData::Set(String string)
 {
     m_size = string.size();
     m_string = string;
 }
 
-qcc::String StringData::Get(void) const
+String StringData::Get(void) const
 {
     return m_string;
 }
@@ -129,13 +129,13 @@ IsAt::~IsAt()
 {
 }
 
-void IsAt::SetGuid(const qcc::String& guid)
+void IsAt::SetGuid(const String& guid)
 {
     m_guid = guid;
     m_flagG = true;
 }
 
-qcc::String IsAt::GetGuid(void) const
+String IsAt::GetGuid(void) const
 {
     return m_guid;
 }
@@ -156,13 +156,13 @@ void IsAt::ClearIPv4(void)
     m_flagF = false;
 }
 
-void IsAt::SetIPv4(qcc::String ipv4)
+void IsAt::SetIPv4(String ipv4)
 {
     m_ipv4 = ipv4;
     m_flagF = true;
 }
 
-qcc::String IsAt::GetIPv4(void) const
+String IsAt::GetIPv4(void) const
 {
     return m_ipv4;
 }
@@ -173,13 +173,13 @@ void IsAt::ClearIPv6(void)
     m_flagS = false;
 }
 
-void IsAt::SetIPv6(qcc::String ipv6)
+void IsAt::SetIPv6(String ipv6)
 {
     m_ipv6 = ipv6;
     m_flagS = true;
 }
 
-qcc::String IsAt::GetIPv6(void) const
+String IsAt::GetIPv6(void) const
 {
     return m_ipv6;
 }
@@ -191,14 +191,14 @@ void IsAt::ClearReliableIPv4(void)
     m_flagR4 = false;
 }
 
-void IsAt::SetReliableIPv4(qcc::String addr, uint16_t port)
+void IsAt::SetReliableIPv4(String addr, uint16_t port)
 {
     m_reliableIPv4Address = addr;
     m_reliableIPv4Port = port;
     m_flagR4 = true;
 }
 
-qcc::String IsAt::GetReliableIPv4Address(void) const
+String IsAt::GetReliableIPv4Address(void) const
 {
     return m_reliableIPv4Address;
 }
@@ -215,14 +215,14 @@ void IsAt::ClearUnreliableIPv4(void)
     m_flagU4 = false;
 }
 
-void IsAt::SetUnreliableIPv4(qcc::String addr, uint16_t port)
+void IsAt::SetUnreliableIPv4(String addr, uint16_t port)
 {
     m_unreliableIPv4Address = addr;
     m_unreliableIPv4Port = port;
     m_flagU4 = true;
 }
 
-qcc::String IsAt::GetUnreliableIPv4Address(void) const
+String IsAt::GetUnreliableIPv4Address(void) const
 {
     return m_unreliableIPv4Address;
 }
@@ -239,14 +239,14 @@ void IsAt::ClearReliableIPv6(void)
     m_flagR6 = false;
 }
 
-void IsAt::SetReliableIPv6(qcc::String addr, uint16_t port)
+void IsAt::SetReliableIPv6(String addr, uint16_t port)
 {
     m_reliableIPv6Address = addr;
     m_reliableIPv6Port = port;
     m_flagR6 = true;
 }
 
-qcc::String IsAt::GetReliableIPv6Address(void) const
+String IsAt::GetReliableIPv6Address(void) const
 {
     return m_reliableIPv6Address;
 }
@@ -263,14 +263,14 @@ void IsAt::ClearUnreliableIPv6(void)
     m_flagU6 = false;
 }
 
-void IsAt::SetUnreliableIPv6(qcc::String addr, uint16_t port)
+void IsAt::SetUnreliableIPv6(String addr, uint16_t port)
 {
     m_unreliableIPv6Address = addr;
     m_unreliableIPv6Port = port;
     m_flagU6 = true;
 }
 
-qcc::String IsAt::GetUnreliableIPv6Address(void) const
+String IsAt::GetUnreliableIPv6Address(void) const
 {
     return m_unreliableIPv6Address;
 }
@@ -285,7 +285,7 @@ void IsAt::Reset(void)
     m_names.clear();
 }
 
-void IsAt::AddName(qcc::String name)
+void IsAt::AddName(String name)
 {
     m_names.push_back(name);
 }
@@ -302,7 +302,7 @@ uint32_t IsAt::GetNumberNames(void) const
     return m_names.size();
 }
 
-qcc::String IsAt::GetName(uint32_t index) const
+String IsAt::GetName(uint32_t index) const
 {
     QCC_ASSERT(index < m_names.size());
     return m_names[index];
@@ -505,7 +505,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         // If the F bit is set, we need to include the IPv4 address.
         //
         if (m_flagF) {
-            qcc::IPAddress::StringToIPv4(m_ipv4, p, 4);
+            IPAddress::StringToIPv4(m_ipv4, p, 4);
             QCC_DbgPrintf(("IsAt::Serialize(): IPv4: %s", m_ipv4.c_str()));
             p += 4;
             size += 4;
@@ -515,7 +515,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         // If the S bit is set, we need to include the IPv6 address.
         //
         if (m_flagS) {
-            qcc::IPAddress::StringToIPv6(m_ipv6, p, 16);
+            IPAddress::StringToIPv6(m_ipv6, p, 16);
             QCC_DbgPrintf(("IsAt::Serialize(): IPv6: %s", m_ipv6.c_str()));
             p += 16;
             size += 16;
@@ -606,7 +606,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         // and port.
         //
         if (m_flagR4) {
-            qcc::IPAddress::StringToIPv4(m_reliableIPv4Address, p, 4);
+            IPAddress::StringToIPv4(m_reliableIPv4Address, p, 4);
             QCC_DbgPrintf(("IsAt::Serialize(): Reliable IPv4: %s", m_reliableIPv4Address.c_str()));
             p += 4;
             size += 4;
@@ -622,7 +622,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         // and port.
         //
         if (m_flagU4) {
-            qcc::IPAddress::StringToIPv4(m_unreliableIPv4Address, p, 4);
+            IPAddress::StringToIPv4(m_unreliableIPv4Address, p, 4);
             QCC_DbgPrintf(("IsAt::Serialize(): Unreliable IPv4: %s", m_unreliableIPv4Address.c_str()));
             p += 4;
             size += 4;
@@ -638,7 +638,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         // and port.
         //
         if (m_flagR6) {
-            qcc::IPAddress::StringToIPv6(m_reliableIPv6Address, p, 16);
+            IPAddress::StringToIPv6(m_reliableIPv6Address, p, 16);
             QCC_DbgPrintf(("IsAt::Serialize(): Reliable IPv6: %s", m_reliableIPv6Address.c_str()));
             p += 16;
             size += 16;
@@ -654,7 +654,7 @@ size_t IsAt::Serialize(uint8_t* buffer) const
         // and port.
         //
         if (m_flagU6) {
-            qcc::IPAddress::StringToIPv6(m_unreliableIPv6Address, p, 16);
+            IPAddress::StringToIPv6(m_unreliableIPv6Address, p, 16);
             QCC_DbgPrintf(("IsAt::Serialize(): Unreliable IPv6: %s", m_unreliableIPv6Address.c_str()));
             p += 16;
             size += 16;
@@ -793,7 +793,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
                 QCC_DbgPrintf(("IsAt::Deserialize(): Insufficient bufsize %d", bufsize));
                 return 0;
             }
-            m_ipv4 = qcc::IPAddress::IPv4ToString(p);
+            m_ipv4 = IPAddress::IPv4ToString(p);
             QCC_DbgPrintf(("IsAt::Deserialize(): IPv4: %s", m_ipv4.c_str()));
             p += 4;
             size += 4;
@@ -809,7 +809,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
                 QCC_DbgPrintf(("IsAt::Deserialize(): Insufficient bufsize %d", bufsize));
                 return 0;
             }
-            m_ipv6 = qcc::IPAddress::IPv6ToString(p);
+            m_ipv6 = IPAddress::IPv6ToString(p);
             QCC_DbgPrintf(("IsAt::Deserialize(): IPv6: %s", m_ipv6.c_str()));
             p += 16;
             size += 16;
@@ -938,7 +938,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
                 return 0;
             }
 
-            m_reliableIPv4Address = qcc::IPAddress::IPv4ToString(p);
+            m_reliableIPv4Address = IPAddress::IPv4ToString(p);
             QCC_DbgPrintf(("IsAt::Deserialize(): Reliable IPv4: %s", m_reliableIPv4Address.c_str()));
             p += 4;
             size += 4;
@@ -961,7 +961,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
                 return 0;
             }
 
-            m_unreliableIPv4Address = qcc::IPAddress::IPv4ToString(p);
+            m_unreliableIPv4Address = IPAddress::IPv4ToString(p);
             QCC_DbgPrintf(("IsAt::Deserialize(): Unreliable IPv4: %s", m_unreliableIPv4Address.c_str()));
             p += 4;
             size += 4;
@@ -984,7 +984,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
                 return 0;
             }
 
-            m_reliableIPv6Address = qcc::IPAddress::IPv6ToString(p);
+            m_reliableIPv6Address = IPAddress::IPv6ToString(p);
             QCC_DbgPrintf(("IsAt::Deserialize(): Reliable IPv6: %s", m_reliableIPv6Address.c_str()));
             p += 16;
             size += 16;
@@ -1007,7 +1007,7 @@ size_t IsAt::Deserialize(uint8_t const* buffer, uint32_t bufsize)
                 return 0;
             }
 
-            m_unreliableIPv6Address = qcc::IPAddress::IPv6ToString(p);
+            m_unreliableIPv6Address = IPAddress::IPv6ToString(p);
             QCC_DbgPrintf(("IsAt::Deserialize(): Unreliable IPv6: %s", m_unreliableIPv6Address.c_str()));
             p += 16;
             size += 16;
@@ -1087,7 +1087,7 @@ void WhoHas::Reset(void)
     m_names.clear();
 }
 
-void WhoHas::AddName(qcc::String name)
+void WhoHas::AddName(String name)
 {
     m_names.push_back(name);
 }
@@ -1097,7 +1097,7 @@ uint32_t WhoHas::GetNumberNames(void) const
     return m_names.size();
 }
 
-qcc::String WhoHas::GetName(uint32_t index) const
+String WhoHas::GetName(uint32_t index) const
 {
     QCC_ASSERT(index < m_names.size());
     return m_names[index];
@@ -1637,7 +1637,7 @@ MDNSDomainName::~MDNSDomainName()
 {
 }
 
-size_t MDNSDomainName::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSDomainName::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     size_t size = 0;
     String name = m_name;
@@ -1662,7 +1662,7 @@ size_t MDNSDomainName::GetSerializedSize(std::map<qcc::String, uint32_t>& offset
     return size;
 }
 
-size_t MDNSDomainName::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSDomainName::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     size_t size = 0;
     String name = m_name;
@@ -1688,7 +1688,7 @@ size_t MDNSDomainName::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t
     return size;
 }
 
-size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     m_name.clear();
     size_t size = 0;
@@ -1743,7 +1743,7 @@ size_t MDNSDomainName::Deserialize(uint8_t const* buffer, uint32_t bufsize, std:
 }
 
 //MDNSQuestion
-MDNSQuestion::MDNSQuestion(qcc::String qName, uint16_t qType, uint16_t qClass) :
+MDNSQuestion::MDNSQuestion(String qName, uint16_t qType, uint16_t qClass) :
     m_qType(qType),
     m_qClass(qClass | QU_BIT)
 {
@@ -1780,12 +1780,12 @@ uint16_t MDNSQuestion::GetQClass()
     return m_qClass & ~QU_BIT;
 }
 
-size_t MDNSQuestion::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSQuestion::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     return m_qName.GetSerializedSize(offsets) + 4;
 }
 
-size_t MDNSQuestion::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSQuestion::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     // Serialize the QNAME first
     size_t size = m_qName.Serialize(buffer, offsets, headerOffset);
@@ -1801,7 +1801,7 @@ size_t MDNSQuestion::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>&
     return size + 4;
 }
 
-size_t MDNSQuestion::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSQuestion::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     // Deserialize the QNAME first
     size_t size = m_qName.Deserialize(buffer, bufsize, compressedOffsets, headerOffset);
@@ -1835,7 +1835,7 @@ MDNSResourceRecord::MDNSResourceRecord() : m_rdata(NULL)
 {
 }
 
-MDNSResourceRecord::MDNSResourceRecord(qcc::String domainName, RRType rrType, RRClass rrClass, uint16_t ttl, MDNSRData* rdata) :
+MDNSResourceRecord::MDNSResourceRecord(String domainName, RRType rrType, RRClass rrClass, uint16_t ttl, MDNSRData* rdata) :
 
     m_rrType(rrType),
     m_rrClass(rrClass),
@@ -1878,7 +1878,7 @@ MDNSResourceRecord::~MDNSResourceRecord()
     }
 }
 
-size_t MDNSResourceRecord::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSResourceRecord::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     QCC_ASSERT(m_rdata);
     size_t size = m_rrDomainName.GetSerializedSize(offsets);
@@ -1887,7 +1887,7 @@ size_t MDNSResourceRecord::GetSerializedSize(std::map<qcc::String, uint32_t>& of
     return size;
 }
 
-size_t MDNSResourceRecord::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSResourceRecord::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     QCC_ASSERT(m_rdata);
 
@@ -1916,7 +1916,7 @@ size_t MDNSResourceRecord::Serialize(uint8_t* buffer, std::map<qcc::String, uint
     return size;
 }
 
-size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     if (m_rdata) {
         delete m_rdata;
@@ -1997,12 +1997,12 @@ size_t MDNSResourceRecord::Deserialize(uint8_t const* buffer, uint32_t bufsize, 
     return size;
 }
 
-void MDNSResourceRecord::SetDomainName(qcc::String domainName)
+void MDNSResourceRecord::SetDomainName(String domainName)
 {
     m_rrDomainName.SetName(domainName);
 }
 
-qcc::String MDNSResourceRecord::GetDomainName() const
+String MDNSResourceRecord::GetDomainName() const
 {
     return m_rrDomainName.GetName();
 }
@@ -2052,13 +2052,13 @@ MDNSRData* MDNSResourceRecord::GetRData()
 }
 
 //MDNSDefaultRData
-size_t MDNSDefaultRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSDefaultRData::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     QCC_UNUSED(offsets);
     return 0;
 }
 
-size_t MDNSDefaultRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSDefaultRData::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     QCC_UNUSED(buffer);
     QCC_UNUSED(offsets);
@@ -2066,7 +2066,7 @@ size_t MDNSDefaultRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32
     return 0;
 }
 
-size_t MDNSDefaultRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSDefaultRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     QCC_UNUSED(compressedOffsets);
     QCC_UNUSED(headerOffset);
@@ -2115,7 +2115,7 @@ void MDNSTextRData::Reset()
     }
 }
 
-void MDNSTextRData::RemoveEntry(qcc::String key)
+void MDNSTextRData::RemoveEntry(String key)
 {
     m_fields.erase(key);
 }
@@ -2145,7 +2145,7 @@ String MDNSTextRData::GetValue(String key)
     }
 }
 
-bool MDNSTextRData::HasKey(qcc::String key)
+bool MDNSTextRData::HasKey(String key)
 {
     if (m_fields.find(key) != m_fields.end()) {
         return true;
@@ -2174,7 +2174,7 @@ uint16_t MDNSTextRData::GetNumFields(String key)
     return numNames;
 }
 
-qcc::String MDNSTextRData::GetFieldAt(String key, int i)
+String MDNSTextRData::GetFieldAt(String key, int i)
 {
     key += "_";
     Fields::const_iterator it;
@@ -2204,7 +2204,7 @@ void MDNSTextRData::RemoveFieldAt(String key, int i)
     }
 }
 
-size_t MDNSTextRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSTextRData::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     QCC_UNUSED(offsets);
     size_t rdlen = 0;
@@ -2221,7 +2221,7 @@ size_t MDNSTextRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets
     return rdlen + 2;
 }
 
-size_t MDNSTextRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSTextRData::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     QCC_UNUSED(offsets);
     QCC_UNUSED(headerOffset);
@@ -2264,7 +2264,7 @@ size_t MDNSTextRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>
     return rdlen + 2;
 }
 
-size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     QCC_UNUSED(compressedOffsets);
     QCC_UNUSED(headerOffset);
@@ -2320,24 +2320,24 @@ size_t MDNSTextRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::
 }
 
 //MDNSARecord
-void MDNSARData::SetAddr(qcc::String ipAddr)
+void MDNSARData::SetAddr(String ipAddr)
 {
     m_ipv4Addr = ipAddr;
 }
 
-qcc::String MDNSARData::GetAddr()
+String MDNSARData::GetAddr()
 {
     return m_ipv4Addr;
 }
 
-size_t MDNSARData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSARData::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     QCC_UNUSED(offsets);
     //4 bytes for address, 2 bytes length
     return 4 + 2;
 }
 
-size_t MDNSARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSARData::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     QCC_UNUSED(offsets);
     QCC_UNUSED(headerOffset);
@@ -2345,7 +2345,7 @@ size_t MDNSARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& o
     buffer[0] = 0;
     buffer[1] = 4;
     uint8_t* p = &buffer[2];
-    QStatus status = qcc::IPAddress::StringToIPv4(m_ipv4Addr, p, 4);
+    QStatus status = IPAddress::StringToIPv4(m_ipv4Addr, p, 4);
     if (status != ER_OK) {
         QCC_DbgPrintf(("MDNSARData::Serialize Error occurred during conversion of String to IPv4 address"));
         return 0;
@@ -2353,7 +2353,7 @@ size_t MDNSARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& o
     return 6;
 }
 
-size_t MDNSARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     QCC_UNUSED(compressedOffsets);
     QCC_UNUSED(headerOffset);
@@ -2368,30 +2368,30 @@ size_t MDNSARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map
 
     }
     uint8_t const* p = &buffer[2];
-    m_ipv4Addr = qcc::IPAddress::IPv4ToString(p);
+    m_ipv4Addr = IPAddress::IPv4ToString(p);
     bufsize -= 6;
     return 6;
 }
 
 //MDNSAAAARecord
-void MDNSAAAARData::SetAddr(qcc::String ipAddr)
+void MDNSAAAARData::SetAddr(String ipAddr)
 {
     m_ipv6Addr = ipAddr;
 }
 
-qcc::String MDNSAAAARData::GetAddr() const
+String MDNSAAAARData::GetAddr() const
 {
     return m_ipv6Addr;
 }
 
-size_t MDNSAAAARData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSAAAARData::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     QCC_UNUSED(offsets);
     //16 bytes for address, 2 bytes length
     return 16 + 2;
 }
 
-size_t MDNSAAAARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSAAAARData::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     QCC_UNUSED(offsets);
     QCC_UNUSED(headerOffset);
@@ -2399,11 +2399,11 @@ size_t MDNSAAAARData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>
     buffer[0] = 0;
     buffer[1] = 16;
     uint8_t* p = &buffer[2];
-    qcc::IPAddress::StringToIPv6(m_ipv6Addr, p, 16);
+    IPAddress::StringToIPv6(m_ipv6Addr, p, 16);
     return 18;
 }
 
-size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     QCC_UNUSED(compressedOffsets);
     QCC_UNUSED(headerOffset);
@@ -2417,23 +2417,23 @@ size_t MDNSAAAARData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::
         return 0;
     }
     uint8_t const* p = &buffer[2];
-    m_ipv6Addr = qcc::IPAddress::IPv6ToString(p);
+    m_ipv6Addr = IPAddress::IPv6ToString(p);
     bufsize -= 18;
     return 18;
 }
 
 //MDNSPtrRData
-void MDNSPtrRData::SetPtrDName(qcc::String rdataStr)
+void MDNSPtrRData::SetPtrDName(String rdataStr)
 {
     m_rdataStr = rdataStr;
 }
 
-qcc::String MDNSPtrRData::GetPtrDName() const
+String MDNSPtrRData::GetPtrDName() const
 {
     return m_rdataStr;
 }
 
-size_t MDNSPtrRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSPtrRData::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     size_t size = 2;
     String name = m_rdataStr;
@@ -2458,7 +2458,7 @@ size_t MDNSPtrRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets)
     return size;
 }
 
-size_t MDNSPtrRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSPtrRData::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     size_t size = 2;
     String name = m_rdataStr;
@@ -2486,7 +2486,7 @@ size_t MDNSPtrRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>&
     return size;
 }
 
-size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
     m_rdataStr.clear();
     //
@@ -2556,7 +2556,7 @@ size_t MDNSPtrRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::m
 }
 
 //MDNSSrvRData
-MDNSSrvRData::MDNSSrvRData(uint16_t priority, uint16_t weight, uint16_t port, qcc::String target) :
+MDNSSrvRData::MDNSSrvRData(uint16_t priority, uint16_t weight, uint16_t port, String target) :
     m_priority(priority),
     m_weight(weight),
     m_port(port)
@@ -2594,23 +2594,23 @@ uint16_t MDNSSrvRData::GetPort()  const
     return m_port;
 }
 
-void MDNSSrvRData::SetTarget(qcc::String target)
+void MDNSSrvRData::SetTarget(String target)
 {
     m_target.SetName(target);
 }
 
-qcc::String MDNSSrvRData::GetTarget()  const
+String MDNSSrvRData::GetTarget()  const
 {
     return m_target.GetName();
 }
 
-size_t MDNSSrvRData::GetSerializedSize(std::map<qcc::String, uint32_t>& offsets) const
+size_t MDNSSrvRData::GetSerializedSize(std::map<String, uint32_t>& offsets) const
 {
     //2 bytes length
     return 2 + 6 + m_target.GetSerializedSize(offsets);
 }
 
-size_t MDNSSrvRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>& offsets, uint32_t headerOffset) const
+size_t MDNSSrvRData::Serialize(uint8_t* buffer, std::map<String, uint32_t>& offsets, uint32_t headerOffset) const
 {
     //length filled in after we know it below
 
@@ -2637,7 +2637,7 @@ size_t MDNSSrvRData::Serialize(uint8_t* buffer, std::map<qcc::String, uint32_t>&
     return size;
 }
 
-size_t MDNSSrvRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, qcc::String>& compressedOffsets, uint32_t headerOffset)
+size_t MDNSSrvRData::Deserialize(uint8_t const* buffer, uint32_t bufsize, std::map<uint32_t, String>& compressedOffsets, uint32_t headerOffset)
 {
 
 //
@@ -2684,7 +2684,7 @@ void MDNSAdvertiseRData::SetTransport(TransportMask tm)
     MDNSTextRData::SetValue("t", U32ToString(tm, 16));
 }
 
-void MDNSAdvertiseRData::AddName(qcc::String name)
+void MDNSAdvertiseRData::AddName(String name)
 {
     MDNSTextRData::SetValue("n", name);
 }
@@ -2733,7 +2733,7 @@ uint16_t MDNSAdvertiseRData::GetNumNames(TransportMask transportMask)
     return numNames;
 }
 
-qcc::String MDNSAdvertiseRData::GetNameAt(TransportMask transportMask, int index)
+String MDNSAdvertiseRData::GetNameAt(TransportMask transportMask, int index)
 {
     Fields::const_iterator it;
     for (it = m_fields.begin(); it != m_fields.end(); ++it) {
@@ -2779,7 +2779,7 @@ void MDNSAdvertiseRData::RemoveNameAt(TransportMask transportMask, int index)
     }
 
 }
-std::pair<qcc::String, qcc::String> MDNSAdvertiseRData::GetFieldAt(int i)
+std::pair<String, String> MDNSAdvertiseRData::GetFieldAt(int i)
 {
     Fields::const_iterator it = m_fields.begin();
     while (i-- && it != m_fields.end()) {
@@ -2801,7 +2801,7 @@ std::pair<qcc::String, qcc::String> MDNSAdvertiseRData::GetFieldAt(int i)
 }
 
 //MDNSSearchRecord
-MDNSSearchRData::MDNSSearchRData(qcc::String name, uint16_t version)
+MDNSSearchRData::MDNSSearchRData(String name, uint16_t version)
     : MDNSTextRData(version, true)
 {
     MDNSTextRData::SetValue("n", name);
@@ -2917,7 +2917,7 @@ bool MDNSSearchRData::RemoveSearchCriterion(int index)
     }
     return removed;
 }
-std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
+std::pair<String, String> MDNSSearchRData::GetFieldAt(int i)
 {
     Fields::const_iterator it = m_fields.begin();
     while (i-- && it != m_fields.end()) {
@@ -2938,7 +2938,7 @@ std::pair<qcc::String, qcc::String> MDNSSearchRData::GetFieldAt(int i)
 }
 
 //MDNSPingRecord
-MDNSPingRData::MDNSPingRData(qcc::String name, uint16_t version)
+MDNSPingRData::MDNSPingRData(String name, uint16_t version)
     : MDNSTextRData(version)
 {
     MDNSTextRData::SetValue("n", name);
@@ -2949,13 +2949,13 @@ String MDNSPingRData::GetWellKnownName()
     return MDNSTextRData::GetValue("n");
 }
 
-void MDNSPingRData::SetWellKnownName(qcc::String name)
+void MDNSPingRData::SetWellKnownName(String name)
 {
     MDNSTextRData::SetValue("n", name);
 }
 
 //MDNSPingReplyRecord
-MDNSPingReplyRData::MDNSPingReplyRData(qcc::String name, uint16_t version)
+MDNSPingReplyRData::MDNSPingReplyRData(String name, uint16_t version)
     : MDNSTextRData(version)
 {
     MDNSTextRData::SetValue("n", name);
@@ -2966,7 +2966,7 @@ String MDNSPingReplyRData::GetWellKnownName()
     return MDNSTextRData::GetValue("n");
 }
 
-void MDNSPingReplyRData::SetWellKnownName(qcc::String name)
+void MDNSPingReplyRData::SetWellKnownName(String name)
 {
     MDNSTextRData::SetValue("n", name);
 }
@@ -2976,7 +2976,7 @@ String MDNSPingReplyRData::GetReplyCode()
     return MDNSTextRData::GetValue("replycode");
 }
 
-void MDNSPingReplyRData::SetReplyCode(qcc::String replyCode)
+void MDNSPingReplyRData::SetReplyCode(String replyCode)
 {
     MDNSTextRData::SetValue("replycode", replyCode);
 }
@@ -3010,14 +3010,33 @@ void MDNSSenderRData::SetIPV4ResponsePort(uint16_t ipv4Port)
     MDNSTextRData::SetValue("upcv4", U32ToString(ipv4Port));
 }
 
-qcc::String MDNSSenderRData::GetIPV4ResponseAddr()
+String MDNSSenderRData::GetIPV4ResponseAddr()
 {
     return MDNSTextRData::GetValue("ipv4");
 }
 
-void MDNSSenderRData::SetIPV4ResponseAddr(qcc::String ipv4Addr)
+void MDNSSenderRData::SetIPV4ResponseAddr(const String& ipv4Addr)
 {
     MDNSTextRData::SetValue("ipv4", ipv4Addr);
+}
+uint16_t MDNSSenderRData::GetIPV6ResponsePort()
+{
+    return MDNSTextRData::GetU16Value("upcv6");
+}
+
+void MDNSSenderRData::SetIPV6ResponsePort(uint16_t ipv6Port)
+{
+    MDNSTextRData::SetValue("upcv6", U32ToString(ipv6Port));
+}
+
+String MDNSSenderRData::GetIPV6ResponseAddr()
+{
+    return MDNSTextRData::GetValue("ipv6");
+}
+
+void MDNSSenderRData::SetIPV6ResponseAddr(const String& ipv6Addr)
+{
+    MDNSTextRData::SetValue("ipv6", ipv6Addr);
 }
 
 //MDNSHeader
@@ -3325,7 +3344,7 @@ bool _MDNSPacket::GetQuestionAt(uint32_t i, MDNSQuestion** question)
     *question = &m_questions[i];
     return true;
 }
-bool _MDNSPacket::GetQuestion(qcc::String str, MDNSQuestion** question)
+bool _MDNSPacket::GetQuestion(String str, MDNSQuestion** question)
 {
     std::vector<MDNSQuestion>::iterator it1 = m_questions.begin();
     while (it1 != m_questions.end()) {
@@ -3364,7 +3383,7 @@ uint16_t _MDNSPacket::GetNumAdditionalRecords()
     return m_additional.size();
 }
 
-void _MDNSPacket::RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type)
+void _MDNSPacket::RemoveAdditionalRecord(String str, MDNSResourceRecord::RRType type)
 {
     std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
     while (it1 != m_additional.end()) {
@@ -3377,7 +3396,25 @@ void _MDNSPacket::RemoveAdditionalRecord(qcc::String str, MDNSResourceRecord::RR
     }
 }
 
-bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** additional)
+#ifndef NDEBUG
+void _MDNSPacket::Dump()
+{
+    std::vector<MDNSResourceRecord>::iterator it1 = m_additional.begin();
+    QCC_DbgPrintf(("Dumping MDNSPacket additional\n"));
+    while (it1 != m_additional.end()) {
+        QCC_DbgPrintf((" %s %d\n", (*it1).GetDomainName().c_str(),  (int)((*it1).GetRRType())));
+        it1++;
+    }
+    it1 = m_answers.begin();
+    QCC_DbgPrintf(("Dumping MDNSPacket answers\n"));
+    while (it1 != m_answers.end()) {
+        QCC_DbgPrintf((" %s %d\n", (*it1).GetDomainName().c_str(), (int)((*it1).GetRRType())));
+        it1++;
+    }
+}
+#endif
+
+bool _MDNSPacket::GetAdditionalRecord(String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** additional)
 {
     size_t starPos = str.find_last_of_std('*');
     String name = str.substr(0, starPos);
@@ -3394,7 +3431,7 @@ bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRTyp
     return false;
 }
 
-bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** additional)
+bool _MDNSPacket::GetAdditionalRecord(String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** additional)
 {
     if (type != MDNSResourceRecord::TXT) {
         return false;
@@ -3415,7 +3452,7 @@ bool _MDNSPacket::GetAdditionalRecord(qcc::String str, MDNSResourceRecord::RRTyp
     return false;
 }
 
-uint32_t _MDNSPacket::GetNumMatches(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version)
+uint32_t _MDNSPacket::GetNumMatches(String str, MDNSResourceRecord::RRType type, uint16_t version)
 {
     if (type != MDNSResourceRecord::TXT) {
         return false;
@@ -3436,7 +3473,7 @@ uint32_t _MDNSPacket::GetNumMatches(qcc::String str, MDNSResourceRecord::RRType 
     return numMatches;
 }
 
-bool _MDNSPacket::GetAdditionalRecordAt(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, uint32_t index, MDNSResourceRecord** additional)
+bool _MDNSPacket::GetAdditionalRecordAt(String str, MDNSResourceRecord::RRType type, uint16_t version, uint32_t index, MDNSResourceRecord** additional)
 {
     if (type != MDNSResourceRecord::TXT) {
         return false;
@@ -3460,7 +3497,7 @@ bool _MDNSPacket::GetAdditionalRecordAt(qcc::String str, MDNSResourceRecord::RRT
     return false;
 }
 
-bool _MDNSPacket::GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** answer)
+bool _MDNSPacket::GetAnswer(String str, MDNSResourceRecord::RRType type, MDNSResourceRecord** answer)
 {
     std::vector<MDNSResourceRecord>::iterator it1 = m_answers.begin();
     while (it1 != m_answers.end()) {
@@ -3473,7 +3510,7 @@ bool _MDNSPacket::GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, MD
     return false;
 }
 
-bool _MDNSPacket::GetAnswer(qcc::String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** answer)
+bool _MDNSPacket::GetAnswer(String str, MDNSResourceRecord::RRType type, uint16_t version, MDNSResourceRecord** answer)
 {
     if (type != MDNSResourceRecord::TXT) {
         return false;
@@ -3513,7 +3550,7 @@ uint16_t _MDNSPacket::GetNumAnswers()
 
 size_t _MDNSPacket::GetSerializedSize(void) const
 {
-    std::map<qcc::String, uint32_t> offsets;
+    std::map<String, uint32_t> offsets;
     size_t ret;
 
     size_t size = m_header.GetSerializedSize();
@@ -3551,7 +3588,7 @@ size_t _MDNSPacket::GetSerializedSize(void) const
 
 size_t _MDNSPacket::Serialize(uint8_t* buffer) const
 {
-    std::map<qcc::String, uint32_t> offsets;
+    std::map<String, uint32_t> offsets;
     size_t ret;
 
     size_t size = m_header.Serialize(buffer);
@@ -3601,7 +3638,7 @@ size_t _MDNSPacket::Serialize(uint8_t* buffer) const
 size_t _MDNSPacket::Deserialize(uint8_t const* buffer, uint32_t bufsize)
 {
     Clear();
-    std::map<uint32_t, qcc::String> compressedOffsets;
+    std::map<uint32_t, String> compressedOffsets;
     size_t size = m_header.Deserialize(buffer, bufsize);
     size_t ret;
     if (size == 0) {
@@ -3705,7 +3742,7 @@ TransportMask _MDNSPacket::GetTransportMask()
     }
     return transportMask;
 }
-void _MDNSPacket::RemoveAnswer(qcc::String str, MDNSResourceRecord::RRType type)
+void _MDNSPacket::RemoveAnswer(String str, MDNSResourceRecord::RRType type)
 {
     std::vector<MDNSResourceRecord>::iterator it1 = m_answers.begin();
     while (it1 != m_answers.end()) {
@@ -3718,7 +3755,7 @@ void _MDNSPacket::RemoveAnswer(qcc::String str, MDNSResourceRecord::RRType type)
     }
 }
 
-void _MDNSPacket::RemoveQuestion(qcc::String str)
+void _MDNSPacket::RemoveQuestion(String str)
 {
     std::vector<MDNSQuestion>::iterator it1 = m_questions.begin();
     while (it1 != m_questions.end()) {

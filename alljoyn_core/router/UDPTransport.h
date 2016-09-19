@@ -28,6 +28,7 @@
 #endif
 
 #include <list>
+#include <vector>
 #include <queue>
 #include <alljoyn/Status.h>
 
@@ -409,7 +410,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
         qcc::String m_requestParam;
         bool m_requestParamOpt;
         TransportMask m_requestTransportMask;
-        std::map<qcc::String, qcc::IPAddress> ifMap;
+        std::multimap<qcc::String, qcc::IPAddress> ifMap;
     };
 
     qcc::Mutex m_listenRequestsLock;  /**< Mutex that protects m_listenRequests */
@@ -524,7 +525,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      */
     void DoStopListen(qcc::String& listenSpec);
 
-    void QueueHandleNetworkEvent(const std::map<qcc::String, qcc::IPAddress>&);
+    void QueueHandleNetworkEvent(const std::multimap<qcc::String, qcc::IPAddress>&);
 
     /**
      * @internal
@@ -566,7 +567,7 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
     class NetworkEventCallback {
       public:
         NetworkEventCallback(UDPTransport& transport) : m_transport(transport) { }
-        void Handler(const std::map<qcc::String, qcc::IPAddress>&);
+        void Handler(const std::multimap<qcc::String, qcc::IPAddress>&);
       private:
         /* Private assigment operator - does nothing */
         NetworkEventCallback operator=(const NetworkEventCallback&);
@@ -760,12 +761,13 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
      * @param[out] socketFd The assigned descriptor which will identify the socket.
      * @param[in] addr The IP address the socket will be bound to.
      * @param[in] port The IP port the socket will be bound to.
+     * @param[in] scopeId The scope of IPv6 address.
      * @return
      *      - ER_OK if socket creation and binding succeeded.
      *      - an error status otherwise. Some configuration failures are not treated as errors
      *        and will not make the method abort with an error status.
      */
-    QStatus SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port);
+    QStatus SetupSocket(qcc::SocketFd& socketFd, const qcc::IPAddress& addr, uint16_t port, uint32_t scopeId);
 
     /**
      * @brief Returns a given socket's accepting status.
@@ -829,21 +831,33 @@ class UDPTransport : public Transport, public _RemoteEndpoint::EndpointListener,
 
     struct InterfaceInfo {
         InterfaceInfo()
-            : m_address(), m_acceptingPort(0), m_activePort(0)
+            : m_addresses(), m_acceptingPort(0), m_activePort(0)
         { }
 
         InterfaceInfo(const qcc::IPAddress& address, uint16_t acceptingPort, uint16_t activePort)
-            : m_address(address), m_acceptingPort(acceptingPort), m_activePort(activePort)
-        { }
+            : m_addresses(), m_acceptingPort(acceptingPort), m_activePort(activePort)
+        {
+            m_addresses.push_back(address);
+        }
 
         InterfaceInfo(const qcc::String& address, uint16_t acceptingPort, uint16_t activePort)
-            : m_address(address), m_acceptingPort(acceptingPort), m_activePort(activePort)
-        { }
-        qcc::IPAddress m_address; /**< The address currently associated with the interface. */
+            : m_addresses(), m_acceptingPort(acceptingPort), m_activePort(activePort)
+        {
+            m_addresses.push_back(address);
+        }
+        std::vector<qcc::IPAddress> m_addresses; /**< The list of addresses currently associated with the interface. */
         uint16_t m_acceptingPort; /**< The port used for accepting incoming connection requests from other routing nodes. */
         uint16_t m_activePort;    /**< The port used for joining and handling sessions hosted by other routing nodes. */
     };
     std::map<qcc::String, InterfaceInfo> m_requestedInterfaces; /**< A map of requested interfaces and corresponding IP addresses/ports or defaults */
+
+    /*
+     * Internal helper methods used by HandleNetworkEventInstance()
+     */
+    bool InterfaceHasAddress(const qcc::String& iface, const qcc::IPAddress& addr) const;
+    qcc::SocketFd GetMatchingListenFdEntry(const qcc::String& listenSpec) const;
+    void AddListenSpecsToList(const qcc::IPAddress& addr, const InterfaceInfo& ifaceInfo, std::list<qcc::String>& specsList) const;
+    void CleanupRequestedInterfaces(const std::multimap<qcc::String, qcc::IPAddress>& ifMap, std::list<qcc::String>& replacedList);
 
     struct AddressInfo {
         AddressInfo()
