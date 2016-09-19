@@ -278,7 +278,11 @@ struct XmlParseContext {
         curElem(NULL),
         attrInQuote(false),
         isEndTag(false),
-        skip(false) { }
+        isDoctype(false),
+        foundHyphen(false),
+        isCommentDelim(false),
+        isTextDecleration(false),
+        foundTxtDeclDelim(false) { }
 
     /** Reset state of XmlParseContext in preparation for reuse */
     void Reset();
@@ -335,6 +339,8 @@ struct XmlParseContext {
         IN_ELEMENT_START,
         IN_ATTR_NAME,
         IN_ATTR_VALUE,
+        IN_SKIP,
+        IN_SKIP_START,
         PARSE_COMPLETE
     } parseState;
 
@@ -344,10 +350,16 @@ struct XmlParseContext {
     qcc::String elemName;     /**< Name of current element */
     qcc::String attrName;     /**< Name of attribute currently being parsed. */
     qcc::String attrValue;    /**< Value of attribute currently being parsed. */
+    qcc::String doctypeStr;
     bool attrInQuote;         /**< true iff inside attribute value quotes */
     char quoteChar;           /**< a " or ' character used for quote matching of an attribute */
     bool isEndTag;            /**< true iff currently parsed tag is an end tag */
-    bool skip;                /**< true iff elements starts with "<!" */
+    bool isDoctype;           /**< true iff currently parsed tag is a doctype tag */
+    bool foundHyphen;         /**< true iff a hyphen was found during the current pass */
+    bool isCommentDelim;      /**< true iff a comment tag delimeter (--) was found */
+    bool shouldIgnore;        /**< true iff currently parsed tag is a comment */
+    bool isTextDecleration;   /**< true iff currently parsed tag is a text decleration tag (<?) */
+    bool foundTxtDeclDelim;   /**< true iff a question mark was found during the current pass */
 };
 
 }
