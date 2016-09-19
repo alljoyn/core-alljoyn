@@ -16,6 +16,11 @@
 
 package org.alljoyn.bus;
 
+import org.alljoyn.bus.defs.BusObjectInfo;
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.MethodDef;
+import org.alljoyn.bus.defs.PropertyDef;
+
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
@@ -57,6 +62,8 @@ public class ProxyBusObject {
     private int flags;
 
     private Method busConnectionLost;
+
+    private List<InterfaceDef> interfaceDefs;
 
     /**
      * Construct a ProxyBusObject.
@@ -100,6 +107,53 @@ public class ProxyBusObject {
         }
     }
 
+    /**
+     * Construct a ProxyBusObject using dynamic interface definitions.
+     * The proxy will use the GenericInterface.class to relay supported bus methods and properties.
+     *
+     * @param busAttachment  The connection the remote object is on.
+     * @param busName        Well-known or unique bus name of remote object.
+     * @param objPath        Object path of remote object.
+     * @param sessionId      The session ID corresponding to the connection to the object.
+     * @param interfaceDefs  A list of dynamic interface definitions that this proxy supports.
+     */
+    public ProxyBusObject(BusAttachment busAttachment, String busName, String objPath, int sessionId,
+                          List<InterfaceDef> interfaceDefs) {
+        this(busAttachment, busName, objPath, sessionId, interfaceDefs, false);
+    }
+
+    /**
+     * Construct a ProxyBusObject using dynamic interface definitions.
+     * The proxy will use the GenericInterface.class to relay supported bus methods and properties.
+     *
+     * @param busAttachment  The connection the remote object is on.
+     * @param busName        Well-known or unique bus name of remote object.
+     * @param objPath        Object path of remote object.
+     * @param sessionId      The session ID corresponding to the connection to the object.
+     * @param interfaceDefs  A list of dynamic interface definitions that this proxy supports.
+     * @param secure         the security mode for the remote object
+     */
+    public ProxyBusObject(BusAttachment busAttachment, String busName, String objPath, int sessionId,
+                          List<InterfaceDef> interfaceDefs, boolean secure) {
+        this.bus = busAttachment;
+        this.busName = busName;
+        this.objPath = objPath;
+        this.flags = 0;
+        create(busAttachment, busName, objPath, sessionId, secure);
+        replyTimeoutMsecs = 25000;
+
+        this.interfaceDefs = interfaceDefs;
+        Class<?>[] busInterfaces = new Class<?>[] {GenericInterface.class};
+        proxy = Proxy.newProxyInstance(busInterfaces[0].getClassLoader(), busInterfaces, new DynamicHandler(interfaceDefs));
+
+        try {
+            busConnectionLost = getClass().getDeclaredMethod("busConnectionLost", String.class);
+            busConnectionLost.setAccessible(true);
+        } catch (NoSuchMethodException ex) {
+            // This will not happen
+        }
+    }
+
     /** Allocate native resources. */
     private native void create(BusAttachment busAttachment, String busName, String objPath, int sessionId, boolean secure);
 
@@ -108,7 +162,15 @@ public class ProxyBusObject {
 
     /** Called by native code to lazily add an interface when a proxy method is invoked. */
     protected int addInterface(String name) throws AnnotationBusException {
-        if (name != null) {
+        // Create interface description based on dynamic or static interface definitions
+        if (interfaceDefs != null && name != null) {
+            InterfaceDef intfDef = BusObjectInfo.getDefinition(interfaceDefs, name, null, InterfaceDef.class);
+            if (intfDef != null) {
+                InterfaceDescription desc = new InterfaceDescription(null);
+                Status status = desc.create(bus, intfDef);
+                return (status == Status.BUS_IFACE_ALREADY_EXISTS) ? Status.OK.getErrorCode() : status.getErrorCode();
+            }
+        } else if (name != null) {
             for (Class<?> intf : proxy.getClass().getInterfaces()) {
                 if (name.equals(InterfaceDescription.getName(intf))) {
                     InterfaceDescription desc = new InterfaceDescription();
@@ -379,6 +441,7 @@ public class ProxyBusObject {
      *             created
      * @return the proxy implementing the interface
      * @see BusAttachment#getProxyBusObject(String, String, int, Class[])
+     * @see BusAttachment#getProxyBusObject(String, String, int, List)
      */
     public <T> T getInterface(Class<T> intf) {
         @SuppressWarnings(value = "unchecked")
@@ -454,11 +517,22 @@ public class ProxyBusObject {
      * @throws BusException if request cannot be honored
      */
     public <T> Map<String, Variant> getAllProperties(Class<T> iface) throws BusException {
+        return getAllProperties(InterfaceDescription.getName(iface));
+    }
+
+    /**
+     * Get all properties from an interface on the remote object.
+     *
+     * @param interfaceName the name of the interface
+     * @return a Map of name/value associations
+     * @throws BusException if request cannot be honored
+     */
+    public Map<String, Variant> getAllProperties(String interfaceName) throws BusException {
         Map<String, Variant> map = null;
         try {
             Type returnType;
             returnType = org.alljoyn.bus.ifaces.Properties.class.getMethod("GetAll", String.class).getGenericReturnType();
-            map = getAllProperties(bus, returnType, InterfaceDescription.getName(iface));
+            map = getAllProperties(bus, returnType, interfaceName);
         } catch (NoSuchMethodException e) {
             /* This will not happen */
             System.err.println("Unexpected NoSuchMethodException for the GetAll method");
@@ -513,5 +587,172 @@ public class ProxyBusObject {
         return clazz.getCanonicalName() + Arrays.toString(names) + "@"
         + System.identityHashCode(proxy);
     }
+
+
+    /**
+     * Invocation handler for bus methods and bus properties that are based on dynamic MethodDef
+     * and PropertyDef definitions.
+     *
+     * The handler accepts invoke requests for:
+     * <ul>
+     *     GenericInterface.methodCall(interfaceName, methodName, args...)
+     *     GenericInterface.getProperty(interfaceName, propertyName)
+     *     GenericInterface.setProperty(interfaceName, propertyName, arg)
+     * </ul>
+     *
+     * The DynamicHandler is initialized with a list of permitted InterfaceDef. For a requested bus
+     * method/property to be called, the corresponding dynamic MethodDef/PropertyDef must be present
+     * in this list.
+     */
+    private class DynamicHandler implements InvocationHandler {
+
+        final private List<InterfaceDef> interfaceDefs;
+
+        /**
+         * Constructor.
+         *
+         * @param interfaceDefs the definitions that describe the interfaces whose methods/properties
+         *                      can be called.
+         * @throws IllegalArgumentException invalid argument was specified.
+         */
+        public DynamicHandler(List<InterfaceDef> interfaceDefs) {
+            if (interfaceDefs == null) {
+                throw new IllegalArgumentException(("Null interfaceDefs"));
+            }
+            this.interfaceDefs = interfaceDefs;
+        }
+
+        /**
+         * Send a bus method call, or bus property get/set, based on the specified args and their
+         * corresponding MethodDef/PropertyDef definition.
+         *
+         * @param proxy The proxy being called (instance of GenericInterface).
+         * @param method The proxy Method being called. Should be one of: GenericInterface.methodCall(...),
+         *               GenericInterface.getProperty(...), GenericInterface.setProperty(...)
+         * @param args an array containing the bus interface name, member name, and input args for the
+         *             request. For example, for a Method Call, these args would have the form
+         *             {interfaceName, methodName, methodArgs...}, where methodArgs is an array of
+         *             arguments passed into the bus method being called.
+         *             The interface name and member name must correspond to a known MethodDef or
+         *             PropertyDef.
+         * @return the bus method/property call's return value
+         * @throws IllegalArgumentException invalid proxy Method was specified.
+         * @throws BusException if the proxy's interface definitions do not include a MethodDef or
+         *             or PropertyDef corresponding to the given bus interface's method or property.
+         */
+        @Override
+        public Object invoke(Object proxy, Method method, Object[] args) throws BusException {
+            // Check that the called method is one of the accepted GenericInterface operations
+            if (method.getDeclaringClass().equals(GenericInterface.class) && method.getName().equals("signal")) {
+                throw new IllegalArgumentException(
+                        "Invalid proxy method. Proxy does not support GenericInterface signal calls.");
+            }
+
+            boolean isGet = method.getName().equals("getProperty");
+            boolean isSet = method.getName().equals("setProperty");
+            boolean isMethod = method.getName().equals("methodCall");
+
+            String interfaceName = null;
+            String memberName = null;
+            String outSig = null;
+            Type outType = void.class;
+            Object value = null;
+
+            if (isMethod) {
+                interfaceName = (String)getArg(args, 0, null);
+                memberName = (String)getArg(args, 1, null);
+                MethodDef methodDef = BusObjectInfo.getDefinition(interfaceDefs,
+                        interfaceName, memberName, MethodDef.class);
+                if (methodDef == null) {
+                    throw new BusException("No such method: " + interfaceName+"."+memberName);
+                }
+
+                outSig = methodDef.getReplySignature();
+                outType = (outSig == null || outSig.isEmpty()) ? void.class : MsgArg.toType(outSig);
+                Object[] methodArgs = (Object[])getArg(args, 2, new Object[]{});
+
+                value = methodCall(bus,
+                            methodDef.getInterfaceName(),
+                            methodDef.getName(),
+                            methodDef.getSignature(),
+                            outType,
+                            methodArgs,
+                            replyTimeoutMsecs,
+                            flags);
+            } else if (isGet || isSet) {
+                interfaceName = (String)getArg(args, 0, null);
+                memberName = (String)getArg(args, 1, null);
+                PropertyDef propertyDef = BusObjectInfo.getDefinition(interfaceDefs,
+                        interfaceName, memberName, PropertyDef.class);
+                if (propertyDef == null) {
+                    throw new BusException("No such property: " + interfaceName+"."+memberName);
+                }
+
+                if (isGet) {
+                    outSig = propertyDef.getType();
+                    outType = MsgArg.toType(outSig);
+                    Variant v = getProperty(bus,
+                            propertyDef.getInterfaceName(),
+                            propertyDef.getName());
+                    value = v.getObject(outType);
+                } else {
+                    Object propertyArg = getArg(args, 2, null);
+                    setProperty(bus,
+                            propertyDef.getInterfaceName(),
+                            propertyDef.getName(),
+                            propertyDef.getType(),
+                            propertyArg);
+                }
+            } else {
+                try {
+                    Class<Object> objectClass = Object.class;
+                    if (method.equals(objectClass.getMethod("toString"))) {
+                        return proxyToString(proxy);
+                    }
+                    if (method.equals(objectClass.getMethod("equals",objectClass))) {
+                        return proxy == args[0];
+                    }
+                    if (method.equals(objectClass.getMethod("hashCode"))) {
+                        return System.identityHashCode(proxy);
+                    }
+                } catch (NoSuchMethodException e) {
+                    throw new BusException("No such method: " + method.getName());
+                }
+            }
+
+            /*
+             * The JNI layer can't perform complete type checking (at least not easily),
+             * so this extra code is here. The conditions below are taken from the
+             * InvocationHandler documentation.
+             */
+            boolean doThrow = false;
+            Class<?> returnType = (Class<?>)outType;
+            if (value == null) {
+                doThrow = returnType.isPrimitive() && !returnType.isAssignableFrom(Void.TYPE);
+            } else if (returnType.isPrimitive()) {
+                if ((returnType.isAssignableFrom(Byte.TYPE) && !(value instanceof Byte))
+                        || (returnType.isAssignableFrom(Short.TYPE) && !(value instanceof Short))
+                        || (returnType.isAssignableFrom(Integer.TYPE) && !(value instanceof Integer))
+                        || (returnType.isAssignableFrom(Long.TYPE) && !(value instanceof Long))
+                        || (returnType.isAssignableFrom(Double.TYPE) && !(value instanceof Double))
+                        || (returnType.isAssignableFrom(Boolean.TYPE) && !(value instanceof Boolean))) {
+                    doThrow = true;
+                }
+            } else if (!returnType.isAssignableFrom(value.getClass())) {
+                doThrow = true;
+            }
+            if (doThrow) {
+                throw new MarshalBusException("cannot marshal '" + outSig + "' into " + returnType);
+            }
+            return value;
+        }
+
+        /** Return the indexed arg. If invalid index, return the given default value. */
+        private Object getArg(Object[] args, int index, Object defaultValue) {
+            if (index < 0) return defaultValue;
+            return (args != null && args.length >= index+1) ? args[index] : defaultValue;
+        }
+    }
+
 }
 
