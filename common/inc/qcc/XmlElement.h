@@ -335,6 +335,8 @@ struct XmlParseContext {
         IN_ELEMENT_START,
         IN_ATTR_NAME,
         IN_ATTR_VALUE,
+        IN_SKIP,
+        IN_SKIP_START,
         PARSE_COMPLETE
     } parseState;
 
@@ -344,10 +346,15 @@ struct XmlParseContext {
     qcc::String elemName;     /**< Name of current element */
     qcc::String attrName;     /**< Name of attribute currently being parsed. */
     qcc::String attrValue;    /**< Value of attribute currently being parsed. */
+    qcc::String doctypeStr;
     bool attrInQuote;         /**< true iff inside attribute value quotes */
     char quoteChar;           /**< a " or ' character used for quote matching of an attribute */
     bool isEndTag;            /**< true iff currently parsed tag is an end tag */
     bool skip;                /**< true iff elements starts with "<!" */
+    bool isDoctype;
+    bool foundHyphen;
+    bool isCommentDelim;
+    bool shouldIgnore;
 };
 
 }
