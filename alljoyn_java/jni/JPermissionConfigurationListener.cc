@@ -22,7 +22,7 @@
 #include "JPermissionConfigurationListener.h"
 #include "alljoyn_jni_helper.h"
 
-#define QCC_MODULE "JNI_PCNFLSTNR"
+#define QCC_MODULE "ALLJOYN_JAVA"
 
 JPermissionConfigurationListener::JPermissionConfigurationListener(jobject jlistener) : jpcListener(NULL)
 {
