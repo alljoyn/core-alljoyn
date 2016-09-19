@@ -1945,6 +1945,34 @@ public class BusAttachment {
     public native PermissionConfigurator getPermissionConfigurator();
 
     /**
+     * Registers a handler to receive the org.alljoyn.Bus.Application
+     * State signal.
+     *
+     * @param applicationStateListener reference to an ApplicationStateListener
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - #ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS when the same listener has already been registered.
+     *    - Different error status otherwise
+     */
+    public native Status registerApplicationStateListener(ApplicationStateListener applicationStateListener);
+
+    /**
+     * Unregisters the ApplicationStateListener from receiving the
+     * org.alljoyn.Bus.Application State signal.
+     *
+     * @param applicationStateListener reference to an
+     *                                     ApplicationStateListener to
+     *                                     unregister
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - #ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER when this listener has not been registered.
+     *    - Different error status otherwise
+     */
+    public native Status unregisterApplicationStateListener(ApplicationStateListener applicationStateListener);
+
+    /**
      * The maximum length of an AllJoyn packet.
      *
      * AllJoyn limits the total size of a packetized Message to 2^17 bytes.
