@@ -594,3 +594,401 @@ TEST(BusObjectTest, GetAllPropsWithStaticMsgArgProp)
     status = pbo.GetAllProperties("org.test", props);
     EXPECT_EQ(ER_OK, status);
 }
+
+
+// ASACORE-1811
+static const char* getPropertyErrorName = "ErrorGetProperty";
+static const char* getPropertyErrorMessage = ": Error while reading this property";
+static const char* setPropertyErrorName = "ErrorSetProperty";
+static const char* setPropertyErrorMessage = ": Error while writing this property";
+
+class CustomErrorTestBusObject : public BusObject {
+  public:
+    CustomErrorTestBusObject(BusAttachment& bus, const char* path) :
+        BusObject(path),
+        m_getPropertyErrorName(getPropertyErrorName),
+        m_getPropertyErrorMessage(getPropertyErrorMessage),
+        m_setPropertyErrorName(setPropertyErrorName),
+        m_setPropertyErrorMessage(setPropertyErrorMessage)
+    {
+        const InterfaceDescription* Intf1 = bus.GetInterface("org.test");
+        EXPECT_TRUE(Intf1 != NULL);
+        AddInterface(*Intf1);
+    }
+
+  protected:
+    QStatus Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+    {
+        QCC_UNUSED(ifcName);
+        QCC_UNUSED(propName);
+        QCC_UNUSED(val);
+
+        errorName = m_getPropertyErrorName;
+        errorMessage = m_getPropertyErrorMessage;
+        return ER_BUS_REPLY_IS_ERROR_MESSAGE;   //generic failure code
+    }
+
+    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+    {
+        QCC_UNUSED(ifcName);
+        QCC_UNUSED(propName);
+        QCC_UNUSED(val);
+
+        errorName = m_setPropertyErrorName;
+        errorMessage = m_setPropertyErrorMessage;
+        return ER_BUS_REPLY_IS_ERROR_MESSAGE;   //generic failure code
+    }
+
+  private:
+    qcc::String m_getPropertyErrorName;
+    qcc::String m_getPropertyErrorMessage;
+    qcc::String m_setPropertyErrorName;
+    qcc::String m_setPropertyErrorMessage;
+};
+
+
+class GetSetPropertyListener : public ProxyBusObject::Listener {
+
+  public:
+    GetSetPropertyListener() : ev() { }
+    virtual ~GetSetPropertyListener() { }
+
+    void GetPropCallback(QStatus status, ProxyBusObject* obj, const MsgArg& value, const qcc::String& errorName, const qcc::String& errorDescription, void* context) {
+        QCC_UNUSED(status);
+        QCC_UNUSED(obj);
+        QCC_UNUSED(value);
+        QCC_UNUSED(context);
+
+        ev.SetEvent();
+        // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+        String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(getPropertyErrorMessage);
+
+        EXPECT_STREQ(errorName.c_str(), getPropertyErrorName);
+        EXPECT_STREQ(errorDescription.c_str(), expectedErrorDescription.c_str());
+    }
+
+    void SetPropCallback(QStatus status, ProxyBusObject* obj, const qcc::String& errorName, const qcc::String& errorDescription, void* context) {
+        QCC_UNUSED(status);
+        QCC_UNUSED(obj);
+        QCC_UNUSED(context);
+
+        ev.SetEvent();
+        // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+        String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(setPropertyErrorMessage);
+
+        EXPECT_STREQ(errorName.c_str(), setPropertyErrorName);
+        EXPECT_STREQ(errorDescription.c_str(), expectedErrorDescription.c_str());
+    }
+
+    void GetAllPropCallback(QStatus status, ProxyBusObject* obj, const MsgArg& values, const qcc::String& errorName, const qcc::String& errorDescription, void* context) {
+        QCC_UNUSED(status);
+        QCC_UNUSED(obj);
+        QCC_UNUSED(values);
+        QCC_UNUSED(context);
+
+        ev.SetEvent();
+        // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+        String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(getPropertyErrorMessage);
+
+        EXPECT_STREQ(errorName.c_str(), getPropertyErrorName);
+        EXPECT_STREQ(errorDescription.c_str(), expectedErrorDescription.c_str());
+    }
+
+    qcc::Event ev;
+};
+
+
+TEST(BusObjectTest, GetPropertyCustomError)
+{
+    QStatus status;
+    BusAttachment busService("test8service");
+    BusAttachment busClient("test8client");
+    InterfaceDescription* intf = NULL;
+    status = busService.CreateInterface("org.test", intf);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_TRUE(intf != NULL);
+    status = intf->AddProperty("integer_property", "i", PROP_ACCESS_RW);
+    EXPECT_EQ(ER_OK, status);
+    intf->Activate();
+
+    //Start a service bus attachment
+    status = busService.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busService.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    //Start a client bus attachment
+    status = busClient.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busClient.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    CustomErrorTestBusObject bo(busService, OBJECT_PATH);
+    status = busService.RegisterBusObject(bo);
+    EXPECT_EQ(ER_OK, status);
+
+    ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
+
+    status = pbo.IntrospectRemoteObject();
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg prop;
+    status = prop.Set("i", 1);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String errorName, errorDescription;
+    pbo.GetProperty("org.test", "integer_property", prop, errorName, errorDescription);
+    EXPECT_STREQ(errorName.c_str(), getPropertyErrorName);
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(getPropertyErrorMessage);
+    EXPECT_STREQ(errorDescription.c_str(), expectedErrorDescription.c_str());
+}
+
+TEST(BusObjectTest, SetPropertyCustomError)
+{
+    QStatus status;
+    BusAttachment busService("test9service");
+    BusAttachment busClient("test9client");
+    InterfaceDescription* intf = NULL;
+    status = busService.CreateInterface("org.test", intf);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_TRUE(intf != NULL);
+    status = intf->AddProperty("integer_property", "i", PROP_ACCESS_RW);
+    EXPECT_EQ(ER_OK, status);
+    intf->Activate();
+
+    //Start a service bus attachment
+    status = busService.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busService.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    //Start a client bus attachment
+    status = busClient.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busClient.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    CustomErrorTestBusObject bo(busService, OBJECT_PATH);
+    status = busService.RegisterBusObject(bo);
+    EXPECT_EQ(ER_OK, status);
+
+    ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
+
+    status = pbo.IntrospectRemoteObject();
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg prop;
+    status = prop.Set("i", 1);
+    EXPECT_EQ(ER_OK, status);
+
+    qcc::String errorName, errorDescription;
+
+    pbo.SetProperty("org.test", "integer_property", prop, errorName, errorDescription);
+    EXPECT_STREQ(errorName.c_str(), setPropertyErrorName);
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(setPropertyErrorMessage);
+
+    EXPECT_STREQ(errorDescription.c_str(), expectedErrorDescription.c_str());
+}
+
+TEST(BusObjectTest, GetPropertyAsyncCustomError)
+{
+    QStatus status;
+    BusAttachment busService("test10service");
+    BusAttachment busClient("test10client");
+    InterfaceDescription* intf = NULL;
+    status = busService.CreateInterface("org.test", intf);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_TRUE(intf != NULL);
+    status = intf->AddProperty("integer_property", "i", PROP_ACCESS_RW);
+    EXPECT_EQ(ER_OK, status);
+    intf->Activate();
+
+    //Start a service bus attachment
+    status = busService.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busService.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    //Start a client bus attachment
+    status = busClient.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busClient.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    CustomErrorTestBusObject bo(busService, OBJECT_PATH);
+    status = busService.RegisterBusObject(bo);
+    EXPECT_EQ(ER_OK, status);
+
+    ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
+
+    status = pbo.IntrospectRemoteObject();
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg prop;
+    status = prop.Set("i", 1);
+    EXPECT_EQ(ER_OK, status);
+
+    GetSetPropertyListener gspl;
+
+    pbo.GetPropertyAsync("org.test",
+                         "integer_property",
+                         &gspl,
+                         static_cast<ProxyBusObject::Listener::GetPropertyAsyncCB>(&GetSetPropertyListener::GetPropCallback),
+                         NULL);
+
+    EXPECT_EQ(ER_OK, Event::Wait(gspl.ev));
+    gspl.ev.ResetEvent();
+}
+
+TEST(BusObjectTest, SetPropertyAsyncCustomError)
+{
+    QStatus status;
+    BusAttachment busService("test11service");
+    BusAttachment busClient("test11client");
+    InterfaceDescription* intf = NULL;
+    status = busService.CreateInterface("org.test", intf);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_TRUE(intf != NULL);
+    status = intf->AddProperty("integer_property", "i", PROP_ACCESS_RW);
+    EXPECT_EQ(ER_OK, status);
+    intf->Activate();
+
+    //Start a service bus attachment
+    status = busService.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busService.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    //Start a client bus attachment
+    status = busClient.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busClient.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    CustomErrorTestBusObject bo(busService, OBJECT_PATH);
+    status = busService.RegisterBusObject(bo);
+    EXPECT_EQ(ER_OK, status);
+
+    ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
+
+    status = pbo.IntrospectRemoteObject();
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg prop;
+    status = prop.Set("i", 1);
+    EXPECT_EQ(ER_OK, status);
+
+    GetSetPropertyListener gspl;
+
+    pbo.SetPropertyAsync("org.test",
+                         "integer_property",
+                         prop,
+                         &gspl,
+                         static_cast<ProxyBusObject::Listener::SetPropertyAsyncCB>(&GetSetPropertyListener::SetPropCallback),
+                         NULL);
+
+    EXPECT_EQ(ER_OK, Event::Wait(gspl.ev));
+    gspl.ev.ResetEvent();
+}
+
+TEST(BusObjectTest, GetAllPropertiesCustomError)
+{
+    QStatus status;
+    BusAttachment busService("test12service");
+    BusAttachment busClient("test12client");
+    InterfaceDescription* intf = NULL;
+    status = busService.CreateInterface("org.test", intf);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_TRUE(intf != NULL);
+    status = intf->AddProperty("integer_property", "i", PROP_ACCESS_RW);
+    EXPECT_EQ(ER_OK, status);
+    intf->Activate();
+
+    //Start a service bus attachment
+    status = busService.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busService.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    //Start a client bus attachment
+    status = busClient.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busClient.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    CustomErrorTestBusObject bo(busService, OBJECT_PATH);
+    status = busService.RegisterBusObject(bo);
+    EXPECT_EQ(ER_OK, status);
+
+    ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
+
+    status = pbo.IntrospectRemoteObject();
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg prop;
+    status = prop.Set("i", 1);
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg props;
+    qcc::String errorName, errorDescription;
+    status = pbo.GetAllProperties("org.test", props, errorName, errorDescription);
+
+    EXPECT_STREQ(errorName.c_str(), getPropertyErrorName);
+
+    // Error description returned by AllJoyn is the concatenation of error name and error message (see  ajn::_Message::GetErrorDescription)
+    String expectedErrorDescription = String(QCC_StatusText(ER_BUS_REPLY_IS_ERROR_MESSAGE)) + String(getPropertyErrorMessage);
+    EXPECT_STREQ(errorDescription.c_str(), expectedErrorDescription.c_str());
+}
+
+TEST(BusObjectTest, GetAllPropertiesAsyncCustomError)
+{
+    QStatus status;
+    BusAttachment busService("test13service");
+    BusAttachment busClient("test13client");
+    InterfaceDescription* intf = NULL;
+    status = busService.CreateInterface("org.test", intf);
+    EXPECT_EQ(ER_OK, status);
+    ASSERT_TRUE(intf != NULL);
+    status = intf->AddProperty("integer_property", "i", PROP_ACCESS_RW);
+    EXPECT_EQ(ER_OK, status);
+    intf->Activate();
+
+    //Start a service bus attachment
+    status = busService.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busService.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    //Start a client bus attachment
+    status = busClient.Start();
+    EXPECT_EQ(ER_OK, status);
+    status = busClient.Connect(ajn::getConnectArg().c_str());
+    EXPECT_EQ(ER_OK, status);
+
+    CustomErrorTestBusObject bo(busService, OBJECT_PATH);
+    status = busService.RegisterBusObject(bo);
+    EXPECT_EQ(ER_OK, status);
+
+    ProxyBusObject pbo(busClient, busService.GetUniqueName().c_str(), OBJECT_PATH, 0, false);
+
+    status = pbo.IntrospectRemoteObject();
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg prop;
+    status = prop.Set("i", 1);
+    EXPECT_EQ(ER_OK, status);
+
+    MsgArg props;
+    GetSetPropertyListener gspl;
+    status = pbo.GetAllPropertiesAsync("org.test",
+                                       &gspl,
+                                       static_cast<ProxyBusObject::Listener::GetAllPropertiesAsyncCB>(&GetSetPropertyListener::GetAllPropCallback),
+                                       NULL);
+
+    EXPECT_EQ(ER_OK, Event::Wait(gspl.ev));
+    gspl.ev.ResetEvent();
+}
