@@ -26,6 +26,14 @@ import org.alljoyn.bus.annotation.BusInterface;
 import org.alljoyn.bus.annotation.BusProperty;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
+import org.alljoyn.bus.defs.InterfaceDef;
+import org.alljoyn.bus.defs.MethodDef;
+import org.alljoyn.bus.defs.PropertyDef;
+import org.alljoyn.bus.defs.PropertyDef.ChangedSignalPolicy;
+import org.alljoyn.bus.defs.ArgDef;
+
+import java.util.Arrays;
+
 public class ProxyBusObjectTest extends TestCase {
     public ProxyBusObjectTest(String name) {
         super(name);
@@ -239,24 +247,118 @@ public class ProxyBusObjectTest extends TestCase {
         proxyObj.release();
     }
 
-    @BusInterface(name = BasicProperty.PROP_INTF_NAME)
-    static interface BasicProperty {
-        String PROP_INTF_NAME = "my.property.test";
-        @BusProperty(annotation = BusProperty.ANNOTATE_EMIT_CHANGED_SIGNAL)
-        String getName();
+    public void testDynamicMethodCall() throws Exception {
+        assertEquals(Status.OK, otherBus.advertiseName(name, SessionOpts.TRANSPORT_ANY));
+
+        // Setup dynamic interface description and proxy
+
+        String ifaceName = "org.alljoyn.bus.SimpleInterface";
+        InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
+        MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
+        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
+        interfaceDef.addMethod(methodDef);
+
+        proxyObj = bus.getProxyBusObject(name, "/simple", BusAttachment.SESSION_ID_ANY,
+                Arrays.asList(new InterfaceDef[]{interfaceDef}), false);
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+
+        // Test proxy calling a bus method via GenericInterface.methodCall()
+
+        assertEquals("hello", proxy.methodCall(ifaceName, "Ping", "hello"));
+
+        // Test other proxy methods available (toString, hashCode, equals)
+
+        assertTrue(proxy.toString().contains(ifaceName));
+        assertNotNull(proxy.hashCode());
+        assertTrue(proxy.equals(proxy));
+
+        // Test proxy calling a non-existant bus method
+
+        try {
+            proxy.methodCall(ifaceName, "Bogus", "hello");
+            fail("Expected BusException('No such method')");
+        } catch (BusException e) {
+            assertTrue(e.getMessage().startsWith("No such method"));
+        }
+
+        // Test proxy not suppose to call GenericInterface.signal()
+
+        try {
+            proxy.signal(ifaceName, "Ping", "hello");
+            fail("Expected IllegalArgumentException('Invalid proxy method')");
+        } catch (IllegalArgumentException e) {
+            assertTrue(e.getMessage().startsWith("Invalid proxy method"));
+        }
+
+        proxyObj.release();
+        otherBus.cancelAdvertiseName(name, SessionOpts.TRANSPORT_ANY);
+    }
+
+    public void testDynamicPropertyCall() throws Exception {
+        String ifaceName = "org.alljoyn.bus.BasicProperty";
+        final String path = "/myProperties";
+
+        // Register service object on the other bus
+
+        PropertyObject serviceObj = new PropertyObject();
+        assertEquals(Status.OK, otherBus.registerBusObject(serviceObj, path));
+
+        // Setup dynamic interface description and get the proxy object
+
+        InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
+        PropertyDef propertyDef = new PropertyDef("Name", "s", PropertyDef.ACCESS_READWRITE, ifaceName);
+        propertyDef.addAnnotation(PropertyDef.ANNOTATION_PROPERTY_EMITS_CHANGED_SIGNAL, ChangedSignalPolicy.TRUE.text);
+        interfaceDef.addProperty(propertyDef);
+
+        proxyObj = bus.getProxyBusObject(name, path, BusAttachment.SESSION_ID_ANY,
+                Arrays.asList(new InterfaceDef[]{interfaceDef}), false);
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+
+        // Test dynamic proxy calls via GenericInterface's getProperty() and setProperty()
+
+        assertEquals("MyName", serviceObj.name); // serviceObj initially has name=MyName
+        assertEquals("MyName", proxy.getProperty(ifaceName, "Name"));
+
+        proxy.setProperty(ifaceName, "Name", "Call me Ishmael");
+        assertEquals("Call me Ishmael", serviceObj.name);
+        assertEquals("Call me Ishmael", proxy.getProperty(ifaceName, "Name"));
+
+        // Test attempt to get/set non-existant bus property
+
+        try {
+            proxy.getProperty(ifaceName, "Bogus");
+            fail("Expected BusException('No such property')");
+        } catch (BusException e) {
+            assertTrue(e.getMessage().startsWith("No such property"));
+        }
+        try {
+            proxy.setProperty(ifaceName, "Bogus", "your name here");
+            fail("Expected BusException('No such property')");
+        } catch (BusException e) {
+            assertTrue(e.getMessage().startsWith("No such property"));
+        }
+
+        proxyObj.release();
+        otherBus.cancelAdvertiseName(name, SessionOpts.TRANSPORT_ANY);
     }
 
     class PropertyObject implements BasicProperty, BusObject {
         private String name = "MyName";
         final AtomicInteger callCount = new AtomicInteger(0);
-	@Override
-        public String getName() {
+        @Override
+        public String getName() throws BusException {
             callCount.incrementAndGet();
             return name;
+        }
+        @Override
+        public void setName(String value) throws BusException {
+            name = value;
         }
     }
 
     public void testPropertyCache() throws Exception {
+        final String ifaceName = "org.alljoyn.bus.BasicProperty";
         final String propertyServicePath = "/myProperties";
         PropertyObject ps = new PropertyObject();
 
@@ -291,19 +393,21 @@ public class ProxyBusObjectTest extends TestCase {
          * The update must be available during the property change callback. */
         synchronized (this) {
             final ArrayList<String> values = new ArrayList<String>();
-            proxyObj.registerPropertiesChangedListener(BasicProperty.PROP_INTF_NAME, new String[]{"Name"}, new PropertiesChangedListener() {
+            proxyObj.registerPropertiesChangedListener(ifaceName, new String[]{"Name"}, new PropertiesChangedListener() {
                 @Override
                 public void propertiesChanged(ProxyBusObject pObj, String ifaceName,
-                    Map<String, Variant> changed, String[] invalidated) {
-
-                    values.add(pp.getName());
+                        Map<String, Variant> changed, String[] invalidated) {
+                    try {
+                        values.add(pp.getName());
+                    } catch (BusException e) {
+                    }
                     synchronized (ProxyBusObjectTest.this) {
                         ProxyBusObjectTest.this.notifyAll();
                     }
                 }
             });
             PropertyChangedEmitter pce = new PropertyChangedEmitter(ps);
-            pce.PropertyChanged(BasicProperty.PROP_INTF_NAME, "Name", new Variant(ps.name));
+            pce.PropertyChanged(ifaceName, "Name", new Variant(ps.name));
             wait(1500);
             assertEquals(1, values.size());
             assertEquals(ps.name, values.get(0));
@@ -318,4 +422,5 @@ public class ProxyBusObjectTest extends TestCase {
         assertEquals(ps.name, pp.getName());
         proxyObj.release();
     }
+
 }
