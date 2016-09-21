@@ -114,6 +114,25 @@ public class Variant {
     }
 
     /**
+     * Gets the object wrapped by this Variant. If the value is null,
+     * then derive its Type from the Variant's signature, and then use
+     * this Type to determine the value from the wrapped native object.
+     *
+     * @return the value of the Variant.
+     * @throws BusException if Variant data cannot be unmarshalled
+     * @throws ClassCastException if Variant data cannot be converted to the derived type
+     */
+    public Object getObject() throws BusException {
+        Object value = getValue();
+        if (value == null) {
+            String sig = getSignature();
+            Type type = (sig == null) ? null : MsgArg.toType(sig);
+            value = getObject(type);
+        }
+        return value;
+    }
+
+    /**
      * Gets the object wrapped by this Variant when object is specified by Type.
      *
      * @param <T> type returned from the getObject call.
