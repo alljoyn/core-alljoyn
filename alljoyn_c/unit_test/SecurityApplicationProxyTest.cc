@@ -960,6 +960,7 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldPassGetManifestTemplate)
 TEST_F(SecurityApplicationProxyPreClaimTest, shouldGetValidManifestTemplate)
 {
     ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmanifesttemplate(m_managedAppSecurityApplicationProxy, &m_retrievedManagedAppManifestTemplate));
+    ASSERT_NE(nullptr, m_retrievedManagedAppManifestTemplate);
 
     EXPECT_STREQ(s_validManagedAppManifestTemplate, RemoveNewLines(m_retrievedManagedAppManifestTemplate).c_str());
 }
