@@ -51,8 +51,35 @@ static QCC_BOOL bus_stopping_flag = QCC_FALSE;
 static QCC_BOOL bus_disconnected_flag = QCC_FALSE;
 static QCC_BOOL prop_changed_flag = QCC_FALSE;
 static alljoyn_transportmask transport_found = 0;
+
+/* member names - access must be synchronized */
+static qcc::Mutex member_added_lock;
 static char* member_added_uniquename = NULL;
+static qcc::Mutex member_removed_lock;
 static char* member_removed_uniquename = NULL;
+
+/*
+ * Reallocate a string 'buffer' to fit the provided 'name', while holding 'bufferLock'.
+ * The 'name' argument is optional - if NULL is provided, the buffer is simply freed.
+ */
+void ReallocateName(char** buffer, qcc::Mutex* bufferLock, const char* name) {
+    char* newName;
+    if (name != NULL) {
+        /* Allocate the new buffer */
+        int uniqueNameSize = strlen(name);
+        newName = (char*) malloc(uniqueNameSize * sizeof(char) + sizeof(char));
+        strncpy(newName, name, uniqueNameSize);
+        newName[uniqueNameSize] = '\0';
+    } else {
+        newName = NULL;
+    }
+
+    ASSERT_EQ(ER_OK, bufferLock->Lock(MUTEX_CONTEXT));
+    free(*buffer);
+    *buffer = newName;
+    ASSERT_EQ(ER_OK, bufferLock->Unlock(MUTEX_CONTEXT));
+}
+
 /* session listener functions */
 static void AJ_CALL session_lost(const void* context, alljoyn_sessionid sessionId, alljoyn_sessionlostreason reason) {
     QCC_UNUSED(context);
@@ -66,14 +93,7 @@ static void AJ_CALL session_member_added(const void* context, alljoyn_sessionid 
     QCC_UNUSED(context);
     QCC_UNUSED(sessionid);
 
-    int uniqueNameSize = strlen(uniqueName);
-    if (member_added_uniquename != NULL) {
-        free(member_added_uniquename);
-        member_added_uniquename = NULL;
-    }
-    member_added_uniquename = (char*) malloc(uniqueNameSize * sizeof(char) + sizeof(char));
-    strncpy(member_added_uniquename, uniqueName, uniqueNameSize);
-    member_added_uniquename[uniqueNameSize] = '\0';
+    ReallocateName(&member_added_uniquename, &member_added_lock, uniqueName);
     session_member_added_flag = QCC_TRUE;
 }
 
@@ -81,14 +101,7 @@ static void AJ_CALL session_member_removed(const void* context, alljoyn_sessioni
     QCC_UNUSED(context);
     QCC_UNUSED(sessionId);
 
-    int uniqueNameSize = strlen(uniqueName);
-    if (member_removed_uniquename != NULL) {
-        free(member_removed_uniquename);
-        member_removed_uniquename = NULL;
-    }
-    member_removed_uniquename = (char*) malloc(uniqueNameSize * sizeof(char) + sizeof(char));
-    strncpy(member_removed_uniquename, uniqueName, uniqueNameSize);
-    member_removed_uniquename[uniqueNameSize] = '\0';
+    ReallocateName(&member_removed_uniquename, &member_removed_lock, uniqueName);
     session_member_removed_flag = QCC_TRUE;
 }
 
@@ -264,14 +277,10 @@ class SessionListenerTest : public testing::Test {
         bus_disconnected_flag = QCC_FALSE;
         prop_changed_flag = QCC_FALSE;
         transport_found = 0;
-        if (member_added_uniquename != NULL) {
-            free(member_added_uniquename);
-            member_added_uniquename = NULL;
-        }
-        if (member_removed_uniquename != NULL) {
-            free(member_removed_uniquename);
-            member_removed_uniquename = NULL;
-        }
+
+        /* free the global unique names */
+        ReallocateName(&member_added_uniquename, &member_added_lock, NULL);
+        ReallocateName(&member_removed_uniquename, &member_removed_lock, NULL);
     }
     QStatus status;
     alljoyn_busattachment servicebus;
@@ -311,7 +320,11 @@ TEST_F(SessionListenerTest, sessionlosttest_remote_end_left_session) {
     EXPECT_TRUE(session_joined_flag);
     EXPECT_EQ(sid, joinsessionid);
     EXPECT_TRUE(session_member_added_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(servicebus), member_added_uniquename);
+
+    ASSERT_EQ(ER_OK, member_added_lock.Lock(MUTEX_CONTEXT));
+    std::string member_added_uniquename_local = member_added_uniquename;
+    ASSERT_EQ(ER_OK, member_added_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(servicebus), member_added_uniquename_local.c_str());
 
     status = alljoyn_busattachment_leavesession(servicebus, sid);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -324,7 +337,11 @@ TEST_F(SessionListenerTest, sessionlosttest_remote_end_left_session) {
     EXPECT_TRUE(session_lost_flag);
     EXPECT_EQ(ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, sessionlostreason);
     EXPECT_TRUE(session_member_removed_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(servicebus), member_removed_uniquename);
+
+    ASSERT_EQ(ER_OK, member_removed_lock.Lock(MUTEX_CONTEXT));
+    std::string member_removed_uniquename_local = member_removed_uniquename;
+    ASSERT_EQ(ER_OK, member_removed_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(servicebus), member_removed_uniquename_local.c_str());
 }
 
 TEST_F(SessionListenerTest, sessionlosttest_closed_abruptly) {
@@ -353,7 +370,11 @@ TEST_F(SessionListenerTest, sessionlosttest_closed_abruptly) {
     EXPECT_TRUE(session_joined_flag);
     EXPECT_EQ(sid, joinsessionid);
     EXPECT_TRUE(session_member_added_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(servicebus), member_added_uniquename);
+
+    ASSERT_EQ(ER_OK, member_added_lock.Lock(MUTEX_CONTEXT));
+    std::string member_added_uniquename_local = member_added_uniquename;
+    ASSERT_EQ(ER_OK, member_added_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(servicebus), member_added_uniquename_local.c_str());
 
     status = alljoyn_busattachment_disconnect(servicebus, ajn::getConnectArg().c_str());
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
@@ -366,12 +387,22 @@ TEST_F(SessionListenerTest, sessionlosttest_closed_abruptly) {
     EXPECT_TRUE(session_lost_flag);
     EXPECT_TRUE(session_member_removed_flag);
     EXPECT_EQ(ALLJOYN_SESSIONLOST_REMOTE_END_CLOSED_ABRUPTLY, sessionlostreason);
+
     /*
      * the servicebus has been disconnected so we can not use the getuniquename
      * function on the servicebus.  If the check done above passes then this
      * should also pass.
      */
-    EXPECT_STREQ(member_added_uniquename, member_removed_uniquename);
+
+    ASSERT_EQ(ER_OK, member_added_lock.Lock(MUTEX_CONTEXT));
+    member_added_uniquename_local = member_added_uniquename;
+    ASSERT_EQ(ER_OK, member_added_lock.Unlock(MUTEX_CONTEXT));
+
+    ASSERT_EQ(ER_OK, member_removed_lock.Lock(MUTEX_CONTEXT));
+    std::string member_removed_uniquename_local = member_removed_uniquename;
+    ASSERT_EQ(ER_OK, member_removed_lock.Unlock(MUTEX_CONTEXT));
+
+    EXPECT_STREQ(member_added_uniquename_local.c_str(), member_removed_uniquename_local.c_str());
 }
 
 TEST_F(SessionListenerTest, sessionmember_added_removed) {
@@ -421,7 +452,11 @@ TEST_F(SessionListenerTest, sessionmember_added_removed) {
     EXPECT_TRUE(session_joined_flag);
     EXPECT_EQ(sid, joinsessionid);
     EXPECT_TRUE(session_member_added_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), member_added_uniquename)
+
+    ASSERT_EQ(ER_OK, member_added_lock.Lock(MUTEX_CONTEXT));
+    std::string member_added_uniquename_local = member_added_uniquename;
+    ASSERT_EQ(ER_OK, member_added_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), member_added_uniquename_local.c_str())
         << "clientbus UID = " << alljoyn_busattachment_getuniquename(clientbus) << "\nservicebus UID = "
         << alljoyn_busattachment_getuniquename(servicebus);
 
@@ -434,7 +469,11 @@ TEST_F(SessionListenerTest, sessionmember_added_removed) {
         qcc::Sleep(5);
     }
     EXPECT_TRUE(session_member_removed_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus), member_removed_uniquename);
+
+    ASSERT_EQ(ER_OK, member_removed_lock.Lock(MUTEX_CONTEXT));
+    std::string member_removed_uniquename_local = member_removed_uniquename;
+    ASSERT_EQ(ER_OK, member_removed_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus), member_removed_uniquename_local.c_str());
 
 
     resetFlags();
@@ -449,7 +488,11 @@ TEST_F(SessionListenerTest, sessionmember_added_removed) {
     EXPECT_TRUE(session_lost_flag);
     EXPECT_EQ(ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, sessionlostreason);
     EXPECT_TRUE(session_member_removed_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), member_removed_uniquename);
+
+    ASSERT_EQ(ER_OK, member_removed_lock.Lock(MUTEX_CONTEXT));
+    member_removed_uniquename_local = member_removed_uniquename;
+    ASSERT_EQ(ER_OK, member_removed_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), member_removed_uniquename_local.c_str());
 
     alljoyn_busattachment_destroy(clientbus2);
 }
@@ -460,7 +503,11 @@ static QCC_BOOL service_session_lost_reason_flag = QCC_FALSE;
 static QCC_BOOL service_session_member_added_flag = QCC_FALSE;
 static QCC_BOOL service_session_member_removed_flag = QCC_FALSE;
 static alljoyn_sessionlostreason service_sessionlostreason = ALLJOYN_SESSIONLOST_INVALID;
+
+/* member names - access must be synchronized */
+static qcc::Mutex service_member_added_lock;
 static char* service_member_added_uniquename = NULL;
+static qcc::Mutex service_member_removed_lock;
 static char* service_member_removed_uniquename = NULL;
 
 void resetServicSessionListenerFlags() {
@@ -469,14 +516,10 @@ void resetServicSessionListenerFlags() {
     service_session_member_added_flag = QCC_FALSE;
     service_session_member_removed_flag = QCC_FALSE;
     sessionlostreason = ALLJOYN_SESSIONLOST_INVALID;
-    if (service_member_added_uniquename != NULL) {
-        free(service_member_added_uniquename);
-        service_member_added_uniquename = NULL;
-    }
-    if (service_member_removed_uniquename != NULL) {
-        free(service_member_removed_uniquename);
-        service_member_removed_uniquename = NULL;
-    }
+
+    /* free the global unique names */
+    ReallocateName(&service_member_added_uniquename, &service_member_added_lock, NULL);
+    ReallocateName(&service_member_removed_uniquename, &service_member_removed_lock, NULL);
 }
 
 /* service session listener functions */
@@ -492,14 +535,7 @@ static void AJ_CALL service_session_member_added(const void* context, alljoyn_se
     QCC_UNUSED(context);
     QCC_UNUSED(sessionid);
 
-    int uniqueNameSize = strlen(uniqueName);
-    if (service_member_added_uniquename != NULL) {
-        free(service_member_added_uniquename);
-        service_member_added_uniquename = NULL;
-    }
-    service_member_added_uniquename = (char*) malloc(uniqueNameSize * sizeof(char) + sizeof(char));
-    strncpy(service_member_added_uniquename, uniqueName, uniqueNameSize);
-    service_member_added_uniquename[uniqueNameSize] = '\0';
+    ReallocateName(&service_member_added_uniquename, &service_member_added_lock, uniqueName);
     service_session_member_added_flag = QCC_TRUE;
 }
 
@@ -507,14 +543,7 @@ static void AJ_CALL service_session_member_removed(const void* context, alljoyn_
     QCC_UNUSED(context);
     QCC_UNUSED(sessionId);
 
-    int uniqueNameSize = strlen(uniqueName);
-    if (service_member_removed_uniquename != NULL) {
-        free(service_member_removed_uniquename);
-        service_member_removed_uniquename = NULL;
-    }
-    service_member_removed_uniquename = (char*) malloc(uniqueNameSize * sizeof(char) + sizeof(char));
-    strncpy(service_member_removed_uniquename, uniqueName, uniqueNameSize);
-    service_member_removed_uniquename[uniqueNameSize] = '\0';
+    ReallocateName(&service_member_removed_uniquename, &service_member_removed_lock, uniqueName);
     service_session_member_removed_flag = QCC_TRUE;
 }
 
@@ -577,7 +606,11 @@ TEST_F(SessionListenerTest, removesessionmember) {
     EXPECT_EQ(sid, joinsessionid);
     EXPECT_TRUE(session_member_added_flag);
     EXPECT_TRUE(service_session_member_added_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), service_member_added_uniquename)
+
+    ASSERT_EQ(ER_OK, service_member_added_lock.Lock(MUTEX_CONTEXT));
+    std::string service_member_added_uniquename_local = service_member_added_uniquename;
+    ASSERT_EQ(ER_OK, service_member_added_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), service_member_added_uniquename_local.c_str())
         << "clientbus UID = " << alljoyn_busattachment_getuniquename(clientbus) << "\nservicebus UID = "
         << alljoyn_busattachment_getuniquename(servicebus);
 
@@ -593,7 +626,12 @@ TEST_F(SessionListenerTest, removesessionmember) {
         qcc::Sleep(5);
     }
     EXPECT_TRUE(service_session_member_removed_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus), service_member_removed_uniquename);
+
+    ASSERT_EQ(ER_OK, service_member_removed_lock.Lock(MUTEX_CONTEXT));
+    std::string service_member_removed_uniquename_local = service_member_removed_uniquename;
+    ASSERT_EQ(ER_OK, service_member_removed_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus), service_member_removed_uniquename_local.c_str());
+
     EXPECT_TRUE(session_lost_flag);
     EXPECT_EQ(ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER, sessionlostreason);
 
@@ -612,7 +650,12 @@ TEST_F(SessionListenerTest, removesessionmember) {
     EXPECT_TRUE(service_session_lost_flag);
     EXPECT_EQ(ALLJOYN_SESSIONLOST_REMOTE_END_LEFT_SESSION, service_sessionlostreason);
     EXPECT_TRUE(service_session_member_removed_flag);
-    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), service_member_removed_uniquename);
+
+    ASSERT_EQ(ER_OK, service_member_removed_lock.Lock(MUTEX_CONTEXT));
+    service_member_removed_uniquename_local = service_member_removed_uniquename;
+    ASSERT_EQ(ER_OK, service_member_removed_lock.Unlock(MUTEX_CONTEXT));
+    EXPECT_STREQ(alljoyn_busattachment_getuniquename(clientbus2), service_member_removed_uniquename_local.c_str());
+
     EXPECT_TRUE(session_lost_flag);
     EXPECT_EQ(ALLJOYN_SESSIONLOST_REMOVED_BY_BINDER, sessionlostreason);
 
