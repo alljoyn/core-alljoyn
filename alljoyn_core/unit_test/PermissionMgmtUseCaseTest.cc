@@ -4017,6 +4017,7 @@ TEST_F(PermissionMgmtRecommendedSecurityLevelsTest, shouldGetManifestTemplatePri
 {
     ASSERT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetManifestTemplateFromXml(s_manifestTemplateWithPrivilegedInterface));
     ASSERT_EQ(ER_OK, m_saProxy->GetManifestTemplate(&m_manifestTemplate));
+    ASSERT_NE(nullptr, m_manifestTemplate);
 
     ASSERT_TRUE(string(m_manifestTemplate).find(SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)) == string::npos);
     ASSERT_TRUE(string(m_manifestTemplate).find(SECURITY_LEVEL_ANNOTATION(NON_PRIVILEGED_SECURITY_LEVEL)) == string::npos);
@@ -4028,6 +4029,7 @@ TEST_F(PermissionMgmtRecommendedSecurityLevelsTest, shouldGetManifestTemplateNon
 {
     ASSERT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetManifestTemplateFromXml(s_manifestTemplateWithNonPrivilegedInterface));
     ASSERT_EQ(ER_OK, m_saProxy->GetManifestTemplate(&m_manifestTemplate));
+    ASSERT_NE(nullptr, m_manifestTemplate);
 
     ASSERT_TRUE(string(m_manifestTemplate).find(SECURITY_LEVEL_ANNOTATION(UNAUTHENTICATED_SECURITY_LEVEL)) == string::npos);
     ASSERT_TRUE(string(m_manifestTemplate).find(SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)) == string::npos);
@@ -4039,6 +4041,7 @@ TEST_F(PermissionMgmtRecommendedSecurityLevelsTest, shouldGetManifestTemplateUna
 {
     ASSERT_EQ(ER_OK, serviceBus.GetPermissionConfigurator().SetManifestTemplateFromXml(s_manifestTemplateWithUnauthorizedInterface));
     ASSERT_EQ(ER_OK, m_saProxy->GetManifestTemplate(&m_manifestTemplate));
+    ASSERT_NE(nullptr, m_manifestTemplate);
 
     ASSERT_TRUE(string(m_manifestTemplate).find(SECURITY_LEVEL_ANNOTATION(NON_PRIVILEGED_SECURITY_LEVEL)) == string::npos);
     ASSERT_TRUE(string(m_manifestTemplate).find(SECURITY_LEVEL_ANNOTATION(PRIVILEGED_SECURITY_LEVEL)) == string::npos);
