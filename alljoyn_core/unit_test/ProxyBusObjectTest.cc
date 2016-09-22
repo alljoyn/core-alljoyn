@@ -121,15 +121,13 @@ class ProxyBusObjectTest : public testing::Test {
     }
 
     virtual void SetUp() {
-        QStatus status = bus.Start();
-        EXPECT_EQ(ER_OK, status);
-        status = bus.Connect(ajn::getConnectArg().c_str());
-        EXPECT_EQ(ER_OK, status);
+        ASSERT_EQ(ER_OK, bus.Start());
+        ASSERT_EQ(ER_OK, bus.Connect(ajn::getConnectArg().c_str()));
     }
 
     virtual void TearDown() {
-        bus.Stop();
-        bus.Join();
+        StopBus(bus);
+        StopBus(servicebus);
         delete proxyBusObjectTestAuthListenerOne;
         delete proxyBusObjectTestAuthListenerTwo;
     }
@@ -177,7 +175,7 @@ class ProxyBusObjectTest : public testing::Test {
             if (buslistener.name_owner_changed_flag) {
                 break;
             }
-            qcc::Sleep(WAIT_TIME_5);
+            qcc::Sleep(WAIT_TIME_40);
         }
         EXPECT_TRUE(buslistener.name_owner_changed_flag);
     }
@@ -252,6 +250,16 @@ class ProxyBusObjectTest : public testing::Test {
 
     ProxyBusObjectTestAuthListenerOne* proxyBusObjectTestAuthListenerOne;
     ProxyBusObjectTestAuthListenerTwo* proxyBusObjectTestAuthListenerTwo;
+
+  private:
+
+    void StopBus(BusAttachment& bus)
+    {
+        if (bus.IsStarted()) {
+            ASSERT_EQ(ER_OK, servicebus.Stop());
+            ASSERT_EQ(ER_OK, servicebus.Join());
+        }
+    }
 };
 
 
@@ -384,7 +392,7 @@ TEST_F(ProxyBusObjectTest, SecureConnectionAsync) {
         if (auth_complete_listener1_flag && auth_complete_listener2_flag) {
             break;
         }
-        qcc::Sleep(WAIT_TIME_10);
+        qcc::Sleep(WAIT_TIME_40);
     }
     EXPECT_TRUE(auth_complete_listener1_flag);
     EXPECT_TRUE(auth_complete_listener2_flag);
