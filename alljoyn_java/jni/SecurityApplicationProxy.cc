@@ -352,12 +352,16 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
         SetHandle(jidcert, certTemp);
         if (jenv->ExceptionCheck()) {
             delete [] certChain;
+            delete certTemp;
+            SetHandle(jidcert, NULL);
             return NULL;
         }
 
         jenv->SetObjectArrayElement(retObj, i, jidcert);
         if (jenv->ExceptionCheck()) {
             delete [] certChain;
+            delete certTemp;
+            SetHandle(jidcert, NULL);
             return NULL;
         }
     }
@@ -1143,12 +1147,16 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
         SetHandle(jidcert, certTemp);
         if (jenv->ExceptionCheck()) {
             delete [] certChain;
+            delete certTemp;
+            SetHandle(jidcert, NULL);
             return NULL;
         }
 
         jenv->SetObjectArrayElement(retObj, i, jidcert);
         if (jenv->ExceptionCheck()) {
             delete [] certChain;
+            delete certTemp;
+            SetHandle(jidcert, NULL);
             return NULL;
         }
     }
