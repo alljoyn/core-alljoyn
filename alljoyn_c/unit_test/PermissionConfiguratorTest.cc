@@ -528,7 +528,7 @@ TEST_F(PermissionConfiguratorTestWithSecurity, ShouldReturnErrorWhenSettingManif
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldReturnErrorWhenSettingManifestTemplateWithInvalidXml)
 {
-    EXPECT_EQ(ER_XML_MALFORMED, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_invalidManifestTemplate));
+    EXPECT_EQ(ER_XML_INVALID_ELEMENT_CHILDREN_COUNT, alljoyn_permissionconfigurator_setmanifesttemplatefromxml(m_configuratorUnderTest, s_invalidManifestTemplate));
 }
 
 TEST_F(PermissionConfiguratorTestWithSecurity, ShouldInitiallyBeNotClaimable)

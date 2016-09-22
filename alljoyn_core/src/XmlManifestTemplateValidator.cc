@@ -26,6 +26,8 @@
 #include "KeyInfoHelper.h"
 #include "XmlManifestTemplateValidator.h"
 
+#define QCC_MODULE "XML_CONVERTER"
+
 using namespace qcc;
 using namespace std;
 
@@ -36,6 +38,8 @@ map<string, PermissionPolicy::Rule::SecurityLevel>* XmlManifestTemplateValidator
 
 void XmlManifestTemplateValidator::Init()
 {
+    QCC_DbgTrace(("%s: Performing validator init.", __FUNCTION__));
+
     QCC_ASSERT((nullptr == s_validator) && (nullptr == s_securityLevelMap));
     s_validator = new XmlManifestTemplateValidator();
 
@@ -47,6 +51,8 @@ void XmlManifestTemplateValidator::Init()
 
 void XmlManifestTemplateValidator::Shutdown()
 {
+    QCC_DbgTrace(("%s: Performing validator cleanup.", __FUNCTION__));
+
     delete s_validator;
     s_validator = nullptr;
 
@@ -67,13 +73,16 @@ string XmlManifestTemplateValidator::GetRootElementName()
 QStatus XmlManifestTemplateValidator::ValidateNodeAnnotations(const vector<XmlElement*>& annotations)
 {
     size_t annotationsSize = annotations.size();
-    QStatus status = (annotationsSize < 2) ? ER_OK : ER_XML_MALFORMED;
 
-    if ((ER_OK == status) && (annotationsSize > 0)) {
-        status = ValidateSecurityLevelAnnotation(annotations[0]);
+    if (annotationsSize >= 2) {
+        QCC_LogError(ER_XML_INVALID_ANNOTATIONS_COUNT,
+                     ("%s: Node contains more than one (%u) annotation.",
+                      __FUNCTION__, annotationsSize));
+
+        return ER_XML_INVALID_ANNOTATIONS_COUNT;
     }
 
-    return status;
+    return annotations.empty() ? ER_OK : ValidateSecurityLevelAnnotation(annotations[0]);
 }
 
 QStatus XmlManifestTemplateValidator::ValidateInterfaceAnnotations(const vector<XmlElement*>& annotations)
@@ -85,22 +94,30 @@ QStatus XmlManifestTemplateValidator::ValidateInterfaceAnnotations(const vector<
 QStatus XmlManifestTemplateValidator::ValidateSecurityLevelAnnotation(const XmlElement* annotation)
 {
     QStatus status = ValidateElementName(annotation, ANNOTATION_XML_ELEMENT);
-
-    if (ER_OK == status) {
-        status = ValidateNameAttributeValue(annotation, SECURITY_LEVEL_ANNOTATION_NAME);
+    if (ER_OK != status) {
+        return status;
     }
 
-    if (ER_OK == status) {
-        status = ValidateSecurityLevelAnnotationValue(annotation);
+    status = ValidateNameAttributeValue(annotation, SECURITY_LEVEL_ANNOTATION_NAME);
+    if (ER_OK != status) {
+        return status;
     }
 
-    return status;
+    return ValidateSecurityLevelAnnotationValue(annotation);
 }
 QStatus XmlManifestTemplateValidator::ValidateSecurityLevelAnnotationValue(const XmlElement* annotation)
 {
     String securityLevel = annotation->GetAttribute(VALUE_XML_ATTRIBUTE);
     auto foundSecurityLevel = s_securityLevelMap->find(securityLevel.c_str());
 
-    return (foundSecurityLevel == s_securityLevelMap->end()) ? ER_XML_MALFORMED : ER_OK;
+    if (foundSecurityLevel == s_securityLevelMap->end()) {
+        QCC_LogError(ER_XML_INVALID_SECURITY_LEVEL_ANNOTATION_VALUE,
+                     ("%s: Unexpected security level value(%s).",
+                      __FUNCTION__, securityLevel.c_str()));
+
+        return ER_XML_INVALID_SECURITY_LEVEL_ANNOTATION_VALUE;
+    }
+
+    return ER_OK;
 }
 }

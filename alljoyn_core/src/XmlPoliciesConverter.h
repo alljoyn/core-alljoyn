@@ -71,8 +71,7 @@ class XmlPoliciesConverter {
      * @param[out]   policy      Reference to the new policy.
      *
      * @return   #ER_OK if extracted correctly.
-     *           #ER_INVALID_ADDRESS if policyXml is null.
-     *           #ER_XML_MALFORMED if the XML does not follow the policy XML schema.
+     *           One of the #ER_XML_CONVERTER_ERROR group in case of an error.
      */
     static QStatus FromXml(AJ_PCSTR policyXml, PermissionPolicy& policy);
 
@@ -82,8 +81,8 @@ class XmlPoliciesConverter {
      * @param[in]    policy      Policy to be converted.
      * @param[out]   policyXml   Policy in XML format.
      *
-     * @return   #ER_OK      If extracted correctly.
-     *           #ER_FAIL    If the policy contains invalid data.
+     * @return   #ER_OK if extracted correctly.
+     *           One of the #ER_XML_CONVERTER_ERROR group in case of an error.
      */
     static QStatus ToXml(const PermissionPolicy& policy, std::string& policyXml);
 
