@@ -418,15 +418,32 @@ public final class MsgArg {
     public static Object[] unmarshal(Method method, long msgArgs) throws MarshalBusException {
         Type[] types = method.getGenericParameterTypes();
         int numArgs = getNumMembers(msgArgs);
+
+        /*
+         * Support Methods that have a purely variable parameter list; single parameter of "Object...".
+         * This is a Java varargs parameter and is equivalent to an Object[], but will allow
+         * a Method to accept any number of Object parameters (i.e. generic/unspecified).
+         * This requires the types array to be reset to an array of Object elements with size numArgs.
+         */
+        boolean isVariable = method.isVarArgs() && (types.length == 1) && (types[0] == Object[].class);
+        if (isVariable) {
+            types = new Type[numArgs];
+            for (int i = 0; i < numArgs; i++) {
+                types[i] = Object.class;
+            }
+        }
+
         if (types.length != numArgs) {
             throw new MarshalBusException(
                 "cannot marshal " + numArgs + " args into " + types.length + " parameters");
         }
+
         Object[] objects = new Object[numArgs];
         for (int i = 0; i < numArgs; ++i) {
             objects[i] = unmarshal(getMember(msgArgs, i), types[i]);
         }
-        return objects;
+
+        return isVariable ? new Object[]{objects}: objects;
     }
 
     /**
