@@ -14,29 +14,21 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <Foundation/Foundation.h>
-#import "AJNApplicationStateListenerImpl.h"
+#import <UIKit/UIKit.h>
 
+@interface ViewController : UIViewController
 
-AJNApplicationStateListenerImpl::AJNApplicationStateListenerImpl(id<AJNApplicationStateListener> delegate) :
-    m_delegate(delegate)
-{
-}
+@property (weak, nonatomic) IBOutlet UITextView *textView;
+@property (weak, nonatomic) IBOutlet UIButton *openButton;
+@property (weak, nonatomic) IBOutlet UIButton *closeButton;
+@property (weak, nonatomic) IBOutlet UILabel *stateLabel;
+@property (weak, nonatomic) IBOutlet UIButton *startButton;
+@property (weak, nonatomic) IBOutlet UITextField *appNameField;
 
-AJNApplicationStateListenerImpl::~AJNApplicationStateListenerImpl()
-{
-    m_delegate = nil;
-}
+- (void)didReceiveStatusUpdateMessage:(NSString *)message;
+- (IBAction)didTouchOpenButton:(id)sender;
+- (IBAction)didTouchCloseButton:(id)sender;
+- (IBAction)didTouchStartButton:(id)sender;
 
-void AJNApplicationStateListenerImpl::State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
-{
-    /*
-     * Check that the delegate implements state
-     */
-    if ([m_delegate respondsToSelector:@selector(state)]) {
-        AJNKeyInfoNISTP256 *keyInfo = [[AJNKeyInfoNISTP256 alloc] initWithHandle:(AJNHandle)&publicKeyInfo];
-
-        [m_delegate state:[NSString stringWithCString:busName encoding:NSUTF8StringEncoding] publicKeyInfo:keyInfo state:(AJNApplicationState)state];
-    }
-}
+@end
 
