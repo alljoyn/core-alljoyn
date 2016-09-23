@@ -345,6 +345,8 @@ TEST_F(SocketTestErrors, SendAfterAbortiveRelease)
     EXPECT_EQ(ER_OS_ERROR, status);
 }
 
+#ifndef QCC_OS_GROUP_WINDOWS
+
 TEST_F(SocketTestErrors, SendWouldBlock)
 {
     EXPECT_EQ(ER_OK, SetBlocking(acceptedFd, false));
@@ -352,6 +354,8 @@ TEST_F(SocketTestErrors, SendWouldBlock)
         ;
     EXPECT_EQ(ER_WOULDBLOCK, status);
 }
+
+#endif
 
 class SocketTestWithFdsErrors : public testing::Test {
   public:
@@ -490,6 +494,8 @@ TEST_F(SocketTestWithFdsErrors, SendAfterAbortiveRelease)
     EXPECT_EQ(ER_OS_ERROR, SendWithFds(acceptedFd, buf, 1, numSent, fds, 1, GetPid()));
 }
 
+#ifndef QCC_OS_GROUP_WINDOWS
+
 TEST_F(SocketTestWithFdsErrors, SendWouldBlock)
 {
     EXPECT_EQ(ER_OK, SetBlocking(acceptedFd, false));
@@ -503,3 +509,5 @@ TEST_F(SocketTestWithFdsErrors, SendWouldBlock)
         ;
     EXPECT_EQ(ER_WOULDBLOCK, status);
 }
+
+#endif
