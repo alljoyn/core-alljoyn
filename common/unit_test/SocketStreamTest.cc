@@ -266,6 +266,11 @@ TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsDisconnected)
     EXPECT_EQ(ER_WRITE_ERROR, unconnected.PushBytesAndFds(buf, 1, numBytes, fds, numFds, GetPid()));
 }
 
+/**
+ * Disabled for Windows builds due to ASACORE-3052.
+ */
+#ifndef QCC_OS_GROUP_WINDOWS
+
 TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsTimeout)
 {
     SocketStream connected(acceptedFd); acceptedFd = INVALID_SOCKET_FD;
@@ -281,6 +286,8 @@ TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsTimeout)
         ;
     EXPECT_EQ(ER_TIMEOUT, status);
 }
+
+#endif
 
 TEST_F(SocketStreamTestAndFdsErrors, PushBytesAndFdsAfterAbortiveRelease)
 {
