@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="11201" systemVersion="15G1004" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" useTraitCollections="YES" colorMatched="YES" initialViewController="BYZ-38-t0r">
+    <dependencies>
+        <deployment identifier="iOS"/>
+        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="11161"/>
+        <capability name="Constraints to layout margins" minToolsVersion="6.0"/>
+        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
+    </dependencies>
+    <scenes>
+        <!--View Controller-->
+        <scene sceneID="tne-QT-ifu">
+            <objects>
+                <viewController id="BYZ-38-t0r" customClass="ViewController" sceneMemberID="viewController">
+                    <layoutGuides>
+                        <viewControllerLayoutGuide type="top" id="y3c-jy-aDJ"/>
+                        <viewControllerLayoutGuide type="bottom" id="wfy-db-euE"/>
+                    </layoutGuides>
+                    <view key="view" contentMode="scaleToFill" id="8bC-Xf-vdC">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="667"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <subviews>
+                            <textField opaque="NO" clipsSubviews="YES" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="left" contentVerticalAlignment="center" text="DoorProvider" borderStyle="roundedRect" textAlignment="natural" minimumFontSize="17" translatesAutoresizingMaskIntoConstraints="NO" id="lXs-3W-Ii4" userLabel="AppNameField">
+                                <frame key="frameInset" minX="20" minY="28" width="560" height="30"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits"/>
+                            </textField>
+                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="IIo-DA-SPj">
+                                <frame key="frameInset" minX="20" minY="538" width="285" height="30"/>
+                                <state key="normal" title="Start"/>
+                                <connections>
+                                    <action selector="didTouchStartButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="1re-wb-iha"/>
+                                </connections>
+                            </button>
+                            <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" misplaced="YES" text="Automatic door event signaling" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="byh-PF-flD">
+                                <frame key="frameInset" minX="20" minY="84" width="237" height="21"/>
+                                <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                <color key="textColor" red="0.0" green="0.0" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <nil key="highlightedColor"/>
+                            </label>
+                            <switch opaque="NO" contentMode="scaleToFill" horizontalHuggingPriority="750" verticalHuggingPriority="750" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" translatesAutoresizingMaskIntoConstraints="NO" id="Hu1-q8-BiW">
+                                <frame key="frameInset" minX="531" minY="79" width="51" height="31"/>
+                                <connections>
+                                    <action selector="didToggleAutoSignal:" destination="BYZ-38-t0r" eventType="valueChanged" id="Jkf-Lj-r3N"/>
+                                </connections>
+                            </switch>
+                            <button opaque="NO" contentMode="scaleToFill" misplaced="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="516-SN-4K2">
+                                <frame key="frameInset" minX="313" minY="538" width="267" height="30"/>
+                                <state key="normal" title="Send Door Event"/>
+                                <connections>
+                                    <action selector="didTouchSignalButton:" destination="BYZ-38-t0r" eventType="touchUpInside" id="T5E-ft-nrM"/>
+                                </connections>
+                            </button>
+                            <textView clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="scaleToFill" misplaced="YES" editable="NO" textAlignment="natural" translatesAutoresizingMaskIntoConstraints="NO" id="t4T-fZ-Tef">
+                                <frame key="frameInset" minX="20" minY="134" width="560" height="381"/>
+                                <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <constraints>
+                                    <constraint firstAttribute="height" constant="381" id="5Ru-fd-abw"/>
+                                </constraints>
+                                <fontDescription key="fontDescription" type="system" pointSize="14"/>
+                                <textInputTraits key="textInputTraits" autocapitalizationType="sentences"/>
+                            </textView>
+                        </subviews>
+                        <color key="backgroundColor" red="1" green="1" blue="1" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                        <constraints>
+                            <constraint firstItem="516-SN-4K2" firstAttribute="trailing" secondItem="8bC-Xf-vdC" secondAttribute="trailingMargin" id="6hk-aT-ray"/>
+                            <constraint firstItem="byh-PF-flD" firstAttribute="centerY" secondItem="Hu1-q8-BiW" secondAttribute="centerY" id="8XL-0v-Mxn"/>
+                            <constraint firstItem="Hu1-q8-BiW" firstAttribute="trailing" secondItem="8bC-Xf-vdC" secondAttribute="trailingMargin" id="I6a-sT-kv1"/>
+                            <constraint firstItem="IIo-DA-SPj" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="IRW-7m-UhW"/>
+                            <constraint firstItem="t4T-fZ-Tef" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="Xlw-7c-wH8"/>
+                            <constraint firstItem="IIo-DA-SPj" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="aqv-QZ-rQg"/>
+                            <constraint firstItem="lXs-3W-Ii4" firstAttribute="trailing" secondItem="8bC-Xf-vdC" secondAttribute="trailingMargin" id="bvS-X8-ZMd"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="516-SN-4K2" secondAttribute="bottom" constant="32" id="ccb-2k-HPq"/>
+                            <constraint firstItem="lXs-3W-Ii4" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="nNW-4b-MqQ"/>
+                            <constraint firstItem="t4T-fZ-Tef" firstAttribute="top" secondItem="Hu1-q8-BiW" secondAttribute="bottom" constant="24" id="nnv-9U-mDh"/>
+                            <constraint firstItem="byh-PF-flD" firstAttribute="leading" secondItem="8bC-Xf-vdC" secondAttribute="leadingMargin" id="tSO-Oe-Uvs"/>
+                            <constraint firstItem="516-SN-4K2" firstAttribute="top" secondItem="t4T-fZ-Tef" secondAttribute="bottom" constant="23" id="tpq-rN-PEj"/>
+                            <constraint firstItem="t4T-fZ-Tef" firstAttribute="trailing" secondItem="8bC-Xf-vdC" secondAttribute="trailingMargin" id="uyS-Gk-6Qv"/>
+                            <constraint firstItem="wfy-db-euE" firstAttribute="top" secondItem="IIo-DA-SPj" secondAttribute="bottom" constant="32" id="vpg-9H-fBu"/>
+                            <constraint firstItem="lXs-3W-Ii4" firstAttribute="top" secondItem="y3c-jy-aDJ" secondAttribute="bottom" constant="8" id="ztC-Vd-WKc"/>
+                        </constraints>
+                    </view>
+                    <connections>
+                        <outlet property="appNameField" destination="lXs-3W-Ii4" id="AQi-ce-mvG"/>
+                        <outlet property="autoSignalSwitch" destination="Hu1-q8-BiW" id="eJ0-Sv-rFi"/>
+                        <outlet property="signalButton" destination="516-SN-4K2" id="XAr-22-kLB"/>
+                        <outlet property="startButton" destination="IIo-DA-SPj" id="G2Z-Br-hll"/>
+                        <outlet property="textView" destination="t4T-fZ-Tef" id="fsE-Jp-nK7"/>
+                    </connections>
+                </viewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="305" y="398"/>
+        </scene>
+    </scenes>
+</document>
