@@ -14,29 +14,12 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <Foundation/Foundation.h>
-#import "AJNApplicationStateListenerImpl.h"
+#import <UIKit/UIKit.h>
+
+@interface AppDelegate : UIResponder <UIApplicationDelegate>
+
+@property (strong, nonatomic) UIWindow *window;
 
 
-AJNApplicationStateListenerImpl::AJNApplicationStateListenerImpl(id<AJNApplicationStateListener> delegate) :
-    m_delegate(delegate)
-{
-}
-
-AJNApplicationStateListenerImpl::~AJNApplicationStateListenerImpl()
-{
-    m_delegate = nil;
-}
-
-void AJNApplicationStateListenerImpl::State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
-{
-    /*
-     * Check that the delegate implements state
-     */
-    if ([m_delegate respondsToSelector:@selector(state)]) {
-        AJNKeyInfoNISTP256 *keyInfo = [[AJNKeyInfoNISTP256 alloc] initWithHandle:(AJNHandle)&publicKeyInfo];
-
-        [m_delegate state:[NSString stringWithCString:busName encoding:NSUTF8StringEncoding] publicKeyInfo:keyInfo state:(AJNApplicationState)state];
-    }
-}
+@end
 
