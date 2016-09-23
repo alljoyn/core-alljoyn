@@ -244,6 +244,22 @@
 - (QStatus)setAppName:(NSString*)appName andLanguage:(NSString*)language;
 
 /**
+ * Get the AppName from the About data
+ *
+ * AppName is required
+ * AppName is part of the announce signal
+ * AppName can be localized for other languages
+ *
+ * @param[out] appName the AppName found in the AboutData (UTF-8 encoded string)
+ * @param[in] language the IETF language tag specified by RFC 5646
+ *            if language is NULL the AppName for the default language will be returned.
+ *
+ * @return ER_OK on success
+ */
+- (QStatus)getAppName:(NSString**)appName andLanguage:(NSString*)language;
+
+
+/**
  * Set the Manufacture for the AboutData
  *
  * Manufacture is required

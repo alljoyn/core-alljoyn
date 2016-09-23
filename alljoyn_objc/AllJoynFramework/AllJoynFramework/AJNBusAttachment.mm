@@ -22,6 +22,8 @@
 #import <alljoyn/InterfaceDescription.h>
 
 #import "AJNAuthenticationListenerImpl.h"
+#import "AJNPermissionConfigurator.h"
+#import "AJNPermissionConfigurationListenerImpl.h"
 #import "AJNBusAttachment.h"
 #import "AJNBusInterface.h"
 #import "AJNBusListenerImpl.h"
@@ -449,6 +451,7 @@ public:
 @property (nonatomic, strong) NSMutableArray *signalHandlers;
 @property (nonatomic, strong) NSMutableArray *keyStoreListeners;
 @property (nonatomic, strong) NSMutableArray *authenticationListeners;
+@property (nonatomic, strong) NSMutableArray *permissionConfigurationListeners;
 @property (nonatomic, strong) NSMutableArray *translatorImpls;
 @property (nonatomic, strong) NSMutableArray *aboutListeners;
 
@@ -466,6 +469,7 @@ public:
 @synthesize signalHandlers = _signalHandlers;
 @synthesize keyStoreListeners = _keyStoreListeners;
 @synthesize authenticationListeners = _authenticationListeners;
+@synthesize permissionConfigurationListeners = _permissionConfigurationListeners;
 @synthesize translatorImpls = _translatorImpls;
 @synthesize aboutListeners = _aboutListeners;
 
@@ -524,6 +528,14 @@ public:
     return _authenticationListeners;
 }
 
+- (NSMutableArray*)permissionConfigurationListeners
+{
+    if (_permissionConfigurationListeners == nil) {
+        _permissionConfigurationListeners = [[NSMutableArray alloc] init];
+    }
+    return _authenticationListeners;
+}
+
 - (NSMutableArray*)aboutListeners
 {
     if (_aboutListeners == nil) {
@@ -578,6 +590,11 @@ public:
 - (BOOL)isPeerSecurityEnabled
 {
     return self.busAttachment->IsPeerSecurityEnabled();
+}
+
+- (AJNPermissionConfigurator*)permissionConfigurator
+{
+    return [[AJNPermissionConfigurator alloc] initWithHandle:(AJNHandle)(&self.busAttachment->GetPermissionConfigurator())];
 }
 
 - (AJNProxyBusObject*)dbusProxyObject
@@ -683,6 +700,14 @@ public:
             delete listenerImpl;
         }
         [self.authenticationListeners removeAllObjects];
+    }
+    
+    @synchronized (self.permissionConfigurationListeners) {
+        for (NSValue *ptrValue in self.permissionConfigurationListeners) {
+            AJNPermissionConfigurationListenerImpl * listenerImpl = (AJNPermissionConfigurationListenerImpl*)[ptrValue pointerValue];
+            delete listenerImpl;
+        }
+        [self.permissionConfigurationListeners removeAllObjects];
     }
 
     @synchronized(self.translatorImpls) {
@@ -1345,6 +1370,17 @@ public:
         [self.authenticationListeners addObject:[NSValue valueWithPointer:listenerImpl]];
     }
     return self.busAttachment->EnablePeerSecurity([authenticationMechanisms UTF8String], listenerImpl, [fileName UTF8String], isShared);
+}
+
+- (QStatus)enablePeerSecurity:(NSString *)authenticationMechanisms authenticationListener:(id<AJNAuthenticationListener>) authListener keystoreFileName:(NSString *)fileName sharing:(BOOL)isShared permissionConfigurationListener:(id<AJNPermissionConfigurationListener>)permissionConfigListener
+{
+    AJNAuthenticationListenerImpl *authListenerImpl = new AJNAuthenticationListenerImpl(authListener);
+    AJNPermissionConfigurationListenerImpl *pcListenerImpl = new AJNPermissionConfigurationListenerImpl(permissionConfigListener);
+    @synchronized(self.authenticationListeners) {
+        [self.authenticationListeners addObject:[NSValue valueWithPointer:authListenerImpl]];
+        [self.permissionConfigurationListeners addObject:[NSValue valueWithPointer:pcListenerImpl]];
+    }
+    return self.busAttachment->EnablePeerSecurity([authenticationMechanisms UTF8String], authListenerImpl, [fileName UTF8String], isShared, pcListenerImpl);
 }
 
 - (QStatus)registerKeyStoreListener:(id<AJNKeyStoreListener>)listener

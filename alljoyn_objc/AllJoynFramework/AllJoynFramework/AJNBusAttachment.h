@@ -28,7 +28,10 @@
 #import "AJNStatus.h"
 #import "AJNInterfaceDescription.h"
 #import "AJNTranslator.h"
+#import "AJNPermissionConfigurationListener.h"
 #import "AJNAboutListener.h"
+
+@class AJNPermissionConfigurator;
 
 @protocol AJNBusObject;
 
@@ -257,6 +260,12 @@ typedef void (^ AJNLeaveSessionBlock)(QStatus status, void *context);
  * @return The string representing the connect spec used by the BusAttachment
  */
 @property (nonatomic, readonly) NSString *connectSpec;
+
+/**
+ * Get the permission configurator for the bus attachment.
+ * @return the permission configurator
+ */
+@property (nonatomic, readonly) AJNPermissionConfigurator* permissionConfigurator;
 
 /**
  * Get the org.freedesktop.DBus proxy object.
@@ -1382,6 +1391,55 @@ typedef void (^ AJNLeaveSessionBlock)(QStatus status, void *context);
  *          - ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
  */
 - (QStatus)enablePeerSecurity:(NSString *)authenticationMechanisms authenticationListener:(id<AJNAuthenticationListener>) listener keystoreFileName:(NSString *)fileName sharing:(BOOL)isShared;
+
+/**
+ * Enable peer-to-peer security. This function must be called by applications that want to use
+ * authentication and encryption. The bus must have been started by calling
+ * BusAttachment::Start() before this function is called. If the application is providing its
+ * own key store implementation it must have already called RegisterKeyStoreListener() before
+ * calling this function.
+ *
+ * This method can be called multiple times with different auth mechanisms.
+ *
+ * @param authenticationMechanisms   The authentication mechanism(s) to use for peer-to-peer authentication.
+ *                             If this parameter is NULL peer-to-peer authentication is disabled.  This is a
+ *                             space separated list of any of the following values:
+ *                             ALLJOYN_SRP_LOGON, ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL, ALLJOYN_ECDHE_PSK,
+ *                             ALLJOYN_ECDHE_ECDSA, GSSAPI, ALLJOYN_ECDHE_SPEKE. Note that the SRP and PSK
+ *                             mechanisms are deprecated and will be removed in a future release.
+ *
+ * @param listener             Passes password and other authentication related requests to the application.
+ *
+ * @param fileName             Optional parameter to specify the filename of the default key store. The
+ *                             default value is the applicationName parameter of BusAttachment().
+ *                             Note that this parameter is only meaningful when using the default
+ *                             key store implementation.
+ *
+ * @param isShared             This parameter is not used as of 16.04. It is ignored internally (always shared).
+ * @param permissionConfigurationListener   Passes security 2.0 callbacks to the application.
+ *
+ * @remark                     The application must Join the bus attachment before destroying the @p authListener.
+ *
+ * For Security 2.0 applications, after the application has been claimed, it is recommended that only
+ * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter. If the application is unclaimed but will
+ * be claimed locally via the PermissionConfigurator::Claim call, it is also recommended that only
+ * ALLJOYN_ECDHE_ECDSA be provided in the authMechanisms parameter, and that the claim capabilities be left as
+ * default, to prevent possible claiming over the network by a rogue security manager.
+ *
+ * If this application will be claimed over the network, peer security should first be enabled with
+ * ALLJOYN_ECDHE_ECDSA and the supported mechanisms for claiming. After it is claimed, and the application
+ * received the EndManagement callback, the application should then re-enable peer security with only
+ * ALLJOYN_ECDHE_ECDSA.
+ *
+ * Unless a bus attachment will be used by a security manager to claim other applications, or will interact
+ * with applications using Security 1.0, and so will need to negotiate other authentication mechanisms,
+ * only ALLJOYN_ECDHE_ECDSA should be enabled while claimed.
+ *
+ * @return
+ *      - #ER_OK if peer security was enabled.
+ *      - #ER_BUS_BUS_NOT_STARTED BusAttachment::Start has not be called
+ */
+- (QStatus)enablePeerSecurity:(NSString *)authenticationMechanisms authenticationListener:(id<AJNAuthenticationListener>) authListener keystoreFileName:(NSString *)fileName sharing:(BOOL)isShared permissionConfigurationListener:(id<AJNPermissionConfigurationListener>)permissionConfigListener;
 
 /**
  * Set a key store listener to listen for key store load and store requests.

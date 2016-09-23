@@ -215,11 +215,11 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 - (QStatus)getDefaultLanguage:(NSString**)defaultLanguage
 {
     QStatus status;
-    char **defaultLanguageOut = NULL;
-    status = self.aboutData->GetDeviceId(defaultLanguageOut);
-    
+    char *defaultLanguageOut;
+    status = self.aboutData->GetDeviceId(&defaultLanguageOut);
+
     if (status == ER_OK && defaultLanguageOut != NULL) {
-        *defaultLanguage = [NSString stringWithCString:*defaultLanguageOut encoding:NSUTF8StringEncoding ];
+        *defaultLanguage = [NSString stringWithCString:defaultLanguageOut encoding:NSUTF8StringEncoding ];
     } else {
         *defaultLanguage = nil;
     }
@@ -234,18 +234,18 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getDeviceName:(NSString**)deviceName andLanguage:(NSString*)language
 {
-    char** deviceNameOut = NULL;
+    char* deviceNameOut;
     const char *languageIn = [language UTF8String];
 
     QStatus status;
 
-    status = self.aboutData->GetDeviceName(deviceNameOut, languageIn);
+    status = self.aboutData->GetDeviceName(&deviceNameOut, languageIn);
     if (status == ER_OK && deviceNameOut != NULL) {
-        *deviceName = [NSString stringWithCString:*deviceNameOut encoding:NSUTF8StringEncoding ];
+        *deviceName = [NSString stringWithCString:deviceNameOut encoding:NSUTF8StringEncoding ];
     } else {
         *deviceName = nil;
     }
-    
+
     return status;
 }
 
@@ -258,11 +258,11 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 - (QStatus)getDeviceId:(NSString**)deviceId
 {
     QStatus status;
-    char **deviceIdOut = NULL;
-    status = self.aboutData->GetDeviceId(deviceIdOut);
+    char* deviceIdOut;
+    status = self.aboutData->GetDeviceId(&deviceIdOut);
 
     if (status == ER_OK && deviceIdOut != NULL) {
-        *deviceId = [NSString stringWithCString:*deviceIdOut encoding:NSUTF8StringEncoding];
+        *deviceId = [NSString stringWithCString:deviceIdOut encoding:NSUTF8StringEncoding];
     } else {
         *deviceId = nil;
     }
@@ -278,15 +278,15 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getAppName:(NSString**)appName andLanguage:(NSString*)language
 {
-    char** appNameOut = NULL;
+    char* appNameOut;
     const char *languageIn = [language UTF8String];
 
     QStatus status;
 
-    status = self.aboutData->GetAppName(appNameOut, languageIn);
+    status = self.aboutData->GetAppName(&appNameOut, languageIn);
 
     if (status == ER_OK && appNameOut != NULL) {
-        *appName = [NSString stringWithCString:*appNameOut encoding:NSUTF8StringEncoding];
+        *appName = [NSString stringWithCString:appNameOut encoding:NSUTF8StringEncoding];
     } else {
         *appName = nil;
     }
@@ -301,13 +301,13 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getManufacturer:(NSString**)manufacturer andLanguage:(NSString*)language
 {
-    char** manufacturerOut = NULL;
+    char* manufacturerOut;
     QStatus status;
 
-    status = self.aboutData->GetManufacturer(manufacturerOut, [language UTF8String]);
+    status = self.aboutData->GetManufacturer(&manufacturerOut, [language UTF8String]);
 
     if (status == ER_OK && manufacturerOut != NULL) {
-        *manufacturer = [NSString stringWithCString:*manufacturerOut encoding:NSUTF8StringEncoding];
+        *manufacturer = [NSString stringWithCString:manufacturerOut encoding:NSUTF8StringEncoding];
     } else {
         *manufacturer = nil;
     }
@@ -322,11 +322,11 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 - (QStatus)getModelNumber:(NSString**)modelNumber
 {
     QStatus status;
-    char **modelNumberOut = NULL;
-    status = self.aboutData->GetModelNumber(modelNumberOut);
+    char* modelNumberOut;
+    status = self.aboutData->GetModelNumber(&modelNumberOut);
 
     if (status == ER_OK && modelNumberOut != NULL) {
-        *modelNumber = [NSString stringWithCString:*modelNumberOut encoding:NSUTF8StringEncoding];
+        *modelNumber = [NSString stringWithCString:modelNumberOut encoding:NSUTF8StringEncoding];
     } else {
         *modelNumber = nil;
     }
@@ -341,10 +341,10 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (size_t)getSupportedLanguages:(NSString*)languageTags num:(size_t)num
 {
-    const char** languageTagsOut = NULL;
+    const char* languageTagsOut;
     size_t numOut = 0;
 
-    num = self.aboutData->GetSupportedLanguages(languageTagsOut, numOut);
+    num = self.aboutData->GetSupportedLanguages(&languageTagsOut, numOut);
     return num;
 }
 
@@ -356,13 +356,13 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 - (QStatus)getDescription:(NSString**)description language:(NSString*)language
 {
     QStatus status;
-    char **descriptionOut = NULL;
+    char* descriptionOut;
     const char *languageIn = [language UTF8String];
 
-    status = self.aboutData->GetDescription(descriptionOut, languageIn);
-    
+    status = self.aboutData->GetDescription(&descriptionOut, languageIn);
+
     if (status == ER_OK && descriptionOut != NULL) {
-        *description = [NSString stringWithCString:*descriptionOut encoding:NSUTF8StringEncoding];
+        *description = [NSString stringWithCString:descriptionOut encoding:NSUTF8StringEncoding];
     } else {
         *description = nil;
     }
@@ -379,13 +379,13 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getDateOfManufacture:(NSString**)dateOfManufacture
 {
-    char** dateOfManufactureOut = NULL;
+    char* dateOfManufactureOut;
     QStatus status;
 
-    status = self.aboutData->GetDateOfManufacture(dateOfManufactureOut);
-    
+    status = self.aboutData->GetDateOfManufacture(&dateOfManufactureOut);
+
     if (status == ER_OK && dateOfManufactureOut != NULL) {
-        *dateOfManufacture = [NSString stringWithCString:*dateOfManufactureOut encoding:NSUTF8StringEncoding];
+        *dateOfManufacture = [NSString stringWithCString:dateOfManufactureOut encoding:NSUTF8StringEncoding];
     } else {
         *dateOfManufacture = nil;
     }
@@ -401,13 +401,13 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getSoftwareVersion:(NSString**)softwareVersion
 {
-    char** softwareVersionOut = NULL;
+    char* softwareVersionOut;
     QStatus status;
 
-    status = self.aboutData->GetSoftwareVersion(softwareVersionOut);
-    
+    status = self.aboutData->GetSoftwareVersion(&softwareVersionOut);
+
     if (status == ER_OK && softwareVersionOut != NULL) {
-        *softwareVersion = [NSString stringWithCString:*softwareVersionOut encoding:NSUTF8StringEncoding];
+        *softwareVersion = [NSString stringWithCString:softwareVersionOut encoding:NSUTF8StringEncoding];
     } else {
         *softwareVersion = nil;
     }
@@ -417,13 +417,13 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getAJSoftwareVersion:(NSString**)ajSoftwareVersion
 {
-    char** ajSoftwareVersionOut = NULL;
+    char* ajSoftwareVersionOut;
     QStatus status;
 
-    status = self.aboutData->GetAJSoftwareVersion(ajSoftwareVersionOut);
+    status = self.aboutData->GetAJSoftwareVersion(&ajSoftwareVersionOut);
 
     if (status == ER_OK && ajSoftwareVersionOut != NULL) {
-        *ajSoftwareVersion = [NSString stringWithCString:*ajSoftwareVersionOut encoding:NSUTF8StringEncoding];
+        *ajSoftwareVersion = [NSString stringWithCString:ajSoftwareVersionOut encoding:NSUTF8StringEncoding];
     } else {
         *ajSoftwareVersion = nil;
     }
@@ -438,13 +438,13 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getHardwareVersion:(NSString**)hardwareVersion
 {
-    char** hardwareVersionOut = NULL;
+    char* hardwareVersionOut;
     QStatus status;
 
-    status = self.aboutData->GetHardwareVersion(hardwareVersionOut);
-    
+    status = self.aboutData->GetHardwareVersion(&hardwareVersionOut);
+
     if (status == ER_OK && hardwareVersionOut != NULL) {
-        *hardwareVersion = [NSString stringWithCString:*hardwareVersionOut encoding:NSUTF8StringEncoding];
+        *hardwareVersion = [NSString stringWithCString:hardwareVersionOut encoding:NSUTF8StringEncoding];
     } else {
         *hardwareVersion = nil;
     }
@@ -459,12 +459,12 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 
 - (QStatus)getSupportUrl:(NSString**)supportUrl
 {
-    char** supportUrlOut = NULL;
+    char* supportUrlOut;
     QStatus status;
 
-    status = self.aboutData->GetSupportUrl(supportUrlOut);
+    status = self.aboutData->GetSupportUrl(&supportUrlOut);
     if (status == ER_OK && supportUrlOut != NULL) {
-        *supportUrl = [NSString stringWithCString:*supportUrlOut encoding:NSUTF8StringEncoding];
+        *supportUrl = [NSString stringWithCString:supportUrlOut encoding:NSUTF8StringEncoding];
     } else {
         *supportUrl = nil;
     }
