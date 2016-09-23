@@ -14,29 +14,22 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
-#import <Foundation/Foundation.h>
-#import "AJNApplicationStateListenerImpl.h"
+#import <UIKit/UIKit.h>
+#import "AppDelegate.h"
+#import "AJNInit.h"
 
-
-AJNApplicationStateListenerImpl::AJNApplicationStateListenerImpl(id<AJNApplicationStateListener> delegate) :
-    m_delegate(delegate)
-{
-}
-
-AJNApplicationStateListenerImpl::~AJNApplicationStateListenerImpl()
-{
-    m_delegate = nil;
-}
-
-void AJNApplicationStateListenerImpl::State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
-{
-    /*
-     * Check that the delegate implements state
-     */
-    if ([m_delegate respondsToSelector:@selector(state)]) {
-        AJNKeyInfoNISTP256 *keyInfo = [[AJNKeyInfoNISTP256 alloc] initWithHandle:(AJNHandle)&publicKeyInfo];
-
-        [m_delegate state:[NSString stringWithCString:busName encoding:NSUTF8StringEncoding] publicKeyInfo:keyInfo state:(AJNApplicationState)state];
+int main(int argc, char * argv[]) {
+    @autoreleasepool {
+        if ([AJNInit alljoynInit] != ER_OK) {
+            return 1;
+        }
+        if ([AJNInit alljoynRouterInit] != ER_OK) {
+            [AJNInit alljoynShutdown];
+            return 1;
+        }
+        int ret = UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
+        [AJNInit alljoynRouterShutdown];
+        [AJNInit alljoynShutdown];
+        return ret;
     }
 }
-
