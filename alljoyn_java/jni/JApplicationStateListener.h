@@ -20,18 +20,16 @@
 #include <jni.h>
 #include <alljoyn/ApplicationStateListener.h>
 
-class JBusAttachment;
-
 class JApplicationStateListener : public ajn::ApplicationStateListener {
   public:
 
     JApplicationStateListener(jobject jlistener);
     ~JApplicationStateListener();
     void State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, ajn::PermissionConfigurator::ApplicationState state);
+    jobject jasListener;
 
   private:
 
-    jweak jasListener;
     jmethodID MID_state;
 };
 

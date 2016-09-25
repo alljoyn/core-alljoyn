@@ -35,7 +35,7 @@ class JPermissionConfigurationListener : public ajn::PermissionConfigurationList
   private:
 
     JBusAttachment* busPtr;
-    jweak jpcListener;
+    jobject jpcListener;
     jmethodID MID_factoryReset;
     jmethodID MID_policyChanged;
     jmethodID MID_startManagement;

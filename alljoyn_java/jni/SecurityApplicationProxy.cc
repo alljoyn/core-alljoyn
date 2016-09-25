@@ -340,10 +340,10 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
 
     jmethodID mid = jenv->GetMethodID(CLS_CertificateX509, "<init>", "()V");
 
-    JLocalRef<jobjectArray> retObj = jenv->NewObjectArray(certChainSize, CLS_CertificateX509, NULL);
+    jobjectArray retObj = jenv->NewObjectArray(certChainSize, CLS_CertificateX509, NULL);
 
     for (size_t i = 0; i < certChainSize; i++) {
-        JLocalRef<jobject> jidcert = jenv->NewObject(CLS_CertificateX509, mid);
+        jobject jidcert = jenv->NewObject(CLS_CertificateX509, mid);
         if (!jidcert) {
             delete [] certChain;
             return NULL;
@@ -369,7 +369,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
     }
 
     delete [] certChain;
-    return retObj.move();
+    return retObj;
 }
 
 /*
@@ -511,25 +511,11 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_claim(JNIEn
         return;
     }
 
-    jfieldID fidX = jenv->GetFieldID(CLS_ECCPublicKey, "x", "[B");
-
-    if (!fidX) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find x field in ECCPrivateKey", __FUNCTION__));
-        return;
-    }
-
-    jfieldID fidY = jenv->GetFieldID(CLS_ECCPublicKey, "y", "[B");
-
-    if (!fidY) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find y field in ECCPrivateKey", __FUNCTION__));
-        return;
-    }
-
     jobject jcertAuthPublicKey = (jobject) jenv->GetObjectField(jcertAuth, fid);
     jbyteArray jkeyID = (jbyteArray) jenv->GetObjectField(jcertAuth, fidKeyId);
 
-    jbyteArray jeccX = (jbyteArray) jenv->GetObjectField(jcertAuthPublicKey, fidX);
-    jbyteArray jeccY = (jbyteArray) jenv->GetObjectField(jcertAuthPublicKey, fidY);
+    jbyteArray jeccX = (jbyteArray) jenv->GetObjectField(jcertAuthPublicKey, FID_ECCPublicKey_x);
+    jbyteArray jeccY = (jbyteArray) jenv->GetObjectField(jcertAuthPublicKey, FID_ECCPublicKey_y);
 
     uint8_t* eccX = ToByteArray(jeccX);
     uint8_t* eccY = ToByteArray(jeccY);
@@ -588,8 +574,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_claim(JNIEn
     jobject jadminGroupPublicKey = (jobject) jenv->GetObjectField(jadminGroup, fid);
     jbyteArray jadminGroupKeyID = (jbyteArray) jenv->GetObjectField(jadminGroup, fidKeyId);
 
-    jbyteArray jadminGroupEccX = (jbyteArray) jenv->GetObjectField(jadminGroupPublicKey, fidX);
-    jbyteArray jadminGroupEccY = (jbyteArray) jenv->GetObjectField(jadminGroupPublicKey, fidY);
+    jbyteArray jadminGroupEccX = (jbyteArray) jenv->GetObjectField(jadminGroupPublicKey, FID_ECCPublicKey_x);
+    jbyteArray jadminGroupEccY = (jbyteArray) jenv->GetObjectField(jadminGroupPublicKey, FID_ECCPublicKey_y);
 
     uint8_t* adminGroupEccX = ToByteArray(jadminGroupEccX);
     uint8_t* adminGroupEccY = ToByteArray(jadminGroupEccY);
@@ -623,8 +609,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_claim(JNIEn
 
     KeyInfoNISTP256 adminGroup;
 
-    certificateAuthority.SetPublicKey(&eccPublicKeyAdminGroup);
-    certificateAuthority.SetKeyId(adminGroupKeyID, jenv->GetArrayLength(jadminGroupKeyID));
+    adminGroup.SetPublicKey(&eccPublicKeyAdminGroup);
+    adminGroup.SetKeyId(adminGroupKeyID, jenv->GetArrayLength(jadminGroupKeyID));
 
     CertificateX509* certChain = new CertificateX509[jcertChainCount];
     size_t maniCount = (size_t) jmaniCount;
@@ -817,6 +803,9 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_updateIdent
 
     status = secPtr->UpdateIdentity(certArray, jcertCount, manifests, jmaniCount);
 
+    if (status == ER_OK) {
+        secPtr->SecureConnection(true);
+    }
 exit:
 
     for (jlong i = 0; i < jmaniCount; ++i) {
@@ -866,6 +855,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_updatePolic
     if (status != ER_OK) {
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return;
+    } else {
+        secPtr->SecureConnection(true);
     }
 }
 
@@ -1135,10 +1126,10 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
 
     jmethodID mid = jenv->GetMethodID(CLS_CertificateX509, "<init>", "()V");
 
-    JLocalRef<jobjectArray> retObj = jenv->NewObjectArray(certChainSize, CLS_CertificateX509, NULL);
+    jobjectArray retObj = jenv->NewObjectArray(certChainSize, CLS_CertificateX509, NULL);
 
     for (size_t i = 0; i < certChainSize; i++) {
-        JLocalRef<jobject> jidcert = jenv->NewObject(CLS_CertificateX509, mid);
+        jobject jidcert = jenv->NewObject(CLS_CertificateX509, mid);
         if (!jidcert) {
             delete [] certChain;
             return NULL;
@@ -1164,7 +1155,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_SecurityApplicationProxy_get
     }
 
     delete [] certChain;
-    return retObj.move();
+    return retObj;
 }
 
 /*

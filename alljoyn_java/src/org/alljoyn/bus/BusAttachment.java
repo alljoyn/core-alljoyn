@@ -29,9 +29,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.alljoyn.bus.common.ECCPrivateKey;
 import org.alljoyn.bus.AuthListener.AuthRequest;
 import org.alljoyn.bus.AuthListener.CertificateRequest;
 import org.alljoyn.bus.AuthListener.Credentials;
@@ -1971,6 +1973,25 @@ public class BusAttachment {
      *    - Different error status otherwise
      */
     public native Status unregisterApplicationStateListener(ApplicationStateListener applicationStateListener);
+
+    /**
+     * Return the Auth GUID
+     * @return guid object holding the auth GUID for this application
+     * @throws BusException
+     *      - ER_OK on success
+     *      - ER_BUS_KEY_STORE_NOT_LOADED if the GUID is not available
+     */
+    public native UUID getGuid() throws BusException;
+
+    /**
+     * Get DSA Private key linked with the CredentialAccessor
+     *
+     * @return privateKey   The requested key
+     * @throws BusException
+     *      - ER_OK if successful
+     *      - ER_CRYPTO_KEY_UNAVAILABLE if key is unavailable
+     */
+    public native ECCPrivateKey getDSAPrivateKey() throws BusException;
 
     /**
      * The maximum length of an AllJoyn packet.
