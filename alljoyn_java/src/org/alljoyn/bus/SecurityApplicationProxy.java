@@ -237,7 +237,7 @@ public class SecurityApplicationProxy {
      * After having a new identity certificate installed, the target bus clears
      * out all of its peer's secret and session keys, so the next call will get
      * security violation. After calling UpdateIdentity, SecureConnection(true)
-     * should be called to force the peers to create a new set of secret and
+     * will be called to force the peers to create a new set of secret and
      * session keys.
      *
      * @param identityCertificateChain       the identity certificate
@@ -264,7 +264,7 @@ public class SecurityApplicationProxy {
      * After having a new identity certificate installed, the target bus clears
      * out all of its peer's secret and session keys, so the next call will get
      * security violation. After calling UpdateIdentity, SecureConnection(true)
-     * should be called to force the peers to create a new set of secret and
+     * will be called to force the peers to create a new set of secret and
      * session keys.
      *
      * @param identityCertificateChain       the identity certificate
