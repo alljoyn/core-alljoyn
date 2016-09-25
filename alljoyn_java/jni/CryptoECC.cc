@@ -26,7 +26,7 @@
 #include "alljoyn_java.h"
 #include "alljoyn_jni_helper.h"
 
-#define QCC_MODULE "ALLJOYN_JAVA_CRYPTOECC"
+#define QCC_MODULE "ALLJOYN_JAVA"
 
 using namespace qcc;
 using namespace std;

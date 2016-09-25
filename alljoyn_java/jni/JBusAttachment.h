@@ -32,6 +32,7 @@
 #include <alljoyn/DBusStd.h>
 
 #include "JAuthListener.h"
+#include "JPermissionConfigurationListener.h"
 #include "JKeyStoreListener.h"
 #include "JSignalHandler.h"
 #include "JAboutObject.h"
@@ -55,7 +56,7 @@ class JBusAttachment : public ajn::BusAttachment {
     QStatus Connect(const char* connectArgs, jobject jkeyStoreListener, const char* authMechanisms,
                     jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
     void Disconnect();
-    QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
+    QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared, JPermissionConfigurationListener jpcl = NULL);
     QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces,
                               jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jtranslator);
     void UnregisterBusObject(jobject jbusObject);

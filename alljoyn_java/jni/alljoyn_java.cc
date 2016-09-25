@@ -45,6 +45,8 @@
 #include <BusInternal.h>
 
 #include "JBusAttachment.h"
+#include "JPermissionConfigurationListener.h"
+#include "JApplicationStateListener.h"
 #include "alljoyn_java.h"
 #include "alljoyn_jni_helper.h"
 
@@ -762,7 +764,7 @@ static jclass CLS_BusObjectListener = NULL;
 static jclass CLS_MessageContext = NULL;
 static jclass CLS_MsgArg = NULL;
 static jclass CLS_Signature = NULL;
-static jclass CLS_Status = NULL;
+jclass CLS_Status = NULL;
 static jclass CLS_Variant = NULL;
 static jclass CLS_BusAttachment = NULL;
 static jclass CLS_SessionOpts = NULL;
@@ -772,12 +774,19 @@ jclass CLS_ECCPublicKey = NULL;
 jclass CLS_ECCPrivateKey = NULL;
 jclass CLS_ECCSignature = NULL;
 jclass CLS_JAVA_UTIL_UUID = NULL;
+jclass CLS_PermissionConfigurator = NULL;
 jclass CLS_PermissionConfiguratorApplicationState = NULL;
 jclass CLS_CertificateX509CertificateType = NULL;
 jclass CLS_CertificateX509 = NULL;
 jclass CLS_CertificateId = NULL;
 jclass CLS_ErrorReplyBusException = NULL;
 jclass CLS_KeyInfoNISTP256 = NULL;
+
+jmethodID MID_ECCPublicKey_cnstrctr = NULL;
+jmethodID MID_ECCPrivateKey_cnstrctr = NULL;
+jmethodID MID_PermissionConfigurator_cnstrctr = NULL;
+jmethodID MID_KeyInfoNISTP256_cnstrctr = NULL;
+jmethodID MID_KeyInfoNISTP256_setPublicKey = NULL;
 
 static jmethodID MID_Integer_intValue = NULL;
 static jmethodID MID_Object_equals = NULL;
@@ -797,6 +806,11 @@ jobject PermissionConfiguratorApplicationState_NOT_CLAIMABLE = NULL;
 jobject PermissionConfiguratorApplicationState_CLAIMABLE = NULL;
 jobject PermissionConfiguratorApplicationState_CLAIMED = NULL;
 jobject PermissionConfiguratorApplicationState_NEED_UPDATE = NULL;
+
+jobject CertificateX509Type_UNRESTRICTED = NULL;
+jobject CertificateX509Type_IDENTITY = NULL;
+jobject CertificateX509Type_MEMBERSHIP = NULL;
+jobject CertificateX509Type_INVALID = NULL;
 
 // predeclare some methods as necessary
 static jobject Unmarshal(const MsgArg* arg, jobject jtype);
@@ -943,6 +957,16 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_KeyInfoNISTP256 = (jclass)env->NewGlobalRef(clazz);
 
+        MID_KeyInfoNISTP256_cnstrctr = env->GetMethodID(CLS_KeyInfoNISTP256, "<init>", "()V");
+        if (!MID_KeyInfoNISTP256_cnstrctr) {
+            return JNI_ERR;
+        }
+
+        MID_KeyInfoNISTP256_setPublicKey = env->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)V");
+        if (!MID_KeyInfoNISTP256_setPublicKey) {
+            return JNI_ERR;
+        }
+
         clazz = env->FindClass("org/alljoyn/bus/IntrospectionListener");
         if (!clazz) {
             return JNI_ERR;
@@ -1031,6 +1055,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_ECCPublicKey = (jclass)env->NewGlobalRef(clazz);
 
+        MID_ECCPublicKey_cnstrctr = env->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
+        if (!MID_ECCPublicKey_cnstrctr) {
+            return JNI_ERR;
+        }
+
         FID_ECCPublicKey_x = env->GetFieldID(CLS_ECCPublicKey, "x", "[B");
         if (!FID_ECCPublicKey_x) {
             return JNI_ERR;
@@ -1046,6 +1075,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_ECCPrivateKey = (jclass)env->NewGlobalRef(clazz);
+
+        MID_ECCPrivateKey_cnstrctr = env->GetMethodID(CLS_ECCPrivateKey, "<init>", "([B)V");
+        if (!MID_ECCPrivateKey_cnstrctr) {
+            return JNI_ERR;
+        }
 
         FID_ECCPrivateKey_d = env->GetFieldID(CLS_ECCPrivateKey, "d", "[B");
         if (!FID_ECCPrivateKey_d) {
@@ -1074,57 +1108,116 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
         }
         CLS_JAVA_UTIL_UUID = (jclass)env->NewGlobalRef(clazz);
 
+        clazz = env->FindClass("org/alljoyn/bus/PermissionConfigurator");
+        if (!clazz) {
+            return JNI_ERR;
+        }
+        CLS_PermissionConfigurator = (jclass)env->NewGlobalRef(clazz);
+
+        MID_PermissionConfigurator_cnstrctr = env->GetMethodID(CLS_PermissionConfigurator, "<init>", "()V");
+        if (!MID_PermissionConfigurator_cnstrctr) {
+            return JNI_ERR;
+        }
+
         clazz = env->FindClass("org/alljoyn/bus/PermissionConfigurator$ApplicationState");
         if (!clazz) {
             return JNI_ERR;
         }
         CLS_PermissionConfiguratorApplicationState = (jclass)env->NewGlobalRef(clazz);
 
-        jfieldID fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "NOT_CLAIMABLE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
-        if (!fidAppState) {
+        jfieldID tempfid = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "NOT_CLAIMABLE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!tempfid) {
             return JNI_ERR;
         }
 
-        PermissionConfiguratorApplicationState_NOT_CLAIMABLE = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
-        if (!PermissionConfiguratorApplicationState_NOT_CLAIMABLE) {
+        jobject tempobj = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, tempfid);
+        if (!tempobj) {
+            return JNI_ERR;
+        }
+        PermissionConfiguratorApplicationState_NOT_CLAIMABLE = env->NewGlobalRef(tempobj);
+
+        tempfid = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "CLAIMABLE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!tempfid) {
             return JNI_ERR;
         }
 
-        fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "CLAIMABLE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
-        if (!fidAppState) {
+        tempobj = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, tempfid);
+        if (!tempobj) {
+            return JNI_ERR;
+        }
+        PermissionConfiguratorApplicationState_CLAIMABLE = env->NewGlobalRef(tempobj);
+
+        tempfid = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "CLAIMED", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!tempfid) {
             return JNI_ERR;
         }
 
-        PermissionConfiguratorApplicationState_CLAIMABLE = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
-        if (!PermissionConfiguratorApplicationState_CLAIMABLE) {
+        tempobj = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, tempfid);
+        if (!tempobj) {
+            return JNI_ERR;
+        }
+        PermissionConfiguratorApplicationState_CLAIMED = env->NewGlobalRef(tempobj);
+
+        tempfid = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "NEED_UPDATE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
+        if (!tempfid) {
             return JNI_ERR;
         }
 
-        fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "CLAIMED", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
-        if (!fidAppState) {
+        tempobj = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, tempfid);
+        if (!tempobj) {
             return JNI_ERR;
         }
-
-        PermissionConfiguratorApplicationState_CLAIMED = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
-        if (!PermissionConfiguratorApplicationState_CLAIMED) {
-            return JNI_ERR;
-        }
-
-        fidAppState = env->GetStaticFieldID(CLS_PermissionConfiguratorApplicationState, "NEED_UPDATE", "Lorg/alljoyn/bus/PermissionConfigurator$ApplicationState;");
-        if (!fidAppState) {
-            return JNI_ERR;
-        }
-
-        PermissionConfiguratorApplicationState_NEED_UPDATE = env->GetStaticObjectField(CLS_PermissionConfiguratorApplicationState, fidAppState);
-        if (!PermissionConfiguratorApplicationState_NEED_UPDATE) {
-            return JNI_ERR;
-        }
+        PermissionConfiguratorApplicationState_NEED_UPDATE = env->NewGlobalRef(tempobj);
 
         clazz = env->FindClass("org/alljoyn/bus/common/CertificateX509$CertificateType");
         if (!clazz) {
             return JNI_ERR;
         }
         CLS_CertificateX509CertificateType = (jclass)env->NewGlobalRef(clazz);
+
+        tempfid = env->GetStaticFieldID(CLS_CertificateX509CertificateType, "UNRESTRICTED_CERTIFICATE", "Lorg/alljoyn/bus/common/CertificateX509$CertificateType;");
+        if (!tempfid) {
+            return JNI_ERR;
+        }
+
+        tempobj = env->GetStaticObjectField(CLS_CertificateX509CertificateType, tempfid);
+        if (!tempobj) {
+            return JNI_ERR;
+        }
+        CertificateX509Type_UNRESTRICTED = env->NewGlobalRef(tempobj);
+
+        tempfid = env->GetStaticFieldID(CLS_CertificateX509CertificateType, "IDENTITY_CERTIFICATE", "Lorg/alljoyn/bus/common/CertificateX509$CertificateType;");
+        if (!tempfid) {
+            return JNI_ERR;
+        }
+
+        tempobj = env->GetStaticObjectField(CLS_CertificateX509CertificateType, tempfid);
+        if (!tempobj) {
+            return JNI_ERR;
+        }
+        CertificateX509Type_IDENTITY = env->NewGlobalRef(tempobj);
+
+        tempfid = env->GetStaticFieldID(CLS_CertificateX509CertificateType, "MEMBERSHIP_CERTIFICATE", "Lorg/alljoyn/bus/common/CertificateX509$CertificateType;");
+        if (!tempfid) {
+            return JNI_ERR;
+        }
+
+        tempobj = env->GetStaticObjectField(CLS_CertificateX509CertificateType, tempfid);
+        if (!tempobj) {
+            return JNI_ERR;
+        }
+        CertificateX509Type_MEMBERSHIP = env->NewGlobalRef(tempobj);
+
+        tempfid = env->GetStaticFieldID(CLS_CertificateX509CertificateType, "INVALID_CERTIFICATE", "Lorg/alljoyn/bus/common/CertificateX509$CertificateType;");
+        if (!tempfid) {
+            return JNI_ERR;
+        }
+
+        tempobj = env->GetStaticObjectField(CLS_CertificateX509CertificateType, tempfid);
+        if (!tempobj) {
+            return JNI_ERR;
+        }
+        CertificateX509Type_INVALID = env->NewGlobalRef(tempobj);
 
         clazz = env->FindClass("org/alljoyn/bus/common/CertificateX509");
         if (!clazz) {
@@ -4003,7 +4096,7 @@ void JBusAttachment::Disconnect()
     gBusObjectMapLock.Unlock();
 }
 
-QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared)
+QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared, JPermissionConfigurationListener jpcl)
 {
     QCC_DbgPrintf(("JBusAttachment::EnablePeerSecurity()"));
 
@@ -4090,7 +4183,7 @@ QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject j
     QCC_DbgPrintf(("JBusAttachment::EnablePeerSecurity(): Releasing Bus Attachment common lock"));
     baCommonLock.Unlock();
 
-    QStatus status = BusAttachment::EnablePeerSecurity(authMechanisms, authListener, keyStoreFileName, isShared);
+    QStatus status = BusAttachment::EnablePeerSecurity(authMechanisms, authListener, keyStoreFileName, isShared, &jpcl);
 
     /*
      * We're back, and depending on what has happened out from under us we
@@ -7974,8 +8067,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_nativeDisconnect(JNIEn
     busPtr->Disconnect();
 }
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(JNIEnv* env, jobject thiz, jstring jauthMechanisms, jobject jauthListener,
-                                                                                jstring jkeyStoreFileName, jboolean isShared)
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(JNIEnv* env, jobject thiz, jstring jauthMechanisms, jobject jauthListener, jstring jkeyStoreFileName, jboolean isShared, jobject jpclistener)
 {
     QCC_DbgPrintf(("BusAttachment_enablePeerSecurity()"));
 
@@ -7987,6 +8079,12 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
     JString keyStoreFileName(jkeyStoreFileName);
     if (env->ExceptionCheck()) {
         return NULL;
+    }
+
+    JPermissionConfigurationListener permListener(jpclistener);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        permListener = NULL;
     }
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
@@ -8006,7 +8104,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
 
     QCC_DbgPrintf(("BusAttachment_enablePeerSecurity(): Refcount on busPtr is %d", busPtr->GetRef()));
 
-    QStatus status = busPtr->EnablePeerSecurity(authMechanisms.c_str(), jauthListener, keyStoreFileName.c_str(), isShared);
+    QStatus status = busPtr->EnablePeerSecurity(authMechanisms.c_str(), jauthListener, keyStoreFileName.c_str(), isShared, permListener);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_enablePeerSecurity(): Exception"));
         return NULL;
@@ -9872,6 +9970,84 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_enableConcurrentCallba
     busPtr->EnableConcurrentCallbacks();
 
     return;
+}
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    getPermissionConfigurator
+ * Signature: ()Lorg/alljoyn/bus/PermissionConfigurator;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_getPermissionConfigurator(JNIEnv* env, jobject thiz)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return NULL;
+    }
+    QCC_ASSERT(busPtr);
+
+    jobject retObj = env->NewObject(CLS_PermissionConfigurator, MID_PermissionConfigurator_cnstrctr);
+
+    if (!retObj) {
+        return NULL;
+    }
+
+    SetHandle(retObj, &(busPtr->GetPermissionConfigurator()));
+
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return NULL;
+    }
+
+    return retObj;
+}
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    registerApplicationStateListener
+ * Signature: (Lorg/alljoyn/bus/ApplicationStateListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerApplicationStateListener(JNIEnv* env, jobject thiz, jobject jappstatelistener)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return JStatus(ER_FAIL);
+    }
+    QCC_ASSERT(busPtr);
+
+    JApplicationStateListener jASListener(jappstatelistener);
+
+    QStatus status = busPtr->RegisterApplicationStateListener(jASListener);
+
+    return JStatus(status);
+}
+
+/*
+ * Class:     org_alljoyn_bus_BusAttachment
+ * Method:    unregisterApplicationStateListener
+ * Signature: (Lorg/alljoyn/bus/ApplicationStateListener;)Lorg/alljoyn/bus/Status;
+ */
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterApplicationStateListener(JNIEnv* env, jobject thiz, jobject jappstatelistener)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
+    if (env->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return JStatus(ER_FAIL);
+    }
+    QCC_ASSERT(busPtr);
+
+    JApplicationStateListener jASListener(jappstatelistener);
+
+    QStatus status = busPtr->UnregisterApplicationStateListener(jASListener);
+
+    return JStatus(status);
 }
 
 JNIEXPORT void JNICALL Java_org_alljoyn_bus_BusAttachment_setDescriptionTranslator(

@@ -18,98 +18,15 @@
 #include <jni.h>
 #include <qcc/Debug.h>
 #include <alljoyn/PermissionConfigurator.h>
+#include <algorithm>
 
 #include "alljoyn_jni_helper.h"
-#include "JBusAttachment.h"
 #include "alljoyn_java.h"
 
 #define QCC_MODULE "ALLJOYN_JAVA"
 
 using namespace ajn;
 using namespace qcc;
-
-class JBusAttachment;
-
-/*
- * Class:     org_alljoyn_bus_PermissionConfigurator
- * Method:    create
- * Signature: (Lorg/alljoyn/bus/BusAttachment;)V
- */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_PermissionConfigurator_create(JNIEnv* jenv, jobject thiz, jobject jbus)
-{
-    QCC_DbgTrace(("%s", __FUNCTION__));
-
-    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
-    if (jenv->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception or NULL bus pointer", __FUNCTION__));
-        return;
-    }
-
-    if (busPtr == NULL) {
-        QCC_LogError(ER_FAIL, ("%s: NULL bus pointer", __FUNCTION__));
-        Throw("java/lang/NullPointerException", "NULL bus pointer");
-        return;
-    }
-
-    QCC_DbgPrintf(("%s: Refcount on busPtr is %d", __FUNCTION__, busPtr->GetRef()));
-
-    /*
-     * Create a new C++ backing object for the Java PermissionConfigurator.
-     */
-    PermissionConfigurator* pconfPtr = new PermissionConfigurator(*busPtr);
-    if (!pconfPtr) {
-        Throw("java/lang/OutOfMemoryError", NULL);
-        return;
-    }
-
-    SetHandle(thiz, pconfPtr);
-
-    if (jenv->ExceptionCheck()) {
-        busPtr->DecRef();
-        delete pconfPtr;
-        pconfPtr = NULL;
-    }
-}
-
-/*
- * Class:     org_alljoyn_bus_PermissionConfigurator
- * Method:    destroy
- * Signature: ()V
- */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_PermissionConfigurator_destroy(JNIEnv* jenv, jobject thiz, jobject jbus)
-{
-    QCC_DbgTrace(("%s", __FUNCTION__));
-
-    PermissionConfigurator* pconfPtr = GetHandle<PermissionConfigurator*>(thiz);
-    if (jenv->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-        return;
-    }
-
-    if (pconfPtr == NULL) {
-        QCC_DbgPrintf(("%s: Already destroyed. Returning.", __FUNCTION__));
-        return;
-    }
-
-    delete pconfPtr;
-    pconfPtr = NULL;
-
-    SetHandle(thiz, NULL);
-
-    JBusAttachment* busPtr = GetHandle<JBusAttachment*>(jbus);
-    if (jenv->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
-        return;
-    }
-
-    if (busPtr == NULL) {
-        QCC_DbgPrintf(("%s: Already destroyed. Returning.", __FUNCTION__));
-        return;
-    }
-
-    // Decrement the ref pointer so the BusAttachment can be released.
-    busPtr->DecRef();
-}
 
 /*
  * Class:     org_alljoyn_bus_PermissionConfigurator
@@ -286,41 +203,29 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getSigning
         return NULL;
     }
 
-    KeyInfoECC keyInfoECC;
-    QStatus status = pconfPtr->GetSigningPublicKey(keyInfoECC);
+    KeyInfoNISTP256 keyInfo;
+    QStatus status = pconfPtr->GetSigningPublicKey(keyInfo);
 
     if (status != ER_OK) {
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return NULL;
     }
 
-    const ECCPublicKey* retKey = keyInfoECC.GetPublicKey();
-
-    jmethodID mid = jenv->GetMethodID(CLS_KeyInfoNISTP256, "<init>", "()V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find KeyInfoNISTP256 constructor", __FUNCTION__));
+    const ECCPublicKey* retKey = keyInfo.GetPublicKey();
+    if (retKey == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: retKey is null", __FUNCTION__));
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(ER_FAIL));
         return NULL;
     }
 
-    JLocalRef<jobject> retObj = jenv->NewObject(CLS_KeyInfoNISTP256, mid);
-
-    jmethodID midC = jenv->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
-    if (!midC) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        return NULL;
-    }
+    JLocalRef<jobject> retObj = jenv->NewObject(CLS_KeyInfoNISTP256, MID_KeyInfoNISTP256_cnstrctr);
 
     JLocalRef<jbyteArray> arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
     JLocalRef<jbyteArray> arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
 
-    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, midC, arrayX.move(), arrayY.move());
+    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX.move(), arrayY.move());
 
-    jmethodID midSet = jenv->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)");
-    if (!midSet) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find setPublicKey", __FUNCTION__));
-        return NULL;
-    }
-    CallObjectMethod(jenv, retObj, midSet, jretKey);
+    CallObjectMethod(jenv, retObj, MID_KeyInfoNISTP256_setPublicKey, jretKey);
 
     return retObj;
 }

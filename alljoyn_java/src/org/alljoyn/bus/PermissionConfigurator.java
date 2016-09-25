@@ -26,11 +26,7 @@ import org.alljoyn.bus.common.KeyInfoECC;
 
 public class PermissionConfigurator {
 
-    private BusAttachment m_bus;
-
-    public PermissionConfigurator(BusAttachment bus) throws Exception{
-        create(bus);
-        m_bus = bus;
+    private PermissionConfigurator() {
     }
 
     /**
@@ -75,28 +71,6 @@ public class PermissionConfigurator {
     public static final short CLAIM_CAPABILITY_ADDITIONAL_PSK_GENERATED_BY_APPLICATION = 0x02;
 
     /**
-     * Allocate native resources.
-     */
-    private native void create(BusAttachment bus) throws Exception;
-
-    /**
-     * Let the Java garbage collector release resources.
-     */
-    @Override
-    protected void finalize() throws Throwable {
-        try {
-            destroy(m_bus);
-        } finally {
-            super.finalize();
-        }
-    }
-
-    /**
-     * virtual destructor
-     */
-    public synchronized native void destroy(BusAttachment bus);
-
-    /**
      * Get the manifest template for the application as XML.
      *
      * @return manifestTemplateXml String to receive the manifest template as XML.
@@ -138,7 +112,7 @@ public class PermissionConfigurator {
      * @return keyInfo the public key info
      * @throws BusException an error code.
      */
-    public native KeyInfoECC getSigningPublicKey() throws BusException;
+    public native KeyInfoNISTP256 getSigningPublicKey() throws BusException;
 
     /**
      * Sign the X509 certificate using the signing key

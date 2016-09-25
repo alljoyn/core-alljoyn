@@ -1100,7 +1100,7 @@ public class BusAttachment {
     private native void nativeDisconnect();
 
     private native Status enablePeerSecurity(String authMechanisms,
-            AuthListenerInternal busAuthListener, String keyStoreFileName, boolean isShared);
+            AuthListenerInternal busAuthListener, String keyStoreFileName, boolean isShared, PermissionConfigurationListener pcl);
 
     private native Status registerBusObject(String objPath, BusObject busObj,
             InterfaceDescription[] busInterfaces, boolean secure,
@@ -1770,10 +1770,11 @@ public class BusAttachment {
      *                         programs must have read/write
      *                         permissions to the keyStoreFileName
      *                         file.
+     * @param pcl PermissionConfigurationListener enables security 2.0
      * @return OK if successful
      */
     public Status registerAuthListener(String authMechanisms, AuthListener listener,
-            String keyStoreFileName, boolean isShared) {
+            String keyStoreFileName, boolean isShared, PermissionConfigurationListener pcl) {
 
         /*
          * It is not possible to register multiple AuthListeners or replace an
@@ -1788,12 +1789,44 @@ public class BusAttachment {
         this.keyStoreFileName = keyStoreFileName;
         this.isShared = isShared;
         Status status = enablePeerSecurity(this.authMechanisms, busAuthListener,
-                                           this.keyStoreFileName, isShared);
+                                           this.keyStoreFileName, isShared, pcl);
         if (status != Status.OK) {
             busAuthListener.setAuthListener(null);
             this.authMechanisms = null;
         }
         return status;
+    }
+
+    /**
+     * Registers a user-defined authentication listener class with a specific
+     * default key store.
+     *
+     * @param authMechanisms the authentication mechanism(s) to use
+     *                         for peer-to-peer authentication. This
+     *                         is a space separated list of any of the
+     *                         following values: ALLJOYN_SRP_LOGON,
+     *                         ALLJOYN_SRP_KEYX, ALLJOYN_ECDHE_NULL,
+     *                         ALLJOYN_ECDHE_PSK, ALLJOYN_ECDHE_ECDSA,
+     *                         GSSAPI.
+     * @param listener the authentication listener
+     * @param keyStoreFileName the name of the default key store.
+     *                         Under Android, the recommended value of
+     *                         this parameter is {@code
+     *                         Context.getFileStreamPath("alljoyn_keystore").getAbsolutePath()}.
+     *                         Note that the default key store
+     *                         implementation may be overrided with
+     *                         {@link
+     *                         #registerKeyStoreListener(KeyStoreListener)}.
+     * @param isShared Set to true if the default keystore will be
+     *                         shared between multiple programs. All
+     *                         programs must have read/write
+     *                         permissions to the keyStoreFileName
+     *                         file.
+     * @return OK if successful
+     */
+    public Status registerAuthListener(String authMechanisms, AuthListener listener,
+            String keyStoreFileName, boolean isShared) {
+        return registerAuthListener(authMechanisms, listener, keyStoreFileName, isShared, null);
     }
 
     /**
@@ -1819,7 +1852,7 @@ public class BusAttachment {
      */
     public Status registerAuthListener(String authMechanisms, AuthListener listener,
             String keyStoreFileName){
-        return registerAuthListener(authMechanisms, listener, keyStoreFileName, false);
+        return registerAuthListener(authMechanisms, listener, keyStoreFileName, false, null);
     }
 
     /**
@@ -1838,7 +1871,7 @@ public class BusAttachment {
      * @return OK if successful
      */
     public Status registerAuthListener(String authMechanisms, AuthListener listener) {
-        return registerAuthListener(authMechanisms, listener, null, false);
+        return registerAuthListener(authMechanisms, listener, null, false, null);
     }
 
     /**
@@ -1903,6 +1936,41 @@ public class BusAttachment {
      * </p>
      */
     public native void enableConcurrentCallbacks();
+
+    /**
+     * Get the permission configurator for the bus attachment.
+     *
+     * @return the permission configurator
+     */
+    public native PermissionConfigurator getPermissionConfigurator();
+
+    /**
+     * Registers a handler to receive the org.alljoyn.Bus.Application
+     * State signal.
+     *
+     * @param applicationStateListener reference to an ApplicationStateListener
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - #ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS when the same listener has already been registered.
+     *    - Different error status otherwise
+     */
+    public native Status registerApplicationStateListener(ApplicationStateListener applicationStateListener);
+
+    /**
+     * Unregisters the ApplicationStateListener from receiving the
+     * org.alljoyn.Bus.Application State signal.
+     *
+     * @param applicationStateListener reference to an
+     *                                     ApplicationStateListener to
+     *                                     unregister
+     *
+     * @return
+     *    - #ER_OK on success
+     *    - #ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER when this listener has not been registered.
+     *    - Different error status otherwise
+     */
+    public native Status unregisterApplicationStateListener(ApplicationStateListener applicationStateListener);
 
     /**
      * The maximum length of an AllJoyn packet.
