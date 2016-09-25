@@ -31,14 +31,13 @@ JPermissionConfigurationListener::JPermissionConfigurationListener(jobject jlist
     JNIEnv* env = GetEnv();
 
     if (!jlistener) {
-        QCC_LogError(ER_FAIL, ("%s: jlistener null", __FUNCTION__));
         return;
     }
 
-    QCC_DbgPrintf(("%s: Taking weak global reference to listener %p", __FUNCTION__, jlistener));
-    jpcListener = env->NewWeakGlobalRef(jlistener);
+    QCC_DbgPrintf(("%s: Taking global reference to listener %p", __FUNCTION__, jlistener));
+    jpcListener = env->NewGlobalRef(jlistener);
     if (!jpcListener) {
-        QCC_LogError(ER_FAIL, ("%s: Can't create new weak global reference", __FUNCTION__));
+        QCC_LogError(ER_FAIL, ("%s: Can't create new global reference", __FUNCTION__));
         return;
     }
 
@@ -73,8 +72,8 @@ JPermissionConfigurationListener::~JPermissionConfigurationListener()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (jpcListener) {
-        QCC_DbgPrintf(("%s: Releasing weak global reference to listener %p", __FUNCTION__, jpcListener));
-        GetEnv()->DeleteWeakGlobalRef(jpcListener);
+        QCC_DbgPrintf(("%s: Releasing global reference to listener %p", __FUNCTION__, jpcListener));
+        GetEnv()->DeleteGlobalRef(jpcListener);
         jpcListener = NULL;
     }
 }
@@ -90,22 +89,11 @@ QStatus JPermissionConfigurationListener::FactoryReset()
     JScopedEnv env;
 
     /*
-     * The weak global reference jpinglistener cannot be directly used.  We have to get
-     * a "hard" reference to it and then use that.  If you try to use a weak reference
-     * directly you will crash and burn.
-     */
-    jobject jo = env->NewLocalRef(jpcListener);
-    if (!jo) {
-        QCC_LogError(ER_FAIL, ("%s: Can't get new local reference to listener", __FUNCTION__));
-        return ER_FAIL;
-    }
-
-    /*
      * This call out to the listener means that the DestinationFound method
      * must be MT-Safe.  This is implied by the definition of the listener.
      */
     QCC_DbgPrintf(("%s: Call out to listener object and method", __FUNCTION__));
-    jobject status = env->CallObjectMethod(jo, MID_factoryReset);
+    jobject status = env->CallObjectMethod(jpcListener, MID_factoryReset);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
         return ER_FAIL;
@@ -137,22 +125,11 @@ void JPermissionConfigurationListener::PolicyChanged()
     JScopedEnv env;
 
     /*
-     * The weak global reference jpinglistener cannot be directly used.  We have to get
-     * a "hard" reference to it and then use that.  If you try to use a weak reference
-     * directly you will crash and burn.
-     */
-    jobject jo = env->NewLocalRef(jpcListener);
-    if (!jo) {
-        QCC_LogError(ER_FAIL, ("%s: Can't get new local reference to listener", __FUNCTION__));
-        return;
-    }
-
-    /*
      * This call out to the listener means that the DestinationFound method
      * must be MT-Safe.  This is implied by the definition of the listener.
      */
     QCC_DbgPrintf(("%s: Call out to listener object and method", __FUNCTION__));
-    env->CallObjectMethod(jo, MID_policyChanged);
+    env->CallObjectMethod(jpcListener, MID_policyChanged);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
     }
@@ -170,22 +147,11 @@ void JPermissionConfigurationListener::StartManagement()
     JScopedEnv env;
 
     /*
-     * The weak global reference jpinglistener cannot be directly used.  We have to get
-     * a "hard" reference to it and then use that.  If you try to use a weak reference
-     * directly you will crash and burn.
-     */
-    jobject jo = env->NewLocalRef(jpcListener);
-    if (!jo) {
-        QCC_LogError(ER_FAIL, ("%s: Can't get new local reference to listener", __FUNCTION__));
-        return;
-    }
-
-    /*
      * This call out to the listener means that the DestinationFound method
      * must be MT-Safe.  This is implied by the definition of the listener.
      */
     QCC_DbgPrintf(("%s: Call out to listener object and method", __FUNCTION__));
-    env->CallObjectMethod(jo, MID_startManagement);
+    env->CallObjectMethod(jpcListener, MID_startManagement);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
     }
@@ -203,22 +169,11 @@ void JPermissionConfigurationListener::EndManagement()
     JScopedEnv env;
 
     /*
-     * The weak global reference jpinglistener cannot be directly used.  We have to get
-     * a "hard" reference to it and then use that.  If you try to use a weak reference
-     * directly you will crash and burn.
-     */
-    jobject jo = env->NewLocalRef(jpcListener);
-    if (!jo) {
-        QCC_LogError(ER_FAIL, ("%s: Can't get new local reference to listener", __FUNCTION__));
-        return;
-    }
-
-    /*
      * This call out to the listener means that the DestinationFound method
      * must be MT-Safe.  This is implied by the definition of the listener.
      */
     QCC_DbgPrintf(("%s: Call out to listener object and method", __FUNCTION__));
-    env->CallObjectMethod(jo, MID_endManagement);
+    env->CallObjectMethod(jpcListener, MID_endManagement);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
     }

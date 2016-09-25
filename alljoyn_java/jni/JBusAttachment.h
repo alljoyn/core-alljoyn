@@ -33,6 +33,7 @@
 
 #include "JAuthListener.h"
 #include "JPermissionConfigurationListener.h"
+#include "JApplicationStateListener.h"
 #include "JKeyStoreListener.h"
 #include "JSignalHandler.h"
 #include "JAboutObject.h"
@@ -40,6 +41,7 @@
 #include "PendingAsyncPing.h"
 
 class JAuthListener;
+class JApplicationStateListener;
 class JKeyStoreListener;
 class JSignalHandler;
 class JAboutObject;
@@ -56,7 +58,7 @@ class JBusAttachment : public ajn::BusAttachment {
     QStatus Connect(const char* connectArgs, jobject jkeyStoreListener, const char* authMechanisms,
                     jobject jauthListener, const char* keyStoreFileName, jboolean isShared);
     void Disconnect();
-    QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared, JPermissionConfigurationListener jpcl = NULL);
+    QStatus EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared, JPermissionConfigurationListener* jpcl = NULL);
     QStatus RegisterBusObject(const char* objPath, jobject jbusObject, jobjectArray jbusInterfaces,
                               jboolean jsecure, jstring jlangTag, jstring jdesc, jobject jtranslator);
     void UnregisterBusObject(jobject jbusObject);
@@ -91,6 +93,23 @@ class JBusAttachment : public ajn::BusAttachment {
      * since we trust that the native binding we wrote will use it correctly.
      */
     std::vector<std::pair<jobject, JSignalHandler*> > signalHandlers;
+
+    /*
+     * The single (optional) JPermissionConfigurationListener associated with this bus
+     * attachment. Note that this member is public since we trust that the native binding
+     * we wrote will use it correctly.
+     */
+    JPermissionConfigurationListener* jPermissionConfigurationListener;
+
+    /**
+     * A mutex to serialize access to bus attachment jApplicationStateListeners
+     */
+    qcc::Mutex baAppStateListenLock;
+
+    /**
+     * A vector of all of the JApplicationStateListeners
+     */
+    std::vector<JApplicationStateListener*> jApplicationStateListeners;
 
     /*
      * The single (optionsl) KeyStoreListener associated with this bus

@@ -47,4 +47,34 @@ public class ECCPublicKey {
     public String toString() {
         return Arrays.toString(x) + ", " + Arrays.toString(y);
     }
+
+    @Override
+    public boolean equals(Object compObj) {
+        if (this == compObj) {
+            return true;
+        }
+        if (!(compObj instanceof ECCPublicKey)) {
+            return false;
+        }
+        if (compObj == null) {
+            return false;
+        }
+
+        ECCPublicKey compPublicKey = (ECCPublicKey) compObj;
+
+        if (getCoordinateSize() != compPublicKey.getCoordinateSize()) {
+            return false;
+        }
+
+        for (int index = 0; index < getCoordinateSize(); index++) {
+            if (x[index] != compPublicKey.x[index]) {
+                return false;
+            }
+            if (y[index] != compPublicKey.y[index]) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

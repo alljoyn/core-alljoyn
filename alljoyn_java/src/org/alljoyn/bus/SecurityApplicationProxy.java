@@ -236,9 +236,8 @@ public class SecurityApplicationProxy {
      *
      * After having a new identity certificate installed, the target bus clears
      * out all of its peer's secret and session keys, so the next call will get
-     * security violation. After calling UpdateIdentity, SecureConnection(true)
-     * should be called to force the peers to create a new set of secret and
-     * session keys.
+     * security violation. Calling updateIdentity causes existing sessions to be
+     * recreated and session keys to be renegotiated.
      *
      * @param identityCertificateChain       the identity certificate
      * @param identityCertificateChainCount  the number of identity certificates
@@ -263,9 +262,8 @@ public class SecurityApplicationProxy {
      *
      * After having a new identity certificate installed, the target bus clears
      * out all of its peer's secret and session keys, so the next call will get
-     * security violation. After calling UpdateIdentity, SecureConnection(true)
-     * should be called to force the peers to create a new set of secret and
-     * session keys.
+     * security violation. Calling updateIdentity causes existing sessions to
+     * be created and session keys to be renegotiated.
      *
      * @param identityCertificateChain       the identity certificate
      * @param manifestXmls                  An array of null-terminated strings containing the application's

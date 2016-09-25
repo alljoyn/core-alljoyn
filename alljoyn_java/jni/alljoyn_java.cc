@@ -3900,6 +3900,15 @@ void JBusAttachment::Disconnect()
 {
     QCC_DbgPrintf(("JBusAttachment::Disconnect()"));
 
+    QCC_VERIFY(ER_OK == baAppStateListenLock.Lock(MUTEX_CONTEXT));
+    for (vector<JApplicationStateListener*>::iterator i = jApplicationStateListeners.begin(); i != jApplicationStateListeners.end(); ++i) {
+        UnregisterApplicationStateListener(**i);
+        delete *i;
+        *i = NULL;
+    }
+    jApplicationStateListeners.clear();
+    QCC_VERIFY(ER_OK == baAppStateListenLock.Unlock(MUTEX_CONTEXT));
+
     if (IsConnected()) {
         QCC_DbgPrintf(("JBusAttachment::Disconnect(): calling BusAttachment::Disconnect()"));
         QStatus status = BusAttachment::Disconnect();
@@ -4082,6 +4091,10 @@ void JBusAttachment::Disconnect()
     QCC_DbgPrintf(("JBusAttachment::Disconnect(): Forgetting jkeyStoreListenerRef"));
     env->DeleteGlobalRef(jkeyStoreListenerRef);
 
+    QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing jPermissionConfigurationListener"));
+    delete jPermissionConfigurationListener;
+    jPermissionConfigurationListener = NULL;
+
     if (aboutObj != NULL) {
         if (aboutObj->jaboutObjGlobalRef != NULL) {
             env->DeleteGlobalRef(aboutObj->jaboutObjGlobalRef);
@@ -4094,9 +4107,10 @@ void JBusAttachment::Disconnect()
 
     QCC_DbgPrintf(("JBusAttachment::Disconnect(): Releasing global Bus Object map lock"));
     gBusObjectMapLock.Unlock();
+
 }
 
-QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared, JPermissionConfigurationListener jpcl)
+QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject jauthListener, const char* keyStoreFileName, jboolean isShared, JPermissionConfigurationListener* jpcl)
 {
     QCC_DbgPrintf(("JBusAttachment::EnablePeerSecurity()"));
 
@@ -4183,7 +4197,7 @@ QStatus JBusAttachment::EnablePeerSecurity(const char* authMechanisms, jobject j
     QCC_DbgPrintf(("JBusAttachment::EnablePeerSecurity(): Releasing Bus Attachment common lock"));
     baCommonLock.Unlock();
 
-    QStatus status = BusAttachment::EnablePeerSecurity(authMechanisms, authListener, keyStoreFileName, isShared, &jpcl);
+    QStatus status = BusAttachment::EnablePeerSecurity(authMechanisms, authListener, keyStoreFileName, isShared, jpcl);
 
     /*
      * We're back, and depending on what has happened out from under us we
@@ -8081,12 +8095,6 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
         return NULL;
     }
 
-    JPermissionConfigurationListener permListener(jpclistener);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        permListener = NULL;
-    }
-
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
     if (env->ExceptionCheck()) {
         return NULL;
@@ -8104,7 +8112,13 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_enablePeerSecurity(
 
     QCC_DbgPrintf(("BusAttachment_enablePeerSecurity(): Refcount on busPtr is %d", busPtr->GetRef()));
 
-    QStatus status = busPtr->EnablePeerSecurity(authMechanisms.c_str(), jauthListener, keyStoreFileName.c_str(), isShared, permListener);
+    busPtr->jPermissionConfigurationListener = new JPermissionConfigurationListener(jpclistener);
+    if (env->ExceptionCheck()) {
+        env->ExceptionClear();
+        busPtr->jPermissionConfigurationListener = NULL;
+    }
+
+    QStatus status = busPtr->EnablePeerSecurity(authMechanisms.c_str(), jauthListener, keyStoreFileName.c_str(), isShared, busPtr->jPermissionConfigurationListener);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("BusAttachment_enablePeerSecurity(): Exception"));
         return NULL;
@@ -10020,9 +10034,17 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerApplication
     }
     QCC_ASSERT(busPtr);
 
-    JApplicationStateListener jASListener(jappstatelistener);
+    JApplicationStateListener* jASListener = new JApplicationStateListener(jappstatelistener);
 
-    QStatus status = busPtr->RegisterApplicationStateListener(jASListener);
+    QStatus status = busPtr->RegisterApplicationStateListener(*jASListener);
+
+    if (status == ER_OK) {
+        QCC_VERIFY(ER_OK == busPtr->baAppStateListenLock.Lock(MUTEX_CONTEXT));
+        busPtr->jApplicationStateListeners.push_back(jASListener);
+        QCC_VERIFY(ER_OK == busPtr->baAppStateListenLock.Unlock(MUTEX_CONTEXT));
+    } else {
+        delete jASListener;
+    }
 
     return JStatus(status);
 }
@@ -10043,9 +10065,33 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterApplicati
     }
     QCC_ASSERT(busPtr);
 
-    JApplicationStateListener jASListener(jappstatelistener);
+    QCC_VERIFY(ER_OK == busPtr->baAppStateListenLock.Lock(MUTEX_CONTEXT));
 
-    QStatus status = busPtr->UnregisterApplicationStateListener(jASListener);
+    QStatus status = ER_FAIL;
+
+    for (vector<JApplicationStateListener*>::iterator i = busPtr->jApplicationStateListeners.begin(); i != busPtr->jApplicationStateListeners.end(); ++i) {
+        jobject jo = env->NewLocalRef((*i)->jasListener);
+        if (!jo) {
+            QCC_LogError(ER_FAIL, ("%s: Can't get new local reference to listener", __FUNCTION__));
+            continue;
+        }
+
+        if (env->IsSameObject(jo, jappstatelistener)) {
+            status = busPtr->UnregisterApplicationStateListener(**i);
+
+            if (status != ER_OK) {
+                break;
+            }
+
+            QCC_DbgPrintf(("%s: Forgetting %p", __FUNCTION__, jo));
+            delete *i;
+
+            busPtr->jApplicationStateListeners.erase(i);
+            break;
+        }
+    }
+
+    QCC_VERIFY(ER_OK == busPtr->baAppStateListenLock.Unlock(MUTEX_CONTEXT));
 
     return JStatus(status);
 }
