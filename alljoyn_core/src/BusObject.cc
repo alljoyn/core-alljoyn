@@ -562,6 +562,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
         if (readableAndAllowedCount > 0) {
             dict = new MsgArg[readableAndAllowedCount];
             const InterfaceDescription* ifc = LookupInterface(components->ifaces, iface->v_string.str);
+            QCC_ASSERT(ifc);
             size_t numProps = ifc->GetProperties();
             props = new const InterfaceDescription::Property*[numProps];
             ifc->GetProperties(props, numProps);
