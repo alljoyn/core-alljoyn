@@ -320,14 +320,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CertificateX509_decodePriv
         return NULL;
     }
 
-    JLocalRef<jbyteArray> jeccD = ToJByteArray(eccPrivateKey.GetD(), eccPrivateKey.GetDSize());
+    jbyteArray jeccD = ToJByteArray(eccPrivateKey.GetD(), eccPrivateKey.GetDSize());
 
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: exception converting byte array", __FUNCTION__));
         return NULL;
     }
 
-    jobject retObj = jenv->NewObject(CLS_ECCPrivateKey, MID_ECCPrivateKey_cnstrctr, jeccD.move());
+    jobject retObj = jenv->NewObject(CLS_ECCPrivateKey, MID_ECCPrivateKey_cnstrctr, jeccD);
 
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: exception converting byte array", __FUNCTION__));
@@ -1780,10 +1780,10 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_common_CertificateX509_decod
     }
 
     jmethodID mid = jenv->GetMethodID(CLS_CertificateX509, "<init>", "()V");
-    JLocalRef<jobjectArray> retArray = jenv->NewObjectArray(jcertExpectedCount, CLS_CertificateX509, NULL);
+    jobjectArray retArray = jenv->NewObjectArray(jcertExpectedCount, CLS_CertificateX509, NULL);
 
     for (jlong i = 0; i < jcertExpectedCount; i++) {
-        JLocalRef<jobject> jcert = jenv->NewObject(CLS_CertificateX509, mid);
+        jobject jcert = jenv->NewObject(CLS_CertificateX509, mid);
         if (!jcert) {
             delete [] certArray;
             return NULL;
@@ -1810,7 +1810,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_common_CertificateX509_decod
     }
 
     delete [] certArray;
-    return retArray.move();
+    return retArray;
 }
 
 /*

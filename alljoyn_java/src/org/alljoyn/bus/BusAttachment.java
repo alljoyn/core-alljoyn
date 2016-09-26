@@ -29,9 +29,11 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.alljoyn.bus.common.ECCPrivateKey;
 import org.alljoyn.bus.AuthListener.AuthRequest;
 import org.alljoyn.bus.AuthListener.CertificateRequest;
 import org.alljoyn.bus.AuthListener.Credentials;

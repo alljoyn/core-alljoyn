@@ -211,6 +211,15 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getSigning
         return NULL;
     }
 
+    jfieldID fidKeyId = jenv->GetFieldID(CLS_KeyInfoNISTP256, "m_keyId", "[B");
+
+    if (!fidKeyId) {
+        QCC_LogError(ER_FAIL, ("%s: Can't find keyId field in KeyInfoNISTP256", __FUNCTION__));
+        return NULL;
+    }
+
+    jbyteArray jkeyId = ToJByteArray(keyInfo.GetKeyId(), keyInfo.GetKeyIdLen());
+
     const ECCPublicKey* retKey = keyInfo.GetPublicKey();
     if (retKey == NULL) {
         QCC_LogError(ER_FAIL, ("%s: retKey is null", __FUNCTION__));
@@ -218,14 +227,16 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getSigning
         return NULL;
     }
 
-    JLocalRef<jobject> retObj = jenv->NewObject(CLS_KeyInfoNISTP256, MID_KeyInfoNISTP256_cnstrctr);
+    jobject retObj = jenv->NewObject(CLS_KeyInfoNISTP256, MID_KeyInfoNISTP256_cnstrctr);
 
-    JLocalRef<jbyteArray> arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
-    JLocalRef<jbyteArray> arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
+    jbyteArray arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
+    jbyteArray arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
 
-    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX.move(), arrayY.move());
+    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
 
     CallObjectMethod(jenv, retObj, MID_KeyInfoNISTP256_setPublicKey, jretKey);
+
+    jenv->SetObjectField(retObj, fidKeyId, jkeyId);
 
     return retObj;
 }
@@ -342,17 +353,10 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getConnect
         return NULL;
     }
 
-    jmethodID midC = jenv->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
-    if (!midC) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        Throw("java/lang/NoSuchMethodException", NULL);
-        return NULL;
-    }
-
     jbyteArray arrayX = ToJByteArray(retKey.GetX(), retKey.GetCoordinateSize());
     jbyteArray arrayY = ToJByteArray(retKey.GetY(), retKey.GetCoordinateSize());
 
-    jobject retObj = jenv->NewObject(CLS_ECCPublicKey, midC, arrayX, arrayY);
+    jobject retObj = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
 
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Couldn't make jobject", __FUNCTION__));
@@ -519,7 +523,7 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_PermissionConfigurator_claim(JNIEnv*
 
     jfieldID fidKeyId = jenv->GetFieldID(CLS_KeyInfoNISTP256, "m_keyId", "[B");
 
-    if (!fid) {
+    if (!fidKeyId) {
         QCC_LogError(ER_FAIL, ("%s: Can't find keyId field in KeyInfoNISTP256", __FUNCTION__));
         return;
     }
@@ -623,8 +627,8 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_PermissionConfigurator_claim(JNIEnv*
 
     KeyInfoNISTP256 adminGroup;
 
-    certificateAuthority.SetPublicKey(&eccPublicKeyAdminGroup);
-    certificateAuthority.SetKeyId(adminGroupKeyID, jenv->GetArrayLength(jadminGroupKeyID));
+    adminGroup.SetPublicKey(&eccPublicKeyAdminGroup);
+    adminGroup.SetKeyId(adminGroupKeyID, jenv->GetArrayLength(jadminGroupKeyID));
 
     CertificateX509* certChain = new CertificateX509[jcertChainCount];
     size_t maniCount = (size_t) jmaniCount;
@@ -800,10 +804,10 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getId
     }
 
     jmethodID mid = jenv->GetMethodID(CLS_CertificateX509, "<init>", "()V");
-    JLocalRef<jobjectArray> retIdentity = jenv->NewObjectArray(identity.size(), CLS_CertificateX509, NULL);
+    jobjectArray retIdentity = jenv->NewObjectArray(identity.size(), CLS_CertificateX509, NULL);
 
     for (unsigned int i = 0; i < identity.size(); i++) {
-        JLocalRef<jobject> jidcert = jenv->NewObject(CLS_CertificateX509, mid);
+        jobject jidcert = jenv->NewObject(CLS_CertificateX509, mid);
         if (!jidcert) {
             return NULL;
         }
@@ -819,7 +823,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getId
         }
     }
 
-    return retIdentity.move();
+    return retIdentity;
 }
 
 /*
@@ -854,49 +858,31 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getIdentit
 
     const ECCPublicKey* retKey = retKeyInfo.GetPublicKey();
 
-    jmethodID mid = jenv->GetMethodID(CLS_KeyInfoNISTP256, "<init>", "()V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find KeyInfoNISTP256 constructor", __FUNCTION__));
-        return NULL;
-    }
+    jobject jretKeyInfo = jenv->NewObject(CLS_KeyInfoNISTP256, MID_KeyInfoNISTP256_cnstrctr);
 
-    JLocalRef<jobject> jretKeyInfo = jenv->NewObject(CLS_KeyInfoNISTP256, mid);
+    jbyteArray arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
+    jbyteArray arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
 
-    jmethodID midC = jenv->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
-    if (!midC) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        return NULL;
-    }
-
-    JLocalRef<jbyteArray> arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
-    JLocalRef<jbyteArray> arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
-
-    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, midC, arrayX.move(), arrayY.move());
+    jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
         return NULL;
     }
 
-    jmethodID midSet = jenv->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)");
-    if (!midSet) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find setPublicKey", __FUNCTION__));
-        return NULL;
-    }
-
-    CallObjectMethod(jenv, jretKeyInfo, midSet, jretKey);
+    CallObjectMethod(jenv, jretKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jretKey);
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
         return NULL;
     }
 
     jmethodID midCCert = jenv->GetMethodID(CLS_CertificateId, "<init>", "(Ljava/util/String;Lorg/alljoyn/bus/common/KeyInfoNISTP256)V");
-    if (!midC) {
+    if (!midCCert) {
         QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
         return NULL;
     }
 
     jstring jserial = jenv->NewStringUTF(serial.c_str());
-    return jenv->NewObject(CLS_CertificateId, midCCert, jserial, jretKeyInfo.move());
+    return jenv->NewObject(CLS_CertificateId, midCCert, jserial, jretKeyInfo);
 }
 
 /*
@@ -949,26 +935,8 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getMe
         return NULL;
     }
 
-    jmethodID mid = jenv->GetMethodID(CLS_KeyInfoNISTP256, "<init>", "()V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find KeyInfoNISTP256 constructor", __FUNCTION__));
-        return NULL;
-    }
-
-    jmethodID midC = jenv->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
-    if (!midC) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        return NULL;
-    }
-
-    jmethodID midSet = jenv->GetMethodID(CLS_KeyInfoNISTP256, "setPublicKey", "(Lorg/alljoyn/bus/common/ECCPublicKey;)");
-    if (!midSet) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find setPublicKey", __FUNCTION__));
-        return NULL;
-    }
-
     jmethodID midCCert = jenv->GetMethodID(CLS_CertificateId, "<init>", "(Ljava/util/String;Lorg/alljoyn/bus/common/KeyInfoNISTP256)V");
-    if (!midC) {
+    if (!midCCert) {
         QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
         return NULL;
     }
@@ -982,30 +950,30 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getMe
         return NULL;
     }
 
-    JLocalRef<jobjectArray> retMemberSummaries = jenv->NewObjectArray(serial.size(), CLS_CertificateId, NULL);
+    jobjectArray retMemberSummaries = jenv->NewObjectArray(serial.size(), CLS_CertificateId, NULL);
 
     for (unsigned int i = 0; i < serial.size(); i++) {
         const ECCPublicKey* retKey = retKeyInfo[i].GetPublicKey();
 
-        JLocalRef<jobject> jretKeyInfo = jenv->NewObject(CLS_KeyInfoNISTP256, mid);
+        jobject jretKeyInfo = jenv->NewObject(CLS_KeyInfoNISTP256, MID_KeyInfoNISTP256_cnstrctr);
 
-        JLocalRef<jbyteArray> arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
-        JLocalRef<jbyteArray> arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
+        jbyteArray arrayX = ToJByteArray(retKey->GetX(), retKey->GetCoordinateSize());
+        jbyteArray arrayY = ToJByteArray(retKey->GetY(), retKey->GetCoordinateSize());
 
-        jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, midC, arrayX.move(), arrayY.move());
+        jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
         if (jenv->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
             return NULL;
         }
 
-        CallObjectMethod(jenv, jretKeyInfo, midSet, jretKey);
+        CallObjectMethod(jenv, jretKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jretKey);
         if (jenv->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
             return NULL;
         }
 
         jstring jserial = jenv->NewStringUTF(serial[i].c_str());
-        jobject jcertid = jenv->NewObject(CLS_CertificateId, midCCert, jserial, jretKeyInfo.move());
+        jobject jcertid = jenv->NewObject(CLS_CertificateId, midCCert, jserial, jretKeyInfo);
 
         jenv->SetObjectArrayElement(retMemberSummaries, i, jcertid);
         if (jenv->ExceptionCheck()) {

@@ -40,10 +40,10 @@ JApplicationStateListener::JApplicationStateListener(jobject jlistener) : jasLis
         return;
     }
 
-    QCC_DbgPrintf(("%s: Taking weak global reference to listener %p", __FUNCTION__, jlistener));
-    jasListener = env->NewWeakGlobalRef(jlistener);
+    QCC_DbgPrintf(("%s: Taking global reference to listener %p", __FUNCTION__, jlistener));
+    jasListener = env->NewGlobalRef(jlistener);
     if (!jasListener) {
-        QCC_LogError(ER_FAIL, ("%s: Can't create new weak global reference", __FUNCTION__));
+        QCC_LogError(ER_FAIL, ("%s: Can't create new global reference", __FUNCTION__));
         return;
     }
 
@@ -63,8 +63,8 @@ JApplicationStateListener::~JApplicationStateListener()
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
     if (jasListener) {
-        QCC_DbgPrintf(("%s: Releasing weak global reference to listener %p", __FUNCTION__, jasListener));
-        GetEnv()->DeleteWeakGlobalRef(jasListener);
+        QCC_DbgPrintf(("%s: Releasing global reference to listener %p", __FUNCTION__, jasListener));
+        GetEnv()->DeleteGlobalRef(jasListener);
         jasListener = NULL;
     }
 }
@@ -78,17 +78,6 @@ void JApplicationStateListener::State(const char* busName, const qcc::KeyInfoNIS
      * thread.
      */
     JScopedEnv env;
-
-    /*
-     * The weak global reference jpinglistener cannot be directly used.  We have to get
-     * a "hard" reference to it and then use that.  If you try to use a weak reference
-     * directly you will crash and burn.
-     */
-    jobject jo = env->NewLocalRef(jasListener);
-    if (!jo) {
-        QCC_LogError(ER_FAIL, ("%s: Can't get new local reference to listener", __FUNCTION__));
-        return;
-    }
 
     /*
      * This call out to the listener means that the state  method
@@ -121,13 +110,13 @@ void JApplicationStateListener::State(const char* busName, const qcc::KeyInfoNIS
 
     jobject jpublicKeyInfo = env->NewObject(CLS_KeyInfoNISTP256, MID_KeyInfoNISTP256_cnstrctr);
 
-    JLocalRef<jbyteArray> arrayX = ToJByteArray(pubKey->GetX(), pubKey->GetCoordinateSize());
-    JLocalRef<jbyteArray> arrayY = ToJByteArray(pubKey->GetY(), pubKey->GetCoordinateSize());
+    jbyteArray arrayX = ToJByteArray(pubKey->GetX(), pubKey->GetCoordinateSize());
+    jbyteArray arrayY = ToJByteArray(pubKey->GetY(), pubKey->GetCoordinateSize());
 
-    jobject jpublicKey = env->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX.move(), arrayY.move());
+    jobject jpublicKey = env->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
 
     env->CallObjectMethod(jpublicKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jpublicKey);
 
-    env->CallObjectMethod(jo, MID_state, jbusName, jpublicKeyInfo, jstate);
+    env->CallObjectMethod(jasListener, MID_state, jbusName, jpublicKeyInfo, jstate);
 }
 
