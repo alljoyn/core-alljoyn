@@ -1354,11 +1354,15 @@ public class BusAttachment {
             String languageTag, String description, Translator dt) {
         try {
             List<InterfaceDescription> descs = new ArrayList<InterfaceDescription>();
-            Status status = InterfaceDescription.create(this, busObj.getClass().getInterfaces(),
-                                                        descs);
+
+            // Create interface description based on dynamic or static interface definitions
+            Status status = (busObj instanceof DynamicBusObject)
+                ? InterfaceDescription.create(this, (DynamicBusObject)busObj, descs)
+                : InterfaceDescription.create(this, busObj.getClass().getInterfaces(), descs);
             if (status != Status.OK) {
                 return status;
             }
+
             return registerBusObject(objPath, busObj, descs.toArray(new InterfaceDescription[0]), secure,
                                      languageTag, description, dt);
         } catch (AnnotationBusException ex) {
