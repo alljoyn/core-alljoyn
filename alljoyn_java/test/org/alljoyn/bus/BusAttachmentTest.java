@@ -25,6 +25,8 @@ import org.alljoyn.bus.ifaces.DBusProxyObj;
 import org.alljoyn.bus.ifaces.Introspectable;
 import org.alljoyn.bus.common.KeyInfoNISTP256;
 
+import org.alljoyn.bus.GenericInterface;
+
 import org.alljoyn.bus.defs.BusObjectInfo;
 import org.alljoyn.bus.defs.InterfaceDef;
 import org.alljoyn.bus.defs.MethodDef;
@@ -33,6 +35,9 @@ import org.alljoyn.bus.defs.PropertyDef;
 import org.alljoyn.bus.defs.ArgDef;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -42,6 +47,7 @@ public class BusAttachmentTest extends TestCase {
         System.loadLibrary("alljoyn_java");
     }
 
+    int receivedSimpleServicePing;
     int receivedGetSignalHandler;
     int receivedGetMethodHandler;
     int receivedGetPropertyHandler;
@@ -68,6 +74,7 @@ public class BusAttachmentTest extends TestCase {
 
     public class SimpleService implements SimpleInterface, BusObject {
         public String ping(String str) {
+            receivedSimpleServicePing++;
             MessageContext ctx = bus.getMessageContext();
             assertEquals(false, ctx.isUnreliable);
             assertEquals("/simple", ctx.objectPath);
@@ -164,6 +171,7 @@ public class BusAttachmentTest extends TestCase {
 
         onPinged = false;
 
+        receivedSimpleServicePing = 0;
         receivedGetSignalHandler = 0;
         receivedGetMethodHandler = 0;
         receivedGetPropertyHandler = 0;
@@ -1990,6 +1998,115 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(Status.OK, bus.registerBusObject(emitter, "/goodpath"));
     }
 
+    public void testGetDynamicProxyBusObject() throws Exception {
+        String ifaceName = "org.alljoyn.bus.SimpleInterface";
+
+        // Usual BusAttachment and DBusProxyObj setup
+
+        bus = new BusAttachment(getClass().getName());
+        assertEquals(Status.OK, bus.connect());
+
+        DBusProxyObj control = bus.getDBusProxyObj();
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                control.RequestName("org.alljoyn.bus.BusAttachmentTest",
+                        DBusProxyObj.REQUEST_NAME_NO_FLAGS));
+
+        SimpleService service = new SimpleService();
+        assertEquals(Status.OK, bus.registerBusObject(service, "/simple"));
+
+        // Test getting/calling proxy using dynamic interface definition and GenericInterface invocation
+
+        InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
+        MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
+        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
+        interfaceDef.addMethod(methodDef);
+
+        ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
+                "/simple",
+                BusAttachment.SESSION_ID_ANY,
+                Arrays.asList(new InterfaceDef[]{interfaceDef}),
+                false);
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+        String result = (String)proxy.methodCall(ifaceName, "Ping", "hello");
+
+        assertEquals(1, receivedSimpleServicePing);
+        assertEquals("hello", result);
+
+        // Test that the bus method args can also be sent as an Object[]
+
+        result = (String)proxy.methodCall(ifaceName, "Ping", new Object[]{"arg array of size 1"});
+        assertEquals(2, receivedSimpleServicePing);
+        assertEquals("arg array of size 1", result);
+    }
+
+    public void testGetDynamicProxyBusObject_invalidInvoke() throws Exception {
+        String ifaceName = "org.alljoyn.bus.SimpleInterface";
+
+        // Usual BusAttachment and DBusProxyObj setup
+
+        bus = new BusAttachment(getClass().getName());
+        assertEquals(Status.OK, bus.connect());
+
+        DBusProxyObj control = bus.getDBusProxyObj();
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                control.RequestName("org.alljoyn.bus.BusAttachmentTest",
+                        DBusProxyObj.REQUEST_NAME_NO_FLAGS));
+
+        SimpleService service = new SimpleService();
+        assertEquals(Status.OK, bus.registerBusObject(service, "/simple"));
+
+        // Get proxy using dynamic interface definition and GenericInterface
+
+        InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
+        MethodDef methodDef = new MethodDef("Ping", "s", "s", ifaceName);
+        methodDef.addArg( new ArgDef("inStr", "s") );
+        methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
+        interfaceDef.addMethod(methodDef);
+
+        ProxyBusObject proxyObj = bus.getProxyBusObject("org.alljoyn.bus.BusAttachmentTest",
+                "/simple",
+                BusAttachment.SESSION_ID_ANY,
+                Arrays.asList(new InterfaceDef[]{interfaceDef}),
+                false);
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+
+        // Test proxy method call with invalid bus interface name
+
+        try {
+            proxy.methodCall("org.alljoyn.bus.BogusInterface", "Ping", "hello");
+            fail("Expected BusException('No such method')");
+        } catch (BusException e) {
+            assertTrue(e.getMessage().startsWith("No such method"));
+        }
+
+        // Test proxy method call with invalid bus method name
+
+        try {
+            proxy.methodCall(ifaceName, "BogusMethod", "hello");
+            fail("Expected BusException('No such method')");
+        } catch (BusException e) {
+            assertTrue(e.getMessage().startsWith("No such method"));
+        }
+
+        // Test proxy method call with missing bus method arg
+
+        try {
+            proxy.methodCall(ifaceName, "Ping"/*, "hello"*/); // omitting Ping's arg
+            fail("Expected BusException due to too few args specified");
+        } catch (BusException e) {
+            assertEquals("ER_BUS_UNEXPECTED_SIGNATURE", e.getMessage());
+        }
+
+        // Test proxy method call with too many bus method args
+
+        try {
+            proxy.methodCall(ifaceName, "Ping", "expected arg", "unexpected arg");
+            fail("Expected ArrayIndexOutOfBoundsException due to too many args specified");
+        } catch (java.lang.ArrayIndexOutOfBoundsException e) {
+        }
+    }
+
     public void testRegisterDynamicBusObject() {
         // Create bus attachment
         bus = new BusAttachment(getClass().getName());
@@ -2131,6 +2248,184 @@ public class BusAttachmentTest extends TestCase {
         assertEquals(0, receivedGetPropertyHandler);
     }
 
+    public class GenericService implements DynamicBusObject {
+        BusObjectInfo info;
+
+        public Map<String,Integer> receivedMethodCallback = new HashMap<String,Integer>(); // value: count of times received
+        public Map<String,Object> receivedPropertyCallback = new HashMap<String,Object>(); // value: received property value
+
+        public GenericService(String path, String ifaceName) {
+            info = buildInterfaceDefinitions2(path, ifaceName);
+        }
+
+        @Override
+        public String getPath() { return info.getPath(); }
+
+        @Override
+        public List<InterfaceDef> getInterfaces() { return info.getInterfaces(); }
+
+        @Override
+        public Method getMethodHandler(String interfaceName, String methodName, String signature) {
+            receivedGetMethodHandler++;
+            return getMethodImplementation(getClass(), "busMethodImpl", new Class[]{Object[].class});
+        }
+
+        @Override
+        public Method[] getPropertyHandler(String interfaceName, String propertyName) {
+            receivedGetPropertyHandler++;
+            return new Method[] {
+                getMethodImplementation(getClass(), "busPropertyGetImpl", new Class[]{}),
+                getMethodImplementation(getClass(), "busPropertySetImpl", new Class[]{Object.class}) };
+        }
+
+        @Override
+        public Method getSignalHandler(String interfaceName, String signalName, String signature) {
+            receivedGetSignalHandler++;
+            return getMethodImplementation(getClass(), "busSignalImpl", new Class[]{Object[].class});
+        }
+
+        /** A generic implementation Method used with a bus method with any return type and any input parameters */
+        public Object busMethodImpl(Object... args) throws BusException {
+            MessageContext ctx = bus.getMessageContext();
+
+            // increment count for the specific bus method received
+            String key = ctx.objectPath + ctx.interfaceName + ctx.memberName + ctx.signature;
+            Integer count = receivedMethodCallback.get(key);
+            receivedMethodCallback.put(key, count==null ? 1 : ++count);
+
+            MethodDef methodDef = info.getMethod(ctx.interfaceName, ctx.memberName, ctx.signature);
+            String replySig = methodDef.getReplySignature();
+            if (replySig == null || replySig.isEmpty()) {
+                return null;
+            } else {
+                switch (replySig.charAt(0)) {
+                    case MsgArg.ALLJOYN_STRING:
+                        return "";
+                    case MsgArg.ALLJOYN_BOOLEAN:
+                        return false;
+                    default:
+                        return null;
+                }
+            }
+        }
+
+        /** A generic implementation Method used with a set bus property of any type */
+        public void busPropertySetImpl(Object arg) throws BusException {
+            //MessageContext ctx = bus.getMessageContext();  // TODO pending ASACORE-3225
+            receivedPropertyCallback.put("Property", arg);
+        }
+
+        /** A generic implementation Method used with a get bus property of any type */
+        public Object busPropertyGetImpl() throws BusException {
+            //MessageContext ctx = bus.getMessageContext();  // TODO pending ASACORE-3225
+            return receivedPropertyCallback.get("Property");
+        }
+
+        /** A generic implementation Method used with a bus signal with any input parameters */
+        public void busSignalImpl(Object... args) throws BusException {
+            // no-op - not needed since interface definition in buildInterfaceDefinitions2() has no bus signals
+        }
+    }
+
+    public void testDynamicBusObjectContainingGenericImplementationHandlers() throws Exception {
+        final String busName = "org.alljoyn.bus.BusAttachmentTest";
+        final String objPath = "/genericImplementationHandlers";
+        final String ifaceName = "org.alljoyn.bus.DynamicInterfaceForGenericHandlerTest";
+        Object result;
+
+        // Setup BusAttachment and use DBusProxyObj to request bus name
+
+        bus = new BusAttachment(getClass().getName());
+        Status status = bus.connect();
+        assertEquals(Status.OK, status);
+
+        DBusProxyObj control = bus.getDBusProxyObj();
+        assertEquals(DBusProxyObj.RequestNameResult.PrimaryOwner,
+                control.RequestName(busName, DBusProxyObj.REQUEST_NAME_NO_FLAGS));
+
+        // Create and register a dynamic bus object
+
+        GenericService busObj = new GenericService(objPath, ifaceName);
+        status = bus.registerBusObject(busObj, objPath);
+        assertEquals(Status.OK, status);
+
+        // Get proxy using dynamic interface definition and GenericInterface invocation
+
+        ProxyBusObject proxyObj = bus.getProxyBusObject(busName, objPath,
+                BusAttachment.SESSION_ID_ANY,
+                busObj.getInterfaces(),
+                false);
+        GenericInterface proxy = proxyObj.getInterface(GenericInterface.class);
+
+        // Test that bus object registration successfully mapped the implementation methods
+
+        assertEquals(4, receivedGetMethodHandler); // Note: counts based on intf def in buildInterfaceDefinitions2()
+        assertEquals(3, receivedGetPropertyHandler);
+        assertEquals(0, receivedGetSignalHandler);
+
+        // Test BusMethod: boolean DoSomethingNoInArg()
+
+        proxy.methodCall(ifaceName, "DoSomethingNoInArg");
+        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingNoInArg"+""));
+        result = proxy.methodCall(ifaceName, "DoSomethingNoInArg");
+        assertEquals(2, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingNoInArg"+""));
+        assertTrue(result instanceof Boolean);
+
+        // Test BusMethod: String DoSomethingOneInArg(String arg1)
+
+        result = proxy.methodCall(ifaceName, "DoSomethingOneInArg", "hello");
+        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingOneInArg"+"s"));
+        assertTrue(result instanceof String);
+
+        // Test BusMethod: void DoSomethingTwoInArgs(String arg1, int arg2)
+
+        proxy.methodCall(ifaceName, "DoSomethingTwoInArgs", "hello", 123);
+        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingTwoInArgs"+"si"));
+
+        // Test BusMethod: void DoSomethingThreeInArgs(String arg1, boolean arg2, String arg3)
+
+        proxy.methodCall(ifaceName, "DoSomethingThreeInArgs", "hello", true, "again");
+        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingThreeInArgs"+"sbs"));
+
+        // Test BusMethod: void DoSomethingOneInArg(String arg1) - sending wrong arg1 type
+        try {
+            proxy.methodCall(ifaceName, "DoSomethingOneInArg", 123); // using int arg rather than the expected String type
+            fail("Expected BusException");
+        } catch (BusException e) {
+        }
+
+        // Test BusProperty: String getStringProperty(), void setStringProperty(String value)
+
+        proxy.setProperty(ifaceName, "StringProperty", "blue");
+        assertEquals("blue", (String)busObj.receivedPropertyCallback.get("Property"));
+
+        result = proxy.getProperty(ifaceName, "StringProperty");
+        assertEquals("blue", (String)result);
+
+        // Test BusProperty: boolean getBooleanProperty(), void setBooleanProperty(boolean value)
+
+        proxy.setProperty(ifaceName, "BooleanProperty", true);
+        assertEquals(true, ((Boolean)busObj.receivedPropertyCallback.get("Property")).booleanValue());
+
+        result = proxy.getProperty(ifaceName, "BooleanProperty");
+        assertEquals(true, ((Boolean)result).booleanValue());
+
+        // Test BusProperty: int getIntegerProperty(), void setIntegerProperty(int value)
+
+        proxy.setProperty(ifaceName, "IntegerProperty", 999);
+        assertEquals(999, ((Integer)busObj.receivedPropertyCallback.get("Property")).intValue());
+
+        result = proxy.getProperty(ifaceName, "IntegerProperty");
+        assertEquals(999, ((Integer)result).intValue());
+
+        // Test BusProperty: void setIntegerProperty(int value) - sending wrong value type
+        try {
+            proxy.setProperty(ifaceName, "IntegerProperty", "999"); // using String value rather than the expected int type
+            fail("Expected BusException");
+        } catch (BusException e) {
+        }
+    }
+
     /* Build a bus object definition containing interfaces that have methods, signals, and properties. */
     private BusObjectInfo buildInterfaceDefinitions() {
         String path = "/test";
@@ -2157,10 +2452,55 @@ public class BusAttachmentTest extends TestCase {
         return new BusObjectInfo(path, ifaceDefs);
     }
 
+    private BusObjectInfo buildInterfaceDefinitions2(String objPath, String ifaceName) {
+        List<InterfaceDef> ifaceDefs = new ArrayList<InterfaceDef>();
+        InterfaceDef interfaceDef = new InterfaceDef(ifaceName);
+
+        // BusMethod: boolean DoSomethingNoInArg()
+        MethodDef methodDef = new MethodDef("DoSomethingNoInArg", "", "b", ifaceName);
+        methodDef.addArg( new ArgDef("result", "b", ArgDef.DIRECTION_OUT) );
+        interfaceDef.addMethod(methodDef);
+
+        // BusMethod: String DoSomethingOneInArg(String arg1)
+        methodDef = new MethodDef("DoSomethingOneInArg", "s", "s", ifaceName);
+        methodDef.addArg( new ArgDef("arg1", "s") );
+        methodDef.addArg( new ArgDef("result", "s", ArgDef.DIRECTION_OUT) );
+        interfaceDef.addMethod(methodDef);
+
+        // BusMethod: void DoSomethingTwoInArgs(String arg1, int arg2)
+        methodDef = new MethodDef("DoSomethingTwoInArgs", "si", "", ifaceName);
+        methodDef.addArg( new ArgDef("arg1", "s") );
+        methodDef.addArg( new ArgDef("arg2", "i") );
+        interfaceDef.addMethod(methodDef);
+
+        // BusMethod: void DoSomethingThreeInArgs(String arg1, boolean arg2, String arg3)
+        methodDef = new MethodDef("DoSomethingThreeInArgs", "sbs", "", ifaceName);
+        methodDef.addArg( new ArgDef("arg1", "s") );
+        methodDef.addArg( new ArgDef("arg2", "b") );
+        methodDef.addArg( new ArgDef("arg3", "s") );
+        interfaceDef.addMethod(methodDef);
+
+        // BusProperty: String getStringProperty(), void setStringProperty(String value)
+        PropertyDef propertyDef = new PropertyDef("StringProperty", "s", PropertyDef.ACCESS_READWRITE, ifaceName);
+        interfaceDef.addProperty(propertyDef);
+
+        // BusProperty: boolean getBooleanProperty(), void setBooleanProperty(boolean value)
+        propertyDef = new PropertyDef("BooleanProperty", "b", PropertyDef.ACCESS_READWRITE, ifaceName);
+        interfaceDef.addProperty(propertyDef);
+
+        // BusProperty: int getIntegerProperty(), void setIntegerProperty(int value)
+        propertyDef = new PropertyDef("IntegerProperty", "i", PropertyDef.ACCESS_READWRITE, ifaceName);
+        interfaceDef.addProperty(propertyDef);
+
+        ifaceDefs.add(interfaceDef);
+        return new BusObjectInfo(objPath, ifaceDefs);
+    }
+
     private Method getMethodImplementation(Class<?> clazz, String methodName, Class<?>... parameterTypes) {
         try {
             return clazz.getDeclaredMethod(methodName, parameterTypes);
         } catch (java.lang.NoSuchMethodException ex) {
+            System.out.println("No such method " + ex.getMessage());
             return null;
         }
     }

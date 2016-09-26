@@ -44,6 +44,8 @@ import org.alljoyn.bus.AuthListener.VerifyRequest;
 import org.alljoyn.bus.annotation.BusSignalHandler;
 import org.alljoyn.bus.ifaces.DBusProxyObj;
 
+import org.alljoyn.bus.defs.InterfaceDef;
+
 /**
  * A connection to a message bus.
  * Using BusAttachment, an application may register objects on the bus for other
@@ -1448,6 +1450,29 @@ public class BusAttachment {
             Class<?>[] busInterfaces,
             boolean secure) {
         return new ProxyBusObject(this, busName, objPath, sessionId, busInterfaces, secure);
+    }
+
+    /**
+     * Creates a proxy bus object (using dynamic interface definitions) for a remote bus object.
+     * Methods on the remote object can be invoked through the proxy object.
+     * <p>
+     * There is no guarantee that the remote object referred to by the proxy
+     * acutally exists. If the remote object does not exist, proxy method
+     * calls will fail.
+     *
+     * @param busName the remote endpoint name (well-known or unique)
+     * @param objPath the absolute (non-relative) object path for the object
+     * @param sessionId the session corresponding to the connection to the the object
+     * @param interfaceDefs a list of dynamic interface definitions that this proxy should support
+     * @param secure the security mode for the remote object
+     * @return a ProxyBusObject for an object that implements all interfaces listed in interfaceDefs
+     */
+    public ProxyBusObject getProxyBusObject(String busName,
+            String objPath,
+            int sessionId,
+            List<InterfaceDef> interfaceDefs,
+            boolean secure) {
+        return new ProxyBusObject(this, busName, objPath, sessionId, interfaceDefs, secure);
     }
 
     /**
