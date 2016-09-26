@@ -773,10 +773,10 @@ TEST(BusAttachmentTest, BasicSecureConnectionAsync)
     EXPECT_EQ(ER_OK, alljoyn_busattachment_secureconnectionasync(bus, alljoyn_busattachment_getuniquename(otherbus), false));
 
     int ticks = 0;
-    while (authCompleteCount == 0 && (ticks++ < 50)) {
+    while ((authCompleteCount < 2) && (ticks++ < 50)) {
         qcc::Sleep(100);
     }
-    EXPECT_NE(0, authCompleteCount);
+    EXPECT_EQ(2, authCompleteCount);
     status = alljoyn_busattachment_stop(otherbus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     alljoyn_busattachment_clearkeystore(otherbus);
