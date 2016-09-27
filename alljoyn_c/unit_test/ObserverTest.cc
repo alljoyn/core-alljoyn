@@ -57,7 +57,7 @@ using namespace ajn;
 
 #define PATH_PREFIX "/test/"
 
-#define MAX_WAIT_MS 3000
+#define MAX_WAIT_MS 30000
 
 #define STRESS_FACTOR 5
 
