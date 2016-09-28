@@ -1027,6 +1027,17 @@ class _Message {
 
     /// @endcond
 
+    /**
+     * @internal
+     * Update the interface name, member name, and signature fields on this message.
+     *
+     * @param ifcName    The proposed value of the interface field.
+     * @param memberName The proposed value of the member field.
+     * @param signature  The proposed value of the signature field.
+     * @return ER_OK if successful.
+     */
+    QStatus UpdateMemberFields(const char* ifcName, const char* memberName, const char* signature);
+
   private:
 
     /**
