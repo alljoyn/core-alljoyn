@@ -1693,9 +1693,9 @@ class JBusObject : public BusObject {
     QStatus Signal(const char* destination, SessionId sessionId, const char* ifaceName, const char* signalName,
                    const MsgArg* args, size_t numArgs, uint32_t timeToLive, uint8_t flags, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
-    QStatus Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
+    QStatus Get(const char* ifcName, const char* propName, Message& msg, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
-    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
+    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, Message& msg, qcc::String& errorName, qcc::String& errorMessage);
     String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
     String GenerateIntrospection(bool deep = false, size_t indent = 0) const;
     void ObjectRegistered();
@@ -8769,10 +8769,12 @@ QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val)
     QCC_DbgPrintf(("JBusObject::Get()"));
     qcc::String errorName;
     qcc::String errorMessage;
-    return Get(ifcName, propName, val, errorName, errorMessage);
+    Message msg(*bus);
+    return Get(ifcName, propName, msg, val, errorName, errorMessage);
 }
 
-QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+QStatus JBusObject::Get(const char* ifcName, const char* propName, Message& msg,
+                        MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
 {
 
     /*
@@ -8799,6 +8801,20 @@ QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val, 
         mapLock.Unlock();
         return ER_BUS_PROPERTY_ACCESS_DENIED;
     }
+
+    /*
+     * Cache a message context that reflects the specific property being retrieved.
+     * This updates (a copy of) the request message's fields, where generic DBus
+     * Property values (related to a Properties.Get or GetAll request) are replaced
+     * with the specific get-request info actually sent to the AllJoyn binding.
+     */
+    Message copyMsg(msg);
+    QStatus status = copyMsg->UpdateMemberDefinition(ifcName, propName, property->second.signature.c_str());
+    if (status != ER_OK) {
+        mapLock.Unlock();
+        return status;
+    }
+    MessageContext context(copyMsg);
 
     JLocalRef<jclass> clazz = env->GetObjectClass(property->second.jget);
     jmethodID mid = env->GetMethodID(clazz, "invoke", "(Ljava/lang/Object;[Ljava/lang/Object;)Ljava/lang/Object;");
@@ -8900,10 +8916,12 @@ QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val)
     QCC_DbgPrintf(("JBusObject::Set()"));
     qcc::String errorName;
     qcc::String errorMessage;
-    return Set(ifcName, propName, val, errorName, errorMessage);
+    Message msg(*bus);
+    return Set(ifcName, propName, val, msg, errorName, errorMessage);
 }
 
-QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val,
+                        Message& msg, qcc::String& errorName, qcc::String& errorMessage)
 {
     /*
      * JScopedEnv will automagically attach the JVM to the current native
@@ -8930,8 +8948,22 @@ QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val, 
         return ER_BUS_PROPERTY_ACCESS_DENIED;
     }
 
+    /*
+     * Cache a message context that reflects the specific property being set.
+     * This updates (a copy of) the request message's fields, where generic DBus
+     * Property values (related to a Properties.Set request) are replaced with
+     * the specific set-request info actually sent to the AllJoyn binding.
+     */
+    Message copyMsg(msg);
+    QStatus status = copyMsg->UpdateMemberDefinition(ifcName, propName, property->second.signature.c_str());
+    if (status != ER_OK) {
+        mapLock.Unlock();
+        return status;
+    }
+    MessageContext context(copyMsg);
+
     JLocalRef<jobjectArray> jvalue;
-    QStatus status = Unmarshal(&val, 1, property->second.jset, jvalue);
+    status = Unmarshal(&val, 1, property->second.jset, jvalue);
     if (ER_OK != status) {
         mapLock.Unlock();
         return status;
