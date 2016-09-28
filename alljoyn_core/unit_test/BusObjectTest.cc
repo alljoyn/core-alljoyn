@@ -617,22 +617,24 @@ class CustomErrorTestBusObject : public BusObject {
     }
 
   protected:
-    QStatus Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+    QStatus Get(const char* ifcName, const char* propName, Message& msg, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
     {
         QCC_UNUSED(ifcName);
         QCC_UNUSED(propName);
         QCC_UNUSED(val);
+        QCC_UNUSED(msg);
 
         errorName = m_getPropertyErrorName;
         errorMessage = m_getPropertyErrorMessage;
         return ER_BUS_REPLY_IS_ERROR_MESSAGE;   //generic failure code
     }
 
-    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, Message& msg, qcc::String& errorName, qcc::String& errorMessage)
     {
         QCC_UNUSED(ifcName);
         QCC_UNUSED(propName);
         QCC_UNUSED(val);
+        QCC_UNUSED(msg);
 
         errorName = m_setPropertyErrorName;
         errorMessage = m_setPropertyErrorMessage;
