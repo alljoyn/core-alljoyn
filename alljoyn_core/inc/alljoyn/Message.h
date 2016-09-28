@@ -573,6 +573,28 @@ class _Message {
     }
 
     /**
+     * Update the interface name, member name, and signature fields on this message.
+     *
+     * @param ifcName    The proposed value of the interface field.
+     * @param memberName The proposed value of the member field.
+     * @param signature  The proposed value of the signature field.
+     * @return ER_OK if successful.
+     */
+    QStatus UpdateMemberDefinition(const char* ifcName, const char* memberName, const char* signature) {
+        if (GetType() == MESSAGE_METHOD_CALL &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].typeId == ALLJOYN_STRING &&
+            hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].typeId == ALLJOYN_SIGNATURE) {
+            hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].v_string.str = ifcName;
+            hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].v_string.str = memberName;
+            hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].v_signature.sig = signature;
+            return ER_OK;
+        } else {
+            return ER_FAIL;
+        }
+    }
+
+    /**
      * Get the Authentication Version of the message.
      *
      * @return

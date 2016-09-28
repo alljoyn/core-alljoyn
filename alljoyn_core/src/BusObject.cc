@@ -278,7 +278,7 @@ void BusObject::GetProp(const InterfaceDescription::Member* member, Message& msg
             const InterfaceDescription::Property* prop = ifc->GetProperty(property->v_string.str);
             if (prop) {
                 if (prop->access & PROP_ACCESS_READ) {
-                    status = Get(iface->v_string.str, property->v_string.str, val, errorName, errorMessage);
+                    status = Get(iface->v_string.str, property->v_string.str, msg, val, errorName, errorMessage);
                 } else {
                     QCC_DbgPrintf(("No read access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -453,7 +453,7 @@ void BusObject::SetProp(const InterfaceDescription::Member* member, Message& msg
                     QCC_DbgPrintf(("Property value for %s has wrong type %s", property->v_string.str, prop->signature.c_str()));
                     status = ER_BUS_SET_WRONG_SIGNATURE;
                 } else if (prop->access & PROP_ACCESS_WRITE) {
-                    status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val), errorName, errorMessage);
+                    status = Set(iface->v_string.str, property->v_string.str, *(val->v_variant.val), msg, errorName, errorMessage);
                 } else {
                     QCC_DbgPrintf(("No write access on property %s", property->v_string.str));
                     status = ER_BUS_PROPERTY_ACCESS_DENIED;
@@ -572,7 +572,7 @@ void BusObject::GetAllProps(const InterfaceDescription::Member* member, Message&
             for (size_t i = 0; i < numProps; ++i) {
                 if (readable[i] && allowed[i]) {
                     MsgArg* val = new MsgArg();
-                    status = Get(iface->v_string.str, props[i]->name.c_str(), *val, errorName, errorMessage);
+                    status = Get(iface->v_string.str, props[i]->name.c_str(), msg, *val, errorName, errorMessage);
                     if (status != ER_OK) {
                         delete val;
                         break;
