@@ -1693,9 +1693,9 @@ class JBusObject : public BusObject {
     QStatus Signal(const char* destination, SessionId sessionId, const char* ifaceName, const char* signalName,
                    const MsgArg* args, size_t numArgs, uint32_t timeToLive, uint8_t flags, Message& msg);
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
-    QStatus Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
+    QStatus Get(const char* ifcName, const char* propName, Message& msg, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
     QStatus Set(const char* ifcName, const char* propName, MsgArg& val);
-    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage);
+    QStatus Set(const char* ifcName, const char* propName, MsgArg& val, Message& msg, qcc::String& errorName, qcc::String& errorMessage);
     String GenerateIntrospection(const char* languageTag, bool deep = false, size_t indent = 0) const;
     String GenerateIntrospection(bool deep = false, size_t indent = 0) const;
     void ObjectRegistered();
@@ -8770,10 +8770,12 @@ QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val)
     QCC_DbgPrintf(("JBusObject::Get()"));
     qcc::String errorName;
     qcc::String errorMessage;
-    return Get(ifcName, propName, val, errorName, errorMessage);
+    Message msg(*bus);
+    return Get(ifcName, propName, msg, val, errorName, errorMessage);
 }
 
-QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+QStatus JBusObject::Get(const char* ifcName, const char* propName, Message& msg,
+                        MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
 {
 
     /*
@@ -8781,6 +8783,8 @@ QStatus JBusObject::Get(const char* ifcName, const char* propName, MsgArg& val, 
      * thread.
      */
     JScopedEnv env;
+
+    MessageContext context(msg);
 
     String key = String(ifcName) + propName;
 
@@ -8901,16 +8905,20 @@ QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val)
     QCC_DbgPrintf(("JBusObject::Set()"));
     qcc::String errorName;
     qcc::String errorMessage;
-    return Set(ifcName, propName, val, errorName, errorMessage);
+    Message msg(*bus);
+    return Set(ifcName, propName, val, msg, errorName, errorMessage);
 }
 
-QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage)
+QStatus JBusObject::Set(const char* ifcName, const char* propName, MsgArg& val,
+                        Message& msg, qcc::String& errorName, qcc::String& errorMessage)
 {
     /*
      * JScopedEnv will automagically attach the JVM to the current native
      * thread.
      */
     JScopedEnv env;
+
+    MessageContext context(msg);
 
     String key = String(ifcName) + propName;
 

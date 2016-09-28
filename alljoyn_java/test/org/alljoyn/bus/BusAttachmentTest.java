@@ -2251,8 +2251,9 @@ public class BusAttachmentTest extends TestCase {
     public class GenericService implements DynamicBusObject {
         BusObjectInfo info;
 
-        public Map<String,Integer> receivedMethodCallback = new HashMap<String,Integer>(); // value: count of times received
-        public Map<String,Object> receivedPropertyCallback = new HashMap<String,Object>(); // value: received property value
+        // Map-key format: path + interfaceName + memberName + memberSignature
+        public Map<String,Integer> callbackCount = new HashMap<String,Integer>();
+        public Map<String,Object> propertyMap = new HashMap<String,Object>();
 
         public GenericService(String path, String ifaceName) {
             info = buildInterfaceDefinitions2(path, ifaceName);
@@ -2290,8 +2291,8 @@ public class BusAttachmentTest extends TestCase {
 
             // increment count for the specific bus method received
             String key = ctx.objectPath + ctx.interfaceName + ctx.memberName + ctx.signature;
-            Integer count = receivedMethodCallback.get(key);
-            receivedMethodCallback.put(key, count==null ? 1 : ++count);
+            Integer count = callbackCount.get(key);
+            callbackCount.put(key, count==null ? 1 : ++count);
 
             MethodDef methodDef = info.getMethod(ctx.interfaceName, ctx.memberName, ctx.signature);
             String replySig = methodDef.getReplySignature();
@@ -2311,14 +2312,26 @@ public class BusAttachmentTest extends TestCase {
 
         /** A generic implementation Method used with a set bus property of any type */
         public void busPropertySetImpl(Object arg) throws BusException {
-            //MessageContext ctx = bus.getMessageContext();  // TODO pending ASACORE-3225
-            receivedPropertyCallback.put("Property", arg);
+            MessageContext ctx = bus.getMessageContext();
+            String key = ctx.objectPath + ctx.interfaceName + ctx.memberName + ctx.signature;
+
+            // increment count for the specific bus property received
+            Integer count = callbackCount.get(key);
+            callbackCount.put(key, count==null ? 1 : ++count);
+
+            propertyMap.put(key, arg);
         }
 
         /** A generic implementation Method used with a get bus property of any type */
         public Object busPropertyGetImpl() throws BusException {
-            //MessageContext ctx = bus.getMessageContext();  // TODO pending ASACORE-3225
-            return receivedPropertyCallback.get("Property");
+            MessageContext ctx = bus.getMessageContext();
+            String key = ctx.objectPath + ctx.interfaceName + ctx.memberName + ctx.signature;
+
+            // increment count for the specific bus property received
+            Integer count = callbackCount.get(key);
+            callbackCount.put(key, count==null ? 1 : ++count);
+
+            return propertyMap.get(key);
         }
 
         /** A generic implementation Method used with a bus signal with any input parameters */
@@ -2366,26 +2379,26 @@ public class BusAttachmentTest extends TestCase {
         // Test BusMethod: boolean DoSomethingNoInArg()
 
         proxy.methodCall(ifaceName, "DoSomethingNoInArg");
-        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingNoInArg"+""));
+        assertEquals(1, (int)busObj.callbackCount.get(objPath+ifaceName+"DoSomethingNoInArg"+""));
         result = proxy.methodCall(ifaceName, "DoSomethingNoInArg");
-        assertEquals(2, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingNoInArg"+""));
+        assertEquals(2, (int)busObj.callbackCount.get(objPath+ifaceName+"DoSomethingNoInArg"+""));
         assertTrue(result instanceof Boolean);
 
         // Test BusMethod: String DoSomethingOneInArg(String arg1)
 
         result = proxy.methodCall(ifaceName, "DoSomethingOneInArg", "hello");
-        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingOneInArg"+"s"));
+        assertEquals(1, (int)busObj.callbackCount.get(objPath+ifaceName+"DoSomethingOneInArg"+"s"));
         assertTrue(result instanceof String);
 
         // Test BusMethod: void DoSomethingTwoInArgs(String arg1, int arg2)
 
         proxy.methodCall(ifaceName, "DoSomethingTwoInArgs", "hello", 123);
-        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingTwoInArgs"+"si"));
+        assertEquals(1, (int)busObj.callbackCount.get(objPath+ifaceName+"DoSomethingTwoInArgs"+"si"));
 
         // Test BusMethod: void DoSomethingThreeInArgs(String arg1, boolean arg2, String arg3)
 
         proxy.methodCall(ifaceName, "DoSomethingThreeInArgs", "hello", true, "again");
-        assertEquals(1, (int)busObj.receivedMethodCallback.get(objPath+ifaceName+"DoSomethingThreeInArgs"+"sbs"));
+        assertEquals(1, (int)busObj.callbackCount.get(objPath+ifaceName+"DoSomethingThreeInArgs"+"sbs"));
 
         // Test BusMethod: void DoSomethingOneInArg(String arg1) - sending wrong arg1 type
         try {
@@ -2397,7 +2410,7 @@ public class BusAttachmentTest extends TestCase {
         // Test BusProperty: String getStringProperty(), void setStringProperty(String value)
 
         proxy.setProperty(ifaceName, "StringProperty", "blue");
-        assertEquals("blue", (String)busObj.receivedPropertyCallback.get("Property"));
+        assertEquals("blue", (String)busObj.propertyMap.get(objPath+ifaceName+"StringProperty"+"s"));
 
         result = proxy.getProperty(ifaceName, "StringProperty");
         assertEquals("blue", (String)result);
@@ -2405,7 +2418,7 @@ public class BusAttachmentTest extends TestCase {
         // Test BusProperty: boolean getBooleanProperty(), void setBooleanProperty(boolean value)
 
         proxy.setProperty(ifaceName, "BooleanProperty", true);
-        assertEquals(true, ((Boolean)busObj.receivedPropertyCallback.get("Property")).booleanValue());
+        assertEquals(true, ((Boolean)busObj.propertyMap.get(objPath+ifaceName+"BooleanProperty"+"b")).booleanValue());
 
         result = proxy.getProperty(ifaceName, "BooleanProperty");
         assertEquals(true, ((Boolean)result).booleanValue());
@@ -2413,17 +2426,27 @@ public class BusAttachmentTest extends TestCase {
         // Test BusProperty: int getIntegerProperty(), void setIntegerProperty(int value)
 
         proxy.setProperty(ifaceName, "IntegerProperty", 999);
-        assertEquals(999, ((Integer)busObj.receivedPropertyCallback.get("Property")).intValue());
+        assertEquals(999, ((Integer)busObj.propertyMap.get(objPath+ifaceName+"IntegerProperty"+"i")).intValue());
 
         result = proxy.getProperty(ifaceName, "IntegerProperty");
         assertEquals(999, ((Integer)result).intValue());
 
         // Test BusProperty: void setIntegerProperty(int value) - sending wrong value type
+
         try {
             proxy.setProperty(ifaceName, "IntegerProperty", "999"); // using String value rather than the expected int type
             fail("Expected BusException");
         } catch (BusException e) {
         }
+
+        // Test proxyObj getAllProperties()
+
+        Map<String,Variant> properties = proxyObj.getAllProperties(ifaceName);
+
+        assertEquals(3, properties.size());
+        assertEquals("blue", (String)properties.get("StringProperty").getObject());
+        assertEquals(true, ((Boolean)properties.get("BooleanProperty").getObject()).booleanValue());
+        assertEquals(999, ((Integer)properties.get("IntegerProperty").getObject()).intValue());
     }
 
     /* Build a bus object definition containing interfaces that have methods, signals, and properties. */

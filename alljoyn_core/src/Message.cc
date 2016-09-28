@@ -556,4 +556,18 @@ void _Message::NotifyEncryptionComplete()
     }
 }
 
+QStatus _Message::UpdateMemberFields(const char* ifcName, const char* memberName, const char* signature)
+{
+    if (hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].typeId == ALLJOYN_STRING &&
+        hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].typeId == ALLJOYN_STRING &&
+        hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].typeId == ALLJOYN_SIGNATURE) {
+        hdrFields.field[ALLJOYN_HDR_FIELD_INTERFACE].v_string.str = ifcName;
+        hdrFields.field[ALLJOYN_HDR_FIELD_MEMBER].v_string.str = memberName;
+        hdrFields.field[ALLJOYN_HDR_FIELD_SIGNATURE].v_signature.sig = signature;
+        return ER_OK;
+    } else {
+        return ER_FAIL;
+    }
+}
+
 }
