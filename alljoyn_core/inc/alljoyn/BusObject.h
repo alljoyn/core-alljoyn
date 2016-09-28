@@ -455,13 +455,16 @@ class BusObject : public MessageReceiver {
      *
      * @param ifcName           Identifies the interface that the property is defined on
      * @param propName          Identifies the property to get
+     * @param[in] msg           The incoming Properties.Get request
      * @param[out] val          Returns the property value. The type of this value is the actual value
      *                          type
      * @param[out] errorName    Error name
      * @param[out] errorMessage Error message
      * @return                  #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
      */
-    virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage) {
+    virtual QStatus Get(const char* ifcName, const char* propName, Message& msg,
+                        MsgArg& val, qcc::String& errorName, qcc::String& errorMessage) {
+        QCC_UNUSED(msg);
         QCC_UNUSED(errorName);
         QCC_UNUSED(errorMessage);
         // For backwards compatibility, we are calling the old version of Get()
@@ -496,14 +499,17 @@ class BusObject : public MessageReceiver {
      * @param propName          Identifies the property to set
      * @param val               The property value to set. The type of this value is the actual value
      *                          type
+     * @param[in] msg           The incoming Properties.Set request
      * @param[out] errorName    Error name
      * @param[out] errorMessage Error message
      * @return                  #ER_BUS_NO_SUCH_PROPERTY (Should be changed by user implementation of BusObject)
      */
-    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val, qcc::String& errorName, qcc::String& errorMessage) {
+    virtual QStatus Set(const char* ifcName, const char* propName, MsgArg& val, Message& msg,
+                        qcc::String& errorName, qcc::String& errorMessage) {
+        QCC_UNUSED(msg);
         QCC_UNUSED(errorName);
         QCC_UNUSED(errorMessage);
-        // For backwards compatibility, we are calling the old version of Get()
+        // For backwards compatibility, we are calling the old version of Set()
         // User-defined implementation should override this
         return Set(ifcName, propName, val);
     }
