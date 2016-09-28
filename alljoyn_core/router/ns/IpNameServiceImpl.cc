@@ -46,6 +46,7 @@
 #include <qcc/Event.h>
 #include <qcc/LockLevel.h>
 #include <qcc/PerfCounters.h>
+#include <qcc/ScopedMutexLock.h>
 
 #include "BusUtil.h"
 #include "IpNameServiceImpl.h"
@@ -2075,7 +2076,10 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     // Do it once for version two.
     //
     if (type & TRANSMIT_V2) {
-        m_v2_queries[transportIndex].insert(matchingStr);
+        {
+            ScopedMutexLock lock(m_mutex);
+            m_v2_queries[transportIndex].insert(matchingStr);
+        }
         uint32_t secondOfPairIndex = IndexFromBit(TRANSPORT_SECOND_OF_PAIR);
         bool isFirstOfPair = (transportMask == TRANSPORT_FIRST_OF_PAIR);
         bool isSecondOfPair = (transportMask == TRANSPORT_SECOND_OF_PAIR);
@@ -2108,7 +2112,10 @@ QStatus IpNameServiceImpl::FindAdvertisement(TransportMask transportMask, const 
     // Do it once for version zero.
     //
     if ((type & TRANSMIT_V0_V1) && (transportMask != TRANSPORT_UDP)) {
-        m_v0_v1_queries[transportIndex].insert(name->second);
+        {
+            ScopedMutexLock lock(m_mutex);
+            m_v0_v1_queries[transportIndex].insert(name->second);
+        }
 
         WhoHas whoHas;
 
@@ -8572,6 +8579,7 @@ bool IpNameServiceImpl::PurgeAndUpdatePacket(MDNSPacket mdnspacket, bool updateS
         refRData->SetSearchID(id);
     }
     if (mdnspacket->GetHeader().GetQRType() == MDNSHeader::MDNS_QUERY) {
+        ScopedMutexLock lock(m_mutex);
         if (isUnicast) {
             /* Do not purge unicast queries(RefreshCache and Ping),
              * These packets do not have an entry in m_v2_queries.
