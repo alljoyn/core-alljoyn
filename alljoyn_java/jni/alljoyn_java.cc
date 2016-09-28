@@ -3790,6 +3790,7 @@ void JAuthListener::AuthenticationComplete(const char* authMechanism, const char
  */
 JBusAttachment::JBusAttachment(const char* applicationName, bool allowRemoteMessages, int concurrency)
     : BusAttachment(applicationName, allowRemoteMessages, concurrency),
+    jPermissionConfigurationListener(NULL),
     keyStoreListener(NULL),
     jkeyStoreListenerRef(NULL),
     authListener(NULL),

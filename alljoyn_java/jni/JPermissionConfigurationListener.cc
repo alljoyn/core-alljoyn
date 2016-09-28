@@ -31,6 +31,7 @@ JPermissionConfigurationListener::JPermissionConfigurationListener(jobject jlist
     JNIEnv* env = GetEnv();
 
     if (!jlistener) {
+        Throw("java/lang/NullPointerException", "PermissionConfigurationListener object is null");
         return;
     }
 
