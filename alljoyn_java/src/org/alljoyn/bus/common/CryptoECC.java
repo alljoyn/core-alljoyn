@@ -69,7 +69,21 @@ public class CryptoECC {
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    public native void generateSPEKEKeyPair(byte[] pw, long pwLen, UUID clientGUID, UUID serviceGUID) throws BusException;
+    private native void generateSPEKEKeyPair(byte[] pw, long pwLen, UUID clientGUID, UUID serviceGUID) throws BusException;
+
+    /**
+     * Generates the ephemeral key pair for EC-SPEKE. The key pair
+     * can then be used with the other DH APIs to compute the shared secret.
+     * @param pw          Password and additional data to use during key generation.
+     * @param clientGUID  The client's GUID
+     * @param serviceGUID The service's GUID
+     * @throws BusException
+     *      ER_FAIL otherwise
+     *      Other error status.
+     */
+    public void generateSPEKEKeyPair(byte[] pw, UUID clientGUID, UUID serviceGUID) throws BusException {
+        generateSPEKEKeyPair(pw, pw.length, clientGUID, serviceGUID);
+    }
 
     /**
      * Generates the Diffie-Hellman shared secret.
@@ -150,23 +164,47 @@ public class CryptoECC {
      * Sign a digest using the DSA key
      * @param digest The digest to sign
      * @param len The digest len
-     * @param sig The output signature
+     * @return signature
      * @throws BusException
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    public native void DSASignDigest(byte digest, short len, ECCSignature sig) throws BusException;
+    private native ECCSignature DSASignDigest(byte[] digest, int len) throws BusException;
+
+    /**
+     * Sign a digest using the DSA key
+     * @param digest The digest to sign
+     * @return signature
+     * @throws BusException
+     *      ER_FAIL otherwise
+     *      Other error status.
+     */
+    public ECCSignature DSASignDigest(byte[] digest) throws BusException {
+        return DSASignDigest(digest, digest.length);
+    }
 
     /**
      * Sign a buffer using the DSA key
      * @param buf The buffer to sign
      * @param len The buffer len
-     * @param sig The output signature
+     * @return signature
      * @throws BusException
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    public native void DSASign(byte buf, short len, ECCSignature sig) throws BusException;
+    private native ECCSignature DSASign(byte[] buf, int len) throws BusException;
+
+    /**
+     * Sign a buffer using the DSA key
+     * @param buf The buffer to sign
+     * @return signature
+     * @throws BusException
+     *      ER_FAIL otherwise
+     *      Other error status.
+     */
+    public ECCSignature DSASign(byte[] buf) throws BusException {
+        return DSASign(buf, buf.length);
+    }
 
     /**
      * Verify DSA signature of a digest
@@ -177,7 +215,19 @@ public class CryptoECC {
      *          - ER_FAIL otherwise
      *          - Other error status.
      */
-    public native void DSAVerifyDigest(byte digest, short len, ECCSignature sig) throws BusException;
+    private native void DSAVerifyDigest(byte[] digest, int len, ECCSignature sig) throws BusException;
+
+    /**
+     * Verify DSA signature of a digest
+     * @param digest The digest to sign
+     * @param sig The signature
+     * @throws BusException
+     *          - ER_FAIL otherwise
+     *          - Other error status.
+     */
+    public void DSAVerifyDigest(byte[] digest, ECCSignature sig) throws BusException {
+        DSAVerifyDigest(digest, digest.length, sig);
+    }
 
     /**
      * Verify DSA signature of a buffer
@@ -188,7 +238,19 @@ public class CryptoECC {
      *      ER_FAIL otherwise
      *      Other error status.
      */
-    public native void DSAVerify(byte buf, short len, ECCSignature sig) throws BusException;
+    private native void DSAVerify(byte[] buf, int len, ECCSignature sig) throws BusException;
+
+    /**
+     * Verify DSA signature of a buffer
+     * @param buf The buffer to sign
+     * @param sig The signature
+     * @throws BusException
+     *      ER_FAIL otherwise
+     *      Other error status.
+     */
+    public void DSAVerify(byte[] buf, ECCSignature sig) throws BusException {
+        DSAVerify(buf, buf.length, sig);
+    }
 
     /**
      * Retrieve the ECC curve type.
