@@ -360,6 +360,11 @@ void MsgArg::Stabilize()
             break;
 
         case ALLJOYN_BOOLEAN_ARRAY:
+            tmp = new bool[v_scalarArray.numElements];
+            memcpy(tmp, v_scalarArray.v_bool, v_scalarArray.numElements * sizeof(bool));
+            v_scalarArray.v_bool = (bool*)tmp;
+            break;
+
         case ALLJOYN_INT32_ARRAY:
         case ALLJOYN_UINT32_ARRAY:
             tmp = new uint32_t[v_scalarArray.numElements];
