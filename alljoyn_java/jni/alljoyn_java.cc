@@ -784,6 +784,7 @@ jclass CLS_KeyInfoNISTP256 = NULL;
 
 jmethodID MID_ECCPublicKey_cnstrctr = NULL;
 jmethodID MID_ECCPrivateKey_cnstrctr = NULL;
+jmethodID MID_ECCSignature_cnstrctr = NULL;
 jmethodID MID_PermissionConfigurator_cnstrctr = NULL;
 jmethodID MID_KeyInfoNISTP256_cnstrctr = NULL;
 jmethodID MID_KeyInfoNISTP256_setPublicKey = NULL;
@@ -1091,6 +1092,11 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM* vm,
             return JNI_ERR;
         }
         CLS_ECCSignature = (jclass)env->NewGlobalRef(clazz);
+
+        MID_ECCSignature_cnstrctr = env->GetMethodID(CLS_ECCSignature, "<init>", "([B[B)V");
+        if (!MID_ECCSignature_cnstrctr) {
+            return JNI_ERR;
+        }
 
         FID_ECCSignature_r = env->GetFieldID(CLS_ECCSignature, "r", "[B");
         if (!FID_ECCSignature_r) {
