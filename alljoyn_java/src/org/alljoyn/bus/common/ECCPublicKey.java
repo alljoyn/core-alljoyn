@@ -34,6 +34,14 @@ public class ECCPublicKey {
         y = y_coor;
     }
 
+    public byte[] getX() {
+        return x;
+    }
+
+    public byte[] getY() {
+        return y;
+    }
+
     public long getCoordinateSize() {
         assert x.length == y.length;
         return x.length;

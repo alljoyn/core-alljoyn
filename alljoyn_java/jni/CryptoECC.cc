@@ -172,11 +172,51 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_generateSPEKEKeyPai
  * Method:    generateSharedSecret
  * Signature: (Lorg/alljoyn/bus/common/ECCPublicKey;Lorg/alljoyn/bus/common/ECCSecret;)V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_generateSharedSecret(JNIEnv*, jobject, jobject, jobject)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_generateSharedSecret(JNIEnv* jenv, jobject thiz, jobject jeccPublicKey, jobject jeccSecret)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    ECCPublicKey eccPublicKey;
+
+    jbyteArray jeccX = (jbyteArray) jenv->GetObjectField(jeccPublicKey, FID_ECCPublicKey_x);
+    jbyteArray jeccY = (jbyteArray) jenv->GetObjectField(jeccPublicKey, FID_ECCPublicKey_y);
+
+    uint8_t* eccX = ToByteArray(jeccX);
+    uint8_t* eccY = ToByteArray(jeccY);
+
+    if (jenv->ExceptionCheck()) {
+        delete [] eccX;
+        delete [] eccY;
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return;
+    }
+
+    QStatus status = eccPublicKey.Import(eccX, jenv->GetArrayLength(jeccX), eccY, jenv->GetArrayLength(jeccY));
+    delete [] eccX;
+    delete [] eccY;
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    ECCSecret* eccsecret = GetHandle<ECCSecret*>(jeccSecret);
+    if (jenv->ExceptionCheck() || eccsecret == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    status = cryptoPtr->GenerateSharedSecret(&eccPublicKey, eccsecret);
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+    }
 }
 
 /*
@@ -194,13 +234,6 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDHPublicKey(J
         return NULL;
     }
 
-    jmethodID mid = jenv->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        Throw("java/lang/NoSuchMethodException", NULL);
-        return NULL;
-    }
-
     const ECCPublicKey* eccPublicKey = cryptoPtr->GetDHPublicKey();
     if (!eccPublicKey) {
         QCC_LogError(ER_FAIL, ("%s: ECCPublicKey wasn't generated", __FUNCTION__));
@@ -211,7 +244,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDHPublicKey(J
     jbyteArray arrayX = ToJByteArray(eccPublicKey->GetX(), eccPublicKey->GetCoordinateSize());
     jbyteArray arrayY = ToJByteArray(eccPublicKey->GetY(), eccPublicKey->GetCoordinateSize());
 
-    jobject retObj = jenv->NewObject(CLS_ECCPublicKey, mid, arrayX, arrayY);
+    jobject retObj = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
 
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Couldn't make jobject", __FUNCTION__));
@@ -227,11 +260,41 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDHPublicKey(J
 /* * Class:     org_alljoyn_bus_common_CryptoECC * Method:    setDHPublicKey
  * Signature: (Lorg/alljoyn/bus/common/ECCPublicKey;)V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDHPublicKey(JNIEnv*, jobject, jobject)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDHPublicKey(JNIEnv* jenv, jobject thiz, jobject jeccPublicKey)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    ECCPublicKey eccPublicKey;
+
+    jbyteArray jeccX = (jbyteArray) jenv->GetObjectField(jeccPublicKey, FID_ECCPublicKey_x);
+    jbyteArray jeccY = (jbyteArray) jenv->GetObjectField(jeccPublicKey, FID_ECCPublicKey_y);
+
+    uint8_t* eccX = ToByteArray(jeccX);
+    uint8_t* eccY = ToByteArray(jeccY);
+
+    if (jenv->ExceptionCheck()) {
+        delete [] eccX;
+        delete [] eccY;
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return;
+    }
+
+    QStatus status = eccPublicKey.Import(eccX, jenv->GetArrayLength(jeccX), eccY, jenv->GetArrayLength(jeccY));
+    delete [] eccX;
+    delete [] eccY;
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    cryptoPtr->SetDHPublicKey(&eccPublicKey);
 }
 
 /*
@@ -249,13 +312,6 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDHPrivateKey(
         return NULL;
     }
 
-    jmethodID mid = jenv->GetMethodID(CLS_ECCPrivateKey, "<init>", "([B)V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPrivateKey constructor", __FUNCTION__));
-        Throw("java/lang/NoSuchMethodException", NULL);
-        return NULL;
-    }
-
     const ECCPrivateKey* eccPrivateKey = cryptoPtr->GetDHPrivateKey();
     if (!eccPrivateKey) {
         QCC_LogError(ER_FAIL, ("%s: ECCPrivateKey wasn't generated", __FUNCTION__));
@@ -266,7 +322,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDHPrivateKey(
     jbyteArray arrayD = jenv->NewByteArray(eccPrivateKey->GetSize());
     jenv->SetByteArrayRegion(arrayD, 0, eccPrivateKey->GetSize(), reinterpret_cast<const jbyte*>(eccPrivateKey->GetD()));
 
-    jobject retObj = jenv->NewObject(CLS_ECCPrivateKey, mid, arrayD);
+    jobject retObj = jenv->NewObject(CLS_ECCPrivateKey, MID_ECCPrivateKey_cnstrctr, arrayD);
 
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Couldn't make jobject", __FUNCTION__));
@@ -281,11 +337,37 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDHPrivateKey(
  * Method:    setDHPrivateKey
  * Signature: (Lorg/alljoyn/bus/common/ECCPrivateKey;)V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDHPrivateKey(JNIEnv*, jobject, jobject)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDHPrivateKey(JNIEnv* jenv, jobject thiz, jobject jeccPrivateKey)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    ECCPrivateKey eccPrivateKey;
+
+    jbyteArray jeccD = (jbyteArray) jenv->GetObjectField(jeccPrivateKey, FID_ECCPrivateKey_d);
+
+    uint8_t* eccD = ToByteArray(jeccD);
+    if (jenv->ExceptionCheck()) {
+        delete [] eccD;
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return;
+    }
+
+    QStatus status = eccPrivateKey.Import(eccD, jenv->GetArrayLength(jeccD));
+
+    delete [] eccD;
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    cryptoPtr->SetDHPrivateKey(&eccPrivateKey);
 }
 
 /*
@@ -303,13 +385,6 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDSAPublicKey(
         return NULL;
     }
 
-    jmethodID mid = jenv->GetMethodID(CLS_ECCPublicKey, "<init>", "([B[B)V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        Throw("java/lang/NoSuchMethodException", NULL);
-        return NULL;
-    }
-
     const ECCPublicKey* eccPublicKey = cryptoPtr->GetDSAPublicKey();
     if (!eccPublicKey) {
         QCC_LogError(ER_FAIL, ("%s: ECCPublicKey wasn't generated", __FUNCTION__));
@@ -320,7 +395,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDSAPublicKey(
     jbyteArray arrayX = ToJByteArray(eccPublicKey->GetX(), eccPublicKey->GetCoordinateSize());
     jbyteArray arrayY = ToJByteArray(eccPublicKey->GetY(), eccPublicKey->GetCoordinateSize());
 
-    jobject retObj = jenv->NewObject(CLS_ECCPublicKey, mid, arrayX, arrayY);
+    jobject retObj = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
 
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Couldn't make jobject", __FUNCTION__));
@@ -338,11 +413,41 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDSAPublicKey(
  * Method:    setDSAPublicKey
  * Signature: (Lorg/alljoyn/bus/common/ECCPublicKey;)V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDSAPublicKey(JNIEnv*, jobject, jobject)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDSAPublicKey(JNIEnv* jenv, jobject thiz, jobject jeccPublicKey)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    ECCPublicKey eccPublicKey;
+
+    jbyteArray jeccX = (jbyteArray) jenv->GetObjectField(jeccPublicKey, FID_ECCPublicKey_x);
+    jbyteArray jeccY = (jbyteArray) jenv->GetObjectField(jeccPublicKey, FID_ECCPublicKey_y);
+
+    uint8_t* eccX = ToByteArray(jeccX);
+    uint8_t* eccY = ToByteArray(jeccY);
+
+    if (jenv->ExceptionCheck()) {
+        delete [] eccX;
+        delete [] eccY;
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return;
+    }
+
+    QStatus status = eccPublicKey.Import(eccX, jenv->GetArrayLength(jeccX), eccY, jenv->GetArrayLength(jeccY));
+    delete [] eccX;
+    delete [] eccY;
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    cryptoPtr->SetDSAPublicKey(&eccPublicKey);
 }
 
 /*
@@ -360,13 +465,6 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDSAPrivateKey
         return NULL;
     }
 
-    jmethodID mid = jenv->GetMethodID(CLS_ECCPrivateKey, "<init>", "([B)V");
-    if (!mid) {
-        QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
-        Throw("java/lang/NoSuchMethodException", NULL);
-        return NULL;
-    }
-
     const ECCPrivateKey* eccPrivateKey = cryptoPtr->GetDSAPrivateKey();
     if (!eccPrivateKey) {
         QCC_LogError(ER_FAIL, ("%s: ECCPrivateKey wasn't generated", __FUNCTION__));
@@ -377,7 +475,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDSAPrivateKey
     jbyteArray arrayD = jenv->NewByteArray(eccPrivateKey->GetSize());
     jenv->SetByteArrayRegion(arrayD, 0, eccPrivateKey->GetSize(), reinterpret_cast<const jbyte*>(eccPrivateKey->GetD()));
 
-    jobject retObj = jenv->NewObject(CLS_ECCPrivateKey, mid, arrayD);
+    jobject retObj = jenv->NewObject(CLS_ECCPrivateKey, MID_ECCPrivateKey_cnstrctr, arrayD);
 
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Couldn't make jobject", __FUNCTION__));
@@ -392,11 +490,37 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_getDSAPrivateKey
  * Method:    setDSAPrivateKey
  * Signature: (Lorg/alljoyn/bus/common/ECCPrivateKey;)V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDSAPrivateKey(JNIEnv*, jobject, jobject)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_setDSAPrivateKey(JNIEnv* jenv, jobject thiz, jobject jeccPrivateKey)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    jbyteArray jeccD = (jbyteArray) jenv->GetObjectField(jeccPrivateKey, FID_ECCPrivateKey_d);
+
+    uint8_t* eccD = ToByteArray(jeccD);
+    if (jenv->ExceptionCheck()) {
+        delete [] eccD;
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return;
+    }
+
+    ECCPrivateKey eccPrivateKey;
+
+    QStatus status = eccPrivateKey.Import(eccD, jenv->GetArrayLength(jeccD));
+
+    delete [] eccD;
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    cryptoPtr->SetDSAPrivateKey(&eccPrivateKey);
 }
 
 /*
@@ -423,47 +547,203 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_generateDSAKeyPair(
 /*
  * Class:     org_alljoyn_bus_common_CryptoECC
  * Method:    DSASignDigest
- * Signature: (BSLorg/alljoyn/bus/common/ECCSignature;)V
+ * Signature: ([BS)Lorg/alljoyn/bus/common/ECCSignature;
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSASignDigest(JNIEnv*, jobject, jbyte, jshort, jobject)
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSASignDigest(JNIEnv* jenv, jobject thiz, jbyteArray jdigest, jint jdigestlen)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return NULL;
+    }
+
+    ECCSignature* eccsignature = new ECCSignature();
+
+    uint8_t* digest = ToByteArray(jdigest);
+
+    QStatus status = cryptoPtr->DSASignDigest(digest, jdigestlen, eccsignature);
+
+    delete [] digest;
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return NULL;
+    }
+
+    size_t eccbufferlen = eccsignature->GetSize();
+    uint8_t* eccbuffer = new uint8_t[eccbufferlen];
+
+    status = eccsignature->Export(eccbuffer, &eccbufferlen);
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        delete [] eccbuffer;
+        return NULL;
+    }
+
+    uint8_t* eccsigr = new uint8_t[eccbufferlen / 2];
+    uint8_t* eccsigs = new uint8_t[eccbufferlen / 2];
+
+    memcpy(eccsigr, eccbuffer, eccbufferlen / 2);
+    memcpy(eccsigs, eccbuffer + eccbufferlen / 2, eccbufferlen / 2);
+
+    jbyteArray jeccsigr = ToJByteArray(eccsigr, eccsignature->GetSize() / 2);
+    jbyteArray jeccsigs = ToJByteArray(eccsigs, eccsignature->GetSize() / 2);
+
+    jobject retObj = jenv->NewObject(CLS_ECCSignature, MID_ECCSignature_cnstrctr, jeccsigr, jeccsigs);
+
+    delete [] eccsigr;
+    delete [] eccsigs;
+    delete [] eccbuffer;
+    return retObj;
 }
 
 /*
  * Class:     org_alljoyn_bus_common_CryptoECC
  * Method:    DSASign
- * Signature: (BSLorg/alljoyn/bus/common/ECCSignature;)V
+ * Signature: ([BS)Lorg/alljoyn/bus/common/ECCSignature;
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSASign(JNIEnv*, jobject, jbyte, jshort, jobject)
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSASign(JNIEnv* jenv, jobject thiz, jbyteArray jbuffer, jint jbufferlen)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return NULL;
+    }
+
+    ECCSignature* eccsignature = new ECCSignature();
+
+    uint8_t* buffer = ToByteArray(jbuffer);
+
+    QStatus status = cryptoPtr->DSASign(buffer, jbufferlen, eccsignature);
+
+    delete [] buffer;
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return NULL;
+    }
+
+    size_t eccbufferlen = eccsignature->GetSize();
+    uint8_t* eccbuffer = new uint8_t[eccbufferlen];
+
+    status = eccsignature->Export(eccbuffer, &eccbufferlen);
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        delete [] eccbuffer;
+        return NULL;
+    }
+
+    uint8_t* eccsigr = new uint8_t[eccbufferlen / 2];
+    uint8_t* eccsigs = new uint8_t[eccbufferlen / 2];
+
+    memcpy(eccsigr, eccbuffer, eccbufferlen / 2);
+    memcpy(eccsigs, eccbuffer + eccbufferlen / 2, eccbufferlen / 2);
+
+    jbyteArray jeccsigr = ToJByteArray(eccsigr, eccsignature->GetSize() / 2);
+    jbyteArray jeccsigs = ToJByteArray(eccsigs, eccsignature->GetSize() / 2);
+
+    jobject retObj = jenv->NewObject(CLS_ECCSignature, MID_ECCSignature_cnstrctr, jeccsigr, jeccsigs);
+
+    delete [] eccsigr;
+    delete [] eccsigs;
+    delete [] eccbuffer;
+    return retObj;
 }
 
 /*
  * Class:     org_alljoyn_bus_common_CryptoECC
  * Method:    DSAVerifyDigest
- * Signature: (BSLorg/alljoyn/bus/common/ECCSignature;)V
+ * Signature: ([BSLorg/alljoyn/bus/common/ECCSignature;)V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSAVerifyDigest(JNIEnv*, jobject, jbyte, jshort, jobject)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSAVerifyDigest(JNIEnv* jenv, jobject thiz, jbyteArray jdigest, jint jdigestlen, jobject jeccSignature)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    ECCSignature eccsignature;
+
+    jbyteArray jsigr = (jbyteArray) jenv->GetObjectField(jeccSignature, FID_ECCSignature_r);
+    jbyteArray jsigs = (jbyteArray) jenv->GetObjectField(jeccSignature, FID_ECCSignature_s);
+
+    jlong jsigrlen = jenv->GetArrayLength(jsigr);
+    jlong jsigslen = jenv->GetArrayLength(jsigs);
+
+    uint8_t* sigr = ToByteArray(jsigr);
+    uint8_t* sigs = ToByteArray(jsigs);
+
+    QStatus status = eccsignature.Import(sigr, jsigrlen, sigs, jsigslen);
+    delete [] sigr;
+    delete [] sigs;
+
+    if (status != ER_OK) {
+        QCC_LogError(ER_FAIL, ("import fail %d", jsigrlen));
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    uint8_t* digest = ToByteArray(jdigest);
+
+    status = cryptoPtr->DSAVerifyDigest(digest, jdigestlen, &eccsignature);
+
+    delete [] digest;
+    if (status != ER_OK) {
+        QCC_LogError(ER_FAIL, ("verifydigest fail"));
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
 }
 
 /*
  * Class:     org_alljoyn_bus_common_CryptoECC
  * Method:    DSAVerify
- * Signature: (BSLorg/alljoyn/bus/common/ECCSignature;)V
+ * Signature: ([BSLorg/alljoyn/bus/common/ECCSignature;)V
  */
-JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSAVerify(JNIEnv*, jobject, jbyte, jshort, jobject)
+JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CryptoECC_DSAVerify(JNIEnv* jenv, jobject thiz, jbyteArray jbuffer, jint jbufferlen, jobject jeccSignature)
 {
-    //TODO ASACORE-3213
     QCC_DbgTrace(("%s", __FUNCTION__));
-    Throw("java/lang/NoSuchMethodException", "Method not implemented yet");
+
+    Crypto_ECC* cryptoPtr = GetHandle<Crypto_ECC*>(thiz);
+    if (jenv->ExceptionCheck() || cryptoPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL pointer", __FUNCTION__));
+        return;
+    }
+
+    ECCSignature eccsignature;
+
+    jbyteArray jsigr = (jbyteArray) jenv->GetObjectField(jeccSignature, FID_ECCSignature_r);
+    jbyteArray jsigs = (jbyteArray) jenv->GetObjectField(jeccSignature, FID_ECCSignature_s);
+
+    jlong jsigrlen = jenv->GetArrayLength(jsigr);
+    jlong jsigslen = jenv->GetArrayLength(jsigs);
+
+    uint8_t* sigr = ToByteArray(jsigr);
+    uint8_t* sigs = ToByteArray(jsigs);
+
+    QStatus status = eccsignature.Import(sigr, jsigrlen, sigs, jsigslen);
+    delete [] sigr;
+    delete [] sigs;
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
+
+    uint8_t* buffer = ToByteArray(jbuffer);
+
+    status = cryptoPtr->DSAVerify(buffer, jbufferlen, &eccsignature);
+
+    delete [] buffer;
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return;
+    }
 }
