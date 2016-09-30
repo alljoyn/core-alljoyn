@@ -358,8 +358,8 @@ class LocalTestObject : public BusObject {
         {
             delayedResponseThreadLock.Lock(MUTEX_CONTEXT);
             this->thread = NULL;
-            delete exitingThread;
             delayedResponseThreadLock.Unlock(MUTEX_CONTEXT);
+            delete exitingThread;
         }
 
       protected:
