@@ -2482,7 +2482,9 @@ class SecPropChangedTest :
 
     virtual void TearDown()
     {
-        proxy->UnregisterPropertiesChangedListener(TEST_INTERFACE, *this);
+        if (nullptr != proxy) {
+            proxy->UnregisterPropertiesChangedListener(TEST_INTERFACE, *this);
+        }
     }
 
     void PropertiesChanged(ProxyBusObject& obj,
