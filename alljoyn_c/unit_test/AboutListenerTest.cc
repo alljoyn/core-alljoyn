@@ -77,9 +77,9 @@ class AboutListenerTest : public testing::Test {
         status = alljoyn_aboutdata_setappname(aboutData, "Application", "en");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_aboutdata_setmanufacturer(aboutData, "Manufacturer", "en");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_aboutdata_setmodelnumber(aboutData, "123456");
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_aboutdata_setdescription(aboutData,
                                                   "A poetic description of this application",
                                                   "en");
@@ -92,7 +92,7 @@ class AboutListenerTest : public testing::Test {
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         status = alljoyn_aboutdata_setsupporturl(aboutData, "http://www.alljoyn.org");
         ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        EXPECT_TRUE(alljoyn_aboutdata_isvalid(aboutData, "en"));
+        ASSERT_TRUE(alljoyn_aboutdata_isvalid(aboutData, "en"));
 
         alljoyn_sessionportlistener_callbacks callbacks = {
             &my_sessionportlistener_acceptsessionjoiner
@@ -103,16 +103,19 @@ class AboutListenerTest : public testing::Test {
                                        ALLJOYN_TRANSPORT_ANY);
         listener = alljoyn_sessionportlistener_create(&callbacks, nullptr);
         status = alljoyn_busattachment_bindsessionport(serviceBus, &port, opts, listener);
-        EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
+        ASSERT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     }
 
     virtual void TearDown() {
         if (serviceBus) {
-            alljoyn_busattachment_stop(serviceBus);
-            alljoyn_busattachment_join(serviceBus);
+            if (alljoyn_busattachment_isstarted(serviceBus)) {
+                alljoyn_busattachment_stop(serviceBus);
+                alljoyn_busattachment_join(serviceBus);
+            }
             alljoyn_busattachment_destroy(serviceBus);
             serviceBus = nullptr;
         }
+
         if (aboutData) {
             alljoyn_aboutdata_destroy(aboutData);
             aboutData = nullptr;
@@ -1578,6 +1581,7 @@ TEST_F(AboutListenerTest, AnnounceAppIdWithNon128BitLength) {
     }
 
     ASSERT_TRUE(announceListenerFlags[0]);
+    ASSERT_NE((const alljoyn_msgarg)NULL, aboutListener->aboutData);
 
     alljoyn_aboutdata listenerAboutData = alljoyn_aboutdata_create_empty();
     alljoyn_aboutdata_createfrommsgarg(listenerAboutData, aboutListener->aboutData, "en");

@@ -85,9 +85,9 @@ static void AJ_CALL non_128_bit_app_id_about_listener_announced_cb(const void* c
     QCC_UNUSED(objectDescriptionArg);
     announce_non_128_bit_app_id_about_listener* listener =
         (announce_non_128_bit_app_id_about_listener*)(context);
-    announceListenerFlags[0] = QCC_TRUE;
     listener->aboutData = alljoyn_msgarg_copy(aboutDataArg);
     alljoyn_msgarg_stabilize(listener->aboutData);
+    announceListenerFlags[0] = QCC_TRUE;
 }
 
 static void AJ_CALL remove_object_description_about_listener_cb(const void* context,
