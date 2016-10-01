@@ -180,33 +180,33 @@ class SecurityPolicyRulesTest : public testing::Test {
         managerToPeer1SessionId(0),
         managerToPeer2SessionId(0),
         interfaceName("org.allseen.test.SecurityApplication.rules"),
-        managerAuthListener(NULL),
-        peer1AuthListener(NULL),
-        peer2AuthListener(NULL),
+        managerAuthListener(nullptr),
+        peer1AuthListener(nullptr),
+        peer2AuthListener(nullptr),
         appStateListener()
     {
     }
 
     virtual void SetUp() {
-        EXPECT_EQ(ER_OK, managerBus.Start());
-        EXPECT_EQ(ER_OK, managerBus.Connect());
-        EXPECT_EQ(ER_OK, peer1Bus.Start());
-        EXPECT_EQ(ER_OK, peer1Bus.Connect());
-        EXPECT_EQ(ER_OK, peer2Bus.Start());
-        EXPECT_EQ(ER_OK, peer2Bus.Connect());
+        ASSERT_EQ(ER_OK, managerBus.Start());
+        ASSERT_EQ(ER_OK, managerBus.Connect());
+        ASSERT_EQ(ER_OK, peer1Bus.Start());
+        ASSERT_EQ(ER_OK, peer1Bus.Connect());
+        ASSERT_EQ(ER_OK, peer2Bus.Start());
+        ASSERT_EQ(ER_OK, peer2Bus.Connect());
 
         // Register in memory keystore listeners
-        EXPECT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
-        EXPECT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
-        EXPECT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
+        ASSERT_EQ(ER_OK, managerBus.RegisterKeyStoreListener(managerKeyStoreListener));
+        ASSERT_EQ(ER_OK, peer1Bus.RegisterKeyStoreListener(peer1KeyStoreListener));
+        ASSERT_EQ(ER_OK, peer2Bus.RegisterKeyStoreListener(peer2KeyStoreListener));
 
         managerAuthListener = new DefaultECDHEAuthListener();
         peer1AuthListener = new DefaultECDHEAuthListener();
         peer2AuthListener = new DefaultECDHEAuthListener();
 
-        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener));
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
+        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+        ASSERT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer1AuthListener));
+        ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA", peer2AuthListener));
 
         interface = "<node>"
                     "<interface name='" + String(interfaceName) + "'>"
@@ -223,56 +223,56 @@ class SecurityPolicyRulesTest : public testing::Test {
                     "</interface>"
                     "</node>";
 
-        EXPECT_EQ(ER_OK, peer1Bus.CreateInterfacesFromXml(interface.c_str()));
-        EXPECT_EQ(ER_OK, peer2Bus.CreateInterfacesFromXml(interface.c_str()));
+        ASSERT_EQ(ER_OK, peer1Bus.CreateInterfacesFromXml(interface.c_str()));
+        ASSERT_EQ(ER_OK, peer2Bus.CreateInterfacesFromXml(interface.c_str()));
 
         SessionOpts opts1;
-        EXPECT_EQ(ER_OK, managerBus.BindSessionPort(managerSessionPort, opts1, managerSessionPortListener));
+        ASSERT_EQ(ER_OK, managerBus.BindSessionPort(managerSessionPort, opts1, managerSessionPortListener));
 
         SessionOpts opts2;
-        EXPECT_EQ(ER_OK, peer1Bus.BindSessionPort(peer1SessionPort, opts2, peer1SessionPortListener));
+        ASSERT_EQ(ER_OK, peer1Bus.BindSessionPort(peer1SessionPort, opts2, peer1SessionPortListener));
 
         SessionOpts opts3;
-        EXPECT_EQ(ER_OK, peer2Bus.BindSessionPort(peer2SessionPort, opts3, peer2SessionPortListener));
+        ASSERT_EQ(ER_OK, peer2Bus.BindSessionPort(peer2SessionPort, opts3, peer2SessionPortListener));
 
-        EXPECT_EQ(ER_OK, managerBus.JoinSession(managerBus.GetUniqueName().c_str(), managerSessionPort, NULL, managerToManagerSessionId, opts1));
-        EXPECT_EQ(ER_OK, managerBus.JoinSession(peer1Bus.GetUniqueName().c_str(), peer1SessionPort, NULL, managerToPeer1SessionId, opts2));
-        EXPECT_EQ(ER_OK, managerBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, managerToPeer2SessionId, opts3));
+        ASSERT_EQ(ER_OK, managerBus.JoinSession(managerBus.GetUniqueName().c_str(), managerSessionPort, NULL, managerToManagerSessionId, opts1));
+        ASSERT_EQ(ER_OK, managerBus.JoinSession(peer1Bus.GetUniqueName().c_str(), peer1SessionPort, NULL, managerToPeer1SessionId, opts2));
+        ASSERT_EQ(ER_OK, managerBus.JoinSession(peer2Bus.GetUniqueName().c_str(), peer2SessionPort, NULL, managerToPeer2SessionId, opts3));
 
         SecurityApplicationProxy sapWithManager(managerBus, managerBus.GetUniqueName().c_str(), managerToManagerSessionId);
         PermissionConfigurator::ApplicationState applicationStateManager;
-        EXPECT_EQ(ER_OK, sapWithManager.GetApplicationState(applicationStateManager));
-        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStateManager);
+        ASSERT_EQ(ER_OK, sapWithManager.GetApplicationState(applicationStateManager));
+        ASSERT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStateManager);
 
         SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
         PermissionConfigurator::ApplicationState applicationStatePeer1;
-        EXPECT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
-        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
+        ASSERT_EQ(ER_OK, sapWithPeer1.GetApplicationState(applicationStatePeer1));
+        ASSERT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer1);
 
         SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer2SessionId);
         PermissionConfigurator::ApplicationState applicationStatePeer2;
-        EXPECT_EQ(ER_OK, sapWithPeer2.GetApplicationState(applicationStatePeer2));
-        EXPECT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer2);
+        ASSERT_EQ(ER_OK, sapWithPeer2.GetApplicationState(applicationStatePeer2));
+        ASSERT_EQ(PermissionConfigurator::NOT_CLAIMABLE, applicationStatePeer2);
 
         managerBus.RegisterApplicationStateListener(appStateListener);
 
         Manifest manifests[1];
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
         //Get manager key
         KeyInfoNISTP256 managerKey;
         PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
-        EXPECT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
+        ASSERT_EQ(ER_OK, pcManager.GetSigningPublicKey(managerKey));
 
         //Create peer1 key
         KeyInfoNISTP256 peer1Key;
         PermissionConfigurator& pcPeer1 = peer1Bus.GetPermissionConfigurator();
-        EXPECT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
+        ASSERT_EQ(ER_OK, pcPeer1.GetSigningPublicKey(peer1Key));
 
         //Create peer2 key
         KeyInfoNISTP256 peer2Key;
         PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
-        EXPECT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
+        ASSERT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
 
         PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
 
@@ -280,7 +280,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         const size_t certChainSize = 1;
         IdentityCertificate identityCertChainMaster[certChainSize];
 
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
                                                                       "0",
                                                                       managerGuid.ToString(),
                                                                       managerKey.GetPublicKey(),
@@ -290,8 +290,8 @@ class SecurityPolicyRulesTest : public testing::Test {
 
         /* set claimable */
         managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
-        EXPECT_EQ(ER_OK, sapWithManager.Claim(managerKey,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
+        ASSERT_EQ(ER_OK, sapWithManager.Claim(managerKey,
                                               managerGuid,
                                               managerKey,
                                               identityCertChainMaster, certChainSize,
@@ -314,7 +314,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         IdentityCertificate identityCertChainPeer1[certChainSize];
 
 
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
                                                                       "0",
                                                                       managerGuid.ToString(),
                                                                       peer1Key.GetPublicKey(),
@@ -325,8 +325,8 @@ class SecurityPolicyRulesTest : public testing::Test {
         //Manager claims Peers
         /* set claimable */
         peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
-        EXPECT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
+        ASSERT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
                                             identityCertChainPeer1, certChainSize,
@@ -345,7 +345,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         IdentityCertificate identityCertChainPeer2[certChainSize];
 
 
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
                                                                       "0",
                                                                       managerGuid.ToString(),
                                                                       peer2Key.GetPublicKey(),
@@ -354,8 +354,8 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                                       identityCertChainPeer2[0])) << "Failed to create identity certificate.";
         /* set claimable */
         peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
-        EXPECT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
+        ASSERT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
                                             identityCertChainPeer2, certChainSize,
@@ -371,11 +371,11 @@ class SecurityPolicyRulesTest : public testing::Test {
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[peer1Bus.GetUniqueName()]);
 
         //Change the managerBus so it only uses ECDHE_ECDSA
-        EXPECT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
+        ASSERT_EQ(ER_OK, managerBus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener));
 
         String membershipSerial = "1";
         qcc::MembershipCertificate managerMembershipCertificate[1];
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
                                                                         managerBus,
                                                                         managerBus.GetUniqueName(),
                                                                         managerKey.GetPublicKey(),
@@ -384,10 +384,10 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                                         3600,
                                                                         managerMembershipCertificate[0]
                                                                         ));
-        EXPECT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 1));
+        ASSERT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 1));
 
         qcc::MembershipCertificate peer1MembershipCertificate[1];
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
                                                                         managerBus,
                                                                         peer1Bus.GetUniqueName(),
                                                                         peer1Key.GetPublicKey(),
@@ -396,11 +396,11 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                                         3600,
                                                                         peer1MembershipCertificate[0]
                                                                         ));
-        EXPECT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
-        EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
+        ASSERT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
+        ASSERT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
 
         qcc::MembershipCertificate peer2MembershipCertificate[1];
-        EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
+        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
                                                                         managerBus,
                                                                         peer2Bus.GetUniqueName(),
                                                                         peer2Key.GetPublicKey(),
@@ -409,23 +409,29 @@ class SecurityPolicyRulesTest : public testing::Test {
                                                                         3600,
                                                                         peer2MembershipCertificate[0]
                                                                         ));
-        EXPECT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
-        EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
+        ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
+        ASSERT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
     }
 
     virtual void TearDown() {
-        managerBus.Stop();
-        managerBus.Join();
-
-        peer1Bus.Stop();
-        peer1Bus.Join();
-
-        peer2Bus.Stop();
-        peer2Bus.Join();
+        StopBus(managerBus);
+        StopBus(peer1Bus);
+        StopBus(peer2Bus);
 
         delete managerAuthListener;
         delete peer1AuthListener;
         delete peer2AuthListener;
+
+        managerAuthListener = nullptr;
+        peer1AuthListener = nullptr;
+        peer2AuthListener = nullptr;
+    }
+
+    void StopBus(BusAttachment& bus) {
+        if (bus.IsStarted()) {
+            ASSERT_EQ(ER_OK, bus.Stop());
+            ASSERT_EQ(ER_OK, bus.Join());
+        }
     }
 
     QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
