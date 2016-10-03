@@ -1254,10 +1254,10 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
     thread2.Join();
     thread3.Join();
     thread4.Join();
-    EXPECT_EQ(ER_OK, thread1.GetResult());
-    EXPECT_EQ(ER_OK, thread2.GetResult());
-    EXPECT_EQ(ER_OK, thread3.GetResult());
-    EXPECT_EQ(ER_OK, thread4.GetResult());
+    ASSERT_EQ(ER_OK, thread1.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
+    ASSERT_EQ(ER_OK, thread2.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
+    ASSERT_EQ(ER_OK, thread3.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
+    ASSERT_EQ(ER_OK, thread4.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
 
     EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_EQ(ER_OK, ExerciseOn(true)); /* `true' parameter will use secondClientBus. */
