@@ -64,6 +64,7 @@ class ClaimContext {
      * @return A bit mask of supported claim schemes
      * @see PermissionConfigurator::CAPABLE_ECDHE_NULL
      * @see PermissionConfigurator::CAPABLE_ECDHE_PSK
+     * @see PermissionConfigurator::CAPABLE_ECDHE_SPEKE
      * @see PermissionConfigurator::CAPABLE_ECDHE_ECDSA
      */
     const PermissionConfigurator::ClaimCapabilities& GetClaimCapabilities() const
@@ -97,14 +98,16 @@ class ClaimContext {
      * @return ER_OK in case of success, ER_BAD_ARG1 if the new claim type is not valid
      * @see PermissionConfigurator::CAPABLE_ECDHE_NULL
      * @see PermissionConfigurator::CAPABLE_ECDHE_PSK
+     * @see PermissionConfigurator::CAPABLE_ECDHE_SPEKE
      * @see PermissionConfigurator::CAPABLE_ECDHE_ECDSA
      */
     QStatus SetClaimType(PermissionConfigurator::ClaimCapabilities newType)
     {
         QStatus status;
         switch (newType) {
-        case PermissionConfigurator::CAPABLE_ECDHE_NULL: //deliberate fall through
-        case PermissionConfigurator::CAPABLE_ECDHE_PSK:  //deliberate fall through
+        case PermissionConfigurator::CAPABLE_ECDHE_NULL:  //deliberate fall through
+        case PermissionConfigurator::CAPABLE_ECDHE_PSK:   //deliberate fall through
+        case PermissionConfigurator::CAPABLE_ECDHE_SPEKE: //deliberate fall through
         case PermissionConfigurator::CAPABLE_ECDHE_ECDSA:
             if ((newType & capabilities) == 0) {
                 return ER_BAD_ARG_1;
@@ -154,14 +157,23 @@ class ClaimContext {
     /**
      * @brief sets a pre-shared key to be used for this claim action
      *
-     * param[in] psk the pre-shared key data or NULL to removed the previous set data. No transfer
-     *               of ownership of memory.
-     * param[in] pskSize The size of the pre-shared data. The size must be 16 or greater.
+     * @param[in] psk The pre-shared key data or NULL to remove the previous set data.
+     * @param[in] pskSize The size of the pre-shared data. The size must be 16 or greater.
      *
      * @return ER_OK in case of success, an error code in all other cases
      */
     virtual QStatus SetPreSharedKey(const uint8_t* psk,
                                     size_t pskSize) = 0;
+
+    /**
+     * @brief sets a password to be used for this claim action
+     *
+     * @param[in] password The password or NULL to remove the previous set data.
+     * @param[in] passwordSize The size of the password in bytes. The size must be 6 or greater.
+     *
+     * @return ER_OK in case of success, an error code in all other cases
+     */
+    virtual QStatus SetSharedPassword(const uint8_t* password, size_t passwordSize) = 0;
 
     /**
      * The destructor of this ClaimContext

@@ -33,6 +33,7 @@
 
 #define KEYX_ECDHE_NULL "ALLJOYN_ECDHE_NULL"
 #define KEYX_ECDHE_PSK "ALLJOYN_ECDHE_PSK"
+#define KEYX_ECDHE_SPEKE "ALLJOYN_ECDHE_SPEKE"
 #define KEYX_ECDHE_ECDSA "ALLJOYN_ECDHE_ECDSA"
 
 using namespace qcc;
@@ -51,7 +52,8 @@ class ProxyObjectManager :
     enum SessionType {
         ECDHE_NULL,
         ECDHE_DSA,
-        ECDHE_PSK
+        ECDHE_PSK,
+        ECDHE_SPEKE
     };
 
     ProxyObjectManager(BusAttachment* ba);
