@@ -18,6 +18,8 @@ package org.alljoyn.bus;
 import junit.framework.TestCase;
 import org.alljoyn.bus.common.CryptoECC;
 import org.alljoyn.bus.common.ECCPublicKey;
+import org.alljoyn.bus.common.ECCSecret;
+import org.alljoyn.bus.common.ECCSignature;
 import org.alljoyn.bus.common.ECCPrivateKey;
 import java.util.UUID;
 
@@ -49,7 +51,27 @@ public class CryptoECCTest extends TestCase {
 
         byte[] password = {'p', 'a', 's', 's', 'w', 'o', 'r', 'd'};
 
-        cryptoECC.generateSPEKEKeyPair(password, password.length, UUID.randomUUID(), UUID.randomUUID());
+        cryptoECC.generateSPEKEKeyPair(password, UUID.randomUUID(), UUID.randomUUID());
+
+        cryptoECC.generateSharedSecret(eccPublicKey, new ECCSecret());
+
+        cryptoECC.setDHPublicKey(eccPublicKey);
+        cryptoECC.setDSAPublicKey(eccPublicKey);
+        cryptoECC.setDSAPrivateKey(eccPrivateKey);
+        cryptoECC.setDHPrivateKey(eccPrivateKey);
+
+        ECCSignature eccsign = cryptoECC.DSASignDigest(eccPublicKey.getX());
+        cryptoECC.DSAVerifyDigest(eccPublicKey.getX(), eccsign);
+
+        eccsign = cryptoECC.DSASign(eccPublicKey.getX());
+        cryptoECC.DSAVerify(eccPublicKey.getX(), eccsign);
+
+        ECCSecret sec = new ECCSecret();
+
+        byte[] secretmaster = sec.derivePreMasterSecret();
+
+        cryptoECC.generateSharedSecret(eccPublicKey, sec);
+
     }
 }
 

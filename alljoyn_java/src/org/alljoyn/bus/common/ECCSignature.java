@@ -26,6 +26,11 @@ public class ECCSignature {
         s = new byte[(int) ECC_COORDINATE_SZ];
     }
 
+    public ECCSignature(byte[] tr, byte[] ts) {
+        r = tr;
+        s = ts;
+    }
+
     public byte[] getR() {
         return r;
     }
