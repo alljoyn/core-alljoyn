@@ -315,6 +315,7 @@ QStatus TestSecurityManager::EndManagement(BusAttachment& peerBus)
     SecurityApplicationProxy peerProxy(bus, peerBusName.c_str(), sessionId);
     EXPECT_EQ(ER_OK, (status = peerProxy.EndManagement()));
     if (ER_OK != status) {
+        EXPECT_EQ(ER_OK, bus.LeaveSession(sessionId));
         return status;
     }
 
