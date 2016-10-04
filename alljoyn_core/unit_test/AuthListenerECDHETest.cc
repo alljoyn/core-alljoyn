@@ -1198,7 +1198,8 @@ TEST_F(AuthListenerECDHETest, ECDHE_ECDSA_TestExpiredSessionKey)
 
 class PeerThread : public Thread {
   public:
-    PeerThread(String name, BusAttachment& srcBus, BusAttachment& targetBus, const char* objectPath) : Thread(name), srcBus(srcBus), targetBus(targetBus), objectPath(objectPath)
+    PeerThread(String name, BusAttachment& srcBus, BusAttachment& targetBus, const char* objectPath, bool checkSecureConnectionResult = false)
+        : Thread(name), srcBus(srcBus), targetBus(targetBus), objectPath(objectPath), result(ER_OK), checkSecureConnectionResult(checkSecureConnectionResult)
     {
     }
     ~PeerThread()
@@ -1213,6 +1214,10 @@ class PeerThread : public Thread {
         QCC_UNUSED(arg);
         ProxyBusObject proxy(srcBus, targetBus.GetUniqueName().c_str(), objectPath, 0, false);
         result = proxy.SecureConnection();
+        if (checkSecureConnectionResult && (result != ER_OK)) {
+            size_t* byeBye = nullptr;
+            return reinterpret_cast<ThreadReturn>(*byeBye);
+        }
         return static_cast<ThreadReturn>(0);
     }
   private:
@@ -1220,6 +1225,7 @@ class PeerThread : public Thread {
     BusAttachment& targetBus;
     const char* objectPath;
     QStatus result;
+    bool checkSecureConnectionResult;
 };
 
 /**
@@ -1238,13 +1244,13 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
     EXPECT_EQ(ER_OK, secondClientBus.EnablePeerSecurity(mechanism, &secondClientAuthListener, NULL, false));
 
     String name = "thread1: client bus " + clientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
-    PeerThread thread1(name, clientBus, serverBus, GetPath());
+    PeerThread thread1(name, clientBus, serverBus, GetPath(), true);
     name = "thread2: server bus " + serverBus.GetUniqueName() + " to clientBus " + clientBus.GetUniqueName();
-    PeerThread thread2(name, serverBus, clientBus, GetPath());
+    PeerThread thread2(name, serverBus, clientBus, GetPath(), true);
     name = "thread3: second bus " + secondClientBus.GetUniqueName() + " to serverBus " + serverBus.GetUniqueName();
-    PeerThread thread3(name, secondClientBus, serverBus, GetPath());
+    PeerThread thread3(name, secondClientBus, serverBus, GetPath(), true);
     name = "thread4: server bus " + serverBus.GetUniqueName() + " to second Bus " + secondClientBus.GetUniqueName();
-    PeerThread thread4(name, serverBus, secondClientBus, GetPath());
+    PeerThread thread4(name, serverBus, secondClientBus, GetPath(), true);
 
     thread1.Start();
     thread2.Start();
@@ -1254,10 +1260,11 @@ TEST_F(AuthListenerECDHETest, ConcurrentKeyExchange_4Threads_ECDSA)
     thread2.Join();
     thread3.Join();
     thread4.Join();
-    EXPECT_EQ(ER_OK, thread1.GetResult());
-    EXPECT_EQ(ER_OK, thread2.GetResult());
-    EXPECT_EQ(ER_OK, thread3.GetResult());
-    EXPECT_EQ(ER_OK, thread4.GetResult());
+    
+    ASSERT_EQ(ER_OK, thread1.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
+    ASSERT_EQ(ER_OK, thread2.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
+    ASSERT_EQ(ER_OK, thread3.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
+    ASSERT_EQ(ER_OK, thread4.GetResult()); /* Temporarily changed this to assert to generate crash dump, this work is being tracked by ASACORE-3322 */
 
     EXPECT_EQ(ER_OK, ExerciseOn());
     EXPECT_EQ(ER_OK, ExerciseOn(true)); /* `true' parameter will use secondClientBus. */
