@@ -366,7 +366,6 @@
 				ORGANIZATIONNAME = "AllSeen Alliance.";
 				TargetAttributes = {
 					ACB2C760160B976000D7E3A6 = {
-						DevelopmentTeam = LHK5UCWG92;
 						SystemCapabilities = {
 							com.apple.BackgroundModes = {
 								enabled = 1;
@@ -552,10 +551,8 @@
 		ACB2C789160B976000D7E3A6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -584,6 +581,7 @@
 					"-lalljoyn",
 					"-lajrouter",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.AboutService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -592,10 +590,8 @@
 		ACB2C78A160B976000D7E3A6 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ARCHS = (
-					"$(ARCHS_STANDARD_32_BIT)",
-					armv7,
-				);
+				ARCHS = "$(ARCHS_STANDARD)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -625,6 +621,7 @@
 					"-lalljoyn",
 					"-lajrouter",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.AboutService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
