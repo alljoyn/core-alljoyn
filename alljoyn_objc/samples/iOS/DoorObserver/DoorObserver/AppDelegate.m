@@ -101,12 +101,12 @@ const NSInteger kDoorServicePort = 42;
     [self.aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
 
     AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "00.00.01"];
+    [ajSoftwareVersion setValue:@"s", "16.10.00"];
     [ajSoftwareVersion stabilize];
     [self.aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
 
     AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "00.00.01"];
+    [hwSoftwareVersion setValue:@"s", "16.10.00"];
     [hwSoftwareVersion stabilize];
     [self.aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
 
