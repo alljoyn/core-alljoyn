@@ -22,6 +22,8 @@
 #include <Winsock2.h> // gethostname
 #endif
 
+#define PASSWORD_LEN 6
+
 using namespace ajn;
 using namespace qcc;
 
@@ -257,34 +259,23 @@ QStatus DoorCommon::AnnounceAbout()
     return aboutObj->Announce(DOOR_APPLICATION_PORT, aboutData);
 }
 
-static void CallDeprecatedSetPSK(DefaultECDHEAuthListener* authListener, const uint8_t* pskBytes, size_t pskLength)
+QStatus RandomPassword(string& password)
 {
-    /*
-     * This function suppresses compiler warnings when calling SetPSK, which is deprecated.
-     * Use of PSK will be replaced by SPEKE in this sample.
-     * https://jira.allseenalliance.org/browse/ASACORE-2761
-     */
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-#endif
-#if defined(QCC_OS_GROUP_WINDOWS)
-#pragma warning(push)
-#pragma warning(disable: 4996)
-#endif
+    GUID128 randomGuid;
+    const uint8_t* randomData = randomGuid.GetBytes();
 
-    QStatus status = authListener->SetPSK(pskBytes, pskLength);
-    if (status != ER_OK) {
-        fprintf(stderr, "Failed to set PSK - status (%s)\n", QCC_StatusText(status));
+    QCC_ASSERT(password.length() <= GUID128::SIZE);
+
+    for (size_t i = 0; i < password.length(); i++) {
+        uint8_t value = (randomData[i] % 16);
+        if (value < 10) {
+            password[i] = '0' + value;
+        } else {
+            password[i] = 'A' + value - 10;
+        }
     }
 
-#if defined(QCC_OS_GROUP_WINDOWS)
-#pragma warning(pop)
-#endif
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
-
+    return ER_OK;
 }
 
 QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
@@ -305,24 +296,33 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
         return status;
     }
 
-    GUID128 psk;
-    if (provider) {
-        authListener = new DefaultECDHEAuthListener();
-        CallDeprecatedSetPSK(authListener, psk.GetBytes(), GUID128::SIZE);
-    } else {
-        authListener = new DefaultECDHEAuthListener();
+    string password;
+    password.resize(PASSWORD_LEN);
+    status = RandomPassword(password);
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to generate random password");
+        return status;
     }
 
-    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK, authListener, nullptr, false, pcl);
+    authListener = new DefaultECDHEAuthListener();
+    if (provider) {
+        status = authListener->SetPassword((uint8_t*)password.data(), password.length());
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to set password");
+            return status;
+        }
+    }
+
+    status = ba->EnablePeerSecurity(KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_PSK " " KEYX_ECDHE_SPEKE, authListener, nullptr, false, pcl);
     if (ER_OK != status) {
         fprintf(stderr, "Failed to EnablePeerSecurity - status (%s)\n", QCC_StatusText(status));
         return status;
     }
 
     if (provider) {
-        printf("Allow doors to be claimable using a PSK.\n");
+        printf("Allow doors to be claimable using a password.\n");
         status = ba->GetPermissionConfigurator().SetClaimCapabilities(
-            PermissionConfigurator::CAPABLE_ECDHE_PSK | PermissionConfigurator::CAPABLE_ECDHE_NULL);
+            PermissionConfigurator::CAPABLE_ECDHE_SPEKE | PermissionConfigurator::CAPABLE_ECDHE_NULL);
         if (ER_OK != status) {
             fprintf(stderr, "Failed to SetClaimCapabilities - status (%s)\n", QCC_StatusText(status));
             return status;
@@ -333,6 +333,14 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
         if (ER_OK != status) {
             fprintf(stderr, "Failed to SetClaimCapabilityAdditionalInfo - status (%s)\n",
                     QCC_StatusText(status));
+            return status;
+        }
+    } else {
+        /* For consumers only claiming with ECDHE_NULL is supported, and the default claim capabilities allow other options. */
+        printf("This application must be claimed with ECDHE_NULL.\n");
+        status = ba->GetPermissionConfigurator().SetClaimCapabilities(PermissionConfigurator::CAPABLE_ECDHE_NULL);
+        if (ER_OK != status) {
+            fprintf(stderr, "Failed to SetClaimCapabilities - status (%s)\n", QCC_StatusText(status));
             return status;
         }
     }
@@ -376,8 +384,8 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
 
         if (PermissionConfigurator::CLAIMABLE == state) {
             printf("Door provider is not claimed.\n");
-            printf("The provider can be claimed using PSK with an application generated secret.\n");
-            printf("PSK = (%s)\n", psk.ToString().c_str());
+            printf("The provider can be claimed using SPEKE with an application generated secret.\n");
+            printf("Password = (%s)\n", password.c_str());
         }
     }
 
