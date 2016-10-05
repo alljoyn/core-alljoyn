@@ -1181,77 +1181,161 @@ QStatus _RemoteEndpoint::WriteCallback(qcc::Sink& sink, bool isTimedOut)
     return status;
 }
 
-QStatus _RemoteEndpoint::PushMessage(Message& msg)
+QStatus _RemoteEndpoint::PushMessageRouter(Message& msg, size_t& count)
 {
-    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
-    QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
-
     QStatus status = ER_OK;
-
     static const size_t MAX_DATA_MESSAGES = 1;
-    static const size_t MAX_TX_QUEUE_SIZE = 1;
-    size_t count = internal->txQueue.size();
-    bool wasEmpty = (count == 0);
-    bool threadWait = true;
-    bool isLeaf = true;
-
-    if (!internal) {
-        return ER_BUS_NO_ENDPOINT;
-    }
 
     internal->lock.Lock(MUTEX_CONTEXT);
+    count = internal->txQueue.size();
+    bool wasEmpty = (count == 0);
 
-    /*
-     * Don't continue if this endpoint is in the process of being closed
-     * Otherwise we risk deadlock when sending NameOwnerChanged signal to
-     * this dying endpoint
-     */
-    if (internal->state != Internal::STARTED) {
-        internal->lock.Unlock(MUTEX_CONTEXT);
-        return ER_BUS_ENDPOINT_CLOSING;
-    }
-
-    if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
-        isLeaf = false;
-
-        if (IsControlMessage(msg)) {
-            if (internal->numControlMessages < internal->maxControlMessages) {
-                internal->txQueue.push_front(msg);
-                internal->numControlMessages++;
-                if (wasEmpty) {
-                    internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
-                }
-            } else {
-                QCC_LogError(ER_BUS_ENDPOINT_CLOSING, ("Endpoint Tx failed (%s)", GetUniqueName().c_str()));
-                internal->stream->Abort();
-                internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
-                SetState(Internal::EXIT_WAIT);
-                Invalidate();
-                status = ER_BUS_ENDPOINT_CLOSING;
+    if (IsControlMessage(msg)) {
+        if (internal->numControlMessages < internal->maxControlMessages) {
+            internal->txQueue.push_front(msg);
+            internal->numControlMessages++;
+            if (wasEmpty) {
+                internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
             }
-            internal->lock.Unlock(MUTEX_CONTEXT);
+        } else {
+            QCC_LogError(ER_BUS_ENDPOINT_CLOSING, ("Endpoint Tx failed (%s)", GetUniqueName().c_str()));
+            internal->stream->Abort();
+            internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
+            SetState(Internal::EXIT_WAIT);
+            Invalidate();
+            status = ER_BUS_ENDPOINT_CLOSING;
+        }
+    } else {
+        /* If the txWaitQueue is not empty, dont queue the message.
+         * There are other threads that are blocked trying to send a message to
+         * this RemoteEndpoint
+         */
+        if ((internal->numDataMessages < MAX_DATA_MESSAGES) && (internal->txWaitQueue.empty())) {
+            internal->txQueue.push_front(msg);
+            internal->numDataMessages++;
+        } else {
+            /* This thread will have to wait for room in the queue */
+            Thread* thread = Thread::GetThread();
+            QCC_ASSERT(thread);
 
-            return status;
+            thread->AddAuxListener(this);
+            internal->txWaitQueue.push_front(thread);
+
+            for (;;) {
+                /* Remove a queue entry whose TTLs is expired.
+                 * Only threads that are the head of the txWaitqueue will purge this deque
+                 * and enqueue new messages to the txQueue.
+                 * This is to ensure that the original order of calling of PushMessage
+                 * is preserved.
+                 */
+                uint32_t maxWait = Event::WAIT_FOREVER;
+                if (internal->txWaitQueue.back() == thread) {
+                    deque<Message>::iterator it = internal->txQueue.begin();
+                    while (it != internal->txQueue.end()) {
+                        uint32_t expMs;
+                        if ((*it)->IsExpired(&expMs)) {
+                            if (IsControlMessage(*it)) {
+                                QCC_ASSERT(internal->numControlMessages > 0);
+                                internal->numControlMessages--;
+                            } else {
+                                QCC_ASSERT(internal->numDataMessages > 0);
+                                internal->numDataMessages--;
+                            }
+                            internal->txQueue.erase(it);
+                            break;
+                        } else {
+                            ++it;
+                            if (maxWait == Event::WAIT_FOREVER) {
+                                maxWait = expMs;
+                            } else {
+                                maxWait = (std::min)(maxWait, expMs);
+                            }
+                        }
+                    }
+
+                    if (internal->numDataMessages < MAX_DATA_MESSAGES) {
+                        count = internal->txQueue.size();
+                        /* Check queue wasn't drained while we were waiting */
+                        if (internal->txQueue.size() == 0) {
+                            wasEmpty = true;
+                        }
+                        internal->txQueue.push_front(msg);
+                        internal->numDataMessages++;
+                        status = ER_OK;
+                        break;
+                    }
+                }
+                internal->lock.Unlock(MUTEX_CONTEXT);
+                status = Event::Wait(Event::neverSet, maxWait);
+                internal->lock.Lock(MUTEX_CONTEXT);
+                /* Reset alert status */
+                if (ER_ALERTED_THREAD == status) {
+                    if (thread->GetAlertCode() == ENDPOINT_IS_DEAD_ALERTCODE) {
+                        status = ER_BUS_ENDPOINT_CLOSING;
+                    }
+                    thread->ResetAlertCode();
+                    thread->GetStopEvent().ResetEvent();
+                }
+
+                switch (internal->state) {
+                case Internal::STARTED:
+                case Internal::STOP_WAIT:
+                case Internal::OTHER_END_STOP_WAIT:
+                case Internal::STOPPING:
+                case Internal::EXIT_WAIT:
+                    /* Waiting for txQueue and txWaitQueue to drain. */
+                    break;
+
+                case Internal::STOPPED:
+                    status = ER_BUS_ENDPOINT_CLOSING;
+                    break;
+                }
+                if ((ER_OK != status) && (ER_ALERTED_THREAD != status) && (ER_TIMEOUT != status)) {
+                    break;
+                }
+            }
+            /* Remove thread from wait queue. */
+            thread->RemoveAuxListener(this);
+            deque<Thread*>::iterator eit = find(internal->txWaitQueue.begin(), internal->txWaitQueue.end(), thread);
+            if (eit != internal->txWaitQueue.end()) {
+                internal->txWaitQueue.erase(eit);
+            }
+
+            /* Alert the first one in the txWaitQueue */
+            if (0 < internal->txWaitQueue.size()) {
+                Thread* wakeMe = internal->txWaitQueue.back();
+                status = wakeMe->Alert();
+                if (ER_OK != status) {
+                    QCC_LogError(status, ("Failed to alert thread blocked on full tx queue"));
+                }
+            }
+
+        }
+
+        if (wasEmpty && (status == ER_OK)) {
+            internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
         }
     }
+    internal->lock.Unlock(MUTEX_CONTEXT);
 
+    return status;
+}
+
+QStatus _RemoteEndpoint::PushMessageLeaf(Message& msg, size_t& count)
+{
+    static const size_t MAX_TX_QUEUE_SIZE = 1;
+
+    QStatus status = ER_OK;
+    internal->lock.Lock(MUTEX_CONTEXT);
+    count = internal->txQueue.size();
+    bool wasEmpty = (count == 0);
     /* If the txWaitQueue is not empty, dont queue the message.
      * There are other threads that are blocked trying to send a message to
      * this RemoteEndpoint
      */
-    if (isLeaf) {
-        if ((count < MAX_TX_QUEUE_SIZE) && (internal->txWaitQueue.empty())) {
-            internal->txQueue.push_front(msg);
-            threadWait = false;
-        }
+    if ((count < MAX_TX_QUEUE_SIZE) && (internal->txWaitQueue.empty())) {
+        internal->txQueue.push_front(msg);
     } else {
-        if ((internal->numDataMessages < MAX_DATA_MESSAGES) && (internal->txWaitQueue.empty())) {
-            internal->txQueue.push_front(msg);
-            internal->numDataMessages++;
-            threadWait = false;
-        }
-    }
-    if (threadWait) {
         /* This thread will have to wait for room in the queue */
         Thread* thread = Thread::GetThread();
         QCC_ASSERT(thread);
@@ -1272,15 +1356,6 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
                 while (it != internal->txQueue.end()) {
                     uint32_t expMs;
                     if ((*it)->IsExpired(&expMs)) {
-                        if (!isLeaf) {
-                            if (IsControlMessage(*it)) {
-                                QCC_ASSERT(internal->numControlMessages > 0);
-                                internal->numControlMessages--;
-                            } else {
-                                QCC_ASSERT(internal->numDataMessages > 0);
-                                internal->numDataMessages--;
-                            }
-                        }
                         internal->txQueue.erase(it);
                         break;
                     } else {
@@ -1293,17 +1368,13 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
                     }
                 }
 
-                if ((isLeaf && (internal->txQueue.size() < MAX_TX_QUEUE_SIZE)) ||
-                    (!isLeaf && (internal->numDataMessages < MAX_DATA_MESSAGES))) {
+                if (internal->txQueue.size() < MAX_TX_QUEUE_SIZE) {
                     count = internal->txQueue.size();
                     /* Check queue wasn't drained while we were waiting */
                     if (internal->txQueue.size() == 0) {
                         wasEmpty = true;
                     }
                     internal->txQueue.push_front(msg);
-                    if (!isLeaf) {
-                        internal->numDataMessages++;
-                    }
                     status = ER_OK;
                     break;
                 }
@@ -1357,9 +1428,38 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
     if (wasEmpty && (status == ER_OK)) {
         internal->bus.GetInternal().GetIODispatch().EnableWriteCallbackNow(internal->stream);
     }
+    internal->lock.Unlock(MUTEX_CONTEXT);
+    return status;
+}
 
+QStatus _RemoteEndpoint::PushMessage(Message& msg)
+{
+    QCC_ASSERT(minimalEndpoint == false && "_RemoteEndpoint::PushMessage(): Unexpected PushMessage with no queues");
+    QCC_DbgTrace(("RemoteEndpoint::PushMessage %s (serial=%d)", GetUniqueName().c_str(), msg->GetCallSerial()));
+
+    QStatus status = ER_OK;
+    size_t count;
+
+    if (!internal) {
+        return ER_BUS_NO_ENDPOINT;
+    }
+    /*
+     * Don't continue if this endpoint is in the process of being closed
+     * Otherwise we risk deadlock when sending NameOwnerChanged signal to
+     * this dying endpoint
+     */
+    internal->lock.Lock(MUTEX_CONTEXT);
+    if (internal->state != Internal::STARTED) {
+        internal->lock.Unlock(MUTEX_CONTEXT);
+        return ER_BUS_ENDPOINT_CLOSING;
+    }
     internal->lock.Unlock(MUTEX_CONTEXT);
 
+    if (internal->bus.GetInternal().GetRouter().IsDaemon()) {
+        status = PushMessageRouter(msg, count);
+    } else {
+        status = PushMessageLeaf(msg, count);
+    }
 #ifndef NDEBUG
 #undef QCC_MODULE
 #define QCC_MODULE "TXSTATS"
@@ -1372,7 +1472,6 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 #undef QCC_MODULE
 #define QCC_MODULE "ALLJOYN"
 #endif
-
     return status;
 }
 

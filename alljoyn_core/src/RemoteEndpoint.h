@@ -639,6 +639,28 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * RemoteEndpoint users should not call this method.
      */
     void ExitCallback();
+
+    /**
+     * Send an outgoing message.
+     *
+     * @param[in] msg   Message to be sent.
+     * @param[out] count   Number of messages in txQueue
+     * @return
+     *      - ER_OK if successful.
+     *      - An error status otherwise
+     */
+    virtual QStatus PushMessageRouter(Message& msg, size_t& count);
+
+    /**
+     * Send an outgoing message.
+     *
+     * @param[in] msg   Message to be sent.
+     * @param[out] count   Number of messages in txQueue
+     * @return
+     *      - ER_OK if successful.
+     *      - An error status otherwise
+     */
+    virtual QStatus PushMessageLeaf(Message& msg, size_t& count);
 };
 
 }
