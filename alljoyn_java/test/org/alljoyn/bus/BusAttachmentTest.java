@@ -2546,27 +2546,48 @@ public class BusAttachmentTest extends TestCase {
      * releaseName - is being tested in the tearDown of every test
      */
 
+    public void testRegisterNullApplicationStateListener() throws Exception {
+        bus = new BusAttachment(getClass().getName(),
+                BusAttachment.RemoteMessage.Receive);
+        bus.connect();
+        try {
+            Status status = bus.registerApplicationStateListener(null);
+            fail("Failed to get expected exception: ApplicationStateListener object is null");
+        } catch (Exception e) {
+            // expected exception
+        }
+    }
+
     public void testUnregisterApplicationStateListener() throws Exception {
         bus = new BusAttachment(getClass().getName(),
                 BusAttachment.RemoteMessage.Receive);
         bus.connect();
         assertEquals(Status.APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.unregisterApplicationStateListener(appStateListener));
+        assertEquals(Status.APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.unregisterApplicationStateListener(null));
     }
 
     public void testRegisterApplicationStateListener() throws Exception {
         bus = new BusAttachment(getClass().getName(),
                 BusAttachment.RemoteMessage.Receive);
         bus.connect();
+
+        // Test basic register/unregister
+        assertEquals(Status.OK, bus.registerApplicationStateListener(appStateListener));
+        assertEquals(Status.OK, bus.unregisterApplicationStateListener(appStateListener));
+
+        // Test duplicate unregister
+        assertEquals(Status.APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.unregisterApplicationStateListener(appStateListener));
+
+        // Test duplicate register
         assertEquals(Status.OK, bus.registerApplicationStateListener(appStateListener));
         assertEquals(Status.APPLICATION_STATE_LISTENER_ALREADY_EXISTS, bus.registerApplicationStateListener(appStateListener));
         assertEquals(Status.OK, bus.unregisterApplicationStateListener(appStateListener));
     }
 
     private ApplicationStateListener appStateListener = new ApplicationStateListener() {
-
         public void state(String busName, KeyInfoNISTP256 publicKeyInfo, PermissionConfigurator.ApplicationState state) {
             System.out.println("state callback was called on this bus " + busName);
         }
-
     };
+
 }

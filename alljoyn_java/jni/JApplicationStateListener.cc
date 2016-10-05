@@ -37,6 +37,7 @@ JApplicationStateListener::JApplicationStateListener(jobject jlistener) : jasLis
 
     if (!jlistener) {
         QCC_LogError(ER_FAIL, ("%s: jlistener null", __FUNCTION__));
+        Throw("java/lang/NullPointerException", "ApplicationStateListener object is null");
         return;
     }
 
