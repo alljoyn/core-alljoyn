@@ -53,61 +53,33 @@ class AsyncTracker {
 
     static AuthContext* Allocate(AuthListener* listener, AuthListener::Credentials* credentials)
     {
-        if (IncrementAndFetch(&refs) == 1) {
-            /* Handle race where a remove is in progress */
-            while (self) {
-                qcc::Sleep(1);
-            }
-            self = new AsyncTracker();
-            QCC_DbgHLPrintf(("Allocated AsyncTracker %#x", self));
-        } else {
-            /* Handle race where another add is in progress */
-            while (!self) {
-                qcc::Sleep(1);
-            }
-            QCC_DbgHLPrintf(("AsyncTracker %#x ref count = %d", self, refs));
-        }
         AuthContext* context = new AuthContext(listener, credentials);
-        self->lock.Lock();
+        QCC_VERIFY(ER_OK == self->lock.Lock(MUTEX_CONTEXT));
         self->contexts.push_back(context);
-        self->lock.Unlock();
+        QCC_VERIFY(ER_OK == self->lock.Unlock(MUTEX_CONTEXT));
         return context;
     }
 
     static bool Trigger(AuthContext* context, bool accept, AuthListener::Credentials* credentials)
     {
         bool found = false;
-        /* Ensure that self has been Allocated in AsyncTracker::Allocate */
-        if (self) {
-            if (IncrementAndFetch(&refs) > 1) {
-                self->lock.Lock();
-                for (std::list<AuthContext*>::iterator it = self->contexts.begin(); it != self->contexts.end(); ++it) {
-                    if (*it == context) {
-                        self->contexts.erase(it);
-                        context->accept = accept;
-                        if (accept && credentials && context->credentials) {
-                            *context->credentials = *credentials;
-                        }
-                        /*
-                         * Set the event to unblock the waiting thread
-                         */
-                        context->event.SetEvent();
-                        found = true;
-                        /*
-                         * Decrement to balance increment in AsyncTracker::Allocate
-                         */
-                        DecrementAndFetch(&refs);
-                        break;
-                    }
+        QCC_VERIFY(ER_OK == self->lock.Lock(MUTEX_CONTEXT));
+        for (std::list<AuthContext*>::iterator it = self->contexts.begin(); it != self->contexts.end(); ++it) {
+            if (*it == context) {
+                self->contexts.erase(it);
+                context->accept = accept;
+                if (accept && credentials && context->credentials) {
+                    *context->credentials = *credentials;
                 }
-                self->lock.Unlock();
-            }
-            if (DecrementAndFetch(&refs) == 0) {
-                QCC_DbgHLPrintf(("Released AsyncTracker %#x", self));
-                delete self;
-                self = NULL;
+                /*
+                 * Set the event to unblock the waiting thread
+                 */
+                context->event.SetEvent();
+                found = true;
+                break;
             }
         }
+        QCC_VERIFY(ER_OK == self->lock.Unlock(MUTEX_CONTEXT));
         return found;
     }
 
@@ -119,46 +91,42 @@ class AsyncTracker {
 
     static void RemoveAll(AuthListener* listener)
     {
-        /* Ensure that self has been Allocated in AsyncTracker::Allocate */
-        if (self) {
-            if (IncrementAndFetch(&refs) > 1) {
-                self->lock.Lock();
-                for (std::list<AuthContext*>::iterator it = self->contexts.begin(); it != self->contexts.end();) {
-                    AuthContext* context = *it;
-                    if (context->listener == listener) {
-                        /*
-                         * Set the event to unblock the waiting thread
-                         */
-                        context->accept = false;
-                        context->event.SetEvent();
-                        it = self->contexts.erase(it);
-                        /*
-                         * Decrement to balance increment in AsyncTracker::Allocate
-                         */
-                        DecrementAndFetch(&refs);
-                    } else {
-                        ++it;
-                    }
-                }
-                self->lock.Unlock();
-            }
-            if (DecrementAndFetch(&refs) == 0) {
-                delete self;
-                self = NULL;
+        QCC_VERIFY(ER_OK == self->lock.Lock(MUTEX_CONTEXT));
+        for (std::list<AuthContext*>::iterator it = self->contexts.begin(); it != self->contexts.end();) {
+            AuthContext* context = *it;
+            if (context->listener == listener) {
+                /*
+                 * Set the event to unblock the waiting thread
+                 */
+                context->accept = false;
+                context->event.SetEvent();
+                it = self->contexts.erase(it);
+            } else {
+                ++it;
             }
         }
+        QCC_VERIFY(ER_OK == self->lock.Unlock(MUTEX_CONTEXT));
     }
+
+    static AsyncTracker* self;
 
   private:
     std::list<AuthContext*> contexts;
     qcc::Mutex lock;
-
-    static volatile int32_t refs;
-    static AsyncTracker* self;
 };
 
-volatile int32_t AsyncTracker::refs = 0;
 AsyncTracker* AsyncTracker::self = NULL;
+
+void ProtectedAuthListener::Init()
+{
+    AsyncTracker::self = new AsyncTracker();
+}
+
+void ProtectedAuthListener::Shutdown()
+{
+    delete AsyncTracker::self;
+    AsyncTracker::self = NULL;
+}
 
 void ProtectedAuthListener::Set(AuthListener* authListener)
 {

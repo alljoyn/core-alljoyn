@@ -28,6 +28,7 @@
 #include "BusInternal.h"
 #include "KeyStoreListener.h"
 #include "NamedPipeClientTransport.h"
+#include "ProtectedAuthListener.h"
 #include "XmlManifestTemplateConverter.h"
 #include "XmlManifestTemplateValidator.h"
 #include "XmlPoliciesConverter.h"
@@ -46,6 +47,7 @@ class StaticGlobals {
   public:
     static void Init()
     {
+        ProtectedAuthListener::Init();
         KeyStore::Init();
         NamedPipeClientTransport::Init();
         AutoPingerInternal::Init();
@@ -74,6 +76,7 @@ class StaticGlobals {
         AutoPingerInternal::Shutdown();
         NamedPipeClientTransport::Shutdown();
         KeyStore::Shutdown();
+        ProtectedAuthListener::Shutdown();
     }
 };
 
