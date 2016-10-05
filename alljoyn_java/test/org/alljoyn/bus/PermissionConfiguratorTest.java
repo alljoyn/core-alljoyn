@@ -54,6 +54,27 @@ public class PermissionConfiguratorTest extends TestCase {
         busAttachment.connect();
     }
 
+    private Status registerAuthListener() throws Exception {
+        Status status = Status.OK;
+        if (System.getProperty("os.name").startsWith("Windows")) {
+            status = busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null, null, false, pclistener);
+        } else if (System.getProperty("java.vm.name").startsWith("Dalvik")) {
+            /*
+             * on some Android devices File.createTempFile trys to create a file in
+             * a location we do not have permission to write to.  Resulting in a
+             * java.io.IOException: Permission denied error.
+             * This code assumes that the junit tests will have file IO permission
+             * for /data/data/org.alljoyn.bus
+             */
+            status = busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
+                            "/data/data/org.alljoyn.bus/files/alljoyn.ks", false, pclistener);
+        } else {
+            status = busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
+                            File.createTempFile("alljoyn", "ks").getAbsolutePath(), false, pclistener);
+        }
+        return status;
+    }
+
     public void testVeryBasic() throws Exception {
         //Need to register AuthListener to be able to use permissionConfigurator
         permissionConfigurator = busAttachment.getPermissionConfigurator();
@@ -66,31 +87,13 @@ public class PermissionConfiguratorTest extends TestCase {
     }
 
     public void testNotClaimable() throws Exception {
-        busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null);
+        registerAuthListener();
         permissionConfigurator = busAttachment.getPermissionConfigurator();
         assertEquals(permissionConfigurator.getApplicationState(), PermissionConfigurator.ApplicationState.NOT_CLAIMABLE);
     }
 
     public void testBasic() throws Exception {
-        if (System.getProperty("os.name").startsWith("Windows")) {
-            assertEquals(Status.OK,
-                    busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null, null, false, pclistener));
-        } else if (System.getProperty("java.vm.name").startsWith("Dalvik")) {
-            /*
-             * on some Android devices File.createTempFile trys to create a file in
-             * a location we do not have permission to write to.  Resulting in a
-             * java.io.IOException: Permission denied error.
-             * This code assumes that the junit tests will have file IO permission
-             * for /data/data/org.alljoyn.bus
-             */
-            assertEquals(Status.OK,
-                    busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
-                            "/data/data/org.alljoyn.bus/files/alljoyn.ks", false, pclistener));
-        } else {
-            assertEquals(Status.OK,
-                    busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
-                                             File.createTempFile("alljoyn", "ks").getAbsolutePath(), false, pclistener));
-        }
+        assertEquals(Status.OK, registerAuthListener());
         permissionConfigurator = busAttachment.getPermissionConfigurator();
         assertEquals(permissionConfigurator.getApplicationState(), PermissionConfigurator.ApplicationState.NOT_CLAIMABLE);
         permissionConfigurator.setManifestTemplateFromXml(defaultManifestTemplate);
