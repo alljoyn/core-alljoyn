@@ -1190,8 +1190,8 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 
     static const size_t MAX_DATA_MESSAGES = 1;
     static const size_t MAX_TX_QUEUE_SIZE = 1;
-    size_t count = internal->txQueue.size();
-    bool wasEmpty = (count == 0);
+    size_t count;
+    bool wasEmpty;
     bool threadWait = true;
     bool isLeaf = true;
 
@@ -1200,6 +1200,9 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
     }
 
     internal->lock.Lock(MUTEX_CONTEXT);
+
+    count = internal->txQueue.size();
+    wasEmpty = (count == 0);
 
     /*
      * Don't continue if this endpoint is in the process of being closed
