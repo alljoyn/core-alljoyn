@@ -13212,9 +13212,11 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setVariant__J(JNIEnv* env, j
 }
 
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials(JNIEnv*env, jobject,
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials(JNIEnv* env, jclass clazz,
                                                                               jstring authMechanism, jstring password)
 {
+    QCC_UNUSED(clazz);
+
     /*
      * Load the C++ authMechanism Java authMechanism.
      */
