@@ -618,10 +618,12 @@ public class BusAttachmentTest extends TestCase {
 
     public void testBasicSecureConnection() throws Exception {
         bus = new BusAttachment(getClass().getName());
+        bus.registerKeyStoreListener(new NullKeyStoreListener());
         Status status = bus.connect();
         assertEquals(status, Status.OK);
 
         BusAttachment otherBus = new BusAttachment(getClass().getName());
+        otherBus.registerKeyStoreListener(new NullKeyStoreListener());
         status = otherBus.connect();
         assertEquals(status, Status.OK);
 
@@ -647,10 +649,12 @@ public class BusAttachmentTest extends TestCase {
 
     public void testSecureConnectionWithNullBusName() throws Exception {
         bus = new BusAttachment(getClass().getName());
+        bus.registerKeyStoreListener(new NullKeyStoreListener());
         Status status = bus.connect();
         assertEquals(status, Status.OK);
 
         BusAttachment otherBus = new BusAttachment(getClass().getName());
+        otherBus.registerKeyStoreListener(new NullKeyStoreListener());
         status = otherBus.connect();
         assertEquals(status, Status.OK);
 
