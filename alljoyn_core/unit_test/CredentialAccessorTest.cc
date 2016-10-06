@@ -27,6 +27,7 @@
 
 #include "CredentialAccessor.h"
 #include "InMemoryKeyStore.h"
+#include <qcc/Util.h>
 
 using namespace qcc;
 using namespace std;
@@ -565,6 +566,23 @@ TEST_F(CredentialAccessorTest, TwoKeysWithTheSameGUID)
  * application with keystore version 0x103.
  */
 
+#if (QCC_TARGET_ENDIAN == QCC_BIG_ENDIAN) && defined(QCC_OS_GROUP_POSIX)
+
+/** A 32-bit Big-Endian KeyStore for OpenWRT testing **/
+static const char Rev0X103KeyStore[] = {
+    "vWgQBOe83hKtREtXdBd0T4F01rvtgLa/2Z3pQIX07md1WWAa9GfwU0gqFZHV"
+    "TCMiykz4haBMt1pHSCE242zBPB/FDR0FcVS11djxcAnRu0RTAUHy/Ovm/i/p"
+    "dkAVwgLCwep8m19142n0+s1CmrJ2VJ1UwmN1jY72kelkIZuHuk0kn04lXDH9"
+    "Hk/Q+nHLSVEZFfJepWl3lIEk6crIEHls1T9eoAgN3fyxAtsJF4KSdBFHNQix"
+    "zECOJlZJ14dbgwyF6URwf8iafbneoWm8YRJoHdQY6n6cyQtQRqtAVju2CUjK"
+    "TJD079wyz+K7oTIqLZKrjFkDQ/iiCZTswPGTmdeqSihEs9ICievLY4v+wq+g"
+    "DSDGXBkv05OElCcUzseMU3sbwF4Y7mQ7QR5/GTz0CygxHlrr+Th5S8YCnmNu"
+    "agZvcD1KjAOtz9iN354BcdU6ibTyfzZdePFG7hdWJim9S6MBNQ2gwQFg7gc2"
+    "4gAAAWzBC3JMYgaQRW9wNImCW0sIAAAAIwED"
+}
+
+#else
+
 static const char Rev0X103KeyStore[] = {
     "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAAAAAAAA4jYH7mABwaANNQGjS70p"
     "JlYX7kbxeF02f/K0iTrVcQGe343Yz60DjEo9cG8Gam5jngLGS3k4+etaHjEo"
@@ -576,6 +594,9 @@ static const char Rev0X103KeyStore[] = {
     "cPHY1bVUcQUdDcUfPMFs4zYhSEdat0yghfhMyiIjTNWRFSpIU/Bn9BpgWXVn"
     "7vSFQOmd2b+2gO271nSBT3QXdFdLRK0S3rznBBBoveJlyA=="
 };
+
+#endif
+
 static const char Rev0X103KeyStorePwd[] = {
     "L3VzcjIvcGhpbG4vQ3JlZGVudGlhbEFjY2Vzc29yVGVzdA=="
 };
