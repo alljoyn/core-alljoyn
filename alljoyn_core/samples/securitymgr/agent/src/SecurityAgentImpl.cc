@@ -89,6 +89,11 @@ class ClaimContextImpl :
 #endif
     }
 
+    QStatus SetSharedPassword(const uint8_t* password, size_t passwordSize)
+    {
+        return SetPassword(password, passwordSize);
+    }
+
     ProxyObjectManager::SessionType GetSessionType()
     {
         switch (GetClaimType()) {
@@ -98,11 +103,14 @@ class ClaimContextImpl :
         case PermissionConfigurator::CAPABLE_ECDHE_PSK:
             return ProxyObjectManager::ECDHE_PSK;
 
+        case PermissionConfigurator::CAPABLE_ECDHE_SPEKE:
+            return ProxyObjectManager::ECDHE_SPEKE;
+
         case PermissionConfigurator::CAPABLE_ECDHE_ECDSA:
             return ProxyObjectManager::ECDHE_DSA;
 
         default:
-            return ProxyObjectManager::ECDHE_PSK;
+            return ProxyObjectManager::ECDHE_SPEKE;
         }
     }
 };
@@ -281,7 +289,7 @@ QStatus SecurityAgentImpl::Init()
 
         proxyObjectManager = make_shared<ProxyObjectManager>(busAttachment);
 
-        status = busAttachment->EnablePeerSecurity(KEYX_ECDHE_PSK, &proxyObjectManager->listener);
+        status = busAttachment->EnablePeerSecurity(KEYX_ECDHE_SPEKE, &proxyObjectManager->listener);
         if (ER_OK != status) {
             QCC_LogError(status,
                          ("Failed to enable security on the security agent bus attachment."));

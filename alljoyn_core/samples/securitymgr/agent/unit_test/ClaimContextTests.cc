@@ -50,6 +50,14 @@ class TestClaimContext :
         QCC_UNUSED(pskSize);
         return ER_OK;
     }
+
+    QStatus SetSharedPassword(const uint8_t* password,
+                              size_t passwordSize)
+    {
+        QCC_UNUSED(password);
+        QCC_UNUSED(passwordSize);
+        return ER_OK;
+    }
 };
 
 class ClaimContextTests :
@@ -118,15 +126,16 @@ TEST_F(ClaimContextTests, ApproveManifest) {
 TEST_F(ClaimContextTests, SetClaimType) {
     OnlineApplication app;
     ajn::securitymgr::Manifest mnf;
-    PermissionConfigurator::ClaimCapabilities caps = 0x1238;
+    PermissionConfigurator::ClaimCapabilities caps = 0x0000;    /* Nothing supported */
     PermissionConfigurator::ClaimCapabilityAdditionalInfo info = 0x4321;
 
     TestClaimContext ctx(app, mnf, caps, info);
 
     ASSERT_EQ(ClaimContext::CLAIM_TYPE_NOT_SET, ctx.GetClaimType());
-    ASSERT_EQ(ER_BAD_ARG_1, ctx.SetClaimType(0x08));
+    ASSERT_EQ(ER_BAD_ARG_1, ctx.SetClaimType(0x07));    /* an invalid claim capability */
     ASSERT_EQ(ER_BAD_ARG_1, ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_ECDSA));
     ASSERT_EQ(ER_BAD_ARG_1, ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_PSK));
+    ASSERT_EQ(ER_BAD_ARG_1, ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_SPEKE));
     ASSERT_EQ(ER_BAD_ARG_1, ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_NULL));
     ASSERT_EQ(ClaimContext::CLAIM_TYPE_NOT_SET, ctx.GetClaimType());
 
