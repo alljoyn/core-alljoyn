@@ -775,51 +775,41 @@ public class BusAttachmentTest extends TestCase {
                 new Class<?>[] { SimpleInterface.class });
         SimpleInterface proxy = proxyObj.getInterface(SimpleInterface.class);
 
-        boolean thrown = false;
         try {
             proxy.ping("hello");
-        } catch (ErrorReplyBusException ex) {
-            thrown = true;
-            assertEquals(Status.BUS_REPLY_IS_ERROR_MESSAGE, ex.getErrorStatus());
-            assertEquals("org.alljoyn.Bus.ErStatus", ex.getErrorName());
+            fail("Failed to receive expected BusException");
+        } catch (BusException ex) {
             /*
-             * in release mode the error code is returned in debug mode the
+             * In release mode the error code is returned, in debug mode the
              * actual text for the error is returned.
              */
-            assertTrue("ER_OS_ERROR".equals(ex.getErrorMessage()) || "0x0004".equals(ex.getErrorMessage()));
+            assertTrue("ER_OS_ERROR".equals(ex.getMessage()) || "0x0004".equals(ex.getMessage()));
         }
-        assertTrue(thrown);
 
-        thrown = false;
         try {
             proxy.ping("hello");
+            fail("Failed to receive expected BusException");
         } catch (ErrorReplyBusException ex) {
-            thrown = true;
             assertEquals(Status.BUS_REPLY_IS_ERROR_MESSAGE, ex.getErrorStatus());
             assertEquals("org.alljoyn.bus.ExceptionService.Error1", ex.getErrorName());
             assertEquals("", ex.getErrorMessage());
         }
-        assertTrue(thrown);
 
-        thrown = false;
         try {
             proxy.ping("hello");
+            fail("Failed to receive expected BusException");
         } catch (ErrorReplyBusException ex) {
-            thrown = true;
             assertEquals(Status.BUS_REPLY_IS_ERROR_MESSAGE, ex.getErrorStatus());
             assertEquals("org.alljoyn.bus.ExceptionService.Error2", ex.getErrorName());
             assertEquals("Message", ex.getErrorMessage());
         }
-        assertTrue(thrown);
 
-        thrown = false;
         try {
             proxy.ping("hello");
+            fail("Failed to receive expected BusException");
         } catch (BusException ex) {
-            thrown = true;
-            assertEquals("org.alljoyn.Bus.ErStatus", ex.getMessage());
+            assertTrue("ER_FAIL".equals(ex.getMessage()) || "0x0002".equals(ex.getMessage()));
         }
-        assertTrue(thrown);
     }
 
     private boolean found;
