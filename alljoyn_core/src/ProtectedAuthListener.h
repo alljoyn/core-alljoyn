@@ -84,6 +84,12 @@ class ProtectedAuthListener : public AuthListener {
     void AuthenticationComplete(const char* authMechanism, const char* peerName, bool success);
 
   private:
+    /**
+     * Static init/shutdown
+     */
+    static void Init();
+    static void Shutdown();
+    friend class StaticGlobals;
 
     /**
      * The inner listener that is being protected.

@@ -49,6 +49,7 @@ using namespace ajn::securitymgr;
 #define GROUPINFO_DELIMITER "/"
 #define GROUP_DESC_MAX 200
 #define GROUP_ID_MAX 32
+#define PASSWORD_LEN 6
 
 static map<string, KeyInfoNISTP256> keys;
 static Mutex keysLock;
@@ -292,8 +293,10 @@ class CLIClaimListener :
         string input;
         getline(cin, input);
 
-        char cmd;
-        cmd = input[0];
+        char cmd = 0;
+        if (input.length() > 0) {
+            cmd = input[0];
+        }
 
         switch (cmd) {
         case 'y':
@@ -304,6 +307,7 @@ class CLIClaimListener :
 
         ctx.ApproveManifest(result);
         if (result) {
+            printf("calling selectsession type\n");
             return SelectSessionType(ctx);
         }
         return ER_OK;
@@ -313,30 +317,46 @@ class CLIClaimListener :
     {
         PermissionConfigurator::ClaimCapabilities caps = ctx.GetClaimCapabilities()
                                                          & (PermissionConfigurator::CAPABLE_ECDHE_NULL |
-                                                            PermissionConfigurator::CAPABLE_ECDHE_PSK);
-
+                                                            PermissionConfigurator::CAPABLE_ECDHE_PSK |
+                                                            PermissionConfigurator::CAPABLE_ECDHE_SPEKE);
         if (0 == caps) {
-            //NULL and PSK not supported
-            cout << "Cannot claim application: claim over NULL or PSK session not supported by the application" << endl;
+            //NULL, SPEKE and PSK not supported
+            cout << "Cannot claim application: claim over NULL, SPEKE or PSK session not supported by the application" << endl;
             return ER_NOT_IMPLEMENTED;
         }
+
+        /* App supports exactly one mechanism. */
         if (PermissionConfigurator::CAPABLE_ECDHE_NULL == caps) {
             return ClaimOverNull(ctx);
         }
         if (PermissionConfigurator::CAPABLE_ECDHE_PSK == caps) {
             return ClaimOverPSK(ctx);
         }
+        if (PermissionConfigurator::CAPABLE_ECDHE_SPEKE == caps) {
+            return ClaimOverSPEKE(ctx);
+        }
 
+        /* App supports multiple mechanisms. */
         cout << "Select claim mechanism:" << endl;
-        cout << "  'n' to claim over a ECDHE_NULL session" << endl;
-        cout << "  'p' to claim over a ECDHE_PSK session" << endl;
-        cout << "  others to abort claiming process" << endl;
+        if (PermissionConfigurator::CAPABLE_ECDHE_NULL & caps) {
+            cout << "  'n' to claim over a ECDHE_NULL session" << endl;
+        }
+        if (PermissionConfigurator::CAPABLE_ECDHE_PSK & caps) {
+            cout << "  'p' to claim over a ECDHE_PSK session" << endl;
+        }
+        if (PermissionConfigurator::CAPABLE_ECDHE_SPEKE & caps) {
+            cout << "  's' to claim over a ECDHE_SPEKE session" << endl;
+        }
+
+        cout << "  press 'a' to abort the claiming process" << endl;
 
         string input;
         getline(cin, input);
 
-        char cmd;
-        cmd = input[0];
+        char cmd = 0;
+        if (input.length() > 0) {
+            cmd = input[0];
+        }
 
         switch (cmd) {
         case 'n':
@@ -344,6 +364,9 @@ class CLIClaimListener :
 
         case 'p':
             return ClaimOverPSK(ctx);
+
+        case 's':
+            return ClaimOverSPEKE(ctx);
 
         default:
             return ER_FAIL;
@@ -383,8 +406,10 @@ class CLIClaimListener :
         string input;
         getline(cin, input);
 
-        char cmd;
-        cmd = input[0];
+        char cmd = 0;
+        if (input.length() > 0) {
+            cmd = input[0];
+        }
 
         switch (cmd) {
         case 'a':
@@ -400,31 +425,143 @@ class CLIClaimListener :
 
     QStatus ReadPSK(ClaimContext& ctx)
     {
-        cout << "please enter the PSK provided by the application" << endl;
+        cout << "Please enter the PSK provided by the application:" << endl;
         string input;
         getline(cin, input);
         String pskString = input.c_str();
         if (GUID128::IsGUID(pskString, true)) {
             GUID128 psk(pskString);
-            ctx.SetPreSharedKey(psk.GetBytes(), GUID128::SIZE);
+            QStatus status = ctx.SetPreSharedKey(psk.GetBytes(), GUID128::SIZE);
+            if (status != ER_OK) {
+                cout << "Failed to set pre-shared key" << endl;
+                return status;
+            }
             cout << "Claiming application ..." << endl;
             return ER_OK;
         }
         cout << "PSK is not valid. Aborting ..." << endl;
-        return ER_OK;
+        return ER_FAIL;
     }
 
     QStatus ProvidePSK(ClaimContext& ctx)
     {
         GUID128 psk;
-        cout << "please provide the PSK to application and press enter to continue " << endl;
+        cout << "Please provide the PSK to application and press enter to continue " << endl;
         cout << "PSK =  '" << psk.ToString() << "'" << endl;
         string input;
-        ctx.SetPreSharedKey(psk.GetBytes(), GUID128::SIZE);
+        QStatus status = ctx.SetPreSharedKey(psk.GetBytes(), GUID128::SIZE);
+        if (status != ER_OK) {
+            cout << "Failed to set pre-shared key" << endl;
+            return status;
+        }
+
         getline(cin, input);
         cout << "Claiming application ..." << endl;
         return ER_OK;
     }
+
+    QStatus ClaimOverSPEKE(ClaimContext& ctx)
+    {
+        PermissionConfigurator::ClaimCapabilityAdditionalInfo info = ctx.GetClaimCapabilityInfo()
+                                                                     & (PermissionConfigurator::
+                                                                        PSK_GENERATED_BY_APPLICATION
+                                                                        | PermissionConfigurator::
+                                                                        PSK_GENERATED_BY_SECURITY_MANAGER);
+        if (info == 0) {
+            cout << "No supported password generation scheme found" << endl;
+            return ER_NOT_IMPLEMENTED;
+        }
+        ctx.SetClaimType(PermissionConfigurator::CAPABLE_ECDHE_SPEKE);
+        if (PermissionConfigurator::PSK_GENERATED_BY_APPLICATION == info) {
+            return ReadPassword(ctx);
+        }
+        if (PermissionConfigurator::PSK_GENERATED_BY_SECURITY_MANAGER == info) {
+            return ProvidePassword(ctx);
+        }
+        cout << "Select password generation:" << endl;
+        cout << "  'a' to use a password provided by the application" << endl;
+        cout << "  'g' to generate a password" << endl;
+        cout << "  others to abort claiming process" << endl;
+
+        string input;
+        getline(cin, input);
+
+        char cmd = 0;
+        if (input.length() > 0) {
+            cmd = input[0];
+        }
+
+        switch (cmd) {
+        case 'a':
+            return ReadPassword(ctx);
+
+        case 'g':
+            return ProvidePassword(ctx);
+
+        default:
+            return ER_FAIL;
+        }
+    }
+
+    QStatus ReadPassword(ClaimContext& ctx)
+    {
+        cout << "Please enter the password provided by the application:" << endl;
+        string input;
+        getline(cin, input);
+        if (input.length() > 0) {
+            QStatus status = ctx.SetSharedPassword((uint8_t*)input.data(), input.length());
+            if (status != ER_OK) {
+                cout << "Failed to set password" << endl;
+                return status;
+            }
+            cout << "Claiming application ..." << endl;
+            return ER_OK;
+        }
+        cout << "Password is not valid. Aborting ..." << endl;
+        return ER_FAIL;
+    }
+
+    QStatus RandomPassword(string& password)
+    {
+        GUID128 randomGuid;
+        const uint8_t* randomData = randomGuid.GetBytes();
+
+        QCC_ASSERT(password.length() <= GUID128::SIZE);
+
+        for (size_t i = 0; i < password.length(); i++) {
+            uint8_t value = (randomData[i] % 16);
+            if (value < 10) {
+                password[i] = '0' + value;
+            } else {
+                password[i] = 'A' + value - 10;
+            }
+        }
+
+        return ER_OK;
+    }
+
+    QStatus ProvidePassword(ClaimContext& ctx)
+    {
+        string password;
+        password.resize(PASSWORD_LEN);
+        QStatus status = RandomPassword(password);
+        if (status != ER_OK) {
+            cout << "Failed to generate random password" << endl;
+            return status;
+        }
+        cout << "Please provide the password to application and press enter to continue " << endl;
+        cout << "Password =  '" << password << "'" << endl;
+        status = ctx.SetSharedPassword((uint8_t*)password.data(), password.length());
+        if (status != ER_OK) {
+            cout << "Failed to set password" << endl;
+            return status;
+        }
+        string input;
+        getline(cin, input); // wait for enter to be pressed
+        cout << "Claiming application ..." << endl;
+        return ER_OK;
+    }
+
 };
 
 static void claim_application(shared_ptr<SecurityAgent>& secAgent,
@@ -778,8 +915,10 @@ static void handle_manifest_update(const shared_ptr<UIStorage>& uiStorage)
     string input;
     getline(cin, input);
 
-    char cmd;
-    cmd = input[0];
+    char cmd = 0;
+    if (input.length() > 0) {
+        cmd = input[0];
+    }
 
     switch (cmd) {
     case 'y':
@@ -856,7 +995,7 @@ static bool parse(shared_ptr<SecurityAgent>& secAgent,
                   PolicyGenerator& policyGenerator,
                   const string& input)
 {
-    char cmd;
+    char cmd = 0;
     size_t argpos;
     string arg = "";
 
