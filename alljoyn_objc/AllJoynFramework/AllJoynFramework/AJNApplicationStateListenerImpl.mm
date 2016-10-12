@@ -23,6 +23,11 @@ AJNApplicationStateListenerImpl::AJNApplicationStateListenerImpl(id<AJNApplicati
 {
 }
 
+AJNApplicationStateListenerImpl::~AJNApplicationStateListenerImpl()
+{
+    m_delegate = nil;
+}
+
 void AJNApplicationStateListenerImpl::State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
 {
     /*
