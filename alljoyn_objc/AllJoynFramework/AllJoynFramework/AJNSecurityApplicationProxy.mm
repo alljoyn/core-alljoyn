@@ -20,6 +20,12 @@
 
 using namespace ajn;
 
+@interface AJNObject(Private)
+
+@property (nonatomic) BOOL shouldDeleteHandleOnDealloc;
+
+@end
+
 @interface AJNBusAttachment(Private)
 
 @property (nonatomic, readonly) BusAttachment *busAttachment;
@@ -235,16 +241,20 @@ using namespace ajn;
 + (QStatus)signManifest:(AJNCertificateX509*)identityCertificate privateKey:(AJNECCPrivateKey*)privateKey unsignedManifestXml:(NSString*)unsignedManifestXml signedManifestXml:(char**)signedManifestXml
 
 {
-    if (identityCertChain == nil) {
+    if (identityCertificate == nil) {
         return ER_BAD_ARG_1;
     }
 
-    if (unsignedManifestXml == nil) {
+    if (privateKey == nil) {
         return ER_BAD_ARG_2;
     }
 
-    if (signedManifestXml == NULL) {
+    if (unsignedManifestXml == nil) {
         return ER_BAD_ARG_3;
+    }
+
+    if (signedManifestXml == NULL) {
+        return ER_BAD_ARG_4;
     }
 
     return ajn::SecurityApplicationProxy::SignManifest(*identityCertificate.certificate, *privateKey.privateKey, [unsignedManifestXml UTF8String], signedManifestXml);
@@ -271,7 +281,7 @@ using namespace ajn;
 + (void)destroyManifestDigest:(uint8_t*)digest
 {
     if (digest != NULL) {
-        ajn::DestroyManifestDigest(digest);
+        ajn::SecurityApplicationProxy::DestroyManifestDigest(digest);
     }
 }
 

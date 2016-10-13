@@ -331,7 +331,7 @@
  *          - #ER_XML_MALFORMED If the unsigned manifest is not compliant with the required format.
  *          - Other error status indicating failure.
  */
-+ (QStatus)computeManifestDigest:(NSString*)unsignedManifestXml identityCertificate:(AJNCertificateX509*)identityCertificate digest:(NSMutableData*)digest;
++ (QStatus)computeManifestDigest:(NSString*)unsignedManifestXml identityCertificate:(AJNCertificateX509*)identityCertificate digest:(uint8_t**)digest;
 
 /**
  * Destroys a digest buffer returned by a call to computeManifestDigest.

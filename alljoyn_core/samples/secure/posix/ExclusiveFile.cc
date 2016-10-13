@@ -17,15 +17,12 @@
 #include <qcc/String.h>
 #include <qcc/Debug.h>
 
+#include <stdlib.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/file.h>
-
-#if defined(QCC_OS_ANDROID)
-#include <stdlib.h>
-#endif
 
 #include "../ExclusiveFile.h"
 

@@ -26,11 +26,10 @@
 #include <alljoyn/KeyStoreListener.h>
 #include <alljoyn/Status.h>
 
+#include <stdlib.h>
+
 #include "ExclusiveFile.h"
 
-#if defined(QCC_OS_ANDROID)
-#include <stdlib.h>
-#endif
 
 #define QCC_MODULE "ALLJOYN_AUTH"
 
