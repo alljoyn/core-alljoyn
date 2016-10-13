@@ -47,8 +47,8 @@ static BasicClient *s_basicClient;
 // Constants
 //
 
-static NSString* kBasicClientInterfaceName = @"org.alljoyn.bus.sample";
-static NSString* kBasicClientServiceName = @"org.alljoyn.bus.sample";
+static NSString* kBasicClientInterfaceName = @"org.alljoyn.Bus.sample";
+static NSString* kBasicClientServiceName = @"org.alljoyn.Bus.sample";
 static NSString* kBasicClientServicePath = @"/sample";
 static const AJNSessionPort kBasicClientServicePort = 25;
 
