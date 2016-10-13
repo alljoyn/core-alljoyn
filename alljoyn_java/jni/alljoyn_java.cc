@@ -10043,13 +10043,28 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_registerApplication
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+    if (env->ExceptionCheck() || busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL bus pointer", __FUNCTION__));
         return JStatus(ER_FAIL);
     }
-    QCC_ASSERT(busPtr);
+
+    // Check whether the listener is already registered
+    for (vector<JApplicationStateListener*>::iterator i = busPtr->jApplicationStateListeners.begin(); i != busPtr->jApplicationStateListeners.end(); ++i) {
+        jobject jo = env->NewLocalRef((*i)->jasListener);
+        if (!jo) {
+            QCC_LogError(ER_FAIL, ("%s: Can't get new local reference to listener", __FUNCTION__));
+            continue;
+        }
+
+        if (env->IsSameObject(jo, jappstatelistener)) {
+            return JStatus(ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS);
+        }
+    }
 
     JApplicationStateListener* jASListener = new JApplicationStateListener(jappstatelistener);
+    if (env->ExceptionCheck()) {
+        return NULL;
+    }
 
     QStatus status = busPtr->RegisterApplicationStateListener(*jASListener);
 
@@ -10074,15 +10089,14 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_BusAttachment_unregisterApplicati
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     JBusAttachment* busPtr = GetHandle<JBusAttachment*>(thiz);
-    if (env->ExceptionCheck()) {
-        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+    if (env->ExceptionCheck() || busPtr == NULL) {
+        QCC_LogError(ER_FAIL, ("%s: Exception or NULL bus pointer", __FUNCTION__));
         return JStatus(ER_FAIL);
     }
-    QCC_ASSERT(busPtr);
 
     QCC_VERIFY(ER_OK == busPtr->baAppStateListenLock.Lock(MUTEX_CONTEXT));
 
-    QStatus status = ER_FAIL;
+    QStatus status = ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER;
 
     for (vector<JApplicationStateListener*>::iterator i = busPtr->jApplicationStateListeners.begin(); i != busPtr->jApplicationStateListeners.end(); ++i) {
         jobject jo = env->NewLocalRef((*i)->jasListener);
@@ -12130,6 +12144,10 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_ProxyBusObject_setProperty(JNIEnv* e
 
     if (ER_OK != status) {
         QCC_LogError(status, ("ProxyBusObjexct_setProperty(): Exception"));
+        if (env->ExceptionCheck()) {
+            env->ExceptionClear();
+        }
+
         if (!errorName.empty()) {
             QCC_DbgPrintf(("ProxyBusObject_setProperty(): Exception ErrorName: %s\nException ErrorMessage: %s", (errorName.c_str(), errorMessage.c_str())));
             /* errorName is returned as org.alljoyn.Bus.ErStatus
@@ -13194,9 +13212,11 @@ JNIEXPORT jlong JNICALL Java_org_alljoyn_bus_MsgArg_setVariant__J(JNIEnv* env, j
 }
 
 
-JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials(JNIEnv*env, jobject,
+JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PasswordManager_setCredentials(JNIEnv* env, jclass clazz,
                                                                               jstring authMechanism, jstring password)
 {
+    QCC_UNUSED(clazz);
+
     /*
      * Load the C++ authMechanism Java authMechanism.
      */

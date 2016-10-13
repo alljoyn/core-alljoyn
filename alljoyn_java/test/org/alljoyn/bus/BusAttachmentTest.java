@@ -618,10 +618,12 @@ public class BusAttachmentTest extends TestCase {
 
     public void testBasicSecureConnection() throws Exception {
         bus = new BusAttachment(getClass().getName());
+        bus.registerKeyStoreListener(new NullKeyStoreListener());
         Status status = bus.connect();
         assertEquals(status, Status.OK);
 
         BusAttachment otherBus = new BusAttachment(getClass().getName());
+        otherBus.registerKeyStoreListener(new NullKeyStoreListener());
         status = otherBus.connect();
         assertEquals(status, Status.OK);
 
@@ -647,10 +649,12 @@ public class BusAttachmentTest extends TestCase {
 
     public void testSecureConnectionWithNullBusName() throws Exception {
         bus = new BusAttachment(getClass().getName());
+        bus.registerKeyStoreListener(new NullKeyStoreListener());
         Status status = bus.connect();
         assertEquals(status, Status.OK);
 
         BusAttachment otherBus = new BusAttachment(getClass().getName());
+        otherBus.registerKeyStoreListener(new NullKeyStoreListener());
         status = otherBus.connect();
         assertEquals(status, Status.OK);
 
@@ -775,51 +779,41 @@ public class BusAttachmentTest extends TestCase {
                 new Class<?>[] { SimpleInterface.class });
         SimpleInterface proxy = proxyObj.getInterface(SimpleInterface.class);
 
-        boolean thrown = false;
         try {
             proxy.ping("hello");
-        } catch (ErrorReplyBusException ex) {
-            thrown = true;
-            assertEquals(Status.BUS_REPLY_IS_ERROR_MESSAGE, ex.getErrorStatus());
-            assertEquals("org.alljoyn.Bus.ErStatus", ex.getErrorName());
+            fail("Failed to receive expected BusException");
+        } catch (BusException ex) {
             /*
-             * in release mode the error code is returned in debug mode the
+             * In release mode the error code is returned, in debug mode the
              * actual text for the error is returned.
              */
-            assertTrue("ER_OS_ERROR".equals(ex.getErrorMessage()) || "0x0004".equals(ex.getErrorMessage()));
+            assertTrue("ER_OS_ERROR".equals(ex.getMessage()) || "0x0004".equals(ex.getMessage()));
         }
-        assertTrue(thrown);
 
-        thrown = false;
         try {
             proxy.ping("hello");
+            fail("Failed to receive expected BusException");
         } catch (ErrorReplyBusException ex) {
-            thrown = true;
             assertEquals(Status.BUS_REPLY_IS_ERROR_MESSAGE, ex.getErrorStatus());
             assertEquals("org.alljoyn.bus.ExceptionService.Error1", ex.getErrorName());
             assertEquals("", ex.getErrorMessage());
         }
-        assertTrue(thrown);
 
-        thrown = false;
         try {
             proxy.ping("hello");
+            fail("Failed to receive expected BusException");
         } catch (ErrorReplyBusException ex) {
-            thrown = true;
             assertEquals(Status.BUS_REPLY_IS_ERROR_MESSAGE, ex.getErrorStatus());
             assertEquals("org.alljoyn.bus.ExceptionService.Error2", ex.getErrorName());
             assertEquals("Message", ex.getErrorMessage());
         }
-        assertTrue(thrown);
 
-        thrown = false;
         try {
             proxy.ping("hello");
+            fail("Failed to receive expected BusException");
         } catch (BusException ex) {
-            thrown = true;
-            assertEquals("org.alljoyn.Bus.ErStatus", ex.getMessage());
+            assertTrue("ER_FAIL".equals(ex.getMessage()) || "0x0002".equals(ex.getMessage()));
         }
-        assertTrue(thrown);
     }
 
     private boolean found;
@@ -2546,27 +2540,48 @@ public class BusAttachmentTest extends TestCase {
      * releaseName - is being tested in the tearDown of every test
      */
 
+    public void testRegisterNullApplicationStateListener() throws Exception {
+        bus = new BusAttachment(getClass().getName(),
+                BusAttachment.RemoteMessage.Receive);
+        bus.connect();
+        try {
+            Status status = bus.registerApplicationStateListener(null);
+            fail("Failed to get expected exception: ApplicationStateListener object is null");
+        } catch (Exception e) {
+            // expected exception
+        }
+    }
+
     public void testUnregisterApplicationStateListener() throws Exception {
         bus = new BusAttachment(getClass().getName(),
                 BusAttachment.RemoteMessage.Receive);
         bus.connect();
         assertEquals(Status.APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.unregisterApplicationStateListener(appStateListener));
+        assertEquals(Status.APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.unregisterApplicationStateListener(null));
     }
 
     public void testRegisterApplicationStateListener() throws Exception {
         bus = new BusAttachment(getClass().getName(),
                 BusAttachment.RemoteMessage.Receive);
         bus.connect();
+
+        // Test basic register/unregister
+        assertEquals(Status.OK, bus.registerApplicationStateListener(appStateListener));
+        assertEquals(Status.OK, bus.unregisterApplicationStateListener(appStateListener));
+
+        // Test duplicate unregister
+        assertEquals(Status.APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER, bus.unregisterApplicationStateListener(appStateListener));
+
+        // Test duplicate register
         assertEquals(Status.OK, bus.registerApplicationStateListener(appStateListener));
         assertEquals(Status.APPLICATION_STATE_LISTENER_ALREADY_EXISTS, bus.registerApplicationStateListener(appStateListener));
         assertEquals(Status.OK, bus.unregisterApplicationStateListener(appStateListener));
     }
 
     private ApplicationStateListener appStateListener = new ApplicationStateListener() {
-
         public void state(String busName, KeyInfoNISTP256 publicKeyInfo, PermissionConfigurator.ApplicationState state) {
             System.out.println("state callback was called on this bus " + busName);
         }
-
     };
+
 }
