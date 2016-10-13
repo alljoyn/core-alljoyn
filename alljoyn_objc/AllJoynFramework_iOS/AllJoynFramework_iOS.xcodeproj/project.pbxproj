@@ -197,6 +197,8 @@
 		5B60D1301D995D9700F962FE /* AJNPingListener.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AJNPingListener.h; path = ../../AllJoynFramework/AllJoynFramework/AJNPingListener.h; sourceTree = "<group>"; };
 		5B60D1311D995D9700F962FE /* AJNPingListenerImpl.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AJNPingListenerImpl.h; path = ../../AllJoynFramework/AllJoynFramework/AJNPingListenerImpl.h; sourceTree = "<group>"; };
 		5B60D13E1D995DB500F962FE /* AJNPingListenerImpl.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPingListenerImpl.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNPingListenerImpl.mm; sourceTree = "<group>"; };
+		5B9BF7EA1DAE681000CA61D4 /* AJNSecurityApplicationProxy.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNSecurityApplicationProxy.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNSecurityApplicationProxy.mm; sourceTree = "<group>"; };
+		5B9BF7EB1DAE685100CA61D4 /* AJNSecurityApplicationProxy.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = AJNSecurityApplicationProxy.h; path = ../../AllJoynFramework/AllJoynFramework/AJNSecurityApplicationProxy.h; sourceTree = "<group>"; };
 		7D682D651899BC54009424AA /* AJNPasswordManager.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPasswordManager.h; path = ../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.h; sourceTree = "<group>"; };
 		7D682D671899BC96009424AA /* AJNPasswordManager.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPasswordManager.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNPasswordManager.mm; sourceTree = "<group>"; };
 		7DC6D47C1A02867500764C73 /* AJNAboutIconObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNAboutIconObject.mm; path = ../../AllJoynFramework/AllJoynFramework/AJNAboutIconObject.mm; sourceTree = "<group>"; };
@@ -371,6 +373,8 @@
 		AC1030AD156EC82300D2853A /* AllJoynFramework_iOS */ = {
 			isa = PBXGroup;
 			children = (
+				5B9BF7EB1DAE685100CA61D4 /* AJNSecurityApplicationProxy.h */,
+				5B9BF7EA1DAE681000CA61D4 /* AJNSecurityApplicationProxy.mm */,
 				5B60D1261D995D9700F962FE /* AJNAboutData.h */,
 				5B60D1141D995D3A00F962FE /* AJNAboutData.mm */,
 				7DD10A5919F9720500CACF38 /* AJNAboutDataListener.h */,
