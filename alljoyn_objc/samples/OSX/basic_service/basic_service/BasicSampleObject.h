@@ -21,8 +21,8 @@
 
 const AJNSessionPort kBasicObjectServicePort = 25;
 NSString * const kBasicObjectServicePath = @ "/sample";
-NSString * const kBasicObjectServiceName = @ "org.alljoyn.bus.sample";
-NSString * const kBasicObjectInterfaceName = @ "org.alljoyn.bus.sample";
+NSString * const kBasicObjectServiceName = @ "org.alljoyn.Bus.sample";
+NSString * const kBasicObjectInterfaceName = @ "org.alljoyn.Bus.sample";
 NSString * const kBasicObjectMethodName = @ "cat";
 
 @protocol MyMethodSample <AJNBusInterface>
