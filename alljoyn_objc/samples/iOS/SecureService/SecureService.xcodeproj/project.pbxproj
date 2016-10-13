@@ -18,6 +18,11 @@
 		7DCBEE111A254D2600A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE071A254D2600A53A83 /* AJNAboutProxy.mm */; };
 		7DCBEE121A254D2600A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE091A254D2600A53A83 /* AJNPasswordManager.mm */; };
 		83B85380193B13660088DD20 /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83B8537F193B13660088DD20 /* AJNTranslatorImpl.mm */; };
+		9A8E48031DAEC6530071D5BB /* AJNCertificateX509.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E47FA1DAEC6530071D5BB /* AJNCertificateX509.mm */; };
+		9A8E48041DAEC6530071D5BB /* AJNCryptoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E47FC1DAEC6530071D5BB /* AJNCryptoECC.mm */; };
+		9A8E48051DAEC6530071D5BB /* AJNKeyInfoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E47FE1DAEC6530071D5BB /* AJNKeyInfoECC.mm */; };
+		9A8E48061DAEC6530071D5BB /* AJNPermissionConfigurationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E48001DAEC6530071D5BB /* AJNPermissionConfigurationListenerImpl.mm */; };
+		9A8E48071DAEC6530071D5BB /* AJNPermissionConfigurator.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A8E48021DAEC6530071D5BB /* AJNPermissionConfigurator.mm */; };
 		AC88104F1649DB10006CD25A /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC88104E1649DB10006CD25A /* UIKit.framework */; };
 		AC8810511649DB10006CD25A /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810501649DB10006CD25A /* Foundation.framework */; };
 		AC8810531649DB10006CD25A /* CoreGraphics.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8810521649DB10006CD25A /* CoreGraphics.framework */; };
@@ -89,6 +94,16 @@
 		83B8537D193B13660088DD20 /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		83B8537E193B13660088DD20 /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		83B8537F193B13660088DD20 /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
+		9A8E47F91DAEC6530071D5BB /* AJNCertificateX509.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNCertificateX509.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCertificateX509.h; sourceTree = "<group>"; };
+		9A8E47FA1DAEC6530071D5BB /* AJNCertificateX509.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCertificateX509.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCertificateX509.mm; sourceTree = "<group>"; };
+		9A8E47FB1DAEC6530071D5BB /* AJNCryptoECC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNCryptoECC.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCryptoECC.h; sourceTree = "<group>"; };
+		9A8E47FC1DAEC6530071D5BB /* AJNCryptoECC.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCryptoECC.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCryptoECC.mm; sourceTree = "<group>"; };
+		9A8E47FD1DAEC6530071D5BB /* AJNKeyInfoECC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNKeyInfoECC.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.h; sourceTree = "<group>"; };
+		9A8E47FE1DAEC6530071D5BB /* AJNKeyInfoECC.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNKeyInfoECC.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.mm; sourceTree = "<group>"; };
+		9A8E47FF1DAEC6530071D5BB /* AJNPermissionConfigurationListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPermissionConfigurationListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurationListenerImpl.h; sourceTree = "<group>"; };
+		9A8E48001DAEC6530071D5BB /* AJNPermissionConfigurationListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPermissionConfigurationListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurationListenerImpl.mm; sourceTree = "<group>"; };
+		9A8E48011DAEC6530071D5BB /* AJNPermissionConfigurator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPermissionConfigurator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurator.h; sourceTree = "<group>"; };
+		9A8E48021DAEC6530071D5BB /* AJNPermissionConfigurator.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPermissionConfigurator.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurator.mm; sourceTree = "<group>"; };
 		AC88104A1649DB10006CD25A /* SecureService.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SecureService.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AC88104E1649DB10006CD25A /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		AC8810501649DB10006CD25A /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
@@ -263,6 +278,16 @@
 		AC8810781649DC7E006CD25A /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				9A8E47F91DAEC6530071D5BB /* AJNCertificateX509.h */,
+				9A8E47FA1DAEC6530071D5BB /* AJNCertificateX509.mm */,
+				9A8E47FB1DAEC6530071D5BB /* AJNCryptoECC.h */,
+				9A8E47FC1DAEC6530071D5BB /* AJNCryptoECC.mm */,
+				9A8E47FD1DAEC6530071D5BB /* AJNKeyInfoECC.h */,
+				9A8E47FE1DAEC6530071D5BB /* AJNKeyInfoECC.mm */,
+				9A8E47FF1DAEC6530071D5BB /* AJNPermissionConfigurationListenerImpl.h */,
+				9A8E48001DAEC6530071D5BB /* AJNPermissionConfigurationListenerImpl.mm */,
+				9A8E48011DAEC6530071D5BB /* AJNPermissionConfigurator.h */,
+				9A8E48021DAEC6530071D5BB /* AJNPermissionConfigurator.mm */,
 				7D6808171A9806E40000F28D /* AJNInit.h */,
 				7D6808181A9806E40000F28D /* AJNInit.mm */,
 				7DCBEDF61A254D2600A53A83 /* AJNAboutObjectDescription.mm */,
@@ -422,9 +447,11 @@
 				AC88105B1649DB10006CD25A /* main.m in Sources */,
 				7D6808191A9806E40000F28D /* AJNInit.mm in Sources */,
 				7DCBEE0C1A254D2600A53A83 /* AJNAboutDataListenerImpl.mm in Sources */,
+				9A8E48031DAEC6530071D5BB /* AJNCertificateX509.mm in Sources */,
 				AC88105F1649DB10006CD25A /* AppDelegate.m in Sources */,
 				7DCBEE101A254D2600A53A83 /* AJNAboutListenerImpl.mm in Sources */,
 				AC8810B51649DC99006CD25A /* AJNAuthenticationListenerImpl.mm in Sources */,
+				9A8E48041DAEC6530071D5BB /* AJNCryptoECC.mm in Sources */,
 				AC8810B61649DC99006CD25A /* AJNBus.m in Sources */,
 				7DCBEE121A254D2600A53A83 /* AJNPasswordManager.mm in Sources */,
 				AC8810B71649DC99006CD25A /* AJNBusAttachment.mm in Sources */,
@@ -440,12 +467,14 @@
 				AC8810BE1649DC99006CD25A /* AJNInterfaceProperty.mm in Sources */,
 				AC8810BF1649DC99006CD25A /* AJNKeyStoreListenerImpl.mm in Sources */,
 				AC8810C01649DC99006CD25A /* AJNMessage.mm in Sources */,
+				9A8E48051DAEC6530071D5BB /* AJNKeyInfoECC.mm in Sources */,
 				AC8810C11649DC99006CD25A /* AJNMessageArgument.mm in Sources */,
 				7DCBEE0B1A254D2600A53A83 /* AJNAboutObject.mm in Sources */,
 				7DCBEE0A1A254D2600A53A83 /* AJNAboutObjectDescription.mm in Sources */,
 				AC8810C21649DC99006CD25A /* AJNMessageHeaderFields.mm in Sources */,
 				AC8810C31649DC99006CD25A /* AJNObject.m in Sources */,
 				AC8810C41649DC99006CD25A /* AJNProxyBusObject.mm in Sources */,
+				9A8E48061DAEC6530071D5BB /* AJNPermissionConfigurationListenerImpl.mm in Sources */,
 				AC8810C51649DC99006CD25A /* AJNSecurityCredentials.mm in Sources */,
 				AC8810C61649DC99006CD25A /* AJNServiceController.m in Sources */,
 				AC8810C71649DC99006CD25A /* AJNSessionListenerImpl.mm in Sources */,
@@ -456,6 +485,7 @@
 				AC8810CB1649DC99006CD25A /* AJNStatus.m in Sources */,
 				AC8810CC1649DC99006CD25A /* AJNTransportMask.m in Sources */,
 				AC8810CD1649DC99006CD25A /* AJNVersion.mm in Sources */,
+				9A8E48071DAEC6530071D5BB /* AJNPermissionConfigurator.mm in Sources */,
 				83B85380193B13660088DD20 /* AJNTranslatorImpl.mm in Sources */,
 				AC8811431649E04E006CD25A /* Constants.m in Sources */,
 				AC8811EB164DD219006CD25A /* AuthenticationTableViewController.m in Sources */,
@@ -567,10 +597,10 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "SecureService/SecureService-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-				    "\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
-				    "\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
-				    "\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
-				    "\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "SecureService/SecureService-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
@@ -605,10 +635,10 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = "SecureService/SecureService-Prefix.pch";
 				HEADER_SEARCH_PATHS = (
-				    "\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
-				    "\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
-				    "\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
-				    "\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
+					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/inc\"",
 				);
 				INFOPLIST_FILE = "SecureService/SecureService-Info.plist";
 				IPHONEOS_DEPLOYMENT_TARGET = 9.0;
