@@ -225,7 +225,7 @@ class AboutThread : public Thread, public ThreadListener {
 class MyAboutListener : public AboutListener {
     void Announced(const char* busName, uint16_t version, SessionPort port, const MsgArg& objectDescriptionArg, const MsgArg& aboutDataArg) {
         printf("*********************************************************************************\n");
-        printf("Anounce signal discovered\n");
+        printf("Announce signal discovered\n");
         printf("\tFrom bus %s\n", busName);
         printf("\tAbout version %hu\n", version);
         printf("\tSessionPort %hu\n", port);
@@ -325,8 +325,8 @@ int CDECL_CALL main(int argc, char** argv)
     MyAboutListener aboutListener;
     g_bus->RegisterAboutListener(aboutListener);
 
-    const char* interfaces[] = { org::alljoyn::About::InterfaceName };
-    status = g_bus->WhoImplements(interfaces, sizeof(interfaces) / sizeof(interfaces[0]));
+    /* Listen for all About announcements. */
+    status = g_bus->WhoImplements(nullptr);
     if (ER_OK == status) {
         printf("WhoImplements called.\n");
     } else {
