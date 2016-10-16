@@ -29,7 +29,9 @@ public class ECCPublicKey {
      */
     private byte y[];
 
-    private ECCPublicKey(byte x_coor[], byte y_coor[]) {
+    public ECCPublicKey() {}
+
+    public ECCPublicKey(byte x_coor[], byte y_coor[]) {
         x = x_coor;
         y = y_coor;
     }
@@ -40,6 +42,14 @@ public class ECCPublicKey {
 
     public byte[] getY() {
         return y;
+    }
+
+    public void setX(byte[] x_coor) {
+        x = x_coor;
+    }
+
+    public void setY(byte[] y_coor) {
+        y = y_coor;
     }
 
     public long getCoordinateSize() {

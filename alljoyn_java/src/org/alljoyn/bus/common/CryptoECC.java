@@ -28,7 +28,7 @@ public class CryptoECC {
     /**
      * Allocate native resources.
      */
-    public native void create() throws Exception;
+    public native void create() throws BusException;
 
     /** Release native resources. */
     private synchronized native void destroy();
@@ -36,7 +36,7 @@ public class CryptoECC {
     /**
      * Default Constructor
      */
-    public CryptoECC() throws Exception {
+    public CryptoECC() throws BusException {
         create();
     }
 

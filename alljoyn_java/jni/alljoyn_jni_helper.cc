@@ -30,6 +30,9 @@ uint8_t* ToByteArray(jbyteArray array)
 {
     JNIEnv* env = GetEnv();
     int len = env->GetArrayLength(array);
+    if (len == 0) {
+        return NULL;
+    }
     uint8_t* buf = new uint8_t[len];
     env->GetByteArrayRegion(array, 0, len, reinterpret_cast<jbyte*>(buf));
     return buf;
