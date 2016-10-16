@@ -63,6 +63,7 @@ public class CertificateX509 {
     public CertificateX509()
     {
         create(null);
+        m_type = CertificateType.UNRESTRICTED_CERTIFICATE;
     }
 
     /**
@@ -72,6 +73,17 @@ public class CertificateX509 {
     public CertificateX509(CertificateType type)
     {
         create(type);
+        m_type = type;
+    }
+
+    private CertificateType m_type;
+
+    /**
+     * Get the certificate type.
+     * @return Certificate type
+     */
+    public CertificateType getType() {
+        return m_type;
     }
 
     /**
@@ -758,7 +770,7 @@ public class CertificateX509 {
      * @throws BusException
      * error code.
      */
-    public boolean validateCertificateTypeInCertChain(CertificateX509[] certChain) throws BusException {
+    public static boolean validateCertificateTypeInCertChain(CertificateX509[] certChain) throws BusException {
         return validateCertificateTypeInCertChain(certChain, certChain.length);
     }
 
