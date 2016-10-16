@@ -414,7 +414,7 @@ class DefaultECDHEAuthListener : public AuthListener {
      */
     QCC_DEPRECATED(DefaultECDHEAuthListener(const uint8_t* psk, size_t pskSize));
 
-    ~DefaultECDHEAuthListener();
+    virtual ~DefaultECDHEAuthListener();
 
     /**
      * @brief updates the PSK used by this DefaultECDHEAuthListener
