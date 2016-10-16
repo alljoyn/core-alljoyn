@@ -453,9 +453,9 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_common_CertificateX509_sign(JNIEnv* 
 
     ECCPrivateKey eccPrivateKey;
 
-    JLocalRef<jbyteArray> jeccD = (jbyteArray) jenv->GetObjectField(jeccPrivateKey, FID_ECCPrivateKey_d);
+    jbyteArray jeccD = (jbyteArray) jenv->GetObjectField(jeccPrivateKey, FID_ECCPrivateKey_d);
 
-    uint8_t* eccD = ToByteArray(jeccD.move());
+    uint8_t* eccD = ToByteArray(jeccD);
     if (jenv->ExceptionCheck()) {
         delete [] eccD;
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));

@@ -24,15 +24,52 @@ public class ECCPrivateKey {
      */
     private byte d[];
 
+    public ECCPrivateKey() {}
+
     /**
      * ECCPrivateKey constructor
      */
-    private ECCPrivateKey(byte d_key[]) {
+    public ECCPrivateKey(byte d_key[]) {
         d = d_key;
+    }
+
+    public byte[] getD() {
+        return d;
+    }
+
+    public void setD(byte[] m_d) {
+        d = m_d;
     }
 
     @Override
     public String toString() {
         return Arrays.toString(d);
+    }
+
+    @Override
+    public boolean equals(Object compObj) {
+        if (this == compObj) {
+            return true;
+        }
+        if (!(compObj instanceof ECCPrivateKey)) {
+            return false;
+        }
+        if (compObj == null) {
+            return false;
+        }
+
+        ECCPrivateKey compPublicKey = (ECCPrivateKey) compObj;
+
+        if (d.length != compPublicKey.d.length) {
+            return false;
+        }
+
+        for (int index = 0; index < d.length; index++) {
+            if (d[index] != compPublicKey.d[index]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }
