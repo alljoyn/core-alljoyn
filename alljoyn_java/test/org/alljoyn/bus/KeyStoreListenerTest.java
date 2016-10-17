@@ -37,14 +37,6 @@ public class KeyStoreListenerTest extends TestCase {
     private BusAuthListener authListener;
     private BusAuthListener otherAuthListener;
 
-    public class InMemoryKeyStoreListener implements KeyStoreListener {
-        private byte[] keys;
-
-        public byte[] getKeys() { return keys; }
-        public char[] getPassword() { return "password".toCharArray(); }
-        public void putKeys(byte[] keys) { this.keys = keys; }
-    }
-
     public class SecureService implements SecureInterface, BusObject {
         public String ping(String str) { return str; }
     }
