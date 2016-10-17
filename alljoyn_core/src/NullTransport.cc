@@ -220,7 +220,7 @@ QStatus _NullEndpoint::PushMessage(Message& msg)
             status = ER_OK;
         }
     } else {
-        QCC_ASSERT(msg->bus == &routerBus);
+        QCC_ASSERT((msg->bus == &routerBus) || ((msg->GetType() == MESSAGE_ERROR) && (uniqueName == msg->GetDestination())));
         /*
          * Register the endpoint with the client router if needed
          */
