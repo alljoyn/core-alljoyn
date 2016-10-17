@@ -1496,19 +1496,25 @@ public:
 
 - (void)unregisterAboutListener:(id<AJNAboutListener>)aboutListenerDelegate
 {
+    NSMutableIndexSet *discardedItems = [NSMutableIndexSet indexSet];
+    NSUInteger index = 0;
+    
     @synchronized(self.aboutListeners) {
         for (NSValue *ptrValue in self.aboutListeners) {
             AJNAboutListenerImpl* aboutListenerImpl = (AJNAboutListenerImpl *)[ptrValue pointerValue];
             if (aboutListenerImpl->getDelegate() == aboutListenerDelegate) {
                 self.busAttachment->UnregisterAboutListener(*aboutListenerImpl);
-                [self.aboutListeners removeObject:aboutListenerDelegate];
+                [discardedItems addIndex:index];
             }
+            index++;
         }
+        [self.aboutListeners removeObjectsAtIndexes:discardedItems];
     }
 }
 
 - (void)unregisterAllAboutListeners {
     self.busAttachment->UnregisterAllAboutListeners();
+    [self.aboutListeners removeAllObjects];
 }
 
 - (QStatus)whoImplementsInterfaces:(NSArray *)interfaces
