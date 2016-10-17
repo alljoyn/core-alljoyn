@@ -1752,7 +1752,7 @@ public class BusAttachment {
 
     /**
      * Explicitly secure the connection to the remote peer. Peer-to-peer
-     * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+     * connections can only be secured if registerAuthListener() was previously called on the bus
      * attachment. If the peer-to-peer connection is already secure this
      * function does nothing. Note that peer-to-peer connections are automatically secured when a
      * method call requiring encryption is sent.
@@ -1769,7 +1769,7 @@ public class BusAttachment {
      * <ul>
      * <li>         - OK if the connection was secured or an error status indicating that the </li>
      * <li>           connection could not be secured. </li>
-     * <li>         - BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called. </li>
+     * <li>         - BUS_SECURITY_NOT_ENABLED if BusAttachment::registerAuthListener() has not been called. </li>
      * <li>         - AUTH_FAIL if the attempt(s) to authenticate the peer failed. </li>
      * <li>         - Other error status codes indicating a failure. </li>
      * </ul>
