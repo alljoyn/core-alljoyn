@@ -46,16 +46,16 @@ static NSString * const kDoorInterfaceName = @"com.example.Door";
 
     // register door interface
     QStatus status = ER_OK;
-    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"com.example.Door"];
-    status = [interfaceDescription addPropertyWithName:@"IsOpen" signature:@"b"];
+    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"com.example.Door" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
+    status = [interfaceDescription addPropertyWithName:@"IsOpen" signature:@"b" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  IsOpen" userInfo:nil];
     }
-    status = [interfaceDescription addPropertyWithName:@"Location" signature:@"s"];
+    status = [interfaceDescription addPropertyWithName:@"Location" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  Location" userInfo:nil];
     }
-    status = [interfaceDescription addPropertyWithName:@"KeyCode" signature:@"u"];
+    status = [interfaceDescription addPropertyWithName:@"KeyCode" signature:@"u" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  KeyCode" userInfo:nil];
     }
@@ -204,7 +204,7 @@ static NSString * const kDoorInterfaceName = @"com.example.Door";
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];
-    [self.bus deleteInterfaceWithName:kDoorInterfaceName];
+    [self.bus deleteInterface: [self.bus interfaceWithName:kDoorInterfaceName]];
 }
 
 @end
