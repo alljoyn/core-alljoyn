@@ -182,7 +182,7 @@ NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 }
 
 -(void)stopBus {
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
     [self.bus waitUntilStopCompleted];
     self.bus = nil;
@@ -206,7 +206,7 @@ NSString *letters = @"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 - (void)didJoin:(NSString *)joiner inSessionWithId:(AJNSessionId)sessionId onSessionPort:(AJNSessionPort)sessionPort
 {
     NSLog(@"AJNSessionPortListener::didJoin:%@ inSessionWithId:%u onSessionPort:%u withSessionOptions:", joiner, sessionId, sessionPort);
-    [self.bus bindHostedSessionListener:self toSession:sessionId];
+    [self.bus setHostedSessionListener:self toSession:sessionId];
 }
 
 
