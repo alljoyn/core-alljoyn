@@ -323,6 +323,8 @@ static const char* IntrospectionXmlWithCustomAnnotations =
     "  <interface name=\"org.alljoyn.Bus.DescriptionInterface\">\n"
     "    <property name=\"theProperty\" type=\"u\" access=\"readwrite\">\n"
     "      <annotation name=\"xyz\" value=\"123\"/>\n"
+    "      <annotation name=\"abc\" value=\"121\"/>\n"
+    "      <annotation name=\"jkl\" value=\"122\"/>\n"
     "    </property>\n"
     "  </interface>\n"
     "  <interface name=\"org.freedesktop.DBus.Introspectable\">\n"
