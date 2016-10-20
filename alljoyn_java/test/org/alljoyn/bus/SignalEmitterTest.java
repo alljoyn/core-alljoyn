@@ -320,6 +320,7 @@ public class SignalEmitterTest extends TestCase {
         }
 
         receivedSignalHandler = 0;
+        receivedGetSignalHandler = 0;
     }
 
     public void tearDown() throws Exception {
@@ -333,8 +334,6 @@ public class SignalEmitterTest extends TestCase {
         }
 
         if (pingEmitter != null) {
-            receivedGetSignalHandler= 0;
-
             bus.unregisterBusObject(pingEmitter);
             pingEmitter = null;
 
@@ -486,6 +485,7 @@ public class SignalEmitterTest extends TestCase {
         pingEmitter = new PingEmitter(); // a class that models a SignalEmitter and a DynamicBusObject
         status = bus.registerBusObject(pingEmitter, DYN_PATH_NAME);
         assertEquals(Status.OK, status);
+        assertEquals(1, receivedGetSignalHandler);
 
         status = bus.registerSignalHandler(DYN_IFACE_NAME, DYN_SIGNAL_NAME, this,
                                            getClass().getMethod("signalHandler",String.class));
@@ -508,7 +508,7 @@ public class SignalEmitterTest extends TestCase {
         assertEquals(bus.getUniqueName(), ctx.sender);
         assertEquals("s", ctx.signature);
 
-        assertEquals(1, receivedGetSignalHandler);
+        Thread.sleep(1000);
         assertEquals(1, receivedSignalHandler);
     }
 }
