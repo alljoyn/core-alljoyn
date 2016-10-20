@@ -44,6 +44,8 @@ public class SecurityManagementTest extends TestCase {
      */
     private Map<String,Integer> hostedSessions;
 
+    private boolean factoryResetReceived;
+
     private static final String defaultManifestXml = "<manifest>" +
     "<node>" +
     "<interface>" +
@@ -78,6 +80,7 @@ public class SecurityManagementTest extends TestCase {
         defaultSessionPort = new Mutable.ShortValue((short) 42);
         managerToManagerSessionId = new Mutable.IntegerValue((short) 0);
         managerToPeerSessionId = new Mutable.IntegerValue((short) 0);
+        factoryResetReceived = false;
     }
 
     @Override
@@ -265,6 +268,38 @@ public class SecurityManagementTest extends TestCase {
         managerConfigurator.signCertificate(certChainMembership[0]);
         managerConfigurator.installMembership(certChainMembership);
 
+        // Reset peer and verify its application state has also changed
+        assertEquals(PermissionConfigurator.ApplicationState.CLAIMED, pcPeer.getApplicationState());
+        pcPeer.reset();
+        assertEquals(PermissionConfigurator.ApplicationState.CLAIMABLE, pcPeer.getApplicationState());
+    }
+
+    public void testConfiguratorReset() throws Exception {
+        // Create manager bus attachment, connect, and register auth listener
+        managerBus = new BusAttachment(getClass().getName() + "Manager", BusAttachment.RemoteMessage.Receive);
+        managerBus.registerKeyStoreListener(new NullKeyStoreListener());
+        assertEquals(Status.OK, managerBus.connect());
+        assertEquals(Status.OK, managerBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
+                authListener, null, false, pclistener));
+
+        // Create peer bus attachment, connect, and register auth listener
+        peerBus = new BusAttachment(getClass().getName() + "Peer", BusAttachment.RemoteMessage.Receive);
+        peerBus.registerKeyStoreListener(new NullKeyStoreListener());
+        assertEquals(Status.OK, peerBus.connect());
+        assertEquals(Status.OK, peerBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
+                authListener, null, false, pclistener));
+
+        // Reset peer configurator and verify reset() was called
+        PermissionConfigurator peerConfigurator = peerBus.getPermissionConfigurator();
+        factoryResetReceived = false;
+        peerConfigurator.reset();
+        assertTrue(factoryResetReceived);
+
+        // Reset manager configurator and verify reset() was called
+        PermissionConfigurator managerConfigurator = managerBus.getPermissionConfigurator();
+        factoryResetReceived = false;
+        managerConfigurator.reset();
+        assertTrue(factoryResetReceived);
     }
 
     private ApplicationStateListener appStateListener = new ApplicationStateListener() {
@@ -279,6 +314,7 @@ public class SecurityManagementTest extends TestCase {
     private PermissionConfigurationListener pclistener = new PermissionConfigurationListener() {
 
         public Status factoryReset() {
+            factoryResetReceived = true;
             return Status.OK;
         }
 
