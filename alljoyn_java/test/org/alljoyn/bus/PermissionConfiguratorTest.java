@@ -54,6 +54,13 @@ public class PermissionConfiguratorTest extends TestCase {
         busAttachment.connect();
     }
 
+    public void tearDown() throws Exception {
+        busAttachment.disconnect();
+        busAttachment.release();
+        busAttachment = null;
+        permissionConfigurator = null;
+    }
+
     private Status registerAuthListener() throws Exception {
         Status status = Status.OK;
         if (System.getProperty("os.name").startsWith("Windows")) {
@@ -88,19 +95,22 @@ public class PermissionConfiguratorTest extends TestCase {
 
     public void testNotClaimable() throws Exception {
         assertEquals(Status.OK, registerAuthListener());
-        permissionConfigurator = busAttachment.getPermissionConfigurator();
-        assertEquals(permissionConfigurator.getApplicationState(), PermissionConfigurator.ApplicationState.NOT_CLAIMABLE);
+        SecurityApplicationProxy sap = new SecurityApplicationProxy(busAttachment,busAttachment.getUniqueName(),(short)0);
+        assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, sap.getApplicationState());
     }
 
     public void testBasic() throws Exception {
         assertEquals(Status.OK, registerAuthListener());
+
+        SecurityApplicationProxy sap = new SecurityApplicationProxy(busAttachment,busAttachment.getUniqueName(),(short)0);
+        assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, sap.getApplicationState());
+
         permissionConfigurator = busAttachment.getPermissionConfigurator();
-        assertEquals(permissionConfigurator.getApplicationState(), PermissionConfigurator.ApplicationState.NOT_CLAIMABLE);
         permissionConfigurator.setManifestTemplateFromXml(defaultManifestTemplate);
-        assertEquals(permissionConfigurator.getApplicationState(), PermissionConfigurator.ApplicationState.CLAIMABLE);
+
+        assertEquals(PermissionConfigurator.ApplicationState.CLAIMABLE, sap.getApplicationState());
 
         KeyInfoNISTP256 securityManagerKey = permissionConfigurator.getSigningPublicKey();
-
     }
 
     private boolean factoryReset = false;

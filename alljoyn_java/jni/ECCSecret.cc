@@ -100,6 +100,7 @@ JNIEXPORT jbyteArray JNICALL Java_org_alljoyn_bus_common_ECCSecret_derivePreMast
 
     if (status != ER_OK) {
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return NULL;
     }
 
     return ToJByteArray(pmsecret, sizeof(pmsecret));
