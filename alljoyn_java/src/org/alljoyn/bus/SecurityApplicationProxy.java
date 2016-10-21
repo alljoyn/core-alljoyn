@@ -24,10 +24,10 @@ import org.alljoyn.bus.common.KeyInfoNISTP256;
 
 public class SecurityApplicationProxy {
 
-    /** 
-     * Allocate native resources. 
+    /**
+     * Allocate native resources.
      */
-    private native void create(BusAttachment bus, String busName, int sessionId) throws Exception;
+    private native void create(BusAttachment bus, String busName, int sessionId) throws BusException;
 
     /**
      * Hold on to the BusAttachment so we can DecRef it in the JNI
@@ -47,7 +47,7 @@ public class SecurityApplicationProxy {
      * @param busName the unique or well-known name of the remote AllJoyn BusAttachment
      * @param sessionId the session ID this ProxyBusObject will use
      */
-    public SecurityApplicationProxy(BusAttachment bus, String busName, int sessionId) throws Exception {
+    public SecurityApplicationProxy(BusAttachment bus, String busName, int sessionId) throws BusException {
         create(bus, busName, sessionId);
         busattachment = bus;
     }
