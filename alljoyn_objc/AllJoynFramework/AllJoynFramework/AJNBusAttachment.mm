@@ -1487,7 +1487,7 @@ public:
 
 - (void)registerAboutListener:(id<AJNAboutListener>)aboutListenerDelegate
 {
-    AJNAboutListenerImpl* aboutListenerImpl = new AJNAboutListenerImpl(self, aboutListenerDelegate);
+    AJNAboutListenerImpl *aboutListenerImpl = new AJNAboutListenerImpl(self, aboutListenerDelegate);
     @synchronized(self.aboutListeners) {
         [self.aboutListeners addObject:[NSValue valueWithPointer:aboutListenerImpl]];
         self.busAttachment->RegisterAboutListener(*aboutListenerImpl);
@@ -1496,14 +1496,14 @@ public:
 
 - (void)unregisterAboutListener:(id<AJNAboutListener>)aboutListenerDelegate
 {
-    NSMutableIndexSet *discardedItems = [NSMutableIndexSet indexSet];
-    NSUInteger index = 0;
-    
     @synchronized(self.aboutListeners) {
+        NSMutableIndexSet *discardedItems = [NSMutableIndexSet indexSet];
+        NSUInteger index = 0;
         for (NSValue *ptrValue in self.aboutListeners) {
-            AJNAboutListenerImpl* aboutListenerImpl = (AJNAboutListenerImpl *)[ptrValue pointerValue];
+            AJNAboutListenerImpl *aboutListenerImpl = (AJNAboutListenerImpl*)[ptrValue pointerValue];
             if (aboutListenerImpl->getDelegate() == aboutListenerDelegate) {
                 self.busAttachment->UnregisterAboutListener(*aboutListenerImpl);
+                delete aboutListenerImpl;
                 [discardedItems addIndex:index];
             }
             index++;
@@ -1512,9 +1512,16 @@ public:
     }
 }
 
-- (void)unregisterAllAboutListeners {
-    self.busAttachment->UnregisterAllAboutListeners();
-    [self.aboutListeners removeAllObjects];
+- (void)unregisterAllAboutListeners
+{
+    @synchronized (self.aboutListeners) {
+        self.busAttachment->UnregisterAllAboutListeners();
+        for (NSValue *ptrValue in self.aboutListeners) {
+            AJNAboutListenerImpl *aboutListenerImpl = (AJNAboutListenerImpl*)[ptrValue pointerValue];
+            delete aboutListenerImpl;
+        }
+        [self.aboutListeners removeAllObjects];
+    }
 }
 
 - (QStatus)whoImplementsInterfaces:(NSArray *)interfaces
