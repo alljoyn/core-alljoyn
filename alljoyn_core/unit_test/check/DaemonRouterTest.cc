@@ -623,6 +623,8 @@ class DaemonRouterTest : public TestParamTuple {
         alljoynObj = NULL;
         delete router;
         router = NULL;
+        delete localEp;
+        localEp = NULL;
     }
 
     BusEndpoint GenEndpoint(const TestEndpointInfo& epInfo, bool onlySlsMatchRules)
@@ -631,9 +633,8 @@ class DaemonRouterTest : public TestParamTuple {
         // WS violations courtesy of uncrustify
         switch (epInfo->type) {
         case ENDPOINT_TYPE_LOCAL: {
-                TestLocalEndpoint ep(*bus, epInfo->name);
-                bep = BusEndpoint::cast(ep);
-                localEp = LocalEndpoint::cast(ep);
+                localEp = new TestLocalEndpoint(*bus, epInfo->name);
+                bep = BusEndpoint::cast(*localEp);
                 break;
             }
 
@@ -795,12 +796,11 @@ class DaemonRouterTest : public TestParamTuple {
     list<BusEndpoint> epList;
     map<std::string, TestRemoteEndpoint> b2bEps;
 
-    LocalEndpoint localEp;
-
     static ConfigDB* configDb;
     static BusAttachment* bus;
     static TestAllJoynObj* alljoynObj;
     static TestSessionlessObj* sessionlessObj;
+    static TestLocalEndpoint*localEp;
     static list<TestEndpointInfo> epInfoList;
     static list<TestEndpointInfo> srcEpInfoList;
     static list<TestEndpointInfo> srcDirectEpInfoList;
@@ -813,6 +813,7 @@ ConfigDB* DaemonRouterTest::configDb = NULL;
 BusAttachment* DaemonRouterTest::bus = NULL;
 TestAllJoynObj* DaemonRouterTest::alljoynObj = NULL;
 TestSessionlessObj* DaemonRouterTest::sessionlessObj = NULL;
+TestLocalEndpoint* DaemonRouterTest::localEp = NULL;
 list<TestEndpointInfo> DaemonRouterTest::epInfoList;
 list<TestEndpointInfo> DaemonRouterTest::srcEpInfoList;
 list<TestEndpointInfo> DaemonRouterTest::srcDirectEpInfoList;
