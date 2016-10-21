@@ -139,7 +139,7 @@ class BusController {
 #endif
 
     /** Event to wait on while initialization completes */
-    bool initComplete;
+    std::atomic<bool> initComplete;
 };
 
 }
