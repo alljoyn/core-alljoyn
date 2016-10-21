@@ -29,6 +29,28 @@
 namespace qcc {
 
 /**
+ * Fetch an int32_t and return its value atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @return  Value of *mem
+ */
+inline int32_t AtomicFetch(volatile const int32_t* mem) {
+    return InterlockedExchangeAdd(reinterpret_cast<volatile long*>(mem), 0);
+}
+
+/**
+ * Set an int32_t atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @param val  value
+ * @return void
+ */
+inline void AtomicSet(volatile int32_t* mem, volatile int32_t val) {
+    InterlockedExchange(reinterpret_cast<volatile long*>(mem), val);
+    return;
+}
+
+/**
  * Increment an int32_t and return its new value atomically.
  *
  * @param mem  Pointer to int32_t to be incremented.
