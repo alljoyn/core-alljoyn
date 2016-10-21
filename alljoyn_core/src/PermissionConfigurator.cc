@@ -215,6 +215,43 @@ QStatus PermissionConfigurator::ComputeThumbprintAndSignManifest(const qcc::Cert
     return status;
 }
 
+QStatus PermissionConfigurator::ComputeThumbprintAndSignManifestXml(const qcc::CertificateX509& subjectCertificate, AJ_PCSTR* manifestXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    Manifest manifest;
+    const size_t manifestSize = 1;
+
+    std::vector<PermissionPolicy::Rule> rules;
+    QStatus status = XmlManifestTemplateConverter::GetInstance()->XmlToRules(*manifestXml, rules);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Could not convert string to manifest"));
+        return status;
+    }
+
+    status = manifest->SetRules(&rules[0], manifestSize);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("could not set rules on manifest"));
+        return status;
+    }
+
+    status = ComputeThumbprintAndSignManifest(subjectCertificate, manifest);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("error computing thumbprint and/or signing"));
+        return status;
+    }
+
+    string strManifestXml;
+    status = XmlManifestConverter::ManifestToXml(manifest, strManifestXml);
+    if (status != ER_OK) {
+        QCC_LogError(status, ("Could not convert manifest to string"));
+        return status;
+    }
+
+    *manifestXml = strManifestXml.c_str();
+    return status;
+}
+
 QStatus PermissionConfigurator::GetConnectedPeerPublicKey(const GUID128& guid, qcc::ECCPublicKey* publicKey)
 {
     PermissionMgmtObj* permissionMgmtObj = m_internal->m_bus.GetInternal().GetPermissionManager().GetPermissionMgmtObj();
