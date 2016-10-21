@@ -1366,9 +1366,9 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 #ifndef NDEBUG
 #undef QCC_MODULE
 #define QCC_MODULE "TXSTATS"
-    static uint32_t lastTime = 0;
+    static qcc::atomic_uint32 lastTime = { 0 };
     uint32_t now = GetTimestamp();
-    if ((now - lastTime) > 1000) {
+    if ((now - uint32_t(lastTime)) > 1000) {
         QCC_DbgPrintf(("Tx queue size (%s) = %d", GetUniqueName().c_str(), count));
         lastTime = now;
     }
