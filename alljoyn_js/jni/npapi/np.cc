@@ -120,7 +120,7 @@ NP_EXPORT(char*) NP_GetPluginVersion()
     return const_cast<char*>("00.00.01");
 }
 
-NP_EXPORT(char*) NP_GetMIMEDescription()
+NP_EXPORT(const char*) NP_GetMIMEDescription()
 {
     Initialize();
     QCC_DbgPrintf(("%s", __FUNCTION__));
