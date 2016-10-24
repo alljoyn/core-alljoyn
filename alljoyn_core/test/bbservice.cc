@@ -70,10 +70,12 @@ const char* InterfaceName = "org.alljoyn.alljoyn_test.values";
 
 /* Forward declaration */
 class MyBusListener;
+class MyAuthListener;
 
 /* Static top level globals */
-static BusAttachment* g_msgBus = NULL;
-static MyBusListener* g_myBusListener = NULL;
+static BusAttachment* g_msgBus = nullptr;
+static MyBusListener* g_myBusListener = nullptr;
+static MyAuthListener* g_myAuthListener = nullptr;
 static String g_wellKnownName = ::org::alljoyn::alljoyn_test::DefaultWellKnownName;
 static bool g_echo_signal = false;
 static uint32_t g_keyExpiration = 0xFFFFFFFF;
@@ -977,7 +979,8 @@ int CDECL_CALL main(int argc, char** argv)
     LocalTestObject* testObj = new LocalTestObject(*g_msgBus, ::org::alljoyn::alljoyn_test::ObjectPath, reportInterval, opts);
     g_msgBus->RegisterBusObject(*testObj, objSecure);
 
-    g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL", new MyAuthListener(), keyStore, keyStore != NULL);
+    g_myAuthListener = new MyAuthListener();
+    g_msgBus->EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA ALLJOYN_ECDHE_PSK ALLJOYN_SRP_KEYX ALLJOYN_SRP_LOGON ALLJOYN_ECDHE_NULL", g_myAuthListener, keyStore, keyStore != NULL);
     /*
      * Pre-compute logon entry for user sleepy
      */
@@ -1012,6 +1015,7 @@ int CDECL_CALL main(int argc, char** argv)
 
     /* Clean up msg bus */
     delete g_msgBus;
+    delete g_myAuthListener;
     delete g_myBusListener;
 
     printf("Runtime elapsed: %u ms \n", (endTime - startTime));

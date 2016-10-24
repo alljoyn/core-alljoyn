@@ -23,6 +23,7 @@
 #include <qcc/platform.h>
 #include <qcc/String.h>
 #include <qcc/XmlElement.h>
+#include <list>
 #include <map>
 #include <alljoyn/AllJoynStd.h>
 #include <alljoyn/Status.h>
@@ -36,9 +37,50 @@ using namespace qcc;
 
 namespace ajn {
 
+/*
+ * Define data structure to hold ordered key/value list such as annotation.
+ * Note that the code that performs insertion must ensure uniqueness of the key.
+ */
+typedef pair<qcc::String, qcc::String> KVPair;
+typedef list<KVPair> KVListBase;
+
+class KVList : public KVListBase {
+  public:
+    KVListBase::const_iterator find(const qcc::String& key) const {
+        KVListBase::const_iterator it;
+        for (it = begin(); it != end(); ++it) {
+            if (key == it->first) {
+                break;
+            }
+        }
+        return it;
+    }
+
+    qcc::String& operator[](const qcc::String& key) {
+        for (KVListBase::iterator it = begin(); it != this->end(); ++it) {
+            if (key == it->first) {
+                return it->second;
+            }
+        }
+        /* Not found in the list, append an empty string and return it */
+        push_back(make_pair(key, ""));
+        return back().second;
+    }
+
+    bool addUnique(const qcc::String& key, const qcc::String& value) {
+        KVList::const_iterator existing = find(key);
+        if (existing == end()) {
+            push_back(make_pair(key, value));
+        } else if (value != existing->second) {
+            /* There's already a key/value pair that does not match the pair being added */
+            return false;
+        }
+        return true;
+    }
+};
 
 static size_t GetAnnotationsWithValues(
-    const std::map<qcc::String, qcc::String>& annotations,
+    const KVList& annotations,
     qcc::String* names,
     qcc::String* values,
     size_t size)
@@ -46,9 +88,8 @@ static size_t GetAnnotationsWithValues(
     size_t count = annotations.size();
 
     if (names && values) {
-        typedef std::map<qcc::String, qcc::String> AnnotationsMap;
         count = std::min(count, size);
-        AnnotationsMap::const_iterator mit = annotations.begin();
+        KVList::const_iterator mit = annotations.begin();
         for (size_t i = 0; i < count && mit != annotations.end(); ++i, ++mit) {
             names[i] = mit->first;
             values[i] = mit->second;
@@ -58,7 +99,7 @@ static size_t GetAnnotationsWithValues(
     return count;
 }
 
-class InterfaceDescription::AnnotationsMap : public std::map<qcc::String, qcc::String> {
+class InterfaceDescription::AnnotationsMap : public KVList {
 };
 
 class InterfaceDescription::ArgumentDescriptions : public std::map<qcc::String, qcc::String> {
@@ -716,13 +757,14 @@ QStatus InterfaceDescription::AddMemberAnnotation(const char* member, const qcc:
         return ER_BUS_INTERFACE_NO_SUCH_MEMBER;
     }
 
-    Member& m = it->second;
-    std::pair<AnnotationsMap::iterator, bool> ret = m.annotations->insert(AnnotationsMap::value_type(annotationName, value));
-    QStatus status = (ret.second || (ret.first->first == annotationName && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
-    if (status == ER_OK && IsDescriptionAnnotation(annotationName)) {
+    if (!it->second.annotations->addUnique(annotationName, value)) {
+        return ER_BUS_ANNOTATION_ALREADY_EXISTS;
+    }
+
+    if (IsDescriptionAnnotation(annotationName)) {
         defs->hasDescription = true;
     }
-    return status;
+    return ER_OK;
 }
 
 bool InterfaceDescription::GetMemberAnnotation(const char* member, const qcc::String& annotationName, qcc::String& value) const
@@ -763,24 +805,25 @@ QStatus InterfaceDescription::AddPropertyAnnotation(const qcc::String& p_name, c
     }
 
     Property& property = pit->second;
-    std::pair<AnnotationsMap::iterator, bool> ret = property.annotations->insert(AnnotationsMap::value_type(annotationName, value));
-    QStatus status = (ret.second || (ret.first->first == annotationName && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
-    if (status == ER_OK) {
-        if ((annotationName == org::freedesktop::DBus::AnnotateEmitsChanged) && (value != "false")) {
-            property.cacheable = true;
-        } else if ((annotationName == "org.alljoyn.Bus.Type.Min") ||
-                   (annotationName == "org.alljoyn.Bus.Type.Max") ||
-                   (annotationName == "org.alljoyn.Bus.Type.Units") ||
-                   (annotationName == "org.alljoyn.Bus.Type.Default") ||
-                   (annotationName == "org.alljoyn.Bus.Type.Reference") ||
-                   (annotationName == "org.alljoyn.Bus.Type.DisplayHint")) {
-            property.cacheable = true;
-        }
-        if (IsDescriptionAnnotation(annotationName)) {
-            defs->hasDescription = true;
-        }
+
+    if (!property.annotations->addUnique(annotationName, value)) {
+        return ER_BUS_ANNOTATION_ALREADY_EXISTS;
     }
-    return status;
+
+    if ((annotationName == org::freedesktop::DBus::AnnotateEmitsChanged) && (value != "false")) {
+        property.cacheable = true;
+    } else if ((annotationName == "org.alljoyn.Bus.Type.Min") ||
+               (annotationName == "org.alljoyn.Bus.Type.Max") ||
+               (annotationName == "org.alljoyn.Bus.Type.Units") ||
+               (annotationName == "org.alljoyn.Bus.Type.Default") ||
+               (annotationName == "org.alljoyn.Bus.Type.Reference") ||
+               (annotationName == "org.alljoyn.Bus.Type.DisplayHint")) {
+        property.cacheable = true;
+    }
+    if (IsDescriptionAnnotation(annotationName)) {
+        defs->hasDescription = true;
+    }
+    return ER_OK;
 }
 
 bool InterfaceDescription::GetPropertyAnnotation(const qcc::String& p_name, const qcc::String& annotationName, qcc::String& value) const
@@ -801,12 +844,14 @@ QStatus InterfaceDescription::AddAnnotation(const qcc::String& annotationName, c
         return ER_BUS_INTERFACE_ACTIVATED;
     }
 
-    std::pair<AnnotationsMap::iterator, bool> ret = defs->annotations.insert(std::make_pair(annotationName, value));
-    QStatus status = (ret.second || (ret.first->first == annotationName && ret.first->second == value)) ? ER_OK : ER_BUS_ANNOTATION_ALREADY_EXISTS;
-    if (status == ER_OK && IsDescriptionAnnotation(annotationName)) {
+    if (!defs->annotations.addUnique(annotationName, value)) {
+        return ER_BUS_ANNOTATION_ALREADY_EXISTS;
+    }
+
+    if (IsDescriptionAnnotation(annotationName)) {
         defs->hasDescription = true;
     }
-    return status;
+    return ER_OK;
 }
 
 bool InterfaceDescription::GetAnnotation(const qcc::String& annotationName, qcc::String& value) const

@@ -1,4 +1,4 @@
-/******************************************************************************
+/*
  * Copyright AllSeen Alliance. All rights reserved.
  *
  *    Permission to use, copy, modify, and/or distribute this software for any
@@ -12,28 +12,26 @@
  *    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
  *    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
- *
- ******************************************************************************/
-#include <jni.h>
+ */
+package org.alljoyn.bus.samples;
 
-#include "alljoyn_jni_helper.h"
+import org.alljoyn.bus.Mutable;
+import org.alljoyn.bus.ProxyBusObject;
 
-jbyteArray ToJByteArray(const uint8_t* byteArray, size_t len)
-{
-    JNIEnv* env = GetEnv();
-    jbyteArray array = env->NewByteArray(len);
-    env->SetByteArrayRegion(array, 0, len, reinterpret_cast<const jbyte*>(byteArray));
-    return array;
-}
+public class Session {
+    private Mutable.IntegerValue sessionId;
+    private Door doorProxy;
 
-uint8_t* ToByteArray(jbyteArray array)
-{
-    JNIEnv* env = GetEnv();
-    int len = env->GetArrayLength(array);
-    if (len == 0) {
-        return NULL;
+    public Session(Mutable.IntegerValue sessionId, Door door) {
+        this.sessionId = sessionId;
+        doorProxy = door;
     }
-    uint8_t* buf = new uint8_t[len];
-    env->GetByteArrayRegion(array, 0, len, reinterpret_cast<jbyte*>(buf));
-    return buf;
+
+    public Mutable.IntegerValue getSessionId() {
+        return sessionId;
+    }
+
+    public Door getDoorInterface() {
+        return doorProxy;
+    }
 }

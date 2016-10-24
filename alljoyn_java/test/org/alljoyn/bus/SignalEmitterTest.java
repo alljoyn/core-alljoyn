@@ -320,7 +320,7 @@ public class SignalEmitterTest extends TestCase {
         }
 
         receivedSignalHandler = 0;
-        receivedGetSignalHandler= 0;
+        receivedGetSignalHandler = 0;
     }
 
     public void tearDown() throws Exception {
