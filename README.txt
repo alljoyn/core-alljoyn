@@ -8,3 +8,4 @@ The documentation for the project as a whole can be found in the
 also and HTML version available in the directory.
 
 **Release Notes** are found in: `alljoyn_core/docs/ReleaseNotes.txt`
+
