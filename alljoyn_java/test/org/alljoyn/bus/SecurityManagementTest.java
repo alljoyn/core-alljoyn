@@ -44,6 +44,8 @@ public class SecurityManagementTest extends TestCase {
      */
     private Map<String,Integer> hostedSessions;
 
+    private boolean factoryResetReceived;
+
     private static final String defaultManifestXml = "<manifest>" +
     "<node>" +
     "<interface>" +
@@ -78,6 +80,7 @@ public class SecurityManagementTest extends TestCase {
         defaultSessionPort = new Mutable.ShortValue((short) 42);
         managerToManagerSessionId = new Mutable.IntegerValue((short) 0);
         managerToPeerSessionId = new Mutable.IntegerValue((short) 0);
+        factoryResetReceived = false;
     }
 
     @Override
@@ -98,35 +101,18 @@ public class SecurityManagementTest extends TestCase {
      */
     public void testBasic() throws Exception {
         peerBus = new BusAttachment(getClass().getName(), BusAttachment.RemoteMessage.Receive);
+        peerBus.registerKeyStoreListener(new InMemoryKeyStoreListener());
         assertEquals(Status.OK, peerBus.connect());
 
         managerBus = new BusAttachment(getClass().getName() + "manager", BusAttachment.RemoteMessage.Receive);
+        managerBus.registerKeyStoreListener(new InMemoryKeyStoreListener());
         assertEquals(Status.OK, managerBus.connect());
 
         managerBusUniqueName = managerBus.getUniqueName();
         peerBusUniqueName = peerBus.getUniqueName();
 
-        if (System.getProperty("os.name").startsWith("Windows")) {
-            assertEquals(Status.OK, managerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener, null, false, pclistener));
-            assertEquals(Status.OK, peerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener, null, false, pclistener));
-        } else if (System.getProperty("java.vm.name").startsWith("Dalvik")) {
-            /*
-             * on some Android devices File.createTempFile trys to create a file in
-             * a location we do not have permission to write to.  Resulting in a
-             * java.io.IOException: Permission denied error.
-             * This code assumes that the junit tests will have file IO permission
-             * for /data/data/org.alljoyn.bus
-             */
-            assertEquals(Status.OK, managerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener,
-                            "/data/data/org.alljoyn.bus/files/alljoyn.ks", false, pclistener));
-            assertEquals(Status.OK, peerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener,
-                            "/data/data/org.alljoyn.bus/files/alljoynpb.ks", false, pclistener));
-        } else {
-            assertEquals(Status.OK, managerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener,
-                                             File.createTempFile("alljoyn", "ks").getAbsolutePath(), false, pclistener));
-            assertEquals(Status.OK, peerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener,
-                                             File.createTempFile("alljoynpb", "ks").getAbsolutePath(), false, pclistener));
-        }
+        assertEquals(Status.OK, managerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener, null, false, pclistener));
+        assertEquals(Status.OK, peerBus.registerAuthListener("ALLJOYN_ECDHE_NULL", authListener, null, false, pclistener));
 
         managerBus.getPermissionConfigurator().setManifestTemplateFromXml(defaultManifestXml);
         peerBus.getPermissionConfigurator().setManifestTemplateFromXml(defaultManifestXml);
@@ -265,6 +251,38 @@ public class SecurityManagementTest extends TestCase {
         managerConfigurator.signCertificate(certChainMembership[0]);
         managerConfigurator.installMembership(certChainMembership);
 
+        // Reset peer and verify its application state has also changed
+        assertEquals(PermissionConfigurator.ApplicationState.CLAIMED, pcPeer.getApplicationState());
+        pcPeer.reset();
+        assertEquals(PermissionConfigurator.ApplicationState.CLAIMABLE, pcPeer.getApplicationState());
+    }
+
+    public void testConfiguratorReset() throws Exception {
+        // Create manager bus attachment, connect, and register auth listener
+        managerBus = new BusAttachment(getClass().getName() + "Manager", BusAttachment.RemoteMessage.Receive);
+        managerBus.registerKeyStoreListener(new NullKeyStoreListener());
+        assertEquals(Status.OK, managerBus.connect());
+        assertEquals(Status.OK, managerBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
+                authListener, null, false, pclistener));
+
+        // Create peer bus attachment, connect, and register auth listener
+        peerBus = new BusAttachment(getClass().getName() + "Peer", BusAttachment.RemoteMessage.Receive);
+        peerBus.registerKeyStoreListener(new NullKeyStoreListener());
+        assertEquals(Status.OK, peerBus.connect());
+        assertEquals(Status.OK, peerBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
+                authListener, null, false, pclistener));
+
+        // Reset peer configurator and verify reset() was called
+        PermissionConfigurator peerConfigurator = peerBus.getPermissionConfigurator();
+        factoryResetReceived = false;
+        peerConfigurator.reset();
+        assertTrue(factoryResetReceived);
+
+        // Reset manager configurator and verify reset() was called
+        PermissionConfigurator managerConfigurator = managerBus.getPermissionConfigurator();
+        factoryResetReceived = false;
+        managerConfigurator.reset();
+        assertTrue(factoryResetReceived);
     }
 
     private ApplicationStateListener appStateListener = new ApplicationStateListener() {
@@ -279,6 +297,7 @@ public class SecurityManagementTest extends TestCase {
     private PermissionConfigurationListener pclistener = new PermissionConfigurationListener() {
 
         public Status factoryReset() {
+            factoryResetReceived = true;
             return Status.OK;
         }
 
@@ -303,4 +322,13 @@ public class SecurityManagementTest extends TestCase {
 
         public void completed(String mechanism, String authPeer, boolean authenticated) {}
     };
+
+    public class InMemoryKeyStoreListener implements KeyStoreListener {
+        private byte[] keys;
+
+        public byte[] getKeys() { return keys; }
+        public char[] getPassword() { return "password".toCharArray(); }
+        public void putKeys(byte[] keys) { this.keys = keys; }
+    }
+
 }
