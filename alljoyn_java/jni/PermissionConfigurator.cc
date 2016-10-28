@@ -28,6 +28,8 @@
 using namespace ajn;
 using namespace qcc;
 
+class XmlManifestConverter;
+
 /*
  * Class:     org_alljoyn_bus_PermissionConfigurator
  * Method:    getManifestTemplateAsXml
@@ -274,6 +276,50 @@ JNIEXPORT void JNICALL Java_org_alljoyn_bus_PermissionConfigurator_signCertifica
         jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
         return;
     }
+}
+
+/*
+ * Class:     org_alljoyn_bus_PermissionConfigurator
+ * Method:    computeThumbprintAndSignManifestXml
+ * Signature: (Lorg/alljoyn/bus/common/CertificateX509;Ljava/lang/String;)Ljava/lang/String;
+ */
+JNIEXPORT jstring JNICALL Java_org_alljoyn_bus_PermissionConfigurator_computeThumbprintAndSignManifestXml(JNIEnv* jenv, jobject thiz, jobject jcert, jstring junsignedManifest)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    PermissionConfigurator* pconfPtr = GetHandle<PermissionConfigurator*>(thiz);
+    if (jenv->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return NULL;
+    }
+
+    if (!pconfPtr) {
+        QCC_LogError(ER_FAIL, ("%s: pconfPtr is null", __FUNCTION__));
+        Throw("java/lang/NullPointerException", "PermissionConfigurator object is null");
+        return NULL;
+    }
+
+    CertificateX509* cx509Ptr = GetHandle<CertificateX509*>(jcert);
+    if (jenv->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return NULL;
+    }
+
+    JString manifestTemplate(junsignedManifest);
+    if (jenv->ExceptionCheck()) {
+        QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
+        return NULL;
+    }
+
+    std::string manifestTemp = manifestTemplate.c_str();
+    QStatus status = pconfPtr->ComputeThumbprintAndSignManifestXml(*cx509Ptr, manifestTemp);
+
+    if (status != ER_OK) {
+        jenv->ThrowNew(CLS_BusException, QCC_StatusText(status));
+        return NULL;
+    }
+
+    return jenv->NewStringUTF(manifestTemp.c_str());
 }
 
 /*
