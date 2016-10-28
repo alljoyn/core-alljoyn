@@ -44,4 +44,8 @@ else:
     liballjoyn_c_static = env.StaticLibrary('alljoyn_c', objs)
 liballjoyn_c_shared = env.SharedLibrary('alljoyn_c', objs_shared)
 
+#Add hardening flags for linux release build
+if (env['OS'] == 'linux') and (env['VARIANT'] == 'release'):
+    env.Append(LINKFLAGS = ['-fPIC', '-Wl,-z,relro,-z,now'])
+
 Return('liballjoyn_c_static', 'liballjoyn_c_shared', 'objs_shared')
