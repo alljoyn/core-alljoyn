@@ -653,6 +653,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 }
             }
             break;
+
         case '.':
             {
                 // consume the rest of the items
