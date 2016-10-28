@@ -58,6 +58,12 @@ static inline void LineBreak(size_t& n, size_t lim, qcc::String& str)
         str.push_back('\n');
     }
 }
+static inline void UpdateVariableList(qcc::String*& val, va_list arg, const uint8_t*& asn, size_t len)
+{
+    val = va_arg(arg, qcc::String*);
+    val->assign_std((char*)asn, len);
+    asn += len;
+}
 
 static inline void UpdateVariableList(qcc::String*& val, const va_list& arg, const uint8_t*& asn, size_t len)
 {
@@ -470,7 +476,6 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 if (len < 2) {
                     status = ER_FAIL;
                 } else {
-
                     size_t unusedBits = *asn++;
                     if (unusedBits > 7) {
                         status = ER_FAIL;
@@ -645,14 +650,12 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             break;
 
         case '*':
-            {
-                // Continue consuming items
-                --syntax;
-                if (!DecodeLen(asn, eod, len)) {
-                    status = ER_FAIL;
-                } else {
-                    asn += len;
-                }
+            // Continue consuming items
+            --syntax;
+            if (!DecodeLen(asn, eod, len)) {
+                status = ER_FAIL;
+            } else {
+                asn += len;
             }
             break;
 
@@ -673,7 +676,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             status = ER_BAD_ARG_1;
             QCC_LogError(status, ("Invalid syntax character \'%c\'", *(syntax - 1)));
             break;
-        }
+        } // End of switch
     } // End of while loop
 
     if (status == ER_OK) {
