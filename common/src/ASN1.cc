@@ -59,7 +59,7 @@ static inline void LineBreak(size_t& n, size_t lim, qcc::String& str)
     }
 }
 
-static inline void UpdateVariableList(qcc::String*& val, const va_list& arg, const uint8_t*& asn, size_t len)
+static inline void UpdateVariableList(qcc::String*& val, va_list arg, const uint8_t*& asn, size_t len)
 {
     val = va_arg(arg, qcc::String*);
     val->assign_std((char*)asn, len);

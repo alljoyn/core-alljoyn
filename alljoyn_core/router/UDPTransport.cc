@@ -709,7 +709,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
     enum EndpointState {
         EP_ILLEGAL = 0,
         EP_INITIALIZED,      /**< The endpoint structure has been allocated but not used */
-        //EP_ACTIVE_STARTED,   /**< The endpoint has begun the process of coming up, due to a passive connection request */
         EP_ACTIVE_STARTED,   /**< The endpoint has begun the process of coming up, due to an active connection request */
         EP_PASSIVE_STARTED,  /**< The endpoint has begun the process of coming up, due to a passive connection request */
         EP_STARTED,          /**< The endpoint is ready for use, registered with daemon, maybe threads wandering thorugh */
