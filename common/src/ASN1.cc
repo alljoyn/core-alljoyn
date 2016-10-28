@@ -643,16 +643,15 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             break;
 
         case '*':
-            {
-                // Continue consuming items
-                --syntax;
-                if (!DecodeLen(asn, eod, len)) {
-                    status = ER_FAIL;
-                } else {
-                    asn += len;
-                }
+            // Continue consuming items
+            --syntax;
+            if (!DecodeLen(asn, eod, len)) {
+                status = ER_FAIL;
+            } else {
+                asn += len;
             }
             break;
+
         case '.':
             {
                 // consume the rest of the items
