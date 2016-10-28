@@ -23,8 +23,14 @@ if router_env['OS'] != 'darwin':
     daemon = daemon_env.Program('alljoyn-daemon', ['daemon-main.cc'] + srobj + router_objs)
 else:
     daemon = []
-	
-#
+
+#Add hardening flags for linux release build for details please refer to
+#https://wiki.debian.org/Hardening
+#The goal is to avoid any impact for these flags to our capability of debugging.
+if daemon_env['OS'] == 'linux' and daemon_env['VARIANT'] == 'release':
+       daemon_env.Append(CXXFLAGS = ['-fstack-protector-all', '-Wstack-protector', '--param', 'ssp-buffer-size=4', '-D_FORTIFY_SOURCE=2', '-O2', '-fPIE'])
+       daemon_env.Append(LINKFLAGS = ['-pie', '-fPIE', '-Wl,-z,relro,-z,now'])
+
 # On Android, build a static library that can be linked into a JNI dynamic 
 # library to implement the daemon as a Service
 #
