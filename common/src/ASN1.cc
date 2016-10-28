@@ -58,6 +58,12 @@ static inline void LineBreak(size_t& n, size_t lim, qcc::String& str)
         str.push_back('\n');
     }
 }
+static inline void UpdateVariableList(qcc::String*& val, va_list arg, const uint8_t*& asn, size_t len)
+{
+    val = va_arg(arg, qcc::String*);
+    val->assign_std((char*)asn, len);
+    asn += len;
+}
 
 QStatus AJ_CALL Crypto_ASN1::EncodeBase64(const qcc::String& bin, qcc::String& b64)
 {
@@ -407,7 +413,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
         switch (*syntax++) {
         case '/':
             --asn;
-            continue;
+            break;
 
         case 'i':
             if ((tag != ASN_INTEGER) || !DecodeLen(asn, eod, len) || (len > 5) || (len < 1)) {
@@ -419,17 +425,20 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     *v = (*v << 8) + *asn++;
                 }
             }
-            continue;
+            break;
 
         case 'l':
             if ((tag != ASN_INTEGER) || !DecodeLen(asn, eod, len) || (len < 1)) {
                 status = ER_FAIL;
-                break;
-            }
-            // Supress leading zero
-            if (*asn == 0) {
-                --len;
-                ++asn;
+            } else {
+                // Supress leading zero
+                if (*asn == 0) {
+                    --len;
+                    ++asn;
+                }
+                if (len > 0) {
+                    UpdateVariableList(val, argp, asn, len);
+                }
             }
             break;
 
@@ -441,11 +450,15 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 *oid = DecodeOID(asn, len);
                 asn += len;
             }
-            continue;
+            break;
 
         case 'x':
             if ((tag != ASN_OCTETS) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
+            } else {
+                if (len > 0) {
+                    UpdateVariableList(val, argp, asn, len);
+                }
             }
             break;
 
@@ -455,20 +468,19 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
             } else {
                 if (len < 2) {
                     status = ER_FAIL;
-                    continue;
-                }
-                size_t unusedBits = *asn++;
-                if (unusedBits > 7) {
-                    status = ER_FAIL;
                 } else {
-                    --len;
-                    val = va_arg(argp, qcc::String*);
-                    val->assign_std((char*)asn, len);
-                    asn += len;
-                    *va_arg(argp, size_t*) = len * 8 - unusedBits;
+                    size_t unusedBits = *asn++;
+                    if (unusedBits > 7) {
+                        status = ER_FAIL;
+                    } else {
+                        if (--len > 0) {
+                            UpdateVariableList(val, argp, asn, len);
+                        }
+                        *va_arg(argp, size_t*) = len * 8 - unusedBits;
+                    }
                 }
             }
-            continue;
+            break;
 
         case 'z':
             if ((tag != ASN_BOOLEAN) || !DecodeLen(asn, eod, len) || (len != 1)) {
@@ -477,14 +489,14 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 uint32_t* v = va_arg(argp, uint32_t*);
                 *v = *asn++;
             }
-            continue;
+            break;
 
         case 'n':
             if ((tag != ASN_NULL) || *asn) {
                 status = ER_FAIL;
             }
             ++asn;
-            continue;
+            break;
 
         case '(':
             if ((tag != ASN_SEQ) || !DecodeLen(asn, eod, len)) {
@@ -498,7 +510,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     status = ER_FAIL;
                 }
             }
-            continue;
+            break;
 
         case '{':
             if ((tag != ASN_SET_OF) || !DecodeLen(asn, eod, len)) {
@@ -512,7 +524,7 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     status = ER_FAIL;
                 }
             }
-            continue;
+            break;
 
         case '[':
             if (!DecodeLen(asn, eod, len)) {
@@ -526,23 +538,35 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     status = ER_FAIL;
                 }
             }
-            continue;
+            break;
 
         case 'a':
             if ((tag != ASN_ASCII) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
+            } else {
+                if (len > 0) {
+                    UpdateVariableList(val, argp, asn, len);
+                }
             }
             break;
 
         case 'p':
             if ((tag != ASN_PRINTABLE) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
+            } else {
+                if (len > 0) {
+                    UpdateVariableList(val, argp, asn, len);
+                }
             }
             break;
 
         case 'u':
             if ((tag != ASN_UTF8) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
+            } else {
+                if (len > 0) {
+                    UpdateVariableList(val, argp, asn, len);
+                }
             }
             break;
 
@@ -551,45 +575,52 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                 uint32_t v = va_arg(argp, uint32_t);
                 if (v >= 32 || *syntax++ != '(') {
                     status = ER_FAIL;
-                    continue;
-                }
-                if ((ASN_CONTEXT_SPECIFIC != (tag & ASN_CONTEXT_SPECIFIC)) ||
-                    ((uint8_t) (tag & 0x1F) != v) ||
-                    !DecodeLen(asn, eod, len)) {
-                    status = ER_FAIL;
-                } else if (ASN_CONSTRUCTED_ENCODING == (tag & ASN_CONSTRUCTED_ENCODING)) {
-                    status = DecodeV(syntax, asn, len, &argp);
-                    if (*syntax++ != ')') {
-                        status = ER_FAIL;
-                    } else if (status == ER_OK) {
-                        asn += len;
-                    }
                 } else {
-                    /* primitive content */
-                    if ((*syntax++ == '.') && (*syntax++ == ')')) {
-                        /*
-                         * Output len bytes as a String, by jumping to the common code path
-                         * at the end of the switch/case statement.
-                         */
-                        break;
-                    }
+                    if ((ASN_CONTEXT_SPECIFIC != (tag & ASN_CONTEXT_SPECIFIC)) ||
+                        ((uint8_t) (tag & 0x1F) != v) ||
+                        !DecodeLen(asn, eod, len)) {
+                        status = ER_FAIL;
+                    } else if (ASN_CONSTRUCTED_ENCODING == (tag & ASN_CONSTRUCTED_ENCODING)) {
+                        status = DecodeV(syntax, asn, len, &argp);
+                        if (*syntax++ != ')') {
+                            status = ER_FAIL;
+                        } else if (status == ER_OK) {
+                            asn += len;
+                        }
+                    } else {
+                        /* primitive content */
+                        if ((*syntax++ == '.') && (*syntax++ == ')')) {
+                            /* Output len bytes as a String */
+                            if (len > 0) {
+                                UpdateVariableList(val, argp, asn, len);
+                            }
+                            break;
+                        }
 
-                    QCC_LogError(status, ("Mismatched tag %#x and syntax character '%c'", (uint32_t)tag, *(syntax - 1)));
-                    status = ER_FAIL;
-                    continue;
+                        QCC_LogError(status, ("Mismatched tag %#x and syntax character '%c'", (uint32_t) tag, *(syntax - 1)));
+                        status = ER_FAIL;
+                    }
                 }
             }
-            continue;
+            break;
 
         case 't':
             if ((tag != ASN_UTC_TIME) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
+            } else {
+                if (len > 0) {
+                    UpdateVariableList(val, argp, asn, len);
+                }
             }
             break;
 
         case 'T':
             if ((tag != ASN_GEN_TIME) || !DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
+            } else {
+                if (len > 0) {
+                    UpdateVariableList(val, argp, asn, len);
+                }
             }
             break;
 
@@ -603,20 +634,23 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     val = va_arg(argp, qcc::String*);
                     if (val) {
                         val->assign_std((char*)start, asn - start);
+                        if (len > 0) {
+                            UpdateVariableList(val, argp, asn, len);
+                        }
                     }
                 }
             }
-            continue;
+            break;
 
         case '*':
             // Continue consuming items
             --syntax;
             if (!DecodeLen(asn, eod, len)) {
                 status = ER_FAIL;
-                break;
+            } else {
+                asn += len;
             }
-            asn += len;
-            continue;
+            break;
 
         case '.':
             {
@@ -628,20 +662,15 @@ QStatus Crypto_ASN1::DecodeV(const char*& syntax, const uint8_t* asn, size_t asn
                     val->assign_std((char*)start, len);
                 }
                 asn = eod; /* everything has been consumed */
-                continue;
             }
+            break;
 
         default:
             status = ER_BAD_ARG_1;
             QCC_LogError(status, ("Invalid syntax character \'%c\'", *(syntax - 1)));
-        }
-        // Shared code for all cases that fall through here
-        if ((status == ER_OK) && (len > 0)) {
-            val = va_arg(argp, qcc::String*);
-            val->assign_std((char*)asn, len);
-            asn += len;
-        }
-    }
+            break;
+        } // End of switch
+    } // End of while loop
 
     if (status == ER_OK) {
         // Consume wildcard if we ran out of data
