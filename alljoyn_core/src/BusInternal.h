@@ -92,7 +92,10 @@ class BusAttachment::Internal : public MessageReceiver, public JoinSessionAsyncC
     /**
      * Return most recently allocated serial number
      */
-    uint32_t PrevSerial() { return msgSerial ? msgSerial : -1; }
+    uint32_t PrevSerial() { 
+      uint32_t sn = qcc::AtomicFetch(&msgSerial);
+      return sn ? sn : -1; 
+    }
 
     /**
      * Get a reference to the authentication manager object.
