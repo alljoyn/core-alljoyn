@@ -1179,7 +1179,7 @@ void _LocalEndpoint::AlarmTriggered(const Alarm& alarm, QStatus reason)
     replyMapLock.Unlock(MUTEX_CONTEXT);
 
     QStatus status = ER_OK;
-    bool attemptDispatch = running;
+    bool attemptDispatch = bool(running);
 
     if (attemptDispatch) {
         QCC_DbgPrintf(("Timed out waiting for METHOD_REPLY with serial %d", serial));

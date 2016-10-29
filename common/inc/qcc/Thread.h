@@ -27,7 +27,9 @@
 #include <qcc/String.h>
 #include <qcc/Event.h>
 #include <qcc/Mutex.h>
+#include <qcc/ScopedMutexLock.h>
 #include <qcc/LockOrderChecker.h>
+#include <qcc/ThreadState.h>
 #include <Status.h>
 
 #include <set>
@@ -192,9 +194,9 @@ class Thread {
     /**
      * Indicate whether a stop has been requested for this thread.
      *
-     * @return true iff thread has been signalled to stop.
+     * @return true if thread has been signalled to stop.
      */
-    bool IsStopping(void) { return isStopping; }
+    bool IsStopping(void);
 
     /**
      * Get the exit value.  Any memory referenced by this pointer must either
@@ -204,50 +206,49 @@ class Thread {
      *
      * @return  The exit value encoded in a void *.
      */
-    ThreadReturn GetExitValue(void)
-    {
-        return exitValue;
-    }
+    ThreadReturn GetExitValue(void);
 
     /**
      * Determine if the thread is currently running. A running thread can be stopped and joined.
      *
      * @return  'true' if the thread is running; 'false' otherwise.
      */
-    bool IsRunning(void) { return ((state == STARTED) || (state == RUNNING) || (state == STOPPING)); }
+    bool IsRunning(void);
 
     /**
      * Get the name of the thread.
      *
      * @return  A pointer to a C string of the thread name.
      */
-    const char* GetName(void) const { return funcName; }
+    const char* GetName(void) const;
 
     /**
      * Return underlying thread handle.
      *
      * @return  Thread handle
      */
-    ThreadHandle GetHandle(void) { return handle; }
+    ThreadHandle GetHandle(void);
 
     /**
      * Get a reference to the stop er::Event object for use in er::Event::Wait().
      *
      * @return  Reference to the stop er::Event.
      */
-    Event& GetStopEvent(void) { return stopEvent; }
+    Event& GetStopEvent(void) {
+        return stopEvent;
+    }
 
     /**
      * Get the alertCode that was set by the caller to Alert()
      *
      * @return The alertCode specified by the caller to Alert.
      */
-    uint32_t GetAlertCode() const { return alertCode; }
+    uint32_t GetAlertCode() const;
 
     /**
      * Reset the alertCode that may have been set by a caller to Alert()
      */
-    void ResetAlertCode() { alertCode = 0; }
+    void ResetAlertCode();
 
     /**
      * Add an aux ThreadListener.
@@ -297,39 +298,38 @@ class Thread {
     static QStatus StaticShutdown();
     friend class StaticGlobals;
 
-    /**
-     * Enumeration of thread states.
-     */
-    enum {
-        INITIAL,  /**< Initial thread state - no underlying OS thread */
-        STARTED,  /**< Thread has started */
-        RUNNING,  /**< Thread is running the thread function */
-        STOPPING, /**< Thread has completed the thread function and is cleaning up */
-        DEAD      /**< Underlying OS thread is gone */
-    } state;
-
-    bool isStopping;                ///< Thread has received a stop request
     char funcName[80];              ///< Function name (used mostly in debug output).
     ThreadFunction function;        ///< Thread entry point or NULL is using Run() as entry point
     ThreadHandle handle;            ///< Thread handle.
     ThreadReturn exitValue;         ///< The returned 'value' from Run.
     void* threadArg;                ///< Run thread argument.
     ThreadListener* threadListener; ///< Listener notified of thread events (or NULL).
-    bool isExternal;                ///< If true, Thread is external (i.e. lifecycle not managed by Thread obj)
     void* platformContext;          ///< Context data specific to platform implementation
     uint32_t alertCode;             ///< Context passed from alerter to alertee
 
     typedef std::set<ThreadListener*> ThreadListeners;
     ThreadListeners auxListeners;
     Mutex auxListenersLock;
-    volatile int32_t waitCount;
 
 #if defined(QCC_OS_GROUP_POSIX)
-    Mutex waitLock;
-    bool hasBeenJoined;
-    Mutex hbjMutex;
+    mutable Mutex privateDataLock;  ///< atomic read/write for variables like state, isRunning, ...
+    ThreadState threadState;
 #elif defined(QCC_OS_GROUP_WINDOWS)
-    ThreadId threadId;          ///< Thread ID used by windows
+    /**
+     * Enumeration of thread states.
+     */
+    enum State {
+        INITIAL,  /**< Initial thread state - no underlying OS thread */
+        STARTED,  /**< Thread has started */
+        RUNNING,  /**< Thread is running the thread function */
+        STOPPING, /**< Thread has completed the thread function and is cleaning up */
+        DEAD      /**< Underlying OS thread is gone */
+    };
+    State state;
+    bool isStopping;                ///< Thread has received a stop request
+    bool isExternal;                ///< If true, Thread is external (i.e. lifecycle not managed by Thread obj)
+    ThreadId threadId;              ///< Thread ID used by windows
+    volatile int32_t waitCount;
 #endif
 
 #ifndef NDEBUG
