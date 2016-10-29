@@ -461,4 +461,39 @@ ThreadId Thread::GetCurrentThreadId()
     return ::GetCurrentThreadId();
 }
 
+bool Thread::IsStopping(void) 
+{ 
+    return isStopping; 
+}
+
+ThreadReturn Thread::GetExitValue(void) 
+{
+    return exitValue;
+}
+
+bool Thread::IsRunning(void) 
+{ 
+    return ((state == STARTED) || (state == RUNNING) || (state == STOPPING)); 
+}
+
+const char* Thread::GetName(void) const 
+{
+    return funcName; 
+}
+
+ThreadHandle Thread::GetHandle(void) 
+{
+    return handle; 
+}
+
+uint32_t Thread::GetAlertCode() const 
+{
+    return alertCode; 
+}
+
+void Thread::ResetAlertCode() 
+{
+    alertCode = 0;
+}
+
 }    /* namespace */

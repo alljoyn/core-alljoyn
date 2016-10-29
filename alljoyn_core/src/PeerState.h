@@ -30,6 +30,7 @@
 #include <map>
 #include <unordered_map>
 #include <limits>
+#include <atomic>
 
 #include <alljoyn/Message.h>
 
@@ -268,7 +269,7 @@ class _PeerState {
      *
      * @return  Returns true if a session key has been set for this peer.
      */
-    bool IsSecure() { return isSecure; }
+    bool IsSecure() { return bool(isSecure); }
 
     /**
      * Returns the auth event for this peer. The auth event is set by the peer object while the peer
@@ -693,7 +694,7 @@ class _PeerState {
     /**
      * Set to true if this peer has keys.
      */
-    bool isSecure;
+    std::atomic<bool> isSecure;
 
     /**
      * Event used to prevent simultaneous authorization requests to this peer.
