@@ -47,9 +47,9 @@ using namespace std;
 namespace qcc {
 
 #ifndef NDEBUG
-static volatile int32_t started = 0;
-static volatile int32_t running = 0;
-static volatile int32_t joined = 0;
+static volatile int32_t started = { 0 };
+static volatile int32_t running = { 0 };
+static volatile int32_t joined = { 0 };
 #endif
 
 /** Global thread list */
@@ -67,15 +67,16 @@ void Thread::CleanExternalThread(void* t)
     }
 
     Thread* thread = reinterpret_cast<Thread*>(t);
-    threadListLock->Lock();
-    map<ThreadId, Thread*>::iterator it = threadList->find(thread->handle);
-    if (it != threadList->end()) {
-        if (it->second->isExternal) {
-            delete it->second;
-            threadList->erase(it);
+    {
+        ScopedMutexLock lock(*threadListLock);
+        map<ThreadId, Thread*>::iterator it = threadList->find(thread->handle);
+        if (it != threadList->end()) {
+            if (it->second->threadState.isExternal()) {
+                delete it->second;
+                threadList->erase(it);
+            }
         }
     }
-    threadListLock->Unlock();
 }
 
 QStatus Thread::StaticInit()
@@ -109,6 +110,11 @@ QStatus Thread::StaticShutdown()
         }
 
         /* A common root cause of a failed assertion here is the app forgetting to call BusAttachment::Join() */
+
+        Thread::threadListLock = new Mutex(LOCK_LEVEL_CHECKING_DISABLED);
+        if (Thread::threadList->size() != 0) {
+            printf("size: %lu >%s<\n", Thread::threadList->size(), Thread::threadList->begin()->second->funcName);
+        }
         QCC_ASSERT(Thread::threadList->size() == 0);
         delete Thread::threadList;
         Thread::threadList = nullptr;
@@ -126,19 +132,21 @@ QStatus AJ_CALL Sleep(uint32_t ms) {
 
 Thread* Thread::GetThread()
 {
-    Thread* ret = NULL;
+    Thread* ret = nullptr;
 
-    /* Find thread on Thread::threadList */
-    threadListLock->Lock();
-    map<ThreadHandle, Thread*>::const_iterator iter = threadList->find(pthread_self());
-    if (iter != threadList->end()) {
-        ret = iter->second;
+    {
+        /* Find thread on Thread::threadList */
+        ScopedMutexLock lock(*threadListLock);
+
+        map<ThreadHandle, Thread*>::const_iterator iter = threadList->find(pthread_self());
+        if (iter != threadList->end()) {
+            ret = iter->second;
+        }
     }
-    threadListLock->Unlock();
 
     /* If the current thread isn't on the list, then create an external (wrapper) thread */
-    if (NULL == ret) {
-        ret = new Thread("external", NULL, true);
+    if (nullptr == ret) {
+        ret = new Thread("external", nullptr, true);
     }
 
     return ret;
@@ -148,13 +156,14 @@ const char* Thread::GetThreadName()
 {
     Thread* thread = NULL;
 
-    /* Find thread on Thread::threadList */
-    threadListLock->Lock();
-    map<ThreadId, Thread*>::const_iterator iter = threadList->find(pthread_self());
-    if (iter != threadList->end()) {
-        thread = iter->second;
+    {
+        /* Find thread on Thread::threadList */
+        ScopedMutexLock lock(*threadListLock);
+        map<ThreadId, Thread*>::const_iterator iter = threadList->find(pthread_self());
+        if (iter != threadList->end()) {
+            thread = iter->second;
+        }
     }
-    threadListLock->Unlock();
 
     /* If the current thread isn't on the list, then don't create an external (wrapper) thread */
     if (thread == NULL) {
@@ -166,37 +175,31 @@ const char* Thread::GetThreadName()
 
 void Thread::CleanExternalThreads()
 {
-    threadListLock->Lock();
+    ScopedMutexLock lock(*threadListLock);
     map<ThreadId, Thread*>::iterator it = threadList->begin();
     while (it != threadList->end()) {
-        if (it->second->isExternal) {
+        if (it->second->threadState.isExternal()) {
             delete it->second;
             threadList->erase(it++);
         } else {
             ++it;
         }
     }
-    threadListLock->Unlock();
 }
 
 Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     stopEvent(),
-    state(isExternal ? RUNNING : INITIAL),
-    isStopping(false),
     function(isExternal ? NULL : func),
     handle(isExternal ? pthread_self() : 0),
     exitValue(NULL),
     threadArg(NULL),
     threadListener(NULL),
-    isExternal(isExternal),
     platformContext(NULL),
     alertCode(0),
     auxListeners(),
     auxListenersLock(LOCK_LEVEL_THREAD_AUXLISTENERSLOCK),
-    waitCount(0),
-    waitLock(LOCK_LEVEL_THREAD_WAITLOCK),
-    hasBeenJoined(false),
-    hbjMutex(LOCK_LEVEL_THREAD_HBJMUTEX)
+    privateDataLock(LOCK_LEVEL_THREAD_PRIVATE_DATA),
+    threadState(isExternal)
 {
     IncrementPerfCounter(PERF_COUNTER_THREAD_CREATED);
 
@@ -208,7 +211,7 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
     /* If this is an external thread, add it to the thread list here since Run will not be called */
     if (isExternal) {
         QCC_ASSERT(func == NULL);
-        threadListLock->Lock();
+        ScopedMutexLock lock(*threadListLock);
         (*threadList)[handle] = this;
         if (pthread_getspecific(cleanExternalThreadKey) == NULL) {
             int ret = pthread_setspecific(cleanExternalThreadKey, this);
@@ -217,9 +220,9 @@ Thread::Thread(qcc::String name, Thread::ThreadFunction func, bool isExternal) :
             }
             QCC_ASSERT(ret == 0);
         }
-        threadListLock->Unlock();
     }
-    QCC_DbgHLPrintf(("Thread::Thread() created %s - %x -- started:%d running:%d joined:%d", funcName, handle, started, running, joined));
+    QCC_DbgHLPrintf(("Thread::Thread() created %s - %x -- started:%d running:%d joined:%d",
+                     funcName, handle, AtomicFetch(&started), AtomicFetch(&running), AtomicFetch(&joined)));
 }
 
 
@@ -227,78 +230,84 @@ Thread::~Thread(void)
 {
     QCC_DbgHLPrintf(("Thread::~Thread() destroying %s - %x", funcName, handle));
 
-    if (!isExternal) {
+    if (!threadState.isExternal()) {
         Stop();
         Join();
     }
 
-    /* Keep object alive until waitCount goes to zero */
-    while (waitCount) {
-        qcc::Sleep(2);
-    }
-
-    QCC_DbgHLPrintf(("Thread::~Thread() destroyed %s - %x -- started:%d running:%d joined:%d", funcName, handle, started, running, joined));
+    QCC_DbgHLPrintf(("Thread::~Thread() destroyed %s - %x -- started:%d running:%d joined:%d",
+                     funcName, handle, AtomicFetch(&started), AtomicFetch(&running), AtomicFetch(&joined)));
     IncrementPerfCounter(PERF_COUNTER_THREAD_DESTROYED);
 }
 
 
 ThreadInternalReturn Thread::RunInternal(void* arg)
 {
-    Thread* thread(reinterpret_cast<Thread*>(arg));
+    void* retVal = nullptr;
+    Thread* thread(static_cast<Thread*>(arg));
     sigset_t newmask;
 
     sigemptyset(&newmask);
     sigaddset(&newmask, SIGUSR1);
 
     QCC_ASSERT(thread != NULL);
+    QCC_ASSERT(thread->threadState.getCurrentState() == ThreadState::STARTING);
 
-    /* Plug race condition between Start and Run. (pthread_create may not write handle before run is called) */
-    thread->handle = pthread_self();
-
-    if (thread->state != STARTED) {
-        return NULL;
+    /* Add this Thread to list of running threads */
+    {
+        ScopedMutexLock lock(*threadListLock);
+        (*threadList)[pthread_self()] = thread;
+        pthread_sigmask(SIG_UNBLOCK, &newmask, NULL);
+    }
+    {
+        ScopedMutexLock lock(thread->privateDataLock);
+        /* Plug race condition between Start and Run. (pthread_create may not write handle before run is called) */
+        thread->handle = pthread_self();
     }
 
     QCC_DEBUG_ONLY(IncrementAndFetch(&started));
 
     QCC_DbgPrintf(("Thread::RunInternal: %s (pid=%x)", thread->funcName, (unsigned long) thread->handle));
 
-    /* Add this Thread to list of running threads */
-    threadListLock->Lock();
-    (*threadList)[thread->handle] = thread;
-    thread->state = RUNNING;
-    pthread_sigmask(SIG_UNBLOCK, &newmask, NULL);
-    threadListLock->Unlock();
+    thread->threadState.started();
 
+    ThreadReturn tmpExitValue = nullptr;
+    ThreadState::State currentState = thread->threadState.getCurrentState();
     /* Start the thread if it hasn't been stopped */
-    if (!thread->isStopping) {
+    if (currentState == ThreadState::STARTING ||
+        currentState == ThreadState::RUNNING) {
         QCC_DbgPrintf(("Starting thread: %s", thread->funcName));
         QCC_DEBUG_ONLY(IncrementAndFetch(&running));
-        thread->exitValue = thread->Run(thread->threadArg);
+        tmpExitValue = thread->Run(thread->threadArg);
         QCC_DEBUG_ONLY(DecrementAndFetch(&running));
         QCC_DbgPrintf(("Thread function exited: %s --> %p", thread->funcName, thread->exitValue));
     }
 
-    thread->state = STOPPING;
+    thread->threadState.stop();
+
+    ThreadHandle handle;
+    {
+        ScopedMutexLock lock(thread->privateDataLock);
+        thread->exitValue = tmpExitValue;
+        /*
+         * Call thread exit callback if specified. Note that ThreadExit may dellocate the thread so the
+         * members of thread may not be accessed after this call
+         */
+        retVal = thread->exitValue;
+        handle = thread->handle;
+    }
     thread->stopEvent.ResetEvent();
 
-    /*
-     * Call thread exit callback if specified. Note that ThreadExit may dellocate the thread so the
-     * members of thread may not be accessed after this call
-     */
-    void* retVal = thread->exitValue;
-    ThreadHandle handle = thread->handle;
-
-
-    /* Call aux listeners before main listener since main listner may delete the thread */
-    thread->auxListenersLock.Lock();
-    ThreadListeners::iterator it = thread->auxListeners.begin();
-    while (it != thread->auxListeners.end()) {
-        ThreadListener* listener = *it;
-        listener->ThreadExit(thread);
-        it = thread->auxListeners.upper_bound(listener);
+    {
+        /* Call aux listeners before main listener since main listner may delete the thread */
+        ScopedMutexLock lock(thread->auxListenersLock);
+        ThreadListeners::iterator it = thread->auxListeners.begin();
+        while (it != thread->auxListeners.end()) {
+            ThreadListener* listener = *it;
+            listener->ThreadExit(thread);
+            it = thread->auxListeners.upper_bound(listener);
+        }
     }
-    thread->auxListenersLock.Unlock();
 
     if (thread->threadListener) {
         thread->threadListener->ThreadExit(thread);
@@ -306,10 +315,13 @@ ThreadInternalReturn Thread::RunInternal(void* arg)
 
     /* This also means no QCC_DbgPrintf as they try to get context on the current thread */
 
-    /* Remove this Thread from list of running threads */
-    threadListLock->Lock();
-    threadList->erase(handle);
-    threadListLock->Unlock();
+    {
+        /* Remove this Thread from list of running threads */
+        ScopedMutexLock lock(*threadListLock);
+        threadList->erase(handle);
+    }
+
+    thread->threadState.stopped();
 
     return reinterpret_cast<ThreadInternalReturn>(retVal);
 }
@@ -320,23 +332,15 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
 {
     QStatus status = ER_OK;
 
-    /* Check that thread can be started */
-    if (isExternal) {
+    ThreadState::Rc stateRc = threadState.start();
+    if (stateRc == ThreadState::IsExternalThread) {
         status = ER_EXTERNAL_THREAD;
-    } else if (isStopping) {
+    } else if (stateRc == ThreadState::AlreadyStopped)   {
         status = ER_THREAD_STOPPING;
-    } else if (IsRunning()) {
+    } else if (stateRc == ThreadState::AlreadyRunning)   {
         status = ER_THREAD_RUNNING;
-    }
-
-    if (status != ER_OK) {
-        QCC_LogError(status, ("Thread::Start [%s]", funcName));
-    } else {
+    } else if (stateRc == ThreadState::Ok)   {
         int ret;
-
-        /* Clear/initialize the join context */
-        hasBeenJoined = false;
-        waitCount = 0;
 
         /*  Reset the stop event so the thread doesn't start out alerted. */
         stopEvent.ResetEvent();
@@ -344,7 +348,6 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
         this->threadArg = arg;
         this->threadListener = listener;
 
-        state = STARTED;
         pthread_attr_t attr;
         ret = pthread_attr_init(&attr);
         if (ret != 0) {
@@ -356,11 +359,11 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Setting stack size: %s", strerror(ret)));
         }
+        ScopedMutexLock lock(privateDataLock);
         ret = pthread_create(&handle, &attr, RunInternal, this);
         QCC_DbgTrace(("Thread::Start() [%s] pid = %x", funcName, handle));
         if (ret != 0) {
-            state = DEAD;
-            isStopping = false;
+            threadState.error();
             status = ER_OS_ERROR;
             QCC_LogError(status, ("Creating thread %s: %s", funcName, strerror(ret)));
         }
@@ -371,23 +374,25 @@ QStatus Thread::Start(void* arg, ThreadListener* listener)
 
 QStatus Thread::Stop(void)
 {
-    /* Cannot stop external threads */
-    if (isExternal) {
+    ThreadState::Rc stateRc = threadState.stop();
+    if (stateRc == ThreadState::IsExternalThread) {
         QCC_LogError(ER_EXTERNAL_THREAD, ("Cannot stop an external thread"));
         return ER_EXTERNAL_THREAD;
-    } else if ((state == DEAD) || (state == INITIAL)) {
+    } else if ((stateRc == ThreadState::AlreadyJoined) ||
+               (stateRc == ThreadState::InInitialState)) {
         QCC_DbgPrintf(("Thread::Stop() thread is dead [%s]", funcName));
         return ER_OK;
     } else {
         QCC_DbgTrace(("Thread::Stop() %x [%s]", handle, funcName));
-        isStopping = true;
-        return stopEvent.SetEvent();
+
+        QStatus rc = stopEvent.SetEvent();
+        return rc;
     }
 }
 
 QStatus Thread::Alert()
 {
-    if (state == DEAD) {
+    if (threadState.getCurrentState() == ThreadState::DEAD) {
         return ER_DEAD_THREAD;
     }
     QCC_DbgTrace(("Thread::Alert() [%s:%srunning]", funcName, IsRunning() ? " " : " not "));
@@ -396,9 +401,12 @@ QStatus Thread::Alert()
 
 QStatus Thread::Alert(uint32_t alertCode)
 {
-    this->alertCode = alertCode;
-    if (state == DEAD) {
+    if (threadState.getCurrentState() == ThreadState::DEAD) {
         return ER_DEAD_THREAD;
+    }
+    {
+        ScopedMutexLock lock(privateDataLock);
+        this->alertCode = alertCode;
     }
     QCC_DbgTrace(("Thread::Alert(%u) [%s:%srunning]", alertCode, funcName, IsRunning() ? " " : " not "));
     return stopEvent.SetEvent();
@@ -406,19 +414,17 @@ QStatus Thread::Alert(uint32_t alertCode)
 
 void Thread::AddAuxListener(ThreadListener* listener)
 {
-    auxListenersLock.Lock();
+    ScopedMutexLock lock(auxListenersLock);
     auxListeners.insert(listener);
-    auxListenersLock.Unlock();
 }
 
 void Thread::RemoveAuxListener(ThreadListener* listener)
 {
-    auxListenersLock.Lock();
+    ScopedMutexLock lock(auxListenersLock);
     ThreadListeners::iterator it = auxListeners.find(listener);
     if (it != auxListeners.end()) {
         auxListeners.erase(it);
     }
-    auxListenersLock.Unlock();
 }
 
 QStatus Thread::Join(void)
@@ -431,98 +437,102 @@ QStatus Thread::Join(void)
                    GetThread()->funcName, GetThread()->handle,
                    funcName, handle));
 
-    /*
-     * Nothing to join if the thread is dead
-     */
-    if (state == DEAD) {
-        QCC_DbgPrintf(("Thread::Join() thread is dead [%s]", funcName));
-        isStopping = false;
-        return ER_OK;
-    }
-    /*
-     * There is a race condition where the underlying OS thread has not yet started to run. We need
-     * to wait until the thread is actually running before we can free it.
-     */
-    while (state == STARTED) {
-        usleep(1000 * 5);
-    }
-
-    /* Threads that join themselves must detach without blocking */
-    if (handle == pthread_self()) {
-        int32_t waiters = IncrementAndFetch(&waitCount);
-        hbjMutex.Lock();
-        if ((waiters == 1) && !hasBeenJoined) {
-            hasBeenJoined = true;
-            hbjMutex.Unlock();
-            int ret = 0;
-            if (state != INITIAL) {
-                QCC_ASSERT(handle);
-                ret = pthread_detach(handle);
-            }
-            if (ret == 0) {
-                QCC_DEBUG_ONLY(IncrementAndFetch(&joined));
-            } else {
+    ThreadState::Rc stateRc = threadState.join();
+    if (stateRc == ThreadState::Ok) {
+        ThreadHandle currentThreadHandle;
+        {
+            ScopedMutexLock lock(privateDataLock);
+            currentThreadHandle = handle;
+        }
+        QCC_ASSERT(currentThreadHandle);
+        /* Threads that join themselves must detach without blocking */
+        if (currentThreadHandle == pthread_self()) {
+            int ret = pthread_detach(currentThreadHandle);
+            if (ret != 0) {
                 status = ER_OS_ERROR;
                 QCC_LogError(status, ("Detaching thread: %d - %s", ret, strerror(ret)));
             }
-            handle = 0;
         } else {
-            hbjMutex.Unlock();
-
-        }
-        DecrementAndFetch(&waitCount);
-        isStopping = false;
-    } else {
-        /*
-         * Unfortunately, POSIX pthread_join can only be called once for a given thread. This is quite
-         * inconvenient in a system of multiple threads that need to synchronize with each other.
-         * This ugly looking code allows multiple threads to Join a thread. All but one thread block
-         * in a Mutex. The first thread to obtain the mutex is the one that is allowed to call pthread_join.
-         * All other threads wait for that join to complete. Then they are released.
-         */
-        int ret = 0;
-        int32_t waiters = IncrementAndFetch(&waitCount);
-        waitLock.Lock();
-        hbjMutex.Lock();
-        if ((waiters == 1) && !hasBeenJoined) {
-            hasBeenJoined = true;
-            hbjMutex.Unlock();
-            if (state != INITIAL) {
-                QCC_ASSERT(handle);
-                ret = pthread_join(handle, NULL);
+            int ret = pthread_join(currentThreadHandle, NULL);
+            if (ret != 0) {
+                status = ER_OS_ERROR;
+                QCC_LogError(status, ("Joining thread: %d - %s", ret, strerror(ret)));
             }
+        }
+
+        QCC_DbgPrintf(("Joined thread %s", funcName));
+
+        QCC_DEBUG_ONLY(IncrementAndFetch(&joined));
+        {
+            ScopedMutexLock lock(privateDataLock);
             handle = 0;
-            QCC_DEBUG_ONLY(IncrementAndFetch(&joined));
-        } else {
-            hbjMutex.Unlock();
-
         }
-        waitLock.Unlock();
-        DecrementAndFetch(&waitCount);
-
-        if (ret != 0) {
-            status = ER_OS_ERROR;
-            QCC_LogError(status, ("Joining thread: %d - %s", ret, strerror(ret)));
-        }
-        isStopping = false;
+        /* once the state is changed to JOINED/DEAD, we must not touch any member of this class anymore */
+        threadState.joined();
     }
-    QCC_DbgPrintf(("Joined thread %s", funcName));
-    /* once the state is changed to DEAD, we must not touch any member of this class anymore */
-    state = DEAD;
+
     return status;
 }
 
 ThreadReturn STDCALL Thread::Run(void* arg)
 {
-    QCC_DbgTrace(("Thread::Run() [%s:%srunning]", funcName, IsRunning() ? " " : " not "));
     QCC_ASSERT(NULL != function);
-    QCC_ASSERT(!isExternal);
+    QCC_ASSERT(!threadState.isExternal());
+    QCC_DbgTrace(("Thread::Run() [%s:%srunning]", funcName, IsRunning() ? " " : " not "));
     return (*function)(arg);
 }
 
 ThreadId Thread::GetCurrentThreadId()
 {
     return pthread_self();
+}
+
+bool Thread::IsStopping(void)
+{
+    ThreadState::State currentState = threadState.getCurrentState();
+    return (currentState == ThreadState::STOPPING ||
+            currentState == ThreadState::STOPPED  ||
+            currentState == ThreadState::JOINING  ||
+            currentState == ThreadState::EXTERNALJOINING);
+}
+
+ThreadReturn Thread::GetExitValue(void)
+{
+    ScopedMutexLock lock(privateDataLock);
+    return exitValue;
+}
+
+bool Thread::IsRunning(void)
+{
+    ThreadState::State currentState = threadState.getCurrentState();
+    return (currentState == ThreadState::RUNNING ||
+            currentState == ThreadState::STOPPING ||
+            currentState == ThreadState::EXTERNAL ||
+            currentState == ThreadState::EXTERNALJOINING);
+}
+
+const char* Thread::GetName(void) const
+{
+    ScopedMutexLock lock(privateDataLock);
+    return funcName;
+}
+
+ThreadHandle Thread::GetHandle(void)
+{
+    ScopedMutexLock lock(privateDataLock);
+    return handle;
+}
+
+uint32_t Thread::GetAlertCode() const
+{
+    ScopedMutexLock lock(privateDataLock);
+    return alertCode;
+}
+
+void Thread::ResetAlertCode()
+{
+    ScopedMutexLock lock(privateDataLock);
+    alertCode = 0;
 }
 
 } /* namespace */

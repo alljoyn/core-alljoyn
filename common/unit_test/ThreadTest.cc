@@ -193,3 +193,43 @@ TEST_F(ThreadsMultipleTest, shouldNullifyHandleAfterJoinFromMultipleThreads)
 
     EXPECT_EQ((ThreadHandle)nullptr, threadUnderTest->GetHandle());
 }
+
+class ThreadExternalTest : public::testing::Test {
+  public:
+    Thread* threadUnderTest;
+
+    ThreadExternalTest() :
+        threadUnderTest(nullptr)
+    { }
+
+    virtual void SetUp()
+    {
+        threadUnderTest = new Thread("threadTestFunction", JoinSelfTask);
+    }
+
+    virtual void TearDown()
+    {
+        delete threadUnderTest;
+    }
+
+  private:
+
+    static ThreadReturn JoinSelfTask(void*)
+    {
+        Thread*pSelf = new Thread("dummy", nullptr, true);
+        if (pSelf) {
+            pSelf->Join();
+        }
+
+        // No delete of pSelf as the object is automagically freed by
+        // Thread::StaticShutdown >> Thread::CleanExternalThread
+
+        return nullptr;
+    }
+};
+
+TEST_F(ThreadExternalTest, shouldJoinSelfWithoutErrors)
+{
+    ASSERT_EQ(ER_OK, threadUnderTest->Start(nullptr));
+    sleep(1);
+}
