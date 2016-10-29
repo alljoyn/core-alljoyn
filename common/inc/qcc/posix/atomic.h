@@ -35,6 +35,30 @@ namespace qcc {
 #if defined(QCC_OS_ANDROID)
 
 /**
+ * Fetch an int32_t and return its value atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @return  Value of *mem
+ */
+inline int32_t AtomicFetch(volatile const int32_t* mem) {
+    return __sync_add_and_fetch(const_cast<volatile int32_t*>(mem), 0);
+}
+
+/**
+ * Set an int32_t atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @param val  value
+ * @return void
+ */
+inline void AtomicSet(volatile int32_t* mem, volatile int32_t val) {
+    volatile int32_t was = __sync_fetch_and_add(mem, 0);
+    while (was != val) {
+        was = __sync_val_compare_and_swap(mem, was, val);
+    }
+}
+
+/**
  * Increment an int32_t and return its new value atomically.
  *
  * @param mem  Pointer to int32_t to be incremented.
@@ -103,6 +127,30 @@ inline bool CompareAndExchangePointer(void* volatile* mem, void* expectedValue, 
 #elif defined(QCC_OS_LINUX)
 
 /**
+ * Fetch an int32_t and return its value atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @return  Value of *mem
+ */
+inline int32_t AtomicFetch(volatile const int32_t* mem) {
+    return __sync_add_and_fetch(const_cast<volatile int32_t*>(mem), 0);
+}
+
+/**
+ * Set an int32_t atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @param val  value
+ * @return void
+ */
+inline void AtomicSet(volatile int32_t* mem, volatile int32_t val) {
+    volatile int32_t was = __sync_fetch_and_add(mem, 0);
+    while (was != val) {
+        was = __sync_val_compare_and_swap(mem, was, val);
+    }
+}
+
+/**
  * Increment an int32_t and return its new value atomically.
  *
  * @param mem  Pointer to int32_t to be incremented.
@@ -153,6 +201,30 @@ inline bool CompareAndExchangePointer(void* volatile* mem, void* expectedValue, 
 #elif defined(QCC_OS_DARWIN)
 
 /**
+ * Fetch an int32_t and return its value atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @return  Value of *mem
+ */
+inline int32_t AtomicFetch(volatile const int32_t* mem) {
+    return OSAtomicAdd32Barrier(0, const_cast<volatile int32_t*>(mem));
+}
+
+/**
+ * Set an int32_t atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @param val  value
+ * @return void
+ */
+inline void AtomicSet(volatile int32_t* mem, volatile int32_t val) {
+    OSMemoryBarrier();
+    *mem = val;
+    OSMemoryBarrier();
+    return;
+}
+
+/**
  * Increment an int32_t and return its new value atomically.
  *
  * @param mem  Pointer to int32_t to be incremented.
@@ -201,6 +273,23 @@ inline bool CompareAndExchangePointer(void* volatile* mem, void* expectedValue, 
 }
 
 #else
+
+/**
+ * Fetch an int32_t and return its value atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @return  Value of *mem
+ */
+inline int32_t AtomicFetch(volatile const int32_t* mem);
+
+/**
+ * Set an int32_t atomically.
+ *
+ * @param mem  Pointer to int32_t
+ * @param val  value
+ * @return void
+ */
+inline void AtomicSet(volatile int32_t* mem, volatile int32_t val);
 
 /**
  * Increment an int32_t and return its new value atomically.
