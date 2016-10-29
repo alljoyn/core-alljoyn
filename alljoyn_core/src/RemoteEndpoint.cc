@@ -23,6 +23,7 @@
 #include <qcc/Debug.h>
 #include <qcc/String.h>
 #include <qcc/StringUtil.h>
+#include <atomic>
 #include <qcc/atomic.h>
 #include <qcc/Thread.h>
 #include <qcc/SocketStream.h>
@@ -1016,11 +1017,13 @@ QStatus _RemoteEndpoint::ReadCallback(qcc::Source& source, bool isTimedOut)
             }
 
             QCC_LogError(ER_TIMEOUT, ("Endpoint Rx timed out (%s)", GetUniqueName().c_str()));
+            internal->lock.Lock(MUTEX_CONTEXT);
             status = ER_BUS_ENDPOINT_CLOSING;
             internal->stream->Abort();
             internal->bus.GetInternal().GetIODispatch().StopStream(internal->stream);
             SetState(Internal::EXIT_WAIT);
             Invalidate();
+            internal->lock.Unlock(MUTEX_CONTEXT);
         }
     }
     return status;
@@ -1366,9 +1369,9 @@ QStatus _RemoteEndpoint::PushMessage(Message& msg)
 #ifndef NDEBUG
 #undef QCC_MODULE
 #define QCC_MODULE "TXSTATS"
-    static uint32_t lastTime = 0;
+    static std::atomic<uint32_t> lastTime = { 0 };
     uint32_t now = GetTimestamp();
-    if ((now - lastTime) > 1000) {
+    if ((now - uint32_t(lastTime)) > 1000) {
         QCC_DbgPrintf(("Tx queue size (%s) = %d", GetUniqueName().c_str(), count));
         lastTime = now;
     }
