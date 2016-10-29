@@ -382,8 +382,6 @@ class TestSessionlessObj : public SessionlessObj {
     void MsgDeliveryHelper(Message& msg, bool push);
 };
 
-}
-
 /********************************************************************************
  * Utility functions.
  ********************************************************************************/
@@ -392,7 +390,7 @@ class TestSessionlessObj : public SessionlessObj {
  * Utility function to get the TestEndpointInfo from a BusEndpoint that is
  * really a derived test endpoint.
  */
-static TestEndpointInfo GetTestEndpointInfo(BusEndpoint ep)
+TestEndpointInfo GetTestEndpointInfo(BusEndpoint ep)
 {
     // WS violations courtesy of uncrustify
     switch (ep->GetEndpointType()) {
@@ -422,12 +420,12 @@ static TestEndpointInfo GetTestEndpointInfo(BusEndpoint ep)
 /*
  * ostream formatter for TestEndpointInfo.
  */
-static ostream& operator<<(ostream& os, const TestEndpointInfo& epInfo)
+ostream& operator<<(ostream& os, const TestEndpointInfo& epInfo)
 {
     if (epInfo->type == ENDPOINT_TYPE_INVALID) {
         os << "<empty>";
     } else {
-        os << "ep " << epInfo->name
+        os << "ep " << epInfo->name.c_str()
            << " (id=" << std::left << std::setw(2) << epInfo->id
            << "  allow=" << (epInfo->allow ? "T" : "F")
            << "  slsMatch=" << (epInfo->slsMatchRule ? "T" : "F")
@@ -436,10 +434,14 @@ static ostream& operator<<(ostream& os, const TestEndpointInfo& epInfo)
     return os;
 }
 
+} // namespace
+
+namespace ajn {
+
 /*
  * ostream formatter for a set of BusEndpoints.
  */
-static std::ostream& operator<<(std::ostream& os, const set<BusEndpoint>& epSet)
+ostream& operator<<(ostream& os, const set<BusEndpoint>& epSet)
 {
     for (set<BusEndpoint>::iterator it = epSet.begin(); it != epSet.end(); ++it) {
         const BusEndpoint& ep = *it;
@@ -449,6 +451,7 @@ static std::ostream& operator<<(std::ostream& os, const set<BusEndpoint>& epSet)
     return os;
 }
 
+} //namespace ajn
 
 /********************************************************************************
  * Test class code
@@ -623,6 +626,7 @@ class DaemonRouterTest : public TestParamTuple {
         alljoynObj = NULL;
         delete router;
         router = NULL;
+        localEp.reset();
     }
 
     BusEndpoint GenEndpoint(const TestEndpointInfo& epInfo, bool onlySlsMatchRules)
@@ -631,9 +635,8 @@ class DaemonRouterTest : public TestParamTuple {
         // WS violations courtesy of uncrustify
         switch (epInfo->type) {
         case ENDPOINT_TYPE_LOCAL: {
-                TestLocalEndpoint ep(*bus, epInfo->name);
-                bep = BusEndpoint::cast(ep);
-                localEp = LocalEndpoint::cast(ep);
+                localEp.reset(new TestLocalEndpoint(*bus, epInfo->name));
+                bep = BusEndpoint::cast(*localEp);
                 break;
             }
 
@@ -795,12 +798,11 @@ class DaemonRouterTest : public TestParamTuple {
     list<BusEndpoint> epList;
     map<std::string, TestRemoteEndpoint> b2bEps;
 
-    LocalEndpoint localEp;
-
     static ConfigDB* configDb;
     static BusAttachment* bus;
     static TestAllJoynObj* alljoynObj;
     static TestSessionlessObj* sessionlessObj;
+    static std::unique_ptr<TestLocalEndpoint> localEp;
     static list<TestEndpointInfo> epInfoList;
     static list<TestEndpointInfo> srcEpInfoList;
     static list<TestEndpointInfo> srcDirectEpInfoList;
@@ -813,6 +815,7 @@ ConfigDB* DaemonRouterTest::configDb = NULL;
 BusAttachment* DaemonRouterTest::bus = NULL;
 TestAllJoynObj* DaemonRouterTest::alljoynObj = NULL;
 TestSessionlessObj* DaemonRouterTest::sessionlessObj = NULL;
+std::unique_ptr<TestLocalEndpoint> DaemonRouterTest::localEp;
 list<TestEndpointInfo> DaemonRouterTest::epInfoList;
 list<TestEndpointInfo> DaemonRouterTest::srcEpInfoList;
 list<TestEndpointInfo> DaemonRouterTest::srcDirectEpInfoList;
