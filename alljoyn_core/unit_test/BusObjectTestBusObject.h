@@ -25,6 +25,7 @@
 #include <qcc/Debug.h>
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
+#include <atomic>
 
 #include "ajTestCommon.h"
 
@@ -83,6 +84,6 @@ class BusObjectTestSignalReceiver : public MessageReceiver {
         signalReceived++;
     }
 
-    unsigned int signalReceived;
+    std::atomic<unsigned int> signalReceived;
 };
 
