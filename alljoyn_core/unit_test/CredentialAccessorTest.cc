@@ -579,7 +579,7 @@ static const char Rev0X103KeyStore[] = {
     "DSDGXBkv05OElCcUzseMU3sbwF4Y7mQ7QR5/GTz0CygxHlrr+Th5S8YCnmNu"
     "agZvcD1KjAOtz9iN354BcdU6ibTyfzZdePFG7hdWJim9S6MBNQ2gwQFg7gc2"
     "4gAAAWzBC3JMYgaQRW9wNImCW0sIAAAAIwED"
-}
+};
 
 #else
 
