@@ -21,6 +21,7 @@ import org.alljoyn.bus.common.ECCPublicKey;
 import org.alljoyn.bus.common.ECCSecret;
 import org.alljoyn.bus.common.ECCSignature;
 import org.alljoyn.bus.common.ECCPrivateKey;
+import javax.xml.bind.DatatypeConverter;
 import java.util.UUID;
 
 public class CryptoECCTest extends TestCase {
@@ -37,6 +38,14 @@ public class CryptoECCTest extends TestCase {
     public void testBasic() throws Exception {
         cryptoECC.generateDSAKeyPair();
         ECCPublicKey eccPublicKey = cryptoECC.getDSAPublicKey();
+        System.out.println("converted");
+        System.out.println("converted");
+        String encoded = DatatypeConverter.printBase64Binary(eccPublicKey.getX());
+        System.out.println(encoded);
+        encoded = DatatypeConverter.printBase64Binary(eccPublicKey.getY());
+        System.out.println(encoded);
+        System.out.println("converted");
+        System.out.println("converted");
         System.out.println(eccPublicKey.toString());
 
         ECCPrivateKey eccPrivateKey = cryptoECC.getDSAPrivateKey();
