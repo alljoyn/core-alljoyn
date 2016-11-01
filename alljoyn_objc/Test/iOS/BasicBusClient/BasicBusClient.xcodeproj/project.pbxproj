@@ -18,6 +18,11 @@
 		7DCBEEA01A254E2F00A53A83 /* AJNAboutProxy.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEE981A254E2F00A53A83 /* AJNAboutProxy.mm */; };
 		7DCBEEA31A254E3C00A53A83 /* AJNPasswordManager.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7DCBEEA21A254E3C00A53A83 /* AJNPasswordManager.mm */; };
 		83757BBD193B142F00637160 /* AJNTranslatorImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 83757BBC193B142F00637160 /* AJNTranslatorImpl.mm */; };
+		9A47F37D1DC8B8B300B45423 /* AJNCertificateX509.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F3741DC8B8B300B45423 /* AJNCertificateX509.mm */; };
+		9A47F37E1DC8B8B300B45423 /* AJNCryptoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F3761DC8B8B300B45423 /* AJNCryptoECC.mm */; };
+		9A47F37F1DC8B8B300B45423 /* AJNKeyInfoECC.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F3781DC8B8B300B45423 /* AJNKeyInfoECC.mm */; };
+		9A47F3801DC8B8B300B45423 /* AJNPermissionConfigurationListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F37A1DC8B8B300B45423 /* AJNPermissionConfigurationListenerImpl.mm */; };
+		9A47F3811DC8B8B300B45423 /* AJNPermissionConfigurator.mm in Sources */ = {isa = PBXBuildFile; fileRef = 9A47F37C1DC8B8B300B45423 /* AJNPermissionConfigurator.mm */; };
 		AC489D3E1631D26F00FC482B /* PingClient.m in Sources */ = {isa = PBXBuildFile; fileRef = AC489D3D1631D26F00FC482B /* PingClient.m */; };
 		AC489D421631D30700FC482B /* Constants.m in Sources */ = {isa = PBXBuildFile; fileRef = AC489D411631D30700FC482B /* Constants.m */; };
 		AC85B98D162CB5580013BCF2 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AC85B98C162CB5580013BCF2 /* UIKit.framework */; };
@@ -91,6 +96,16 @@
 		83757BBA193B142F00637160 /* AJNTranslator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslator.h; sourceTree = "<group>"; };
 		83757BBB193B142F00637160 /* AJNTranslatorImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNTranslatorImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.h; sourceTree = "<group>"; };
 		83757BBC193B142F00637160 /* AJNTranslatorImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNTranslatorImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNTranslatorImpl.mm; sourceTree = "<group>"; };
+		9A47F3731DC8B8B300B45423 /* AJNCertificateX509.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNCertificateX509.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCertificateX509.h; sourceTree = "<group>"; };
+		9A47F3741DC8B8B300B45423 /* AJNCertificateX509.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCertificateX509.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCertificateX509.mm; sourceTree = "<group>"; };
+		9A47F3751DC8B8B300B45423 /* AJNCryptoECC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNCryptoECC.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCryptoECC.h; sourceTree = "<group>"; };
+		9A47F3761DC8B8B300B45423 /* AJNCryptoECC.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNCryptoECC.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNCryptoECC.mm; sourceTree = "<group>"; };
+		9A47F3771DC8B8B300B45423 /* AJNKeyInfoECC.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNKeyInfoECC.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.h; sourceTree = "<group>"; };
+		9A47F3781DC8B8B300B45423 /* AJNKeyInfoECC.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNKeyInfoECC.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNKeyInfoECC.mm; sourceTree = "<group>"; };
+		9A47F3791DC8B8B300B45423 /* AJNPermissionConfigurationListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPermissionConfigurationListenerImpl.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurationListenerImpl.h; sourceTree = "<group>"; };
+		9A47F37A1DC8B8B300B45423 /* AJNPermissionConfigurationListenerImpl.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPermissionConfigurationListenerImpl.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurationListenerImpl.mm; sourceTree = "<group>"; };
+		9A47F37B1DC8B8B300B45423 /* AJNPermissionConfigurator.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = AJNPermissionConfigurator.h; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurator.h; sourceTree = "<group>"; };
+		9A47F37C1DC8B8B300B45423 /* AJNPermissionConfigurator.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = AJNPermissionConfigurator.mm; path = ../../../../AllJoynFramework/AllJoynFramework/AJNPermissionConfigurator.mm; sourceTree = "<group>"; };
 		AC489D3C1631D26F00FC482B /* PingClient.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PingClient.h; sourceTree = "<group>"; };
 		AC489D3D1631D26F00FC482B /* PingClient.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PingClient.m; sourceTree = "<group>"; };
 		AC489D401631D30700FC482B /* Constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Constants.h; sourceTree = "<group>"; };
@@ -270,6 +285,16 @@
 		AC9DD89816307EB400F5D0AB /* AllJoynFramework */ = {
 			isa = PBXGroup;
 			children = (
+				9A47F3731DC8B8B300B45423 /* AJNCertificateX509.h */,
+				9A47F3741DC8B8B300B45423 /* AJNCertificateX509.mm */,
+				9A47F3751DC8B8B300B45423 /* AJNCryptoECC.h */,
+				9A47F3761DC8B8B300B45423 /* AJNCryptoECC.mm */,
+				9A47F3771DC8B8B300B45423 /* AJNKeyInfoECC.h */,
+				9A47F3781DC8B8B300B45423 /* AJNKeyInfoECC.mm */,
+				9A47F3791DC8B8B300B45423 /* AJNPermissionConfigurationListenerImpl.h */,
+				9A47F37A1DC8B8B300B45423 /* AJNPermissionConfigurationListenerImpl.mm */,
+				9A47F37B1DC8B8B300B45423 /* AJNPermissionConfigurator.h */,
+				9A47F37C1DC8B8B300B45423 /* AJNPermissionConfigurator.mm */,
 				7D68081D1A9807E20000F28D /* AJNInit.h */,
 				7D68081E1A9807E20000F28D /* AJNInit.mm */,
 				7DCBEEA11A254E3C00A53A83 /* AJNPasswordManager.h */,
@@ -453,9 +478,11 @@
 				AC85B999162CB5580013BCF2 /* main.m in Sources */,
 				7D68081F1A9807E20000F28D /* AJNInit.mm in Sources */,
 				7DCBEE9B1A254E2F00A53A83 /* AJNAboutDataListenerImpl.mm in Sources */,
+				9A47F37D1DC8B8B300B45423 /* AJNCertificateX509.mm in Sources */,
 				AC85B99D162CB5580013BCF2 /* AppDelegate.m in Sources */,
 				7DCBEE9F1A254E2F00A53A83 /* AJNAboutListenerImpl.mm in Sources */,
 				AC85B9AC162CB5580013BCF2 /* ViewController.m in Sources */,
+				9A47F37E1DC8B8B300B45423 /* AJNCryptoECC.mm in Sources */,
 				AC9DD88716307D1600F5D0AB /* AJNPingObject.mm in Sources */,
 				7DCBEEA31A254E3C00A53A83 /* AJNPasswordManager.mm in Sources */,
 				AC9DD88816307D1600F5D0AB /* PingObject.m in Sources */,
@@ -471,12 +498,14 @@
 				ACD910171668096C00AB8C99 /* AJNBusObject.mm in Sources */,
 				ACD910181668096C00AB8C99 /* AJNBusObjectImpl.mm in Sources */,
 				ACD910191668096C00AB8C99 /* AJNClientController.m in Sources */,
+				9A47F37F1DC8B8B300B45423 /* AJNKeyInfoECC.mm in Sources */,
 				ACD9101A1668096C00AB8C99 /* AJNInterfaceDescription.mm in Sources */,
 				7DCBEE9A1A254E2F00A53A83 /* AJNAboutObject.mm in Sources */,
 				7DCBEE991A254E2F00A53A83 /* AJNAboutObjectDescription.mm in Sources */,
 				ACD9101B1668096C00AB8C99 /* AJNInterfaceMember.mm in Sources */,
 				ACD9101C1668096C00AB8C99 /* AJNInterfaceProperty.mm in Sources */,
 				ACD9101D1668096C00AB8C99 /* AJNKeyStoreListenerImpl.mm in Sources */,
+				9A47F3801DC8B8B300B45423 /* AJNPermissionConfigurationListenerImpl.mm in Sources */,
 				ACD9101E1668096C00AB8C99 /* AJNMessage.mm in Sources */,
 				ACD9101F1668096C00AB8C99 /* AJNMessageArgument.mm in Sources */,
 				ACD910201668096C00AB8C99 /* AJNMessageHeaderFields.mm in Sources */,
@@ -487,6 +516,7 @@
 				ACD910241668096C00AB8C99 /* AJNServiceController.m in Sources */,
 				ACD910251668096C00AB8C99 /* AJNSessionListenerImpl.mm in Sources */,
 				ACD910261668096C00AB8C99 /* AJNSessionOptions.mm in Sources */,
+				9A47F3811DC8B8B300B45423 /* AJNPermissionConfigurator.mm in Sources */,
 				83757BBD193B142F00637160 /* AJNTranslatorImpl.mm in Sources */,
 				ACD910271668096C00AB8C99 /* AJNSessionPortListenerImpl.mm in Sources */,
 				ACD910281668096C00AB8C99 /* AJNSignalHandlerImpl.mm in Sources */,
