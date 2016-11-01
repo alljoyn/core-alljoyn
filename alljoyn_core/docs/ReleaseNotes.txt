@@ -1,4 +1,4 @@
-AllJoyn Standard Core Version 16.04a Release Notes
+AllJoyn Standard Core Version 16.10 Release Notes
 ==================================================
 
 Fully Validated Platforms
@@ -14,87 +14,66 @@ https://msdn.microsoft.com/en-us/library/windows/apps/windows.devices.alljoyn.as
 
 See the Core Release Review wiki page for other platforms that have not been
 fully verified, but may work:
-https://wiki.allseenalliance.org/core/core_16.04_release_review#regression_test
+https://wiki.allseenalliance.org/core/core_16.10_release_review#regression_test
 
 
-Features added in Version 16.04a
+Features added in Version 16.10
 --------------------------------
-* Security 2.0 continues to be a Developer Preview Feature (ASACORE-1393)
-* New password-based authentication mechanism ECDHE_SPEKE (ASACORE-2055)
-* Improved multi-thread and multi-process Key Store synchronization
-  (ASACORE-2751)
-* Support for unified introspection XML format (ASACORE-964)
-* Additional C APIs for InterfaceDescription (ASACORE-2662)
-* CreateInterfacesFromXml and IntrospectWithDescription support for multiple
-  description languages (ASACORE-2667)
-* Support for a "const" annotation of interface description properties
-  (ASACORE-2254)
-* C APIs for Security 2.0 (ASACORE-2607)
-* XML-based Security 2.0 methods for handling Manifests, Policies and Rules
-  (ASACORE-2607)
-* Support for multiple Security 2.0 Manifests for a single app (ASACORE-2710)
-* Each Security 2.0 Manifest must be signed (ASACORE-2750)
-* StartManagement/EndManagement notifications for Security 2.0 apps
-  (ASACORE-2599)
-* Reject attempts to Claim Security 2.0 app using an authentication mechanism
-  that is not present in app's ClaimCapabilities (ASACORE-2660)
-* Security Manager application (secmgr) is now a sample app of the Standard
-  Core release. Previously Secmgr had been released outside of Core in 15.09,
-  as described in
-  https://wiki.allseenalliance.org/release/15.09?s[]=securitymgr#release_1509.
-* maxAlarms feature is now disabled on Windows, because the risk of deadlocks
-  was larger than the risk of using too many Alarms (ASACORE-2810)
+* Security 2.0 formal release (i.e. no longer Developer Preview) (ASACORE-1393)
+  * Obj-C and Java APIs for Security 2.0
+* Support for dependent services: Common Frameworks, CDM (formerly HAE), Gateway
+* Parity across OS and language bindings
+* Basic IPv6 Support (ASACORE-3167)
+  * UDP support only, no TCP support
+  * IPv6 over ethernet, WiFi
+  * TCL and SCL to support sessions between routing nodes
 
-Issues Addressed in Version 16.04a
+Full list of Jira's covering these can be found on the replease plan page:
+https://wiki.allseenalliance.org/core/core_16.10_release_plan?&#themes_and_priorities
+
+Issues Addressed in Version 16.10
 ----------------------------------
-ASACORE-2367 [Security 2.0] Unable to send sessioncast signals
-ASACORE-2379 Android DONE softkey is missing on sample Java apps
-ASACORE-2426 Simultaneous authentication of two peers doesn't work
-ASACORE-2444 Crash on BusAttachment destructor if application bus object
-             registered at object path '/'
-ASACORE-2516 LocalEndpoint hang while shutting down the endpoint
-ASACORE-2520 AuthenticationComplete not called when ALLJOYN_SRP_KEYX
-             authentication fails
-ASACORE-2542 Auth fails between TCL "SecureClientECDHE.exe -e ECDHE_ECDSA" and
-             SCL SampleServiceECDHE.exe
-ASACORE-2588 Applications built in Release mode cannot interop with Standard
-             Core Library built in Debug mode, and vice versa
-ASACORE-2730 IpNameServiceImpl::PurgeAndUpdatePacket infinite loop
-ASACORE-2933 C++ SecurityApplicationProxy.h includes a private header Crypto.h
-ASACORE-2940 qcc::String returns std::string by value while it used to return by
-             reference, not updated comments do not match the behaviour
-ASACORE-2955 C binding for InterfaceDescription relies on qcc::String reference
-             counting
-ASACORE-3106 Add BusAttachment::SecureConnection API to Java Binding
-
-For a complete list of fixed issues:
-https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20issuetype%20%3D%20Bug%20AND%20status%20in%20(Closed%2C%20Resolved)%20AND%20resolution%20%3D%20Fixed%20AND%20fixVersion%20in%20(16.04a%2C%2016.04)%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
-
-
-Known Issues in Version 16.04a
-------------------------------
 ASACORE-49   Multipoint session lost on joiner side and not binder side
              prevents joiner from rejoining
-ASACORE-1244 Legacy About service truncates the AppID to 16 bytes
 ASACORE-1600 iOS AboutService sample can not inter-operate with Java AboutClient
              sample
+ASACORE-2656 Error starting JNI Samples
+ASACORE-2841 Android chat sample fails when the channel name includes a decimal
+ASACORE-2865 AJCORE-471: JNI Chat sample for Android fails to start
+ASACORE-2797 AboutIconProxy::GetIcon ignores error return from GetContent
+ASACORE-2984 XML policy validator is stricter than HLD requirements
+ASACORE-3045 Policy XML schema has incorrect format for public keys
+ASACORE-3141 Address information disclosure of membership certificates
+
+For a complete list of fixed issues:
+https://jira.allseenalliance.org/issues/?jql=project%20%3D%20ASACORE%20AND%20issuetype%20%3D%20Bug%20AND%20status%20in%20(Closed%2C%20Resolved)%20AND%20resolution%20%3D%20Fixed%20AND%20fixVersion%20%3D%2016.10%20AND%20component%20%3D%20%22Router%2FSCL%22%20ORDER%20BY%20key%20ASC
+
+
+Known Issues in Version 16.10
+------------------------------
+ASACORE-1244 Legacy About service truncates the AppID to 16 bytes
 ASACORE-1827 GetTimestamp() function on Darwin is not monotonic
-ASACORE-1867 TRANSPORT_LOCAL SessionOpts does not work
+ASACORE-1867 TRANSPORT_LOCAL SessionOpts does not work (closed "won't fix" in
+             16.10)
 ASACORE-1893 Interface org.allseen.Introspectable cannot be marked as ANNOUNCED
              until RegisterBusObject is called
 ASACORE-2481 DefaultKeyStoreListener implementation uses faulty algorithm to
-             derive keystore filename
-ASACORE-2656 Error starting JNI Samples
+             derive keystore filename (closed "postponed" in 16.10)
 ASACORE-2741 Sharing a Key Store file between 64 bit and 32 apps is not
-             supported
+             supported (closed "won't fix" in 16.10)
 ASACORE-2797 AboutIconProxy::GetIcon ignores error return from GetContent
-ASACORE-2841 Android chat sample fails when the channel name includes a decimal
-ASACORE-2865 AJCORE-471: JNI Chat sample for Android fails to start
-ASACORE-2867 AJCORE-472: JNI Simple Service and Simple Client fail to start
+ASACORE-2919 Provide explicit init and deinit for C++ objects and Java bindings
 ASACORE-3144 About Service/Client Scalability Problems - This will result in
              slow discovery of clients when in noisy (lots of clients)
-             enviroments (100 so devices advertising).
-
+             enviroments (100 so devices advertising) - a charaterization effort
+             is planned in 17.04 timeframe.
+ASACORE-3276 ASACORE-3283 [IPNS][Fix] Query responses are sent when shouldn't
+ASACORE-3298 openwrt SConscript loads the environment variable "TARGET_LDFLAGS"
+             as its build variable "TARGET_LINKFLAGS".
+ASACORE-3343 ProxyBusObject:SecureConnection does not end up calling
+             AuthListener::AuthenticationComplete
+ASACORE-3433 ASACORE-3283 [IPNS] Quiet advertising works inconsistently between
+             IPv4 and IPv6
 
 For a complete list of open issues:
 https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20AND%20%28component%20in%20%28%22Router%2FSCL%22%2C%20SCONS%29%20OR%20component%20is%20EMPTY%29%20AND%20%28status%20%3D%20closed%20AND%20resolution%20%3D%20Postponed%20OR%20status%20not%20in%20%28closed%2C%20resolved%29%20AND%20issuetype%20%3D%20Bug%29%20ORDER%20BY%20Severity%20DESC%2C%20priority%20DESC%2C%20id%20ASC
@@ -102,65 +81,55 @@ https://jira.allseenalliance.org/issues/?jql=project%20%3D%20%22Core%20SW%22%20A
 
 Compatibility
 -------------
-Version 16.04:
-* ECDHE_PSK authentication mechanism has been marked deprecated. Use ECDHE_SPEKE
-  or some other authentication mechanism instead of ECDHE_PSK (ASACORE-2055)
-* Some of the qcc::String methods have been marked deprecated (ASACORE-2274)
-* Apps calling AllJoynShutdown before waiting for all Standard Core Threads to
-  finish execution will trigger a failed assertion on Debug builds and possibly
-  an application crash on Release builds. Applications should use
-  BusAttachment::Join() to wait for threads to finish execution (ASACORE-2811)
-* Security 2.0 methods BusAttachment::AddApplicationStateRule and
-  BusAttachment::RemoveApplicationStateRule were not needed so they have been
-  removed (ASACORE-2683)
-* qcc::GetGid() and qcc::GetUid() return hard-coded, constant values on Windows,
-  regardless of the current user's name and domain. This behavior is new for
-  Windows domain users. Non-domain users were already getting hard-coded IDs in
-  the 15.09 release (ASACORE-2854)
-* The incorrect definition of snprintf for Windows has been removed
-  (ASACORE-2891). Applications should either:
-  - Use the Visual Studio 2015 CRT, that provides a correct snprintf
-    implementation, or
-  - When using an older version of the Visual Studio CRT, call _snprintf then
-    add a zero character string terminator if _snprintf returns a negative value
+Version 16.10:
+* Security 2.0 Developer, and wire APIs have changed from the Developer Preview
+  versions in 15.09 and 16.04
+* ASACORE-3353: Codegen'ed apps cannot interop with non-codegen'ed apps. An
+  application that introspects and finds multiple annotations based on AllJoyn
+  16.04 should treat these annotations as unusable. To determine the AllJoyn
+  framework version, an application can query the About data.  This was fixed in
+  16.10.
 
 More details on these changes may be found on the Core Release Review wiki page:
 https://wiki.allseenalliance.org/core/core_16.04_release_review#compatibility
 
 For details of previous releases/release families please see the release notes:
-15.09: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.09/
-15.04: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.04/
+16.04: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB16.04
+15.09: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.09
+15.04: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB15.04
 14.12: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB14.12
 14.06: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB14.06
 
 
 Change history
 --------------
-16.04a - Restored full support for iOS 9.x, bug fixes: ASACORE-2730,
-         ASACORE-2933, ASACORE-2940, ASACORE-2955, ASACORE-3106
-16.04  - Bug fixes, new password-based authentication mechanism (ECDHE_SPEKE),
-         interface description improvements, Security 2.0 improvements
-         (including new APIs).
-15.09a - Bug fixes: ASACORE-2539, ASACORE-2575, ASACORE-2590
-15.09  - Bug fixes, Security2.0 feature, productization of TC <-> RN ARDP/UDP
-         feature, About feature supported in Javascript binding, Windows desktop
-         applications will use named pipe when running on Windows 10
-15.04b - Bug fixes: ASACORE-2247, ASACORE-2270
-15.04a - Bug fixes: ASACORE-1917, ASACORE-1920, ASACORE-1921, ASACORE-1929,
-         ASACORE-1934, ASACORE-1946, ASACORE-1954, ASACORE-1959, ASACORE-1960,
-         ASACORE-1961, ASACORE-1975, ASACORE-1977, ASACORE-1978, ASACORE-2000,
-         ASACORE-2018, ASACORE-2032, ASACORE-2035, ASACORE-2048
-15.04  - Bug fixes, further improvements to scalability and performance, new
-         features.
-14.12b - Bug fixes: ASACORE-780, ASACORE-1143, ASACORE-1504, ASACORE-1549,
-         ASACORE-1576, ASACORE-1596
-14.12a - Bug fixes: ASACORE-1324, ASACORE-1325, ASACORE-1333, ASACORE-1334,
-         ASACORE-1336, ASACORE-1337, ASACORE-1355, ASACORE-1366, ASACORE-1368,
-         ASACORE-1369, ASACORE-1390, ASACORE-1402, ASACORE-1417
-14.12  - Bug fixes, major improvements to address scalability and stability, new
-         features.
-14.06a - Bug fixes: ASACORE-713, ASACORE-747, ASACORE-760, ASACORE-779,
-         ASACORE-788, ASACORE-808, ASACORE-809, ASACORE-814, ASACORE-858,
-         ASACORE-863, ASACORE-909 and ASACORE-921.
-14.06  - Stability Bug fixes. Removed support for ICE.  Added a number of
-         features listed above.
+16.10  Bug Fixes, Formal release of Security 2.0 feature,Feature parity
+       across all supported platforms, support for UDP over IPv6
+16.04a Restored full support for iOS 9.x, bug fixes: ASACORE-2730,
+       ASACORE-2933, ASACORE-2940, ASACORE-2955, ASACORE-3106
+16.04  Bug fixes, new password-based authentication mechanism (ECDHE_SPEKE),
+       interface description improvements, Security 2.0 improvements
+       (including new APIs).
+15.09a Bug fixes: ASACORE-2539, ASACORE-2575, ASACORE-2590
+15.09  Bug fixes, Security2.0 feature, productization of TC <-> RN ARDP/UDP
+       feature, About feature supported in Javascript binding, Windows desktop
+       applications will use named pipe when running on Windows 10
+15.04b Bug fixes: ASACORE-2247, ASACORE-2270
+15.04a Bug fixes: ASACORE-1917, ASACORE-1920, ASACORE-1921, ASACORE-1929,
+       ASACORE-1934, ASACORE-1946, ASACORE-1954, ASACORE-1959, ASACORE-1960,
+       ASACORE-1961, ASACORE-1975, ASACORE-1977, ASACORE-1978, ASACORE-2000,
+       ASACORE-2018, ASACORE-2032, ASACORE-2035, ASACORE-2048
+15.04  Bug fixes, further improvements to scalability and performance, new
+       features.
+14.12b Bug fixes: ASACORE-780, ASACORE-1143, ASACORE-1504, ASACORE-1549,
+       ASACORE-1576, ASACORE-1596
+14.12a Bug fixes: ASACORE-1324, ASACORE-1325, ASACORE-1333, ASACORE-1334,
+       ASACORE-1336, ASACORE-1337, ASACORE-1355, ASACORE-1366, ASACORE-1368,
+       ASACORE-1369, ASACORE-1390, ASACORE-1402, ASACORE-1417
+14.12  Bug fixes, major improvements to address scalability and stability, new
+       features.
+14.06a Bug fixes: ASACORE-713, ASACORE-747, ASACORE-760, ASACORE-779,
+       ASACORE-788, ASACORE-808, ASACORE-809, ASACORE-814, ASACORE-858,
+       ASACORE-863, ASACORE-909 and ASACORE-921.
+14.06  Stability Bug fixes. Removed support for ICE.  Added a number of
+       features listed above.
