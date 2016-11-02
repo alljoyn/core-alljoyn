@@ -581,7 +581,235 @@ static void CheckSeal(uint8_t* p)
 }
 #endif
 
-class ArdpStream;
+/**
+ * A skeletal variety of a Stream used to fake the system into believing that
+ * there is a stream-based protocol at work here.  This is not intended to be
+ * wired into IODispatch but is used to allow the daemon to to run in a
+ * threadless, streamless environment without major changes.
+ */
+class ArdpStream : public qcc::Stream {
+  public:
+
+    ArdpStream();
+
+    virtual ~ArdpStream();
+
+    /**
+     * Get a pointer to the associated UDP transport instance.
+     */
+    UDPTransport* GetTransport() const;
+
+    /**
+     * Set the pointer to the associated UDP transport instance.
+     */
+    void SetTransport(UDPTransport* transport);
+
+    /**
+     * Get a pointer to the associated UDP endpoint.
+     */
+    _UDPEndpoint* GetEndpoint() const;
+
+    /**
+     * Set the pointer to the associated UDP endpoint instance.
+     */
+    void SetEndpoint(_UDPEndpoint* endpoint);
+
+    /**
+     * Get the information that describes the underlying ARDP protocol connection.
+     */
+    ArdpHandle* GetHandle() const;
+
+    /**
+     * Set the handle to the underlying ARDP protocol instance.
+     */
+    void SetHandle(ArdpHandle* handle);
+
+    /**
+     * Get the information that describes the underlying ARDP protocol
+     * connection.
+     */
+    ArdpConnRecord* GetConn() const;
+
+    /**
+     * Set the information that describes the underlying ARDP protocol
+     * connection.
+     */
+    void SetConn(ArdpConnRecord* conn);
+
+    /**
+     * Get the underlying ARDP protocol connection identifier.
+     */
+    uint32_t GetConnId() const;
+
+    /**
+     * Set the underlying ARDP protocol connection ID
+     */
+    void SetConnId(uint32_t connId);
+
+    /**
+     * Add the currently running thread to a set of threads that may be
+     * currently referencing the internals of the stream.  We need this list to
+     * make sure we don't try to delete the stream if there are threads
+     * currently using the stream, and to wake those threads in case the threads
+     * are blocked waiting for a send to complete when the associated endpoint
+     * is shut down.
+     */
+    void AddCurrentThread();
+
+    /**
+     * Remove the currently running thread from the set of threads that may be
+     * currently referencing the internals of the stream.
+     */
+    void RemoveCurrentThread();
+
+    /**
+     * Wake all of the treads that may be waiting on the condition for a chance
+     * to contend for the resource.  We expect this function to be used to wake
+     * all of the threads in the case that the stream is shutting down.
+     * Presumably they will all wake up and notice that the stream is going away
+     * and exit
+     */
+    void WakeThreadSet();
+
+    /**
+     * Determine whether or not there is a thread waiting on the stream for a write
+     * operation to complete.
+     */
+    bool ThreadSetEmpty();
+
+    /**
+     * Get the number of outstanding send buffers -- the number of sends that have been
+     * called, but have not completed and had the buffers returned by ARDP.
+     */
+    uint32_t GetSendsOutstanding();
+
+    /**
+     * Set the stream's write condition if it exists.  This will wake exactly
+     * one waiting thread which will then loop back around and try to do its
+     * work again.
+     */
+    void SignalWriteCondition();
+
+    /**
+     * Send some bytes to the other side of the conection described by the
+     * m_conn member variable.
+     *
+     * The caller of this function is most likely the daemon router that is
+     * moving a message to a remote destination.  It was written expecting this
+     * call to copy bytes into TCP or block when TCP applies backpressure.  As
+     * soon as the call returns, the router expects to be able to delete the
+     * message backing buffer (our buf) and go on about its business.
+     *
+     * That means we basically have to do the same thing here unless we start
+     * ripping the guts out of the system.  That means the daemon router expects
+     * to see and endpoint with a stream in it that has this PushBytes method.
+     *
+     * we need to copy the data in and return immediately if there is no
+     * backpressure from the protocol; or copy the data in and block the caller
+     * if there is backpressure.  Backpressure is indicated by the
+     * ER_ARDP_BACKPRESSURE return.  If this happens, we cannot send any more
+     * data until we get a send callback indicating the other side has consumed
+     * some data.  In this case we need to block the calling thread until it can
+     * continue.
+     *
+     * When a buffer is sent, the ARDP protocol takes ownership of it until it
+     * is ACKed by the other side or it times out.  When the ACK happens, a send
+     * callback is fired that will record the actual status of the send and free
+     * the buffer.  The status of the write is not known until the next read or
+     * write operation.
+     */
+    QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent, uint32_t ttl);
+
+    /*
+     * A version of PushBytes that doesn't care about TTL.
+     */
+    QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent);
+
+    /**
+     * Get some bytes from the other side of the conection described by the
+     * m_conn member variable.  Data must be present in the message buffer
+     * list since we expect that a RecvCb that added a buffer to that list is
+     * what is going to be doing the read that will eventually call PullBytes.
+     * In that case, since the data is expected to be present, <timeout> will
+     * be zero.
+     */
+    QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout);
+
+    /**
+     * Set the stram up for being torn down before going through the expected
+     * lifetime state transitions.
+     */
+    void EarlyExit();
+
+    /**
+     * Get the disconnected status.  If the stream has been disconnected, return
+     * true otherwise false.
+     */
+    bool GetDisconnected();
+
+    /**
+     * In the case of a local disconnect, disc sent means that ARDP_Disconnect()
+     * has been called.  Determine if this call has been made or not.
+     */
+    bool GetDiscSent();
+
+    /**
+     * In the case of a remote disconnect, disc status reflects the reason the
+     * stream was disconnected.  In the local case, will be ER_OK until the
+     * disconnect happens, then will be ER_UDP_LOCAL_DISCONNECT.
+     */
+    QStatus GetDiscStatus();
+
+    /**
+     * Process a disconnect event, either local or remote.
+     */
+    void Disconnect(bool sudden, QStatus status);
+
+    /**
+     * This is the data sent callback which is plumbed from the ARDP protocol up
+     * to this stream.  This callback means that the buffer is no longer
+     * required and may be freed.  The ARDP protocol only had temporary custody
+     * of the buffer.
+     */
+    void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status);
+
+    class ThreadEntry {
+      public:
+        qcc::Thread* m_thread;
+        ArdpStream* m_stream;
+    };
+
+  private:
+    ArdpStream(const ArdpStream& other);
+    ArdpStream operator=(const ArdpStream& other);
+
+    UDPTransport* m_transport;         /**< The transport that created the endpoint that created the stream */
+    _UDPEndpoint* m_endpoint;          /**< The endpoint that created the stream */
+    ArdpHandle* m_handle;              /**< The handle to the ARDP protocol instance this stream works with */
+    ArdpConnRecord* m_conn;            /**< The ARDP connection associated with this endpoint / stream combination */
+    uint32_t m_connId;                 /**< The ARDP connection identifier */
+    qcc::Mutex m_lock;                 /**< Mutex that protects m_threads and disconnect state */
+    bool m_disc;                       /**< Set to true when ARDP fires the DisconnectCb on the associated connection */
+    bool m_discSent;                   /**< Set to true when the endpoint calls ARDP_Disconnect */
+    QStatus m_discStatus;              /**< The status code that was the reason for the last disconnect */
+    qcc::Condition* m_writeCondition;  /**< The write event that callers are blocked on to apply backpressure */
+    int32_t m_sendsOutstanding;        /**< The number of Message sends that are outstanding (in-flight) with ARDP */
+    std::set<ThreadEntry> m_threads;   /**< Threads that are wandering around in the stream and possibly associated endpoint */
+
+#if SENT_SANITY
+    std::set<uint8_t*> m_sentSet;
+#endif
+
+    class BufEntry {
+      public:
+        BufEntry() : m_buf(NULL), m_len(0), m_pulled(0), m_rcv(NULL), m_cnt(0) { }
+        uint8_t* m_buf;
+        uint16_t m_len;
+        uint16_t m_pulled;
+        ArdpRcvBuf* m_rcv;
+        uint16_t m_cnt;
+    };
+};
 
 /*
  * An endpoint class to abstract the notion of an addressible point in the
@@ -2103,8 +2331,18 @@ class _UDPEndpoint : public _RemoteEndpoint {
         QCC_DbgTrace(("_UDPEndpoint::SetLinkTimeout(linkTimeout=%d.)", linkTimeoutSeconds));
 
         m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
+        ArdpStream* ardpStream = GetStream();
+        QCC_ASSERT(ardpStream != nullptr);
+        if (ardpStream->GetDisconnected()) {
+            QStatus status = ER_ARDP_INVALID_STATE;
+            QCC_LogError(status, ("UDPEndpoint::SetLinkTimeout(): ARDP disconnected"));
+            m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
+            return status;
+        }
+        ArdpConnRecord* conn = GetConn();
+        QCC_ASSERT(conn != nullptr);
         uint32_t linkTimeoutMilliseconds = linkTimeoutSeconds * 1000;
-        ARDP_UpdateProbeTimeout(GetHandle(), GetConn(), linkTimeoutMilliseconds);
+        ARDP_UpdateProbeTimeout(GetHandle(), conn, linkTimeoutMilliseconds);
         m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
 
         return ER_OK;
@@ -2154,984 +2392,939 @@ class _UDPEndpoint : public _RemoteEndpoint {
     bool m_wait;                      /**< If true, follow EP_STOPPING state with EP_WAITING state */
 };
 
+
+ArdpStream::ArdpStream()
+    : m_transport(NULL),
+    m_endpoint(NULL),
+    m_handle(NULL),
+    m_conn(NULL),
+    m_connId(0),
+    m_lock(LOCK_LEVEL_UDPTRANSPORT_ARDPSTREAM_LOCK),
+    m_disc(false),
+    m_discSent(false),
+    m_discStatus(ER_OK),
+    m_writeCondition(NULL),
+    m_sendsOutstanding(0)
+{
+    QCC_DbgTrace(("ArdpStream::ArdpStream()"));
+    m_writeCondition = new qcc::Condition();
+}
+
+ArdpStream::~ArdpStream()
+{
+    QCC_DbgTrace(("ArdpStream::~ArdpStream()"));
+
+    QCC_DbgPrintf(("ArdpStream::~ArdpStream(): delete events"));
+    delete m_writeCondition;
+    m_writeCondition = NULL;
+}
+
 /**
- * A skeletal variety of a Stream used to fake the system into believing that
- * there is a stream-based protocol at work here.  This is not intended to be
- * wired into IODispatch but is used to allow the daemon to to run in a
- * threadless, streamless environment without major changes.
+ * Get a pointer to the associated UDP transport instance.
  */
-class ArdpStream : public qcc::Stream {
-  public:
+UDPTransport* ArdpStream::GetTransport() const
+{
+    QCC_DbgTrace(("ArdpStream::GetTransport(): => %p", m_transport));
+    return m_transport;
+}
 
-    ArdpStream()
-        : m_transport(NULL),
-        m_endpoint(NULL),
-        m_handle(NULL),
-        m_conn(NULL),
-        m_connId(0),
-        m_lock(LOCK_LEVEL_UDPTRANSPORT_ARDPSTREAM_LOCK),
-        m_disc(false),
-        m_discSent(false),
-        m_discStatus(ER_OK),
-        m_writeCondition(NULL),
-        m_sendsOutstanding(0)
-    {
-        QCC_DbgTrace(("ArdpStream::ArdpStream()"));
-        m_writeCondition = new qcc::Condition();
+/**
+ * Set the pointer to the associated UDP transport instance.
+ */
+void ArdpStream::SetTransport(UDPTransport* transport)
+{
+    QCC_DbgTrace(("ArdpStream::SetTransport(transport=%p)", transport));
+    m_transport = transport;
+}
+
+/**
+ * Get a pointer to the associated UDP endpoint.
+ */
+_UDPEndpoint* ArdpStream::GetEndpoint() const
+{
+    QCC_DbgTrace(("ArdpStream::GetEndpoint(): => %p", m_endpoint));
+    return m_endpoint;
+}
+
+/**
+ * Set the pointer to the associated UDP endpoint instance.
+ */
+void ArdpStream::SetEndpoint(_UDPEndpoint* endpoint)
+{
+    QCC_DbgTrace(("ArdpStream::SetEndpoint(endpoint=%p)", endpoint));
+    m_endpoint = endpoint;
+}
+
+/**
+ * Get the information that describes the underlying ARDP protocol connection.
+ */
+ArdpHandle* ArdpStream::GetHandle() const
+{
+    QCC_DbgTrace(("ArdpStream::GetHandle(): => %p", m_handle));
+    return m_handle;
+}
+
+/**
+ * Set the handle to the underlying ARDP protocol instance.
+ */
+void ArdpStream::SetHandle(ArdpHandle* handle)
+{
+    QCC_DbgTrace(("ArdpStream::SetHandle(handle=%p)", handle));
+    m_handle = handle;
+}
+
+/**
+ * Get the information that describes the underlying ARDP protocol
+ * connection.
+ */
+ArdpConnRecord* ArdpStream::GetConn() const
+{
+    QCC_DbgTrace(("ArdpStream::GetConn(): => %p", m_conn));
+    return m_conn;
+}
+
+/**
+ * Set the information that describes the underlying ARDP protocol
+ * connection.
+ */
+void ArdpStream::SetConn(ArdpConnRecord* conn)
+{
+    QCC_DbgTrace(("ArdpStream::SetConn(conn=%p)", conn));
+    m_conn = conn;
+}
+
+/**
+ * Get the underlying ARDP protocol connection identifier.
+ */
+uint32_t ArdpStream::GetConnId() const
+{
+    QCC_DbgTrace(("ArdpStream::GetConnId(): => %p", m_connId));
+    return m_connId;
+}
+
+/**
+ * Set the underlying ARDP protocol connection ID
+ */
+void ArdpStream::SetConnId(uint32_t connId)
+{
+    QCC_DbgTrace(("ArdpStream::SetConnId(connId=%d.)", connId));
+    m_connId = connId;
+}
+
+/**
+ * Add the currently running thread to a set of threads that may be
+ * currently referencing the internals of the stream.  We need this list to
+ * make sure we don't try to delete the stream if there are threads
+ * currently using the stream, and to wake those threads in case the threads
+ * are blocked waiting for a send to complete when the associated endpoint
+ * is shut down.
+ */
+void ArdpStream::AddCurrentThread()
+{
+    QCC_DbgTrace(("ArdpStream::AddCurrentThread()"));
+
+    ThreadEntry entry;
+    entry.m_thread = qcc::Thread::GetThread();
+    entry.m_stream = this;
+    m_lock.Lock(MUTEX_CONTEXT);
+    m_threads.insert(entry);
+    m_lock.Unlock(MUTEX_CONTEXT);
+}
+
+/**
+ * Remove the currently running thread from the set of threads that may be
+ * currently referencing the internals of the stream.
+ */
+void ArdpStream::RemoveCurrentThread()
+{
+    QCC_DbgTrace(("ArdpStream::RemoveCurrentThread()"));
+
+    ThreadEntry entry;
+    entry.m_thread = qcc::Thread::GetThread();
+    entry.m_stream = this;
+
+    m_lock.Lock(MUTEX_CONTEXT);
+    set<ThreadEntry>::iterator i = m_threads.find(entry);
+    QCC_ASSERT(i != m_threads.end() && "ArdpStream::RemoveCurrentThread(): Thread not on m_threads");
+    m_threads.erase(i);
+    m_lock.Unlock(MUTEX_CONTEXT);
+}
+
+/**
+ * Wake all of the treads that may be waiting on the condition for a chance
+ * to contend for the resource.  We expect this function to be used to wake
+ * all of the threads in the case that the stream is shutting down.
+ * Presumably they will all wake up and notice that the stream is going away
+ * and exit
+ */
+void ArdpStream::WakeThreadSet()
+{
+    QCC_DbgTrace(("ArdpStream::WakeThreadSet()"));
+    m_lock.Lock(MUTEX_CONTEXT);
+    if (m_writeCondition) {
+        m_writeCondition->Broadcast();
     }
+    m_lock.Unlock(MUTEX_CONTEXT);
+}
 
-    virtual ~ArdpStream()
-    {
-        QCC_DbgTrace(("ArdpStream::~ArdpStream()"));
+/**
+ * Determine whether or not there is a thread waiting on the stream for a write
+ * operation to complete.
+ */
+bool ArdpStream::ThreadSetEmpty()
+{
+    QCC_DbgTrace(("ArdpStream::ThreadSetEmpty()"));
 
-        QCC_DbgPrintf(("ArdpStream::~ArdpStream(): delete events"));
-        delete m_writeCondition;
-        m_writeCondition = NULL;
+    m_lock.Lock(MUTEX_CONTEXT);
+    bool empty = m_threads.empty();
+    m_lock.Unlock(MUTEX_CONTEXT);
+
+    QCC_DbgTrace(("ArdpStream::ThreadSetEmpty(): -> %s", empty ? "true" : "false"));
+    return empty;
+}
+
+/**
+ * Get the number of outstanding send buffers -- the number of sends that have been
+ * called, but have not completed and had the buffers returned by ARDP.
+ */
+uint32_t ArdpStream::GetSendsOutstanding()
+{
+    QCC_DbgTrace(("ArdpStream::GetSendsOutstanding() -> %d.", m_sendsOutstanding));
+    m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
+    uint32_t sendsOutstanding = m_sendsOutstanding;
+    m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
+    return sendsOutstanding;
+}
+
+/**
+ * Set the stream's write condition if it exists.  This will wake exactly
+ * one waiting thread which will then loop back around and try to do its
+ * work again.
+ */
+void ArdpStream::SignalWriteCondition()
+{
+    QCC_DbgTrace(("ArdpStream::SignalWriteCondition()"));
+    m_lock.Lock(MUTEX_CONTEXT);
+    if (m_writeCondition) {
+        m_writeCondition->Signal();
     }
+    m_lock.Unlock(MUTEX_CONTEXT);
+}
 
-    /**
-     * Get a pointer to the associated UDP transport instance.
+/**
+ * Send some bytes to the other side of the conection described by the
+ * m_conn member variable.
+ *
+ * The caller of this function is most likely the daemon router that is
+ * moving a message to a remote destination.  It was written expecting this
+ * call to copy bytes into TCP or block when TCP applies backpressure.  As
+ * soon as the call returns, the router expects to be able to delete the
+ * message backing buffer (our buf) and go on about its business.
+ *
+ * That means we basically have to do the same thing here unless we start
+ * ripping the guts out of the system.  That means the daemon router expects
+ * to see and endpoint with a stream in it that has this PushBytes method.
+ *
+ * we need to copy the data in and return immediately if there is no
+ * backpressure from the protocol; or copy the data in and block the caller
+ * if there is backpressure.  Backpressure is indicated by the
+ * ER_ARDP_BACKPRESSURE return.  If this happens, we cannot send any more
+ * data until we get a send callback indicating the other side has consumed
+ * some data.  In this case we need to block the calling thread until it can
+ * continue.
+ *
+ * When a buffer is sent, the ARDP protocol takes ownership of it until it
+ * is ACKed by the other side or it times out.  When the ACK happens, a send
+ * callback is fired that will record the actual status of the send and free
+ * the buffer.  The status of the write is not known until the next read or
+ * write operation.
+ */
+QStatus ArdpStream::PushBytes(const void* buf, size_t numBytes, size_t& numSent, uint32_t ttl)
+{
+    QCC_DbgTrace(("ArdpStream::PushBytes(buf=%p, numBytes=%d., numSent=%p)", buf, numBytes, &numSent));
+    QStatus status = ER_OK;
+
+    /*
+     * Start out by assuming that nothing worked and we have sent nothing.
      */
-    UDPTransport* GetTransport() const
-    {
-        QCC_DbgTrace(("ArdpStream::GetTransport(): => %p", m_transport));
-        return m_transport;
-    }
+    numSent = 0;
 
-    /**
-     * Set the pointer to the associated UDP transport instance.
-     */
-    void SetTransport(UDPTransport* transport)
-    {
-        QCC_DbgTrace(("ArdpStream::SetTransport(transport=%p)", transport));
-        m_transport = transport;
-    }
-
-    /**
-     * Get a pointer to the associated UDP endpoint.
-     */
-    _UDPEndpoint* GetEndpoint() const
-    {
-        QCC_DbgTrace(("ArdpStream::GetEndpoint(): => %p", m_endpoint));
-        return m_endpoint;
-    }
-
-    /**
-     * Set the pointer to the associated UDP endpoint instance.
-     */
-    void SetEndpoint(_UDPEndpoint* endpoint)
-    {
-        QCC_DbgTrace(("ArdpStream::SetEndpoint(endpoint=%p)", endpoint));
-        m_endpoint = endpoint;
-    }
-
-    /**
-     * Get the information that describes the underlying ARDP protocol connection.
-     */
-    ArdpHandle* GetHandle() const
-    {
-        QCC_DbgTrace(("ArdpStream::GetHandle(): => %p", m_handle));
-        return m_handle;
-    }
-
-    /**
-     * Set the handle to the underlying ARDP protocol instance.
-     */
-    void SetHandle(ArdpHandle* handle)
-    {
-        QCC_DbgTrace(("ArdpStream::SetHandle(handle=%p)", handle));
-        m_handle = handle;
-    }
-
-    /**
-     * Get the information that describes the underlying ARDP protocol
-     * connection.
-     */
-    ArdpConnRecord* GetConn() const
-    {
-        QCC_DbgTrace(("ArdpStream::GetConn(): => %p", m_conn));
-        return m_conn;
-    }
-
-    /**
-     * Set the information that describes the underlying ARDP protocol
-     * connection.
-     */
-    void SetConn(ArdpConnRecord* conn)
-    {
-        QCC_DbgTrace(("ArdpStream::SetConn(conn=%p)", conn));
-        m_conn = conn;
-    }
-
-    /**
-     * Get the underlying ARDP protocol connection identifier.
-     */
-    uint32_t GetConnId() const
-    {
-        QCC_DbgTrace(("ArdpStream::GetConnId(): => %p", m_connId));
-        return m_connId;
-    }
-
-    /**
-     * Set the underlying ARDP protocol connection ID
-     */
-    void SetConnId(uint32_t connId)
-    {
-        QCC_DbgTrace(("ArdpStream::SetConnId(connId=%d.)", connId));
-        m_connId = connId;
-    }
-
-    /**
-     * Add the currently running thread to a set of threads that may be
-     * currently referencing the internals of the stream.  We need this list to
-     * make sure we don't try to delete the stream if there are threads
-     * currently using the stream, and to wake those threads in case the threads
-     * are blocked waiting for a send to complete when the associated endpoint
-     * is shut down.
-     */
-    void AddCurrentThread()
-    {
-        QCC_DbgTrace(("ArdpStream::AddCurrentThread()"));
-
-        ThreadEntry entry;
-        entry.m_thread = qcc::Thread::GetThread();
-        entry.m_stream = this;
-        m_lock.Lock(MUTEX_CONTEXT);
-        m_threads.insert(entry);
-        m_lock.Unlock(MUTEX_CONTEXT);
-    }
-
-    /**
-     * Remove the currently running thread from the set of threads that may be
-     * currently referencing the internals of the stream.
-     */
-    void RemoveCurrentThread()
-    {
-        QCC_DbgTrace(("ArdpStream::RemoveCurrentThread()"));
-
-        ThreadEntry entry;
-        entry.m_thread = qcc::Thread::GetThread();
-        entry.m_stream = this;
-
-        m_lock.Lock(MUTEX_CONTEXT);
-        set<ThreadEntry>::iterator i = m_threads.find(entry);
-        QCC_ASSERT(i != m_threads.end() && "ArdpStream::RemoveCurrentThread(): Thread not on m_threads");
-        m_threads.erase(i);
-        m_lock.Unlock(MUTEX_CONTEXT);
-    }
-
-    /**
-     * Wake all of the treads that may be waiting on the condition for a chance
-     * to contend for the resource.  We expect this function to be used to wake
-     * all of the threads in the case that the stream is shutting down.
-     * Presumably they will all wake up and notice that the stream is going away
-     * and exit
-     */
-    void WakeThreadSet()
-    {
-        QCC_DbgTrace(("ArdpStream::WakeThreadSet()"));
-        m_lock.Lock(MUTEX_CONTEXT);
-        if (m_writeCondition) {
-            m_writeCondition->Broadcast();
-        }
-        m_lock.Unlock(MUTEX_CONTEXT);
-    }
-
-    /**
-     * Determine whether or not there is a thread waiting on the stream for a write
-     * operation to complete.
-     */
-    bool ThreadSetEmpty()
-    {
-        QCC_DbgTrace(("ArdpStream::ThreadSetEmpty()"));
-
-        m_lock.Lock(MUTEX_CONTEXT);
-        bool empty = m_threads.empty();
-        m_lock.Unlock(MUTEX_CONTEXT);
-
-        QCC_DbgTrace(("ArdpStream::ThreadSetEmpty(): -> %s", empty ? "true" : "false"));
-        return empty;
-    }
-
-    /**
-     * Get the number of outstanding send buffers -- the number of sends that have been
-     * called, but have not completed and had the buffers returned by ARDP.
-     */
-    uint32_t GetSendsOutstanding()
-    {
-        QCC_DbgTrace(("ArdpStream::GetSendsOutstanding() -> %d.", m_sendsOutstanding));
-        m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
-        uint32_t sendsOutstanding = m_sendsOutstanding;
-        m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
-        return sendsOutstanding;
-    }
-
-    /**
-     * Set the stream's write condition if it exists.  This will wake exactly
-     * one waiting thread which will then loop back around and try to do its
-     * work again.
-     */
-    void SignalWriteCondition()
-    {
-        QCC_DbgTrace(("ArdpStream::SignalWriteCondition()"));
-        m_lock.Lock(MUTEX_CONTEXT);
-        if (m_writeCondition) {
-            m_writeCondition->Signal();
-        }
-        m_lock.Unlock(MUTEX_CONTEXT);
-    }
-
-    /**
-     * Send some bytes to the other side of the conection described by the
-     * m_conn member variable.
+    /*
+     * If either the transport or the endpoint is not in a state where it
+     * indicates that it is ready to send, we need to return an error.
      *
-     * The caller of this function is most likely the daemon router that is
-     * moving a message to a remote destination.  It was written expecting this
-     * call to copy bytes into TCP or block when TCP applies backpressure.  As
-     * soon as the call returns, the router expects to be able to delete the
-     * message backing buffer (our buf) and go on about its business.
+     * Unfortunately, the system will try to do all kinds of things to an
+     * endpoint even though it has just stopped it.  To prevent cascades of
+     * error logs, we need to return a "magic" error code and not log an
+     * error if we detect that either the transport or the endpoint is
+     * shutting down.  Higher level code (especially AllJoynObj) will look
+     * for this error and not do any logging if it is a transient error
+     * during shutdown, as identified by the error return value
+     * ER_BUS_ENDPOINT_CLOSING.
      *
-     * That means we basically have to do the same thing here unless we start
-     * ripping the guts out of the system.  That means the daemon router expects
-     * to see and endpoint with a stream in it that has this PushBytes method.
-     *
-     * we need to copy the data in and return immediately if there is no
-     * backpressure from the protocol; or copy the data in and block the caller
-     * if there is backpressure.  Backpressure is indicated by the
-     * ER_ARDP_BACKPRESSURE return.  If this happens, we cannot send any more
-     * data until we get a send callback indicating the other side has consumed
-     * some data.  In this case we need to block the calling thread until it can
-     * continue.
-     *
-     * When a buffer is sent, the ARDP protocol takes ownership of it until it
-     * is ACKed by the other side or it times out.  When the ACK happens, a send
-     * callback is fired that will record the actual status of the send and free
-     * the buffer.  The status of the write is not known until the next read or
-     * write operation.
+     * There is a window between the start of a remote disconnect event and
+     * the endpoint state change where the endpoint can think it is up and
+     * started but the stream can think it has started going down.  We'll
+     * catch that case before actually starting the send.
      */
-    QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent, uint32_t ttl)
-    {
-        QCC_DbgTrace(("ArdpStream::PushBytes(buf=%p, numBytes=%d., numSent=%p)", buf, numBytes, &numSent));
-        QStatus status = ER_OK;
+    if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
+        return ER_BUS_ENDPOINT_CLOSING;
+    }
+    if (m_endpoint->IsEpStarted() == false) {
+        return ER_BUS_ENDPOINT_CLOSING;
+    }
 
-        /*
-         * Start out by assuming that nothing worked and we have sent nothing.
-         */
-        numSent = 0;
-
-        /*
-         * If either the transport or the endpoint is not in a state where it
-         * indicates that it is ready to send, we need to return an error.
-         *
-         * Unfortunately, the system will try to do all kinds of things to an
-         * endpoint even though it has just stopped it.  To prevent cascades of
-         * error logs, we need to return a "magic" error code and not log an
-         * error if we detect that either the transport or the endpoint is
-         * shutting down.  Higher level code (especially AllJoynObj) will look
-         * for this error and not do any logging if it is a transient error
-         * during shutdown, as identified by the error return value
-         * ER_BUS_ENDPOINT_CLOSING.
-         *
-         * There is a window between the start of a remote disconnect event and
-         * the endpoint state change where the endpoint can think it is up and
-         * started but the stream can think it has started going down.  We'll
-         * catch that case before actually starting the send.
-         */
-        if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
-            return ER_BUS_ENDPOINT_CLOSING;
-        }
-        if (m_endpoint->IsEpStarted() == false) {
-            return ER_BUS_ENDPOINT_CLOSING;
-        }
-
-        /*
-         * We can proceed, but we are a new thread that is going to be wandering
-         * down into the stream code, so add ourselves to the list of threads
-         * wandering around in the associated endpoint.  We need to keep track
-         * of this in case the endpoint is stopped while the current thread is
-         * wandering around in the stream trying to get the send done.
-         */
-        AddCurrentThread();
+    /*
+     * We can proceed, but we are a new thread that is going to be wandering
+     * down into the stream code, so add ourselves to the list of threads
+     * wandering around in the associated endpoint.  We need to keep track
+     * of this in case the endpoint is stopped while the current thread is
+     * wandering around in the stream trying to get the send done.
+     */
+    AddCurrentThread();
 
 #ifndef NDEBUG
 #if BYTEDUMPS
-        DumpBytes((uint8_t*)buf, numBytes);
+    DumpBytes((uint8_t*)buf, numBytes);
 #endif
 #endif
-        /*
-         * Copy in the bytes to preserve the buffer management approach expected by
-         * higher level code.
-         */
-        QCC_DbgPrintf(("ArdpStream::PushBytes(): Copy in"));
+    /*
+     * Copy in the bytes to preserve the buffer management approach expected by
+     * higher level code.
+     */
+    QCC_DbgPrintf(("ArdpStream::PushBytes(): Copy in"));
 #ifndef NDEBUG
-        uint8_t* buffer = new uint8_t[numBytes + SEAL_SIZE];
-        SealBuffer(buffer + numBytes);
+    uint8_t* buffer = new uint8_t[numBytes + SEAL_SIZE];
+    SealBuffer(buffer + numBytes);
 #else
-        uint8_t* buffer = new uint8_t[numBytes];
+    uint8_t* buffer = new uint8_t[numBytes];
 #endif
-        memcpy(buffer, buf, numBytes);
+    memcpy(buffer, buf, numBytes);
+
+    /*
+     * Set up a timeout on the write.  If we call ARDP_Send, we expect it to
+     * come back with some a send callback if it accepts the data.  As a
+     * double-check, we add our own timeout that expires in twice the we
+     * expect ARDP to time out.  This is effectively a watchdog that barks
+     * when ARDP is not doing what we expect it to.
+     */
+    uint32_t timeout;
+    Timespec<MonotonicTime> tStart;
+
+    m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
+    timeout = 2 * ARDP_GetDataTimeout(m_handle, m_conn);
+    m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
+
+    GetTimeNow(&tStart);
+    QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %" PRIu64 ".%03d.", tStart.seconds, tStart.mseconds));
+
+    /*
+     * This is the point at which a classic condition vairable wait idiom
+     * comes into play.  Extracted from all of the dependencies here, it
+     * would look something like:
+     *
+     *     mutex.Lock(MUTEX_CONTEXT)
+     *     while (condition != met) {
+     *         condition.Wait(mutex);
+     *     }
+     *     mutex.Unlock(MUTEX_CONTEXT);
+     *
+     * The mutex in question is the cbLock, which synchronizes this thread
+     * (think a consumer contending for the protected resource) with the
+     * callback thread from ARDP (think producer -- making the ARDP resource
+     * available).  The condition in question is whether or not are done trying
+     * to write to the stream (we can either succeed or error out).
+     */
+    bool done = false;
+    m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
+    while (done != true) {
+        /*
+         * We're in a loop here that could possibly run for many seconds
+         * trying to get data out, so we need to check to make sure that the
+         * transport is not shutting down each time through the loop.
+         */
+        if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
+            status = ER_BUS_ENDPOINT_CLOSING;
+            done = true;
+            continue;
+        }
 
         /*
-         * Set up a timeout on the write.  If we call ARDP_Send, we expect it to
-         * come back with some a send callback if it accepts the data.  As a
-         * double-check, we add our own timeout that expires in twice the we
-         * expect ARDP to time out.  This is effectively a watchdog that barks
-         * when ARDP is not doing what we expect it to.
+         * Check the watchdog to make sure it has not timed out.
          */
-        uint32_t timeout;
-        Timespec<MonotonicTime> tStart;
-
-        m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
-        timeout = 2 * ARDP_GetDataTimeout(m_handle, m_conn);
-        m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
-
-        GetTimeNow(&tStart);
-        QCC_DbgPrintf(("ArdpStream::PushBytes(): Start time is %" PRIu64 ".%03d.", tStart.seconds, tStart.mseconds));
+        Timespec<MonotonicTime> tNow;
+        GetTimeNow(&tNow);
+        int32_t tRemaining = tStart + timeout - tNow;
+        QCC_DbgPrintf(("ArdpStream::PushBytes(): tRemaining is %d.", tRemaining));
+        if (tRemaining <= 0) {
+            status = ER_TIMEOUT;
+            QCC_LogError(status, ("ArdpStream::PushBytes(): Timed out"));
+            done = true;
+            continue;
+        }
 
         /*
-         * This is the point at which a classic condition vairable wait idiom
-         * comes into play.  Extracted from all of the dependencies here, it
-         * would look something like:
+         * Above, we did a coarse granularity checks for whether or not the
+         * endpoint was ready to accept data.  There is one case for which
+         * we have to be more careful though.  That's the shutdown case.
+         * When we speak about shutdown, think socket shutdown.  We have
+         * queued up a bunch of data, and we want to do the equivalent of a
+         * shutdown(SHUT_WR) when we stop our endpoint.  This means we want
+         * to wait for existing data to be sent, and then we want to shut
+         * down the endpoint.
          *
-         *     mutex.Lock(MUTEX_CONTEXT)
-         *     while (condition != met) {
-         *         condition.Wait(mutex);
-         *     }
-         *     mutex.Unlock(MUTEX_CONTEXT);
+         * The equivalent of a shutdown(SHUT_WR) in our case is calling
+         * Stop() on an endpoint.  If the Stop() is a result of a local
+         * shutdown, the endpoint will immediately transition to the
+         * EP_STOPPING state.  This change will cause the endpoint
+         * management thread to run.  The management thread will notice the
+         * local stop and transition immediately to EP_WAITING state.  The
+         * endpoint remains in EP_WAITING until all of the in-process sends
+         * complete, at which time an ARDP_Disconnect() is sent and the
+         * endpoint continues the destruction process.
          *
-         * The mutex in question is the cbLock, which synchronizes this thread
-         * (think a consumer contending for the protected resource) with the
-         * callback thread from ARDP (think producer -- making the ARDP resource
-         * available).  The condition in question is whether or not are done trying
-         * to write to the stream (we can either succeed or error out).
+         * We need to make sure that we are in EP_STARTED state when we make
+         * the ARDP_Send() call, and that we do not allow a change of state
+         * out of EP_STARTED while the call is executing, otherwise we risk
+         * making a send call and queueing a write during the time at which
+         * the management thread is deciding when to execute the
+         * ARDP_Disconnect.
+         *
+         * There at least three threads that may be interested in the
+         * instantaneous value of the state: there's us, who is trying to
+         * send bytes to the endpoint; there's the management thread who may
+         * be wanting to change the state of the endpoint; and there's a
+         * LeaveSession thread that may be driving a Stop().  We take the
+         * endpoint state change lock and hold it during the ARDP call to
+         * prevent possible inconsistencies.
+         *
+         * There is a window between the start of a remote disconnect event
+         * and the endpoint state change where the endpoint can think it is
+         * up and started but the stream can think it has started going
+         * down.  If we start a send during that time it is doomed to fail,
+         * so we check for this corner case at the last possible time.
          */
-        bool done = false;
-        m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
-        while (done != true) {
-            /*
-             * We're in a loop here that could possibly run for many seconds
-             * trying to get data out, so we need to check to make sure that the
-             * transport is not shutting down each time through the loop.
-             */
-            if (m_transport->IsRunning() == false || m_transport->m_stopping == true) {
-                status = ER_BUS_ENDPOINT_CLOSING;
-                done = true;
-                continue;
-            }
+        m_endpoint->StateLock(MUTEX_CONTEXT);
 
-            /*
-             * Check the watchdog to make sure it has not timed out.
-             */
-            Timespec<MonotonicTime> tNow;
-            GetTimeNow(&tNow);
-            int32_t tRemaining = tStart + timeout - tNow;
-            QCC_DbgPrintf(("ArdpStream::PushBytes(): tRemaining is %d.", tRemaining));
-            if (tRemaining <= 0) {
-                status = ER_TIMEOUT;
-                QCC_LogError(status, ("ArdpStream::PushBytes(): Timed out"));
-                done = true;
-                continue;
-            }
-
-            /*
-             * Above, we did a coarse granularity checks for whether or not the
-             * endpoint was ready to accept data.  There is one case for which
-             * we have to be more careful though.  That's the shutdown case.
-             * When we speak about shutdown, think socket shutdown.  We have
-             * queued up a bunch of data, and we want to do the equivalent of a
-             * shutdown(SHUT_WR) when we stop our endpoint.  This means we want
-             * to wait for existing data to be sent, and then we want to shut
-             * down the endpoint.
-             *
-             * The equivalent of a shutdown(SHUT_WR) in our case is calling
-             * Stop() on an endpoint.  If the Stop() is a result of a local
-             * shutdown, the endpoint will immediately transition to the
-             * EP_STOPPING state.  This change will cause the endpoint
-             * management thread to run.  The management thread will notice the
-             * local stop and transition immediately to EP_WAITING state.  The
-             * endpoint remains in EP_WAITING until all of the in-process sends
-             * complete, at which time an ARDP_Disconnect() is sent and the
-             * endpoint continues the destruction process.
-             *
-             * We need to make sure that we are in EP_STARTED state when we make
-             * the ARDP_Send() call, and that we do not allow a change of state
-             * out of EP_STARTED while the call is executing, otherwise we risk
-             * making a send call and queueing a write during the time at which
-             * the management thread is deciding when to execute the
-             * ARDP_Disconnect.
-             *
-             * There at least three threads that may be interested in the
-             * instantaneous value of the state: there's us, who is trying to
-             * send bytes to the endpoint; there's the management thread who may
-             * be wanting to change the state of the endpoint; and there's a
-             * LeaveSession thread that may be driving a Stop().  We take the
-             * endpoint state change lock and hold it during the ARDP call to
-             * prevent possible inconsistencies.
-             *
-             * There is a window between the start of a remote disconnect event
-             * and the endpoint state change where the endpoint can think it is
-             * up and started but the stream can think it has started going
-             * down.  If we start a send during that time it is doomed to fail,
-             * so we check for this corner case at the last possible time.
-             */
-            m_endpoint->StateLock(MUTEX_CONTEXT);
-
-            if (m_endpoint->IsEpStarted()) {
-                if (m_disc || m_discSent) {
-                    /*
-                     * The corner case mentioned above has happened, so don't
-                     * bother to start the ARDP_Send since we'll just get an
-                     * error.
-                     *
-                     * Note that there used to be a consistency checking assert
-                     * right here.  It was removed since the disconnect callback
-                     * doesn't update the state of the stream and the state of
-                     * the endpoint atomically.  The "obvious" consistency check
-                     * here failed under stress.  As discussed in a comment in
-                     * DisconnectCb(), the inconsistency is harmless, but we
-                     * minimize its impact here.
-                     */
-                    m_endpoint->StateUnlock(MUTEX_CONTEXT);
-                    status = ER_BUS_ENDPOINT_CLOSING;
-                    done = true;
-                    continue;
-                } else {
-                    /*
-                     * We think everything is up and ready in ARDP-land, so we
-                     * can go ahead and start a send.
-                     */
-                    m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
-                    status = ARDP_Send(m_handle, m_conn, buffer, numBytes, ttl);
-                    m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
-                }
-            } else {
+        if (m_endpoint->IsEpStarted()) {
+            if (m_disc || m_discSent) {
                 /*
-                 * The endpoint is not in started state, which means it is
-                 * disconnecting which means it is closing from the point of
-                 * view of higher level code.  The AllJoynObj, for example,
-                 * special-cases a return of ER_BUS_ENDPOINT_CLOSING since
-                 * it is "expected."
+                 * The corner case mentioned above has happened, so don't
+                 * bother to start the ARDP_Send since we'll just get an
+                 * error.
+                 *
+                 * Note that there used to be a consistency checking assert
+                 * right here.  It was removed since the disconnect callback
+                 * doesn't update the state of the stream and the state of
+                 * the endpoint atomically.  The "obvious" consistency check
+                 * here failed under stress.  As discussed in a comment in
+                 * DisconnectCb(), the inconsistency is harmless, but we
+                 * minimize its impact here.
                  */
                 m_endpoint->StateUnlock(MUTEX_CONTEXT);
                 status = ER_BUS_ENDPOINT_CLOSING;
                 done = true;
                 continue;
+            } else {
+                /*
+                 * We think everything is up and ready in ARDP-land, so we
+                 * can go ahead and start a send.
+                 */
+                m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
+                status = ARDP_Send(m_handle, m_conn, buffer, numBytes, ttl);
+                m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
             }
-
+        } else {
+            /*
+             * The endpoint is not in started state, which means it is
+             * disconnecting which means it is closing from the point of
+             * view of higher level code.  The AllJoynObj, for example,
+             * special-cases a return of ER_BUS_ENDPOINT_CLOSING since
+             * it is "expected."
+             */
             m_endpoint->StateUnlock(MUTEX_CONTEXT);
+            status = ER_BUS_ENDPOINT_CLOSING;
+            done = true;
+            continue;
+        }
 
-            /*
-             * If we do something that is going to bug the ARDP protocol, we need
-             * to call back into ARDP ASAP to get it moving.  This is done in the
-             * main thread, which we need to wake up.  Note that we don't set
-             * m_manage so we don't trigger endpoint management, we just trigger
-             * ARDP_Run to happen.
-             */
-            m_transport->Alert();
+        m_endpoint->StateUnlock(MUTEX_CONTEXT);
 
-            /*
-             * If the send succeeded, then the bits are on their way off to the
-             * destination.  The send callback associated with this PushBytes()
-             * will take care of freeing the buffer we allocated.  We return back
-             * to the caller as if we were TCP and had copied the bytes into the
-             * kernel.
-             */
-            if (status == ER_OK) {
-                /*
-                 * The bytes are in flight, so as far as we are concerned they
-                 * were successfully written; so indicate that to the caller.
-                 *
-                 * If we have successfully sent the bytes, the ARDP protocol has
-                 * taken responsibility for them, so the buffer is now gone.  We
-                 * can't ever touch this buffer so we need to rid ourselves of
-                 * the reference to it.
-                 */
-                numSent = numBytes;
-                m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
-                ++m_sendsOutstanding;
-#if SENT_SANITY
-                m_sentSet.insert(buffer);
-#endif
-                m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
-                buffer = NULL;
-                done = true;
-                continue;
-            }
+        /*
+         * If we do something that is going to bug the ARDP protocol, we need
+         * to call back into ARDP ASAP to get it moving.  This is done in the
+         * main thread, which we need to wake up.  Note that we don't set
+         * m_manage so we don't trigger endpoint management, we just trigger
+         * ARDP_Run to happen.
+         */
+        m_transport->Alert();
 
+        /*
+         * If the send succeeded, then the bits are on their way off to the
+         * destination.  The send callback associated with this PushBytes()
+         * will take care of freeing the buffer we allocated.  We return back
+         * to the caller as if we were TCP and had copied the bytes into the
+         * kernel.
+         */
+        if (status == ER_OK) {
             /*
-             * If the send failed, and the failure was not due to the
-             * application of backpressure by the protocol, we have a hard
-             * failure and we must give up.  Since the buffer wasn't sent, the
-             * callback won't happen and we need to dispose of it here and now.
-             */
-            if (status != ER_ARDP_BACKPRESSURE) {
-                QCC_LogError(status, ("ArdpStream::PushBytes(): Hard failure"));
-                done = true;
-                continue;
-            }
-
-            /*
-             * If backpressure has been applied by the ARDP protocol, we can't
-             * send another message on this connection until the other side ACKs
-             * one of the outstanding datagrams.  It communicates this to us by
-             * a send callback which, in turn, signals the condition variable
-             * we'll be waiting on and wakes us up. The Wait here corresponds to
-             * the Wait in the condition idiom outlined above.
+             * The bytes are in flight, so as far as we are concerned they
+             * were successfully written; so indicate that to the caller.
              *
-             * What if the backpressure error happens and there are no
-             * outstanding messages?  That is, what if the UDP buffer is full
-             * and we cant' send even the one message.  Since there is no
-             * message in process, there will never be a SendCb to bug the
-             * condition to wake us up and therefore the send will time out.  We
-             * assume that ARDP will allow us to send at least one message
-             * before blocking us due to backpressure; so this is therefore
-             * assumed to be a non-problem.
+             * If we have successfully sent the bytes, the ARDP protocol has
+             * taken responsibility for them, so the buffer is now gone.  We
+             * can't ever touch this buffer so we need to rid ourselves of
+             * the reference to it.
              */
-            if (status == ER_ARDP_BACKPRESSURE) {
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Condition::Wait()."));
-                QCC_ASSERT(m_writeCondition && "ArdpStream::PushBytes(): m_writeCondition must be set");
-                status = m_writeCondition->TimedWait(m_transport->m_cbLock, tRemaining);
+            numSent = numBytes;
+            m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
+            ++m_sendsOutstanding;
+#if SENT_SANITY
+            m_sentSet.insert(buffer);
+#endif
+            m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
+            buffer = NULL;
+            done = true;
+            continue;
+        }
 
-                /*
-                 * We expect that the wait will return either ER_OK if it
-                 * succeeds, or ER_TIMEOUT.  If the Wait fails in other ways
-                 * then we will stop trying and communicate the failure back to
-                 * the caller since we really don't know what might have
-                 * happened and whether or not this is recoverable.
-                 */
-                if (status != ER_OK && status != ER_TIMEOUT) {
-                    QCC_LogError(status, ("ArdpStream::PushBytes(): Condition::Wait() returned unexpected error"));
-                    done = true;
-                    continue;
-                }
+        /*
+         * If the send failed, and the failure was not due to the
+         * application of backpressure by the protocol, we have a hard
+         * failure and we must give up.  Since the buffer wasn't sent, the
+         * callback won't happen and we need to dispose of it here and now.
+         */
+        if (status != ER_ARDP_BACKPRESSURE) {
+            QCC_LogError(status, ("ArdpStream::PushBytes(): Hard failure"));
+            done = true;
+            continue;
+        }
 
-                /*
-                 * If there was a disconnect in the underlying connection, there's
-                 * nothing we can do but return the error.
-                 */
-                if (m_disc) {
-                    status = ER_UDP_DISCONNECT;
-                    QCC_LogError(status, ("ArdpStream::PushBytes(): Stream disconnected"));
-                    done = true;
-                    continue;
-                }
+        /*
+         * If backpressure has been applied by the ARDP protocol, we can't
+         * send another message on this connection until the other side ACKs
+         * one of the outstanding datagrams.  It communicates this to us by
+         * a send callback which, in turn, signals the condition variable
+         * we'll be waiting on and wakes us up. The Wait here corresponds to
+         * the Wait in the condition idiom outlined above.
+         *
+         * What if the backpressure error happens and there are no
+         * outstanding messages?  That is, what if the UDP buffer is full
+         * and we cant' send even the one message.  Since there is no
+         * message in process, there will never be a SendCb to bug the
+         * condition to wake us up and therefore the send will time out.  We
+         * assume that ARDP will allow us to send at least one message
+         * before blocking us due to backpressure; so this is therefore
+         * assumed to be a non-problem.
+         */
+        if (status == ER_ARDP_BACKPRESSURE) {
+            QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure. Condition::Wait()."));
+            QCC_ASSERT(m_writeCondition && "ArdpStream::PushBytes(): m_writeCondition must be set");
+            status = m_writeCondition->TimedWait(m_transport->m_cbLock, tRemaining);
 
-                QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure loop"));
-                QCC_ASSERT(done == false && "ArdpStream::PushBytes(): loop error");
+            /*
+             * We expect that the wait will return either ER_OK if it
+             * succeeds, or ER_TIMEOUT.  If the Wait fails in other ways
+             * then we will stop trying and communicate the failure back to
+             * the caller since we really don't know what might have
+             * happened and whether or not this is recoverable.
+             */
+            if (status != ER_OK && status != ER_TIMEOUT) {
+                QCC_LogError(status, ("ArdpStream::PushBytes(): Condition::Wait() returned unexpected error"));
+                done = true;
+                continue;
             }
 
             /*
-             * We are at the end of the while (condition != true) piece of the
-             * condition variable wait idiom.  To get here, we must have tried
-             * to send a message.  That send either did or did not work out.  If
-             * it succeeded, done will have been set to true and we'll break out
-             * of the while loop.  If there was a hard failure, done will have
-             * also been set to true and we'll break out.  If We detected
-             * backpressure, we blocked on the condition variable until it was
-             * set.  This indicates that backpressure may have been relieved.
-             * we need to loop back and try the ARDP_Send again, maybe
-             * encountering backpressure again.
+             * If there was a disconnect in the underlying connection, there's
+             * nothing we can do but return the error.
              */
+            if (m_disc) {
+                status = ER_UDP_DISCONNECT;
+                QCC_LogError(status, ("ArdpStream::PushBytes(): Stream disconnected"));
+                done = true;
+                continue;
+            }
+
+            QCC_DbgPrintf(("ArdpStream::PushBytes(): Backpressure loop"));
+            QCC_ASSERT(done == false && "ArdpStream::PushBytes(): loop error");
         }
 
         /*
-         * If the buffer was successfully sent off to ARDP, then we no longer
-         * have ownership of the buffer and the pointer will have been set to
-         * NULL.  If it is not NULL we own it and must dispose of it.
+         * We are at the end of the while (condition != true) piece of the
+         * condition variable wait idiom.  To get here, we must have tried
+         * to send a message.  That send either did or did not work out.  If
+         * it succeeded, done will have been set to true and we'll break out
+         * of the while loop.  If there was a hard failure, done will have
+         * also been set to true and we'll break out.  If We detected
+         * backpressure, we blocked on the condition variable until it was
+         * set.  This indicates that backpressure may have been relieved.
+         * we need to loop back and try the ARDP_Send again, maybe
+         * encountering backpressure again.
          */
-        if (buffer) {
-#ifndef NDEBUG
-            CheckSeal(buffer + numBytes);
-#endif
-            delete[] buffer;
-            buffer = NULL;
-        }
-
-        /*
-         * This is the last unlock in the condition wait idiom outlined above.
-         * We are all done here.
-         */
-        m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
-        RemoveCurrentThread();
-        return status;
     }
 
     /*
-     * A version of PushBytes that doesn't care about TTL.
+     * If the buffer was successfully sent off to ARDP, then we no longer
+     * have ownership of the buffer and the pointer will have been set to
+     * NULL.  If it is not NULL we own it and must dispose of it.
      */
-    QStatus PushBytes(const void* buf, size_t numBytes, size_t& numSent)
-    {
-        QCC_DbgTrace(("ArdpStream::PushBytes(buf=%p, numBytes=%d., numSent=%p)", buf, numBytes, &numSent));
-        return PushBytes(buf, numBytes, numSent, 0);
-    }
-
-    /**
-     * Get some bytes from the other side of the conection described by the
-     * m_conn member variable.  Data must be present in the message buffer
-     * list since we expect that a RecvCb that added a buffer to that list is
-     * what is going to be doing the read that will eventually call PullBytes.
-     * In that case, since the data is expected to be present, <timeout> will
-     * be zero.
-     */
-    QStatus PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
-    {
-        QCC_UNUSED(buf);
-        QCC_UNUSED(reqBytes);
-        QCC_UNUSED(actualBytes);
-        QCC_UNUSED(timeout);
-        QCC_DbgTrace(("ArdpStream::PullBytes(buf=%p, reqBytes=%d., actualBytes=%d., timeout=%d.)",
-                      buf, reqBytes, actualBytes, timeout));
-        QCC_ASSERT(0 && "ArdpStream::PullBytes(): Should never be called");
-        return ER_FAIL;
-    }
-
-    /**
-     * Set the stram up for being torn down before going through the expected
-     * lifetime state transitions.
-     */
-    void EarlyExit()
-    {
-        QCC_DbgTrace(("ArdpStream::EarlyExit()"));
-
-        /*
-         * An EarlyExit is one when a stream has been created in the expectation
-         * that an endpoint will be brought up, but the system changed its mind
-         * in mid-"stream" and therefore there is no disconnect processing needed
-         * and there must be no threads waiting.
-         */
-        m_lock.Lock(MUTEX_CONTEXT);
-        m_disc = true;
-        m_conn = NULL;
-        m_discStatus = ER_UDP_EARLY_EXIT;
-        m_lock.Unlock(MUTEX_CONTEXT);
-    }
-
-    /**
-     * Get the disconnected status.  If the stream has been disconnected, return
-     * true otherwise false.
-     */
-    bool GetDisconnected()
-    {
-        QCC_DbgTrace(("ArdpStream::Disconnected(): -> %s", m_disc ? "true" : "false"));
-        return m_disc;
-    }
-
-    /**
-     * In the case of a local disconnect, disc sent means that ARDP_Disconnect()
-     * has been called.  Determine if this call has been made or not.
-     */
-    bool GetDiscSent()
-    {
-        QCC_DbgTrace(("ArdpStream::GetDiscSent(): -> %s", m_discSent ? "true" : "false"));
-        return m_discSent;
-    }
-
-    /**
-     * In the case of a remote disconnect, disc status reflects the reason the
-     * stream was disconnected.  In the local case, will be ER_OK until the
-     * disconnect happens, then will be ER_UDP_LOCAL_DISCONNECT.
-     */
-    QStatus GetDiscStatus()
-    {
-        QCC_DbgTrace(("ArdpStream::GetDiscStatus(): -> \"%s\"", QCC_StatusText(m_discStatus)));
-        return m_discStatus;
-    }
-
-    /**
-     * Process a disconnect event, either local or remote.
-     */
-    void Disconnect(bool sudden, QStatus status)
-    {
-        QCC_DbgTrace(("ArdpStream::Disconnect(sudden==%d., status==\"%s\")", sudden, QCC_StatusText(status)));
-        QCC_DbgPrintf(("ArdpStream::Disconnect(): ConnId == %d.", m_connId));
-
-        /*
-         * A "sudden" disconnect is an unexpected or unsolicited disconnect
-         * initiated from the remote side.  In this case, we will have have
-         * gotten an ARDP DisconnectCb() which tells us that the connection is
-         * gone and we shouldn't use it again.
-         *
-         * If sudden is not true, then this is as a result of a local request to
-         * terminate the connection.  This means we need to call ARDP and let it
-         * know we are disconnecting.  We wait for the DisconnectCb() that must
-         * happen as a result of the ARDP_Disconnect() to declare the connection
-         * completely gone.
-         *
-         * The details can get very intricate becuase once a remote side has
-         * disconnected, we can get a flood of disconnects from different local
-         * users of the endopint as the daemon figures out what it no longer
-         * needs as a result of a remote endpoint going away.  We just have to
-         * harden ourselves against many duplicate calls.  There are three bits
-         * to worry about (sudden, m_discSent, and m_disc) and so there are
-         * eight possibile conditions/states here.  We just break them all out.
-         */
+    if (buffer) {
 #ifndef NDEBUG
-        if (status == ER_OK) {
-            QCC_ASSERT(sudden == false);
-        }
-        if (sudden) {
-            QCC_ASSERT(status != ER_OK);
-        }
+        CheckSeal(buffer + numBytes);
+#endif
+        delete[] buffer;
+        buffer = NULL;
+    }
+
+    /*
+     * This is the last unlock in the condition wait idiom outlined above.
+     * We are all done here.
+     */
+    m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
+    RemoveCurrentThread();
+    return status;
+}
+
+/*
+ * A version of PushBytes that doesn't care about TTL.
+ */
+QStatus ArdpStream::PushBytes(const void* buf, size_t numBytes, size_t& numSent)
+{
+    QCC_DbgTrace(("ArdpStream::PushBytes(buf=%p, numBytes=%d., numSent=%p)", buf, numBytes, &numSent));
+    return PushBytes(buf, numBytes, numSent, 0);
+}
+
+/**
+ * Get some bytes from the other side of the conection described by the
+ * m_conn member variable.  Data must be present in the message buffer
+ * list since we expect that a RecvCb that added a buffer to that list is
+ * what is going to be doing the read that will eventually call PullBytes.
+ * In that case, since the data is expected to be present, <timeout> will
+ * be zero.
+ */
+QStatus ArdpStream::PullBytes(void* buf, size_t reqBytes, size_t& actualBytes, uint32_t timeout)
+{
+    QCC_UNUSED(buf);
+    QCC_UNUSED(reqBytes);
+    QCC_UNUSED(actualBytes);
+    QCC_UNUSED(timeout);
+    QCC_DbgTrace(("ArdpStream::PullBytes(buf=%p, reqBytes=%d., actualBytes=%d., timeout=%d.)",
+                  buf, reqBytes, actualBytes, timeout));
+    QCC_ASSERT(0 && "ArdpStream::PullBytes(): Should never be called");
+    return ER_FAIL;
+}
+
+/**
+ * Set the stram up for being torn down before going through the expected
+ * lifetime state transitions.
+ */
+void ArdpStream::EarlyExit()
+{
+    QCC_DbgTrace(("ArdpStream::EarlyExit()"));
+
+    /*
+     * An EarlyExit is one when a stream has been created in the expectation
+     * that an endpoint will be brought up, but the system changed its mind
+     * in mid-"stream" and therefore there is no disconnect processing needed
+     * and there must be no threads waiting.
+     */
+    m_lock.Lock(MUTEX_CONTEXT);
+    m_disc = true;
+    m_conn = NULL;
+    m_discStatus = ER_UDP_EARLY_EXIT;
+    m_lock.Unlock(MUTEX_CONTEXT);
+}
+
+/**
+ * Get the disconnected status.  If the stream has been disconnected, return
+ * true otherwise false.
+ */
+bool ArdpStream::GetDisconnected()
+{
+    QCC_DbgTrace(("ArdpStream::Disconnected(): -> %s", m_disc ? "true" : "false"));
+    return m_disc;
+}
+
+/**
+ * In the case of a local disconnect, disc sent means that ARDP_Disconnect()
+ * has been called.  Determine if this call has been made or not.
+ */
+bool ArdpStream::GetDiscSent()
+{
+    QCC_DbgTrace(("ArdpStream::GetDiscSent(): -> %s", m_discSent ? "true" : "false"));
+    return m_discSent;
+}
+
+/**
+ * In the case of a remote disconnect, disc status reflects the reason the
+ * stream was disconnected.  In the local case, will be ER_OK until the
+ * disconnect happens, then will be ER_UDP_LOCAL_DISCONNECT.
+ */
+QStatus ArdpStream::GetDiscStatus()
+{
+    QCC_DbgTrace(("ArdpStream::GetDiscStatus(): -> \"%s\"", QCC_StatusText(m_discStatus)));
+    return m_discStatus;
+}
+
+/**
+ * Process a disconnect event, either local or remote.
+ */
+void ArdpStream::Disconnect(bool sudden, QStatus status)
+{
+    QCC_DbgTrace(("ArdpStream::Disconnect(sudden==%d., status==\"%s\")", sudden, QCC_StatusText(status)));
+    QCC_DbgPrintf(("ArdpStream::Disconnect(): ConnId == %d.", m_connId));
+
+    /*
+     * A "sudden" disconnect is an unexpected or unsolicited disconnect
+     * initiated from the remote side.  In this case, we will have have
+     * gotten an ARDP DisconnectCb() which tells us that the connection is
+     * gone and we shouldn't use it again.
+     *
+     * If sudden is not true, then this is as a result of a local request to
+     * terminate the connection.  This means we need to call ARDP and let it
+     * know we are disconnecting.  We wait for the DisconnectCb() that must
+     * happen as a result of the ARDP_Disconnect() to declare the connection
+     * completely gone.
+     *
+     * The details can get very intricate becuase once a remote side has
+     * disconnected, we can get a flood of disconnects from different local
+     * users of the endopint as the daemon figures out what it no longer
+     * needs as a result of a remote endpoint going away.  We just have to
+     * harden ourselves against many duplicate calls.  There are three bits
+     * to worry about (sudden, m_discSent, and m_disc) and so there are
+     * eight possibile conditions/states here.  We just break them all out.
+     */
+#ifndef NDEBUG
+    if (status == ER_OK) {
+        QCC_ASSERT(sudden == false);
+    }
+    if (sudden) {
+        QCC_ASSERT(status != ER_OK);
+    }
 #endif
 
-        QCC_DbgPrintf(("ArdpStream::Disconnect(): sudden==%d., m_disc==%d., m_discSent==%d., status==\"%s\"",
-                       sudden, m_disc, m_discSent, QCC_StatusText(status)));
-        m_lock.Lock(MUTEX_CONTEXT);
+    QCC_DbgPrintf(("ArdpStream::Disconnect(): sudden==%d., m_disc==%d., m_discSent==%d., status==\"%s\"",
+                   sudden, m_disc, m_discSent, QCC_StatusText(status)));
+    m_lock.Lock(MUTEX_CONTEXT);
 
-        if (sudden == false) {
-            if (m_disc == false) {
-                if (m_discSent == false) {
-                    /*
-                     * sudden = false, m_disc = false, m_discSent == false
-                     *
-                     * This is a new solicited local disconnect event that is
-                     * happening on a stream that has never seen a disconnect
-                     * event.  We need to do an ARDP_Disconnect() to start the
-                     * disconnect process.  We expect status to be
-                     * ER_UDP_LOCAL_DISCONNECT by contract.  If we fail to send
-                     * the ARDP_Disconnect() the disconnect status is updated
-                     * to the reason we couldn't send it.
-                     */
-                    QCC_ASSERT(status == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
+    if (sudden == false) {
+        if (m_disc == false) {
+            if (m_discSent == false) {
+                /*
+                 * sudden = false, m_disc = false, m_discSent == false
+                 *
+                 * This is a new solicited local disconnect event that is
+                 * happening on a stream that has never seen a disconnect
+                 * event.  We need to do an ARDP_Disconnect() to start the
+                 * disconnect process.  We expect status to be
+                 * ER_UDP_LOCAL_DISCONNECT by contract.  If we fail to send
+                 * the ARDP_Disconnect() the disconnect status is updated
+                 * to the reason we couldn't send it.
+                 */
+                QCC_ASSERT(status == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
 
-                    m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
-                    QCC_DbgPrintf(("ArdpStream::Disconnect(): ARDP_Disconnect()"));
-                    status = ARDP_Disconnect(m_handle, m_conn, m_connId);
-                    m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
-                    if (status == ER_OK) {
-                        m_discSent = true;
-                        m_discStatus = ER_UDP_LOCAL_DISCONNECT;
-                    } else {
-                        QCC_LogError(status, ("ArdpStream::Disconnect(): Cannot send ARDP_Disconnect()"));
-                        m_disc = true;
-                        m_conn = NULL;
-                        m_discSent = true;
-                        m_discStatus = status;
-                    }
-
-                    /*
-                     * Tell the endpoint manager that something interesting has
-                     * happened
-                     */
-                    m_transport->m_manage = UDPTransport::STATE_MANAGE;
-                    m_transport->Alert();
+                m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
+                QCC_DbgPrintf(("ArdpStream::Disconnect(): ARDP_Disconnect()"));
+                status = ARDP_Disconnect(m_handle, m_conn, m_connId);
+                m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
+                if (status == ER_OK) {
+                    m_discSent = true;
+                    m_discStatus = ER_UDP_LOCAL_DISCONNECT;
                 } else {
-                    /*
-                     * sudden = false, m_disc = false, m_discSent == true
-                     *
-                     * This disconnect event is happening as a result of the
-                     * ARDP disconnect callback.  We expect that the status
-                     * passed in is ER_OK to confirm that this is the response
-                     * to the ARDP_Disconnect().  This completes the locally
-                     * initiated disconnect process.  If this happens, we expect
-                     * status to be ER_OK by contract and we expect the
-                     * disconnect status to have been set to
-                     * ER_UDP_LOCAL_DISCONNECT by us.
-                     */
-                    QCC_ASSERT(status == ER_OK && "ArdpStream::Disconnect(): Unexpected status");
-                    QCC_ASSERT(m_discStatus == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
+                    QCC_LogError(status, ("ArdpStream::Disconnect(): Cannot send ARDP_Disconnect()"));
                     m_disc = true;
                     m_conn = NULL;
-
-                    /*
-                     * Tell the endpoint manager that something interesting has
-                     * happened
-                     */
-                    m_transport->m_manage = UDPTransport::STATE_MANAGE;
-                    m_transport->Alert();
-                }
-            } else {
-                if (m_discSent == false) {
-                    /*
-                     * sudden = false, m_disc = true, m_discSent == false
-                     *
-                     * This is a locally initiated disconnect that happens as a
-                     * result of a previously received remote disconnect.  This
-                     * can happen when the daemon begins dereferencing
-                     * (Stopping) endpoints as a result of a previously reported
-                     * disconnect.
-                     *
-                     * The connection should already be gone.
-                     */
-                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
-                } else {
-                    /*
-                     * sudden = false, m_disc = true, m_discSent == true
-                     *
-                     * This is a locally initiated disconnect that happens after
-                     * a local disconnect that has completed (ARDP_Disconnect()
-                     * has been called and its DisconnectCb() has been received.
-                     * This can happen when the daemon begins dereferencing
-                     * (Stopping) endpoints as a result of a previously reported
-                     * disconnect but is a little slow at doing so.
-                     *
-                     * The connection should already be gone.
-                     */
-                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
-                }
-            }
-        } else {
-            if (m_disc == false) {
-                if (m_discSent == false) {
-                    /*
-                     * sudden = true, m_disc = false, m_discSent == false
-                     *
-                     * This is a new unsolicited remote disconnect event that is
-                     * happening on a stream that has never seen a disconnect
-                     * event.
-                     */
-                    m_conn = NULL;
-                    m_disc = true;
+                    m_discSent = true;
                     m_discStatus = status;
-                } else {
-                    /*
-                     * sudden = true, m_disc = false, m_discSent == true
-                     *
-                     * This is an unsolicited remote disconnect event that is
-                     * happening on a stream that has previously gotten a local
-                     * disconnect event and called ARDP_Disconnect() but has not
-                     * yet received the DisconnectCb() as a result of that
-                     * ARDP_Disconnect().
-                     *
-                     * This indicates a race between the local disconnect and a
-                     * remote disconnect.  Any sudden disconnect means the
-                     * connection is gone; so a remote disconnect trumps an
-                     * in-process local disconnect.  This means we go right to
-                     * m_disc = true.  We'll leave the original m_discStatus
-                     * alone.
-                     */
-                    m_conn = NULL;
-                    m_disc = true;
                 }
+
+                /*
+                 * Tell the endpoint manager that something interesting has
+                 * happened
+                 */
+                m_transport->m_manage = UDPTransport::STATE_MANAGE;
+                m_transport->Alert();
             } else {
-                if (m_discSent == false) {
-                    /*
-                     * sudden = true, m_disc = true, m_discSent == false
-                     *
-                     * This is a second unsolicited remote disconnect event that
-                     * is happening on a stream that has previously gotten a
-                     * remote disconnect event -- a duplicate in other words.
-                     * We'll leave the original m_discStatus alone.
-                     *
-                     * The connection should already be gone.
-                     */
-                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
-                } else {
-                    /*
-                     * sudden = true, m_disc = true, m_discSent == true
-                     *
-                     * This is an unsolicited remote disconnect event that is
-                     * happening on a stream that has previously gotten a local
-                     * disconnect event that has completed.  We have already
-                     * called ARDP_Disconnect() and gotten the DisconnectCb()
-                     * and the connection is gone.  This can happen if both
-                     * sides decide to take down connections at about the same
-                     * time.  We'll leave the original m_discStatus alone.
-                     *
-                     * The connection should already be gone.
-                     */
-                    QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
-                    QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
-                }
+                /*
+                 * sudden = false, m_disc = false, m_discSent == true
+                 *
+                 * This disconnect event is happening as a result of the
+                 * ARDP disconnect callback.  We expect that the status
+                 * passed in is ER_OK to confirm that this is the response
+                 * to the ARDP_Disconnect().  This completes the locally
+                 * initiated disconnect process.  If this happens, we expect
+                 * status to be ER_OK by contract and we expect the
+                 * disconnect status to have been set to
+                 * ER_UDP_LOCAL_DISCONNECT by us.
+                 */
+                QCC_ASSERT(status == ER_OK && "ArdpStream::Disconnect(): Unexpected status");
+                QCC_ASSERT(m_discStatus == ER_UDP_LOCAL_DISCONNECT && "ArdpStream::Disconnect(): Unexpected status");
+                m_disc = true;
+                m_conn = NULL;
+
+                /*
+                 * Tell the endpoint manager that something interesting has
+                 * happened
+                 */
+                m_transport->m_manage = UDPTransport::STATE_MANAGE;
+                m_transport->Alert();
+            }
+        } else {
+            if (m_discSent == false) {
+                /*
+                 * sudden = false, m_disc = true, m_discSent == false
+                 *
+                 * This is a locally initiated disconnect that happens as a
+                 * result of a previously received remote disconnect.  This
+                 * can happen when the daemon begins dereferencing
+                 * (Stopping) endpoints as a result of a previously reported
+                 * disconnect.
+                 *
+                 * The connection should already be gone.
+                 */
+                QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
+            } else {
+                /*
+                 * sudden = false, m_disc = true, m_discSent == true
+                 *
+                 * This is a locally initiated disconnect that happens after
+                 * a local disconnect that has completed (ARDP_Disconnect()
+                 * has been called and its DisconnectCb() has been received.
+                 * This can happen when the daemon begins dereferencing
+                 * (Stopping) endpoints as a result of a previously reported
+                 * disconnect but is a little slow at doing so.
+                 *
+                 * The connection should already be gone.
+                 */
+                QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
             }
         }
-
-#ifndef NDEBUG
-        if (sudden) {
-            QCC_ASSERT(m_disc == true);
-        }
-#endif
-
-        m_lock.Unlock(MUTEX_CONTEXT);
-    }
-
-    /**
-     * This is the data sent callback which is plumbed from the ARDP protocol up
-     * to this stream.  This callback means that the buffer is no longer
-     * required and may be freed.  The ARDP protocol only had temporary custody
-     * of the buffer.
-     */
-    void SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
-    {
-        QCC_UNUSED(handle);
-        QCC_UNUSED(conn);
-        QCC_UNUSED(len);
-        QCC_UNUSED(status);
-
-        QCC_DbgTrace(("ArdpStream::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
-        m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
-        --m_sendsOutstanding;
-
-#if SENT_SANITY
-        set<uint8_t*>::iterator i = find(m_sentSet.begin(), m_sentSet.end(), buf);
-        if (i == m_sentSet.end()) {
-            QCC_LogError(ER_FAIL, ("ArdpStream::SendCb(): Callback for unexpected buffer (%p, %d.): Ignored.", buf, len));
+    } else {
+        if (m_disc == false) {
+            if (m_discSent == false) {
+                /*
+                 * sudden = true, m_disc = false, m_discSent == false
+                 *
+                 * This is a new unsolicited remote disconnect event that is
+                 * happening on a stream that has never seen a disconnect
+                 * event.
+                 */
+                m_conn = NULL;
+                m_disc = true;
+                m_discStatus = status;
+            } else {
+                /*
+                 * sudden = true, m_disc = false, m_discSent == true
+                 *
+                 * This is an unsolicited remote disconnect event that is
+                 * happening on a stream that has previously gotten a local
+                 * disconnect event and called ARDP_Disconnect() but has not
+                 * yet received the DisconnectCb() as a result of that
+                 * ARDP_Disconnect().
+                 *
+                 * This indicates a race between the local disconnect and a
+                 * remote disconnect.  Any sudden disconnect means the
+                 * connection is gone; so a remote disconnect trumps an
+                 * in-process local disconnect.  This means we go right to
+                 * m_disc = true.  We'll leave the original m_discStatus
+                 * alone.
+                 */
+                m_conn = NULL;
+                m_disc = true;
+            }
         } else {
-            m_sentSet.erase(i);
-        }
-#endif
-
-        m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
-
-#ifndef NDEBUG
-        CheckSeal(buf + len);
-#endif
-        delete[] buf;
-
-        /*
-         * If there are any threads waiting for a chance to send bits, wake them
-         * up.  They will retry their sends when this event gets set.  If the
-         * send callbacks are part of normal operation, the sends may succeed
-         * the next time around.  If this callback is part of disconnect
-         * processing the next send will fail with an error; and PushBytes()
-         * will manage the outstanding write count.
-         */
-        if (m_writeCondition) {
-            QCC_DbgPrintf(("ArdpStream::SendCb(): Condition::Signal()"));
-            m_writeCondition->Signal();
+            if (m_discSent == false) {
+                /*
+                 * sudden = true, m_disc = true, m_discSent == false
+                 *
+                 * This is a second unsolicited remote disconnect event that
+                 * is happening on a stream that has previously gotten a
+                 * remote disconnect event -- a duplicate in other words.
+                 * We'll leave the original m_discStatus alone.
+                 *
+                 * The connection should already be gone.
+                 */
+                QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
+            } else {
+                /*
+                 * sudden = true, m_disc = true, m_discSent == true
+                 *
+                 * This is an unsolicited remote disconnect event that is
+                 * happening on a stream that has previously gotten a local
+                 * disconnect event that has completed.  We have already
+                 * called ARDP_Disconnect() and gotten the DisconnectCb()
+                 * and the connection is gone.  This can happen if both
+                 * sides decide to take down connections at about the same
+                 * time.  We'll leave the original m_discStatus alone.
+                 *
+                 * The connection should already be gone.
+                 */
+                QCC_ASSERT(m_conn == NULL && "ArdpStream::Disconnect(): m_conn unexpectedly live");
+                QCC_ASSERT(m_disc == true && "ArdpStream::Disconnect(): unexpectedly not disconnected");
+            }
         }
     }
 
-    class ThreadEntry {
-      public:
-        qcc::Thread* m_thread;
-        ArdpStream* m_stream;
-    };
-
-  private:
-    ArdpStream(const ArdpStream& other);
-    ArdpStream operator=(const ArdpStream& other);
-
-    UDPTransport* m_transport;         /**< The transport that created the endpoint that created the stream */
-    _UDPEndpoint* m_endpoint;          /**< The endpoint that created the stream */
-    ArdpHandle* m_handle;              /**< The handle to the ARDP protocol instance this stream works with */
-    ArdpConnRecord* m_conn;            /**< The ARDP connection associated with this endpoint / stream combination */
-    uint32_t m_connId;                 /**< The ARDP connection identifier */
-    qcc::Mutex m_lock;                 /**< Mutex that protects m_threads and disconnect state */
-    bool m_disc;                       /**< Set to true when ARDP fires the DisconnectCb on the associated connection */
-    bool m_discSent;                   /**< Set to true when the endpoint calls ARDP_Disconnect */
-    QStatus m_discStatus;              /**< The status code that was the reason for the last disconnect */
-    qcc::Condition* m_writeCondition;  /**< The write event that callers are blocked on to apply backpressure */
-    int32_t m_sendsOutstanding;        /**< The number of Message sends that are outstanding (in-flight) with ARDP */
-    std::set<ThreadEntry> m_threads;   /**< Threads that are wandering around in the stream and possibly associated endpoint */
-
-#if SENT_SANITY
-    std::set<uint8_t*> m_sentSet;
+#ifndef NDEBUG
+    if (sudden) {
+        QCC_ASSERT(m_disc == true);
+    }
 #endif
 
-    class BufEntry {
-      public:
-        BufEntry() : m_buf(NULL), m_len(0), m_pulled(0), m_rcv(NULL), m_cnt(0) { }
-        uint8_t* m_buf;
-        uint16_t m_len;
-        uint16_t m_pulled;
-        ArdpRcvBuf* m_rcv;
-        uint16_t m_cnt;
-    };
-};
+    m_lock.Unlock(MUTEX_CONTEXT);
+}
+
+/**
+ * This is the data sent callback which is plumbed from the ARDP protocol up
+ * to this stream.  This callback means that the buffer is no longer
+ * required and may be freed.  The ARDP protocol only had temporary custody
+ * of the buffer.
+ */
+void ArdpStream::SendCb(ArdpHandle* handle, ArdpConnRecord* conn, uint8_t* buf, uint32_t len, QStatus status)
+{
+    QCC_UNUSED(handle);
+    QCC_UNUSED(conn);
+    QCC_UNUSED(len);
+    QCC_UNUSED(status);
+
+    QCC_DbgTrace(("ArdpStream::SendCb(handle=%p, conn=%p, buf=%p, len=%d.)", handle, conn, buf, len));
+    m_transport->m_cbLock.Lock(MUTEX_CONTEXT);
+    --m_sendsOutstanding;
+
+#if SENT_SANITY
+    set<uint8_t*>::iterator i = find(m_sentSet.begin(), m_sentSet.end(), buf);
+    if (i == m_sentSet.end()) {
+        QCC_LogError(ER_FAIL, ("ArdpStream::SendCb(): Callback for unexpected buffer (%p, %d.): Ignored.", buf, len));
+    } else {
+        m_sentSet.erase(i);
+    }
+#endif
+
+    m_transport->m_cbLock.Unlock(MUTEX_CONTEXT);
+
+#ifndef NDEBUG
+    CheckSeal(buf + len);
+#endif
+    delete[] buf;
+
+    /*
+     * If there are any threads waiting for a chance to send bits, wake them
+     * up.  They will retry their sends when this event gets set.  If the
+     * send callbacks are part of normal operation, the sends may succeed
+     * the next time around.  If this callback is part of disconnect
+     * processing the next send will fail with an error; and PushBytes()
+     * will manage the outstanding write count.
+     */
+    if (m_writeCondition) {
+        QCC_DbgPrintf(("ArdpStream::SendCb(): Condition::Signal()"));
+        m_writeCondition->Signal();
+    }
+}
+
 
 bool operator<(const ArdpStream::ThreadEntry& lhs, const ArdpStream::ThreadEntry& rhs)
 {
