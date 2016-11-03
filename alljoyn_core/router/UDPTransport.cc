@@ -2071,17 +2071,6 @@ class _UDPEndpoint : public _RemoteEndpoint {
          * sanitized version.
          */
         disconnectStatus = status;
-    }
-
-    /**
-     * Set the boolean indicating that the disconenct logic has happened.  This
-     * is provided so that the transport can manually override this logic if an
-     * error is detected prior to calling start (and where the disconnect
-     * callback that drives that logic will never be called).
-     */
-    void SetDisconnected()
-    {
-        QCC_DbgTrace(("_UDPEndpoint::SetDisconnected()"));
         m_disconnected = true;
     }
 
@@ -2102,12 +2091,20 @@ class _UDPEndpoint : public _RemoteEndpoint {
     {
         QCC_DbgTrace(("_UDPEndpoint::SetLinkTimeout(linkTimeout=%d.)", linkTimeoutSeconds));
 
-        m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
-        uint32_t linkTimeoutMilliseconds = linkTimeoutSeconds * 1000;
-        ARDP_UpdateProbeTimeout(GetHandle(), GetConn(), linkTimeoutMilliseconds);
-        m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
+        QStatus status = ER_OK;
+        if (!m_disconnected) {
+            ArdpConnRecord* conn = GetConn();
+            QCC_ASSERT(conn != nullptr);
+            uint32_t linkTimeoutMilliseconds = linkTimeoutSeconds * 1000;
+            m_transport->m_ardpLock.Lock(MUTEX_CONTEXT);
+            ARDP_UpdateProbeTimeout(GetHandle(), conn, linkTimeoutMilliseconds);
+            m_transport->m_ardpLock.Unlock(MUTEX_CONTEXT);
+        } else {
+            status = ER_ARDP_INVALID_STATE;
+            QCC_LogError(status, ("_UDPEndpoint::SetLinkTimeout() ARDP disconnected"));
+        }
 
-        return ER_OK;
+        return status;
     }
 
     void StateLock(const char* file, uint32_t line)
