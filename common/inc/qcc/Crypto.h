@@ -251,8 +251,9 @@ class Crypto_Hash {
 
     /// Typedef for abstracting the hash algorithm specifier.
     typedef enum {
-        SHA1,          ///< SHA1 algorithm specifier
-        SHA256         ///< SHA256 algorithm specifier
+        SHA1 = 0,          ///< SHA1 algorithm specifier
+        SHA256 = 1,        ///< SHA256 algorithm specifier
+        TOTAL_ALGORITHMS_COUNT = 2 ///< Total number of supported algorithms, increment this number when adding new hash algorithm
     } Algorithm;
 
     /**
