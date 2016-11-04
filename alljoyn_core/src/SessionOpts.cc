@@ -127,7 +127,24 @@ qcc::String SessionOpts::ToString() const
         break;
     }
 
-    str.append(", transports=%X", transports);
+    qcc::String sTransports;
+    if ((transports & TRANSPORT_ANY) == TRANSPORT_ANY) {
+        sTransports.append("TRANSPORT_ANY");
+    } else if ((transports & TRANSPORT_IP) == TRANSPORT_IP) {
+        sTransports.append("TRANSPORT_IP");
+    } else {
+        if ((transports & TRANSPORT_LOCAL) == TRANSPORT_LOCAL) {
+            sTransports.append("TRANSPORT_LOCAL");
+        }
+        if ((transports & TRANSPORT_TCP) == TRANSPORT_TCP) {
+            sTransports.append(sTransports.empty() ? "TRANSPORT_TCP" : ",TRANSPORT_TCP");
+        }
+        if ((transports & TRANSPORT_UDP) == TRANSPORT_UDP) {
+            sTransports.append(sTransports.empty() ? "TRANSPORT_UDP" : ",TRANSPORT_UDP");
+        }
+    }
+    str.append(", transports=" + sTransports);
+
     return str;
 }
 void SessionOpts::SetAllNames()
