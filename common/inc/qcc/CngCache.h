@@ -94,7 +94,7 @@ struct CngCache {
     /**
      * Number of supported algorithms as defined by Crypto_Hash::Algorithm enum
      */
-    static const int ALGORITHM_COUNT = 2;
+    static const int ALGORITHM_COUNT = qcc::Crypto_Hash::TOTAL_ALGORITHMS_COUNT;
 
     /**
      * Number of supported curves for ECDSA or ECDH.
