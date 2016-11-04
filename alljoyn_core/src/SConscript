@@ -46,6 +46,11 @@ else:
     libenv.Depends(version_cc, shared_objs)
     shared_objs.append(libenv.SharedObject(version_cc))
 
+    #Add hardening flags for linux release build only.
+    #The goal is to avoid any impact for these flags to our capability of debugging.
+    if (libenv['OS'] == 'linux') and (libenv['VARIANT'] == 'release'):
+        libenv.Append(LINKFLAGS = ['-fPIC', '-Wl,-z,relro,-z,now'])
+
 # AllJoyn Static Library
 libs = libenv.StaticLibrary('alljoyn', static_objs)
 if libenv['LIBTYPE'] != 'static':
