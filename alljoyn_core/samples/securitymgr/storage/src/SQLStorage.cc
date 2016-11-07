@@ -798,7 +798,7 @@ QStatus SQLStorage::GetCertificate(const Application& app, CertificateX509& cert
                 sqlStmtText += MEMBERSHIP_CERTS_TABLE_NAME;
                 sqlStmtText += " WHERE SUBJECT_KEYINFO = ? AND GUID = ? ";
                 groupId =
-                    dynamic_cast<MembershipCertificate&>(cert).GetGuild().ToString().c_str();
+                    static_cast<MembershipCertificate&>(cert).GetGuild().ToString().c_str();
             }
             break;
 
@@ -921,7 +921,7 @@ QStatus SQLStorage::RemoveCertificate(const Application& app, CertificateX509& c
         if (CertificateX509::MEMBERSHIP_CERTIFICATE == cert.GetType()) {
             sqlRetCode |=
                 sqlite3_bind_text(statement, 2,
-                                  dynamic_cast<MembershipCertificate&>(cert).GetGuild().
+                                  static_cast<MembershipCertificate&>(cert).GetGuild().
                                   ToString().c_str(),
                                   -1, SQLITE_TRANSIENT);
         }
@@ -1235,7 +1235,7 @@ QStatus SQLStorage::BindCertForStorage(const Application& app, CertificateX509& 
         switch (cert.GetType()) {
         case CertificateX509::IDENTITY_CERTIFICATE: {
                 const IdentityCertificate& idCert =
-                    dynamic_cast<const IdentityCertificate&>(cert);
+                    static_cast<const IdentityCertificate&>(cert);
                 sqlRetCode |= sqlite3_bind_text(*statement, ++column,
                                                 idCert.GetAlias().c_str(), -1,
                                                 SQLITE_TRANSIENT);
@@ -1248,7 +1248,7 @@ QStatus SQLStorage::BindCertForStorage(const Application& app, CertificateX509& 
 
         case CertificateX509::MEMBERSHIP_CERTIFICATE: {
                 CertificateX509& c = const_cast<CertificateX509&>(cert);
-                MembershipCertificate& memCert = dynamic_cast<MembershipCertificate&>(c);
+                MembershipCertificate& memCert = static_cast<MembershipCertificate&>(c);
                 sqlRetCode |= sqlite3_bind_text(*statement, ++column,
                                                 memCert.GetGuild().ToString().c_str(), -1,
                                                 SQLITE_TRANSIENT);
