@@ -513,8 +513,9 @@ TEST_F(ClaimingTests, NestedPSKClaims) {
     vector<shared_ptr<TestApplication> > testapps;
     size_t nr_off_apps = 5;
     for (size_t i = 0; i < nr_off_apps; i++) {
-        TestApplication* testapp = new TestApplication(string("NestedTestApp") +
-                                                       std::to_string(i));
+        stringstream ss;
+        ss << "NestedTestApp" << i;
+        TestApplication* testapp = new TestApplication(ss.str());
         testapps.push_back(shared_ptr<TestApplication>(testapp));
         testapps[i]->Start();
         testapps[i]->SetClaimByPSK();
@@ -597,8 +598,9 @@ TEST_F(ClaimingTests, ConcurrentPSKClaims) {
     vector<shared_ptr<TestApplication> > testapps;
     size_t nr_off_apps = 3;
     for (size_t i = 0; i < nr_off_apps; i++) {
-        TestApplication* testapp = new TestApplication(string("NestedTestApp") +
-                                                       std::to_string(i));
+        stringstream ss;
+        ss << "NestedTestApp" << i;
+        TestApplication* testapp = new TestApplication(ss.str());
         testapps.push_back(shared_ptr<TestApplication>(testapp));
         testapps[i]->Start();
         testapps[i]->SetClaimByPSK();

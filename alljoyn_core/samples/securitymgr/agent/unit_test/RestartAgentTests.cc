@@ -54,8 +54,10 @@ TEST_F(RestartAgentTests, SuccessfulAgentRestart) {
     vector<IdentityInfo> identities;
 
     for (size_t i = 0; i < numOfApps; i++) {
+        stringstream ss;
+        ss << i << "-Testapp";
         identities.push_back(IdentityInfo());
-        apps.push_back(shared_ptr<TestApplication>(new TestApplication(std::to_string(i) + "-Testapp")));
+        apps.push_back(shared_ptr<TestApplication>(new TestApplication(ss.str())));
         ASSERT_EQ(ER_OK, storage->StoreIdentity(identities[i]));
     }
 

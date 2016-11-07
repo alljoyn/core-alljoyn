@@ -169,7 +169,7 @@ class EventListener :
         manifestUpdatesLock.Unlock();
 
         cout << " >>>>> Received ManifestUpdate for " << manifestUpdate->app.busName
-             << " (" << to_string(manifestUpdate->additionalRules.GetRulesSize())
+             << " (" << manifestUpdate->additionalRules.GetRulesSize()
              << " additional rule(s))" << endl;
     }
 };

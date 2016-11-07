@@ -24,7 +24,9 @@ namespace secmgr_tests {
 MPApplication::MPApplication(pid_t pid) :
     busAttachment(nullptr), authListener()
 {
-    appName = string("MP-") + to_string(pid);
+    stringstream ss;
+    ss << "MP-" << pid;
+    appName = ss.str();
 }
 
 QStatus MPApplication::Start()

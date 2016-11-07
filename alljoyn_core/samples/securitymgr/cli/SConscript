@@ -25,8 +25,8 @@ app_env.Append(LIBPATH = '../agent/src')
 app_env.Append(LIBPATH = '../storage/src')
 
 app_env.Prepend(LIBS = ['sqlite3'])
-app_env.Prepend(LIBS = ['ajsecstorage'])
 app_env.Prepend(LIBS = ['ajsecmgr'])
+app_env.Prepend(LIBS = ['ajsecstorage'])
 
 secmgrapp = app_env.Program(target='secmgr', source=['secmanager.cc'])
 

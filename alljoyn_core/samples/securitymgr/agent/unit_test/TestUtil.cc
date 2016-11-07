@@ -77,11 +77,12 @@ void TestApplicationListener::OnSyncError(const SyncError* er)
 
 string ManifestUpdateToString(const ManifestUpdate* update)
 {
-    string result = "ManifestUpdate >> ";
-    result += update->app.busName + " requested ";
-    result += to_string(update->additionalRules.GetRulesSize());
-    result += " additional rules";
-    return result;
+    stringstream result;
+    result << "ManifestUpdate >> ";
+    result << update->app.busName << " requested ";
+    result << update->additionalRules.GetRulesSize();
+    result << " additional rules";
+    return result.str();
 }
 
 static void GetDefaultStorageFilePath(string& storageFilePath)
