@@ -617,19 +617,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ENABLE_BITCODE = NO;
-				HEADER_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
-					"\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
-					"\"$(SRCROOT)/../../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"",
-				);
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/../../../../../build/iOS/universal/$(PLATFORM_NAME)/debug/dist/cpp/inc/\"";
 				INFOPLIST_FILE = DoorProvider/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks";
-				LIBRARY_SEARCH_PATHS = (
-					"\"$(SRCROOT)/../../../../../build/darwin/$(CURRENT_ARCH)/$(PLATFORM_NAME)/debug/dist/cpp/lib/\"",
-					"\"$(SRCROOT)/../../../../../build/darwin/armv7/$(PLATFORM_NAME)/debug/dist/cpp/lib/\"",
-					"\"$(SRCROOT)/../../../../../build/darwin/x86_64/$(PLATFORM_NAME)/debug/dist/cpp/lib/\"",
-					"\"$(SRCROOT)/../../../../../build/darwin/arm/$(PLATFORM_NAME)/debug/dist/cpp/lib/\"",
-				);
+				LIBRARY_SEARCH_PATHS = "\"$(SRCROOT)/../../../../../build/iOS/universal/$(PLATFORM_NAME)/debug/dist/cpp/lib/\"";
 				OTHER_CFLAGS = (
 					"-DQCC_OS_GROUP_POSIX",
 					"-DQCC_OS_DARWIN",
