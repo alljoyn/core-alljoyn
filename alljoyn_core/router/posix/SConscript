@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('router_env', 'router_objs', 'srobj')
 
@@ -20,19 +20,19 @@ if router_env['OS'] != 'darwin':
     daemon_env = router_env.Clone()
     if daemon_env['OS'] != 'android':
         daemon_env.Append(LIBS = 'cap')
+    #Add hardening flags for linux release build for details please refer to
+    #https://wiki.debian.org/Hardening
+    #The goal is to avoid any impact for these flags to our capability of debugging.
+    if daemon_env['OS'] == 'linux' and daemon_env['VARIANT'] == 'release':
+           daemon_env.Append(CXXFLAGS = ['-fstack-protector-all', '-Wstack-protector', '--param', 'ssp-buffer-size=4', '-D_FORTIFY_SOURCE=2', '-O2', '-fPIE'])
+           daemon_env.Append(LINKFLAGS = ['-pie', '-fPIE', '-Wl,-z,relro,-z,now'])
+
     daemon = daemon_env.Program('alljoyn-daemon', ['daemon-main.cc'] + srobj + router_objs)
 else:
     daemon = []
 
-#Add hardening flags for linux release build for details please refer to
-#https://wiki.debian.org/Hardening
-#The goal is to avoid any impact for these flags to our capability of debugging.
-if daemon_env['OS'] == 'linux' and daemon_env['VARIANT'] == 'release':
-       daemon_env.Append(CXXFLAGS = ['-fstack-protector-all', '-Wstack-protector', '--param', 'ssp-buffer-size=4', '-D_FORTIFY_SOURCE=2', '-O2', '-fPIE'])
-       daemon_env.Append(LINKFLAGS = ['-pie', '-fPIE', '-Wl,-z,relro,-z,now'])
-
 #
-# On Android, build a static library that can be linked into a JNI dynamic 
+# On Android, build a static library that can be linked into a JNI dynamic
 # library to implement the daemon as a Service
 #
 if router_env['OS'] == 'android':

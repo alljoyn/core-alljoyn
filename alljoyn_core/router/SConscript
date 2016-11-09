@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 from os.path import basename
 
@@ -69,15 +69,15 @@ lib = router_env.StaticLibrary('ajrouter', brobj + router_objs);
 
 # AllJoyn Daemon test programs
 if router_env['OS'] == 'darwin':
-    if router_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
-        print 'Not building unit tests for iOS...'    
+    if router_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64', 'iOS_universal',]:
+        print 'Not building unit tests for iOS...'
         tests = []
     else:
         print 'Building unit tests for darwin...'
         tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs', 'srobj'])
 else:
     tests = router_env.SConscript('test/SConscript', exports = ['router_env', 'router_objs', 'srobj'])
-    
+
 # Return daemon and related tests
 ret = progs + tests, lib, srobj, router_objs
 Return('ret')
