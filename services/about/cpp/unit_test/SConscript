@@ -19,7 +19,7 @@ Import('about_env')
 if not about_env.has_key('GTEST_DIR'):
     print('GTEST_DIR not specified skipping About Service unit test build')
 
-elif about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
+elif about_env['OS'] == 'darwin' and about_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64', 'iOS_universal',]:
     # do not even try Google test if darwin and arm
     print 'GTEST_DIR ignored when building for OS=darwin CPU=arm, skipping alljoyn_core unit test build'
 
@@ -63,10 +63,10 @@ else:
     if gtest_env['OS_CONF'] == 'windows' and gtest_env['MSVC_VERSION'] == '11.0':
         gtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
 
-    # we compile with no rtti and we are not using exceptions. 
+    # we compile with no rtti and we are not using exceptions.
     gtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
 
-    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the 
+    # we replace AllJoyn's include CPPPATH options.  AllJoyn includes stlport that will cause the
     # gTest code to not compile as expected at this time
     gtest_env.Append(CPPPATH = [ gtest_src_base ])
     if gtest_dir != '/usr':
@@ -76,7 +76,7 @@ else:
     gtest_env.StaticLibrary(target = 'gtest', source = gtest_obj)
 
     unittest_env = about_env.Clone()
-    
+
     test_src = unittest_env.Glob('*.cc')
 
     if unittest_env['BR'] == 'on':
@@ -88,7 +88,7 @@ else:
     gtest_dir = unittest_env['GTEST_DIR']
     if gtest_dir != '/usr':
         unittest_env.Append(CPPPATH = [gtest_dir + '/include'])
-    
+
     if unittest_env['OS_GROUP'] == 'windows':
         unittest_env.Append(CXXFLAGS = ['/EHsc'])
 
@@ -110,8 +110,8 @@ else:
     # gtest library file is placed on folder above the the object files.
     unittest_env.Append(LIBPATH = ['./', '$ABOUT_DISTDIR/lib'])
     unittest_env.Prepend(LIBS = ['gtest', 'alljoyn_about'])
-        
+
     obj = unittest_env.Object(test_src);
-        
+
     unittest_prog = unittest_env.Program('abouttest', obj)
     unittest_env.Install('$TESTDIR/cpp/bin', unittest_prog)
