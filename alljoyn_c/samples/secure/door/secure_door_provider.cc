@@ -250,11 +250,12 @@ static QStatus SetUpProviderSecurity(CommonDoorData* doorData)
         return status;
     }
 
-    status = alljoyn_busattachment_enablepeersecurity(doorData->bus,
-                                                      KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_SPEKE,
-                                                      doorData->authListener,
-                                                      nullptr,
-                                                      QCC_FALSE);
+    status = alljoyn_busattachment_enablepeersecuritywithpermissionconfigurationlistener(doorData->bus,
+                                                                                         KEYX_ECDHE_DSA " " KEYX_ECDHE_NULL " " KEYX_ECDHE_SPEKE,
+                                                                                         doorData->authListener,
+                                                                                         nullptr,
+                                                                                         QCC_TRUE,
+                                                                                         doorData->permissionConfigurationListener);
     if (ER_OK != status) {
         fprintf(stderr, "Failed to enablepeersecurity - status (%s)\n", QCC_StatusText(status));
         return status;
@@ -425,7 +426,7 @@ int CDECL_CALL main(int argc, char** argv)
         goto Exit;
     }
 
-    status = WaitToBeClaimed(doorData.bus);
+    status = WaitToBeClaimed(&doorData);
     if (ER_OK != status) {
         fprintf(stderr, "Failed to WaitToBeClaimed - status (%s)\n", QCC_StatusText(status));
         goto Exit;

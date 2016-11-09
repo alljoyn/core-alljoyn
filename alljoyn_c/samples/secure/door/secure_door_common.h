@@ -26,6 +26,7 @@
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/BusObject.h>
 #include <alljoyn_c/Init.h>
+#include <alljoyn_c/PermissionConfigurationListener.h>
 
 extern AJ_PCSTR g_doorInterfaceXml;
 
@@ -56,12 +57,16 @@ typedef struct {
     alljoyn_aboutobj aboutObj;
     alljoyn_sessionportlistener spl;
     alljoyn_authlistener authListener;
+    alljoyn_permissionconfigurationlistener permissionConfigurationListener;
+    volatile char endManagementCalled;
 } CommonDoorData;
 
 QStatus CommonDoorSetUp(AJ_PCSTR appName, CommonDoorData* doorData);
+void SetPermissionConfigurationListener(CommonDoorData* doorData);
+void AJ_CALL EndManagementCallback(const void* context);
 QStatus HostSession(const CommonDoorData* doorData);
 QStatus AnnounceAboutData(CommonDoorData* doorData, AJ_PCSTR appName);
-QStatus WaitToBeClaimed(alljoyn_busattachment bus);
+QStatus WaitToBeClaimed(CommonDoorData* doorData);
 QStatus SetSecurityForClaimedMode(CommonDoorData* doorData);
 void CommonDoorTearDown(CommonDoorData* doorData);
 
