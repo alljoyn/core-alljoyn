@@ -21,7 +21,7 @@ Import('libcommon')
 if not commonenv.has_key('GTEST_DIR'):
     print('GTEST_DIR not specified skipping common unit test build')
 
-elif commonenv['OS'] == 'darwin' and commonenv['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]:
+elif (commonenv['OS'] == 'darwin' and commonenv['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64',]) or commonenv['OS'] == 'iOS':
     # do not even try Google test if darwin and arm
     print 'GTEST_DIR ignored when building for OS=darwin CPU=arm, skipping common unit test build'
 
@@ -47,7 +47,7 @@ else:
         # don't use the _DEBUG define unless the /MDd compiler flag is specified
         #gtest_env.Append(CPPDEFINES = ['WIN32', '_DEBUG', '_LIB'])
         gtest_env.Append(CXXFLAGS = ['/EHsc'])
-    
+
     if gtest_env['OS_CONF'] == 'android':
         # used by gtest to prevent use of wcscasecmp and set GTEST_HAS_STD_WSTRING=0
         gtest_env.Append(CPPDEFINES = ['ANDROID'])
@@ -65,7 +65,7 @@ else:
     if gtest_env['OS_CONF'] == 'windows' and (gtest_env['MSVC_VERSION'] == '11.0' or gtest_env['MSVC_VERSION'] == '11.0Exp'):
         gtest_env.Append(CPPDEFINES = ['_VARIADIC_MAX=10'])
 
-    # we compile with no rtti and we are not using exceptions. 
+    # we compile with no rtti and we are not using exceptions.
     gtest_env.Append(CPPDEFINES = ['GTEST_HAS_RTTI=0'])
     gtest_env.Append(CPPPATH = [ gtest_src_base ])
     if gtest_dir != '/usr':
