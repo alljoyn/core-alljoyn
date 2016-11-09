@@ -1,3 +1,4 @@
+#!/bin/sh
 # Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
@@ -13,21 +14,16 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('router_env', 'router_objs', 'srobj')
-from os.path import basename
+cd ..
+SDKROOT_MACOS=`xcodebuild -version -sdk macosx Path`
+CPU_NUM=`sysctl -n hw.ncpu`
 
-# Test Programs
-if router_env['OS'] == 'iOS':
-    progs = []
-else:
-    progs = [
-        router_env.Program('advtunnel', ['advtunnel.cc'] + srobj + router_objs),
-        router_env.Program('ns', ['ns.cc'] + srobj + router_objs)
-    ]
+echo "Building AllJoyn Core for macOS"
+echo "SDKROOT_MACOS: $SDKROOT_MACOS"
+echo "CPU_NUM: $CPU_NUM"
 
-    if router_env['OS'] in ['android', 'linux', 'win7', 'win10']:
-        progs.append(router_env.Program('bbdaemon', ['bbdaemon.cc'] + srobj + router_objs))
-        progs.append(router_env.Program('ardp',     ['ardp.cc'] +     srobj + router_objs))
-        progs.append(router_env.Program('ardptest', ['ardptest.cc'] + srobj + router_objs))
+set -e
 
-Return('progs')
+export PLATFORM_NAME=macosx
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS
