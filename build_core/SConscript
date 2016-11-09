@@ -68,7 +68,7 @@ elif platform.system() == 'Darwin':
     allowed_target_oss = ('darwin', 'android', 'openwrt')
 
     default_target_cpu = 'x86_64'
-    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'armv7', 'armv7s', 'arm64', 'openwrt')
+    allowed_target_cpus = ('x86', 'x86_64', 'arm', 'armv7', 'armv7s', 'arm64', 'openwrt', 'iOS_universal')
 
     default_msvc_version = None
 
@@ -108,7 +108,7 @@ target_cpu = ARGUMENTS.get('CPU', default_target_cpu)
 
 if target_os == 'android':
     default_crypto = 'builtin'
-if target_os == 'darwin' and target_cpu in ['x86', 'x86_64']:
+if target_os == 'darwin' and target_cpu in ['x86', 'x86_64', 'iOS_universal']:
     default_crypto = 'builtin'
 
 vars.Add(EnumVariable('CRYPTO', 'Crypto implementation', default_crypto, allowed_values = allowed_crypto))

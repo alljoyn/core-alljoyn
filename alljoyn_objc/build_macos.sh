@@ -1,3 +1,4 @@
+#!/bin/sh
 # Copyright AllSeen Alliance. All rights reserved.
 #
 #    Permission to use, copy, modify, and/or distribute this software for any
@@ -13,18 +14,16 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-Import('env')
+cd ..
+SDKROOT_MACOS=`xcodebuild -version -sdk macosx Path`
+CPU_NUM=`sysctl -n hw.ncpu`
 
-snippets_env = env.Clone()
+echo "Building AllJoyn Core for macOS"
+echo "SDKROOT_MACOS: $SDKROOT_MACOS"
+echo "CPU_NUM: $CPU_NUM"
 
-if snippets_env['BR'] == 'on':
-    # Build apps with bundled daemon support
-    snippets_env.Prepend(LIBS = [snippets_env['ajrlib']])
+set -e
 
-# only include command line samples, unit test, test programs if we are not
-# building for iOS. No support on iOS for command line applications.
-if not (snippets_env['OS'] == 'darwin' and snippets_env['CPU'] in ['arm', 'armv7', 'armv7s', 'arm64', 'iOS_universal',]):
-    snippets_env.Program('usingmsgarg',  ['usingmsgarg.cpp'])
-    snippets_env.Program('create_interface_from_xml_interface', ['create_interface_from_xml_interface.cpp'])
-    snippets_env.Program('create_interface_from_xml_node', ['create_interface_from_xml_node.cpp'])
-    snippets_env.Program('create_interface_using_code', ['create_interface_using_code.cpp'])
+export PLATFORM_NAME=macosx
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS
+scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS
