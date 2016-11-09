@@ -11,7 +11,7 @@
 #    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
 #    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-# 
+#
 
 Import('ajenv')
 Import('common_static_objs')
@@ -27,8 +27,8 @@ srcs = [ f for f in libenv.Glob('*.cc') + libenv.Glob('*.c')
          if not (str(f).endswith('version.cc')) ]
 
 # Platform specific sources
-if libenv['OS'] == 'darwin':
-    os_srcs = [ f for f in libenv.Glob(libenv['OS'] + '/*.cc') ]
+if libenv['OS_SUBGROUP'] == 'darwin':
+    os_srcs = [ f for f in libenv.Glob(libenv['OS_SUBGROUP'] + '/*.cc') ]
     os_srcs += [ f for f in libenv.Glob(libenv['OS_GROUP'] + '/KeyStoreListenerFactory.cc') ]
 else:
     os_srcs = [ f for f in libenv.Glob(libenv['OS_GROUP'] + '/*.cc') ]
