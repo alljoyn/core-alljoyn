@@ -94,13 +94,15 @@ public class PermissionConfiguratorTest extends TestCase {
     }
 
     public void testNotClaimable() throws Exception {
-        assertEquals(Status.OK, registerAuthListener());
+        assertEquals(Status.OK, busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
+                File.createTempFile("alljoyn","ks").getAbsolutePath(), false, pclistener));
         SecurityApplicationProxy sap = new SecurityApplicationProxy(busAttachment,busAttachment.getUniqueName(),(short)0);
         assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, sap.getApplicationState());
     }
 
     public void testBasic() throws Exception {
-        assertEquals(Status.OK, registerAuthListener());
+        assertEquals(Status.OK, busAttachment.registerAuthListener("ALLJOYN_ECDHE_NULL", null,
+                File.createTempFile("alljoyn","ks").getAbsolutePath(), false, pclistener));
 
         SecurityApplicationProxy sap = new SecurityApplicationProxy(busAttachment,busAttachment.getUniqueName(),(short)0);
         assertEquals(PermissionConfigurator.ApplicationState.NOT_CLAIMABLE, sap.getApplicationState());
