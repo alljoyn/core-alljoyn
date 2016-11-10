@@ -160,8 +160,28 @@ QStatus CommonDoorSetUp(AJ_PCSTR appName, CommonDoorData* doorData)
     doorData->aboutObj = alljoyn_aboutobj_create(doorData->bus, UNANNOUNCED);
     doorData->spl = alljoyn_sessionportlistener_create(&s_splCallbacks, nullptr);
     doorData->authListener = nullptr;
+    doorData->endManagementCalled = QCC_FALSE;
+
+    SetPermissionConfigurationListener(doorData);
 
     return CommonInit(doorData);
+}
+
+void SetPermissionConfigurationListener(CommonDoorData* doorData)
+{
+    alljoyn_permissionconfigurationlistener_callbacks callbacks = {
+        nullptr,
+        nullptr,
+        nullptr,
+        EndManagementCallback
+    };
+    doorData->permissionConfigurationListener = alljoyn_permissionconfigurationlistener_create(&callbacks, (const void*)(&(doorData->endManagementCalled)));
+}
+
+void AJ_CALL EndManagementCallback(const void* context)
+{
+    printf("EndManagementCallback called.\n");
+    *((volatile QCC_BOOL*)context) = QCC_TRUE;
 }
 
 QStatus HostSession(const CommonDoorData* doorData)
@@ -192,31 +212,37 @@ QStatus AnnounceAboutData(CommonDoorData* doorData, AJ_PCSTR appName)
     return alljoyn_aboutobj_announce(doorData->aboutObj, DOOR_APPLICATION_PORT, doorData->aboutData);
 }
 
-QStatus WaitToBeClaimed(alljoyn_busattachment bus)
+QStatus WaitToBeClaimed(CommonDoorData* doorData)
 {
     uint32_t waitIteration = 0;
     QStatus status = ER_OK;
+    alljoyn_busattachment bus = doorData->bus;
     alljoyn_applicationstate appState = CLAIMABLE;
     alljoyn_permissionconfigurator configurator = alljoyn_busattachment_getpermissionconfigurator(bus);
 
     status = alljoyn_permissionconfigurator_getapplicationstate(configurator, &appState);
-    while ((CLAIMED != appState) && (ER_OK == status)) {
+    if (ER_OK != status) {
+        fprintf(stderr, "Failed to retrieve application's state - status (%s)\n", QCC_StatusText(status));
+        return status;
+    }
+
+    if (CLAIMED == appState) {
+        printf("App is already claimed, skipping wait.\n");
+        return ER_OK;
+    }
+
+    while (doorData->endManagementCalled != QCC_TRUE) {
 #if defined(QCC_OS_GROUP_WINDOWS)
         Sleep(250);
 #else
         usleep(250 * 1000);
 #endif
         printf("Waiting to be claimed... %u\n", waitIteration++);
-        status = alljoyn_permissionconfigurator_getapplicationstate(configurator, &appState);
     }
 
-    if (ER_OK != status) {
-        fprintf(stderr, "Failed to retrieve application's state - status (%s)\n", QCC_StatusText(status));
-    } else {
-        printf("App has been claimed.\n");
-    }
+    printf("App has been claimed.\n");
 
-    return status;
+    return ER_OK;
 }
 
 QStatus SetSecurityForClaimedMode(CommonDoorData* doorData)
@@ -272,5 +298,11 @@ void CommonDoorTearDown(CommonDoorData* doorData)
 
     if (nullptr != doorData->authListener) {
         alljoyn_authlistener_destroy(doorData->authListener);
+        doorData->authListener = nullptr;
+    }
+
+    if (nullptr != doorData->permissionConfigurationListener) {
+        alljoyn_permissionconfigurationlistener_destroy(doorData->permissionConfigurationListener);
+        doorData->permissionConfigurationListener = nullptr;
     }
 }
