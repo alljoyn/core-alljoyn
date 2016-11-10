@@ -721,6 +721,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				HEADER_SEARCH_PATHS = (
@@ -760,6 +761,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				ENABLE_BITCODE = NO;
 				GCC_ENABLE_CPP_EXCEPTIONS = NO;
 				GCC_ENABLE_CPP_RTTI = NO;
 				HEADER_SEARCH_PATHS = (
@@ -779,6 +781,12 @@
 					"\"$(SRCROOT)/../../../../build/darwin/arm64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
 					"\"$(SRCROOT)/../../../../build/darwin/armv7/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
 					"\"$(SRCROOT)/../../../../build/darwin/x86_64/$(PLATFORM_NAME)/release/dist/cpp/lib\"",
+				);
+				ONLY_ACTIVE_ARCH = YES;
+				OTHER_CFLAGS = (
+					"-DNS_BLOCK_ASSERTIONS=1",
+					"-DQCC_OS_GROUP_POSIX",
+					"-DQCC_OS_DARWIN",
 				);
 				OTHER_LDFLAGS = (
 					"-lalljoyn",
