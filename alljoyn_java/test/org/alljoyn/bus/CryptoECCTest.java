@@ -67,11 +67,8 @@ public class CryptoECCTest extends TestCase {
         cryptoECC.DSAVerify(eccPublicKey.getX(), eccsign);
 
         ECCSecret sec = new ECCSecret();
-
-        byte[] secretmaster = sec.derivePreMasterSecret();
-
         cryptoECC.generateSharedSecret(eccPublicKey, sec);
-
+        byte[] secretmaster = sec.derivePreMasterSecret();
     }
 }
 
