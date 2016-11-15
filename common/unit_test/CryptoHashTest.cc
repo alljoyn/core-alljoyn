@@ -36,11 +36,14 @@
 using namespace qcc;
 using namespace std;
 
+// Scope this object to just this file to avoid One Definition Rule violation as described in ASACORE-3467
+namespace {
 typedef struct {
     const char* key;     /* input key (for hmac) - hex string */
     const char* msg;     /* input message - ascii */
     const char* dig;     /* output digest - hex string */
 } TEST_CASE;
+} // anonymous namespace
 
 static TEST_CASE sha1test[] = {
     {
