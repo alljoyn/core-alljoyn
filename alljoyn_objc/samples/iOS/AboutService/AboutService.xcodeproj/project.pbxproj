@@ -614,6 +614,7 @@
 					"-lalljoyn",
 					"-lajrouter",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.AboutService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
@@ -655,6 +656,7 @@
 					"-lalljoyn",
 					"-lajrouter",
 				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.alljoyn.AboutService;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				WRAPPER_EXTENSION = app;
 			};
