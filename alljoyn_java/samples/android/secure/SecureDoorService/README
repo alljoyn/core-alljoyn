@@ -1,0 +1,17 @@
+This is an Android Studio project. In order to run this project,
+the AllJoyn 'jar' and 'so' files must be added.
+
+Add the following jar files in the app/libs/ folder:
+   alljoyn.jar
+   alljoyn_about.jar
+   alljoyn_config.jar
+   alljoyn_apps_andriod_utils.jar
+
+Add the following shared object files to the app/src/main/jniLibs/armeabi/ folder:
+   liballjoyn_java.so
+
+Add a local.properties file to the top folder of the project.
+It should specify the path to your Android SDK installation folder.
+For example:
+   sdk.dir=/Users/SomeUser/Library/Android/sdk
+
