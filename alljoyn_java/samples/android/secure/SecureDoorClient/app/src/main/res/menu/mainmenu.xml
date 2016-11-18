@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <item android:title="Open doors" android:id="@+id/open"></item>
+    <item android:title="Close doors" android:id="@+id/close"></item>
+    <item android:title="Doors state (method call)" android:id="@+id/stateMethod"></item>
+    <item android:title="Get doors state (property call)" android:id="@+id/stateProperty"></item>
+    <item android:title="Quit" android:id="@+id/quit"></item>
+</menu>
