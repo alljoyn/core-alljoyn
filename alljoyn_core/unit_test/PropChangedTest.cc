@@ -359,6 +359,7 @@ class PropChangedTestBusObject :
 
     virtual ~PropChangedTestBusObject()
     {
+        bus.UnregisterBusObject(*this);
     }
 
     virtual QStatus Get(const char* ifcName, const char* propName, MsgArg& val)
