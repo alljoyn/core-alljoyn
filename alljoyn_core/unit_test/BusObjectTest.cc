@@ -393,6 +393,8 @@ TEST(BusObjectTest, SendSignalAfterUnregistersignalHandler)
 
 }
 
+// Scope this object to just this file to avoid One Definition Rule violation as described in ASACORE-3467
+namespace {
 class TestBusObject : public BusObject {
   public:
     TestBusObject(BusAttachment& bus, const char* path)
@@ -431,7 +433,7 @@ class TestBusObject : public BusObject {
     BusAttachment& bus;
     bool wasRegistered, wasUnregistered;
 };
-
+} // anonymous namespace
 
 //Test that you can make a method call and then the method call should fail gracefully when you unregister the bus object on the service side.
 TEST(BusObjectTest, Make_methodcall_after_unregister_bus_object)

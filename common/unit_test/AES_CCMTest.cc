@@ -36,6 +36,8 @@
 using namespace qcc;
 using namespace std;
 
+// Scope this object to just this file to avoid One Definition Rule violation as described in ASACORE-3467
+namespace {
 typedef struct {
     const char* key;     /* AES key */
     const char* nonce;   /* Nonce */
@@ -44,6 +46,7 @@ typedef struct {
     const char* output;  /* Authenticated and encrypted output for verification */
     uint8_t authLen;     /* Length of the authentication field */
 } TEST_CASE;
+} // anonymous namespace
 
 
 static TEST_CASE testVector[] = {

@@ -213,6 +213,8 @@ TEST(SRPTest, Basic_API) {
 
 }
 
+// Scope this object to just this file to avoid One Definition Rule violation as described in ASACORE-3467
+namespace {
 class MyAuthListener : public AuthListener {
     bool RequestCredentials(const char* authMechanism, const char* authPeer, uint16_t authCount, const char* userId, uint16_t credMask, Credentials& creds) {
         QCC_UNUSED(authMechanism);
@@ -228,6 +230,7 @@ class MyAuthListener : public AuthListener {
         printf("Authentication %s %s\n", authMechanism, success ? "succesful" : "failed");
     }
 };
+} // anonymous namespace
 
 TEST(SRPTest, authentication_mechanism) {
     QStatus status = ER_OK;

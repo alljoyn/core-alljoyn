@@ -88,6 +88,8 @@ static QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& d
     return ER_OK;
 }
 
+// Scope this object to just this file to avoid One Definition Rule violation as described in ASACORE-3467
+namespace {
 class TestBusObject : public BusObject {
   public:
     TestBusObject(BusAttachment& bus, const char* path, const char* interfaceName, bool announce = true)
@@ -121,6 +123,7 @@ class TestBusObject : public BusObject {
   private:
     bool isAnnounced;
 };
+} // anonymous namespace
 
 class MultipleTrustAnchorsPropagationTest : public testing::Test {
   public:
