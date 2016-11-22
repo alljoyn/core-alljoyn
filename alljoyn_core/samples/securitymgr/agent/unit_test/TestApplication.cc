@@ -47,6 +47,7 @@ TestApplication::TestApplication(string _appName) :
     manifestRules[1].SetMembers(1, mprms);
 
     busAttachment = shared_ptr<BusAttachment>(new BusAttachment(appName.c_str(), true));
+    busAttachment->DeleteDefaultKeyStore(appName.c_str());
 }
 
 const string TestApplication::GetBusName() const
@@ -170,5 +171,7 @@ TestApplication::~TestApplication()
 {
     Reset();
     Stop();
+    delete[] manifestRules;
+    manifestRules = nullptr;
 }
 } // namespace
