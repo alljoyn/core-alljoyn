@@ -299,7 +299,7 @@ class _PeerState {
      *
      * @return  Returns true if this PeerState instance is for the local peer.
      */
-    bool IsLocalPeer() { return isLocalPeer; }
+    bool IsLocalPeer() const { return isLocalPeer; }
 
     /**
      * Returns window size for serial number validation. Used by unit tests.
@@ -859,8 +859,11 @@ class PeerStateTable {
 
     /**
      * Clear all peer state.
+     *
+     * @param keepLocalPeer When set to true, the Peer State associated with the local
+     * bus attachment will not be cleared.
      */
-    void Clear();
+    void Clear(bool keepLocalPeer = false);
 
     /**
      * Destructor
