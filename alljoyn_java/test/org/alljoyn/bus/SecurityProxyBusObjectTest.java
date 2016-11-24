@@ -162,38 +162,6 @@ public class SecurityProxyBusObjectTest extends TestCase {
         "</node>" +
         "</manifest>";
 
-    private static final String POLICY =
-        "<policy>" +
-        "<policyVersion>1</policyVersion>" +
-        "<serialNumber>2</serialNumber>" +
-        "<acls>" +
-        "<acl>" +
-        "<peers>" +
-        "<peer>" +
-        "<type>ALL</type>" +
-        "</peer>" +
-        "</peers>" +
-        "<rules>" +
-        "<node name=\"*\">" +
-        "<interface name=\"org.allseen.bus.EchoChirpInterface\">" +
-        "<method name=\"*\">" +
-        "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Modify\"/>" +
-        "</method>" +
-        "<signal name=\"*\">" +
-        "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Provide\"/>" +
-        "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Observe\"/>" +
-        "</signal>" +
-        "<property name=\"*\">" +
-        "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Observe\"/>" +
-        "<annotation name=\"org.alljoyn.Bus.Action\" value=\"Modify\"/>" +
-        "</property>" +
-        "</interface>" +
-        "</node>" +
-        "</rules>" +
-        "</acl>" +
-        "</acls>" +
-        "</policy>";
-
     private UUID managerGuid;
 
     private AuthListener defaultAuthListener = new AuthListener() {
@@ -272,7 +240,9 @@ public class SecurityProxyBusObjectTest extends TestCase {
         managerMembershipCertificate[0].setValidity(validFrom, validTo);
         pcManager.signCertificate(managerMembershipCertificate[0]);
 
-        sapWithManagerBus.installMembership(managerMembershipCertificate);
+        pcManager.installMembership(managerMembershipCertificate);
+        CertificateId[] certId = pcManager.getMembershipSummaries();
+        assertTrue(certId.length != 0);
     }
 
     public CertificateX509[] createIdentityCert(String serial, ECCPublicKey pubKey, String alias, long expiration,
@@ -453,8 +423,8 @@ public class SecurityProxyBusObjectTest extends TestCase {
 
         // Update policies
 
-        sapWithPeer1.updatePolicy(POLICY);
-        sapWithPeer2.updatePolicy(POLICY);
+        sapWithPeer1.updatePolicy(PolicyTestHelper.POLICY_ALL_INCLUSIVE);
+        sapWithPeer2.updatePolicy(PolicyTestHelper.POLICY_ALL_INCLUSIVE);
 
         // Call proxy methods
 
@@ -487,6 +457,9 @@ public class SecurityProxyBusObjectTest extends TestCase {
         assertEquals(1, receivedSetProp1);
         assertEquals(11, proxy.getProp1());
         assertEquals(2, receivedGetProp1);
+
+        peer1PermissionConfigurator.resetPolicy();
+        peer2PermissionConfigurator.resetPolicy();
 
         peer1Bus.unregisterApplicationStateListener(appStateListener);
         peer2Bus.unregisterApplicationStateListener(appStateListener);
