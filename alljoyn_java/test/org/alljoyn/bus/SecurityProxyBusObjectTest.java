@@ -162,7 +162,7 @@ public class SecurityProxyBusObjectTest extends TestCase {
         "</node>" +
         "</manifest>";
 
-    private static final String POLICY =
+    public static final String POLICY =
         "<policy>" +
         "<policyVersion>1</policyVersion>" +
         "<serialNumber>2</serialNumber>" +
@@ -273,6 +273,8 @@ public class SecurityProxyBusObjectTest extends TestCase {
         pcManager.signCertificate(managerMembershipCertificate[0]);
 
         sapWithManagerBus.installMembership(managerMembershipCertificate);
+        CertificateId[] certId = pcManager.getMembershipSummaries();
+        assertTrue(certId.length != 0);
     }
 
     public CertificateX509[] createIdentityCert(String serial, ECCPublicKey pubKey, String alias, long expiration,
@@ -331,7 +333,7 @@ public class SecurityProxyBusObjectTest extends TestCase {
         assertEquals(2, receivedEcho);
     }
 
-    public void testProxyMethodWithSecuityMgmt() throws Exception {
+    public void testProxyMethodWithSecurityMgmt() throws Exception {
         securityManagerBus.registerAuthListener("ALLJOYN_ECDHE_NULL ALLJOYN_ECDHE_ECDSA",
                 defaultAuthListener,
                 File.createTempFile("secManBus", "ks").getAbsolutePath(),
@@ -487,6 +489,9 @@ public class SecurityProxyBusObjectTest extends TestCase {
         assertEquals(1, receivedSetProp1);
         assertEquals(11, proxy.getProp1());
         assertEquals(2, receivedGetProp1);
+
+        peer1PermissionConfigurator.resetPolicy();
+        peer2PermissionConfigurator.resetPolicy();
 
         peer1Bus.unregisterApplicationStateListener(appStateListener);
         peer2Bus.unregisterApplicationStateListener(appStateListener);
