@@ -613,7 +613,9 @@ class InterfaceDescription {
      *
      * @param language The language tag
      */
-    QCC_DEPRECATED_ON(void SetDescriptionLanguage(const char* language), 16.10);
+    QCC_DEPRECATED_MSG(void SetDescriptionLanguage(const char* language),
+                       "Please use SetDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Get the language tag for the introspection descriptions of this InterfaceDescription
@@ -623,7 +625,9 @@ class InterfaceDescription {
      *
      * @return The langauge tag
      */
-    QCC_DEPRECATED_ON(const char* GetDescriptionLanguage() const, 16.10);
+    QCC_DEPRECATED_MSG(const char* GetDescriptionLanguage() const,
+                       "Please use GetDescriptionLanguages() or GetDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Get the set of all available description languages.
@@ -648,7 +652,9 @@ class InterfaceDescription {
      *
      * @param description The introspection description
      */
-    QCC_DEPRECATED_ON(void SetDescription(const char* description), 16.10);
+    QCC_DEPRECATED_MSG(void SetDescription(const char* description),
+                       "Please use SetDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Set the introspection description for this InterfaceDescription in the given language.
@@ -709,7 +715,9 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
      *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
-    QCC_DEPRECATED_ON(QStatus SetMemberDescription(const char* member, const char* description), 16.10);
+    QCC_DEPRECATED_MSG(QStatus SetMemberDescription(const char* member, const char* description),
+                       "Please use SetMemberDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Set the introspection description for member "memberName" of this InterfaceDescription
@@ -795,7 +803,9 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
      *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found
      */
-    QCC_DEPRECATED_ON(QStatus SetArgDescription(const char* member, const char* arg, const char* description), 16.10);
+    QCC_DEPRECATED_MSG(QStatus SetArgDescription(const char* member, const char* arg, const char* description),
+                       "Please use SetArgDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Set the introspection description for the argument "argName" of the member "memberName"
@@ -866,7 +876,9 @@ class InterfaceDescription {
      *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated
      *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found
      */
-    QCC_DEPRECATED_ON(QStatus SetPropertyDescription(const char* name, const char* description), 16.10);
+    QCC_DEPRECATED_MSG(QStatus SetPropertyDescription(const char* name, const char* description),
+                       "Please use SetPropertyDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Set the introspection description for the interface property "propertyName"
@@ -929,7 +941,9 @@ class InterfaceDescription {
      *
      * @param translator The Translator instance.
      */
-    QCC_DEPRECATED_ON(void SetDescriptionTranslator(Translator * translator), 16.10);
+    QCC_DEPRECATED_MSG(void SetDescriptionTranslator(Translator * translator),
+                       "Please use SetDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Get the Translator that provides this InterfaceDescription's
@@ -940,7 +954,9 @@ class InterfaceDescription {
      *
      * @return The Translator instance.
      */
-    QCC_DEPRECATED_ON(Translator * GetDescriptionTranslator() const, 16.10);
+    QCC_DEPRECATED_MSG(Translator * GetDescriptionTranslator() const,
+                       "Please use GetDescriptionForLanguage() instead.",
+                       16.10);
 
     /**
      * Does this interface have at least one description on an element

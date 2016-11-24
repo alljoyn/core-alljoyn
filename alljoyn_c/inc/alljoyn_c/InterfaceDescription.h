@@ -635,8 +635,9 @@ extern AJ_API alljoyn_interfacedescription_securitypolicy AJ_CALL alljoyn_interf
  * @param[in] iface Interface on which to set the description language.
  * @param[in] language The language tag.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptionlanguage(alljoyn_interfacedescription iface, const char* language),
+    "Please use alljoyn_interfacedescription_setdescriptionforlanguage() instead.",
     16.10);
 
 /**
@@ -660,8 +661,9 @@ QCC_DEPRECATED_ON(
  * @return The number of languages returned or the total number of
  *         language tags if languages is NULL.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguages(const alljoyn_interfacedescription iface, const char** languages, size_t size),
+    "Please use alljoyn_interfacedescription_getdescriptionlanguages2() instead.",
     16.10);
 
 /**
@@ -700,8 +702,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionlanguage
  * @param[in] iface Interface on which to set the description.
  * @param[in] description The interface description. Call alljoyn_interfacedescription_setdescriptionlanguage() to specify description language.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescription(alljoyn_interfacedescription iface, const char* description),
+    "Please use alljoyn_interfacedescription_setdescriptionforlanguage() instead.",
     16.10);
 
 /**
@@ -766,8 +769,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getdescriptionforlangu
  *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
  *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setmemberdescription(alljoyn_interfacedescription iface, const char* member, const char* description),
+    "Please use alljoyn_interfacedescription_setmemberdescriptionforlanguage() instead.",
     16.10);
 
 /**
@@ -839,8 +843,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getmemberdescriptionfo
  *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
  *      - #ER_BUS_INTERFACE_NO_SUCH_MEMBER If the member was not found.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setargdescription(alljoyn_interfacedescription iface, const char* member, const char* argName, const char* description),
+    "Please use alljoyn_interfacedescription_setargdescriptionforlanguage() instead.",
     16.10);
 
 /**
@@ -913,8 +918,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getargdescriptionforla
  *      - #ER_BUS_INTERFACE_ACTIVATED If the interface has already been activated.
  *      - #ER_BUS_NO_SUCH_PROPERTY If the property was not found.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API QStatus AJ_CALL alljoyn_interfacedescription_setpropertydescription(alljoyn_interfacedescription iface, const char* name, const char* description),
+    "Please use alljoyn_interfacedescription_setpropertydescriptionforlanguage() instead.",
     16.10);
 
 /**
@@ -979,8 +985,9 @@ extern AJ_API size_t AJ_CALL alljoyn_interfacedescription_getpropertydescription
  * @param[in] iface Interface on which to set description translation callback.
  * @param[in] translationCallback The translation callback instance.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API void AJ_CALL alljoyn_interfacedescription_setdescriptiontranslationcallback(alljoyn_interfacedescription iface, alljoyn_interfacedescription_translation_callback_ptr translationCallback),
+    "Please use language-aware accessors instead.",
     16.10);
 
 /**
@@ -994,8 +1001,9 @@ QCC_DEPRECATED_ON(
  *
  * @return The translation callback instance.
  */
-QCC_DEPRECATED_ON(
+QCC_DEPRECATED_MSG(
     extern AJ_API alljoyn_interfacedescription_translation_callback_ptr AJ_CALL alljoyn_interfacedescription_getdescriptiontranslationcallback(const alljoyn_interfacedescription iface),
+    "Please use language-aware accessors instead.",
     16.10);
 
 /**
