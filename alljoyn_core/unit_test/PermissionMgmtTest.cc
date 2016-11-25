@@ -48,6 +48,10 @@ using namespace std;
 const char* BasePermissionMgmtTest::INTERFACE_NAME = "org.allseen.Security.PermissionMgmt";
 const char* BasePermissionMgmtTest::ONOFF_IFC_NAME = "org.allseenalliance.control.OnOff";
 const char* BasePermissionMgmtTest::TV_IFC_NAME = "org.allseenalliance.control.TV";
+const char* BasePermissionMgmtTest::ADMIN_BUS_NAME = "PermissionMgmtTestAdmin";
+const char* BasePermissionMgmtTest::SERVICE_BUS_NAME = "PermissionMgmtTestService";
+const char* BasePermissionMgmtTest::CONSUMER_BUS_NAME = "PermissionMgmtTestConsumer";
+const char* BasePermissionMgmtTest::RC_BUS_NAME = "PermissionMgmtTestRemoteControl";
 
 static void BuildValidity(CertificateX509::ValidPeriod& validity, uint32_t expiredInSecs)
 {
@@ -399,13 +403,13 @@ void BasePermissionMgmtTest::TearDown()
     status = TeardownBus(remoteControlBus);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
     delete serviceKeyListener;
-    serviceKeyListener = NULL;
+    serviceKeyListener = nullptr;
     delete adminKeyListener;
-    adminKeyListener = NULL;
+    adminKeyListener = nullptr;
     delete consumerKeyListener;
-    consumerKeyListener = NULL;
+    consumerKeyListener = nullptr;
     delete remoteControlKeyListener;
-    remoteControlKeyListener = NULL;
+    remoteControlKeyListener = nullptr;
 }
 
 void BasePermissionMgmtTest::PropertiesChanged(ProxyBusObject& obj, const char* ifaceName, const MsgArg& changed, const MsgArg& invalidated, void* context)
@@ -446,16 +450,16 @@ void BasePermissionMgmtTest::EnableSecurity(const char* keyExchange)
     }
     delete adminKeyListener;
     adminKeyListener = GenAuthListener(keyExchange);
-    adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, NULL, true);
+    adminBus.EnablePeerSecurity(keyExchange, adminKeyListener, nullptr, true);
     delete serviceKeyListener;
     serviceKeyListener = GenAuthListener(keyExchange);
-    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, NULL, false, &testPCL);
+    serviceBus.EnablePeerSecurity(keyExchange, serviceKeyListener, nullptr, false, &testPCL);
     delete consumerKeyListener;
     consumerKeyListener = GenAuthListener(keyExchange);
-    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, NULL, false, &testPCL);
+    consumerBus.EnablePeerSecurity(keyExchange, consumerKeyListener, nullptr, false, &testPCL);
     delete remoteControlKeyListener;
     remoteControlKeyListener = GenAuthListener(keyExchange);
-    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, NULL, false, &testPCL);
+    remoteControlBus.EnablePeerSecurity(keyExchange, remoteControlKeyListener, nullptr, false, &testPCL);
     authMechanisms = keyExchange;
 }
 
@@ -467,14 +471,14 @@ const qcc::String& BasePermissionMgmtTest::GetAuthMechanisms() const
 void BasePermissionMgmtTest::CreateOnOffAppInterface(BusAttachment& bus, bool addService)
 {
     /* create/activate alljoyn_interface */
-    InterfaceDescription* ifc = NULL;
+    InterfaceDescription* ifc = nullptr;
     QStatus status = bus.CreateInterface(BasePermissionMgmtTest::ONOFF_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_TRUE(ifc != NULL);
-    if (ifc != NULL) {
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "On", NULL, NULL, NULL);
+    EXPECT_TRUE(ifc != nullptr);
+    if (ifc != nullptr) {
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "On", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Off", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Off", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
         ifc->Activate();
     }
@@ -490,20 +494,20 @@ void BasePermissionMgmtTest::CreateOnOffAppInterface(BusAttachment& bus, bool ad
 void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addService)
 {
     /* create/activate alljoyn_interface */
-    InterfaceDescription* ifc = NULL;
+    InterfaceDescription* ifc = nullptr;
     QStatus status = bus.CreateInterface(BasePermissionMgmtTest::TV_IFC_NAME, ifc, AJ_IFC_SECURITY_REQUIRED);
     EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-    EXPECT_TRUE(ifc != NULL);
-    if (ifc != NULL) {
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Up", NULL, NULL, NULL);
+    EXPECT_TRUE(ifc != nullptr);
+    if (ifc != nullptr) {
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Up", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Down", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Down", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Channel", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Channel", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Mute", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "Mute", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
-        status = ifc->AddMember(MESSAGE_METHOD_CALL, "InputSource", NULL, NULL, NULL);
+        status = ifc->AddMember(MESSAGE_METHOD_CALL, "InputSource", nullptr, nullptr, nullptr);
         EXPECT_EQ(ER_OK, status) << "  Actual Status: " << QCC_StatusText(status);
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
@@ -528,7 +532,7 @@ void BasePermissionMgmtTest::CreateTVAppInterface(BusAttachment& bus, bool addSe
 
         ifc->Activate();
         status = bus.RegisterSignalHandler(this,
-                                           static_cast<MessageReceiver::SignalHandler>(&BasePermissionMgmtTest::ChannelChangedSignalHandler), ifc->GetMember("ChannelChanged"), NULL);
+                                           static_cast<MessageReceiver::SignalHandler>(&BasePermissionMgmtTest::ChannelChangedSignalHandler), ifc->GetMember("ChannelChanged"), nullptr);
         EXPECT_EQ(ER_OK, status) << "  Failed to register channel changed signal handler.  Actual Status: " << QCC_StatusText(status);
         status = InterestInChannelChangedSignal(&bus);
         EXPECT_EQ(ER_OK, status) << "  Failed to show interest in channel changed signal.  Actual Status: " << QCC_StatusText(status);
@@ -661,10 +665,10 @@ void BasePermissionMgmtTest::TVChannelChanged(const InterfaceDescription::Member
     MsgArg args[1];
     args[0].Set("u", currentTVChannel);
     if (sendMethod == SEND_SIGNAL_SESSIONCAST) {
-        Signal(NULL, SESSION_ID_ALL_HOSTED, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+        Signal(nullptr, SESSION_ID_ALL_HOSTED, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
     } else if (sendMethod == SEND_SIGNAL_BROADCAST) {
         /* sending a broadcast signal */
-        Signal(NULL, 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
+        Signal(nullptr, 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
     } else {
         Signal(consumerBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
         Signal(remoteControlBus.GetUniqueName().c_str(), 0, *member->iface->GetMember("ChannelChanged"), args, 1, 0, 0);
@@ -731,7 +735,7 @@ bool PermissionMgmtTestHelper::IsPermissionDeniedError(QStatus status, Message& 
     if (ER_BUS_REPLY_IS_ERROR_MESSAGE == status) {
         qcc::String errorMsg;
         const char* errorName = msg->GetErrorName(&errorMsg);
-        if (errorName == NULL) {
+        if (errorName == nullptr) {
             return false;
         }
         if (strcmp(errorName, "org.alljoyn.Bus.Security.Error.PermissionDenied") == 0) {
@@ -907,7 +911,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOn(BusAttachment& bus, ProxyBusObject&
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "On", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -923,7 +927,7 @@ QStatus PermissionMgmtTestHelper::ExerciseOff(BusAttachment& bus, ProxyBusObject
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::ONOFF_IFC_NAME, "Off", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -939,7 +943,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVUp(BusAttachment& bus, ProxyBusObjec
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Up", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -996,7 +1000,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVDown(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Down", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1012,7 +1016,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVChannel(BusAttachment& bus, ProxyBus
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Channel", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1028,7 +1032,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVMute(BusAttachment& bus, ProxyBusObj
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "Mute", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1044,7 +1048,7 @@ QStatus PermissionMgmtTestHelper::ExerciseTVInputSource(BusAttachment& bus, Prox
     remoteObj.AddInterface(*itf);
     Message reply(bus);
 
-    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", NULL, 0, reply, METHOD_CALL_TIMEOUT);
+    status = remoteObj.MethodCall(BasePermissionMgmtTest::TV_IFC_NAME, "InputSource", nullptr, 0, reply, METHOD_CALL_TIMEOUT);
     if (ER_OK != status) {
         if (IsPermissionDeniedError(status, reply)) {
             status = ER_PERMISSION_DENIED;
@@ -1059,7 +1063,7 @@ QStatus PermissionMgmtTestHelper::JoinPeerSession(BusAttachment& initiator, BusA
     QStatus status = ER_FAIL;
     for (int cnt = 0; cnt < 30; cnt++) {
         status = initiator.JoinSession(responder.GetUniqueName().c_str(),
-                                       ALLJOYN_SESSIONPORT_PERMISSION_MGMT, NULL, sessionId, opts);
+                                       ALLJOYN_SESSIONPORT_PERMISSION_MGMT, nullptr, sessionId, opts);
         if (ER_OK == status) {
             return status;
         }
@@ -1073,7 +1077,7 @@ QStatus BasePermissionMgmtTest::JoinSessionWithService(BusAttachment& initiator,
 {
     servicePortListener.lastJoiner = String::Empty;
     SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-    QStatus status = initiator.JoinSession(serviceBus.GetUniqueName().c_str(), servicePort, NULL, sessionId, opts);
+    QStatus status = initiator.JoinSession(serviceBus.GetUniqueName().c_str(), servicePort, nullptr, sessionId, opts);
     if (ER_OK != status) {
         return status;
     }

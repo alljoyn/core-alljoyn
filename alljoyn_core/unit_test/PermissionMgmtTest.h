@@ -88,23 +88,27 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
     static const char* NOTIFY_INTERFACE_NAME;
     static const char* ONOFF_IFC_NAME;
     static const char* TV_IFC_NAME;
+    static const char* ADMIN_BUS_NAME;
+    static const char* SERVICE_BUS_NAME;
+    static const char* CONSUMER_BUS_NAME;
+    static const char* RC_BUS_NAME;
 
     BasePermissionMgmtTest(const char* path) : BusObject(path),
-        adminBus("PermissionMgmtTestAdmin", false),
-        serviceBus("PermissionMgmtTestService", false),
+        adminBus(ADMIN_BUS_NAME, false),
+        serviceBus(SERVICE_BUS_NAME, false),
         servicePort(0),
-        consumerBus("PermissionMgmtTestConsumer", false),
-        remoteControlBus("PermissionMgmtTestRemoteControl", false),
+        consumerBus(CONSUMER_BUS_NAME, false),
+        remoteControlBus(RC_BUS_NAME, false),
         adminAdminGroupGUID("00112233445566778899AABBCCDDEEFF"),
         consumerAdminGroupGUID("AABBCCDDEEFF00112233445566778899"),
         serviceGUID(),
         consumerGUID(),
         remoteControlGUID(),
         status(ER_OK),
-        serviceKeyListener(NULL),
-        adminKeyListener(NULL),
-        consumerKeyListener(NULL),
-        remoteControlKeyListener(NULL),
+        serviceKeyListener(nullptr),
+        adminKeyListener(nullptr),
+        consumerKeyListener(nullptr),
+        remoteControlKeyListener(nullptr),
         canTestStateSignalReception(false),
         currentTVChannel(1),
         volume(1),
@@ -113,6 +117,10 @@ class BasePermissionMgmtTest : public testing::Test, public BusObject,
         testASL(),
         testPCL()
     {
+        adminBus.DeleteDefaultKeyStore(ADMIN_BUS_NAME);
+        serviceBus.DeleteDefaultKeyStore(SERVICE_BUS_NAME);
+        consumerBus.DeleteDefaultKeyStore(CONSUMER_BUS_NAME);
+        remoteControlBus.DeleteDefaultKeyStore(RC_BUS_NAME);
     }
 
     virtual void SetUp();
