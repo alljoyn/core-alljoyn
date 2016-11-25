@@ -314,8 +314,6 @@ private:
 
 - (QStatus)announceAbout;
 
-- (QStatus)updateManifest:(NSString*)manifest;
-
 - (QStatus)setSecurityForClaimedMode;
 
 + (QStatus)updateDoorProviderManifest:(DoorCommon*)common;

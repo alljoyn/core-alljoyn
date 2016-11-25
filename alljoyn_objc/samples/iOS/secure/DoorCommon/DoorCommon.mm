@@ -596,7 +596,8 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
     }
 
     NSString* securitySuites = [NSString stringWithFormat:@"%@ %@ %@", KEYX_ECDHE_DSA, KEYX_ECDHE_NULL, KEYX_ECDHE_PSK];
-    status = [self.BusAttachment enablePeerSecurity:securitySuites authenticationListener:self.authListener keystoreFileName:nil sharing:NO permissionConfigurationListener:self.permissionConfigListener];
+    NSString *keystoreFilePath = @"Documents/alljoyn_keystore/s_central.ks";
+    status = [self.BusAttachment enablePeerSecurity:securitySuites authenticationListener:self.authListener keystoreFileName:keystoreFilePath sharing:NO permissionConfigurationListener:self.permissionConfigListener];
     if (status != ER_OK) {
         NSLog(@"Failed to enablePeerSecurity - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
         return status;
@@ -684,23 +685,6 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
     return ER_OK;
 }
 
-- (QStatus)updateManifest:(NSString *)manifest
-{
-    QStatus status = [self.BusAttachment.permissionConfigurator setManifestTemplateFromXml:manifest];
-    if (ER_OK != status) {
-        NSLog(@"Failed to SetPermissionManifestTemplate - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-        return status;
-    }
-
-    status = [self.BusAttachment.permissionConfigurator setApplicationState:NEED_UPDATE];
-    if (ER_OK != status) {
-        NSLog(@"Failed to SetApplicationState - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
-    }
-
-    return status;
-
-}
-
 + (QStatus)updateDoorProviderManifest:(DoorCommon*)common
 {
     PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
@@ -722,7 +706,18 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
     PermissionPolicy::Acl manifest;
     manifest.SetRules(1, rules);
 
-    return [common updateManifest:[NSString stringWithCString:manifest.ToString().c_str() encoding:NSUTF8StringEncoding]];
+    QStatus status = ((PermissionConfigurator*)common.BusAttachment.permissionConfigurator.handle)->SetPermissionManifestTemplate(rules, manifest.GetRulesSize());
+    if (ER_OK != status) {
+        NSLog(@"Failed to SetPermissionManifestTemplate - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+        return status;
+    }
+
+    status = ((PermissionConfigurator*)common.BusAttachment.permissionConfigurator.handle)->SetApplicationState(PermissionConfigurator::NEED_UPDATE);
+    if (ER_OK != status) {
+        NSLog(@"Failed to SetApplicationState - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+    }
+
+    return status;
 }
 
 - (void)dealloc
