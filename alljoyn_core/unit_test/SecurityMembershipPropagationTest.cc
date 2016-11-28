@@ -946,11 +946,20 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
 }
 
 /*
- * Failing test case discovered during work on ASACORE-3142.
- * Currently disabled, to be investigated under
- * ASACORE-3451 Security 2.0: ASGA cannot update its own policy remotely.
+ * Purpose:
+ * - Verify if an admin is aware of its own membership certificates (in particular, the ASG membership cert).
+ *
+ * Setup:
+ * 1.
+ * - Manager self-claims,
+ * - Manager is an admin (member of the ASG).
+ * 2.
+ * - Manager tries to update its own policy remotely.
+ *
+ * Verification:
+ * - The policy update should succeed.
  */
-TEST(MembershipPropagationTest, DISABLED_manager_updates_own_policy_via_remote_call) {
+TEST(MembershipPropagationTest, manager_updates_own_policy_via_remote_call) {
     BusAttachment managerBus("SecurityACLManager");
 
     BusAttachment busUsedAsCA("busUsedAsCA");
@@ -1056,7 +1065,7 @@ TEST(MembershipPropagationTest, DISABLED_manager_updates_own_policy_via_remote_c
                                                                     ));
 
     ASSERT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 2));
-    ASSERT_EQ(ER_OK, sapWithManager.SecureConnection());
+    ASSERT_EQ(ER_OK, sapWithManager.SecureConnection(true));
 
     /*
      * Add a PEER_FROM_CERTIFICATE_AUTHORITY clause with CA1 key
@@ -1078,7 +1087,7 @@ TEST(MembershipPropagationTest, DISABLED_manager_updates_own_policy_via_remote_c
         PermissionPolicy defaultPolicy;
         sapWithManager.GetDefaultPolicy(defaultPolicy);
         UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, managerPolicy, true, true, true);
-        EXPECT_EQ(ER_OK, sapWithManager.UpdatePolicy(managerPolicy)); // This currently fails
+        EXPECT_EQ(ER_OK, sapWithManager.UpdatePolicy(managerPolicy));
         EXPECT_EQ(ER_OK, sapWithManager.SecureConnection(true));
     }
 

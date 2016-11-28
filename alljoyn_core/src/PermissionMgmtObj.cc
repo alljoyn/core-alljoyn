@@ -84,8 +84,10 @@ class ClearSecretsWhenMsgDeliveredNotification : public MessageEncryptionNotific
          * Clear out the master secrets used in ECDSA key exchange
          */
         bus.GetInternal().GetKeyStore().Clear(ECDHE_ECDSA_NAME_PATTERN);
-        /* clear all the peer states to force re-authentication */
-        bus.GetInternal().GetPeerStateTable()->Clear();
+        /* Clear other peers' states to force re-authentication.
+         * Do not clear own peer state to keep track of own memberships and
+         * to be able to decrypt own response if we are communicating with ourselves. */
+        bus.GetInternal().GetPeerStateTable()->Clear(true);
     }
 
   private:
@@ -1738,7 +1740,14 @@ QStatus PermissionMgmtObj::StoreMembership(const MsgArg& msgArg)
             goto Exit;
         }
     }
+
     status = StoreMembership(certs, certChainCount);
+    if (status == ER_OK) {
+        /* Store own membership data in own PeerState. */
+        PeerState peerState =  bus.GetInternal().GetPeerStateTable()->GetPeerState(bus.GetUniqueName());
+        status = AddMembershipsToPeerState(peerState, certs, certChainCount);
+    }
+
 Exit:
     delete [] certs;
     return status;
@@ -3267,6 +3276,44 @@ QStatus PermissionMgmtObj::SendManifests(const ProxyBusObject* remotePeerObj, Me
     }
     /* process the reply */
     return ParseSendManifests(replyMsg, peerState);
+}
+
+QStatus PermissionMgmtObj::AddMembershipsToPeerState(PeerState& peerState,
+                                                     const qcc::CertificateX509* certs,
+                                                     size_t certChainCount) const
+{
+    if (certChainCount == 0) {
+        return ER_OK;
+    }
+
+    unique_ptr<CertificateX509> leafCert(new (nothrow) CertificateX509(certs[0]));
+    if (leafCert.get() == nullptr) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Could not allocate leaf certificate object"));
+        return ER_OUT_OF_MEMORY;
+    }
+    unique_ptr<_PeerState::GuildMetadata> metadata(new (nothrow) _PeerState::GuildMetadata());
+    if (metadata.get() == nullptr) {
+        QCC_LogError(ER_OUT_OF_MEMORY, ("Could not allocate GUILD metadata object"));
+        return ER_OUT_OF_MEMORY;
+    }
+
+    String serialTag;
+    if (leafCert->GetSerialLen() > 0) {
+        serialTag.assign_std(reinterpret_cast<const char*>(leafCert->GetSerial()), leafCert->GetSerialLen());
+    }
+    String issuerAki = leafCert->GetAuthorityKeyId();
+    metadata->certChain.push_back(leafCert.release());
+
+    for (size_t idx = 1; idx < certChainCount; idx++) {
+        std::unique_ptr<CertificateX509> cert(new (nothrow) CertificateX509(certs[idx]));
+        if (cert.get() == nullptr) {
+            QCC_LogError(ER_OUT_OF_MEMORY, ("Could not allocate certificate object"));
+            return ER_OUT_OF_MEMORY;
+        }
+        metadata->certChain.push_back(cert.release());
+    }
+    peerState->SetGuildMetadata(serialTag, issuerAki, metadata.release());
+    return ER_OK;
 }
 
 } /* namespace ajn */
