@@ -16,6 +16,7 @@
 #include "TestUtil.h"
 
 #include <stdlib.h>
+#include <errno.h>
 
 #include <qcc/Thread.h>
 #include <qcc/Util.h>
@@ -121,15 +122,19 @@ void BasicTest::SetUp()
 
     if (storage_path.empty()) {
         GetDefaultStorageFilePath(storage_path);
-        assert(!storage_path.empty());
+        QCC_ASSERT(!storage_path.empty());
         Environ::GetAppEnviron()->Add(STORAGE_FILEPATH_KEY, storage_path.c_str());
     }
 
-    remove(storage_path.c_str());
+    int status = remove(storage_path.c_str());
+    if ((status != 0) && (errno != ENOENT)) {
+        printf("Removing storage %s failed: %s\n", storage_path.c_str(), strerror(errno));
+    }
 
     StorageFactory& storageFac = StorageFactory::GetInstance();
 
     ba = new BusAttachment("testsecmgr", true);
+    ba->DeleteDefaultKeyStore("testsecmgr");
     ASSERT_TRUE(ba != nullptr);
     ASSERT_EQ(ER_OK, ba->Start());
     ASSERT_EQ(ER_OK, ba->Connect());
@@ -198,6 +203,7 @@ QStatus BasicTest::CreateProxyObjectManager()
 {
     if (nullptr == proxyObjectManager) {
         ownBus = new BusAttachment("ownsecmgrtest");
+        ownBus->DeleteDefaultKeyStore("ownsecmgrtest");
         QStatus status = ownBus->Start();
         if (ER_OK != status) {
             cerr << "Failure in " << __FILE__ << "@" << __LINE__ << endl;
@@ -338,7 +344,7 @@ bool BasicTest::WaitForState(const OnlineApplication& appInfoNeeded, PermissionC
                 printf("timeout- failing test - %i\n", status);
                 break;
             }
-            assert(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
+            QCC_ASSERT(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
         }
     } while (true);
     printf("WaitForState failed.\n");
@@ -367,7 +373,7 @@ bool BasicTest::WaitForEvents(size_t numOfEvents)
                 printf("timeout- failing test - %i\n", status);
                 break;
             }
-            assert(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
+            QCC_ASSERT(tal->events.size()); // assume TimedWait returns != ER_OK in case of timeout
         }
     } while (true);
     lock.Unlock();
@@ -901,3 +907,4 @@ QStatus BasicTest::GetPublicKey(const TestApplication& app, OnlineApplication& a
     return status;
 }
 }
+
