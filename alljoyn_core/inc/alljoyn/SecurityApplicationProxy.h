@@ -115,6 +115,19 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * certs follow.  This chain is installed by the manufacturer at production time.
      * If no manufacturer certificate is available then this is an empty array.
      *
+     * @param[out] certificateVector The manufacturer certificate chain.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetManufacturerCertificate(std::vector<qcc::CertificateX509>& certificateVector);
+
+    /**
+     * The manufacturer certificate chain. The leaf cert is listed first. The signing
+     * certs follow.  This chain is installed by the manufacturer at production time.
+     * If no manufacturer certificate is available then this is an empty array.
+     *
      * @param[out] certificate The manufacturer certificate chain.
      *
      * @return
@@ -462,7 +475,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      * @param[in] certificateChain      The membership certificate chain. It can be a
      *                                  single certificate if it is issued by the security
      *                                  group authority.
-     * @param[in] certificateChainCount The number of certificates in the certificate chain.
+     * @param[in] certificateChainSize The number of certificates in the certificate chain.
      *
      * @return
      *  - #ER_OK if successful
@@ -513,6 +526,18 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetManagedApplicationVersion(uint16_t& version);
+
+    /**
+     * Get the identify certificate chain.
+     * This version is used by C API
+     *
+     * @param[out] cerrfificateVector identify certificates chain.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetIdentity(std::vector<qcc::CertificateX509>& cerfificateVector);
 
     /**
      * Get the identify certificate chain.
@@ -580,6 +605,23 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus GetDefaultPolicy(PermissionPolicy& defaultPolicy);
+
+    /**
+     * Get the list of serial numbers and issuers of the currently installed membership
+     * certificates.  If the issuer's public key is not available in the case
+     * where the membership is a single cert, the issuer public key field is
+     * empty.
+     *
+     * Note: this version is used by C-API to avoid MsgArgs handling
+     *
+     * @param[out] serialsVector    The container for membership serial numbers
+     * @param[out] keyInfosVector   The container for membership KeyInfo
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipSummaries(std::vector<qcc::String>& serialsVector, std::vector<qcc::KeyInfoNISTP256>& keyInfosVector);
 
     /**
      * The list of serial numbers and issuers of the currently installed membership

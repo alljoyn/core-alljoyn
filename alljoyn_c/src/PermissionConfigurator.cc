@@ -95,6 +95,30 @@ void AJ_CALL alljoyn_permissionconfigurator_publickey_destroy(AJ_PSTR publicKey)
     DestroyStringCopy(publicKey);
 }
 
+QStatus AJ_CALL alljoyn_permissionconfigurator_getconnectedpeerpublickey(alljoyn_permissionconfigurator configurator, const uint8_t* groupId, AJ_PSTR* publicKey)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    qcc::ECCPublicKey eccKey;
+    qcc::String eccKey_str;
+    GUID128 gid;
+    gid.SetBytes(groupId);
+
+    QStatus status = ((PermissionConfigurator*)configurator)->GetConnectedPeerPublicKey(gid, &eccKey);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    eccKey_str = eccKey.ToString();
+    *publicKey = CreateStringCopy(static_cast<std::string>(eccKey_str));
+
+    if (nullptr == *publicKey) {
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return ER_OK;
+}
+
 QStatus AJ_CALL alljoyn_permissionconfigurator_getmanifesttemplate(alljoyn_permissionconfigurator configurator, AJ_PSTR* manifestTemplateXml)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
@@ -639,4 +663,58 @@ QStatus AJ_CALL alljoyn_permissionconfigurator_endmanagement(alljoyn_permissionc
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     return ((PermissionConfigurator*)configurator)->EndManagement();
+}
+
+QStatus AJ_CALL alljoyn_permissionconfigurator_signcertificate(alljoyn_permissionconfigurator configurator, AJ_PCSTR unsignedCertificate, AJ_PSTR* signedCertificate)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QStatus status;
+    PermissionConfigurator* pc = (PermissionConfigurator*)configurator;
+    CertificateX509 cert;
+    qcc::String certificate_str(unsignedCertificate);
+    status = cert.LoadPEM(certificate_str);
+
+    if (ER_OK == status) {
+        status = pc->SignCertificate(cert);
+    }
+
+    if (ER_OK == status) {
+        certificate_str = cert.GetPEM();
+    }
+
+    *signedCertificate = CreateStringCopy(certificate_str);
+
+    if (nullptr == signedCertificate) {
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return status;
+}
+
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_signmanifest(alljoyn_permissionconfigurator configurator,
+                                                                   AJ_PCSTR subjectCertificate,
+                                                                   AJ_PCSTR unsignedManifestXml,
+                                                                   AJ_PSTR* signedManifestXml)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QStatus status;
+    PermissionConfigurator* pc = (PermissionConfigurator*)configurator;
+    CertificateX509 cert;
+    std::string input_str(unsignedManifestXml);
+    qcc::String certificate_str(subjectCertificate);
+    status = cert.LoadPEM(certificate_str);
+
+    if (ER_OK == status) {
+        status = pc->ComputeThumbprintAndSignManifestXml(cert, input_str);
+    }
+
+    *signedManifestXml = CreateStringCopy(input_str);
+
+    if (nullptr == *signedManifestXml) {
+        return ER_OUT_OF_MEMORY;
+    }
+
+    return status;
 }
