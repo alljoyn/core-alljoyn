@@ -14,26 +14,50 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-cd ..
-SDKROOT_IOS_SIMULATOR=`xcodebuild -version -sdk iphonesimulator Path`
-SDKROOT_IOS=`xcodebuild -version -sdk iphoneos Path`
-CPU_NUM=`sysctl -n hw.ncpu`
-
-echo "Building AllJoyn Core for iOS"
-echo "SDKROOT_IOS_SIMULATOR: $SDKROOT_IOS_SIMULATOR"
-echo "SDKROOT_IOS: $SDKROOT_IOS"
-echo "CPU_NUM: $CPU_NUM"
-
 set -e
 
-export CONFIGURATION=release
-export PLATFORM_NAME=iphoneos
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
-export PLATFORM_NAME=iphonesimulator
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=release CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
+./build_core_ios.sh
 
-export CONFIGURATION=debug
-export PLATFORM_NAME=iphoneos
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS
-export PLATFORM_NAME=iphonesimulator
-scons -u --jobs $CPU_NUM OS=iOS VARIANT=debug CPU=universal CRYPTO=builtin BR=on BINDINGS="cpp" WS=off SDKROOT=$SDKROOT_IOS_SIMULATOR
+BASE_DIR=../build/iOS
+BUILD_DIR="${BASE_DIR}/AllJoynFramework"
+
+build() {
+    CONFIGURATION=$1
+
+    xcodebuild -project AllJoynFramework/AllJoynFramework.xcodeproj -target AllJoynFramework_iOS  ONLY_ACTIVE_ARCH=NO -configuration $CONFIGURATION -sdk iphoneos  BUILD_DIR="../${BUILD_DIR}" SYMROOT="../${BUILD_DIR}/obj"
+    xcodebuild -project AllJoynFramework/AllJoynFramework.xcodeproj -target AllJoynFramework_iOS  ONLY_ACTIVE_ARCH=NO -configuration $CONFIGURATION -sdk iphonesimulator  BUILD_DIR="../${BUILD_DIR}" SYMROOT="../${BUILD_DIR}/obj"
+
+    mkdir -p "${BUILD_DIR}/${CONFIGURATION}"
+    lipo -create -output "${BUILD_DIR}/${CONFIGURATION}/libAllJoynFramework_iOS.a" "${BUILD_DIR}/${CONFIGURATION}-iphoneos/libAllJoynFramework_iOS.a" "${BUILD_DIR}/${CONFIGURATION}-iphonesimulator/libAllJoynFramework_iOS.a"
+}
+
+echo "Building AllJoynFramework for iOS..."
+
+build Debug
+build Release
+
+echo "Copying Headers..."
+
+cp -R "${BUILD_DIR}/Release-iphoneos/include" "${BUILD_DIR}"
+cp -R "${BASE_DIR}/universal/iphoneos/release/dist/cpp/inc/alljoyn" "${BUILD_DIR}/include/alljoyn"
+cp -R "${BASE_DIR}/universal/iphoneos/release/dist/cpp/inc/qcc" "${BUILD_DIR}/include/qcc"
+
+rm -R "${BUILD_DIR}/Debug-iphoneos"
+rm -R "${BUILD_DIR}/Debug-iphonesimulator"
+rm -R "${BUILD_DIR}/Release-iphoneos"
+rm -R "${BUILD_DIR}/Release-iphonesimulator"
+rm -R "${BUILD_DIR}/obj"
+
+echo "Copying Core Libs..."
+
+lipo_core_lib() {
+    lipo -create -output "${BUILD_DIR}/Release/$1" "${BASE_DIR}/universal/iphoneos/release/dist/cpp/lib/$1" "${BASE_DIR}/universal/iphonesimulator/release/dist/cpp/lib/$1"
+    lipo -create -output "${BUILD_DIR}/Debug/$1" "${BASE_DIR}/universal/iphoneos/debug/dist/cpp/lib/$1" "${BASE_DIR}/universal/iphonesimulator/debug/dist/cpp/lib/$1"
+}
+
+lipo_core_lib libajrouter.a
+lipo_core_lib liballjoyn_about.a
+lipo_core_lib liballjoyn_config.a
+lipo_core_lib liballjoyn.a
+
+rm -R "${BASE_DIR}/universal"
