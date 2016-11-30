@@ -215,6 +215,32 @@ QStatus SecurityApplicationProxy::GetEccPublicKey(qcc::ECCPublicKey& eccPublicKe
     return status;
 }
 
+QStatus SecurityApplicationProxy::GetManufacturerCertificate(vector<CertificateX509>& certificateVector)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    MsgArg certArg;
+    size_t count;
+
+    QStatus status = GetManufacturerCertificate(certArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not GetManufacturerCertificate"));
+        return status;
+    }
+
+    count = certArg.v_array.GetNumElements();
+    certificateVector.clear();
+    certificateVector.resize(count);
+
+    //Note: ManufacturerCertificate uses a(yay) as well, which is the same as IdentityCerts
+    status = MsgArgToIdentityCertChain(certArg, certificateVector.data(), count);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("MsgArgToIdentityCertChain failed"));
+        return status;
+    }
+
+    return status;
+}
+
 QStatus SecurityApplicationProxy::GetManufacturerCertificate(MsgArg& certificate)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -803,6 +829,30 @@ void SecurityApplicationProxy::DestroyManifestDigest(uint8_t* digest)
     delete[] digest;
 }
 
+QStatus SecurityApplicationProxy::GetIdentity(vector<CertificateX509>& certificateVector)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    MsgArg certArg;
+    size_t count;
+    QStatus status = GetIdentity(certArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not GetIdentity"));
+        return status;
+    }
+
+    count = certArg.v_array.GetNumElements();
+    certificateVector.clear();
+    certificateVector.resize(count);
+
+    status = MsgArgToIdentityCertChain(certArg, certificateVector.data(), count);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("MsgArgToIdentityCertChain failed"));
+        return status;
+    }
+
+    return status;
+}
+
 QStatus SecurityApplicationProxy::GetIdentity(MsgArg& identityCertificate)
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
@@ -989,6 +1039,32 @@ QStatus SecurityApplicationProxy::GetDefaultPolicy(PermissionPolicy& defaultPoli
     status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "DefaultPolicy", arg);
     if (ER_OK == status) {
         status = defaultPolicy.Import(PermissionPolicy::SPEC_VERSION, arg);
+    }
+
+    return status;
+}
+
+QStatus SecurityApplicationProxy::GetMembershipSummaries(vector<String>& serialsVector, vector<KeyInfoNISTP256>& keyInfosVector)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    QStatus status = ER_OK;
+    size_t count;
+    MsgArg arg;
+
+    status = GetMembershipSummaries(arg);
+    if (ER_OK == status) {
+        /* Get the Summaries array */
+        count = arg.v_array.GetNumElements();
+        if (0 == count) {
+            QCC_DbgTrace(("Zero memberships found."));
+            return ER_OK;
+        }
+
+        serialsVector.clear();
+        serialsVector.resize(count);
+        keyInfosVector.clear();
+        keyInfosVector.resize(count);
+        status = MsgArgToCertificateIds(arg, serialsVector.data(), keyInfosVector.data(), count);
     }
 
     return status;
