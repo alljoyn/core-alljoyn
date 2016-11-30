@@ -54,7 +54,7 @@ class AboutIconObj : public BusObject {
     /**
      * Handles  GetUrl method call for the org.alljoyn.Icon interface
      *
-     * @param[in]  member
+     * @param[in]  member interface member
      * @param[in]  msg reference of AllJoyn Message
      */
     void GetUrl(const InterfaceDescription::Member* member, Message& msg);
@@ -62,7 +62,7 @@ class AboutIconObj : public BusObject {
     /**
      * Handles  GetContent method call for the org.alljoyn.Icon interface
      *
-     * @param[in]  member
+     * @param[in]  member interface member
      * @param[in]  msg reference of AllJoyn Message
      */
     void GetContent(const InterfaceDescription::Member* member, Message& msg);
@@ -73,7 +73,8 @@ class AboutIconObj : public BusObject {
      * @param[in]  ifcName  interface name
      * @param[in]  propName the name of the properly
      * @param[in]  val reference of MsgArg out parameter.
-     * @return
+     *
+     * @return ER_OK on success
      */
     QStatus Get(const char* ifcName, const char* propName, MsgArg& val);
 
