@@ -20,6 +20,7 @@
 
 #import "AJNAboutData.h"
 #import <alljoyn/AboutData.h>
+#import <vector>
 
 using namespace ajn;
 
@@ -67,64 +68,73 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
 };
 
 @interface FieldDetails : NSObject
+    
 @property (nonatomic, assign) AJNAboutFieldMask fieldMask;
 @property (nonatomic, strong) NSString *signature;
 
-- (instancetype)initWithFieldMask:(AJNAboutFieldMask)aboutFieldMask andSignature:(NSString*)signature;
+- (instancetype)initWithFieldMask:(AJNAboutFieldMask)aboutFieldMask andSignature:(NSString *)signature;
+
 @end
 
 @implementation FieldDetails
-- (instancetype)initWithFieldMask:(AJNAboutFieldMask)aboutFieldMask andSignature:(NSString *)signature{
+    
+- (instancetype)initWithFieldMask:(AJNAboutFieldMask)aboutFieldMask andSignature:(NSString *)signature
+{
     self = [super init];
+    
     if (self) {
         self.fieldMask = aboutFieldMask;
         self.signature = signature;
     }
+    
     return self;
 }
 @end
 
-
-
-
-
 #pragma mark-
+
 @implementation AJNAboutData
 /**
  * Helper to return the C++ API object that is encapsulated by this objective-c class
  */
-- (AboutData*)aboutData
+- (AboutData *)aboutData
 {
-    return static_cast<AboutData*>(self.handle);
+    return static_cast<AboutData *>(self.handle);
 }
 
 - (id)init
 {
     self = [super init];
+    
     if (self) {
         self.handle = new AboutData();
         self.shouldDeleteHandleOnDealloc = YES;
     }
+    
     return self;
 }
 
-- (id)initWithLanguage: (NSString*)language
+- (id)initWithLanguage:(NSString *)language
 {
     self = [super init];
+    
     if (self) {
         self.handle = new AboutData([ language UTF8String]);
         self.shouldDeleteHandleOnDealloc = YES;
     }
+    
     return self;
 }
 
-- (id)initWithMsgArg:(AJNMessageArgument *)msgArg andLanguage:(NSString*)language
+- (id)initWithMsgArg:(AJNMessageArgument *)msgArg andLanguage:(NSString *)language
 {
     self = [super init];
+    
     if (self) {
-        self.handle = new AboutData(*msgArg.msgArg,[ language UTF8String]);
+        self.handle = new AboutData(*msgArg.msgArg, [language UTF8String]);
         self.shouldDeleteHandleOnDealloc = YES;
     }
+    
     return self;
 }
 
@@ -144,33 +154,36 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
             (c >= 'a' && c <= 'f'));
 }
 
-- (QStatus)createFromXml:(NSString*)aboutXmlData
+- (QStatus)createFromXml:(NSString *)aboutXmlData
 {
     return self.aboutData->CreateFromXml(aboutXmlData.UTF8String);
 }
 
-- (QStatus)createFromMsgArg:(AJNMessageArgument *)msgArg andLanguage:(NSString*)language
+- (QStatus)createFromMsgArg:(AJNMessageArgument *)msgArg andLanguage:(NSString *)language
 {
     return self.aboutData->CreatefromMsgArg(*msgArg.msgArg,language.UTF8String);
 }
 
-- (QStatus)getField:(NSString*)name messageArg:(AJNMessageArgument*)msgArg language:(NSString*)language{
+- (QStatus)getField:(NSString *)name messageArg:(AJNMessageArgument *)msgArg language:(NSString *)language
+{
     QStatus status;
-    MsgArg* arg = msgArg.msgArg;
+    MsgArg *arg = msgArg.msgArg;
     status = self.aboutData->GetField(name.UTF8String, arg, language.UTF8String);
     return status;
 }
 
-- (QStatus)setField:(NSString*)name msgArg:(AJNMessageArgument*)msgArg andLanguage:(NSString*)language{
-     return self.aboutData->SetField(name.UTF8String, *msgArg.msgArg, language.UTF8String );
+- (QStatus)setField:(NSString *)name msgArg:(AJNMessageArgument *)msgArg andLanguage:(NSString *)language
+{
+    return self.aboutData->SetField(name.UTF8String, *msgArg.msgArg, language.UTF8String );
 }
 
-- (BOOL)isValid{
-
+- (BOOL)isValid
+{
     return [self isValid:nil];
 }
 
-- (BOOL)isValid:(NSString*)language{
+- (BOOL)isValid:(NSString *)language
+{
     BOOL test;
     if (language == nil || language.length == 0) {
         test = self.aboutData->IsValid();
@@ -179,40 +192,44 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return self.aboutData->IsValid( [language UTF8String]);
 }
 
-- (QStatus)setField:(NSString*)name msgArg:(AJNMessageArgument*)msgArg{
+- (QStatus)setField:(NSString *)name msgArg:(AJNMessageArgument *)msgArg
+{
     return self.aboutData->SetField(name.UTF8String, *msgArg.msgArg);
 }
 
-- (QStatus)setDefaultLanguage:(NSString *)language{
+- (QStatus)setDefaultLanguage:(NSString *)language
+{
     return self.aboutData->SetDefaultLanguage(language.UTF8String);
 }
 
-- (NSString*)getFieldSignature:(NSString*)fieldName{
+- (NSString *)getFieldSignature:(NSString *)fieldName
+{
     const char *fieldSignature = self.aboutData->GetFieldSignature([fieldName UTF8String]);
+    
     return [NSString stringWithCString:fieldSignature encoding:NSUTF8StringEncoding ];
-
 }
 
-- (BOOL)isFieldLocalized:(NSString*)fieldName{
+- (BOOL)isFieldLocalized:(NSString *)fieldName
+{
     return self.aboutData->IsFieldLocalized([fieldName UTF8String]);
-
 }
 
-- (BOOL)isFieldAnnounced:(NSString*)fieldName{
+- (BOOL)isFieldAnnounced:(NSString *)fieldName
+{
     return self.aboutData->IsFieldAnnounced([fieldName UTF8String]);
-
 }
 
-- (BOOL)isFieldRequired:(NSString*)fieldName{
+- (BOOL)isFieldRequired:(NSString *)fieldName
+{
     return self.aboutData->IsFieldRequired([fieldName UTF8String]);
 }
 
-- (QStatus)setAppId:(uint8_t[])appId{
+- (QStatus)setAppId:(uint8_t[])appId
+{
     return self.aboutData->SetAppId(appId);
-
 }
 
-- (QStatus)getDefaultLanguage:(NSString**)defaultLanguage
+- (QStatus)getDefaultLanguage:(NSString **)defaultLanguage
 {
     QStatus status;
     char *defaultLanguageOut;
@@ -227,14 +244,14 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setDeviceName:(NSString*)deviceName andLanguage:(NSString*)language
+- (QStatus)setDeviceName:(NSString *)deviceName andLanguage:(NSString *)language
 {
     return self.aboutData->SetDeviceName([deviceName UTF8String], language.UTF8String);
 }
 
-- (QStatus)getDeviceName:(NSString**)deviceName andLanguage:(NSString*)language
+- (QStatus)getDeviceName:(NSString **)deviceName andLanguage:(NSString *)language
 {
-    char* deviceNameOut;
+    char *deviceNameOut;
     const char *languageIn = [language UTF8String];
 
     QStatus status;
@@ -249,16 +266,15 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setDeviceId:(NSString*)deviceId
+- (QStatus)setDeviceId:(NSString *)deviceId
 {
     return self.aboutData->SetDeviceId([deviceId UTF8String]);
-
 }
 
-- (QStatus)getDeviceId:(NSString**)deviceId
+- (QStatus)getDeviceId:(NSString **)deviceId
 {
     QStatus status;
-    char* deviceIdOut;
+    char *deviceIdOut;
     status = self.aboutData->GetDeviceId(&deviceIdOut);
 
     if (status == ER_OK && deviceIdOut != NULL) {
@@ -270,15 +286,14 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setAppName:(NSString*)appName andLanguage:(NSString*)language
+- (QStatus)setAppName:(NSString *)appName andLanguage:(NSString *)language
 {
     return self.aboutData->SetAppName([appName UTF8String], [language UTF8String]);
-
 }
 
-- (QStatus)getAppName:(NSString**)appName andLanguage:(NSString*)language
+- (QStatus)getAppName:(NSString **)appName andLanguage:(NSString *)language
 {
-    char* appNameOut;
+    char *appNameOut;
     const char *languageIn = [language UTF8String];
 
     QStatus status;
@@ -290,18 +305,18 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     } else {
         *appName = nil;
     }
+    
     return status;
 }
 
-- (QStatus)setManufacturer:(NSString*)manufacturer andLanguage:(NSString*)language
+- (QStatus)setManufacturer:(NSString *)manufacturer andLanguage:(NSString *)language
 {
     return self.aboutData->SetManufacturer([manufacturer UTF8String], [language UTF8String]);
-
 }
 
-- (QStatus)getManufacturer:(NSString**)manufacturer andLanguage:(NSString*)language
+- (QStatus)getManufacturer:(NSString **)manufacturer andLanguage:(NSString *)language
 {
-    char* manufacturerOut;
+    char *manufacturerOut;
     QStatus status;
 
     status = self.aboutData->GetManufacturer(&manufacturerOut, [language UTF8String]);
@@ -314,15 +329,15 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setModelNumber:(NSString*)modelNumber
+- (QStatus)setModelNumber:(NSString *)modelNumber
 {
     return self.aboutData->SetModelNumber([modelNumber UTF8String]);
 }
 
-- (QStatus)getModelNumber:(NSString**)modelNumber
+- (QStatus)getModelNumber:(NSString **)modelNumber
 {
     QStatus status;
-    char* modelNumberOut;
+    char *modelNumberOut;
     status = self.aboutData->GetModelNumber(&modelNumberOut);
 
     if (status == ER_OK && modelNumberOut != NULL) {
@@ -334,29 +349,39 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setSupportedLanguage:(NSString*)language
+- (QStatus)setSupportedLanguage:(NSString *)language
 {
     return self.aboutData->SetSupportedLanguage([language UTF8String]);
 }
 
-- (size_t)getSupportedLanguages:(NSString*)languageTags num:(size_t)num
+- (NSArray<NSString *> *)getSupportedLanguages
 {
-    const char* languageTagsOut;
-    size_t numOut = 0;
-
-    num = self.aboutData->GetSupportedLanguages(&languageTagsOut, numOut);
-    return num;
+    size_t numLanguages = self.aboutData->GetSupportedLanguages();
+    
+    std::vector<const char *> languages(numLanguages);
+    
+    self.aboutData->GetSupportedLanguages(&(languages[0]), numLanguages);
+    
+    NSMutableArray<NSString *> *retLanguages = [[NSMutableArray<NSString *> alloc] init];
+    
+    for (auto it : languages) {
+        NSString *lang = [NSString stringWithCString:it encoding:NSUTF8StringEncoding];
+        
+        [retLanguages addObject:lang];
+    }
+    
+    return retLanguages;
 }
 
-- (QStatus)setDescription:(NSString*)description andLanguage:(NSString*)language
+- (QStatus)setDescription:(NSString *)description andLanguage:(NSString *)language
 {
     return self.aboutData->SetDescription([description UTF8String], [language UTF8String]);
 }
 
-- (QStatus)getDescription:(NSString**)description language:(NSString*)language
+- (QStatus)getDescription:(NSString **)description language:(NSString *)language
 {
     QStatus status;
-    char* descriptionOut;
+    char *descriptionOut;
     const char *languageIn = [language UTF8String];
 
     status = self.aboutData->GetDescription(&descriptionOut, languageIn);
@@ -370,16 +395,15 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-
-- (QStatus)setDateOfManufacture:(NSString*)dateOfManufacture
+- (QStatus)setDateOfManufacture:(NSString *)dateOfManufacture
 {
     return self.aboutData->SetDateOfManufacture([dateOfManufacture UTF8String]);
 
 }
 
-- (QStatus)getDateOfManufacture:(NSString**)dateOfManufacture
+- (QStatus)getDateOfManufacture:(NSString **)dateOfManufacture
 {
-    char* dateOfManufactureOut;
+    char *dateOfManufactureOut;
     QStatus status;
 
     status = self.aboutData->GetDateOfManufacture(&dateOfManufactureOut);
@@ -393,15 +417,15 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setSoftwareVersion:(NSString*)softwareVersion
+- (QStatus)setSoftwareVersion:(NSString *)softwareVersion
 {
     return self.aboutData->SetSoftwareVersion([softwareVersion UTF8String]);
 
 }
 
-- (QStatus)getSoftwareVersion:(NSString**)softwareVersion
+- (QStatus)getSoftwareVersion:(NSString **)softwareVersion
 {
-    char* softwareVersionOut;
+    char *softwareVersionOut;
     QStatus status;
 
     status = self.aboutData->GetSoftwareVersion(&softwareVersionOut);
@@ -415,9 +439,9 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)getAJSoftwareVersion:(NSString**)ajSoftwareVersion
+- (QStatus)getAJSoftwareVersion:(NSString **)ajSoftwareVersion
 {
-    char* ajSoftwareVersionOut;
+    char *ajSoftwareVersionOut;
     QStatus status;
 
     status = self.aboutData->GetAJSoftwareVersion(&ajSoftwareVersionOut);
@@ -431,14 +455,14 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setHardwareVersion:(NSString*)hardwareVersion
+- (QStatus)setHardwareVersion:(NSString *)hardwareVersion
 {
     return self.aboutData->SetHardwareVersion([hardwareVersion UTF8String]);
 }
 
-- (QStatus)getHardwareVersion:(NSString**)hardwareVersion
+- (QStatus)getHardwareVersion:(NSString **)hardwareVersion
 {
-    char* hardwareVersionOut;
+    char *hardwareVersionOut;
     QStatus status;
 
     status = self.aboutData->GetHardwareVersion(&hardwareVersionOut);
@@ -452,14 +476,14 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-- (QStatus)setSupportUrl:(NSString*)supportUrl
+- (QStatus)setSupportUrl:(NSString *)supportUrl
 {
     return self.aboutData->SetSupportUrl([supportUrl UTF8String]);
 }
 
-- (QStatus)getSupportUrl:(NSString**)supportUrl
+- (QStatus)getSupportUrl:(NSString **)supportUrl
 {
-    char* supportUrlOut;
+    char *supportUrlOut;
     QStatus status;
 
     status = self.aboutData->GetSupportUrl(&supportUrlOut);
@@ -472,8 +496,9 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     return status;
 }
 
-#pragma mark- AJNAboutDataListener
-- (QStatus)getAboutData:(AJNMessageArgument**)msgArg withLanguage:(NSString*)language
+#pragma mark - AJNAboutDataListener
+    
+- (QStatus)getAboutData:(AJNMessageArgument **)msgArg withLanguage:(NSString *)language
 {
     QStatus status = ER_OK;
     MsgArg *messageArg = new MsgArg;
@@ -483,10 +508,9 @@ typedef NS_ENUM(NSInteger, AJNAboutFieldMask) {
     *msgArg = [[AJNMessageArgument alloc]initWithHandle:messageArg ];
 
     return status;
-
 }
 
-- (QStatus)getAnnouncedAboutData:(AJNMessageArgument**)msgArg
+- (QStatus)getAnnouncedAboutData:(AJNMessageArgument **)msgArg
 {
     QStatus status = ER_OK;
     MsgArg *messageArg = new MsgArg;

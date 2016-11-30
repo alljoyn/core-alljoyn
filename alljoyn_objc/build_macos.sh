@@ -14,16 +14,38 @@
 #    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 #
 
-cd ..
-SDKROOT_MACOS=`xcodebuild -version -sdk macosx Path`
-CPU_NUM=`sysctl -n hw.ncpu`
-
-echo "Building AllJoyn Core for macOS"
-echo "SDKROOT_MACOS: $SDKROOT_MACOS"
-echo "CPU_NUM: $CPU_NUM"
-
 set -e
 
-export PLATFORM_NAME=macosx
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS
+./build_core_macos.sh
+
+BASE_DIR=../build/darwin
+BUILD_DIR="${BASE_DIR}/AllJoynFramework"
+
+echo "Building AllJoynFramework for macOS..."
+
+xcodebuild -project AllJoynFramework/AllJoynFramework.xcodeproj -target AllJoynFramework_macOS  ONLY_ACTIVE_ARCH=NO -configuration Debug -sdk macosx  BUILD_DIR="../${BUILD_DIR}" SYMROOT="../${BUILD_DIR}/obj"
+xcodebuild -project AllJoynFramework/AllJoynFramework.xcodeproj -target AllJoynFramework_macOS  ONLY_ACTIVE_ARCH=NO -configuration Release -sdk macosx  BUILD_DIR="../${BUILD_DIR}" SYMROOT="../${BUILD_DIR}/obj"
+
+echo "Copying Headers..."
+
+cp -R "${BUILD_DIR}/Release/include" "${BUILD_DIR}"
+cp -R "${BASE_DIR}/x86_64/release/dist/cpp/inc/alljoyn" "${BUILD_DIR}/include/alljoyn"
+cp -R "${BASE_DIR}/x86_64/release/dist/cpp/inc/qcc" "${BUILD_DIR}/include/qcc"
+
+rm -R "${BUILD_DIR}/obj"
+rm -R "${BUILD_DIR}/Release/include"
+rm -R "${BUILD_DIR}/Debug/include"
+
+echo "Copying Core Libs..."
+
+copy_core_lib() {
+    cp "${BASE_DIR}/x86_64/release/dist/cpp/lib/$1" "${BUILD_DIR}/Release/$1"
+    cp "${BASE_DIR}/x86_64/debug/dist/cpp/lib/$1" "${BUILD_DIR}/Debug/$1"
+}
+
+copy_core_lib libajrouter.a
+copy_core_lib liballjoyn_about.a
+copy_core_lib liballjoyn_config.a
+copy_core_lib liballjoyn.a
+
+rm -R "${BASE_DIR}/x86_64"

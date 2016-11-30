@@ -130,7 +130,7 @@ class HeaderFields {
      *
      * @deprecated March 2015 for 15.04 release
      */
-    static const bool Compressible[ALLJOYN_HDR_FIELD_UNKNOWN + 1];
+    QCC_DEPRECATED(static const bool Compressible[ALLJOYN_HDR_FIELD_UNKNOWN + 1]);
 
     /**
      * Table to map the header field to a AllJoynTypeId
@@ -477,9 +477,9 @@ class _Message {
      * @deprecated Header compression was deprecated in March 2015 for 15.04
      * release
      */
-    uint32_t GetCompressionToken() const {
+    QCC_DEPRECATED(uint32_t GetCompressionToken() const {
         return 0;
-    }
+    })
 
     /**
      * Accessor function to get the session id for the message.
@@ -1071,7 +1071,7 @@ class _Message {
      * @param sender       sender of the message
      * @param allowRemote  true iff connection allows messages from remote devices.
      * @param guid         GUID of sender of message
-     * @param nametype     specify what names are transfered
+     * @param nameType     specify what names are transfered
      *
      * @return
      *      - #ER_OK if hello method call was sent successfully.

@@ -998,7 +998,7 @@ class _Manifest {
      * Sign method before applying to an application.
      *
      * @param[in] rules Array of PermissionPolicy::Rule objects
-     * @param[in] ruleCount Number of elements in rules array
+     * @param[in] rulesCount Number of elements in rules array
      *
      * @return
      * - #ER_OK if successful
@@ -1202,7 +1202,7 @@ class _Manifest {
     /**
      * Get a serialized form of this signed manifest.
      *
-     * @param[out] serializedForm Vector containing the bytes of the serialized manifest.
+     * @param[out] seralizedForm Vector containing the bytes of the serialized manifest.
      *
      * @return
      * - #ER_OK if serialization was successful

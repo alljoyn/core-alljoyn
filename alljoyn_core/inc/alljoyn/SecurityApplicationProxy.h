@@ -350,7 +350,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *
      * @param[in] identityCertificateChain             the identity certificate
      * @param[in] identityCertificateChainCount        the number of identity certificates
-     * @param[in] manifests                            the signed manifests to install on the application
+     * @param[in] manifest                            the signed manifests to install on the application
      * @param[in] manifestCount                        the number of manifests
      *
      * @return
@@ -438,7 +438,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *
      * @see ProxyBusObject.SecureConnection(bool)
      *
-     * @param[in] policy    The new policy in XML format. For the policy XSD refer to
+     * @param[in] policyXml    The new policy in XML format. For the policy XSD refer to
      *                      alljoyn_core/docs/policy.xsd.
      *
      * @return
@@ -552,7 +552,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
     /**
      * Get the manifests
      *
-     * @param[out] manifests the manifest
+     * @param[out] manifest the manifest
      *
      * @return
      *  - #ER_OK if successful

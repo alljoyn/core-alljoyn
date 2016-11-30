@@ -642,7 +642,7 @@ public:
 {
     self = [super init];
     if (self) {
-        self.handle = new ajn::BusAttachment([applicationName UTF8String], allowRemoteMessages, maximumConcurrentOperations);
+        self.handle = new ajn::BusAttachment([applicationName UTF8String], allowRemoteMessages, (uint32_t)maximumConcurrentOperations);
     }
     return self;
 }
@@ -1231,14 +1231,14 @@ public:
     return self.busAttachment->SecureConnectionAsync([name UTF8String], forceAuth ? true : false);
 }
 
-- (AJNHandle)socketFileDescriptorForSession:(AJNSessionId)sessionId
+- (AJNSocketFd)socketFileDescriptorForSession:(AJNSessionId)sessionId
 {
     qcc::SocketFd fd;
     QStatus status = self.busAttachment->GetSessionFd(sessionId, fd);
     if (status != ER_OK) {
         NSLog(@"ERROR: AJNBusAttachment::socketFileDescriptorForSession: failed. %@", [AJNStatus descriptionForStatusCode:status]);
     }
-    return (AJNHandle)fd;
+    return (AJNSocketFd)fd;
 }
 
 - (QStatus)advertiseName:(NSString*)name withTransportMask:(AJNTransportMask)mask

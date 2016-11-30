@@ -66,7 +66,7 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
 - (void)setUp
 {
     [super setUp];
-
+    
     // Set-up code here. Executed before each test case is run.
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
@@ -78,7 +78,7 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
     //
     [self.bus destroy];
     self.bus = nil;
-
+    
     [super tearDown];
 }
 

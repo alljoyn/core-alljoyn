@@ -26,8 +26,19 @@
 
 #include <qcc/platform.h>
 
-#if defined(QCC_OS_DARWIN)
-#include <libkern/OSAtomic.h>
+#if defined(QCC_OS_LINUX)
+
+#define QCC_USE_GCC_BUILTIN_ATOMIC
+
+#elif defined(QCC_OS_DARWIN)
+
+#ifdef QCC_OS_DARWIN_USE_LEGACY_ATOMIC
+#include <libkern/OSAtomic.h> // Deprecated in macOS 10.12 / iOS 10
+#else
+// Clang supports GCC built-in functions for atomic memory access
+#define QCC_USE_GCC_BUILTIN_ATOMIC
+#endif
+
 #endif
 
 namespace qcc {
@@ -100,7 +111,7 @@ inline bool CompareAndExchangePointer(void* volatile* mem, void* expectedValue, 
     return __atomic_compare_exchange_n(mem, &expectedValue, newValue, false, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST);
 }
 
-#elif defined(QCC_OS_LINUX)
+#elif defined(QCC_USE_GCC_BUILTIN_ATOMIC)
 
 /**
  * Increment an int32_t and return its new value atomically.
@@ -150,7 +161,7 @@ inline bool CompareAndExchangePointer(void* volatile* mem, void* expectedValue, 
     return __sync_bool_compare_and_swap(mem, expectedValue, newValue);
 }
 
-#elif defined(QCC_OS_DARWIN)
+#elif defined(QCC_OS_DARWIN_USE_LEGACY_ATOMIC)
 
 /**
  * Increment an int32_t and return its new value atomically.
