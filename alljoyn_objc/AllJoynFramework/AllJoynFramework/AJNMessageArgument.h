@@ -137,6 +137,20 @@
 - (QStatus)setValue:(NSString *)signature, ...;
 
 /**
+ * Set value of a message arg from a signature and a list of values. Note that any values or
+ * MsgArg pointers passed in must remain valid until this MsgArg is freed.
+ * This method could be used in Swift using CVAListPointer (analog c 'va_list') as the second parameter.
+ *
+ *
+ * @param signature   The signature for MsgArg value
+ * @param arguments   List of values to initialize the MsgArg.
+ *
+ * @return Returns ER_OK if the MsgArg was successfully set or an error status otherwise.
+ */
+
+- (QStatus)setValue:(NSString *)signature arguments:(va_list)arguments;
+
+/**
  * Matches a signature to the MsArg and if the signature matches unpacks the component values of a MsgArg. Note that the values
  * returned are references into the MsgArg itself so unless copied will become invalid if the MsgArg is freed or goes out of scope.
  * This function resolved through variants, so if the MsgArg is a variant that references a 32 bit integer is can be unpacked
@@ -222,6 +236,19 @@
  *          - An error status otherwise
  */
 - (QStatus)value:(NSString *)signature, ...;
+
+/**
+ * Matches a signature to the MsArg and if the signature matches unpacks the component values of a MsgArg.
+ * Note that the value returned is a c 'va_list' so this method could be used in Swift with CVAListPointer type.
+ *
+ * @param signature   The signature for MsgArg value
+ * @param arguments   Pointers to return the unpacked values.
+ *
+ * @return  - ER_OK if the signature matched and MsgArg was successfully unpacked.
+ *          - ER_BUS_SIGNATURE_MISMATCH if the signature did not match.
+ *          - An error status otherwise
+ */
+- (QStatus)value:(NSString *)signature arguments:(va_list)arguments;
 
 /**
  * Clear the MsgArg setting the type to ALLJOYN_INVALID and freeing any memory allocated for the
