@@ -144,6 +144,21 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getpublickey(alljoyn_permi
 AJ_API void AJ_CALL alljoyn_permissionconfigurator_publickey_destroy(AJ_PSTR publicKey);
 
 /**
+ * Get the connected peer's public key.
+ *
+ * @param[in]   configurator        The queried alljoyn_permissionconfigurator.
+ * @param[in]   groupId             Null terminated C String representing the peer's groupId in HEX format
+ * @param[out]  publicKey           Pointer to receive the null-terminated C string with the PEM-encoded representation
+ *                                  of the application's public key. On success, this string must be freed with a call
+ *                                  to alljoyn_permissionconfigurator_publickey_destroy.
+ *
+ * @return
+ *         #ER_OK if successful.
+ *         Other error status codes indicating a failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getconnectedpeerpublickey(alljoyn_permissionconfigurator configurator, const uint8_t* groupId, AJ_PSTR* publicKey);
+
+/**
  * Get the application's manifest template as XML.
  *
  * @param[in]   configurator        The queried alljoyn_permissionconfigurator.
@@ -579,6 +594,39 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_startmanagement(alljoyn_pe
  *          - #ER_MANAGEMENT_NOT_STARTED     if the app was not in the management state
  */
 AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_endmanagement(alljoyn_permissionconfigurator configurator);
+
+/**
+ * This method sign a certificate.
+ *
+ * @param[in]   configurator                 The alljoyn_permissionconfigurator for the application's bus attachment.
+ * @param[in]   unsignedCertificate          Null-terminated C string representing a X509 certificate in PEM encoding as input.
+ * @param[out]  signedCertificate            pointer to Null-terminated C string representing a X509 certificate in PEM encoding as output.
+ * @return
+ *          - #ER_OK                         If successful.
+ *          - #ER_MANAGEMENT_NOT_STARTED     if the app was not in the management state
+ */
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_signcertificate(alljoyn_permissionconfigurator configurator,
+                                                                      AJ_PCSTR unsignedCertificate,
+                                                                      AJ_PSTR*  signedCertificate);
+
+
+
+/**
+ * This method sign a manifest using .
+ *
+ * @param[in]   configurator                 The alljoyn_permissionconfigurator for the application's bus attachment.
+ * @param[in]   subjectCertificate           Null-terminated C string representing a X509 certificate in PEM encoding as input to be used to sign the manifest.
+ * @param[in]   unsignedManifestXml          Null-terminated C string representing manifest XML as input.
+ * @param[in]   signedManifestXml            pointer to Null-terminated C string representing manifest XML as signed output.
+ * @return
+ *          - #ER_OK                         If successful.
+ *          - #ER_MANAGEMENT_NOT_STARTED     if the app was not in the management state
+ */
+
+AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_signmanifest(alljoyn_permissionconfigurator configurator,
+                                                                   AJ_PCSTR subjectCertificate,
+                                                                   AJ_PCSTR unsignedManifestXml,
+                                                                   AJ_PSTR* signedManifestXml);
 
 #ifdef __cplusplus
 } /* extern "C" */
