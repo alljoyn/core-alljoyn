@@ -29,14 +29,14 @@ AJNPingListenerImpl::~AJNPingListenerImpl()
 
 void AJNPingListenerImpl::DestinationLost(const qcc::String& group, const qcc::String& destination)
 {
-    if ([m_delegate respondsToSelector:@selector(destinationLost:group:destination:)]) {
+    if ([m_delegate respondsToSelector:@selector(destinationLost:forDestination:)]) {
            [m_delegate destinationLost:[NSString stringWithCString:group.c_str() encoding:NSUTF8StringEncoding] forDestination:[NSString stringWithCString:destination.c_str() encoding:NSUTF8StringEncoding]];
     }
 }
 
 void AJNPingListenerImpl::DestinationFound(const qcc::String& group, const qcc::String& destination)
 {
-    if ([m_delegate respondsToSelector:@selector(destinationFound:group:destination:)]) {
+    if ([m_delegate respondsToSelector:@selector(destinationFound:forDestination:)]) {
            [m_delegate destinationFound:[NSString stringWithCString:group.c_str() encoding:NSUTF8StringEncoding] forDestination:[NSString stringWithCString:destination.c_str() encoding:NSUTF8StringEncoding]];
     }
 }

@@ -624,7 +624,7 @@ class BusObject : public MessageReceiver {
      * @param member   Identifies the @c org.allseen.Introspectable.IntrospectWithDescription method.
      * @param msg      The Introspectable.IntrospectWithDescription request.
      */
-    virtual void IntrospectWithDescription(const InterfaceDescription::Member* member, Message& msg);
+    QCC_DEPRECATED(virtual void IntrospectWithDescription(const InterfaceDescription::Member* member, Message& msg));
 
     /**
      * Default handler for a bus attempt to read the languages available for IntrospectWithDescription
@@ -676,7 +676,7 @@ class BusObject : public MessageReceiver {
      * This utility method is called by the bus during object registration.
      * Do not call this object explicitly.
      *
-     * @param bus  BusAttachement to associate with BusObject.
+     * @param busAttachment  BusAttachement to associate with BusObject.
      * @return
      *      - #ER_OK if all the methods were added
      *      - #ER_BUS_NO_SUCH_INTERFACE is method can not be added because interface does not exist.

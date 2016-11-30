@@ -267,13 +267,17 @@ using namespace ajn;
     }
 }
 
-+ (QStatus)computeManifestDigest:(NSString*)unsignedManifestXml identityCertificate:(AJNCertificateX509*)identityCertificate digest:(uint8_t**)digest
++ (QStatus)computeManifestDigest:(NSString *)unsignedManifestXml identityCertificate:(AJNCertificateX509 *)identityCertificate digest:(NSData **)digest
 {
     uint8_t** outDigest = NULL;
     size_t outDigestSize = 0;
     QStatus status = ajn::SecurityApplicationProxy::ComputeManifestDigest([unsignedManifestXml UTF8String], *identityCertificate.certificate, outDigest, &outDigestSize);
+    
+    NSData *digestData = [[NSData alloc] initWithBytes:*outDigest length:outDigestSize];
+    
+    ajn::SecurityApplicationProxy::DestroyManifestDigest(*outDigest);
 
-    digest = outDigest;
+    *digest = digestData;
 
     return status;
 }

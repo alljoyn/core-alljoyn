@@ -164,7 +164,6 @@ class AboutObjectDescription {
     /**
      * Clear all the contents of this AboutObjectDescription
      *
-     * @return ER_OK
      */
     void Clear();
     /**
