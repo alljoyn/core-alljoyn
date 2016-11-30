@@ -106,14 +106,14 @@ class AboutObj : public BusObject {
   private:
     /**
      * Handles  GetAboutData method
-     * @param[in]  member
+     * @param[in]  member interface member
      * @param[in]  msg reference of AllJoyn Message
      */
     void GetAboutData(const InterfaceDescription::Member* member, Message& msg);
 
     /**
      *  Handles  GetObjectDescription method
-     * @param[in]  member
+     * @param[in]  member interface member
      * @param[in]  msg reference of AllJoyn Message
      */
     void GetObjectDescription(const InterfaceDescription::Member* member, Message& msg);
