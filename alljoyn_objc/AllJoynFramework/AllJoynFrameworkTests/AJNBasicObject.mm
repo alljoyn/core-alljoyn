@@ -162,8 +162,12 @@ QStatus BasicObjectImpl::Get(const char* ifcName, const char* propName, MsgArg& 
 
         if (strcmp(propName, "testStringProperty") == 0)
         {
-            testStringProperty = [((id<BasicStringsDelegate>)delegate).testStringProperty UTF8String];
-            status = val.Set( "s",  testStringProperty.c_str());
+            if (((id<BasicStringsDelegate>)delegate).testStringProperty == nil) {
+                status = val.Set( "s",  "");
+            } else {
+                testStringProperty = [((id<BasicStringsDelegate>)delegate).testStringProperty UTF8String];
+                status = val.Set( "s",  testStringProperty.c_str());
+            }
         }
 
     }
@@ -547,7 +551,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: MethodWithOnlyOutArgs" userInfo:nil];
         }
 
-        status = [interfaceDescription addMethodWithName:@"methodWithNoReturnAndNoArgs" inputSignature:@"" outputSignature:@"" argumentNames:[NSArray arrayWithObjects: nil]];
+        status = [interfaceDescription addMethodWithName:@"methodWithNoReturnAndNoArgs" inputSignature:@"" outputSignature:@"" argumentNames:[[NSArray alloc] init]];
 
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: methodWithNoReturnAndNoArgs" userInfo:nil];
@@ -562,7 +566,7 @@ void PingObjectImpl::Ping(const InterfaceDescription::Member *member, Message& m
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestStringPropertyChanged" userInfo:nil];
         }
 
-        status = [interfaceDescription addSignalWithName:@"TestSignalWithNoArgs" inputSignature:@"" argumentNames:[NSArray arrayWithObjects: nil]];
+        status = [interfaceDescription addSignalWithName:@"TestSignalWithNoArgs" inputSignature:@"" argumentNames:[[NSArray alloc] init]];
 
         if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
             @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestSignalWithNoArgs" userInfo:nil];

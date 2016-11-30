@@ -14,9 +14,9 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FAB389F71DE7301E0009C7AE"
-               BuildableName = "libAllJoynFramework_macOS.a"
-               BlueprintName = "AllJoynFramework_macOS"
+               BlueprintIdentifier = "FA02A2181DEC610C00D26D17"
+               BuildableName = "libAllJoynFramework_iOS.a"
+               BlueprintName = "AllJoynFramework_iOS"
                ReferencedContainer = "container:AllJoynFramework.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
@@ -32,9 +32,9 @@
             skipped = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "FAB38A071DE7306D0009C7AE"
-               BuildableName = "AllJoynFrameworkTests.xctest"
-               BlueprintName = "AllJoynFrameworkTests"
+               BlueprintIdentifier = "FA02A2551DEC665700D26D17"
+               BuildableName = "AllJoynFrameworkTests_iOS.xctest"
+               BlueprintName = "AllJoynFrameworkTests_iOS"
                ReferencedContainer = "container:AllJoynFramework.xcodeproj">
             </BuildableReference>
          </TestableReference>
@@ -42,9 +42,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FAB389F71DE7301E0009C7AE"
-            BuildableName = "libAllJoynFramework_macOS.a"
-            BlueprintName = "AllJoynFramework_macOS"
+            BlueprintIdentifier = "FA02A2181DEC610C00D26D17"
+            BuildableName = "libAllJoynFramework_iOS.a"
+            BlueprintName = "AllJoynFramework_iOS"
             ReferencedContainer = "container:AllJoynFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -64,9 +64,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FAB389F71DE7301E0009C7AE"
-            BuildableName = "libAllJoynFramework_macOS.a"
-            BlueprintName = "AllJoynFramework_macOS"
+            BlueprintIdentifier = "FA02A2181DEC610C00D26D17"
+            BuildableName = "libAllJoynFramework_iOS.a"
+            BlueprintName = "AllJoynFramework_iOS"
             ReferencedContainer = "container:AllJoynFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
@@ -82,9 +82,9 @@
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "FAB389F71DE7301E0009C7AE"
-            BuildableName = "libAllJoynFramework_macOS.a"
-            BlueprintName = "AllJoynFramework_macOS"
+            BlueprintIdentifier = "FA02A2181DEC610C00D26D17"
+            BuildableName = "libAllJoynFramework_iOS.a"
+            BlueprintName = "AllJoynFramework_iOS"
             ReferencedContainer = "container:AllJoynFramework.xcodeproj">
          </BuildableReference>
       </MacroExpansion>
