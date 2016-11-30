@@ -362,7 +362,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *  - an error status indicating failure
      */
     QStatus UpdateIdentity(const qcc::CertificateX509* identityCertificateChain, size_t identityCertificateChainCount,
-                           const Manifest* manifest, size_t manifestCount);
+                           const Manifest* manifests, size_t manifestCount);
 
     /**
      * This method allows an admin to update the application's identity certificate
@@ -438,7 +438,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
      *
      * @see ProxyBusObject.SecureConnection(bool)
      *
-     * @param[in] policy    The new policy in XML format. For the policy XSD refer to
+     * @param[in] policyXml    The new policy in XML format. For the policy XSD refer to
      *                      alljoyn_core/docs/policy.xsd.
      *
      * @return
@@ -552,7 +552,7 @@ class SecurityApplicationProxy : public ProxyBusObject {
     /**
      * Get the manifests
      *
-     * @param[out] manifests the manifest
+     * @param[out] manifest the manifest
      *
      * @return
      *  - #ER_OK if successful
