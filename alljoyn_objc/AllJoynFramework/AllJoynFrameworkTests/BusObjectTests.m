@@ -1,17 +1,30 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright AllSeen Alliance. All rights reserved.
+// Copyright (c) Open Connectivity Foundation (OCF) and AllJoyn Open
+//    Source Project (AJOSP) Contributors and others.
 //
-//    Permission to use, copy, modify, and/or distribute this software for any
-//    purpose with or without fee is hereby granted, provided that the above
-//    copyright notice and this permission notice appear in all copies.
+//    SPDX-License-Identifier: Apache-2.0
 //
-//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//    All rights reserved. This program and the accompanying materials are
+//    made available under the terms of the Apache License, Version 2.0
+//    which accompanies this distribution, and is available at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
+//    Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for
+//    any purpose with or without fee is hereby granted, provided that the
+//    above copyright notice and this permission notice appear in all
+//    copies.
+//
+//     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+//     WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+//     WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+//     AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+//     DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+//     PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+//     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+//     PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "BusObjectTests.h"
@@ -24,6 +37,8 @@
 static NSString * const kBusObjectTestsAdvertisedName = @"org.alljoyn.bus.sample.strings";
 static NSString * const kBusObjectTestsInterfaceName = @"org.alljoyn.bus.sample.strings";
 static NSString * const kBusObjectTestsObjectPath = @"/basic_object";
+static NSString * const kBusObjectTestsMethodName= @"Concatentate";
+static NSString * const kBusObjectTestsStringPropertyName= @"testStringProperty";
 const NSTimeInterval kBusObjectTestsWaitTimeBeforeFailure = 5.0;
 const NSInteger kBusObjectTestsServicePort = 999;
 
@@ -74,23 +89,36 @@ const NSInteger kBusObjectTestsServicePort = 999;
 @synthesize didReceiveSignal = _didReceiveSignal;
 @synthesize handle = _handle;
 
-+(void)setUp
++ (void) setUp
 {
     [AJNInit alljoynInit];
     [AJNInit alljoynRouterInit];
 }
 
-+(void)tearDown
++ (void) tearDown
 {
     [AJNInit alljoynRouterShutdown];
     [AJNInit alljoynShutdown];
 }
 
-- (void)setUp
+- (void) setUp
 {
     [super setUp];
-    // Set-up code here. Executed before each test case is run.
+    
+    [self startAJNApplication];
+}
+
+- (void)tearDown
+{
+    // Tear-down code here. Executed after each test case is run.
     //
+    [self shutdownAJNApplication];
+    
+    [super tearDown];
+}
+
+- (void) startAJNApplication
+{
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
     self.listenerDidRegisterWithBusCompleted = NO;
     self.listenerDidUnregisterWithBusCompleted = NO;
@@ -99,7 +127,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.nameOwnerChangedCompleted = NO;
     self.busWillStopCompleted = NO;
     self.busDidDisconnectCompleted = NO;
-
+    
     self.sessionWasLost = NO;
     self.didAddMemberNamed = NO;
     self.didRemoveMemberNamed = NO;
@@ -113,10 +141,8 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.testSessionJoiner = nil;
 }
 
-- (void)tearDown
+- (void) shutdownAJNApplication
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
     [self.bus destroy];
     [self.bus destroyBusListener:self];
     self.bus = nil;
@@ -127,7 +153,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.nameOwnerChangedCompleted = NO;
     self.busWillStopCompleted = NO;
     self.busDidDisconnectCompleted = NO;
-
+    
     self.sessionWasLost = NO;
     self.didAddMemberNamed = NO;
     self.didRemoveMemberNamed = NO;
@@ -139,16 +165,13 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.didReceiveSignal = NO;
     self.testSessionId = -1;
     self.testSessionJoiner = nil;
-
-    [super tearDown];
 }
 
 - (void)testShouldCallMethodAndReturnResult
 {
     BusObjectTests *client = [[BusObjectTests alloc] init];
-    BasicObject *basicObject = nil;
 
-    [client setUp];
+    [client startAJNApplication];
 
     client.isTestClient = YES;
 
@@ -168,7 +191,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     status = [self.bus requestWellKnownName:kBusObjectTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
     XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
 
-    basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
 
     [self.bus registerBusObject:basicObject];
 
@@ -187,18 +210,43 @@ const NSInteger kBusObjectTestsServicePort = 999;
     XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
+    
+    AJNMessageArgument *firstArgument = [[AJNMessageArgument alloc] init];
+    status = [firstArgument setValue:@"s", "Hello "];
+    XCTAssertTrue(status == ER_OK, @"Setting value for first argument failed");
+    [firstArgument stabilize];
+    
+    AJNMessageArgument *secondArgument = [[AJNMessageArgument alloc] init];
+    status = [secondArgument setValue:@"s", "world!"];
+    XCTAssertTrue(status == ER_OK, @"Setting value for first argument failed");
+    [secondArgument stabilize];
+    
+    NSArray *arguments = [[NSArray alloc]initWithObjects:firstArgument, secondArgument, nil];
 
-    BasicObjectProxy *proxy = [[BasicObjectProxy alloc] initWithBusAttachment:client.bus serviceName:kBusObjectTestsAdvertisedName objectPath:kBusObjectTestsObjectPath sessionId:self.testSessionId];
+    AJNMessage *reply = [AJNMessage alloc];
+    
+    AJNProxyBusObject *proxy = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:kBusObjectTestsAdvertisedName objectPath:kBusObjectTestsObjectPath sessionId:self.testSessionId];
+    status = [proxy introspectRemoteObject];
+    XCTAssertTrue(status == ER_OK, @"Introspect of Remote Object failed.");
+    
+    [proxy callMethodWithName:kBusObjectTestsMethodName onInterfaceWithName:kBusObjectTestsInterfaceName withArguments:arguments methodReply:&reply];
+    XCTAssertTrue(status == ER_OK, @"Proxy object's method call failed");
+    
+//    char s = 's';
+//    char *p = &s;
+//    char **replyString = &p;
+//    AJNMessageArgument *replyArgument = [reply arg:0];
+//    status = [replyArgument value:@"s", replyString];
+    
+    //    TODO get value with [remoteProperty value:(NSString*), ...]
+    NSString *replyXml = [reply arg:0].xml;
+    NSString *expectedXmlString = @"<string>Hello world!</string>";
+    XCTAssertTrue([replyXml compare:expectedXmlString] == NSOrderedSame, @"Method call return reply message with wrong xml. Value is [%@], have to be [%@]", replyXml, expectedXmlString);
 
-    [proxy introspectRemoteObject];
-
-    NSString *resultantString = [proxy concatenateString:@"Hello " withString:@"World!"];
-    XCTAssertTrue([resultantString compare:@"Hello World!"] == NSOrderedSame, @"Test client call to method via proxy object failed.");
-
-    status = [client.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    status = [client.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus failed.");
+    status = [self.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus failed.");
 
     status = [client.bus stop];
     XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
@@ -215,15 +263,15 @@ const NSInteger kBusObjectTestsServicePort = 999;
     [self.bus unregisterBusListener:self];
     XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
 
-    [client tearDown];
+    [client shutdownAJNApplication];
+    [self shutdownAJNApplication];
 }
 
 - (void)testShouldSuccessfullyAccessPropertyOfObject
 {
     BusObjectTests *client = [[BusObjectTests alloc] init];
-    BasicObject *basicObject = nil;
 
-    [client setUp];
+    [client startAJNApplication];
 
     client.isTestClient = YES;
 
@@ -243,7 +291,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     status = [self.bus requestWellKnownName:kBusObjectTestsAdvertisedName withFlags:kAJNBusNameFlagDoNotQueue|kAJNBusNameFlagReplaceExisting];
     XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
 
-    basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
+    BasicObject *basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBusObjectTestsObjectPath];
 
     [self.bus registerBusObject:basicObject];
 
@@ -263,32 +311,28 @@ const NSInteger kBusObjectTestsServicePort = 999;
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
 
-    BasicObjectProxy *proxy = [[BasicObjectProxy alloc] initWithBusAttachment:client.bus serviceName:kBusObjectTestsAdvertisedName objectPath:kBusObjectTestsObjectPath sessionId:self.testSessionId];
-
-    [proxy introspectRemoteObject];
-
-    NSString *proxyPropertyValue;
-    NSString *servicePropertyValue;
-
-    proxy.testStringProperty = @"Hello World!!!";
-
-    proxyPropertyValue = proxy.testStringProperty;
-
-    servicePropertyValue = basicObject.testStringProperty;
-
-    XCTAssertTrue([proxyPropertyValue compare:@"Hello World!!!"] == NSOrderedSame, @"The value of the property in the client-side object does not match what it was just set to. Actual value=[%@]",proxyPropertyValue);
-    XCTAssertTrue([servicePropertyValue compare:@"Hello World!!!"] == NSOrderedSame, @"The value of the property in the service-side object does not match what it was just set to. Actual value=[%@]",servicePropertyValue);
-
-    basicObject.testStringProperty = @"Foo bar???";
-    proxyPropertyValue = proxy.testStringProperty;
-    servicePropertyValue = basicObject.testStringProperty;
-    XCTAssertTrue([proxyPropertyValue compare:@"Foo bar???"] == NSOrderedSame, @"The value of the property in the client-side object does not match what it was just set to. Actual value=[%@]",proxyPropertyValue);
-    XCTAssertTrue([servicePropertyValue compare:@"Foo bar???"] == NSOrderedSame, @"The value of the property in the service-side object does not match what it was just set to. Actual value=[%@]",servicePropertyValue);
-
-    status = [client.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    AJNProxyBusObject *proxy = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:kBusObjectTestsAdvertisedName objectPath:kBusObjectTestsObjectPath sessionId:self.testSessionId];
+    status = [proxy introspectRemoteObject];
+    XCTAssertTrue(status == ER_OK, @"Introspect of Remote Object failed.");
+    
+    AJNMessageArgument *remoteProperty = [proxy propertyWithName:kBusObjectTestsStringPropertyName forInterfaceWithName:kBusObjectTestsInterfaceName];
+    
+    //TODO get value with [remoteProperty value:(NSString*), ...]
+    NSString *remotePropertyXmlString = remoteProperty.xml;
+    NSString *expectedXmlString = @"<variant signature=\"s\">\n  <string></string>\n</variant>";
+    XCTAssertTrue([remotePropertyXmlString compare:expectedXmlString] == NSOrderedSame, @"Client recived property with wrong XML for null. Value is [%@], have to be [%@]", remoteProperty.xml, expectedXmlString);
+    
+    [proxy setPropertyWithName:kBusObjectTestsStringPropertyName forInterfaceWithName:kBusObjectTestsInterfaceName toStringValue:@"foo bar"]; //TODO CHECK: is delay needed???
+    XCTAssertTrue([basicObject.testStringProperty compare:@"foo bar"] == NSOrderedSame, @"The value of the property in the service-side object does not match what it was just set to. Value is [%@], have to be [%@]", basicObject.testStringProperty, @"foo bar");
+    
+    remoteProperty = [proxy propertyWithName:kBusObjectTestsStringPropertyName forInterfaceWithName:kBusObjectTestsInterfaceName];
+    expectedXmlString = @"<variant signature=\"s\">\n  <string>foo bar</string>\n</variant>";
+    XCTAssertTrue([remoteProperty.xml compare:expectedXmlString] == NSOrderedSame, @"Client recived property with wrong XML after remote set. Value is [%@], have to be [%@]", remoteProperty.xml, expectedXmlString);
+    
+    status = [client.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus failed.");
+    status = [self.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus failed.");
 
     status = [client.bus stop];
     XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
@@ -305,7 +349,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     [self.bus unregisterBusListener:self];
     XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
 
-    [client tearDown];
+    [client shutdownAJNApplication];
 }
 - (void)testShouldSendAndReceiveSignalSuccessfully
 {
@@ -381,10 +425,10 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.didReceiveSignal = NO;
     client.didReceiveSignal = NO;
 
-    status = [client.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
-    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
+    status = [client.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via failed.");
+    status = [self.bus disconnect];
+    XCTAssertTrue(status == ER_OK, @"Disconnect from bus via failed.");
 
     status = [client.bus stop];
     XCTAssertTrue(status == ER_OK, @"Client bus failed to stop.");
@@ -399,7 +443,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     [self.bus unregisterBusListener:self];
     XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_listenerDidUnregisterWithBusCompleted], @"The bus listener should have been notified that a listener was unregistered.");
 
-    [client tearDown];
+    [client shutdownAJNApplication];
 }
 
 #pragma mark - Asynchronous test case support

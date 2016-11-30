@@ -1,17 +1,30 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright AllSeen Alliance. All rights reserved.
+// Copyright (c) Open Connectivity Foundation (OCF) and AllJoyn Open
+//    Source Project (AJOSP) Contributors and others.
 //
-//    Permission to use, copy, modify, and/or distribute this software for any
-//    purpose with or without fee is hereby granted, provided that the above
-//    copyright notice and this permission notice appear in all copies.
+//    SPDX-License-Identifier: Apache-2.0
 //
-//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//    All rights reserved. This program and the accompanying materials are
+//    made available under the terms of the Apache License, Version 2.0
+//    which accompanies this distribution, and is available at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
+//    Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for
+//    any purpose with or without fee is hereby granted, provided that the
+//    above copyright notice and this permission notice appear in all
+//    copies.
+//
+//     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+//     WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+//     WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+//     AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+//     DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+//     PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+//     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+//     PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "BusAttachmentTests.h"
@@ -141,7 +154,7 @@ static const uint8_t ICON_BYTE = 0x11;
 - (void)setUp
 {
     [super setUp];
-
+    
     // Set-up code here. Executed before each test case is run.
     //
     [self setUpWithBusAttachement: [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES]];
@@ -172,7 +185,7 @@ static const uint8_t ICON_BYTE = 0x11;
     self.setInvalidLanguage = NO;
     receiveAnnounce = NO;
     self.busNameToConnect = nil;
-    self.sessionPortToConnect = nil;
+    self.sessionPortToConnect = 0;
     self.testBadAnnounceData = NO;
     self.testMissingAboutDataField = NO;
     self.testMissingAnnounceDataField = NO;
@@ -208,7 +221,7 @@ static const uint8_t ICON_BYTE = 0x11;
     self.didReceiveAnnounce = NO;
     receiveAnnounce = NO;
     self.busNameToConnect = nil;
-    self.sessionPortToConnect = nil;
+    self.sessionPortToConnect = 0;
     self.testBadAnnounceData = NO;
     self.testMissingAboutDataField = NO;
     self.testMissingAnnounceDataField = NO;
@@ -217,34 +230,8 @@ static const uint8_t ICON_BYTE = 0x11;
     self.testAboutObjectDescription = NO;
 
     self.bus = nil;
-
+    
     [super tearDown];
-}
-
-- (AJNAboutData*)createNewAboutData
-{
-    QStatus status = ER_OK;
-    AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
-    uint8_t appId[] = { 0x01, 0xB3, 0xBA, 0x14,
-        0x1E, 0x82, 0x11, 0xE4,
-        0x86, 0x51, 0xD1, 0x56,
-        0x1D, 0x5D, 0x46, 0xB0 };
-    [aboutData setAppId:appId];
-    [aboutData setDeviceName:@"iPhone" andLanguage:@"en"];
-    [aboutData setDeviceId:@"93c06771-c725-48c2-b1ff-6a2a59d445b8"];
-    [aboutData setAppName:@"Application" andLanguage:@"en"];
-    [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
-    [aboutData setModelNumber:@"123456"];
-    [aboutData setDescription:@"A poetic description of this application" andLanguage:@"en"];
-    [aboutData setDateOfManufacture:@"14/07/2016"];
-    [aboutData setSoftwareVersion:@"0.1.2"];
-    [aboutData setHardwareVersion:@"0.0.1"];
-    [aboutData setSupportUrl:@"http://www.example.org"];
-
-    // Check to see if the aboutData is valid before sending the About Announcement
-    XCTAssertTrue([aboutData isValid], @"Failed to setup about data");
-
-    return aboutData;
 }
 
 - (void)testShouldHaveValidHandleAfterIntialization
@@ -329,7 +316,7 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(self.bus.isStarted, @"Bus attachment indicates that it is not started after successful call to start.");
     XCTAssertFalse(self.bus.isStopping, @"Bus attachment indicates that it is stopping before successful call to stop.");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");
 
@@ -351,7 +338,7 @@ static const uint8_t ICON_BYTE = 0x11;
 
     XCTAssertTrue(self.bus.uniqueIdentifier != nil && self.bus.uniqueIdentifier.length > 0, @"Bus should be assigned a unique identifier after starting and connecting.");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
     XCTAssertFalse(self.bus.isConnected, @"Bus attachment indicates that it is connected after successful call to disconnect.");
 
@@ -381,7 +368,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus connectWithArguments:@"null:"];
     XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [self.bus stop];
@@ -404,7 +391,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus connectWithArguments:@"null:"];
     XCTAssertTrue(status == ER_OK, @"Connection to bus via null transport failed.");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [self.bus stop];
@@ -437,7 +424,7 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(status == ER_OK, @"Find advertised name failed.");
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didFindAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was found.");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [self.bus stop];
@@ -474,7 +461,7 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didLoseAdvertisedNameCompleted], @"The bus listener should have been notified that the advertised name was lost.");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [self.bus stop];
@@ -501,7 +488,7 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(status == ER_OK, @"Request for well known name failed.");
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_nameOwnerChangedCompleted], @"The bus listener should have been notified that the name we requested has a new owner now (us).");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [self.bus stop];
@@ -531,7 +518,7 @@ static const uint8_t ICON_BYTE = 0x11;
     BOOL hasOwner = [self.bus doesWellKnownNameHaveOwner:kBusAttachmentTestsAdvertisedName];
     XCTAssertTrue(hasOwner, @"The doesWellKnownNameHaveOwner message should have returned true after we took ownership of the name.");
 
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [self.bus stop];
@@ -583,9 +570,9 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
 
-    status = [client.bus disconnectWithArguments:@"null:"];
+    status = [client.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [client.bus stop];
@@ -650,9 +637,9 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus setLinkTimeout:&timeout forSession:self.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Failed to set the link timeout on the service's bus attachment. Error was %@", [AJNStatus descriptionForStatusCode:status]);
 
-    status = [client.bus disconnectWithArguments:@"null:"];
+    status = [client.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [client.bus stop];
@@ -710,9 +697,9 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
 
-    status = [client.bus disconnectWithArguments:@"null:"];
+    status = [client.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [client.bus stop];
@@ -769,9 +756,9 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
-    status = [client.bus disconnectWithArguments:@"null:"];
+    status = [client.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [client.bus stop];
@@ -833,9 +820,9 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(ER_OK == [self.bus pingPeerAsync:kBusAttachmentTestsAdvertisedName withTimeout:5 completionDelegate:self context:nil], @"PingPeerAsync Failed");
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
 
-    status = [client.bus disconnectWithArguments:@"null:"];
+    status = [client.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [client.bus stop];
@@ -901,9 +888,9 @@ static const uint8_t ICON_BYTE = 0x11;
                                   }context:nil], @"PingPeerAsync Failed");
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_isPingAsyncComplete], @"The service could not be pinged");
 
-    status = [client.bus disconnectWithArguments:@"null:"];
+    status = [client.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Client disconnect from bus via null transport failed.");
-    status = [self.bus disconnectWithArguments:@"null:"];
+    status = [self.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Disconnect from bus via null transport failed.");
 
     status = [client.bus stop];
@@ -1007,7 +994,7 @@ static const uint8_t ICON_BYTE = 0x11;
 
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
     XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
-
+    
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
     XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
 
@@ -1021,10 +1008,10 @@ static const uint8_t ICON_BYTE = 0x11;
 
     status = [client.bus setJoinedSessionListener:client toSession:client.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
-
+    
     status = [client.bus leaveJoinedSession:client.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Client failed to leave self joined session");
-
+    
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_sessionWasLost], @"The Service was not informed that the session was lost.");
 
     status = [self.bus stop];
@@ -1039,6 +1026,8 @@ static const uint8_t ICON_BYTE = 0x11;
 
     [client tearDown];
 }
+
+//TODO - (void)testShouldNotifyAJNSessionListenerInCaseOfSessionLost
 
 - (void)testShouldReceiveAnnounceSignalAndPrintIt
 {
@@ -1062,9 +1051,8 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
 
-    AJNAboutData *aboutData = [self createNewAboutData];
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:aboutData];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
 
     // Client
@@ -1079,17 +1067,15 @@ static const uint8_t ICON_BYTE = 0x11;
 
     XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-
-    aboutData = nil;
 }
 
 - (void)testShouldReceiveAboutIcon
@@ -1114,9 +1100,8 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
 
-    AJNAboutData *aboutData = [self createNewAboutData];
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:aboutData];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
 
     // Client
@@ -1152,7 +1137,7 @@ static const uint8_t ICON_BYTE = 0x11;
     [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
 
     // Set AboutIconObject
-    AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
+    AJNAboutIconObject __unused *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon]; //__unused applied because this object don't used directly, and due to this warning appears.
 
     //Client gets the About Icon
     AJNAboutIconProxy *aboutIconProxy = [[AJNAboutIconProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
@@ -1175,17 +1160,15 @@ static const uint8_t ICON_BYTE = 0x11;
         }
 
     }
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-
-    aboutData = nil;
 }
 
 - (void)testShouldHandleLargeAboutIcon
@@ -1209,10 +1192,9 @@ static const uint8_t ICON_BYTE = 0x11;
 
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
-
-    AJNAboutData *aboutData = [self createNewAboutData];
+    
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:aboutData];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
 
     // Client
@@ -1232,16 +1214,14 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
 
     uint8_t aboutIconContent[MAX_ICON_SIZE_IN_BYTES];
-    if (aboutIconContent) {
-        for (size_t iconByte = 0; iconByte < MAX_ICON_SIZE_IN_BYTES; iconByte++) {
-            aboutIconContent[iconByte] = ICON_BYTE;
-        }
+    for (size_t iconByte = 0; iconByte < MAX_ICON_SIZE_IN_BYTES; iconByte++) {
+        aboutIconContent[iconByte] = ICON_BYTE;
     }
 
     status = [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
 
     // Set AboutIconObject
-    AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
+    AJNAboutIconObject __unused *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon]; //__unused applied because this object don't used directly, and due to this warning appears.
 
     //Client gets the About Icon
     AJNAboutIconProxy *aboutIconProxy = [[AJNAboutIconProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
@@ -1264,17 +1244,15 @@ static const uint8_t ICON_BYTE = 0x11;
         }
 
     }
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-
-    aboutData = nil;
 }
 
 - (void)testShouldFailLargeAboutIcon
@@ -1299,9 +1277,8 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
 
-    AJNAboutData *aboutData = [self createNewAboutData];
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:aboutData];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
 
     // Client
@@ -1321,16 +1298,14 @@ static const uint8_t ICON_BYTE = 0x11;
     XCTAssertTrue(status == ER_OK, @"Could not set Url for the About Icon");
 
     uint8_t aboutIconContent[MAX_ICON_SIZE_IN_BYTES + 2];
-    if (aboutIconContent) {
-        for (size_t iconByte = 0; iconByte < MAX_ICON_SIZE_IN_BYTES; iconByte++) {
-            aboutIconContent[iconByte] = ICON_BYTE;
-        }
+    for (size_t iconByte = 0; iconByte < MAX_ICON_SIZE_IN_BYTES; iconByte++) {
+        aboutIconContent[iconByte] = ICON_BYTE;
     }
 
     status = [aboutIcon setContentWithMimeType:@"image/png" data:aboutIconContent size:(sizeof(aboutIconContent) / sizeof(aboutIconContent[0])) ownsFlag:false];
 
     // Set AboutIconObject
-    AJNAboutIconObject *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon];
+    AJNAboutIconObject __unused *aboutIconObject = [[AJNAboutIconObject alloc] initWithBusAttachment:self.bus aboutIcon:aboutIcon]; //__unused applied because this object don't used directly, and due to this warning appears.
 
     //Client gets the About Icon
     AJNAboutIconProxy *aboutIconProxy = [[AJNAboutIconProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
@@ -1353,19 +1328,16 @@ static const uint8_t ICON_BYTE = 0x11;
         }
 
     }
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-
-    aboutData = nil;
 }
-
 
 - (void)testShouldHandleInconsistentAnnounceData
 {
@@ -1389,7 +1361,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Inconsistent about announce and about data should be reported as error");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 }
 
@@ -1415,7 +1387,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 }
 
@@ -1441,7 +1413,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_ABOUT_INVALID_ABOUTDATA_LISTENER, @"Missing about data field should be reported as error");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 }
 
@@ -1483,10 +1455,10 @@ static const uint8_t ICON_BYTE = 0x11;
 
     XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
@@ -1536,13 +1508,13 @@ static const uint8_t ICON_BYTE = 0x11;
     AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
 
     NSMutableDictionary *aboutData;
-    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:&aboutData];
+    status = [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:&aboutData];
     XCTAssertTrue(status == ER_OK, @"Non default language should not throw error");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
@@ -1592,13 +1564,13 @@ static const uint8_t ICON_BYTE = 0x11;
     AJNAboutProxy *aboutProxy = [[AJNAboutProxy alloc] initWithBusAttachment:client.bus busName:client.busNameToConnect sessionId:client.testSessionId];
 
     NSMutableDictionary *aboutData;
-    status = [aboutProxy getAboutDataForLanguage:@"foo" usingDictionary:&aboutData];
+    status = [aboutProxy getAboutDataForLanguage:@"en" usingDictionary:&aboutData];
     XCTAssertTrue(status == ER_OK, @"Non default language should not throw error");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
@@ -1627,9 +1599,8 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
 
-    AJNAboutData *aboutData = [self createNewAboutData];
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:aboutData];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
 
     // Client
@@ -1643,17 +1614,15 @@ static const uint8_t ICON_BYTE = 0x11;
 
     XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-
-    aboutData = nil;
 }
 
 - (void)testWhoImplementsCallForWildCardPositive
@@ -1678,9 +1647,8 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
 
-    AJNAboutData *aboutData = [self createNewAboutData];
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:aboutData];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
 
     // Client
@@ -1694,17 +1662,15 @@ static const uint8_t ICON_BYTE = 0x11;
 
     XCTAssertTrue([client waitForCompletion:20 onFlag:&receiveAnnounce], @"The about listener should have been notified that the announce signal is received.");
 
-    [self.bus disconnectWithArguments:@"null:"];
+    [self.bus disconnect];
     [self.bus stop];
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-
-    aboutData = nil;
 }
 
 - (void)testWhoImplementsCallForNull
@@ -1729,9 +1695,8 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
 
-    AJNAboutData *aboutData = [self createNewAboutData];
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:aboutData];
+    status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
 
     // Client
@@ -1754,8 +1719,6 @@ static const uint8_t ICON_BYTE = 0x11;
     [client.bus unregisterBusListener:self];
     [client.bus unregisterAllAboutListeners];
     [client tearDown];
-
-    aboutData = nil;
 }
 
 - (void)testCancelWhoImplementsMismatch
@@ -1774,7 +1737,7 @@ static const uint8_t ICON_BYTE = 0x11;
     status = [client.bus cancelWhoImplementsInterface:@"org.alljoyn.bus.sample.strings.mismatch"];
     XCTAssertTrue(status == ER_BUS_MATCH_RULE_NOT_FOUND, @"Test for mismatched CancelWhoImplements Failed");
 
-    [client.bus disconnectWithArguments:@"null:"];
+    [client.bus disconnect];
     [client.bus stop];
 
     [client.bus unregisterBusListener:self];
@@ -1858,218 +1821,92 @@ static const uint8_t ICON_BYTE = 0x11;
 
 #pragma mark - AJNAboutDataListener delegate methods
 
-- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary **)aboutData
+- (QStatus)getAboutData:(AJNMessageArgument *__autoreleasing *)msgArg withLanguage:(NSString *)language
 {
-    NSLog(@"Inside getAboutDataForLanguage");
-    QStatus status = ER_OK;
-    *aboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-    gDefaultAboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-
-    AJNMessageArgument *appID = [[AJNMessageArgument alloc] init];
+    AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    [appID setValue:@"ay", sizeof(originalAppId) / sizeof(originalAppId[0]), originalAppId];
-    [appID stabilize];
-    [*aboutData setValue:appID forKey:@"AppId"];
-    [gDefaultAboutData setValue:appID forKey:@"AppId"];
-
-    AJNMessageArgument *defaultLang = [[AJNMessageArgument alloc] init];
-    [defaultLang setValue:@"s", "en"];
-    [defaultLang stabilize];
-    [*aboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-    [gDefaultAboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-
-    AJNMessageArgument *deviceName = [[AJNMessageArgument alloc] init];
+    [aboutData setAppId:originalAppId];
+    
+    [aboutData setDefaultLanguage:@"en"];
+    
     if (self.testBadAnnounceData == YES) {
-        [deviceName setValue:@"s", "foo"];
+        [aboutData setDeviceName:@"foo" andLanguage:@"en"];
     } else {
-        [deviceName setValue:@"s", "Device Name"];
+        [aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
     }
-    [deviceName stabilize];
-    [*aboutData setValue:deviceName forKey:@"DeviceName"];
-    [gDefaultAboutData setValue:deviceName forKey:@"DeviceName"];
-
-    AJNMessageArgument *deviceId = [[AJNMessageArgument alloc] init];
+    
     if (self.testMissingAboutDataField == YES) {
-        [deviceId setValue:@"s", ""];
+        [aboutData setDeviceId:@""];
     } else {
-        [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
+        [aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
     }
-
-    [deviceId stabilize];
-    [*aboutData setValue:deviceId forKey:@"DeviceId"];
-    [gDefaultAboutData setValue:deviceId forKey:@"DeviceId"];
-
-    AJNMessageArgument *appName = [[AJNMessageArgument alloc] init];
+    
     if (self.testMissingAnnounceDataField == YES) {
-        [appName setValue:@"s", ""];
+        [aboutData setAppName:@"" andLanguage:@"en"];
     } else {
-        [appName setValue:@"s", "App Name"];
+        [aboutData setAppName:@"App Name" andLanguage:@"en"];
     }
-
-    [appName stabilize];
-    [*aboutData setValue:appName forKey:@"AppName"];
-    [gDefaultAboutData setValue:appName forKey:@"AppName"];
-
-    AJNMessageArgument *manufacturer = [[AJNMessageArgument alloc] init];
-    [manufacturer setValue:@"s", "Manufacturer"];
-    [manufacturer stabilize];
-    [*aboutData setValue:manufacturer forKey:@"Manufacturer"];
-    [gDefaultAboutData setValue:manufacturer forKey:@"Manufacturer"];
-
-    AJNMessageArgument *modelNo = [[AJNMessageArgument alloc] init];
-    [modelNo setValue:@"s", "ModelNo"];
-    [modelNo stabilize];
-    [*aboutData setValue:modelNo forKey:@"ModelNumber"];
-    [gDefaultAboutData setValue:modelNo forKey:@"ModelNumber"];
-
-    AJNMessageArgument *supportedLang = [[AJNMessageArgument alloc] init];
-    const char *supportedLangs[] = {"en", "foo"};
-    [supportedLang setValue:@"as", 1, supportedLangs];
-    [supportedLang stabilize];
-    [*aboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-    [gDefaultAboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-
-    AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
+    
+    [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
+    
+    [aboutData setModelNumber:@"ModelNo"];
+    
+    [aboutData setSupportedLanguage:@"en"];
+    [aboutData setSupportedLanguage:@"foo"];
+    
     if (self.testNonDefaultUTFLanguage == YES) {
-        [description setValue:@"s", "Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método"];
+        [aboutData setDescription:@"Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método" andLanguage:@"foo"];
     } else {
-        [description setValue:@"s", "Description"];
+        [aboutData setDescription:@"Description" andLanguage:@"en"];
     }
-    [description stabilize];
-    [*aboutData setValue:description forKey:@"Description"];
-    [gDefaultAboutData setValue:description forKey:@"Description"];
-
-    AJNMessageArgument *dateOfManufacture = [[AJNMessageArgument alloc] init];
-    [dateOfManufacture setValue:@"s", "1-1-2014"];
-    [dateOfManufacture stabilize];
-    [*aboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-    [gDefaultAboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-
-    AJNMessageArgument *softwareVersion = [[AJNMessageArgument alloc] init];
-    [softwareVersion setValue:@"s", "1.0"];
-    [softwareVersion stabilize];
-    [*aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-    [gDefaultAboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-
-    AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "00.00.01"];
-    [ajSoftwareVersion stabilize];
-    [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-    [gDefaultAboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-
-    AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "00.00.01"];
-    [hwSoftwareVersion stabilize];
-    [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-    [gDefaultAboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-
-    AJNMessageArgument *supportURL = [[AJNMessageArgument alloc] init];
-    [supportURL setValue:@"s", "some.random.url"];
-    [supportURL stabilize];
-    [*aboutData setValue:supportURL forKey:@"SupportUrl"];
-    [gDefaultAboutData setValue:supportURL forKey:@"SupportUrl"];
-
-    return status;
+    
+    [aboutData setDateOfManufacture:@"1-1-2014"];
+    
+    [aboutData setSoftwareVersion:@"1.0"];
+    
+    [aboutData setHardwareVersion:@"00.00.01"];
+    
+    [aboutData setSupportUrl:@"some.random.url"];
+        
+    return [aboutData getAboutData:msgArg withLanguage:language];
 }
 
--(QStatus)getDefaultAnnounceData:(NSMutableDictionary **)aboutData
+- (QStatus)getAnnouncedAboutData:(AJNMessageArgument *__autoreleasing *)msgArg
 {
-    NSLog(@"Inside getDefaultAnnounceData");
-    QStatus status = ER_OK;
-    *aboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-    gDefaultAboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
-
-    AJNMessageArgument *appID = [[AJNMessageArgument alloc] init];
+    AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-    [appID setValue:@"ay", sizeof(originalAppId) / sizeof(originalAppId[0]), originalAppId];
-    [appID stabilize];
-    [*aboutData setValue:appID forKey:@"AppId"];
-    [gDefaultAboutData setValue:appID forKey:@"AppId"];
-
-    AJNMessageArgument *defaultLang = [[AJNMessageArgument alloc] init];
-    [defaultLang setValue:@"s", "en"];
-    [defaultLang stabilize];
-    [*aboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-    [gDefaultAboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-
-    AJNMessageArgument *deviceName = [[AJNMessageArgument alloc] init];
-    [deviceName setValue:@"s", "Device Name"];
-    [deviceName stabilize];
-    [*aboutData setValue:deviceName forKey:@"DeviceName"];
-    [gDefaultAboutData setValue:deviceName forKey:@"DeviceName"];
-
-    AJNMessageArgument *deviceId = [[AJNMessageArgument alloc] init];
-    [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
-    [deviceId stabilize];
-    [*aboutData setValue:deviceId forKey:@"DeviceId"];
-    [gDefaultAboutData setValue:deviceId forKey:@"DeviceId"];
-
-    AJNMessageArgument *appName = [[AJNMessageArgument alloc] init];
-    [appName setValue:@"s", "App Name"];
-    [appName stabilize];
-    [*aboutData setValue:appName forKey:@"AppName"];
-    [gDefaultAboutData setValue:appName forKey:@"AppName"];
-
-    AJNMessageArgument *manufacturer = [[AJNMessageArgument alloc] init];
-    [manufacturer setValue:@"s", "Manufacturer"];
-    [manufacturer stabilize];
-    [*aboutData setValue:manufacturer forKey:@"Manufacturer"];
-    [gDefaultAboutData setValue:manufacturer forKey:@"Manufacturer"];
-
-    AJNMessageArgument *modelNo = [[AJNMessageArgument alloc] init];
-    [modelNo setValue:@"s", "ModelNo"];
-    [modelNo stabilize];
-    [*aboutData setValue:modelNo forKey:@"ModelNumber"];
-    [gDefaultAboutData setValue:modelNo forKey:@"ModelNumber"];
-
-    AJNMessageArgument *supportedLang = [[AJNMessageArgument alloc] init];
-    const char *supportedLangs[] = {"en"};
-    [supportedLang setValue:@"as", 1, supportedLangs];
-    [supportedLang stabilize];
-    [*aboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-    [gDefaultAboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-
-    AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
+    [aboutData setAppId:originalAppId];
+    
+    [aboutData setDefaultLanguage:@"en"];
+    
+    [aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
+    
+    [aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
+    
+    [aboutData setAppName:@"App Name" andLanguage:@"en"];
+    
+    [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
+    
+    [aboutData setModelNumber:@"ModelNo"];
+    
+    [aboutData setSupportedLanguage:@"en"];
+    [aboutData setSupportedLanguage:@"foo"];
+    
     if (self.testNonDefaultUTFLanguage == YES) {
-        [description setValue:@"s", "Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método"];
+        [aboutData setDescription:@"Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método" andLanguage:@"foo"];
     } else {
-        [description setValue:@"s", "Description"];
+        [aboutData setDescription:@"Description" andLanguage:@"en"];
     }
-    [description stabilize];
-    [*aboutData setValue:description forKey:@"Description"];
-    [gDefaultAboutData setValue:description forKey:@"Description"];
-
-    AJNMessageArgument *dateOfManufacture = [[AJNMessageArgument alloc] init];
-    [dateOfManufacture setValue:@"s", "1-1-2014"];
-    [dateOfManufacture stabilize];
-    [*aboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-    [gDefaultAboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-
-    AJNMessageArgument *softwareVersion = [[AJNMessageArgument alloc] init];
-    [softwareVersion setValue:@"s", "1.0"];
-    [softwareVersion stabilize];
-    [*aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-    [gDefaultAboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-
-    AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [ajSoftwareVersion setValue:@"s", "00.00.01"];
-    [ajSoftwareVersion stabilize];
-    [*aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-    [gDefaultAboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-
-    AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-    [hwSoftwareVersion setValue:@"s", "00.00.01"];
-    [hwSoftwareVersion stabilize];
-    [*aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-    [gDefaultAboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-
-    AJNMessageArgument *supportURL = [[AJNMessageArgument alloc] init];
-    [supportURL setValue:@"s", "some.random.url"];
-    [supportURL stabilize];
-    [*aboutData setValue:supportURL forKey:@"SupportUrl"];
-    [gDefaultAboutData setValue:supportURL forKey:@"SupportUrl"];
-
-    return status;
+    
+    [aboutData setDateOfManufacture:@"1-1-2014"];
+    
+    [aboutData setSoftwareVersion:@"1.0"];
+    
+    [aboutData setHardwareVersion:@"00.00.01"];
+    
+    [aboutData setSupportUrl:@"some.random.url"];
+    
+    return [aboutData getAnnouncedAboutData:msgArg];
 }
 
 #pragma mark - Asynchronous test case support
@@ -2183,7 +2020,7 @@ static const uint8_t ICON_BYTE = 0x11;
 
 #pragma mark - AJNSessionListener methods
 
-- (void)sessionWasLost:(AJNSessionId)sessionId
+- (void)sessionWasLost:(AJNSessionId)sessionId forReason:(AJNSessionLostReason)reason
 {
     NSLog(@"AJNBusListener::sessionWasLost %u", sessionId);
     if (self.testSessionId == sessionId) {

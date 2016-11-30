@@ -1,29 +1,64 @@
 #!/bin/sh
-# Copyright AllSeen Alliance. All rights reserved.
+# Copyright (c) Open Connectivity Foundation (OCF) and AllJoyn Open
+#    Source Project (AJOSP) Contributors and others.
 #
-#    Permission to use, copy, modify, and/or distribute this software for any
-#    purpose with or without fee is hereby granted, provided that the above
-#    copyright notice and this permission notice appear in all copies.
+#    SPDX-License-Identifier: Apache-2.0
 #
-#    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-#    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-#    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-#    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-#    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-#    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-#    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+#    All rights reserved. This program and the accompanying materials are
+#    made available under the terms of the Apache License, Version 2.0
+#    which accompanies this distribution, and is available at
+#    http://www.apache.org/licenses/LICENSE-2.0
 #
-
-cd ..
-SDKROOT_MACOS=`xcodebuild -version -sdk macosx Path`
-CPU_NUM=`sysctl -n hw.ncpu`
-
-echo "Building AllJoyn Core for macOS"
-echo "SDKROOT_MACOS: $SDKROOT_MACOS"
-echo "CPU_NUM: $CPU_NUM"
+#    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
+#    Alliance. All rights reserved.
+#
+#    Permission to use, copy, modify, and/or distribute this software for
+#    any purpose with or without fee is hereby granted, provided that the
+#    above copyright notice and this permission notice appear in all
+#    copies.
+#
+#     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+#     WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+#     WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+#     AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+#     DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+#     PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+#     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+#     PERFORMANCE OF THIS SOFTWARE.
+#
 
 set -e
 
-export PLATFORM_NAME=macosx
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=debug SDKROOT=$SDKROOT_MACOS
-scons -u --jobs $CPU_NUM OS=darwin CPU=x86_64 CRYPTO=builtin BR=on BINDINGS="cpp" WS=off VARIANT=release SDKROOT=$SDKROOT_MACOS
+./build_core_macos.sh
+
+BASE_DIR=../build/darwin
+BUILD_DIR="${BASE_DIR}/AllJoynFramework"
+
+echo "Building AllJoynFramework for macOS..."
+
+xcodebuild -project AllJoynFramework/AllJoynFramework.xcodeproj -target AllJoynFramework_macOS  ONLY_ACTIVE_ARCH=NO -configuration Debug -sdk macosx  BUILD_DIR="../${BUILD_DIR}" SYMROOT="../${BUILD_DIR}/obj"
+xcodebuild -project AllJoynFramework/AllJoynFramework.xcodeproj -target AllJoynFramework_macOS  ONLY_ACTIVE_ARCH=NO -configuration Release -sdk macosx  BUILD_DIR="../${BUILD_DIR}" SYMROOT="../${BUILD_DIR}/obj"
+
+echo "Copying Headers..."
+
+cp -R "${BUILD_DIR}/Release/include" "${BUILD_DIR}"
+cp -R "${BASE_DIR}/x86_64/release/dist/cpp/inc/alljoyn" "${BUILD_DIR}/include/alljoyn"
+cp -R "${BASE_DIR}/x86_64/release/dist/cpp/inc/qcc" "${BUILD_DIR}/include/qcc"
+
+rm -R "${BUILD_DIR}/obj"
+rm -R "${BUILD_DIR}/Release/include"
+rm -R "${BUILD_DIR}/Debug/include"
+
+echo "Copying Core Libs..."
+
+copy_core_lib() {
+    cp "${BASE_DIR}/x86_64/release/dist/cpp/lib/$1" "${BUILD_DIR}/Release/$1"
+    cp "${BASE_DIR}/x86_64/debug/dist/cpp/lib/$1" "${BUILD_DIR}/Debug/$1"
+}
+
+copy_core_lib libajrouter.a
+copy_core_lib liballjoyn_about.a
+copy_core_lib liballjoyn_config.a
+copy_core_lib liballjoyn.a
+
+rm -R "${BASE_DIR}/x86_64"

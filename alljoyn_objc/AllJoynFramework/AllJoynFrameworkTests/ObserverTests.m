@@ -1,17 +1,30 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright AllSeen Alliance. All rights reserved.
+// Copyright (c) Open Connectivity Foundation (OCF) and AllJoyn Open
+//    Source Project (AJOSP) Contributors and others.
 //
-//    Permission to use, copy, modify, and/or distribute this software for any
-//    purpose with or without fee is hereby granted, provided that the above
-//    copyright notice and this permission notice appear in all copies.
+//    SPDX-License-Identifier: Apache-2.0
 //
-//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//    All rights reserved. This program and the accompanying materials are
+//    made available under the terms of the Apache License, Version 2.0
+//    which accompanies this distribution, and is available at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
+//    Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for
+//    any purpose with or without fee is hereby granted, provided that the
+//    above copyright notice and this permission notice appear in all
+//    copies.
+//
+//     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+//     WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+//     WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+//     AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+//     DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+//     PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+//     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+//     PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "ObserverTests.h"
@@ -22,6 +35,7 @@
 #import "AJNAboutObject.h"
 #import "AJNInit.h"
 #import <sys/time.h>
+#import "AJNAboutData.h"
 
 static NSString * const kObserverTestsAdvertisedName = @"org.alljoyn.observer.tests.AReallyNiftyNameThatNoOneWillUse";
 static NSString * const kObserverTestsInterfaceNameA = @"org.test.a";
@@ -71,12 +85,12 @@ static NSString * const kPathPrefix = @"/test/";
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-@interface Participant : NSObject <AJNSessionListener, AJNSessionPortListener, AJNAboutDataListener>
+@interface Participant : NSObject <AJNSessionListener, AJNSessionPortListener>
 
 @property (nonatomic, strong) AJNBusAttachment *bus;
 @property (nonatomic, strong) AJNAboutObject *aboutObj;
+@property (nonatomic, strong) AJNAboutData *aboutData;
 @property (nonatomic, strong) NSString *uniqueBusName;
-@property (nonatomic, strong) NSMutableDictionary *aboutData;
 @property (nonatomic, strong) NSMutableDictionary *ObjectMap;
 @property (nonatomic, strong) NSMutableDictionary *hostedSessionMap;
 @property (nonatomic, strong) NSLock* hostedSessionMapLock;
@@ -97,7 +111,6 @@ static NSString * const kPathPrefix = @"/test/";
 {
     self = [super init];
     if (self){
-        self.aboutData = [[NSMutableDictionary alloc] initWithCapacity:16];
         self.ObjectMap = [[NSMutableDictionary alloc] init];
         self.hostedSessionMap = [[NSMutableDictionary alloc] init];
         self.hostedSessionMapLock = [[NSLock alloc]init];
@@ -156,83 +169,39 @@ static NSString * const kPathPrefix = @"/test/";
         //--------------------------
         // Create About data
         //--------------------------
-        AJNMessageArgument *appID = [[AJNMessageArgument alloc] init];
+        self.aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
         uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
-        [appID setValue:@"ay", sizeof(originalAppId) / sizeof(originalAppId[0]), originalAppId];
-        [appID stabilize];
-        [self.aboutData setValue:appID forKey:@"AppId"];
-
-        AJNMessageArgument *defaultLang = [[AJNMessageArgument alloc] init];
-        [defaultLang setValue:@"s", "en"];
-        [defaultLang stabilize];
-        [self.aboutData setValue:defaultLang forKey:@"DefaultLanguage"];
-
-        AJNMessageArgument *deviceName = [[AJNMessageArgument alloc] init];
-        [deviceName setValue:@"s", "Device Name"];
-        [deviceName stabilize];
-        [self.aboutData setValue:deviceName forKey:@"DeviceName"];
-
-        AJNMessageArgument *deviceId = [[AJNMessageArgument alloc] init];
-        [deviceId setValue:@"s", "avec-awe1213-1234559xvc123"];
-        [deviceId stabilize];
-        [self.aboutData setValue:deviceId forKey:@"DeviceId"];
-
-        AJNMessageArgument *appName = [[AJNMessageArgument alloc] init];
-        [appName setValue:@"s", "App Name"];
-        [appName stabilize];
-        [self.aboutData setValue:appName forKey:@"AppName"];
-
-        AJNMessageArgument *manufacturer = [[AJNMessageArgument alloc] init];
-        [manufacturer setValue:@"s", "Manufacturer"];
-        [manufacturer stabilize];
-        [self.aboutData setValue:manufacturer forKey:@"Manufacturer"];
-
-        AJNMessageArgument *modelNo = [[AJNMessageArgument alloc] init];
-        [modelNo setValue:@"s", "ModelNo"];
-        [modelNo stabilize];
-        [self.aboutData setValue:modelNo forKey:@"ModelNumber"];
-
-        AJNMessageArgument *supportedLang = [[AJNMessageArgument alloc] init];
-        const char *supportedLangs[] = {"en"};
-        [supportedLang setValue:@"as", 1, supportedLangs];
-        [supportedLang stabilize];
-        [self.aboutData setValue:supportedLang forKey:@"SupportedLanguages"];
-
-        AJNMessageArgument *description = [[AJNMessageArgument alloc] init];
-        [description setValue:@"s", "Description"];
-        [description stabilize];
-        [self.aboutData setValue:description forKey:@"Description"];
-
-        AJNMessageArgument *dateOfManufacture = [[AJNMessageArgument alloc] init];
-        [dateOfManufacture setValue:@"s", "1-1-2014"];
-        [dateOfManufacture stabilize];
-        [self.aboutData setValue:dateOfManufacture forKey:@"DateOfManufacture"];
-
-        AJNMessageArgument *softwareVersion = [[AJNMessageArgument alloc] init];
-        [softwareVersion setValue:@"s", "1.0"];
-        [softwareVersion stabilize];
-        [self.aboutData setValue:softwareVersion forKey:@"SoftwareVersion"];
-
-        AJNMessageArgument *ajSoftwareVersion = [[AJNMessageArgument alloc] init];
-        [ajSoftwareVersion setValue:@"s", "00.00.01"];
-        [ajSoftwareVersion stabilize];
-        [self.aboutData setValue:ajSoftwareVersion forKey:@"AJSoftwareVersion"];
-
-        AJNMessageArgument *hwSoftwareVersion = [[AJNMessageArgument alloc] init];
-        [hwSoftwareVersion setValue:@"s", "00.00.01"];
-        [hwSoftwareVersion stabilize];
-        [self.aboutData setValue:hwSoftwareVersion forKey:@"HardwareVersion"];
-
-        AJNMessageArgument *supportURL = [[AJNMessageArgument alloc] init];
-        [supportURL setValue:@"s", "some.random.url"];
-        [supportURL stabilize];
-        [self.aboutData setValue:supportURL forKey:@"SupportUrl"];
+        [self.aboutData setAppId:originalAppId];
+        
+        [self.aboutData setDefaultLanguage:@"en"];
+        
+        [self.aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
+        
+        [self.aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
+        
+        [self.aboutData setAppName:@"App Name" andLanguage:@"en"];
+        
+        [self.aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
+        
+        [self.aboutData setModelNumber:@"ModelNo"];
+        
+        [self.aboutData setSupportedLanguage:@"en"];
+        
+        [self.aboutData setDescription:@"Description" andLanguage:@"en"];
+        
+        [self.aboutData setDateOfManufacture:@"1-1-2014"];
+        
+        [self.aboutData setSoftwareVersion:@"1.0"];
+        
+        [self.aboutData setHardwareVersion:@"00.00.01"];
+        
+        [self.aboutData setSupportUrl:@"some.random.url"];
 
         //--------------------------
         // Create & Announce About data
         //--------------------------
         self.aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
-        [self.aboutObj announceForSessionPort:kObserverTestsServicePort withAboutDataListener:self];
+        [self.aboutObj announceForSessionPort:kObserverTestsServicePort withAboutDataListener:self.aboutData];
     }
     return self;
 }
@@ -252,7 +221,7 @@ static NSString * const kPathPrefix = @"/test/";
         [self.bus deleteInterface:[self.bus interfaceWithName:kObserverTestsInterfaceNameB]];
     }
 
-    QStatus status = [self.bus disconnectWithArguments:@"null:"];
+    QStatus status = [self.bus disconnect];
     NSAssert(status == ER_OK, @"Failed to disconnect from bus via null transport.");
     status = [self.bus stop];
     NSAssert(status == ER_OK, @"Bus failed to stop.");
@@ -289,7 +258,7 @@ static NSString * const kPathPrefix = @"/test/";
     QStatus status = [self.bus registerBusObject:objState.obj];
     NSAssert(status == ER_OK, @"Failed to register object %@ on bus.", name);
     objState.registered = YES;
-    [self.aboutObj announceForSessionPort:kObserverTestsServicePort withAboutDataListener:self];
+    [self.aboutObj announceForSessionPort:kObserverTestsServicePort withAboutDataListener:self.aboutData];
 }
 
 -(void)unregisterObjectWithName:(NSString *)name
@@ -299,7 +268,7 @@ static NSString * const kPathPrefix = @"/test/";
     NSAssert(objState.registered, @"%@: Object not on bus.", name);
     [self.bus unregisterBusObject:objState.obj];
     objState.registered = NO;
-    [self.aboutObj announceForSessionPort:kObserverTestsServicePort withAboutDataListener:self];
+    [self.aboutObj announceForSessionPort:kObserverTestsServicePort withAboutDataListener:self.aboutData];
 }
 
 -(void)closeSessionForParticipant:(Participant *)joiner
@@ -365,20 +334,6 @@ static NSString * const kPathPrefix = @"/test/";
     [self.hostedSessionMap setObject:[NSNumber numberWithUnsignedInt:sessionId] forKey:joiner];
     [self.bus setHostedSessionListener:self toSession:sessionId];
     [self.hostedSessionMapLock unlock];
-}
-
-#pragma mark - AJNAboutDataListener protocol
-
-- (QStatus)getAboutDataForLanguage:(NSString *)language usingDictionary:(NSMutableDictionary **)aboutData
-{
-    // re-use the defaults
-    return [self getDefaultAnnounceData:aboutData];
-}
-
--(QStatus)getDefaultAnnounceData:(NSMutableDictionary **)aboutData
-{
-    *aboutData = self.aboutData;
-    return ER_OK;
 }
 
 @end
@@ -523,7 +478,7 @@ typedef BOOL (^verifyObjects)();
     // Tear-down code here. Executed after each test case is run.
     //
     [super tearDown];
-
+    
     // Wait 500ms to let object cleanup stabalize
     struct timeval time;
     gettimeofday(&time, NULL);

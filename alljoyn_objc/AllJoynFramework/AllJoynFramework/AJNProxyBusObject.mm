@@ -1,17 +1,30 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright AllSeen Alliance. All rights reserved.
+// Copyright (c) Open Connectivity Foundation (OCF) and AllJoyn Open
+//    Source Project (AJOSP) Contributors and others.
 //
-//    Permission to use, copy, modify, and/or distribute this software for any
-//    purpose with or without fee is hereby granted, provided that the above
-//    copyright notice and this permission notice appear in all copies.
+//    SPDX-License-Identifier: Apache-2.0
 //
-//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//    All rights reserved. This program and the accompanying materials are
+//    made available under the terms of the Apache License, Version 2.0
+//    which accompanies this distribution, and is available at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
+//    Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for
+//    any purpose with or without fee is hereby granted, provided that the
+//    above copyright notice and this permission notice appear in all
+//    copies.
+//
+//     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+//     WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+//     WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+//     AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+//     DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+//     PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+//     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+//     PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <alljoyn/BusAttachment.h>
@@ -89,8 +102,8 @@ public:
      * Callback registered with GetPropertyAsync()
      *
      * @param status    - ER_OK if the property get request was successfull or:
-     *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
-     *                  - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     *                  - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *                  - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      *                  - Other error status codes indicating the reason the get request failed.
      * @param obj       Remote bus object that was introspected
      * @param value     If status is ER_OK a MsgArg containing the returned property value
@@ -112,8 +125,8 @@ public:
     * Callback registered with GetPropertyAsync()
     *
     * @param status            - ER_OK if the property get request was successful or:
-    *                          - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
-    *                          - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+    *                          - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+    *                          - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
     *                          - Other error status codes indicating the reason the get request failed
     * @param obj               Remote bus object that was introspected
     * @param value             If status is ER_OK a MsgArg containing the returned property value
@@ -123,10 +136,15 @@ public:
     */
     void GetPropertyAsyncCallback(QStatus status, ProxyBusObject* obj, const MsgArg& value, const qcc::String& errorName, const qcc::String& errorDescription, void* context)
     {
-        if ([m_delegate respondsToSelector:@selector(didReceiveValueForPropertyAndErrors:ofObject:completionStatus:context:)]) {
+        if ([m_delegate respondsToSelector:@selector(didReceiveValueAndErrorsForProperty:ofObject:completionStatus:context:withErrorName:withErrorDescription:)]) {
             __block id<AJNProxyBusObjectDelegate> theDelegate = m_delegate;
             dispatch_async(dispatch_get_main_queue(), ^{
-                [theDelegate didReceiveValueAndErrorsForProperty:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&value] ofObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj] completionStatus:status context:context withErrorName:[NSString stringWithCString:errorName.c_str() encoding:NSUTF8StringEncoding] withErrorDescription:[NSString stringWithCString:errorDescription.c_str() encoding:NSUTF8StringEncoding] ];
+                [theDelegate didReceiveValueAndErrorsForProperty:[[AJNMessageArgument alloc] initWithHandle:(AJNHandle)&value]
+                                                        ofObject:[[AJNProxyBusObject alloc] initWithHandle:(AJNHandle)obj]
+                                                completionStatus:status
+                                                         context:context
+                                                   withErrorName:[NSString stringWithCString:errorName.c_str() encoding:NSUTF8StringEncoding]
+                                            withErrorDescription:[NSString stringWithCString:errorDescription.c_str() encoding:NSUTF8StringEncoding] ];
             });
         }
     }
@@ -134,8 +152,8 @@ public:
     /**
      * Callback registered with GetAllPropertiesAsync()
      *
-     * @param status      - ER_OK if the get all properties request was successfull or:
-     *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     * @param status    - ER_OK if the get all properties request was successfull or:
+     *                  - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
      *                  - Other error status codes indicating the reason the get request failed.
      * @param obj         Remote bus object that was introspected
      * @param[out] values If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties.
@@ -156,7 +174,7 @@ public:
      * Callback registered with GetAllPropertiesAsync()
      *
      * @param status           - ER_OK if the get all properties request was successful or:
-     *                         - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
+     *                         - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interface does not exist on the remote object
      *                         - Other error status codes indicating the reason the get request failed
      * @param obj              Remote bus object that was introspected
      * @param[out] values      If status is ER_OK an array of dictionary entries, signature "a{sv}" listing the properties
@@ -179,8 +197,8 @@ public:
      * Callback registered with SetPropertyAsync()
      *
      * @param status    - ER_OK if the property was successfully set or:
-     *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
-     *                  - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     *                  - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *                  - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      *                  - Other error status codes indicating the reason the set request failed.
      * @param obj       Remote bus object that was introspected
      * @param context   Caller provided context passed in to SetPropertyAsync()
@@ -200,8 +218,8 @@ public:
      * Callback registered with SetPropertyAsync()
      *
      * @param status    - ER_OK if the property was successfully set or:
-     *                  - #ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
-     *                  - #ER_BUS_NO_SUCH_PROPERTY if the property does not exist
+     *                  - ER_BUS_OBJECT_NO_SUCH_INTERFACE if the specified interfaces does not exist on the remote object.
+     *                  - ER_BUS_NO_SUCH_PROPERTY if the property does not exist
      *                  - Other error status codes indicating the reason the set request failed.
      * @param obj       Remote bus object that was introspected
      * @param errorName        Error name
@@ -417,7 +435,8 @@ using namespace ajn;
 
 - (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)arguments methodReply:(AJNMessage**)reply
 {
-    return [self callMethod:method withArguments:arguments methodReply:reply timeout:ajn::ProxyBusObject::DefaultCallTimeout flags:0 msg:nil];
+    AJNMessage *msg;
+    return [self callMethod:method withArguments:arguments methodReply:reply timeout:ajn::ProxyBusObject::DefaultCallTimeout flags:0 msg:&msg];
 }
 
 - (QStatus)callMethod:(AJNInterfaceMember*)method withArguments:(NSArray*)arguments methodReply:(AJNMessage**)reply timeout:(uint32_t)timeout flags:(uint8_t)flags msg:(AJNMessage**)callMsg

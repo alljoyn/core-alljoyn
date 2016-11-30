@@ -1,17 +1,30 @@
 ////////////////////////////////////////////////////////////////////////////////
-// Copyright AllSeen Alliance. All rights reserved.
+// Copyright (c) Open Connectivity Foundation (OCF) and AllJoyn Open
+//    Source Project (AJOSP) Contributors and others.
 //
-//    Permission to use, copy, modify, and/or distribute this software for any
-//    purpose with or without fee is hereby granted, provided that the above
-//    copyright notice and this permission notice appear in all copies.
+//    SPDX-License-Identifier: Apache-2.0
 //
-//    THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-//    WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-//    MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-//    ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-//    WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-//    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-//    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+//    All rights reserved. This program and the accompanying materials are
+//    made available under the terms of the Apache License, Version 2.0
+//    which accompanies this distribution, and is available at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//
+//    Copyright (c) Open Connectivity Foundation and Contributors to AllSeen
+//    Alliance. All rights reserved.
+//
+//    Permission to use, copy, modify, and/or distribute this software for
+//    any purpose with or without fee is hereby granted, provided that the
+//    above copyright notice and this permission notice appear in all
+//    copies.
+//
+//     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL
+//     WARRANTIES WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED
+//     WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+//     AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL
+//     DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR
+//     PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR OTHER
+//     TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+//     PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////
 //
@@ -285,55 +298,51 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
     AJNInterfaceDescription *interfaceDescription;
 
 
-        //
-        // EventsActionsObjectDelegate interface (org.alljoyn.bus.sample)
-        //
-        // create an interface description, or if that fails, get the interface as it was already created
-        //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
+    //
+    // EventsActionsObjectDelegate interface (org.alljoyn.bus.sample)
+    //
+    // create an interface description, or if that fails, get the interface as it was already created
+    //
+    interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
+    [interfaceDescription setDescriptionForLanguage:@"This is the interface" forLanguage:@""];
 
-        [interfaceDescription setDescriptionLanguage:@""];
-        [interfaceDescription setDescription:@"This is the interface"];
+    // add the properties to the interface description
+    //
 
-        // add the properties to the interface description
-        //
+    status = [interfaceDescription addPropertyWithName:@"TestProperty" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
 
-        status = [interfaceDescription addPropertyWithName:@"TestProperty" signature:@"s" accessPermissions:kAJNInterfacePropertyAccessReadWriteFlag];
+    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
+        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  TestProperty" userInfo:nil];
+    }
 
-        if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
-            @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add property to interface:  TestProperty" userInfo:nil];
-        }
+    [interfaceDescription setPropertyDescriptionForLanguage:@"TestProperty" withDescription:@"This is property description" withLanguage:@""];
 
-        [interfaceDescription setPropertyDescription:@"This is property description" forPropertyWithName:@"TestProperty"];
+    // add the methods to the interface description
+    //
 
-        // add the methods to the interface description
-        //
+    status = [interfaceDescription addMethodWithName:@"TestAction" inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1",@"str2",@"outStr", nil]];
 
-        status = [interfaceDescription addMethodWithName:@"TestAction" inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1",@"str2",@"outStr", nil]];
+    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
+        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: TestAction" userInfo:nil];
+    }
 
-        if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
-            @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: TestAction" userInfo:nil];
-        }
+    [interfaceDescription setMemberDescriptionForLanguage:@"TestAction" withDescription:@"This is the test action" forLanguage:@""];
 
-        [interfaceDescription setMemberDescription:@"This is the test action" forMemberWithName:@"TestAction" sessionlessSignal:FALSE];
+    // add the signals to the interface description
+    //
 
-        // add the signals to the interface description
-        //
+    status = [interfaceDescription addSignalWithName:@"TestEvent" inputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"outStr", nil] annotation:8 accessPermissions:nil];
+    //TODO replace annotation:8 by annotation:kAJNInterfaceAnnotationSessionlessFlag after fixing ASACORE-3498 (AJNInterfaceAnnotationFlags doesn't contains all supported Annotation flags)
+    //TODO check accessPermissions flags. Seems accessPermissions must take AJNInterfaceAnnotationFlags but cpp part take char * or 
 
-        status = [interfaceDescription addSignalWithName:@"TestEvent" inputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"outStr", nil]];
-
-        if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
-            @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestEvent" userInfo:nil];
-        }
-
-        [interfaceDescription setMemberDescription:@"This is the test event" forMemberWithName:@"TestEvent" sessionlessSignal:TRUE];
-
-
-
-
-
-        [interfaceDescription activate];
+    if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
+        @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestEvent" userInfo:nil];
+    }
+    
+    [interfaceDescription setMemberDescriptionForLanguage:@"TestEvent" withDescription:@"This is the test event" forLanguage:@""];
+    
+    [interfaceDescription activate];
 
 
     self.bus = busAttachment;
@@ -623,4 +632,3 @@ void EventsActionsObjectDelegateSignalHandlerImpl::TestEventSignalHandler(const 
 @end
 
 ////////////////////////////////////////////////////////////////////////////////
-
