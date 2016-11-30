@@ -368,7 +368,7 @@ class PermissionConfigurator {
      * Retrieve the local app's identity certificate information.
      *
      * @param[out] serial Identity certificate's serial
-     * @param[out] keyInfo Identity certificate's KeyInfoNISTP256 structure
+     * @param[out] issuerKeyInfo Identity certificate's KeyInfoNISTP256 structure
      *
      * @return
      *    - #ER_OK if the identity certificate information is placed in the parameters
