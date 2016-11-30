@@ -638,7 +638,6 @@ bool SecurityApplicationProxyPreProxyTest::s_factoryResetHappened;
 bool SecurityApplicationProxyPreProxyTest::s_startManagementHappened;
 bool SecurityApplicationProxyPreProxyTest::s_endManagementHappened;
 
-
 TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenCreatingWithNonExistingRemoteApp)
 {
     m_securityManagerSecurityApplicationProxy = alljoyn_securityapplicationproxy_create(m_securityManager, INVALID_BUS_NAME, m_securityManagerSessionId);
@@ -788,6 +787,15 @@ TEST_F(SecurityApplicationProxyPreProxyTest, shouldPassWhenSettingManifestSignat
                                                                            signatureBytes,
                                                                            sizeof(signatureBytes),
                                                                            &m_signedManifestXml));
+}
+
+TEST_F(SecurityApplicationProxySelfClaimTest, shouldPassGetManufacturerCertificate)
+{
+    AJ_PSTR manufacturerCert;
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmanufacturercerticate(m_securityManagerSecurityApplicationProxy, &manufacturerCert));
+    //there is no Manufacturer Certificate installed now
+    EXPECT_STREQ("", manufacturerCert);
+    alljoyn_securityapplicationproxy_certificatechain_destroy(manufacturerCert);
 }
 
 TEST_F(SecurityApplicationProxySelfClaimTest, shouldReturnErrorWhenClaimingWithInvalidProxy)
@@ -1079,6 +1087,33 @@ TEST_F(SecurityApplicationProxyPreClaimTest, shouldReturnErrorWhenInstallingSame
     EXPECT_EQ(ER_DUPLICATE_CERTIFICATE, alljoyn_securityapplicationproxy_installmembership(m_securityManagerSecurityApplicationProxy, m_adminGroupMembershipCertificate));
 }
 
+TEST_F(SecurityApplicationProxyPostClaimTest, shouldSucceedGetSecurityApplicationVersion)
+{
+    uint16_t version = 0;
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getsecurityapplicationversion(m_managedAppSecurityApplicationProxy, &version));
+    //see SECURITY_APPLICATION_VERSION in SecurityApplicationObj.cc
+    EXPECT_EQ(1U, version);
+}
+
+TEST_F(SecurityApplicationProxyPostClaimTest, shouldSucceedGetClaimableApplicationVersion)
+{
+    uint16_t version = 0;
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getclaimableapplicationversion(m_managedAppSecurityApplicationProxy, &version));
+    //see SECURITY_CLAIMABLE_APPLICATION_VERSION in SecurityApplicationObj.cc
+    EXPECT_EQ(1U, version);
+}
+
+TEST_F(SecurityApplicationProxyPostClaimTest, shouldSucceedGetManagedApplicationVersion)
+{
+    uint16_t version = 0;
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmanagedapplicationversion(m_managedAppSecurityApplicationProxy, &version));
+    //see SECURITY_MANAGED_APPLICATION_VERSIOn in SecurityApplicationObj.cc
+    EXPECT_EQ(2U, version);
+}
+
 TEST_F(SecurityApplicationProxyPostClaimTest, shouldReturnErrorForStartManagementWithInvalidProxy)
 {
     EXPECT_EQ(ER_AUTH_FAIL, alljoyn_securityapplicationproxy_startmanagement(m_invalidProxy));
@@ -1243,6 +1278,13 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldNotCallPolicyChangedCallback
     EXPECT_FALSE(WaitForTrueOrTimeout(&s_policyChangeHappened));
 }
 
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassGetManifests)
+{
+    alljoyn_manifestarray manifestArray;
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmanifests(m_managedAppSecurityApplicationProxy, &manifestArray));
+    EXPECT_EQ(1U, manifestArray.count);
+}
+
 TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassResetForValidProxyAndInstalledMembership)
 {
     EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_reset(m_managedAppSecurityApplicationProxy));
@@ -1294,7 +1336,92 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicy)
     EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicy(m_managedAppSecurityApplicationProxy, &m_retrievedPolicy));
 }
 
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetPolicyVersion)
+{
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_updatepolicy(m_managedAppSecurityApplicationProxy, m_oldPolicy));
+    ASSERT_EQ(ER_OK, alljoyn_proxybusobject_secureconnection((alljoyn_proxybusobject)m_managedAppSecurityApplicationProxy, true));
+
+    uint32_t version = 0;
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicyversion(m_managedAppSecurityApplicationProxy, &version));
+    EXPECT_EQ(100U, version);
+
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_updatepolicy(m_managedAppSecurityApplicationProxy, m_newPolicy));
+    ASSERT_EQ(ER_OK, alljoyn_proxybusobject_secureconnection((alljoyn_proxybusobject)m_managedAppSecurityApplicationProxy, true));
+
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_getpolicyversion(m_managedAppSecurityApplicationProxy, &version));
+    EXPECT_EQ(200U, version);
+}
+
 TEST_F(SecurityApplicationProxyFullSetupTest, shouldSucceedGetDefaultPolicy)
 {
     EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getdefaultpolicy(m_managedAppSecurityApplicationProxy, &m_retrievedPolicy));
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassGetIdentityManagedAppProxy)
+{
+    AJ_PSTR identityCerts;
+    size_t size = 0xFF;
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getidentity(m_managedAppSecurityApplicationProxy, &identityCerts, &size));
+    EXPECT_EQ(2U, size);
+
+    alljoyn_securityapplicationproxy_certificatechain_destroy(identityCerts);
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassGetIdentitySecurityManagerProxy)
+{
+    AJ_PSTR identityCerts;
+    size_t size = 0xFF;
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getidentity(m_securityManagerSecurityApplicationProxy, &identityCerts, &size));
+    EXPECT_EQ(1U, size);
+
+    alljoyn_securityapplicationproxy_certificatechain_destroy(identityCerts);
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassGetMembershipSummaries)
+{
+    alljoyn_certificateidarray certIds;
+
+    //No member cert, count should be 0
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmembershipsummaries(m_managedAppSecurityApplicationProxy, &certIds));
+    EXPECT_EQ(0U, certIds.count);
+
+    //Create and Install a new member cert, count should increase
+    AJ_PSTR mbrCert;
+    SecurityApplicationProxyTestHelper::CreateMembershipCert(m_securityManager, m_managedApp, m_adminGroupId, true, &mbrCert);
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_installmembership(m_managedAppSecurityApplicationProxy, mbrCert));
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmembershipsummaries(m_managedAppSecurityApplicationProxy, &certIds));
+    EXPECT_EQ(1U, certIds.count);
+
+    alljoyn_securityapplicationproxy_certificateidarray_cleanup(&certIds);
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassRemoveMembership)
+{
+    alljoyn_certificateidarray certIds;
+    AJ_PSTR mbrCert;
+
+    SecurityApplicationProxyTestHelper::CreateMembershipCert(m_securityManager, m_managedApp, m_adminGroupId, true, &mbrCert);
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_installmembership(m_managedAppSecurityApplicationProxy, mbrCert));
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmembershipsummaries(m_managedAppSecurityApplicationProxy, &certIds));
+    EXPECT_EQ(1U, certIds.count);
+
+    std::string serial((char*)certIds.ids[0].serial, certIds.ids[0].serialLen);
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_removemembership(m_managedAppSecurityApplicationProxy, (const uint8_t*)serial.c_str(), serial.size(), certIds.ids[0].issuerPublicKey, nullptr, 0U));
+
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmembershipsummaries(m_managedAppSecurityApplicationProxy, &certIds));
+    EXPECT_EQ(0U, certIds.count);
+
+    alljoyn_securityapplicationproxy_certificateidarray_cleanup(&certIds);
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassInstallManifests)
+{
+    AJ_PSTR signedManifests[1];
+
+    SecurityApplicationProxyTestHelper::CreateIdentityCert(m_securityManager, m_managedApp, &m_managedAppIdentityCertificate, false);
+    ASSERT_EQ(ER_OK, alljoyn_securityapplicationproxy_signmanifest(s_validManagedAppManifestTemplate, m_managedAppIdentityCertificate, m_securityManagerPrivateKey, &(signedManifests[0])));
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_installmanifests(m_managedAppSecurityApplicationProxy, (AJ_PCSTR*)signedManifests, 1));
 }
