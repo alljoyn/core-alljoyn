@@ -25,6 +25,7 @@
 #include <alljoyn_c/PermissionConfigurator.h>
 #include <alljoyn_c/BusAttachment.h>
 #include <alljoyn_c/Session.h>
+#include <qcc/KeyInfoECC.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,12 +105,59 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_claim(alljoyn_securityap
                                                               AJ_PCSTR* manifestsXmls, size_t manifestsCount);
 
 /**
+ * This method allows the admin to retrieve the claimable application version from an application.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   version                    The claimable application version.
+ *
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus alljoyn_securityapplicationproxy_getclaimableapplicationversion(alljoyn_securityapplicationproxy proxy, uint16_t* version);
+
+/**
+ * This method allows the admin to retrieve the managed application version from an application.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   version                    The managed application version
+ *
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus alljoyn_securityapplicationproxy_getmanagedapplicationversion(alljoyn_securityapplicationproxy proxy, uint16_t* version);
+
+/**
+ * Retrieves the manifest in XML form from the application.
+ *
+ * @param[in]    proxy                  The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   manifestArray          The struct object contains the count and a null-terminated array of manifest strings
+ *                                      The object is managed by the caller and must be later destroyed by calling
+ *                                      alljoyn_securityapplicationproxy_manifestarray_cleanup API.
+ *
+ * @return
+ *          - #ER_OK If successful.
+ *          - Other error status codes indicating a failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifests(alljoyn_securityapplicationproxy proxy, alljoyn_manifestarray* manifestArray);
+
+/**
+ * This method deallocates an array of strings containing manifests returned by alljoyn_securityapplicationproxy_getmanifests.
+ *
+ * @param[in]    manifestArray              Pointer to alljoyn_manifestarray populated by a call to
+ *                                          alljoyn_securityapplicationproxy_getmanifests.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifestarray_cleanup(alljoyn_manifestarray* manifestArray);
+
+
+/**
  * Retrieves the manifest template in XML form from the application.
  *
  * @param[in]    proxy                  The alljoyn_securityapplicationproxy connected to the managed application.
- * @param[out]   manifestTemplateXml    A null-terminated C string with the manifest template in XML format.
- *                                      The string is managed by the caller and must be later destroyed
- *                                      using alljoyn_securityapplicationproxy_manifesttemplate_destroy.
+ * @param[out]   manifestTemplateXml    A pointer to null-terminated manifest template XML string.
+ *                                      The string is managed by the caller and must be later destroyed by calling
+ *                                      alljoyn_securityapplicationproxy_manifesttemplate_destroy API.
  *
  * @return
  *          - #ER_OK If successful.
@@ -118,11 +166,47 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_claim(alljoyn_securityap
 AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplate(alljoyn_securityapplicationproxy proxy, AJ_PSTR* manifestTemplateXml);
 
 /**
+ * Retrieves the manifest template digest from the application.
+ *
+ * @param[in]    proxy                  The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   digest                 A byte array containing the digest, this array is allocated by the caller, and will be filled by this
+ *                                      function with the digest. This array is managed by the caller and must be later destroyed using
+ *                                      alljoyn_securityapplicationproxy_digest_destroy.
+ *
+ * @param[in]    expectedSize           Expected size of the digest array.
+ *
+ * @return
+ *          - #ER_OK If successful.
+ *          - Other error status codes indicating a failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifesttemplatedigest(alljoyn_securityapplicationproxy proxy, uint8_t* digest, size_t expectedSize);
+
+/**
  * Frees the memory allocated for the manifest template inside alljoyn_securityapplicationproxy_get_manifest_template.
  *
  * @param[in]   manifestTemplateXml Manifest string created using alljoyn_securityapplicationproxy_getmanifesttemplate.
  */
 AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifesttemplate_destroy(AJ_PSTR manifestTemplateXml);
+
+/**
+ * Frees the memory allocated for the manifest in get or sign manifest functions such as alljoyn_securityapplicationproxy_getmanifests
+ * or alljoyn_securityapplicationproxy_signmanifest.
+ *
+ * @param[in]   manifestXml Manifest string created using get or sign manifest functions.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR manifestXml);
+
+/**
+ * This method allows the admin to retrieve the active security application version from an application.
+ *
+ * @param[in]    proxy              The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   version            The active security application version
+ *
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus alljoyn_securityapplicationproxy_getsecurityapplicationversion(alljoyn_securityapplicationproxy proxy, uint16_t* version);
 
 /**
  * Representation of the current state of the application.
@@ -166,11 +250,23 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilities(all
 AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getclaimcapabilitiesadditionalinfo(alljoyn_securityapplicationproxy proxy, alljoyn_claimcapabilitiesadditionalinfo* additionalInfo);
 
 /**
+ * This method allows the admin to retrieve the active policy version from an application.
+ *
+ * @param[in]    proxy              The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   version            The active policy version which is the policy's serial number
+ *
+ * @return
+ *          - #ER_OK                If successful.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getpolicyversion(alljoyn_securityapplicationproxy proxy, uint32_t* version);
+
+/**
  * This method allows the admin to retrieve the active policy from an application.
  *
- * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
- * @param[out]   policyXml                  The active policy in XML format. This string must be freed using
- *                                          alljoyn_securityapplicationproxy_policy_destroy.
+ * @param[in]    proxy              The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   policyXml          The active policy in XML format. This string must be freed using
+ *                                  alljoyn_securityapplicationproxy_policy_destroy.
  * @return
  *          - #ER_OK                If successful.
  *          - An error status indicating failure.
@@ -263,7 +359,7 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_updateidentity(alljoyn_s
                                                                        AJ_PCSTR* manifestsXmls, size_t manifestsCount);
 
 /**
- * This method allows the admin to install a membership cert chain to the
+ * This method allows the admin to install a membership certificate chain to the
  * application.
  *
  * @param[in]    proxy                      The alljoyn_securityapplicationproxy connected to the managed application.
@@ -280,6 +376,50 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_updateidentity(alljoyn_s
  *          - An error status indicating failure.
  */
 AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_installmembership(alljoyn_securityapplicationproxy proxy, AJ_PCSTR membershipCertificateChain);
+
+/**
+ * This method allows the admin to remove a membership certificate chain from the
+ * application.
+ *
+ * @param[in]   proxy           The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[in]   serial          Certificate's serial number.
+ * @param[in]   serialLen       Certificate's serial number length.
+ * @param[in]   pubKey          Null-terminated C String representing the public key of the certificate to be removed in PEM format
+ * @param[in]   issuerAki       Certificate issuer's AKI.
+ * @param[in]   issuerAkiLen    Certificate issuer's AKI length.
+ *
+ * @return
+ *          - #ER_OK if successful
+ *          - #ER_PERMISSION_DENIED Error raised when the caller does not have permission
+ *          - #ER_CERTIFICATE_NOT_FOUND Error raised when the certificate is not found
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_removemembership(alljoyn_securityapplicationproxy proxy,
+                                                                         const uint8_t* serial,
+                                                                         size_t serialLen,
+                                                                         AJ_PCSTR pubKey,
+                                                                         const uint8_t* issuerAki,
+                                                                         size_t issuerAkiLen);
+
+/**
+ * Get the summaries for installed memberships
+ *
+ * @param[in]   proxy           The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]  certificateIds  The object containing the size and an array of alljoyn_certificateid. This array is allocated by the caller and must be later
+ *                              destroyed by calling alljoyn_securityapplicationproxy_certificateidarray_cleanup API.
+ *
+ * @return
+ *  - #ER_OK if successful
+ *  - An error status indicating failure
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmembershipsummaries(alljoyn_securityapplicationproxy proxy, alljoyn_certificateidarray* certificateIds);
+
+/**
+ * This method deallocates the object filled by alljoyn_securityapplicationproxy_getmembershipsummaries
+ *
+ * @param[in]    certificateIds  Pointer to alljoyn_certificateidarray populated by a call by alljoyn_securityapplicationproxy_getmanifests.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_certificateidarray_cleanup(alljoyn_certificateidarray* certificateIds);
 
 /**
  * This method allows an admin to reset the application to its original state
@@ -341,6 +481,28 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_startmanagement(alljoyn_
 AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_endmanagement(alljoyn_securityapplicationproxy proxy);
 
 /**
+ * Retrieves manufacturer certificate chain.
+ *
+ * @param[in]    proxy                          The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]   manufacturerCertificateChain   Null-terminated C string representing PEM-encoded manufacturer certificate chain.
+ *                                              The string is managed by the caller and must be later destroyed using
+ *                                              alljoyn_securityapplicationproxy_manifest_destroy.
+ *
+ * @return
+ *          - #ER_OK                        If successful.
+ *          - #ER_CERTIFICATE_NOT_FOUND     Error raised when no identity certificate chain is installed.
+ *          - An error status indicating failure.
+ */
+QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanufacturercerticate(alljoyn_securityapplicationproxy proxy, AJ_PSTR* manufacturerCertificateChain);
+
+/**
+ * This method deallocates a string of PEM-encoded certificates returned by alljoyn_permissionconfigurator_getidentity.
+ *
+ * @param[in]   certificateChain            String returned by a call to alljoyn_permissionconfigurator_getidentity.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_certificatechain_destroy(AJ_PSTR certificateChain);
+
+/**
  * Retrieves (in PEM format) the public ECC key used by the managed application.
  *
  * @param[in]    proxy          The alljoyn_securityapplicationproxy connected to the managed application.
@@ -390,6 +552,22 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_signmanifest(AJ_PCSTR un
  */
 AJ_API void AJ_CALL alljoyn_securityapplicationproxy_manifest_destroy(AJ_PSTR signedManifestXml);
 
+/**
+ * Install signed manifests to the application to which the proxy is connected by adding the manifests to the already-installed manifests
+ * present on the app. This method only verifies that manifests have a signature; it does not verify that the signature is valid.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy for the application's bus attachment.
+ * @param[in]    manifestsXmls              Array of null-terminated C strings, each of which is a signed manifest in XML format.
+ * @param[in]    manifestsCount             The number of elements in the manifests array.
+ *
+ * @return
+ *          - #ER_OK                        If successful.
+ *          - #ER_DIGEST_MISMATCH           Error raised if no manifests can be installed because none are signed.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_installmanifests(alljoyn_securityapplicationproxy proxy,
+                                                                         AJ_PCSTR* manifestsXmls,
+                                                                         size_t manifestsCount);
 /**
  * Adds an identity certificate thumbprint and retrieves the digest of the manifest XML for signing.
  *
@@ -444,6 +622,24 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_setmanifestsignature(AJ_
                                                                              const uint8_t* signature,
                                                                              size_t signatureSize,
                                                                              AJ_PSTR* signedManifestXml);
+
+/**
+ * Retrieves identity certificate chain.
+ *
+ * @param[in]    proxy                      The alljoyn_securityapplicationproxy for the application's bus attachment.
+ * @param[out]   identityCertificateChain   Null-terminated C string representing PEM-encoded identity certificate chain
+ *                                          with the application's certificate being the leaf. The leaf is listed first
+ *                                          followed by each intermediate Certificate Authority's certificate, ending in
+ *                                          the trusted root's certificate. This string must be freed with
+ *                                          alljoyn_securityapplicationproxy_certificatechain_destroy.
+ * @param[out] size                         a pointer to the size of the certificate Chain.
+ *
+ * @return
+ *          - #ER_OK                        If successful.
+ *          - #ER_CERTIFICATE_NOT_FOUND     Error raised when no identity certificate chain is installed.
+ *          - An error status indicating failure.
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getidentity(alljoyn_securityapplicationproxy proxy, AJ_PSTR* identityCertificateChain, size_t* size);
 
 #ifdef __cplusplus
 } /* extern "C" */
