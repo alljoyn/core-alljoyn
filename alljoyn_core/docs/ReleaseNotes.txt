@@ -96,7 +96,7 @@ Version 16.10:
   version, an application can query the About data.  This was fixed in 16.10.
 
 More details on these changes may be found on the Core Release Review wiki page:
-https://wiki.allseenalliance.org/core/core_16.04_release_review#compatibility
+https://wiki.allseenalliance.org/core/core_16.10_release_review#compatibility
 
 For details of previous releases/release families please see the release notes:
 16.04: https://git.allseenalliance.org/cgit/core/alljoyn.git/plain/alljoyn_core/docs/ReleaseNotes.txt?h=RB16.04
