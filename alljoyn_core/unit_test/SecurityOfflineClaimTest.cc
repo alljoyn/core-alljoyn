@@ -23,11 +23,10 @@
 #include <qcc/Timer.h>
 #include <qcc/Util.h>
 
-#include "PermissionMgmtObj.h"
-#include "PermissionMgmtTest.h"
 #include "InMemoryKeyStore.h"
 #include "XmlManifestConverter.h"
 #include "ajTestCommon.h"
+#include "SecurityTestHelper.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -82,7 +81,7 @@ class SecurityOfflineClaimTest : public testing::Test {
     void SetManifestTemplate(BusAttachment& bus)
     {
         Manifest manifestTemplate;
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifestTemplate));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifestTemplate));
         ASSERT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifestTemplate(const_cast<PermissionPolicy::Rule*>(manifestTemplate->GetRules().data()), manifestTemplate->GetRules().size()));
     }
 
@@ -100,13 +99,6 @@ class SecurityOfflineClaimTest : public testing::Test {
 
     GUID128 managerGuid;
 };
-
-static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
-{
-    KeyInfoNISTP256 keyInfo;
-    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    publicKey = *keyInfo.GetPublicKey();
-}
 
 TEST_F(SecurityOfflineClaimTest, IsUnclaimableByDefault)
 {
@@ -160,20 +152,19 @@ TEST_F(SecurityOfflineClaimTest, Claim_using_PermissionConfigurator_session_succ
 
     //Peer public key used to generate the identity certificate chain
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -187,7 +178,7 @@ TEST_F(SecurityOfflineClaimTest, Claim_using_PermissionConfigurator_session_succ
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_EQ(ER_OK, pcPeer1.Claim(securityManagerKey,
                                    securityManagerGuid,
                                    securityManagerKey,
@@ -252,20 +243,19 @@ TEST_F(SecurityOfflineClaimTest, claim_fails_using_empty_caPublicKeyIdentifier)
 
     // peer public key used to generate the identity certificate chain
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "1215",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "1215",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
 
     /* set claimable */
     ASSERT_EQ(ER_OK, peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE));
@@ -281,7 +271,7 @@ TEST_F(SecurityOfflineClaimTest, claim_fails_using_empty_caPublicKeyIdentifier)
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_NE(ER_OK, pcPeer1.Claim(caKey,
                                    securityManagerGuid,
                                    securityManagerKey,
@@ -325,20 +315,19 @@ TEST_F(SecurityOfflineClaimTest, claim_fails_using_empty_adminGroupSecurityPubli
 
     // peer public key used to generate the identity certificate chain
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "1215",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "1215",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /* set claimable */
     ASSERT_EQ(ER_OK, pcPeer1.SetApplicationState(PermissionConfigurator::CLAIMABLE));
     /*
@@ -353,7 +342,7 @@ TEST_F(SecurityOfflineClaimTest, claim_fails_using_empty_adminGroupSecurityPubli
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_NE(ER_OK, pcPeer1.Claim(caKey,
                                    securityManagerGuid,
                                    securityManagerKey,
@@ -403,21 +392,20 @@ TEST_F(SecurityOfflineClaimTest, Claim_caKey_not_same_as_adminGroupKey)
 
     // peer public key used to generate the identity certificate chain
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // peer2 will become the the one signing the identity certificate.
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(peer2Bus,
-                                                                  "1215",
-                                                                  caGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(peer2Bus,
+                                                            "1215",
+                                                            caGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer2Bus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer2Bus, identityCertChain[0], manifests[0]));
     //Verify the caPublicKey != adminGroupSecurityPublicKey.
     ASSERT_NE(caKey, securityManagerKey);
     /*
@@ -434,7 +422,7 @@ TEST_F(SecurityOfflineClaimTest, Claim_caKey_not_same_as_adminGroupKey)
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_EQ(ER_OK, pcPeer1.Claim(caKey,
                                    securityManagerGuid,
                                    securityManagerKey,
@@ -479,20 +467,19 @@ TEST_F(SecurityOfflineClaimTest, fail_second_claim)
 
     // peer public key used to generate the identity certificate chain
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -506,7 +493,7 @@ TEST_F(SecurityOfflineClaimTest, fail_second_claim)
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_EQ(ER_OK, pcPeer1.Claim(securityManagerKey,
                                    securityManagerGuid,
                                    securityManagerKey,
@@ -558,20 +545,19 @@ TEST_F(SecurityOfflineClaimTest, fail_second_claim_with_different_parameters)
 
     // peer public key used to generate the identity certificate chain
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -585,7 +571,7 @@ TEST_F(SecurityOfflineClaimTest, fail_second_claim_with_different_parameters)
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_EQ(ER_OK, pcPeer1.Claim(securityManagerKey,
                                    securityManagerGuid,
                                    securityManagerKey,
@@ -598,15 +584,14 @@ TEST_F(SecurityOfflineClaimTest, fail_second_claim_with_different_parameters)
     //Create identityCertChain
     IdentityCertificate identityCertChain2[1];
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain2[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain2[0], manifests[0]));
 
     EXPECT_EQ(ER_PERMISSION_DENIED, pcPeer1.Claim(securityManagerKey,
                                                   securityManagerGuid,
@@ -651,21 +636,20 @@ TEST_F(SecurityOfflineClaimTest, fail_when_claiming_non_claimable)
 
     // peer public key used to generate the identity certificate chain
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  &peer1PublicKey,
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            &peer1PublicKey,
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
     /*
      * Claim Peer1
      * the certificate authority is self signed so the certificateAuthority
@@ -679,7 +663,7 @@ TEST_F(SecurityOfflineClaimTest, fail_when_claiming_non_claimable)
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_EQ(ER_PERMISSION_DENIED, pcPeer1.Claim(securityManagerKey,
                                                   securityManagerGuid,
                                                   securityManagerKey,
@@ -727,26 +711,25 @@ TEST_F(SecurityOfflineClaimTest, fail_if_incorrect_publickey_used_in_identity_ce
     ASSERT_EQ(ER_OK, peer1PermissionConfigurator.GetSigningPublicKey(peer1Key));
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     // securityManagerKey used instead of Peer1 key to make sure we create an
     // invalid cert.
     EXPECT_NE(*peer1Key.GetPublicKey(), *securityManagerKey.GetPublicKey());
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(securityManagerBus,
-                                                                  "0",
-                                                                  securityManagerGuid.ToString(),
-                                                                  securityManagerKey.GetPublicKey(),
-                                                                  "Alias",
-                                                                  3600,
-                                                                  identityCertChain[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(securityManagerBus,
+                                                            "0",
+                                                            securityManagerGuid.ToString(),
+                                                            securityManagerKey.GetPublicKey(),
+                                                            "Alias",
+                                                            identityCertChain[0])) << "Failed to create identity certificate.";
 
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(securityManagerBus, identityCertChain[0], manifests[0]));
 
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     EXPECT_EQ(ER_UNKNOWN_CERTIFICATE, pcPeer1.Claim(securityManagerKey,
                                                     securityManagerGuid,
                                                     securityManagerKey,

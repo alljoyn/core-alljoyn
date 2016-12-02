@@ -14,17 +14,18 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <gtest/gtest.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/SecurityApplicationProxy.h>
+#include <qcc/Thread.h>
 #include <qcc/Util.h>
 #include <iostream>
 #include <map>
 
 #include "InMemoryKeyStore.h"
-#include "PermissionMgmtObj.h"
-#include "PermissionMgmtTest.h"
 #include "ajTestCommon.h"
+#include "SecurityTestHelper.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -160,13 +161,6 @@ class PolicyRulesTestBusObject : public BusObject {
     int32_t prop2;
 };
 
-static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
-{
-    KeyInfoNISTP256 keyInfo;
-    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    publicKey = *keyInfo.GetPublicKey();
-}
-
 class SecurityPolicyRulesTest : public testing::Test {
   public:
     SecurityPolicyRulesTest() :
@@ -257,7 +251,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         managerBus.RegisterApplicationStateListener(appStateListener);
 
         Manifest manifests[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
         //Get manager key
         KeyInfoNISTP256 managerKey;
@@ -274,23 +268,22 @@ class SecurityPolicyRulesTest : public testing::Test {
         PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
         ASSERT_EQ(ER_OK, pcPeer2.GetSigningPublicKey(peer2Key));
 
-        PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
+        SecurityTestHelper::GetGUID(managerBus, managerGuid);
 
         //Create identityCert
         const size_t certChainSize = 1;
         IdentityCertificate identityCertChainMaster[certChainSize];
 
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                      "0",
-                                                                      managerGuid.ToString(),
-                                                                      managerKey.GetPublicKey(),
-                                                                      "ManagerAlias",
-                                                                      3600,
-                                                                      identityCertChainMaster[0])) << "Failed to create identity certificate.";
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                                "0",
+                                                                managerGuid.ToString(),
+                                                                managerKey.GetPublicKey(),
+                                                                "ManagerAlias",
+                                                                identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
         /* set claimable */
         managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
         ASSERT_EQ(ER_OK, sapWithManager.Claim(managerKey,
                                               managerGuid,
                                               managerKey,
@@ -305,7 +298,7 @@ class SecurityPolicyRulesTest : public testing::Test {
         }
 
         ECCPublicKey managerPublicKey;
-        GetAppPublicKey(managerBus, managerPublicKey);
+        SecurityTestHelper::GetAppPublicKey(managerBus, managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
         ASSERT_EQ(PermissionConfigurator::ApplicationState::CLAIMED, appStateListener.stateMap[managerBus.GetUniqueName()]);
@@ -314,18 +307,17 @@ class SecurityPolicyRulesTest : public testing::Test {
         IdentityCertificate identityCertChainPeer1[certChainSize];
 
 
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                      "0",
-                                                                      managerGuid.ToString(),
-                                                                      peer1Key.GetPublicKey(),
-                                                                      "Peer1Alias",
-                                                                      3600,
-                                                                      identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                                "0",
+                                                                managerGuid.ToString(),
+                                                                peer1Key.GetPublicKey(),
+                                                                "Peer1Alias",
+                                                                identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
         //Manager claims Peers
         /* set claimable */
         peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
         ASSERT_EQ(ER_OK, sapWithPeer1.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
@@ -345,16 +337,15 @@ class SecurityPolicyRulesTest : public testing::Test {
         IdentityCertificate identityCertChainPeer2[certChainSize];
 
 
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                      "0",
-                                                                      managerGuid.ToString(),
-                                                                      peer2Key.GetPublicKey(),
-                                                                      "Peer2Alias",
-                                                                      3600,
-                                                                      identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                                "0",
+                                                                managerGuid.ToString(),
+                                                                peer2Key.GetPublicKey(),
+                                                                "Peer2Alias",
+                                                                identityCertChainPeer2[0])) << "Failed to create identity certificate.";
         /* set claimable */
         peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
         ASSERT_EQ(ER_OK, sapWithPeer2.Claim(managerKey,
                                             managerGuid,
                                             managerKey,
@@ -375,40 +366,34 @@ class SecurityPolicyRulesTest : public testing::Test {
 
         String membershipSerial = "1";
         qcc::MembershipCertificate managerMembershipCertificate[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
-                                                                        managerBus,
-                                                                        managerBus.GetUniqueName(),
-                                                                        managerKey.GetPublicKey(),
-                                                                        managerGuid,
-                                                                        false,
-                                                                        3600,
-                                                                        managerMembershipCertificate[0]
-                                                                        ));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert(membershipSerial,
+                                                                  managerBus,
+                                                                  managerBus.GetUniqueName(),
+                                                                  managerKey.GetPublicKey(),
+                                                                  managerGuid,
+                                                                  managerMembershipCertificate[0]
+                                                                  ));
         ASSERT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 1));
 
         qcc::MembershipCertificate peer1MembershipCertificate[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
-                                                                        managerBus,
-                                                                        peer1Bus.GetUniqueName(),
-                                                                        peer1Key.GetPublicKey(),
-                                                                        managerGuid,
-                                                                        false,
-                                                                        3600,
-                                                                        peer1MembershipCertificate[0]
-                                                                        ));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert(membershipSerial,
+                                                                  managerBus,
+                                                                  peer1Bus.GetUniqueName(),
+                                                                  peer1Key.GetPublicKey(),
+                                                                  managerGuid,
+                                                                  peer1MembershipCertificate[0]
+                                                                  ));
         ASSERT_EQ(ER_OK, peer1Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
         ASSERT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
 
         qcc::MembershipCertificate peer2MembershipCertificate[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
-                                                                        managerBus,
-                                                                        peer2Bus.GetUniqueName(),
-                                                                        peer2Key.GetPublicKey(),
-                                                                        managerGuid,
-                                                                        false,
-                                                                        3600,
-                                                                        peer2MembershipCertificate[0]
-                                                                        ));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert(membershipSerial,
+                                                                  managerBus,
+                                                                  peer2Bus.GetUniqueName(),
+                                                                  peer2Key.GetPublicKey(),
+                                                                  managerGuid,
+                                                                  peer2MembershipCertificate[0]
+                                                                  ));
         ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", managerAuthListener, NULL, false));
         ASSERT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 1));
     }
@@ -433,12 +418,6 @@ class SecurityPolicyRulesTest : public testing::Test {
             ASSERT_EQ(ER_OK, bus.Join());
         }
     }
-
-    QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
-                                                    PermissionPolicy& policy,
-                                                    bool keepCAentry = true,
-                                                    bool keepAdminGroupEntry = false,
-                                                    bool keepInstallMembershipEntry = false);
 
     /*
      * The policy for all of the GetAllProperties tests only differs by what is
@@ -480,52 +459,6 @@ class SecurityPolicyRulesTest : public testing::Test {
     //Random GUID used for the SecurityManager
     GUID128 managerGuid;
 };
-
-QStatus SecurityPolicyRulesTest::UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
-                                                                         PermissionPolicy& policy,
-                                                                         bool keepCAentry,
-                                                                         bool keepAdminGroupEntry,
-                                                                         bool keepInstallMembershipEntry) {
-
-    size_t count = policy.GetAclsSize();
-    if (keepCAentry) {
-        ++count;
-    }
-    if (keepAdminGroupEntry) {
-        ++count;
-    }
-    if (keepInstallMembershipEntry) {
-        ++count;
-    }
-
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[count];
-    size_t idx = 0;
-    for (size_t cnt = 0; cnt < defaultPolicy.GetAclsSize(); ++cnt) {
-        if (defaultPolicy.GetAcls()[cnt].GetPeersSize() > 0) {
-            if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) {
-                if (keepCAentry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
-                if (keepAdminGroupEntry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY) {
-                if (keepInstallMembershipEntry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            }
-        }
-
-    }
-    for (size_t cnt = 0; cnt < policy.GetAclsSize(); ++cnt) {
-        QCC_ASSERT(idx <= count);
-        acls[idx++] = policy.GetAcls()[cnt];
-    }
-    policy.SetAcls(count, acls);
-    delete [] acls;
-    return ER_OK;
-}
 
 /*
  * The policy for all of the GetAllProperties tests only differs by what is
@@ -573,18 +506,17 @@ void SecurityPolicyRulesTest::UpdatePeer1Manifest(PermissionPolicy::Rule* manife
     //Create peer1 identityCert
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str());
     Manifest manifests[1];
     EXPECT_EQ(ER_OK, manifests[0]->SetRules(manifest, manifestSize));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifests, ArraySize(manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 }
@@ -600,18 +532,17 @@ void SecurityPolicyRulesTest::UpdatePeer2Manifest(PermissionPolicy::Rule* manife
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str());
     Manifest manifests[1];
     EXPECT_EQ(ER_OK, manifests[0]->SetRules(manifest, manifestSize));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifests, ArraySize(manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 }
@@ -714,12 +645,12 @@ TEST_P(SecurityPolicyRulesMethodCalls, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -873,12 +804,12 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
     }
 
     qcc::String p1policyStr = "\n----Peer1 Policy-----\n" + peer1Policy.ToString();
@@ -915,15 +846,14 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     //Create peer1 identityCert
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifests, ArraySize(peer1Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
@@ -948,15 +878,14 @@ TEST_P(SecurityPolicyRulesMethodCallsManifest, PolicyRules)
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifests, ArraySize(peer2Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
@@ -1128,12 +1057,12 @@ TEST_P(SecurityPolicyRulesGetProperty, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -1283,12 +1212,12 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -1320,15 +1249,14 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     //Create peer1 identityCert
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifests, ArraySize(peer1Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
@@ -1353,15 +1281,14 @@ TEST_P(SecurityPolicyRulesGetPropertyManifest, PolicyRules)
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifests, ArraySize(peer2Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
@@ -1532,12 +1459,12 @@ TEST_P(SecurityPolicyRulesSetProperty, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -1697,12 +1624,12 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -1734,15 +1661,14 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     //Create peer1 identityCert
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifests, ArraySize(peer1Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
@@ -1767,15 +1693,14 @@ TEST_P(SecurityPolicyRulesSetPropertyManifest, PolicyRules)
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifests, ArraySize(peer2Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
@@ -1954,12 +1879,12 @@ TEST_P(SecurityPolicyRulesSignal, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -2124,12 +2049,12 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -2162,15 +2087,14 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifests, ArraySize(peer1Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
 
@@ -2196,15 +2120,14 @@ TEST_P(SecurityPolicyRulesSignalManifest, PolicyRules)
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifests, ArraySize(peer2Manifests)));
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
@@ -2380,12 +2303,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test1_properties_succesfully_se
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -2517,12 +2440,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test2_only_prop1_successfully_f
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -2649,12 +2572,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test3_only_prop1_successfully_f
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -2784,12 +2707,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test4_no_properties_fetched)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -2907,12 +2830,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test5_no_properties_fetched)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -3027,12 +2950,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test6_properties_successfully_f
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -3164,12 +3087,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test7_properties_successfully_f
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -3302,12 +3225,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test8_no_properties_fetched)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -3424,12 +3347,12 @@ TEST_F(SecurityPolicyRulesTest, GetAllProperties_test9_no_properties_fetched)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -3580,12 +3503,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_1)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -3772,12 +3695,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_2)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -3962,12 +3885,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_3)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -4151,12 +4074,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_4)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -4299,7 +4222,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     peer2Cert.SetValidity(&validity);
 
     ECCPublicKey peer2PublicKey;
-    GetAppPublicKey(peer2Bus, peer2PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer2Bus, peer2PublicKey);
 
     peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
     peer2Cert.SetAlias("peer2-cert-alias");
@@ -4316,7 +4239,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     identityCertChain[1] = ca1Cert;
 
     // Call UpdateIdentity to install the cert chain
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
@@ -4408,12 +4331,12 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_5)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -4557,7 +4480,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     peer2Cert.SetValidity(&validity);
 
     ECCPublicKey peer2PublicKey;
-    GetAppPublicKey(peer2Bus, peer2PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer2Bus, peer2PublicKey);
 
     peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
     peer2Cert.SetAlias("peer2-cert-alias");
@@ -4573,7 +4496,7 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     identityCertChain[1] = ca1Cert;
 
     // Call UpdateIdentity to install the cert chain
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChain, certChainSize, manifests, ArraySize(manifests)))
         << "Failed to update Identity cert or manifest ";
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
@@ -4666,12 +4589,12 @@ TEST_F(SecurityPolicyRulesTest, DISABLED_PolicyRules_DENY_6)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -4859,12 +4782,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_7)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -5053,12 +4976,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_8)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -5246,12 +5169,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_9)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -5422,12 +5345,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_10)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -5686,12 +5609,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_11)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -5956,12 +5879,12 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_12)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -6177,16 +6100,15 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_13)
     //Create peer1 identityCert
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifests, ArraySize(peer1Manifests)))
         << "Failed to update Identity cert or manifest ";
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
@@ -6403,16 +6325,15 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_14)
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifests, ArraySize(peer2Manifests)))
         << "Failed to update Identity cert or manifest ";
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
@@ -6546,16 +6467,15 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_15)
     //Create peer1 identityCert
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
     SecurityApplicationProxy sapWithPeer1(managerBus, peer1Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], peer1Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, peer1Manifests, ArraySize(peer1Manifests)))
         << "Failed to update Identity cert or manifest ";
     EXPECT_EQ(ER_OK, sapWithPeer1.SecureConnection(true));
@@ -6694,16 +6614,15 @@ TEST_F(SecurityPolicyRulesTest, PolicyRules_DENY_16)
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                  "1",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                            "1",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
     SecurityApplicationProxy sapWithPeer2(managerBus, peer2Bus.GetUniqueName().c_str(), managerToPeer1SessionId);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], peer2Manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, peer2Manifests, ArraySize(peer2Manifests)))
         << "Failed to update Identity cert or manifest ";
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
@@ -6849,12 +6768,12 @@ TEST_F(SecurityPolicyRulesTest, acl_ECDHE_NULL_methodcall_fails_for_ANY_TRUSTED_
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -6978,12 +6897,12 @@ TEST_F(SecurityPolicyRulesTest, acl_ECDHE_NULL_methodcall_fails_for_ANY_TRUSTED_
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -7137,12 +7056,12 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -7151,35 +7070,33 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     //Create peer1 identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "2",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "2",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer1[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifests, ArraySize(manifests)));
 
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "2",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "2",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifests, ArraySize(manifests)));
 
     SessionOpts opts;
@@ -7328,12 +7245,12 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -7342,35 +7259,33 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     //Create peer1 identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "2",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "2",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer1[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifests, ArraySize(manifests)));
 
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "2",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "2",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifests, ArraySize(manifests)));
 
     SessionOpts opts;
@@ -7520,12 +7435,12 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy, true, true, true);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy, true, true, true);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -7534,35 +7449,33 @@ TEST_F(SecurityPolicyRulesTest, acl_verify_peers_using_FROM_CERTIFICATE_AUTHORIT
     EXPECT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     //Create peer1 identityCert
     const size_t certChainSize = 1;
     IdentityCertificate identityCertChainPeer1[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "2",
-                                                                  managerGuid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "2",
+                                                            managerGuid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer1[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer1[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdateIdentity(identityCertChainPeer1, certChainSize, manifests, ArraySize(manifests)));
 
     //Create peer2 identityCert
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "2",
-                                                                  managerGuid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "2",
+                                                            managerGuid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer2[0], manifests[0]));
     EXPECT_EQ(ER_OK, sapWithPeer2.UpdateIdentity(identityCertChainPeer2, certChainSize, manifests, ArraySize(manifests)));
 
     SessionOpts opts;
@@ -7682,12 +7595,12 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_method_call_should_pass)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -7811,12 +7724,12 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_recieving_peer_has_incorrect
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -7938,12 +7851,12 @@ TEST_F(SecurityPolicyRulesTest, acl_with_public_key_sending_peer_has_incorrect_p
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -8027,54 +7940,48 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_successfull)
     EXPECT_EQ(ER_OK, busUsedAsSGA2.GetPermissionConfigurator().GetSigningPublicKey(sga2Key));
 
     GUID128 peer1Guid;
-    PermissionMgmtTestHelper::GetGUID(peer1Bus, peer1Guid);
+    SecurityTestHelper::GetGUID(peer1Bus, peer1Guid);
     GUID128 peer2Guid;
-    PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
+    SecurityTestHelper::GetGUID(peer2Bus, peer2Guid);
     GUID128 sgid1Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
     GUID128 sgid2Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
 
     qcc::MembershipCertificate peer1MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid2Guid.ToString(),
-                                                                    sga2Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid2Guid.ToString(),
+                                                              sga2Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 2));
 
     qcc::MembershipCertificate peer2MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid1Guid.ToString(),
-                                                                    sga1Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA1,
-                                                                    peer2Guid.ToString(),
-                                                                    peer2Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid1Guid.ToString(),
+                                                              sga1Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA1,
+                                                              peer2Guid.ToString(),
+                                                              peer2Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 2));
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
@@ -8144,12 +8051,12 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_successfull)
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -8239,54 +8146,48 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     EXPECT_EQ(ER_OK, busUsedAsSGA2.GetPermissionConfigurator().GetSigningPublicKey(sga2Key));
 
     GUID128 peer1Guid;
-    PermissionMgmtTestHelper::GetGUID(peer1Bus, peer1Guid);
+    SecurityTestHelper::GetGUID(peer1Bus, peer1Guid);
     GUID128 peer2Guid;
-    PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
+    SecurityTestHelper::GetGUID(peer2Bus, peer2Guid);
     GUID128 sgid1Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
     GUID128 sgid2Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
 
     qcc::MembershipCertificate peer1MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid2Guid.ToString(),
-                                                                    sga2Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid2Guid.ToString(),
+                                                              sga2Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 2));
 
     qcc::MembershipCertificate peer2MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid1Guid.ToString(),
-                                                                    sga1Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA1,
-                                                                    peer2Guid.ToString(),
-                                                                    peer2Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid1Guid.ToString(),
+                                                              sga1Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA1,
+                                                              peer2Guid.ToString(),
+                                                              peer2Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 2));
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
@@ -8357,12 +8258,12 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -8463,54 +8364,48 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA2.GetPermissionConfigurator().GetSigningPublicKey(sga2Key));
 
     GUID128 peer1Guid;
-    PermissionMgmtTestHelper::GetGUID(peer1Bus, peer1Guid);
+    SecurityTestHelper::GetGUID(peer1Bus, peer1Guid);
     GUID128 peer2Guid;
-    PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
+    SecurityTestHelper::GetGUID(peer2Bus, peer2Guid);
     GUID128 sgid1Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
     GUID128 sgid2Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
 
     qcc::MembershipCertificate peer1MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid2Guid.ToString(),
-                                                                    sga2Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid2Guid.ToString(),
+                                                              sga2Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 2));
 
     qcc::MembershipCertificate peer2MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid1Guid.ToString(),
-                                                                    sga1Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA1,
-                                                                    peer2Guid.ToString(),
-                                                                    peer2Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid1Guid.ToString(),
+                                                              sga1Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA1,
+                                                              peer2Guid.ToString(),
+                                                              peer2Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 2));
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
@@ -8580,12 +8475,12 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -8672,54 +8567,48 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     EXPECT_EQ(ER_OK, busUsedAsSGA2.GetPermissionConfigurator().GetSigningPublicKey(sga2Key));
 
     GUID128 peer1Guid;
-    PermissionMgmtTestHelper::GetGUID(peer1Bus, peer1Guid);
+    SecurityTestHelper::GetGUID(peer1Bus, peer1Guid);
     GUID128 peer2Guid;
-    PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
+    SecurityTestHelper::GetGUID(peer2Bus, peer2Guid);
     GUID128 sgid1Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
     GUID128 sgid2Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
 
     qcc::MembershipCertificate peer1MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid2Guid.ToString(),
-                                                                    sga2Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid2Guid.ToString(),
+                                                              sga2Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 2));
 
     qcc::MembershipCertificate peer2MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid1Guid.ToString(),
-                                                                    sga1Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA1,
-                                                                    peer2Guid.ToString(),
-                                                                    peer2Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid1Guid.ToString(),
+                                                              sga1Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA1,
+                                                              peer2Guid.ToString(),
+                                                              peer2Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 2));
     /* install permissions make method calls */
 
@@ -8792,12 +8681,12 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_id_doe
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -8898,54 +8787,48 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     EXPECT_EQ(ER_OK, busUsedAsSGA2.GetPermissionConfigurator().GetSigningPublicKey(sga2Key));
 
     GUID128 peer1Guid;
-    PermissionMgmtTestHelper::GetGUID(peer1Bus, peer1Guid);
+    SecurityTestHelper::GetGUID(peer1Bus, peer1Guid);
     GUID128 peer2Guid;
-    PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
+    SecurityTestHelper::GetGUID(peer2Bus, peer2Guid);
     GUID128 sgid1Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
     GUID128 sgid2Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
 
     qcc::MembershipCertificate peer1MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid2Guid.ToString(),
-                                                                    sga2Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid2Guid.ToString(),
+                                                              sga2Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 2));
 
     qcc::MembershipCertificate peer2MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid1Guid.ToString(),
-                                                                    sga1Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA1,
-                                                                    peer2Guid.ToString(),
-                                                                    peer2Key.GetPublicKey(),
-                                                                    sgid1Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer2MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid1Guid.ToString(),
+                                                              sga1Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA1,
+                                                              peer2Guid.ToString(),
+                                                              peer2Key.GetPublicKey(),
+                                                              sgid1Guid,
+                                                              peer2MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer2.InstallMembership(peer2MembershipCertificate, 2));
     /* install permissions make method calls */
     //Permission policy that will be installed on peer1
@@ -9015,12 +8898,12 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_security_group_author
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
@@ -9104,33 +8987,30 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_membership_not_presen
     EXPECT_EQ(ER_OK, busUsedAsSGA2.GetPermissionConfigurator().GetSigningPublicKey(sga2Key));
 
     GUID128 peer1Guid;
-    PermissionMgmtTestHelper::GetGUID(peer1Bus, peer1Guid);
+    SecurityTestHelper::GetGUID(peer1Bus, peer1Guid);
     GUID128 peer2Guid;
-    PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
+    SecurityTestHelper::GetGUID(peer2Bus, peer2Guid);
     GUID128 sgid1Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA1, sgid1Guid);
     GUID128 sgid2Guid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
+    SecurityTestHelper::GetGUID(busUsedAsSGA2, sgid2Guid);
 
     qcc::MembershipCertificate peer1MembershipCertificate[2];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-1",
-                                                                    managerBus,
-                                                                    sgid2Guid.ToString(),
-                                                                    sga2Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    true,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[1]
-                                                                    ));
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("2-0",
-                                                                    busUsedAsSGA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    sgid2Guid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-1",
+                                                              managerBus,
+                                                              sgid2Guid.ToString(),
+                                                              sga2Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[1],
+                                                              true
+                                                              ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("2-0",
+                                                              busUsedAsSGA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              sgid2Guid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
     EXPECT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 2));
 
     /* install permissions make method calls */
@@ -9201,12 +9081,12 @@ TEST_F(SecurityPolicyRulesTest, acl_policy_WITH_MEMBERSHIP_membership_not_presen
     {
         PermissionPolicy peer1DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         EXPECT_EQ(ER_OK, sapWithPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     EXPECT_EQ(ER_OK, sapWithPeer1.UpdatePolicy(peer1Policy));
