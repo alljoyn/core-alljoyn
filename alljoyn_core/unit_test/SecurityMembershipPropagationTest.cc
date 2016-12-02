@@ -22,8 +22,7 @@
 #include <map>
 
 #include "InMemoryKeyStore.h"
-#include "PermissionMgmtObj.h"
-#include "PermissionMgmtTest.h"
+#include "SecurityTestHelper.h"
 
 using namespace ajn;
 using namespace qcc;
@@ -38,55 +37,6 @@ class TestSessionPortListener : public SessionPortListener {
         return true;
     }
 };
-
-static QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
-                                                       PermissionPolicy& policy,
-                                                       bool keepCAentry,
-                                                       bool keepAdminGroupEntry,
-                                                       bool keepInstallMembershipEntry) {
-
-    size_t count = policy.GetAclsSize();
-    if (keepCAentry) {
-        ++count;
-    }
-    if (keepAdminGroupEntry) {
-        ++count;
-    }
-    if (keepInstallMembershipEntry) {
-        ++count;
-    }
-
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[count];
-    size_t idx = 0;
-
-    for (size_t cnt = 0; cnt < defaultPolicy.GetAclsSize(); ++cnt) {
-        if (defaultPolicy.GetAcls()[cnt].GetPeersSize() > 0) {
-            if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) {
-                if (keepCAentry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
-                if (keepAdminGroupEntry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY) {
-                if (keepInstallMembershipEntry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            }
-        }
-
-    }
-
-    for (size_t cnt = 0; cnt < policy.GetAclsSize(); ++cnt) {
-        QCC_ASSERT(idx <= count);
-        acls[idx++] = policy.GetAcls()[cnt];
-    }
-
-    policy.SetAcls(count, acls);
-    delete [] acls;
-    return ER_OK;
-}
 
 // Scope this object to just this file to avoid One Definition Rule violation as described in ASACORE-3467
 namespace {
@@ -199,11 +149,11 @@ class MultipleTrustAnchorsPropagationTest : public testing::Test {
     }
 
     void getGUIDs() {
-        PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
-        PermissionMgmtTestHelper::GetGUID(peer1Bus, peer1Guid);
-        PermissionMgmtTestHelper::GetGUID(peer2Bus, peer2Guid);
-        PermissionMgmtTestHelper::GetGUID(busUsedAsCA1, ca1Guid);
-        PermissionMgmtTestHelper::GetGUID(busUsedAsCA2, ca2Guid);
+        SecurityTestHelper::GetGUID(managerBus, managerGuid);
+        SecurityTestHelper::GetGUID(peer1Bus, peer1Guid);
+        SecurityTestHelper::GetGUID(peer2Bus, peer2Guid);
+        SecurityTestHelper::GetGUID(busUsedAsCA1, ca1Guid);
+        SecurityTestHelper::GetGUID(busUsedAsCA2, ca2Guid);
     }
 
     void unbindSessionPorts() {
@@ -340,7 +290,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_Admin_claimed_w
     ASSERT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     /* Create identity certs. */
     const size_t certChainSize = 2;
@@ -350,55 +300,50 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_Admin_claimed_w
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
     /* Create CA certs. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  ca1Guid.ToString(),
-                                                                  ca1Key.GetPublicKey(),
-                                                                  "CertificateAuthority",
-                                                                  3600,
-                                                                  identityCertChainMasterCA1[1])) << "Failed to create CA1 cert";
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "0",
-                                                                  ca2Guid.ToString(),
-                                                                  ca2Key.GetPublicKey(),
-                                                                  "CertificateAuthority2",
-                                                                  3600,
-                                                                  identityCertChainMasterCA2[1])) << "Failed to create CA1 cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            ca1Guid.ToString(),
+                                                            ca1Key.GetPublicKey(),
+                                                            "CertificateAuthority",
+                                                            identityCertChainMasterCA1[1])) << "Failed to create CA1 cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "0",
+                                                            ca2Guid.ToString(),
+                                                            ca2Key.GetPublicKey(),
+                                                            "CertificateAuthority2",
+                                                            identityCertChainMasterCA2[1])) << "Failed to create CA1 cert";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA1, identityCertChainMasterCA1[1])) << "Failed to set CA flag on CA1's cert";
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA2, identityCertChainMasterCA2[1])) << "Failed to set CA flag on CA2's cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SetCAFlagOnCert(busUsedAsCA1, identityCertChainMasterCA1[1])) << "Failed to set CA flag on CA1's cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SetCAFlagOnCert(busUsedAsCA2, identityCertChainMasterCA2[1])) << "Failed to set CA flag on CA2's cert";
 
     /* Manager's identity certificate to be signed by CA2. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "0",
-                                                                  managerGuid.ToString(),
-                                                                  managerKey.GetPublicKey(),
-                                                                  "ManagerAlias",
-                                                                  3600,
-                                                                  identityCertChainMasterCA2[0])) << "Failed to create Manager identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "0",
+                                                            managerGuid.ToString(),
+                                                            managerKey.GetPublicKey(),
+                                                            "ManagerAlias",
+                                                            identityCertChainMasterCA2[0])) << "Failed to create Manager identity certificate.";
 
     /* Both peer identity certificates to be signed by CA1. */
     identityCertChainPeer1[1] = identityCertChainMasterCA1[1];
     identityCertChainPeer2[1] = identityCertChainMasterCA1[1];
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  peer1Guid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create Peer1 identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            peer1Guid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create Peer1 identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  peer2Guid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create Peer2 identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            peer2Guid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create Peer2 identity certificate.";
 
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainMasterCA2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainMasterCA2[0], manifests[0]));
     /*
      * Manager's identity certificate is signed by CA2.
      * Add CA1's key as Manager's authority so that it recognizes
@@ -411,7 +356,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_Admin_claimed_w
                                           manifests, ArraySize(manifests)));
 
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer1[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer1[0], manifests[0]));
     ASSERT_EQ(ER_OK, sapWithPeer1.Claim(ca1Key,
                                         managerGuid,
                                         ca2Key,
@@ -419,7 +364,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_Admin_claimed_w
                                         manifests, ArraySize(manifests)));
 
     peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer2[0], manifests[0]));
     ASSERT_EQ(ER_OK, sapWithPeer2.Claim(ca1Key,
                                         managerGuid,
                                         ca2Key,
@@ -433,30 +378,26 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_Admin_claimed_w
     qcc::MembershipCertificate managerMembershipCertificate[1];
 
     /* Manager's ASG membership certificate to be signed by CA2 which is the ASGA. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("0-1",
-                                                                    busUsedAsCA2,
-                                                                    managerGuid.ToString(),
-                                                                    managerKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    false,
-                                                                    3600,
-                                                                    managerMembershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("0-1",
+                                                              busUsedAsCA2,
+                                                              managerGuid.ToString(),
+                                                              managerKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              managerMembershipCertificate[0]
+                                                              ));
 
     ASSERT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 1));
     ASSERT_EQ(ER_OK, sapWithManager.SecureConnection());
 
     qcc::MembershipCertificate peer1MembershipCertificate[1];
     /* Peer1 Living Room SG certificate to be signed by CA2 which is the ASGA. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1-1",
-                                                                    busUsedAsCA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    livingRoomGuid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("1-1",
+                                                              busUsedAsCA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              livingRoomGuid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
 
     ASSERT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
     ASSERT_EQ(ER_OK, sapWithPeer1.SecureConnection());
@@ -491,7 +432,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_Admin_claimed_w
     {
         PermissionPolicy defaultPolicy;
         sapWithPeer2.GetDefaultPolicy(defaultPolicy);
-        UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, peer2Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, peer2Policy, true, true, true);
         ASSERT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
         ASSERT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
     }
@@ -551,7 +492,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
     ASSERT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     /* Create identity certs. */
     const size_t certChainSize = 2;
@@ -561,55 +502,50 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
     /* Create CA certs. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  ca1Guid.ToString(),
-                                                                  ca1Key.GetPublicKey(),
-                                                                  "CertificateAuthority",
-                                                                  3600,
-                                                                  identityCertChainMasterCA1[1])) << "Failed to create CA1 cert";
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "0",
-                                                                  ca2Guid.ToString(),
-                                                                  ca2Key.GetPublicKey(),
-                                                                  "CertificateAuthority2",
-                                                                  3600,
-                                                                  identityCertChainMasterCA2[1])) << "Failed to create CA1 cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            ca1Guid.ToString(),
+                                                            ca1Key.GetPublicKey(),
+                                                            "CertificateAuthority",
+                                                            identityCertChainMasterCA1[1])) << "Failed to create CA1 cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "0",
+                                                            ca2Guid.ToString(),
+                                                            ca2Key.GetPublicKey(),
+                                                            "CertificateAuthority2",
+                                                            identityCertChainMasterCA2[1])) << "Failed to create CA1 cert";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA1, identityCertChainMasterCA1[1])) << "Failed to set CA flag on CA1's cert";
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA2, identityCertChainMasterCA2[1])) << "Failed to set CA flag on CA2's cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SetCAFlagOnCert(busUsedAsCA1, identityCertChainMasterCA1[1])) << "Failed to set CA flag on CA1's cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SetCAFlagOnCert(busUsedAsCA2, identityCertChainMasterCA2[1])) << "Failed to set CA flag on CA2's cert";
 
     /* Manager's identity certificate to be signed by CA2. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "0",
-                                                                  managerGuid.ToString(),
-                                                                  managerKey.GetPublicKey(),
-                                                                  "ManagerAlias",
-                                                                  3600,
-                                                                  identityCertChainMasterCA2[0])) << "Failed to create Manager identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "0",
+                                                            managerGuid.ToString(),
+                                                            managerKey.GetPublicKey(),
+                                                            "ManagerAlias",
+                                                            identityCertChainMasterCA2[0])) << "Failed to create Manager identity certificate.";
 
     /* Both peer identity certificates to be signed by CA1. */
     identityCertChainPeer1[1] = identityCertChainMasterCA1[1];
     identityCertChainPeer2[1] = identityCertChainMasterCA1[1];
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  peer1Guid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create Peer1 identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            peer1Guid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create Peer1 identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  peer2Guid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create Peer2 identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            peer2Guid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create Peer2 identity certificate.";
 
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainMasterCA2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainMasterCA2[0], manifests[0]));
     /*
      * Manager's identity certificate is signed by CA2.
      * Manager's certificate authority is set to CA2.
@@ -623,7 +559,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
                                           manifests, ArraySize(manifests)));
 
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer1[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer1[0], manifests[0]));
     ASSERT_EQ(ER_OK, sapWithPeer1.Claim(ca1Key,
                                         managerGuid,
                                         ca2Key,
@@ -631,7 +567,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
                                         manifests, ArraySize(manifests)));
 
     peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer2[0], manifests[0]));
     ASSERT_EQ(ER_OK, sapWithPeer2.Claim(ca1Key,
                                         managerGuid,
                                         ca2Key,
@@ -645,15 +581,13 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
     qcc::MembershipCertificate managerMembershipCertificate[1];
 
     /* Manager's ASG membership certificate to be signed by CA2 which is the ASGA. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("0-1",
-                                                                    busUsedAsCA2,
-                                                                    managerGuid.ToString(),
-                                                                    managerKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    false,
-                                                                    3600,
-                                                                    managerMembershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("0-1",
+                                                              busUsedAsCA2,
+                                                              managerGuid.ToString(),
+                                                              managerKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              managerMembershipCertificate[0]
+                                                              ));
 
     ASSERT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 1));
     ASSERT_EQ(ER_OK, sapWithManager.SecureConnection());
@@ -679,22 +613,20 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
         PermissionConfigurator& pcManager = managerBus.GetPermissionConfigurator();
         PermissionPolicy defaultPolicy;
         pcManager.GetDefaultPolicy(defaultPolicy);
-        UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, managerPolicy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, managerPolicy, true, true, true);
         ASSERT_EQ(ER_OK, pcManager.UpdatePolicy(managerPolicy));
         ASSERT_EQ(ER_OK, sapWithManager.SecureConnection(true));
     }
 
     qcc::MembershipCertificate peer1MembershipCertificate[1];
     /* Peer1 Living Room SG certificate to be signed by CA2 which is the ASGA. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1-1",
-                                                                    busUsedAsCA2,
-                                                                    peer1Guid.ToString(),
-                                                                    peer1Key.GetPublicKey(),
-                                                                    livingRoomGuid,
-                                                                    false,
-                                                                    3600,
-                                                                    peer1MembershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("1-1",
+                                                              busUsedAsCA2,
+                                                              peer1Guid.ToString(),
+                                                              peer1Key.GetPublicKey(),
+                                                              livingRoomGuid,
+                                                              peer1MembershipCertificate[0]
+                                                              ));
 
     ASSERT_EQ(ER_OK, sapWithPeer1.InstallMembership(peer1MembershipCertificate, 1));
     ASSERT_EQ(ER_OK, sapWithPeer1.SecureConnection());
@@ -729,7 +661,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_With_Membership_CA1_added_to_Ad
     {
         PermissionPolicy defaultPolicy;
         sapWithPeer2.GetDefaultPolicy(defaultPolicy);
-        UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, peer2Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, peer2Policy, true, true, true);
         ASSERT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
         ASSERT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
     }
@@ -786,7 +718,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
     ASSERT_EQ(ER_OK, peer2Bus.RegisterBusObject(peer2BusObject));
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     /* Create identity certs. */
     const size_t certChainSize = 2;
@@ -796,56 +728,51 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
     IdentityCertificate identityCertChainPeer2[certChainSize];
 
     /* Create CA certs. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  ca1Guid.ToString(),
-                                                                  ca1Key.GetPublicKey(),
-                                                                  "CertificateAuthority",
-                                                                  3600,
-                                                                  identityCertChainMasterCA1[1])) << "Failed to create CA1 cert";
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "0",
-                                                                  ca2Guid.ToString(),
-                                                                  ca2Key.GetPublicKey(),
-                                                                  "CertificateAuthority2",
-                                                                  3600,
-                                                                  identityCertChainMasterCA2[1])) << "Failed to create CA1 cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            ca1Guid.ToString(),
+                                                            ca1Key.GetPublicKey(),
+                                                            "CertificateAuthority",
+                                                            identityCertChainMasterCA1[1])) << "Failed to create CA1 cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "0",
+                                                            ca2Guid.ToString(),
+                                                            ca2Key.GetPublicKey(),
+                                                            "CertificateAuthority2",
+                                                            identityCertChainMasterCA2[1])) << "Failed to create CA1 cert";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA1, identityCertChainMasterCA1[1])) << "Failed to set CA flag on CA1's cert";
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA2, identityCertChainMasterCA2[1])) << "Failed to set CA flag on CA2's cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SetCAFlagOnCert(busUsedAsCA1, identityCertChainMasterCA1[1])) << "Failed to set CA flag on CA1's cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SetCAFlagOnCert(busUsedAsCA2, identityCertChainMasterCA2[1])) << "Failed to set CA flag on CA2's cert";
 
     /* Manager's identity certificate to be signed by CA2. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "0",
-                                                                  managerGuid.ToString(),
-                                                                  managerKey.GetPublicKey(),
-                                                                  "ManagerAlias",
-                                                                  3600,
-                                                                  identityCertChainMasterCA2[0])) << "Failed to create Manager identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "0",
+                                                            managerGuid.ToString(),
+                                                            managerKey.GetPublicKey(),
+                                                            "ManagerAlias",
+                                                            identityCertChainMasterCA2[0])) << "Failed to create Manager identity certificate.";
 
     /* Peer1 identity certificate to be signed by CA1. */
     identityCertChainPeer1[1] = identityCertChainMasterCA1[1];
     /* Peer2 identity certificate to be signed by CA2. */
     identityCertChainPeer2[1] = identityCertChainMasterCA2[1];
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA1,
-                                                                  "0",
-                                                                  peer1Guid.ToString(),
-                                                                  peer1Key.GetPublicKey(),
-                                                                  "Peer1Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer1[0])) << "Failed to create Peer1 identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA1,
+                                                            "0",
+                                                            peer1Guid.ToString(),
+                                                            peer1Key.GetPublicKey(),
+                                                            "Peer1Alias",
+                                                            identityCertChainPeer1[0])) << "Failed to create Peer1 identity certificate.";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA2,
-                                                                  "0",
-                                                                  peer2Guid.ToString(),
-                                                                  peer2Key.GetPublicKey(),
-                                                                  "Peer2Alias",
-                                                                  3600,
-                                                                  identityCertChainPeer2[0])) << "Failed to create Peer2 identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA2,
+                                                            "0",
+                                                            peer2Guid.ToString(),
+                                                            peer2Key.GetPublicKey(),
+                                                            "Peer2Alias",
+                                                            identityCertChainPeer2[0])) << "Failed to create Peer2 identity certificate.";
 
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainMasterCA2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainMasterCA2[0], manifests[0]));
     /*
      * Manager's identity certificate is signed by CA2.
      * Add CA1's key as Manager's authority so that it recognizes
@@ -858,7 +785,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
                                           manifests, ArraySize(manifests)));
 
     peer1Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer1[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA1, identityCertChainPeer1[0], manifests[0]));
     ASSERT_EQ(ER_OK, sapWithPeer1.Claim(ca1Key,
                                         managerGuid,
                                         ca2Key,
@@ -866,7 +793,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
                                         manifests, ArraySize(manifests)));
 
     peer2Bus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer2[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA2, identityCertChainPeer2[0], manifests[0]));
     ASSERT_EQ(ER_OK, sapWithPeer2.Claim(ca2Key,
                                         managerGuid,
                                         ca2Key,
@@ -880,15 +807,13 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
     qcc::MembershipCertificate managerMembershipCertificate[1];
 
     /* Manager's ASG membership certificate to be signed by CA2 which is the ASGA. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("0-1",
-                                                                    busUsedAsCA2,
-                                                                    managerGuid.ToString(),
-                                                                    managerKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    false,
-                                                                    3600,
-                                                                    managerMembershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("0-1",
+                                                              busUsedAsCA2,
+                                                              managerGuid.ToString(),
+                                                              managerKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              managerMembershipCertificate[0]
+                                                              ));
 
     ASSERT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 1));
     ASSERT_EQ(ER_OK, sapWithManager.SecureConnection());
@@ -925,7 +850,7 @@ TEST_F(MultipleTrustAnchorsPropagationTest, Peer_From_Certificate_Authority) {
     {
         PermissionPolicy defaultPolicy;
         sapWithPeer2.GetDefaultPolicy(defaultPolicy);
-        UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, peer2Policy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, peer2Policy, true, true, true);
         ASSERT_EQ(ER_OK, sapWithPeer2.UpdatePolicy(peer2Policy));
         ASSERT_EQ(ER_OK, sapWithPeer2.SecureConnection(true));
     }
@@ -1003,38 +928,36 @@ TEST(MembershipPropagationTest, manager_updates_own_policy_via_remote_call) {
     ASSERT_EQ(ER_OK, pcCA.GetSigningPublicKey(caKey));
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     GUID128 managerGuid;
-    PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
+    SecurityTestHelper::GetGUID(managerBus, managerGuid);
     GUID128 caGuid;
-    PermissionMgmtTestHelper::GetGUID(busUsedAsCA, caGuid);
+    SecurityTestHelper::GetGUID(busUsedAsCA, caGuid);
 
     /* Create identity certs. */
     const size_t certChainSize = 2;
     IdentityCertificate identityCertChainMasterCA[certChainSize];
 
     /* Create CA certs. */
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
-                                                                  "0",
-                                                                  caGuid.ToString(),
-                                                                  caKey.GetPublicKey(),
-                                                                  "CertificateAuthority",
-                                                                  3600,
-                                                                  identityCertChainMasterCA[1])) << "Failed to create CA cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA,
+                                                            "0",
+                                                            caGuid.ToString(),
+                                                            caKey.GetPublicKey(),
+                                                            "CertificateAuthority",
+                                                            identityCertChainMasterCA[1])) << "Failed to create CA cert";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SetCAFlagOnCert(busUsedAsCA, identityCertChainMasterCA[1])) << "Failed to set CA flag on CA's cert";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SetCAFlagOnCert(busUsedAsCA, identityCertChainMasterCA[1])) << "Failed to set CA flag on CA's cert";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(busUsedAsCA,
-                                                                  "0",
-                                                                  managerGuid.ToString(),
-                                                                  managerKey.GetPublicKey(),
-                                                                  "ManagerAlias",
-                                                                  3600,
-                                                                  identityCertChainMasterCA[0])) << "Failed to create identity certificate.";
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(busUsedAsCA,
+                                                            "0",
+                                                            managerGuid.ToString(),
+                                                            managerKey.GetPublicKey(),
+                                                            "ManagerAlias",
+                                                            identityCertChainMasterCA[0])) << "Failed to create identity certificate.";
 
     managerBus.GetPermissionConfigurator().SetApplicationState(PermissionConfigurator::CLAIMABLE);
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChainMasterCA[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA, identityCertChainMasterCA[0], manifests[0]));
     ASSERT_EQ(ER_OK, sapWithManager.Claim(caKey,
                                           managerGuid,
                                           managerKey,
@@ -1045,24 +968,21 @@ TEST(MembershipPropagationTest, manager_updates_own_policy_via_remote_call) {
 
     qcc::MembershipCertificate managerMembershipCertificate[2];
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("0-1",
-                                                                    busUsedAsCA,
-                                                                    managerGuid.ToString(),
-                                                                    managerKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    managerMembershipCertificate[1]
-                                                                    ));
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("0-0",
-                                                                    managerBus,
-                                                                    managerGuid.ToString(),
-                                                                    managerKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    false,
-                                                                    3600,
-                                                                    managerMembershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("0-1",
+                                                              busUsedAsCA,
+                                                              managerGuid.ToString(),
+                                                              managerKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              managerMembershipCertificate[1],
+                                                              true
+                                                              ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("0-0",
+                                                              managerBus,
+                                                              managerGuid.ToString(),
+                                                              managerKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              managerMembershipCertificate[0]
+                                                              ));
 
     ASSERT_EQ(ER_OK, sapWithManager.InstallMembership(managerMembershipCertificate, 2));
     ASSERT_EQ(ER_OK, sapWithManager.SecureConnection(true));
@@ -1086,7 +1006,7 @@ TEST(MembershipPropagationTest, manager_updates_own_policy_via_remote_call) {
     {
         PermissionPolicy defaultPolicy;
         sapWithManager.GetDefaultPolicy(defaultPolicy);
-        UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, managerPolicy, true, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(defaultPolicy, managerPolicy, true, true, true);
         EXPECT_EQ(ER_OK, sapWithManager.UpdatePolicy(managerPolicy));
         EXPECT_EQ(ER_OK, sapWithManager.SecureConnection(true));
     }

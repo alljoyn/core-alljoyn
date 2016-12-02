@@ -14,6 +14,7 @@
  *    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  ******************************************************************************/
 #include <gtest/gtest.h>
+#include <alljoyn/AllJoynStd.h>
 #include <alljoyn/AuthListener.h>
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/SecurityApplicationProxy.h>
@@ -21,11 +22,10 @@
 #include <map>
 
 #include "InMemoryKeyStore.h"
-#include "PermissionMgmtObj.h"
-#include "PermissionMgmtTest.h"
 #include "XmlManifestConverter.h"
 #include "KeyStore.h"
 #include "ajTestCommon.h"
+#include "SecurityTestHelper.h"
 
 #define TEN_MINS 600 // 600 secs is 10 mins
 
@@ -56,13 +56,6 @@ static const char s_ecdsaCertChainX509PEM[] = {
     "sr1PNKFcqHcL\n"
     "-----END CERTIFICATE-----"
 };
-
-static void GetAppPublicKey(BusAttachment& bus, ECCPublicKey& publicKey)
-{
-    KeyInfoNISTP256 keyInfo;
-    bus.GetPermissionConfigurator().GetSigningPublicKey(keyInfo);
-    publicKey = *keyInfo.GetPublicKey();
-}
 
 class SecurityOfflineManagementTestSessionPortListener : public SessionPortListener {
   public:
@@ -126,7 +119,7 @@ class SecurityOfflineManagementTest : public testing::Test {
         ASSERT_EQ(ER_OK, peer2Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer2AuthListener, nullptr, false));
         ASSERT_EQ(ER_OK, peer3Bus.EnablePeerSecurity("ALLJOYN_ECDHE_ECDSA", peer3AuthListener, nullptr, false));
 
-        PermissionMgmtTestHelper::GetGUID(managerBus, managerGuid);
+        SecurityTestHelper::GetGUID(managerBus, managerGuid);
         SetManifestTemplate(managerBus);
         SetManifestTemplate(peer1Bus);
         SetManifestTemplate(peer2Bus);
@@ -155,7 +148,7 @@ class SecurityOfflineManagementTest : public testing::Test {
         ASSERT_EQ(ER_OK, peer3Bus.CreateInterfacesFromXml(interface.c_str()));
 
         Manifest manifests[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
         // Get manager key
         KeyInfoNISTP256 managerKey;
@@ -188,19 +181,18 @@ class SecurityOfflineManagementTest : public testing::Test {
         const size_t certChainSize = 1;
         IdentityCertificate identityCertChainMaster[certChainSize];
 
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                      "0",
-                                                                      managerGuid.ToString(),
-                                                                      managerKey.GetPublicKey(),
-                                                                      "ManagerAlias",
-                                                                      3600,
-                                                                      identityCertChainMaster[0])) << "Failed to create identity certificate.";
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                                "0",
+                                                                managerGuid.ToString(),
+                                                                managerKey.GetPublicKey(),
+                                                                "ManagerAlias",
+                                                                identityCertChainMaster[0])) << "Failed to create identity certificate.";
 
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainMaster[0], manifests[0]));
         vector<std::string> manifestsXmlStrings;
         vector<AJ_PCSTR> manifestsXmls;
         ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-        PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+        SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
         ASSERT_EQ(ER_OK, pcManager.Claim(managerKey,
                                          managerGuid,
                                          managerKey,
@@ -208,24 +200,23 @@ class SecurityOfflineManagementTest : public testing::Test {
                                          manifestsXmls.data(), manifestsXmls.size()));
 
         ECCPublicKey managerPublicKey;
-        GetAppPublicKey(managerBus, managerPublicKey);
+        SecurityTestHelper::GetAppPublicKey(managerBus, managerPublicKey);
         ASSERT_EQ(*managerKey.GetPublicKey(), managerPublicKey);
 
         //Create peer1 identityCert
         IdentityCertificate identityCertChainPeer1[certChainSize];
 
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                      "0",
-                                                                      managerGuid.ToString(),
-                                                                      peer1Key.GetPublicKey(),
-                                                                      "Peer1Alias",
-                                                                      3600,
-                                                                      identityCertChainPeer1[0])) << "Failed to create identity certificate.";
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                                "0",
+                                                                managerGuid.ToString(),
+                                                                peer1Key.GetPublicKey(),
+                                                                "Peer1Alias",
+                                                                identityCertChainPeer1[0])) << "Failed to create identity certificate.";
 
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer1[0], manifests[0]));
         //Manager claims Peers
         ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-        PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+        SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
         ASSERT_EQ(ER_OK, pcPeer1.Claim(managerKey,
                                        managerGuid,
                                        managerKey,
@@ -234,16 +225,15 @@ class SecurityOfflineManagementTest : public testing::Test {
 
         // Create peer2 identityCert
         IdentityCertificate identityCertChainPeer2[certChainSize];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateIdentityCert(managerBus,
-                                                                      "0",
-                                                                      managerGuid.ToString(),
-                                                                      peer2Key.GetPublicKey(),
-                                                                      "Peer2Alias",
-                                                                      3600,
-                                                                      identityCertChainPeer2[0])) << "Failed to create identity certificate.";
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateIdentityCert(managerBus,
+                                                                "0",
+                                                                managerGuid.ToString(),
+                                                                peer2Key.GetPublicKey(),
+                                                                "Peer2Alias",
+                                                                identityCertChainPeer2[0])) << "Failed to create identity certificate.";
+        ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(managerBus, identityCertChainPeer2[0], manifests[0]));
         ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-        PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+        SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
         ASSERT_EQ(ER_OK, pcPeer2.Claim(managerKey,
                                        managerGuid,
                                        managerKey,
@@ -288,15 +278,14 @@ class SecurityOfflineManagementTest : public testing::Test {
 
         String membershipSerial = "1";
         qcc::MembershipCertificate managerMembershipCertificate[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
-                                                                        managerBus,
-                                                                        "managerBus",
-                                                                        managerKey.GetPublicKey(),
-                                                                        managerGuid,
-                                                                        true,
-                                                                        3600,
-                                                                        managerMembershipCertificate[0]
-                                                                        ));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert(membershipSerial,
+                                                                  managerBus,
+                                                                  "managerBus",
+                                                                  managerKey.GetPublicKey(),
+                                                                  managerGuid,
+                                                                  managerMembershipCertificate[0],
+                                                                  true
+                                                                  ));
         ASSERT_EQ(ER_OK, pcManager.InstallMembership(managerMembershipCertificate, 1));
     }
 
@@ -309,15 +298,13 @@ class SecurityOfflineManagementTest : public testing::Test {
 
         String membershipSerial = "1";
         qcc::MembershipCertificate peer1MembershipCertificate[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
-                                                                        managerBus,
-                                                                        "peer1Bus",
-                                                                        peer1Key.GetPublicKey(),
-                                                                        managerGuid,
-                                                                        false,
-                                                                        3600,
-                                                                        peer1MembershipCertificate[0]
-                                                                        ));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert(membershipSerial,
+                                                                  managerBus,
+                                                                  "peer1Bus",
+                                                                  peer1Key.GetPublicKey(),
+                                                                  managerGuid,
+                                                                  peer1MembershipCertificate[0]
+                                                                  ));
         ASSERT_EQ(ER_OK, pcPeer1.InstallMembership(peer1MembershipCertificate, 1));
     }
 
@@ -330,22 +317,20 @@ class SecurityOfflineManagementTest : public testing::Test {
 
         String membershipSerial = "1";
         qcc::MembershipCertificate peer2MembershipCertificate[1];
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert(membershipSerial,
-                                                                        managerBus,
-                                                                        "peer2Bus",
-                                                                        peer2Key.GetPublicKey(),
-                                                                        managerGuid,
-                                                                        false,
-                                                                        3600,
-                                                                        peer2MembershipCertificate[0]
-                                                                        ));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert(membershipSerial,
+                                                                  managerBus,
+                                                                  "peer2Bus",
+                                                                  peer2Key.GetPublicKey(),
+                                                                  managerGuid,
+                                                                  peer2MembershipCertificate[0]
+                                                                  ));
         ASSERT_EQ(ER_OK, pcPeer2.InstallMembership(peer2MembershipCertificate, 1));
     }
 
     void SetManifestTemplate(BusAttachment& bus)
     {
         Manifest manifestTemplate;
-        ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifestTemplate));
+        ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifestTemplate));
         ASSERT_EQ(ER_OK, bus.GetPermissionConfigurator().SetPermissionManifestTemplate(const_cast<PermissionPolicy::Rule*>(manifestTemplate->GetRules().data()), manifestTemplate->GetRules().size()));
     }
 
@@ -387,22 +372,6 @@ class SecurityOfflineManagementTest : public testing::Test {
         return status;
     }
 
-    static QStatus UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
-                                                           PermissionPolicy& policy,
-                                                           bool keepCAentry = true,
-                                                           bool keepAdminGroupEntry = false,
-                                                           bool keepInstallMembershipEntry = false);
-
-    /*
-     * this will create a Policy that will allow access to everything.
-     * Many of the tests assume that a Bus is able to respond to method calls
-     * The value of the policy is unimportant just that the bus is using security
-     * and is responsive.
-     *
-     * DOES NOT add the CA entry from the default policy
-     */
-    static void CreatePermissivePolicy(PermissionPolicy& policy, uint32_t version);
-
     BusAttachment managerBus;
     BusAttachment peer1Bus;
     BusAttachment peer2Bus;
@@ -431,83 +400,6 @@ class SecurityOfflineManagementTest : public testing::Test {
     //Random GUID used for the SecurityManager
     GUID128 managerGuid;
 };
-
-QStatus SecurityOfflineManagementTest::UpdatePolicyWithValuesFromDefaultPolicy(const PermissionPolicy& defaultPolicy,
-                                                                               PermissionPolicy& policy,
-                                                                               bool keepCAentry,
-                                                                               bool keepAdminGroupEntry,
-                                                                               bool keepInstallMembershipEntry) {
-
-    size_t count = policy.GetAclsSize();
-    if (keepCAentry) {
-        ++count;
-    }
-    if (keepAdminGroupEntry) {
-        ++count;
-    }
-    if (keepInstallMembershipEntry) {
-        ++count;
-    }
-
-    PermissionPolicy::Acl* acls = new PermissionPolicy::Acl[count];
-    size_t idx = 0;
-
-    for (size_t cnt = 0; cnt < defaultPolicy.GetAclsSize(); ++cnt) {
-        if (defaultPolicy.GetAcls()[cnt].GetPeersSize() > 0) {
-            if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_FROM_CERTIFICATE_AUTHORITY) {
-                if (keepCAentry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_MEMBERSHIP) {
-                if (keepAdminGroupEntry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            } else if (defaultPolicy.GetAcls()[cnt].GetPeers()[0].GetType() == PermissionPolicy::Peer::PEER_WITH_PUBLIC_KEY) {
-                if (keepInstallMembershipEntry) {
-                    acls[idx++] = defaultPolicy.GetAcls()[cnt];
-                }
-            }
-        }
-
-    }
-
-    for (size_t cnt = 0; cnt < policy.GetAclsSize(); ++cnt) {
-        QCC_ASSERT(idx <= count);
-        acls[idx++] = policy.GetAcls()[cnt];
-    }
-
-    policy.SetAcls(count, acls);
-    delete [] acls;
-    return ER_OK;
-}
-
-void SecurityOfflineManagementTest::CreatePermissivePolicy(PermissionPolicy& policy, uint32_t version) {
-    policy.SetVersion(version);
-    {
-        PermissionPolicy::Acl acls[1];
-        {
-            PermissionPolicy::Peer peers[1];
-            peers[0].SetType(PermissionPolicy::Peer::PEER_ALL);
-            acls[0].SetPeers(1, peers);
-        }
-        {
-            PermissionPolicy::Rule rules[1];
-            rules[0].SetObjPath("*");
-            rules[0].SetInterfaceName("*");
-            {
-                PermissionPolicy::Rule::Member members[1];
-                members[0].Set("*",
-                               PermissionPolicy::Rule::Member::NOT_SPECIFIED,
-                               PermissionPolicy::Rule::Member::ACTION_PROVIDE |
-                               PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                               PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-                rules[0].SetMembers(1, members);
-            }
-            acls[0].SetRules(1, rules);
-        }
-        policy.SetAcls(1, acls);
-    }
-}
 
 /*
  * Purpose:
@@ -578,7 +470,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_fails_if_version_not_newer)
     {
         PermissionPolicy peer1DefaultPolicy;
         ASSERT_EQ(ER_OK, pcPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy1, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy1, true, true);
     }
 
     ASSERT_EQ(ER_OK, pcPeer1.UpdatePolicy(policy1));
@@ -661,7 +553,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_new_policy_should_override_ol
     {
         PermissionPolicy peer1DefaultPolicy;
         ASSERT_EQ(ER_OK, pcPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy1, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy1, true, true);
     }
 
     ASSERT_EQ(ER_OK, pcPeer1.UpdatePolicy(policy1));
@@ -706,7 +598,7 @@ TEST_F(SecurityOfflineManagementTest, UpdatePolicy_new_policy_should_override_ol
     {
         PermissionPolicy peer1DefaultPolicy;
         ASSERT_EQ(ER_OK, pcPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy2, true, true);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, policy2, true, true);
     }
 
     ASSERT_EQ(ER_OK, pcPeer1.UpdatePolicy(policy2));
@@ -780,7 +672,7 @@ TEST_F(SecurityOfflineManagementTest, Update_identity_fails_on_invalid_icc_chain
     PermissionConfigurator& pcPeer2 = peer2Bus.GetPermissionConfigurator();
 
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 5, 6, 7, 8 };
@@ -818,7 +710,7 @@ TEST_F(SecurityOfflineManagementTest, Update_identity_fails_on_invalid_icc_chain
     peer1Cert.SetValidity(&validity);
 
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
     peer1Cert.SetAlias("intermediate-cert-alias");
@@ -836,7 +728,7 @@ TEST_F(SecurityOfflineManagementTest, Update_identity_fails_on_invalid_icc_chain
     peer2Cert.SetValidity(&validity);
 
     ECCPublicKey peer2PublicKey;
-    GetAppPublicKey(peer2Bus, peer2PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer2Bus, peer2PublicKey);
 
     peer2Cert.SetSubjectPublicKey(&peer2PublicKey);
     peer2Cert.SetAlias("peer2-cert-alias");
@@ -852,11 +744,11 @@ TEST_F(SecurityOfflineManagementTest, Update_identity_fails_on_invalid_icc_chain
     identityCertChain[1] = peer1Cert;
     identityCertChain[2] = caCert;
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(peer1Bus, identityCertChain[0], manifests[0]));
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     // Call UpdateIdentity to install the cert chain
     EXPECT_EQ(ER_INVALID_CERTIFICATE, pcPeer2.UpdateIdentity(identityCertChain, certChainSize, manifestsXmls.data(), manifestsXmls.size()))
         << "Failed to update Identity cert or manifest ";
@@ -865,22 +757,21 @@ TEST_F(SecurityOfflineManagementTest, Update_identity_fails_on_invalid_icc_chain
 TEST_F(SecurityOfflineManagementTest, install_membership_succeeds)
 {
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     KeyInfoNISTP256 peer2PublicKey;
     PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
     ASSERT_EQ(ER_OK, peer2PermissionConfigurator.GetSigningPublicKey(peer2PublicKey));
 
     qcc::MembershipCertificate membershipCertificate[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("123",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("123",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
     // Call InstallMembership
     EXPECT_EQ(ER_OK, peer2PermissionConfigurator.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
@@ -889,35 +780,33 @@ TEST_F(SecurityOfflineManagementTest, install_membership_succeeds)
 TEST_F(SecurityOfflineManagementTest, install_membership_twice_succeeds)
 {
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     KeyInfoNISTP256 peer2PublicKey;
     PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
     ASSERT_EQ(ER_OK, peer2PermissionConfigurator.GetSigningPublicKey(peer2PublicKey));
 
     qcc::MembershipCertificate membershipCertificate[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("123",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("123",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
     // Call InstallMembership
     ASSERT_EQ(ER_OK, peer2PermissionConfigurator.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("456",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("456",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
 
     // Call InstallMembership
@@ -927,37 +816,35 @@ TEST_F(SecurityOfflineManagementTest, install_membership_twice_succeeds)
 TEST_F(SecurityOfflineManagementTest, install_membership_fails_with_same_cert_serial)
 {
     Manifest manifests[1];
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     KeyInfoNISTP256 peer2PublicKey;
     PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
     ASSERT_EQ(ER_OK, peer2PermissionConfigurator.GetSigningPublicKey(peer2PublicKey));
 
     qcc::MembershipCertificate membershipCertificate[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("1",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
 
     // Call InstallMembership
     ASSERT_EQ(ER_OK, peer2PermissionConfigurator.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
 
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("1",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("1",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
     // Call InstallMembership
     EXPECT_EQ(ER_DUPLICATE_CERTIFICATE, peer2PermissionConfigurator.InstallMembership(membershipCertificate, 1)) << "InstallMembership succeeded when it should have failed";
@@ -966,7 +853,7 @@ TEST_F(SecurityOfflineManagementTest, install_membership_fails_with_same_cert_se
 TEST_F(SecurityOfflineManagementTest, remove_membership_fails_if_serial_does_not_match)
 {
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     KeyInfoNISTP256 peer2PublicKey;
     PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
@@ -974,28 +861,26 @@ TEST_F(SecurityOfflineManagementTest, remove_membership_fails_if_serial_does_not
 
     qcc::MembershipCertificate membershipCertificate[1];
     /* GetUniqueName returns an empty string when the bus is not connected, so we can't use that here. */
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("123",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("123",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
     // Call InstallMembership
     ASSERT_EQ(ER_OK, peer2PermissionConfigurator.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("456",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("456",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
 
     // Call InstallMembership
@@ -1033,35 +918,33 @@ TEST_F(SecurityOfflineManagementTest, remove_membership_fails_if_serial_does_not
 TEST_F(SecurityOfflineManagementTest, remove_membership_fails_if_issuer_does_not_match)
 {
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     KeyInfoNISTP256 peer2PublicKey;
     PermissionConfigurator& peer2PermissionConfigurator = peer2Bus.GetPermissionConfigurator();
     ASSERT_EQ(ER_OK, peer2PermissionConfigurator.GetSigningPublicKey(peer2PublicKey));
 
     qcc::MembershipCertificate membershipCertificate[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("123",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("123",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
     // Call InstallMembership
     EXPECT_EQ(ER_OK, peer2PermissionConfigurator.InstallMembership(membershipCertificate, 1)) << "Failed to install membership ";
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::CreateMembershipCert("456",
-                                                                    managerBus,
-                                                                    "peer2Bus",
-                                                                    peer2PublicKey.GetPublicKey(),
-                                                                    managerGuid,
-                                                                    true,
-                                                                    3600,
-                                                                    membershipCertificate[0]
-                                                                    ));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::CreateMembershipCert("456",
+                                                              managerBus,
+                                                              "peer2Bus",
+                                                              peer2PublicKey.GetPublicKey(),
+                                                              managerGuid,
+                                                              membershipCertificate[0],
+                                                              true
+                                                              ));
 
 
     // Call InstallMembership
@@ -1111,12 +994,12 @@ TEST_F(SecurityOfflineManagementTest, successful_method_call_after_chained_membe
     GUID128 interGuid;
     GUID128 caGUID;
 
-    PermissionMgmtTestHelper::GetGUID(peer1Bus, leafGuid);
-    PermissionMgmtTestHelper::GetGUID(peer3Bus, interGuid);
-    PermissionMgmtTestHelper::GetGUID(busUsedAsCA, caGUID);
+    SecurityTestHelper::GetGUID(peer1Bus, leafGuid);
+    SecurityTestHelper::GetGUID(peer3Bus, interGuid);
+    SecurityTestHelper::GetGUID(busUsedAsCA, caGUID);
 
     Manifest manifests[1];
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::CreateAllInclusiveManifest(manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::CreateAllInclusiveManifest(manifests[0]));
 
     uint8_t managerCN[] = { 1, 2, 3, 4 };
     uint8_t intermediateCN[] = { 9, 9, 9, 9 };
@@ -1155,7 +1038,7 @@ TEST_F(SecurityOfflineManagementTest, successful_method_call_after_chained_membe
     peer1Cert.SetValidity(&validity);
 
     ECCPublicKey peer1PublicKey;
-    GetAppPublicKey(peer1Bus, peer1PublicKey);
+    SecurityTestHelper::GetAppPublicKey(peer1Bus, peer1PublicKey);
 
     peer1Cert.SetSubjectPublicKey(&peer1PublicKey);
     peer1Cert.SetAlias("intermediate-cert-alias");
@@ -1174,7 +1057,7 @@ TEST_F(SecurityOfflineManagementTest, successful_method_call_after_chained_membe
     // Create membership chain to be installed on peer 1
     //
 
-    PermissionMgmtTestHelper::GetGUID(managerBus, guildAuthorityGUID);
+    SecurityTestHelper::GetGUID(managerBus, guildAuthorityGUID);
     KeyInfoNISTP256 sgaKey;
     PermissionConfigurator& managerPC = managerBus.GetPermissionConfigurator();
     ASSERT_EQ(ER_OK, managerPC.GetSigningPublicKey(sgaKey));
@@ -1241,11 +1124,11 @@ TEST_F(SecurityOfflineManagementTest, successful_method_call_after_chained_membe
     //ASSERT_EQ(ER_OK, pcPeer1.Reset());
     ASSERT_EQ(ER_OK, peer1PC.InstallMembership(membershipCertChain, 3));
 
-    EXPECT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChain[0], manifests[0]));
+    EXPECT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA, identityCertChain[0], manifests[0]));
     vector<std::string> manifestsXmlStrings;
     vector<AJ_PCSTR> manifestsXmls;
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     // Call UpdateIdentity on Peer 1 to install the cert chain
     ASSERT_EQ(ER_OK, peer1PC.UpdateIdentity(identityCertChain, certChainSize, manifestsXmls.data(), manifestsXmls.size()))
         << "Failed to update Identity cert or manifest ";
@@ -1274,9 +1157,9 @@ TEST_F(SecurityOfflineManagementTest, successful_method_call_after_chained_membe
     identityCertChain[0] = peer2Cert;
     identityCertChain[1] = caCert;
 
-    ASSERT_EQ(ER_OK, PermissionMgmtTestHelper::SignManifest(busUsedAsCA, identityCertChain[0], manifests[0]));
+    ASSERT_EQ(ER_OK, SecurityTestHelper::SignManifest(busUsedAsCA, identityCertChain[0], manifests[0]));
     ASSERT_EQ(ER_OK, XmlManifestConverter::ManifestsToXmlArray(manifests, ArraySize(manifests), manifestsXmlStrings));
-    PermissionMgmtTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
+    SecurityTestHelper::UnwrapStrings(manifestsXmlStrings, manifestsXmls);
     // Call UpdateIdentity on Peer 1 to install the cert chain
     ASSERT_EQ(ER_OK, peer2PC.UpdateIdentity(identityCertChain, certChainSize, manifestsXmls.data(), manifestsXmls.size()))
         << "Failed to update Identity cert or manifest ";
@@ -1444,12 +1327,12 @@ TEST_P(SecurityOfflineManagementMethodCalls, PolicyRules)
     {
         PermissionPolicy peer1DefaultPolicy;
         ASSERT_EQ(ER_OK, pcPeer1.GetDefaultPolicy(peer1DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer1DefaultPolicy, peer1Policy);
     }
     {
         PermissionPolicy peer2DefaultPolicy;
         ASSERT_EQ(ER_OK, pcPeer2.GetDefaultPolicy(peer2DefaultPolicy));
-        UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
+        SecurityTestHelper::UpdatePolicyWithValuesFromDefaultPolicy(peer2DefaultPolicy, peer2Policy);
     }
 
     ASSERT_EQ(ER_OK, pcPeer1.UpdatePolicy(peer1Policy));
