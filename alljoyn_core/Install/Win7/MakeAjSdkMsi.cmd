@@ -3,19 +3,15 @@ Rem @file
 Rem @brief  Make the .cab file for Win7 installation.
 
 Rem ****************************************************************************
-Rem  Copyright AllSeen Alliance. All rights reserved.
-Rem 
-Rem     Permission to use, copy, modify, and/or distribute this software for any
-Rem     purpose with or without fee is hereby granted, provided that the above
-Rem     copyright notice and this permission notice appear in all copies.
-Rem 
-Rem     THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-Rem     WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-Rem     MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-Rem     ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-Rem     WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-Rem     ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-Rem     OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+Rem  Rem  
+Rem     Copyright (c) 2016 Open Connectivity Foundation and AllJoyn Open
+Rem     Source Project Contributors and others.
+Rem     
+Rem     All rights reserved. This program and the accompanying materials are
+Rem     made available under the terms of the Apache License, Version 2.0
+Rem     which accompanies this distribution, and is available at
+Rem     http://www.apache.org/licenses/LICENSE-2.0
+
 Rem ****************************************************************************
 
 setlocal ENABLEDELAYEDEXPANSION 
