@@ -31,7 +31,7 @@
 
 using namespace qcc;
 
-#if defined(OPENSSL_THREADS)
+#if defined(OPENSSL_THREADS) && !defined(LINUX_USE_OPENSSL_1_1)
 
 OpenSsl_ScopedLock::OpenSsl_ScopedLock() {
 }
@@ -74,7 +74,7 @@ void Crypto::Shutdown()
     locks = NULL;
 }
 
-#else /* !OPENSSL_THREADS */
+#else /* !OPENSSL_THREADS  || LINUX_USE_OPENSSL_1_1 */
 
 static Mutex* mutex = NULL;
 static volatile int32_t refCount = 0;
@@ -98,7 +98,8 @@ OpenSsl_ScopedLock::~OpenSsl_ScopedLock()
     mutex->Unlock();
 }
 
-void Crypto::Init() {
+QStatus Crypto::Init() {
+    return ER_OK;
 }
 
 void Crypto::Shutdown() {

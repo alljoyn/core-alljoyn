@@ -36,6 +36,7 @@
 #include <qcc/StringUtil.h>
 #include <qcc/Crypto.h>
 #include <qcc/KeyBlob.h>
+#include <qcc/Debug.h>
 
 #include <Status.h>
 #include "OpenSsl.h"
@@ -69,11 +70,21 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(new
     OpenSsl_ScopedLock lock;
 
     AES_set_encrypt_key((unsigned char*)key.GetData(), key.GetSize() * 8, &keyState->key);
+
+#ifdef LINUX_USE_OPENSSL_1_1
+    ERR_load_crypto_strings();
+    OpenSSL_add_all_algorithms();
+    //  OPENSSL_config(NULL);
+#endif
 }
 
 Crypto_AES::~Crypto_AES()
 {
     delete keyState;
+#ifdef LINUX_USE_OPENSSL_1_1
+    EVP_cleanup();
+    ERR_free_strings();
+#endif
 }
 
 QStatus Crypto_AES::Encrypt(const Block* in, Block* out, uint32_t numBlocks)
@@ -134,6 +145,18 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
     return status;
 }
 
+static inline uint8_t LengthOctetsFor(size_t len)
+{
+    if (len <= 0xFFFF) {
+        return 2;
+    } else if (len <= 0xFFFFFF) {
+        return 3;
+    } else {
+        return 4;
+    }
+}
+
+#ifndef LINUX_USE_OPENSSL_1_1
 static void Compute_CCM_AuthField(AES_KEY* key, Crypto_AES::Block& T, uint8_t M, uint8_t L, const KeyBlob& nonce, const uint8_t* mData, size_t mLen, const uint8_t* addData, size_t addLen)
 {
     uint8_t flags = ((addLen) ? 0x40 : 0) | (((M - 2) / 2) << 3) | (L - 1);
@@ -220,18 +243,6 @@ static void Compute_CCM_AuthField(AES_KEY* key, Crypto_AES::Block& T, uint8_t M,
         }
     }
     Trace("CBC-MAC:   ", T.data, M);
-}
-
-
-static inline uint8_t LengthOctetsFor(size_t len)
-{
-    if (len <= 0xFFFF) {
-        return 2;
-    } else if (len <= 0xFFFFFF) {
-        return 3;
-    } else {
-        return 4;
-    }
 }
 
 /*
@@ -355,6 +366,272 @@ QStatus Crypto_AES::Decrypt_CCM(const void* in, void* out, size_t& len, const Ke
         return ER_AUTH_FAIL;
     }
 }
+//Due to changes in OpenSSL1.1.x the Encrypt_CCM and Decrypt_CCM functions must be implemented differently
+#else
 
+#ifndef AES_CCM_IV_MIN_LEN
+#define AES_CCM_IV_MIN_LEN 7
+#endif
+//Get the openssl libcrypto errors and return QStatus
+static QStatus CCM_handleErrors(QStatus status)
+{
+    char* buf = (char*)calloc(128, sizeof(char));
+    ERR_error_string(ERR_get_error(), buf);
+    QCC_LogError(status, ("error message from libcrypto: %s", buf));
+
+    free(buf);
+    return status;
+}
+
+//Set the IV
+static QStatus SetIV(const KeyBlob& nonce, Crypto_AES::Block& iv, int& ivLen)
+{
+    OpenSsl_ScopedLock lock;
+    size_t origLen = nonce.GetSize();
+
+    //Just in case this function is called somewhere else without input check
+    if ((origLen < 4) || (origLen > 14)) {
+        return ER_BAD_ARG_4;
+    }
+
+    memcpy(iv.data, nonce.GetData(), origLen);
+    ivLen = origLen;
+
+    //Pad IV if necessary. AES_CCM requires 7 bytes minium
+    if (origLen < AES_CCM_IV_MIN_LEN) {
+        memcpy(iv.data + origLen, nonce.GetData(), AES_CCM_IV_MIN_LEN - origLen);
+        ivLen = AES_CCM_IV_MIN_LEN;
+    }
+    return ER_OK;
+}
+
+QStatus Crypto_AES::Encrypt_CCM(const void* in, void* out, size_t& len, const KeyBlob& nonce, const void* addData, size_t addLen, uint8_t authLen)
+{
+    /*
+     * Protect the open ssl APIs.
+     */
+    OpenSsl_ScopedLock lock;
+    /*
+     * Check we are initialized for CCM
+     */
+    if (mode != CCM) {
+        return ER_CRYPTO_ERROR;
+    }
+    size_t nLen = nonce.GetSize();
+    if (!in && len) {
+        return ER_BAD_ARG_1;
+    }
+    if (!out && len) {
+        return ER_BAD_ARG_2;
+    }
+    if (nLen < 4 || nLen > 14) {
+        return ER_BAD_ARG_4;
+    }
+    if ((authLen < 4) || (authLen > 16)) {
+        return ER_BAD_ARG_8;
+    }
+    const uint8_t L = 15 - (uint8_t)max(nLen, (size_t)11);
+    if (L < LengthOctetsFor(len)) {
+        return ER_BAD_ARG_3;
+    }
+
+    Block iv;
+    int ivLen;
+    QStatus status = SetIV(nonce, iv, ivLen);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    EVP_CIPHER_CTX* ctx;
+    int ciphertext_len;
+    int plaintext_len = len;
+    int encrypt_len;
+    Block tag(0);
+
+    /* Create and initializse the context */
+    if (!(ctx = EVP_CIPHER_CTX_new())) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_NEW_FAIL);
+    }
+
+    /* Initialise the encryption operation. */
+    if (1 != EVP_EncryptInit_ex(ctx, EVP_aes_128_ccm(), NULL, NULL, NULL)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_INIT_FAIL);
+    }
+
+    /* Setting IV len, minial & default is 7.*/
+    if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, ivLen, NULL)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_CTRL_FAIL);
+    }
+
+    /* Set tag length, must use NULL for the buffer here */
+    if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, authLen, NULL)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_CTRL_FAIL);
+    }
+
+    /* Initialize key and IV */
+    if (1 != EVP_EncryptInit_ex(ctx, NULL, NULL, (uint8_t*)&keyState->key, iv.data)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_INIT_FAIL);
+    }
+
+    /* Provide the total plaintext length */
+    if (1 != EVP_EncryptUpdate(ctx, NULL, &encrypt_len, NULL, plaintext_len)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_UPDATE_FAIL);
+    }
+
+    /* Provide any AAD data, if there is any */
+    if ((addLen > 0) && (NULL != addData)) {
+        if (1 != EVP_EncryptUpdate(ctx, NULL, &encrypt_len, (const uint8_t*)addData, addLen)) {
+            return CCM_handleErrors(ER_CRYPTO_CTX_UPDATE_FAIL);
+        }
+    }
+
+    /* Provide the message to be encrypted, and obtain the encrypted output. */
+    if (1 != EVP_EncryptUpdate(ctx, (uint8_t*)out, &encrypt_len, (const uint8_t*)in, plaintext_len)) {
+        // usually this fails due to auth data(Tag) mismatch between the input and computed
+        return CCM_handleErrors(ER_AUTH_FAIL);
+    }
+
+    ciphertext_len = encrypt_len;
+
+    /* Finalize the encryption.
+     * (Note blow is from Openssl sample code's comment, not sure what it means)
+     * Normally ciphertext bytes may be written at
+     * this stage, but this does not occur in CCM mode
+     */
+    if (1 != EVP_EncryptFinal_ex(ctx, (uint8_t*)out + encrypt_len, &encrypt_len)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_FINAL_FAIL);
+    }
+    ciphertext_len += encrypt_len;
+
+    /* Get the tag */
+    if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_GET_TAG, authLen, tag.data)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_CTRL_FAIL);
+    }
+
+    /* Clean up CTX*/
+    EVP_CIPHER_CTX_free(ctx);
+
+    //append the tag data to the end of ciphertext(out), and increase the length of total message
+    memcpy((uint8_t*)out + ciphertext_len, tag.data, authLen);
+    len = ciphertext_len + authLen;
+
+    return ER_OK;
+}
+
+QStatus Crypto_AES::Decrypt_CCM(const void* in, void* out, size_t& len, const KeyBlob& nonce, const void* addData, size_t addLen, uint8_t authLen)
+{
+    /*
+     * Protect the open ssl APIs.
+     */
+    OpenSsl_ScopedLock lock;
+    /*
+     * Check we are initialized for CCM
+     */
+
+    if (mode != CCM) {
+        return ER_CRYPTO_ERROR;
+    }
+    size_t nLen = nonce.GetSize();
+    if (!in) {
+        return ER_BAD_ARG_1;
+    }
+    if (!len || (len < authLen)) {
+        return ER_BAD_ARG_3;
+    }
+    if (nLen < 4 || nLen > 14) {
+        return ER_BAD_ARG_4;
+    }
+    if ((authLen < 4) || (authLen > 16)) {
+        return ER_BAD_ARG_8;
+    }
+    const uint8_t L = 15 - (uint8_t)max(nLen, (size_t)11);
+    if (L < LengthOctetsFor(len)) {
+        return ER_BAD_ARG_3;
+    }
+
+    Block iv;
+    int ivLen;
+    QStatus status;
+
+    status = SetIV(nonce, iv, ivLen);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    EVP_CIPHER_CTX* ctx;
+
+    int ciphertext_len = len - authLen;
+    int plaintext_len;
+    int decrypt_len;
+    Block tag(0);
+    //copy the Tag to tag.data
+    memcpy(tag.data, (uint8_t*)in + ciphertext_len, authLen);
+
+    /* Create and initialize the context */
+    if (!(ctx = EVP_CIPHER_CTX_new())) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_NEW_FAIL);
+    }
+
+    /* Initialise the encryption operation. */
+    if (1 != EVP_DecryptInit_ex(ctx, EVP_aes_128_ccm(), NULL, NULL, NULL)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_INIT_FAIL);
+    }
+
+    /* Setting IV len to 7. Not strictly necessary as this is the default
+     * but shown here for the purposes of this example */
+    if (1 != EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_IVLEN, ivLen, NULL)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_CTRL_FAIL);
+    }
+
+    /* Set tag and length */
+    EVP_CIPHER_CTX_ctrl(ctx, EVP_CTRL_CCM_SET_TAG, authLen, tag.data);
+
+    /* Initialize key and IV */
+    if (1 != EVP_DecryptInit_ex(ctx, NULL, NULL, (uint8_t*)&keyState->key, iv.data)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_INIT_FAIL);
+    }
+
+    /* Provide the total plaintext length */
+    if (1 != EVP_DecryptUpdate(ctx, NULL, &decrypt_len, NULL, ciphertext_len)) {
+        return CCM_handleErrors(ER_CRYPTO_CTX_UPDATE_FAIL);
+    }
+
+    /* Provide any AAD data if there is any */
+    if ((addLen > 0) && (NULL != addData)) {
+        if (1 != EVP_DecryptUpdate(ctx, NULL, &decrypt_len, (const uint8_t*)addData, addLen)) {
+            return CCM_handleErrors(ER_CRYPTO_CTX_UPDATE_FAIL);
+        }
+    }
+
+    /* Provide the message to be encrypted, and obtain the encrypted output.
+     * EVP_DecryptUpdate can only be called once for this
+     */
+    int ret = EVP_DecryptUpdate(ctx, (uint8_t*)out, &decrypt_len, (const uint8_t*)in, ciphertext_len);
+    if (1 != ret) {
+        //usually this fails due to auth data(Tag) mismatch between the input and computed
+        return CCM_handleErrors(ER_AUTH_FAIL);
+    }
+    plaintext_len = decrypt_len;
+
+    /** Note for Openssl-1.1.0: this call always fails. It is not necessary to call this function in
+     * the end though. Keeping it here for now till OpenSSL fix it. Below is the comments from the
+     * original sample code*/
+    /* Finalise the encryption. Normally ciphertext bytes may be written at
+     * this stage, but this does not occur in CCM mode
+     */
+    //if (1 != EVP_DecryptFinal_ex(ctx, (uint8_t*)out + decrypt_len, &decrypt_len)) {
+    //    CCM_handleErrors();
+    //}
+    //plaintext_len += decrypt_len;
+
+    /* Clean up */
+    EVP_CIPHER_CTX_free(ctx);
+
+    len = plaintext_len;
+    return ER_OK;
+}
+#endif //LINUX_USE_OPENSSL_1_1
 
 }

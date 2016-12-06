@@ -89,10 +89,63 @@ if env['ASAN']:
    env.Append(LINKFLAGS = '-fsanitize=address')
 
 env.SConscript('${CPU}/SConscript')
-
 env.AppendUnique(LIBS =['rt', 'stdc++', 'pthread', 'm'])
+
 if env['CRYPTO'] == 'openssl':
+    import re
+    import subprocess
+    import sys
+    def check_libcrypto_version():
+        #subprocess.check_output not available prior to python 2.7
+        version=''
+        for path in env['LIBPATH']:
+           path = str(env.Dir(path))
+           try:
+               #subprocess.check_call(['stat', '-t', path])
+               libcryptoso = subprocess.check_output(['find', path, '-maxdepth', '1', '-name', 'libcrypto.so', '-print'])
+               #find -print put a newline char in the end of the file
+               libcryptoso = libcryptoso.strip()
+               if libcryptoso :
+                   version = subprocess.check_output("strings "+libcryptoso+" | grep \"^OpenSSL\s\+[0-9]\+\.[0-9]\+\.\"", shell=True)
+               if version:
+                   print "\t[Linux]    found openssl version via LIBPATH"
+                   break
+           except subprocess.CalledProcessError:
+               pass
+
+        #use strings to find libcrypto's OpenSSL version
+        if not version:
+            try:
+                version = subprocess.check_output(['openssl', 'version'])
+                print "\t[Linux]    found OpenSSL version via \"openssl version\" cli"
+            except subprocess.CalledProcessError:
+                pass
+
+        #extract the major and minor numbers
+        if version:
+            print "\t[Linux]    found: "+version
+            m = re.search("^OpenSSL\s+([0-9]+)\.([0-9])+\.", version)
+            major = m.group(1)
+            minor = m.group(2)
+            if int(major) >= 1 and int(minor) >= 1:
+                return True
+        #default
+        return False
+
     env.AppendUnique(LIBS =['crypto', 'ssl'])
     print 'Using OpenSSL crypto'
+    #check if OpenSSL libcrypto version is 1.1.x or above
+    if sys.version_info < (2, 7):
+        msg = "Python 2.7 or greater is required to perform OpenSSL version check\n"
+        msg +="If your python version is older and OpenSSL1.1.0 or greater is installed,\n"
+        msg +="please consider defining the Macro manually via SCONS cli, i.e:\n"
+        msg +="scons CPPPATH=/your/openssl-include-path \\\n"
+        msg +="\tLIBPATH=/your/openssl-lib-path \\\n"
+        msg +="\tCPPDEFINES=LINUX_USE_OPENSSL_1_1 (rest of your opentions)\n"
+        print msg
+    else:
+        if not 'LINUX_USE_OPENSSL_1_1' in env['CPPDEFINES']:
+            if check_libcrypto_version():
+                env.Append(CPPDEFINES= ['LINUX_USE_OPENSSL_1_1'])
 else:
     print 'Using builtin crypto'
