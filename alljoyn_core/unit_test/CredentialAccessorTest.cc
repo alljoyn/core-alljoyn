@@ -582,8 +582,43 @@ static const char Rev0X103KeyStore[] = {
 };
 
 #else
-
+/**
+ *   In case Crypto parameters change, this test will fail. The input is a Base64 encoded ciphertext, below is how it could be re-constructed:
+ *
+ *   1). leading 40 chars are the header part which will be stripped out by KeyStore by serveral "PullBytes" calls for version, lengh, etc. and
+ *   they are not part of Decryption/Encryption.
+ *
+ *   "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAAAAAAAA"
+ *
+ *   After Base64 decoding the length is 30 bytes;
+ *
+ *   2). The rest part should be 364 bytes long after Base64 decoding, which contains 348 bytes of Ciphertext and 16 bytes of Tag. To compute the
+ *   right input, either start from your own Cleartext, or first Base64 decode the following string, then use the same Crypto, nonce, key to do a
+ *   Encrypt_CCM, which will compute a tag and append to the end of the Ciphtertext.
+ *
+ *   "DQAAAM9eg8ltGrz5qniR1pWyN3jhAfmIigAAAAAAJwAAFwBUaGlzIGlzIHRoZSBw"
+ *   "ZWVyIHNlY3JldAAAAAAAFgAAALk60g9MFjECwVYBNgtuCbzBARyJigAAAAAAXwAA"
+ *   "GQBUaGlzIGlzIHRoZSBwZWVyIHNlY3JldCAyAAAAAAASAAAAcSWw2r7sBeb4KeMo"
+ *   "FGRuxsEGCImKAAAAAABHAAAYAFRoaXMgaXMgdGhlIGN1c3RvbSBrZXkgMRBHTBKU"
+ *   "h8QyEGP8f/aConjxAAAAABEAAABHTBKUh8QyEGP8f/aConjx4QH5iIoAAAAAAEIA"
+ *   "ABcAVGhpcyBpcyB0aGUgcGVlciBzZWNyZXQAAAAAAA8AAAAI2pMoWbvvcwCC1qvq"
+ *   "RXx+wQbqiIoAAAAAAD4AABUAQmxvYiBmb3IgY3VzdG9tIGtleSAyEM9eg8ltGrz5"
+ *   "qniR1pWyN3gAAAAA";
+ *
+ *   3). Encode the Ciphertext and prepend the string from Step #1)
+ */
 static const char Rev0X103KeyStore[] = {
+#ifdef QCC_LINUX_OPENSSL_GT_1_1_X
+    "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAAAAAAAA"
+    "6EzFwX0Z3vdzWJUTsRQdGo2+uUA7ixOSwt/j5Vfb8xDVkZkp6qqbtI3AOx4iZpy+"
+    "n3Db7hbSxLLg6+2qIOEJAn/ThAc9jQKYm8lVUApYOX2shcomLAdAgPG7ShArVrCz"
+    "1dlR1BhjjZ/gO5lOPvth05z8mcr5mHLOle3HjKONk2Nm+2dilSJzl2CwKPL+h2/f"
+    "JNp1MPJqbT7X2d227mIjAPRK8WX5BUJ+A7wdXqmLh67TEw00uMcLyB9yVrtFwmnC"
+    "9uHV8iL65d8ZYMLraIGax5Cle05oS+RdUImBjQz2POwEmBekJCWPs0F/7zQgSBjq"
+    "mBj+cfjfLbGQND+KHP5HrzQU89yWOmZlaer+DMkAFPWd3KNu+S+OZFc1d2UZ60H2"
+    "y2ZEAdUeHjUYz1gj4nrRgATChbkiaXmkvUKc2HhS8alfF+DjyjO5oX0O3tV9NRPl"
+    "fT7MZAaWq+RV0TG+q+U8YpZfg85XyuHKj1g+8g=="
+#else
     "AwEjAAAACEtbgok0cG9FkAZiTHILwWwBAAAAAAAA4jYH7mABwaANNQGjS70p"
     "JlYX7kbxeF02f/K0iTrVcQGe343Yz60DjEo9cG8Gam5jngLGS3k4+etaHjEo"
     "C/Q8GX8eQTtk7hhewBt7U4zHzhQnlIST0y8ZXMYgDaCvwv6LY8vriQLSs0Qo"
@@ -593,8 +628,8 @@ static const char Rev0X103KeyStore[] = {
     "kfaOjXVjwlSdVHaymkLN+vRp43Vfm3zqwcICwhVAdukv/ubr/PJBAVNEu9EJ"
     "cPHY1bVUcQUdDcUfPMFs4zYhSEdat0yghfhMyiIjTNWRFSpIU/Bn9BpgWXVn"
     "7vSFQOmd2b+2gO271nSBT3QXdFdLRK0S3rznBBBoveJlyA=="
+#endif //QCC_LINUX_OPENSSL_GT_1_1_X
 };
-
 #endif
 
 static const char Rev0X103KeyStorePwd[] = {

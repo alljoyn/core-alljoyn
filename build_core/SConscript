@@ -220,6 +220,11 @@ env.Append(CPPPATH = ["$DISTDIR/cpp/inc",
 env.Append(LIBPATH = ["$DISTDIR/cpp/lib",
                       "$DISTDIR/c/lib"])
 
+#allows user to define C++ preprocessor marcos, CPPPATH and LIBPATH from Scons cli
+env.Append(CPPDEFINES = ARGUMENTS.get('CPPDEFINES','').split(','))
+env.Append(CPPPATH = ARGUMENTS.get('CPPPATH','').split(','))
+env.Append(LIBPATH = ARGUMENTS.get('LIBPATH','').split(','))
+
 # Setup additional builders
 if os.path.exists('tools/scons/doxygen.py'):
     env.Tool('doxygen', toolpath=['tools/scons'])

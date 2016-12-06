@@ -31,36 +31,37 @@
 
 using namespace qcc;
 
-#if defined(OPENSSL_THREADS)
+#if defined(OPENSSL_THREADS) && !defined(QCC_LINUX_OPENSSL_GT_1_1_X)
 
 OpenSsl_ScopedLock::OpenSsl_ScopedLock() {
 }
+
 OpenSsl_ScopedLock::~OpenSsl_ScopedLock() {
 }
 
-static Mutex* locks = 0;
+static Mutex* s_locks = 0;
 
 static void LockingCb(int mode, int type, const char* file, int line)
 {
     QCC_UNUSED(file);
     QCC_UNUSED(line);
     if (mode & CRYPTO_LOCK) {
-        locks[type].Lock();
+        s_locks[type].Lock();
     } else {
-        locks[type].Unlock();
+        s_locks[type].Unlock();
     }
 }
 
 QStatus Crypto::Init()
 {
-    if (!locks) {
+    if (!s_locks) {
         int numLocks = CRYPTO_num_locks();
-        locks = new Mutex[numLocks];
+        s_locks = new Mutex[numLocks];
         CRYPTO_set_locking_callback(LockingCb);
 
 #ifndef NDEBUG
         for (int index = 0; index < numLocks; index++) {
-            MutexInternal::SetLevel(locks[index], LOCK_LEVEL_OPENSSL_LOCK);
+            MutexInternal::SetLevel(s_locks[index], LOCK_LEVEL_OPENSSL_LOCK);
         }
 #endif
     }
@@ -70,35 +71,36 @@ QStatus Crypto::Init()
 void Crypto::Shutdown()
 {
     CRYPTO_set_locking_callback(NULL);
-    delete[] locks;
-    locks = NULL;
+    delete[] s_locks;
+    s_locks = NULL;
 }
 
-#else /* !OPENSSL_THREADS */
+#else /* !OPENSSL_THREADS  || QCC_LINUX_OPENSSL_GT_1_1_X */
 
-static Mutex* mutex = NULL;
-static volatile int32_t refCount = 0;
+static Mutex* s_mutex = NULL;
+static volatile int32_t s_refCount = 0;
 
 OpenSsl_ScopedLock::OpenSsl_ScopedLock()
 {
-    if (IncrementAndFetch(&refCount) == 1) {
-        mutex = new Mutex();
+    if (IncrementAndFetch(&s_refCount) == 1) {
+        s_mutex = new Mutex();
     } else {
-        DecrementAndFetch(&refCount);
-        while (!mutex) {
+        DecrementAndFetch(&s_refCount);
+        while (!s_mutex) {
             qcc::Sleep(1);
         }
     }
-    mutex->Lock();
+    s_mutex->Lock();
 }
 
 OpenSsl_ScopedLock::~OpenSsl_ScopedLock()
 {
-    QCC_ASSERT(mutex);
-    mutex->Unlock();
+    QCC_ASSERT(s_mutex);
+    s_mutex->Unlock();
 }
 
-void Crypto::Init() {
+QStatus Crypto::Init() {
+    return ER_OK;
 }
 
 void Crypto::Shutdown() {
