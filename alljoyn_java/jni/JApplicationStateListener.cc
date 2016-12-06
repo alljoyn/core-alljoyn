@@ -116,8 +116,8 @@ void JApplicationStateListener::State(const char* busName, const qcc::KeyInfoNIS
 
     jobject jpublicKey = env->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
 
-    env->CallObjectMethod(jpublicKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jpublicKey);
+    env->CallVoidMethod(jpublicKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jpublicKey);
 
-    env->CallObjectMethod(jasListener, MID_state, jbusName, jpublicKeyInfo, jstate);
+    env->CallVoidMethod(jasListener, MID_state, jbusName, jpublicKeyInfo, jstate);
 }
 
