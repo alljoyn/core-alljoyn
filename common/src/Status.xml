@@ -95,7 +95,11 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_SLAP_OTHER_END_CLOSED" value="0x102B" comment="Other end closed the SLAP connection"/>
   <status name="ER_TIMER_NOT_ALLOWED" value="0x102C" comment="Timer EnableReentrancy call not allowed"/>
   <status name="ER_NOT_CONN" value="0x102D" comment="Socket not connected"/>
-
+  <status name="ER_CRYPTO_CTX_NEW_FAIL" value="0x102e" comment="EVP CTX new failed"/>
+  <status name="ER_CRYPTO_CTX_INIT_FAIL" value="0x102f" comment="EVP CTX init failed"/>
+  <status name="ER_CRYPTO_CTX_CTRL_FAIL" value="0x1030" comment="EVP CTX control failed"/>
+  <status name="ER_CRYPTO_CTX_UPDATE_FAIL" value="0x1031" comment="EVP CTX update failed"/>
+  <status name="ER_CRYPTO_CTX_FINAL_FAIL" value="0x1032" comment="EVP CTX final failed"/>
   <status name="ER_XML_CONVERTER_ERROR" value="0x2000" comment="An error related to XML &lt;--&gt; object conversion."/>
   <status name="ER_XML_INVALID_RULES_COUNT" value="0x2001" comment="There must be at least one rule object."/>
   <status name="ER_XML_INTERFACE_MEMBERS_MISSING" value="0x2002" comment="There must be at least one member object."/>
