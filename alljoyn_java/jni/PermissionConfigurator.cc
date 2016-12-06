@@ -236,7 +236,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getSigning
 
     jobject jretKey = jenv->NewObject(CLS_ECCPublicKey, MID_ECCPublicKey_cnstrctr, arrayX, arrayY);
 
-    CallObjectMethod(jenv, retObj, MID_KeyInfoNISTP256_setPublicKey, jretKey);
+    jenv->CallVoidMethod(retObj, MID_KeyInfoNISTP256_setPublicKey, jretKey);
 
     jenv->SetObjectField(retObj, fidKeyId, jkeyId);
 
@@ -915,7 +915,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getIdentit
         return NULL;
     }
 
-    CallObjectMethod(jenv, jretKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jretKey);
+    jenv->CallVoidMethod(jretKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jretKey);
     if (jenv->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
         return NULL;
@@ -1012,7 +1012,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getMe
             return NULL;
         }
 
-        CallObjectMethod(jenv, jretKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jretKey);
+        jenv->CallVoidMethod(jretKeyInfo, MID_KeyInfoNISTP256_setPublicKey, jretKey);
         if (jenv->ExceptionCheck()) {
             QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
             return NULL;
