@@ -130,7 +130,7 @@ void JPermissionConfigurationListener::PolicyChanged()
      * must be MT-Safe.  This is implied by the definition of the listener.
      */
     QCC_DbgPrintf(("%s: Call out to listener object and method", __FUNCTION__));
-    env->CallObjectMethod(jpcListener, MID_policyChanged);
+    env->CallVoidMethod(jpcListener, MID_policyChanged);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
     }
@@ -152,7 +152,7 @@ void JPermissionConfigurationListener::StartManagement()
      * must be MT-Safe.  This is implied by the definition of the listener.
      */
     QCC_DbgPrintf(("%s: Call out to listener object and method", __FUNCTION__));
-    env->CallObjectMethod(jpcListener, MID_startManagement);
+    env->CallVoidMethod(jpcListener, MID_startManagement);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
     }
@@ -174,7 +174,7 @@ void JPermissionConfigurationListener::EndManagement()
      * must be MT-Safe.  This is implied by the definition of the listener.
      */
     QCC_DbgPrintf(("%s: Call out to listener object and method", __FUNCTION__));
-    env->CallObjectMethod(jpcListener, MID_endManagement);
+    env->CallVoidMethod(jpcListener, MID_endManagement);
     if (env->ExceptionCheck()) {
         QCC_LogError(ER_FAIL, ("%s: Exception", __FUNCTION__));
     }
