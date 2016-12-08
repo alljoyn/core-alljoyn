@@ -621,30 +621,33 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
 
     PermissionPolicy::Rule manifestRule;
     manifestRule.SetInterfaceName([DOOR_INTERFACE UTF8String]);
-
+    NSString* manifestXml = nil;
     if (provider) {
-        // Set a very flexible default manifest for the door provider
-        PermissionPolicy::Rule::Member members[2];
-        members[0].SetMemberName("*");
-        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-        members[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-        members[1].SetMemberName("*");
-        members[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-        members[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-        manifestRule.SetMembers(2, members);
+        manifestXml = @"<manifest>"
+        "<node>"
+        "<interface name=\"sample.securitymgr.door.Door\">"
+        "<any>"
+        "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+        "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+        "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+        "</any>"
+        "</interface>"
+        "</node>"
+        "</manifest>";
     } else {
-        // Set a very flexible default manifest for the door consumer
-        PermissionPolicy::Rule::Member member;
-        member.SetMemberName("*");
-        member.SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                             PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        member.SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
-        manifestRule.SetMembers(1, &member);
+        manifestXml = @"<manifest>"
+        "<node>"
+        "<interface name=\"sample.securitymgr.door.Door\">"
+        "<any>"
+        "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+        "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+        "</any>"
+        "</interface>"
+        "</node>"
+        "</manifest>";
     }
 
-    NSLog(@"%@", [NSString stringWithCString:manifestRule.ToString().c_str() encoding:NSUTF8StringEncoding]);
-
-    status = ((PermissionConfigurator*)self.BusAttachment.permissionConfigurator.handle)->SetPermissionManifestTemplate(&manifestRule, 1);
+    status = [self.BusAttachment.permissionConfigurator setManifestTemplateFromXml:manifestXml];
     if (ER_OK != status) {
         NSLog(@"Failed to setPermissionManifestTemplate - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
         return status;
@@ -687,32 +690,25 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
 
 + (QStatus)updateDoorProviderManifest:(DoorCommon*)common
 {
-    PermissionPolicy::Rule* rules = new PermissionPolicy::Rule[1];
-    rules[0].SetInterfaceName([DOOR_INTERFACE UTF8String]);
+    NSString* manifestXml = @"<manifest>"
+    "<node>"
+    "<interface>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
 
-    PermissionPolicy::Rule::Member* prms = new PermissionPolicy::Rule::Member[3];
-    prms[0].SetMemberName("*");
-    prms[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-    prms[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[1].SetMemberName("*");
-    prms[1].SetMemberType(PermissionPolicy::Rule::Member::SIGNAL);
-    prms[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-    prms[2].SetMemberName("*");
-    prms[2].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-    prms[2].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-
-    rules[0].SetMembers(3, prms);
-
-    PermissionPolicy::Acl manifest;
-    manifest.SetRules(1, rules);
-
-    QStatus status = ((PermissionConfigurator*)common.BusAttachment.permissionConfigurator.handle)->SetPermissionManifestTemplate(rules, manifest.GetRulesSize());
+    QStatus status = [common.BusAttachment.permissionConfigurator setManifestTemplateFromXml:manifestXml];
     if (ER_OK != status) {
         NSLog(@"Failed to SetPermissionManifestTemplate - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
         return status;
     }
 
-    status = ((PermissionConfigurator*)common.BusAttachment.permissionConfigurator.handle)->SetApplicationState(PermissionConfigurator::NEED_UPDATE);
+    status = [common.BusAttachment.permissionConfigurator setApplicationState:NEED_UPDATE];
     if (ER_OK != status) {
         NSLog(@"Failed to SetApplicationState - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
     }
