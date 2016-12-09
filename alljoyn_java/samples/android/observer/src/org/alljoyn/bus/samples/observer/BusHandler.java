@@ -1,5 +1,5 @@
 /*
- * Copyright AllSeen Alliance. All rights reserved.
+ * Copyright (c) 2016 Open Connectivity Foundation and AllJoyn Open Source Project Contributors and others.
  *
  * Permission to use, copy, modify, and/or distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -357,4 +357,3 @@ public class BusHandler extends Handler {
         return names;
     }
 }
-
