@@ -57,24 +57,13 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 
 @synthesize handle = _handle;
 
-+ (void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+ (void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
-    
-    // Set-up code here. Executed before each test case is run
-    //
+
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
     self.authenticationListener = [[TestAuthenticationListener alloc] initOnBus:self.bus withUserName:@"Code Monkey" maximumAuthenticationsAllowed:5];
     self.listenerDidRegisterWithBusCompleted = NO;
@@ -99,8 +88,6 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
     [self.bus destroy];
     [self.bus destroyBusListener:self];
     self.bus = nil;
@@ -123,11 +110,14 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     self.didReceiveSignal = NO;
     self.testSessionId = -1;
     self.testSessionJoiner = nil;
-    
+
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+
     [super tearDown];
 }
 
-- (void)testAuthenticatedMethodCallShouldSucceed //TODO check is it secure call or not
+- (void)testAuthenticatedMethodCallShouldSucceed
 {
     AuthenticationTests *client = [[AuthenticationTests alloc] init];
     BasicObject *basicObject = nil;
@@ -143,7 +133,7 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     XCTAssertTrue(status == ER_OK, @"Bus failed to start.");
     status = [client.bus start];
     XCTAssertTrue(status == ER_OK, @"Bus for client failed to start.");
-    
+
     basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kAuthenticationTestsObjectPath];
 
     status = [self.bus registerBusObject:basicObject];
@@ -197,14 +187,11 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     [secondArgument setValue:@"s", "world!"];
     [secondArgument stabilize];
     NSArray *arguments = [[NSArray alloc]initWithObjects:firstArgument, secondArgument, nil];
-    
+
     AJNMessage *reply;
-//    NSArray *interfaces = [proxy interfaces];
-//    NSArray *members = [[interfaces objectAtIndex:0] members];
-//    [proxy callMethod:[members objectAtIndex:0] withArguments:arguments methodReply:&reply]; TODO need do fix Framework for test
-    
+
     [proxy callMethodWithName:@"Concatentate" onInterfaceWithName:@"org.alljoyn.bus.sample.strings" withArguments:arguments methodReply:&reply];
-    
+
     NSString *replyXml = [reply arg:0].xml;
     NSString *expectedXmlString = @"<string>Hello world!</string>";
     XCTAssertTrue([replyXml compare:expectedXmlString] == NSOrderedSame, @"Method call return reply message with wrong xml. Value is [%@], have to be [%@]", replyXml, expectedXmlString);

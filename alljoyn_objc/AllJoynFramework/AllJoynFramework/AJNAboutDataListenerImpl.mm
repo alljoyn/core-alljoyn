@@ -59,7 +59,7 @@ AJNAboutDataListenerImpl::~AJNAboutDataListenerImpl()
  *
  * The MsgArg will contain the signature `a{sv}`.
  *
- * TODO add more documentation for the Key/Value pair requirements here.
+ * TODO: add more documentation for the Key/Value pair requirements here.
  *
  * @param[out] msgArg a the dictionary containing all of the AboutData fields for
  *                    the specified language.  If language is not specified the default

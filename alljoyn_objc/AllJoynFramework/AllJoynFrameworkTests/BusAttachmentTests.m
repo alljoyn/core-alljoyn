@@ -126,25 +126,55 @@ static const uint8_t ICON_BYTE = 0x11;
 @synthesize testAboutDataArg = _testAboutDataArg;
 @synthesize testAboutObjectDescription = _testAboutObjectDescription;
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
-    
-    // Set-up code here. Executed before each test case is run.
-    //
+
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+
     [self setUpWithBusAttachement: [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES]];
+}
+
+- (void)tearDown
+{
+    self.listenerDidRegisterWithBusCompleted = NO;
+    self.listenerDidUnregisterWithBusCompleted = NO;
+    self.didFindAdvertisedNameCompleted = NO;
+    self.didLoseAdvertisedNameCompleted = NO;
+    self.nameOwnerChangedCompleted = NO;
+    self.busWillStopCompleted = NO;
+    self.busDidDisconnectCompleted = NO;
+
+    self.sessionWasLost = NO;
+    self.didAddMemberNamed = NO;
+    self.didRemoveMemberNamed = NO;
+    self.shouldAcceptSessionJoinerNamed = NO;
+    self.didJoinInSession = NO;
+    self.isTestClient = NO;
+    self.isAsyncTestClientBlock = NO;
+    self.isAsyncTestClientDelegate = NO;
+    self.clientConnectionCompleted = NO;
+    self.isPingAsyncComplete = NO;
+    self.setInvalidData = NO;
+    self.setInvalidLanguage = NO;
+    self.didReceiveAnnounce = NO;
+    receiveAnnounce = NO;
+    self.busNameToConnect = nil;
+    self.sessionPortToConnect = 0;
+    self.testBadAnnounceData = NO;
+    self.testMissingAboutDataField = NO;
+    self.testMissingAnnounceDataField = NO;
+    self.testUnsupportedLanguage = NO;
+    self.testNonDefaultUTFLanguage = NO;
+    self.testAboutObjectDescription = NO;
+
+    self.bus = nil;
+
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+
+    [super tearDown];
 }
 
 - (void)setUpWithBusAttachement:(AJNBusAttachment *)busAttachment
@@ -179,46 +209,6 @@ static const uint8_t ICON_BYTE = 0x11;
     self.testUnsupportedLanguage = NO;
     self.testNonDefaultUTFLanguage = NO;
     self.testAboutObjectDescription = NO;
-}
-
-- (void)tearDown
-{
-    // Tear-down code here. Executed after each test case is run.
-    //
-    self.listenerDidRegisterWithBusCompleted = NO;
-    self.listenerDidUnregisterWithBusCompleted = NO;
-    self.didFindAdvertisedNameCompleted = NO;
-    self.didLoseAdvertisedNameCompleted = NO;
-    self.nameOwnerChangedCompleted = NO;
-    self.busWillStopCompleted = NO;
-    self.busDidDisconnectCompleted = NO;
-
-    self.sessionWasLost = NO;
-    self.didAddMemberNamed = NO;
-    self.didRemoveMemberNamed = NO;
-    self.shouldAcceptSessionJoinerNamed = NO;
-    self.didJoinInSession = NO;
-    self.isTestClient = NO;
-    self.isAsyncTestClientBlock = NO;
-    self.isAsyncTestClientDelegate = NO;
-    self.clientConnectionCompleted = NO;
-    self.isPingAsyncComplete = NO;
-    self.setInvalidData = NO;
-    self.setInvalidLanguage = NO;
-    self.didReceiveAnnounce = NO;
-    receiveAnnounce = NO;
-    self.busNameToConnect = nil;
-    self.sessionPortToConnect = 0;
-    self.testBadAnnounceData = NO;
-    self.testMissingAboutDataField = NO;
-    self.testMissingAnnounceDataField = NO;
-    self.testUnsupportedLanguage = NO;
-    self.testNonDefaultUTFLanguage = NO;
-    self.testAboutObjectDescription = NO;
-
-    self.bus = nil;
-    
-    [super tearDown];
 }
 
 - (void)testShouldHaveValidHandleAfterIntialization
@@ -960,6 +950,8 @@ static const uint8_t ICON_BYTE = 0x11;
 - (void)testShouldAllowClientToLeaveSelfJoin
 {
     BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+
     [client setUpWithBusAttachement:self.bus];
     client.isTestClient = YES;
     [client.bus registerBusListener:client];
@@ -981,7 +973,7 @@ static const uint8_t ICON_BYTE = 0x11;
 
     status = [self.bus advertiseName:kBusAttachmentTestsAdvertisedName withTransportMask:kAJNTransportMaskAny];
     XCTAssertTrue(status == ER_OK, @"Advertise name failed.");
-    
+
     status = [client.bus findAdvertisedName:kBusAttachmentTestsAdvertisedName];
     XCTAssertTrue(status == ER_OK, @"Client attempt to find advertised name %@ failed.", kBusAttachmentTestsAdvertisedName);
 
@@ -995,10 +987,10 @@ static const uint8_t ICON_BYTE = 0x11;
 
     status = [client.bus setJoinedSessionListener:client toSession:client.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Binding of a Client sessionlistener failed");
-    
+
     status = [client.bus leaveJoinedSession:client.testSessionId];
     XCTAssertTrue(status == ER_OK, @"Client failed to leave self joined session");
-    
+
     XCTAssertTrue([self waitForCompletion:kBusAttachmentTestsWaitTimeBeforeFailure onFlag:&_sessionWasLost], @"The Service was not informed that the session was lost.");
 
     status = [self.bus stop];
@@ -1014,7 +1006,7 @@ static const uint8_t ICON_BYTE = 0x11;
     [client tearDown];
 }
 
-//TODO - (void)testShouldNotifyAJNSessionListenerInCaseOfSessionLost
+//TODO: - (void)testShouldNotifyAJNSessionListenerInCaseOfSessionLost
 
 - (void)testShouldReceiveAnnounceSignalAndPrintIt
 {
@@ -1179,7 +1171,7 @@ static const uint8_t ICON_BYTE = 0x11;
 
     status = [self.bus bindSessionOnPort:kBusAttachmentTestsServicePort withOptions:sessionOptions withDelegate:self];
     XCTAssertTrue(status == ER_OK, @"Bind session on port %ld failed.", (long)kBusAttachmentTestsServicePort);
-    
+
     AJNAboutObject *aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
     status = [aboutObj announceForSessionPort:kBusAttachmentTestsServicePort withAboutDataListener:self];
     XCTAssertTrue(status == ER_OK, @"Bus failed to announce");
@@ -1813,48 +1805,48 @@ static const uint8_t ICON_BYTE = 0x11;
     AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     [aboutData setAppId:originalAppId];
-    
+
     [aboutData setDefaultLanguage:@"en"];
-    
+
     if (self.testBadAnnounceData == YES) {
         [aboutData setDeviceName:@"foo" andLanguage:@"en"];
     } else {
         [aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
     }
-    
+
     if (self.testMissingAboutDataField == YES) {
         [aboutData setDeviceId:@""];
     } else {
         [aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
     }
-    
+
     if (self.testMissingAnnounceDataField == YES) {
         [aboutData setAppName:@"" andLanguage:@"en"];
     } else {
         [aboutData setAppName:@"App Name" andLanguage:@"en"];
     }
-    
+
     [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
-    
+
     [aboutData setModelNumber:@"ModelNo"];
-    
+
     [aboutData setSupportedLanguage:@"en"];
     [aboutData setSupportedLanguage:@"foo"];
-    
+
     if (self.testNonDefaultUTFLanguage == YES) {
         [aboutData setDescription:@"Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método" andLanguage:@"foo"];
     } else {
         [aboutData setDescription:@"Description" andLanguage:@"en"];
     }
-    
+
     [aboutData setDateOfManufacture:@"1-1-2014"];
-    
+
     [aboutData setSoftwareVersion:@"1.0"];
-    
+
     [aboutData setHardwareVersion:@"00.00.01"];
-    
+
     [aboutData setSupportUrl:@"some.random.url"];
-        
+
     return [aboutData getAboutData:msgArg withLanguage:language];
 }
 
@@ -1863,36 +1855,36 @@ static const uint8_t ICON_BYTE = 0x11;
     AJNAboutData *aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
     uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
     [aboutData setAppId:originalAppId];
-    
+
     [aboutData setDefaultLanguage:@"en"];
-    
+
     [aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
-    
+
     [aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
-    
+
     [aboutData setAppName:@"App Name" andLanguage:@"en"];
-    
+
     [aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
-    
+
     [aboutData setModelNumber:@"ModelNo"];
-    
+
     [aboutData setSupportedLanguage:@"en"];
     [aboutData setSupportedLanguage:@"foo"];
-    
+
     if (self.testNonDefaultUTFLanguage == YES) {
         [aboutData setDescription:@"Sólo se puede aceptar cadenas distintas de cadenas nada debe hacerse utilizando el método" andLanguage:@"foo"];
     } else {
         [aboutData setDescription:@"Description" andLanguage:@"en"];
     }
-    
+
     [aboutData setDateOfManufacture:@"1-1-2014"];
-    
+
     [aboutData setSoftwareVersion:@"1.0"];
-    
+
     [aboutData setHardwareVersion:@"00.00.01"];
-    
+
     [aboutData setSupportUrl:@"some.random.url"];
-    
+
     return [aboutData getAnnouncedAboutData:msgArg];
 }
 

@@ -33,10 +33,9 @@ void AJNApplicationStateListenerImpl::State(const char* busName, const qcc::KeyI
     /*
      * Check that the delegate implements state
      */
-    if ([m_delegate respondsToSelector:@selector(state)]) {
+    if ([m_delegate respondsToSelector:@selector(appStateChangedForRemoteBusAttachment:appPublicKeyInfo:state:)]) {
         AJNKeyInfoNISTP256 *keyInfo = [[AJNKeyInfoNISTP256 alloc] initWithHandle:(AJNHandle)&publicKeyInfo];
 
-        [m_delegate state:[NSString stringWithCString:busName encoding:NSUTF8StringEncoding] publicKeyInfo:keyInfo state:(AJNApplicationState)state];
+        [m_delegate appStateChangedForRemoteBusAttachment:[NSString stringWithCString:busName encoding:NSUTF8StringEncoding] appPublicKeyInfo:keyInfo state:(AJNApplicationState)state];
     }
 }
-
