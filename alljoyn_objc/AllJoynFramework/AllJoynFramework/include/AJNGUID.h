@@ -137,4 +137,11 @@
  */
 + (BOOL)isGuid:(NSString*)str withExactLen:(BOOL)exactlLen;
 
+/**
+ * Get the GUID raw bytes wrapped in NSMutableData
+ *
+ * @return  GUID raw bytes
+ */
+- (NSMutableData *)getGuidData;
+
 @end
