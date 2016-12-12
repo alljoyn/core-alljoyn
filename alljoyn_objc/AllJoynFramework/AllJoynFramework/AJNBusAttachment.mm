@@ -39,6 +39,7 @@
 #import "AJNSignalHandlerImpl.h"
 #import "AJNTranslatorImpl.h"
 #import "AJNAboutListenerImpl.h"
+#import "AJNApplicationStateListenerImpl.h"
 
 using namespace ajn;
 
@@ -454,6 +455,7 @@ public:
 @property (nonatomic, strong) NSMutableArray *permissionConfigurationListeners;
 @property (nonatomic, strong) NSMutableArray *translatorImpls;
 @property (nonatomic, strong) NSMutableArray *aboutListeners;
+@property (nonatomic, strong) NSMutableArray *applicationStateListeners;
 
 /** C++ AllJoyn API object
  */
@@ -472,6 +474,7 @@ public:
 @synthesize permissionConfigurationListeners = _permissionConfigurationListeners;
 @synthesize translatorImpls = _translatorImpls;
 @synthesize aboutListeners = _aboutListeners;
+@synthesize applicationStateListeners = _applicationStateListeners;
 
 /** Accessor for the internal C++ API object this objective-c class encapsulates
  */
@@ -542,6 +545,14 @@ public:
         _aboutListeners = [[NSMutableArray alloc] init];
     }
     return _aboutListeners;
+}
+
+- (NSMutableArray*)applicationStateListeners
+{
+    if (_applicationStateListeners == nil) {
+        _applicationStateListeners = [[NSMutableArray alloc] init];
+    }
+    return _applicationStateListeners;
 }
 
 - (NSMutableArray*)translatorImpls
@@ -728,6 +739,15 @@ public:
 
     @synchronized(self.signalHandlers) {
         [self.signalHandlers removeAllObjects];
+    }
+
+    @synchronized(self.applicationStateListeners) {
+        for (NSValue *ptrValue in self.applicationStateListeners) {
+            AJNApplicationStateListenerImpl *applicationStateListenerImpl = (AJNApplicationStateListenerImpl*)[ptrValue pointerValue];
+            self.busAttachment->UnregisterApplicationStateListener(*applicationStateListenerImpl);
+            delete applicationStateListenerImpl;
+        }
+        [self.applicationStateListeners removeAllObjects];
     }
 
     ajn::BusAttachment* ptr = [self busAttachment];
@@ -1586,14 +1606,41 @@ public:
     return status;
 }
 
--(QStatus)cancelWhoImplementsInterface:(NSString *)interface
+- (QStatus)cancelWhoImplementsInterface:(NSString *)interface
 {
     return self.busAttachment->CancelWhoImplements([interface UTF8String]);
 }
 
--(QStatus)cancelWhoImplementsNonBlocking:(NSString *)interface
+- (QStatus)cancelWhoImplementsNonBlocking:(NSString *)interface
 {
     return self.busAttachment->CancelWhoImplementsNonBlocking([interface UTF8String]);
 }
+
+- (QStatus)registerApplicationStateListener:(id<AJNApplicationStateListener>)delegate
+{
+    AJNApplicationStateListenerImpl *applicationStateListenerImpl = new AJNApplicationStateListenerImpl(delegate);
+    @synchronized(self.applicationStateListeners) {
+        //putting pointer to C++ AJNApplicationStateListenerImpl object to applicationStateListeners NSArray
+        //TODO: rework to collect pointers in std::vector
+        [self.applicationStateListeners addObject:[NSValue valueWithPointer:applicationStateListenerImpl]];
+        return self.busAttachment->RegisterApplicationStateListener(*applicationStateListenerImpl);
+    }
+}
+
+- (QStatus)unregisterApplicationStateListener:(id<AJNApplicationStateListener>)delegate
+{
+    QStatus status = ER_FAIL;
+    @synchronized(self.applicationStateListeners) {
+        for (NSValue *ptrValue in self.applicationStateListeners) {
+            AJNApplicationStateListenerImpl *applicationStateListenerImpl = (AJNApplicationStateListenerImpl*)[ptrValue pointerValue];
+            if (applicationStateListenerImpl->getDelegate() == delegate) {
+                status = self.busAttachment->UnregisterApplicationStateListener(*applicationStateListenerImpl);
+                break;
+            }
+        }
+    }
+    return status;
+}
+
 
 @end

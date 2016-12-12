@@ -320,15 +320,15 @@ QStatus EventsActionsObjectImpl::SendTestEvent(const char * outStr, const char* 
     //
 
     status = [interfaceDescription addSignalWithName:@"TestEvent" inputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"outStr", nil] annotation:8 accessPermissions:nil];
-    //TODO replace annotation:8 by annotation:kAJNInterfaceAnnotationSessionlessFlag after fixing ASACORE-3498 (AJNInterfaceAnnotationFlags doesn't contains all supported Annotation flags)
-    //TODO check accessPermissions flags. Seems accessPermissions must take AJNInterfaceAnnotationFlags but cpp part take char * or 
+    //TODO: replace annotation:8 by annotation:kAJNInterfaceAnnotationSessionlessFlag after fixing ASACORE-3498 (AJNInterfaceAnnotationFlags doesn't contains all supported Annotation flags)
+    //TODO: check accessPermissions flags. Seems accessPermissions must take AJNInterfaceAnnotationFlags but cpp part take char * or
 
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add signal to interface:  TestEvent" userInfo:nil];
     }
-    
+
     [interfaceDescription setMemberDescriptionForLanguage:@"TestEvent" withDescription:@"This is the test event" forLanguage:@""];
-    
+
     [interfaceDescription activate];
 
 
@@ -619,4 +619,3 @@ void EventsActionsObjectDelegateSignalHandlerImpl::TestEventSignalHandler(const 
 @end
 
 ////////////////////////////////////////////////////////////////////////////////
-

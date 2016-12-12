@@ -13,27 +13,29 @@
 //    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+//  ALLJOYN MODELING TOOL - GENERATED CODE
+//
+////////////////////////////////////////////////////////////////////////////////
 
-#import <Foundation/Foundation.h>
-#import <alljoyn/Status.h>
-#import "AJNKeyInfoECC.h"
-#import "AJNPermissionConfigurator.h"
+////////////////////////////////////////////////////////////////////////////////
+//
+//  SecureObject.h
+//
+////////////////////////////////////////////////////////////////////////////////
 
-/**
- * Listener used to handle the security State signal.
- */
-@protocol AJNApplicationStateListener <NSObject>
+#import "AJNSecureObject.h"
 
-@required
 
-/**
- * Handler for the org.allseen.Bus.Application's State sessionless signal.
- *
- * @param[in] busName          unique name of the remote BusAttachment that
- *                             sent the State signal
- * @param[in] publicKeyInfo the application public key
- * @param[in] state the application state
- */
-- (void)appStateChangedForRemoteBusAttachment:(NSString*)busName appPublicKeyInfo:(AJNKeyInfoNISTP256*)publicKeyInfo state:(AJNApplicationState)state;
+////////////////////////////////////////////////////////////////////////////////
+//
+//  SecureObject
+//
+////////////////////////////////////////////////////////////////////////////////
+
+@interface SecureObject : AJNSecureObject
 
 @end
+
+////////////////////////////////////////////////////////////////////////////////
