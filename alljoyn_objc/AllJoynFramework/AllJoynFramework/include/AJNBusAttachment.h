@@ -30,6 +30,7 @@
 #import "AJNTranslator.h"
 #import "AJNPermissionConfigurationListener.h"
 #import "AJNAboutListener.h"
+#import "AJNApplicationStateListener.h"
 
 @class AJNPermissionConfigurator;
 
@@ -1843,5 +1844,33 @@ typedef int AJNSocketFd;
  *    - An error status otherwise
  */
 - (QStatus)cancelWhoImplementsNonBlocking:(NSString *)interface;
+
+/**
+ * Register a handler to receive the org.alljoyn.Bus.Application
+ * state signal.
+ *
+ * @param[in] applicationStateListener reference to an ApplicationStateListener
+ *
+ * @return
+ *    - ER_OK on success
+ *    - ER_APPLICATION_STATE_LISTENER_ALREADY_EXISTS when the same listener has already been registered.
+ *    - Different error status otherwise
+ */
+- (QStatus)registerApplicationStateListener:(id<AJNApplicationStateListener>)applicationStateListener;
+
+/**
+ * Unregisters the ApplicationStateListener from receiving the
+ * org.alljoyn.Bus.Application state signal.
+ *
+ * @param[in] applicationStateListener reference to an
+ *                                     ApplicationStateListener to
+ *                                     unregister
+ *
+ * @return
+ *    - ER_OK on success
+ *    - ER_APPLICATION_STATE_LISTENER_NO_SUCH_LISTENER when this listener has not been registered.
+ *    - Different error status otherwise
+ */
+- (QStatus)unregisterApplicationStateListener:(id<AJNApplicationStateListener>)applicationStateListener;
 
 @end

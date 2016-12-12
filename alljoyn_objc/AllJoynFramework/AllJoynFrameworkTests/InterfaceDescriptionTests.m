@@ -51,34 +51,24 @@ static NSString * const kInterfaceXML = @"<interface name=\"org.alljoyn.bus.objc
 
 @synthesize bus = _bus;
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
-    
-    // Set-up code here. Executed before each test case is run.
-    //
+
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
 }
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
     [self.bus destroy];
     self.bus = nil;
-    
+
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+
     [super tearDown];
 }
 
