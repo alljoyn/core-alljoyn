@@ -15,6 +15,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AJNCertificateX509.h"
+#import <qcc/CertificateECC.h>
 
 using namespace qcc;
 
@@ -597,6 +598,13 @@ size_t CRYPTO_SHA256_DIGEST_SIZE = 32;
     delete [] certs;
 
     return status;
+}
+
+- (void)setGuild:(NSMutableData *)guild
+{
+    uint8_t *guildData = (uint8_t*)guild.bytes;
+    qcc::String guildString((const char*)guildData, guild.length);
+    self.certificate->SetSubjectAltName(guildString);
 }
 
 @end

@@ -159,29 +159,29 @@ static NSString * const kPathPrefix = @"/test/";
         self.aboutData = [[AJNAboutData alloc] initWithLanguage:@"en"];
         uint8_t originalAppId[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15 };
         [self.aboutData setAppId:originalAppId];
-        
+
         [self.aboutData setDefaultLanguage:@"en"];
-        
+
         [self.aboutData setDeviceName:@"Device Name" andLanguage:@"en"];
-        
+
         [self.aboutData setDeviceId:@"avec-awe1213-1234559xvc123"];
-        
+
         [self.aboutData setAppName:@"App Name" andLanguage:@"en"];
-        
+
         [self.aboutData setManufacturer:@"Manufacturer" andLanguage:@"en"];
-        
+
         [self.aboutData setModelNumber:@"ModelNo"];
-        
+
         [self.aboutData setSupportedLanguage:@"en"];
-        
+
         [self.aboutData setDescription:@"Description" andLanguage:@"en"];
-        
+
         [self.aboutData setDateOfManufacture:@"1-1-2014"];
-        
+
         [self.aboutData setSoftwareVersion:@"1.0"];
-        
+
         [self.aboutData setHardwareVersion:@"00.00.01"];
-        
+
         [self.aboutData setSupportUrl:@"some.random.url"];
 
         //--------------------------
@@ -456,34 +456,24 @@ typedef BOOL (^verifyObjects)();
 - (void)setUp
 {
     [super setUp];
-    // Set-up code here. Executed before each test case is run.
-    //
+
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
 }
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
-    [super tearDown];
-    
     // Wait 500ms to let object cleanup stabalize
     struct timeval time;
     gettimeofday(&time, NULL);
     long now = (time.tv_sec * 1000) + (time.tv_usec / 1000);
     long final = now + 500;
     [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSince1970:(final/1000)]];
-}
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
     [AJNInit alljoynRouterShutdown];
     [AJNInit alljoynShutdown];
+
+    [super tearDown];
 }
 
 -(NSUInteger)countProxies:(AJNObserver *) observer

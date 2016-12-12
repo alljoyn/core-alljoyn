@@ -18,6 +18,7 @@
 #import <alljoyn/Status.h>
 #import "AJNKeyInfoECC.h"
 #import <qcc/KeyInfoECC.h>
+#import <qcc/CryptoECC.h>
 
 @interface AJNObject(Private)
 
@@ -198,6 +199,69 @@ using namespace qcc;
 - (ECCSignature*)signature
 {
     return static_cast<ECCSignature*>(self.handle);
+}
+
+@end
+
+@implementation AJNCryptoECC
+
+- (id)init
+{
+    self = [super init];
+    if (self) {
+        self.handle = new Crypto_ECC();
+        self.shouldDeleteHandleOnDealloc = YES;
+    }
+    return self;
+}
+
+- (void)dealloc
+{
+    if (self.shouldDeleteHandleOnDealloc) {
+        Crypto_ECC *pArg = static_cast<Crypto_ECC*>(self.handle);
+        delete pArg;
+        self.handle = nil;
+    }
+}
+
+- (Crypto_ECC*)cryptoECC
+{
+    return static_cast<Crypto_ECC*>(self.handle);
+}
+
+- (QStatus) generateDHKeyPair
+{
+    return self.cryptoECC->GenerateDHKeyPair();
+}
+
+//- (QStatus) generateSPEKEKeyPair:(NSString *)password clientGUID:(AJNGUID128 *)clientGUID serviceGUID:(AJNGUID128 *)serviceGUID
+//{
+//
+//    return self.cryptoECC->GenerateSPEKEKeyPair(<#const uint8_t *pw#>, <#size_t pwLen#>, <#const qcc::GUID128 clientGUID#>, <#const qcc::GUID128 serviceGUID#>);
+//}
+
+- (AJNECCPublicKey *) getDHPublicKey
+{
+    ECCPublicKey publicKey = *new ECCPublicKey(*self.cryptoECC->GetDHPublicKey());
+    return [[AJNECCPublicKey alloc] initWithHandle:&publicKey];
+    //TODO research another way
+}
+
+- (void) setDHPublicKey:(AJNECCPublicKey *)pubKey
+{
+    self.cryptoECC->SetDHPublicKey((ECCPublicKey *)pubKey.handle);
+}
+
+- (AJNECCPrivateKey*) getDHPrivateKey
+{
+    ECCPrivateKey privateKey = *new ECCPrivateKey(*self.cryptoECC->GetDHPrivateKey());
+    return [[AJNECCPrivateKey alloc] initWithHandle:&privateKey];
+    //TODO research another way
+}
+
+- (void) setDHPrivateKey:(AJNECCPrivateKey *)privateKey
+{
+    self.cryptoECC->SetDHPrivateKey((ECCPrivateKey *)privateKey.handle);
 }
 
 @end
