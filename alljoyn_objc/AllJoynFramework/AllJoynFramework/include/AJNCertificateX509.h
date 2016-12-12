@@ -15,21 +15,19 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <Foundation/Foundation.h>
-#import <qcc/CertificateECC.h>
 #import "AJNObject.h"
 #import "AJNKeyInfoECC.h"
 #import "AJNCryptoECC.h"
 
-
 /**
  * The validity period
  */
-struct AJNValidPeriod {
+typedef struct AJNValidPeriod {
     uint64_t validFrom; /**< the date time when the cert becomes valid
                          expressed in the number of seconds in EPOCH Jan 1, 1970 */
     uint64_t validTo;  /**< the date time after which the cert becomes invalid
                         expressed in the number of seconds in EPOCH Jan 1, 1970 */
-};
+} AJNValidPeriod;
 
 /**
  * encoding format
@@ -456,7 +454,7 @@ typedef enum {
  * Get the SHA-256 thumbprint of this certificate.
  * @param[out] thumbprint buffer of size Crypto_SHA256::DIGEST_SIZE to receive the thumbprint
  *
- * @return #ER_OK if successful, error code otherwise
+ * @return ER_OK if successful, error code otherwise
  */
 - (QStatus)getSHA256Thumbprint:(NSMutableData *)thumbprint;
 
@@ -477,6 +475,12 @@ typedef enum {
  * @return true if valid; false, otherwise;
  */
 + (BOOL)validateCertificateTypeInCertChain:(NSArray *)certChain;
+
+/**
+ * Set the guild GUID
+ * @param guid the guild GUID
+ */
+- (void)setGuild:(NSMutableData *)guid;
 
 
 @end

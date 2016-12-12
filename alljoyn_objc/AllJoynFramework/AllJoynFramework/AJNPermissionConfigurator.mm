@@ -15,6 +15,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AJNPermissionConfigurator.h"
+#import "AJNBusAttachment.h"
+#import "alljoyn/BusAttachment.h"
+
+using namespace ajn;
 
 @interface AJNBusAttachment(Private)
 
@@ -286,5 +290,59 @@
     return status;
 }
 
+- (QStatus)getSigningPublicKey:(AJNKeyInfoNISTP256 **)keyInfo
+{
+    if (keyInfo == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    qcc::KeyInfoNISTP256 *qccKeyInfo = new qcc::KeyInfoNISTP256(); //object qccKeyInfo will be released in the AJNKeyInfoNISTP256 keyInfo dealloc method
+    QStatus status = self.permissionConfigurator->GetSigningPublicKey(*qccKeyInfo);
+
+    if (status == ER_OK) {
+        *keyInfo = [[AJNKeyInfoNISTP256 alloc] initWithHandle:(AJNHandle)qccKeyInfo];
+    }
+
+    return status;
+}
+
+- (QStatus)signCertificate:(AJNCertificateX509 *)cert
+{
+    if (cert == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    QStatus status = self.permissionConfigurator->SignCertificate(*cert.certificate);
+    return status;
+}
+
+- (QStatus)computeThumbprintAndSignManifestXml:(AJNCertificateX509 *)cert manifestXml:(NSString **)manifestXml
+{
+    if (cert == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    std::string manifest([*manifestXml UTF8String]);
+    QStatus status = self.permissionConfigurator->ComputeThumbprintAndSignManifestXml(*cert.certificate, manifest);
+    *manifestXml = [NSString stringWithUTF8String:manifest.c_str()];
+
+    return status;
+}
+
+- (QStatus)getConnectedPeerPublicKeyForUid:(AJNGUID128 *)guid publicKey:(AJNECCPublicKey **)publicKey
+{
+    if (guid == nil) {
+        return ER_BAD_ARG_1;
+    }
+
+    qcc::ECCPublicKey *qccPublicKey = new qcc::ECCPublicKey(); //object qccPublicKey will be released in the AJNECCPublicKey publicKey dealloc method
+    QStatus status = self.permissionConfigurator->GetConnectedPeerPublicKey(*guid.guid128, qccPublicKey);
+
+    if (status == ER_OK) {
+        *publicKey = [[AJNECCPublicKey alloc] initWithHandle:(AJNHandle)qccPublicKey];
+    }
+
+    return status;
+}
 
 @end

@@ -21,20 +21,28 @@
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  EventsActionsObject.h
+//  SecureObject.m
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-#import "AJNEventsActionsObject.h"
-
+#import "SecureObject.h"
 
 ////////////////////////////////////////////////////////////////////////////////
 //
-//  EventsActionsObject
+//  Objective-C Bus Object implementation for SecureObject
 //
 ////////////////////////////////////////////////////////////////////////////////
 
-@interface EventsActionsObject : AJNEventsActionsObject
+@implementation SecureObject
+
+- (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2 message:(AJNMessage *)methodCallMessage
+{
+    // TODO: complete the implementation of this method
+    //
+    // @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
+    return [str1 stringByAppendingString:str2];
+}
+
 
 @end
 

@@ -56,7 +56,7 @@
         self.lost = [[NSMutableArray alloc] init];
         self.found = [[NSMutableArray alloc] init];
     }
-    
+
     return self;
 }
 
@@ -82,9 +82,9 @@
 - (BOOL)waitUntilFound:(NSString*)uniqueName forTime:(NSTimeInterval)timeoutSeconds
 {
     NSDate *timeoutDate = [NSDate dateWithTimeIntervalSinceNow:timeoutSeconds];
-    
+
     BOOL didFind = NO;
-    
+
     do {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:timeoutDate];
         if ([self.found containsObject:uniqueName]) {
@@ -95,16 +95,16 @@
             break;
         }
     } while (true);
-    
+
     return didFind;
 }
 
 - (BOOL)waitUntilLost:(NSString*)uniqueName forTime:(NSTimeInterval)timeoutSeconds
 {
     NSDate *timeoutDate = [NSDate dateWithTimeIntervalSinceNow:timeoutSeconds];
-    
+
     BOOL didLose = NO;
-    
+
     do {
         [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:timeoutDate];
         if ([self.lost containsObject:uniqueName]) {
@@ -115,7 +115,7 @@
             break;
         }
     } while (true);
-    
+
     return didLose;
 }
 
@@ -143,33 +143,21 @@
 //    return self;
 //}
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
-//    
-//    [AJNInit alljoynInit];
-//    [AJNInit alljoynRouterInit];
-    
+
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+
     self.serviceBus = [[AJNBusAttachment alloc] initWithApplicationName:@"AutoPingerTest" allowRemoteMessages:YES];
     self.autoPinger = [[AJNAutoPinger alloc] initWithBusAttachment:self.serviceBus];
-    
+
     QStatus status = ER_OK;
     status = [self.serviceBus start];
     XCTAssertEqual(ER_OK, status, @"Bus could not start");
     XCTAssertFalse([self.serviceBus isConnected], @"Bus is already connected");
-    
+
     status = [self.serviceBus connectWithArguments:@"null"];
     XCTAssertEqual(ER_OK, status, @"Bus could not connect");
     XCTAssertTrue([self.serviceBus isConnected], @"Bus could not connect");
@@ -182,10 +170,10 @@
     [self.serviceBus waitUntilStopCompleted];
     [self.serviceBus destroy];
     self.serviceBus = nil;
-    
-//    [AJNInit alljoynRouterShutdown];
-//    [AJNInit alljoynShutdown];
-    
+
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+
     [super tearDown];
 }
 
@@ -193,52 +181,52 @@
 {
     QStatus status = ER_OK;
     AJNBusAttachment *clientBus = [[AJNBusAttachment alloc] initWithApplicationName:@"app" allowRemoteMessages:YES];
-    
+
     status = [clientBus start];
     XCTAssert(status == ER_OK, @"Unable to start client bus.");
-    
+
     status = [clientBus connectWithArguments:@"null"];
     XCTAssert(status == ER_OK, @"Client bus unable to connect with null arguments.");
 
     TestPingListener *listener = [[TestPingListener alloc] init];
-    
+
     [self.autoPinger addPingGroup:@"testgroup" withDelegate:listener withInterval:2];
     NSString *uniqueName = [clientBus uniqueName];
-    
+
     status = [self.autoPinger addDestination:@"badgroup" forDestination:uniqueName];
     XCTAssert(status == ER_BUS_PING_GROUP_NOT_FOUND, @"Didn't find expected group not found status.");
-    
+
     status = [self.autoPinger addDestination:@"testgroup" forDestination:uniqueName];
     XCTAssert(status == ER_OK, @"Unable to add first destination to auto pinger.");
-    
+
     status = [self.autoPinger addDestination:@"testgroup" forDestination:uniqueName];
     XCTAssert(status == ER_OK, @"Unable to add second destination to auto pinger.");
-    
+
     XCTAssertTrue([listener waitUntilFound:uniqueName forTime:10], @"Listener didn't find client bus");
-    
+
     [clientBus disconnect];
     XCTAssertTrue([listener waitUntilLost:uniqueName forTime:10], @"Listener didn't lost client bus");
-    
+
     [self.autoPinger pause];
     [self.autoPinger pause];
     [self.autoPinger resume];
     [self.autoPinger resume];
-    
+
     status = [clientBus connectWithArguments:@"null"];
     XCTAssert(status == ER_OK, @"Client bus unable to connect with null arguments.");
-    
+
     uniqueName = [clientBus uniqueName];
-    
+
     status = [self.autoPinger addDestination:@"testgroup" forDestination:uniqueName];
     XCTAssert(status == ER_OK, @"Unable to add destination to auto pinger.");
 
     XCTAssertTrue([listener waitUntilFound:uniqueName forTime:10], @"Listener didn't find client bus");
-    
+
     [self.autoPinger removePingGroup:@"badgroup"];
     [self.autoPinger removePingGroup:@"testgroup"];
     [self.autoPinger pause];
     self.autoPinger = nil;
-    
+
     [clientBus disconnect];
     [clientBus stop];
     [clientBus waitUntilStopCompleted];
