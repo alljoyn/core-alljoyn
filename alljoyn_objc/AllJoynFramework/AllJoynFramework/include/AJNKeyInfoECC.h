@@ -15,7 +15,6 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <Foundation/Foundation.h>
-#import <qcc/KeyInfoECC.h>
 #import "AJNCryptoECC.h"
 #import "AJNObject.h"
 
