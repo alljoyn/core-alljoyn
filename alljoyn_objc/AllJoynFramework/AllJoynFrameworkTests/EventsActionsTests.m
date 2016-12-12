@@ -52,7 +52,8 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 
 
 
-/*
+/*  TODO fix it
+    TODO add unit tests for check full description (new uni description)
     The following test cases from regression test plan are covered
     001		Global translator and Client using empty string to Introspect
     002		Global translator and Client using unsupported language to Introspect
@@ -337,25 +338,56 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 @synthesize testSupportedLanguage = _testSupportedLanguage;
 @synthesize testUnsupportedLanguage = _testUnsupportedLanguage;
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
     
-    // Set-up code here. Executed before each test case is run.
-    //
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+    
     [self setUpWithBusAttachement: [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES]];
+}
+
+- (void)tearDown
+{
+    self.listenerDidRegisterWithBusCompleted = NO;
+    self.listenerDidUnregisterWithBusCompleted = NO;
+    self.didFindAdvertisedNameCompleted = NO;
+    self.didLoseAdvertisedNameCompleted = NO;
+    self.nameOwnerChangedCompleted = NO;
+    self.busWillStopCompleted = NO;
+    self.busDidDisconnectCompleted = NO;
+    
+    self.sessionWasLost = NO;
+    self.didAddMemberNamed = NO;
+    self.didRemoveMemberNamed = NO;
+    self.shouldAcceptSessionJoinerNamed = NO;
+    self.didJoinInSession = NO;
+    self.isTestClient = NO;
+    self.isAsyncTestClientBlock = NO;
+    self.isAsyncTestClientDelegate = NO;
+    self.clientConnectionCompleted = NO;
+    self.isPingAsyncComplete = NO;
+    self.setInvalidData = NO;
+    self.setInvalidLanguage = NO;
+    self.didReceiveAnnounce = NO;
+    announceFlag = NO;
+    self.busNameToConnect = nil;
+    self.sessionPortToConnect = 0;
+    self.testBadAnnounceData = NO;
+    self.testMissingAboutDataField = NO;
+    self.testMissingAnnounceDataField = NO;
+    self.testNonDefaultUTFLanguage = NO;
+    self.testAboutObjectDescription = NO;
+    
+    self.testSupportedLanguage = NO;
+    self.testUnsupportedLanguage = NO;
+    self.bus = nil;
+    
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+    
+    [super tearDown];
 }
 
 - (void)setUpWithBusAttachement:(AJNBusAttachment *)busAttachment
@@ -393,47 +425,6 @@ static NSString * const PROPERTY_DESCRIPTION_ES = @"es: This is property descrip
 
     self.testSupportedLanguage = NO;
     self.testUnsupportedLanguage = NO;
-}
-
-- (void)tearDown
-{
-    // Tear-down code here. Executed after each test case is run.
-    //
-    self.listenerDidRegisterWithBusCompleted = NO;
-    self.listenerDidUnregisterWithBusCompleted = NO;
-    self.didFindAdvertisedNameCompleted = NO;
-    self.didLoseAdvertisedNameCompleted = NO;
-    self.nameOwnerChangedCompleted = NO;
-    self.busWillStopCompleted = NO;
-    self.busDidDisconnectCompleted = NO;
-
-    self.sessionWasLost = NO;
-    self.didAddMemberNamed = NO;
-    self.didRemoveMemberNamed = NO;
-    self.shouldAcceptSessionJoinerNamed = NO;
-    self.didJoinInSession = NO;
-    self.isTestClient = NO;
-    self.isAsyncTestClientBlock = NO;
-    self.isAsyncTestClientDelegate = NO;
-    self.clientConnectionCompleted = NO;
-    self.isPingAsyncComplete = NO;
-    self.setInvalidData = NO;
-    self.setInvalidLanguage = NO;
-    self.didReceiveAnnounce = NO;
-    announceFlag = NO;
-    self.busNameToConnect = nil;
-    self.sessionPortToConnect = 0;
-    self.testBadAnnounceData = NO;
-    self.testMissingAboutDataField = NO;
-    self.testMissingAnnounceDataField = NO;
-    self.testNonDefaultUTFLanguage = NO;
-    self.testAboutObjectDescription = NO;
-
-    self.testSupportedLanguage = NO;
-    self.testUnsupportedLanguage = NO;
-    self.bus = nil;
-    
-    [super tearDown];
 }
 
 // Sessionless flag should be reflected in the Introspection XML

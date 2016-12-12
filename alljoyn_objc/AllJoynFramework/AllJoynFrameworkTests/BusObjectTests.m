@@ -76,30 +76,22 @@ const NSInteger kBusObjectTestsServicePort = 999;
 @synthesize didReceiveSignal = _didReceiveSignal;
 @synthesize handle = _handle;
 
-+ (void) setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+ (void) tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void) setUp
 {
     [super setUp];
+    
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
     
     [self startAJNApplication];
 }
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
     [self shutdownAJNApplication];
+    
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
     
     [super tearDown];
 }

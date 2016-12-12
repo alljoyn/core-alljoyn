@@ -57,24 +57,13 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 
 @synthesize handle = _handle;
 
-+ (void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+ (void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
     
-    // Set-up code here. Executed before each test case is run
-    //
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+    
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES];
     self.authenticationListener = [[TestAuthenticationListener alloc] initOnBus:self.bus withUserName:@"Code Monkey" maximumAuthenticationsAllowed:5];
     self.listenerDidRegisterWithBusCompleted = NO;
@@ -99,8 +88,6 @@ const NSInteger kAuthenticationTestsServicePort = 999;
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
     [self.bus destroy];
     [self.bus destroyBusListener:self];
     self.bus = nil;
@@ -123,6 +110,9 @@ const NSInteger kAuthenticationTestsServicePort = 999;
     self.didReceiveSignal = NO;
     self.testSessionId = -1;
     self.testSessionJoiner = nil;
+    
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
     
     [super tearDown];
 }

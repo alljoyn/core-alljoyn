@@ -13,29 +13,30 @@
 //    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////
+//
+//  ALLJOYN MODELING TOOL - GENERATED CODE
+//
+////////////////////////////////////////////////////////////////////////////////
 
-#import <Foundation/Foundation.h>
-#import "AJNApplicationStateListenerImpl.h"
+////////////////////////////////////////////////////////////////////////////////
+//
+//  SecureObject.h
+//
+////////////////////////////////////////////////////////////////////////////////
+
+#import "AJNSecureObject.h"
 
 
-AJNApplicationStateListenerImpl::AJNApplicationStateListenerImpl(id<AJNApplicationStateListener> delegate) :
-    m_delegate(delegate)
-{
-}
+////////////////////////////////////////////////////////////////////////////////
+//
+//  SecureObject
+//
+////////////////////////////////////////////////////////////////////////////////
 
-AJNApplicationStateListenerImpl::~AJNApplicationStateListenerImpl()
-{
-    m_delegate = nil;
-}
+@interface SecureObject : AJNSecureObject
 
-void AJNApplicationStateListenerImpl::State(const char* busName, const qcc::KeyInfoNISTP256& publicKeyInfo, PermissionConfigurator::ApplicationState state)
-{
-    /*
-     * Check that the delegate implements state
-     */
-    if ([m_delegate respondsToSelector:@selector(appStateChangedForRemoteBusAttachment:appPublicKeyInfo:state:)]) {
-        AJNKeyInfoNISTP256 *keyInfo = [[AJNKeyInfoNISTP256 alloc] initWithHandle:(AJNHandle)&publicKeyInfo];
+@end
 
-        [m_delegate appStateChangedForRemoteBusAttachment:[NSString stringWithCString:busName encoding:NSUTF8StringEncoding] appPublicKeyInfo:keyInfo state:(AJNApplicationState)state];
-    }
-}
+////////////////////////////////////////////////////////////////////////////////
+

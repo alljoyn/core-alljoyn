@@ -338,4 +338,26 @@
  */
 + (void)destroyManifestDigest:(uint8_t *)digest;
 
+/**
+ * Explicitly secure the connection to the remote peer for this proxy object. Peer-to-peer
+ * connections can only be secured if EnablePeerSecurity() was previously called on the bus
+ * attachment for this proxy object. If the peer-to-peer connection is already secure this
+ * function does nothing. Note that peer-to-peer connections are automatically secured when a
+ * method call requiring encryption is sent.
+ *
+ * This call causes messages to be send on the bus, therefore it cannot be called within AllJoyn
+ * callbacks (method/signal/reply handlers or ObjectRegistered callbacks, etc.)
+ *
+ * @param forceAuth  If true, forces an re-authentication even if the peer connection is already
+ *                   authenticated.
+ *
+ * @return
+ *          - #ER_OK if the connection was secured or an error status indicating that the
+ *            connection could not be secured.
+ *          - #ER_BUS_NO_AUTHENTICATION_MECHANISM if BusAttachment::EnablePeerSecurity() has not been called.
+ *          - #ER_AUTH_FAIL if the attempt(s) to authenticate the peer failed.
+ *          - Other error status codes indicating a failure.
+ */
+- (QStatus)secureConnect:(BOOL)forceAuth;
+
 @end

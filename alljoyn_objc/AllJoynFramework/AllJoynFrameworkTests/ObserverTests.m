@@ -456,34 +456,24 @@ typedef BOOL (^verifyObjects)();
 - (void)setUp
 {
     [super setUp];
-    // Set-up code here. Executed before each test case is run.
-    //
+    
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
 }
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
-    [super tearDown];
-    
     // Wait 500ms to let object cleanup stabalize
     struct timeval time;
     gettimeofday(&time, NULL);
     long now = (time.tv_sec * 1000) + (time.tv_usec / 1000);
     long final = now + 500;
     [[NSRunLoop currentRunLoop] runMode:NSDefaultRunLoopMode beforeDate:[NSDate dateWithTimeIntervalSince1970:(final/1000)]];
-}
-
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
+    
     [AJNInit alljoynRouterShutdown];
     [AJNInit alljoynShutdown];
+    
+    [super tearDown];
 }
 
 -(NSUInteger)countProxies:(AJNObserver *) observer

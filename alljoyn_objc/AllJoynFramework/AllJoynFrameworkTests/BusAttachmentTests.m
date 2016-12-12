@@ -126,25 +126,55 @@ static const uint8_t ICON_BYTE = 0x11;
 @synthesize testAboutDataArg = _testAboutDataArg;
 @synthesize testAboutObjectDescription = _testAboutObjectDescription;
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
     
-    // Set-up code here. Executed before each test case is run.
-    //
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+    
     [self setUpWithBusAttachement: [[AJNBusAttachment alloc] initWithApplicationName:@"testApp" allowRemoteMessages:YES]];
+}
+
+- (void)tearDown
+{
+    self.listenerDidRegisterWithBusCompleted = NO;
+    self.listenerDidUnregisterWithBusCompleted = NO;
+    self.didFindAdvertisedNameCompleted = NO;
+    self.didLoseAdvertisedNameCompleted = NO;
+    self.nameOwnerChangedCompleted = NO;
+    self.busWillStopCompleted = NO;
+    self.busDidDisconnectCompleted = NO;
+    
+    self.sessionWasLost = NO;
+    self.didAddMemberNamed = NO;
+    self.didRemoveMemberNamed = NO;
+    self.shouldAcceptSessionJoinerNamed = NO;
+    self.didJoinInSession = NO;
+    self.isTestClient = NO;
+    self.isAsyncTestClientBlock = NO;
+    self.isAsyncTestClientDelegate = NO;
+    self.clientConnectionCompleted = NO;
+    self.isPingAsyncComplete = NO;
+    self.setInvalidData = NO;
+    self.setInvalidLanguage = NO;
+    self.didReceiveAnnounce = NO;
+    receiveAnnounce = NO;
+    self.busNameToConnect = nil;
+    self.sessionPortToConnect = 0;
+    self.testBadAnnounceData = NO;
+    self.testMissingAboutDataField = NO;
+    self.testMissingAnnounceDataField = NO;
+    self.testUnsupportedLanguage = NO;
+    self.testNonDefaultUTFLanguage = NO;
+    self.testAboutObjectDescription = NO;
+    
+    self.bus = nil;
+    
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+    
+    [super tearDown];
 }
 
 - (void)setUpWithBusAttachement:(AJNBusAttachment *)busAttachment
@@ -179,46 +209,6 @@ static const uint8_t ICON_BYTE = 0x11;
     self.testUnsupportedLanguage = NO;
     self.testNonDefaultUTFLanguage = NO;
     self.testAboutObjectDescription = NO;
-}
-
-- (void)tearDown
-{
-    // Tear-down code here. Executed after each test case is run.
-    //
-    self.listenerDidRegisterWithBusCompleted = NO;
-    self.listenerDidUnregisterWithBusCompleted = NO;
-    self.didFindAdvertisedNameCompleted = NO;
-    self.didLoseAdvertisedNameCompleted = NO;
-    self.nameOwnerChangedCompleted = NO;
-    self.busWillStopCompleted = NO;
-    self.busDidDisconnectCompleted = NO;
-
-    self.sessionWasLost = NO;
-    self.didAddMemberNamed = NO;
-    self.didRemoveMemberNamed = NO;
-    self.shouldAcceptSessionJoinerNamed = NO;
-    self.didJoinInSession = NO;
-    self.isTestClient = NO;
-    self.isAsyncTestClientBlock = NO;
-    self.isAsyncTestClientDelegate = NO;
-    self.clientConnectionCompleted = NO;
-    self.isPingAsyncComplete = NO;
-    self.setInvalidData = NO;
-    self.setInvalidLanguage = NO;
-    self.didReceiveAnnounce = NO;
-    receiveAnnounce = NO;
-    self.busNameToConnect = nil;
-    self.sessionPortToConnect = 0;
-    self.testBadAnnounceData = NO;
-    self.testMissingAboutDataField = NO;
-    self.testMissingAnnounceDataField = NO;
-    self.testUnsupportedLanguage = NO;
-    self.testNonDefaultUTFLanguage = NO;
-    self.testAboutObjectDescription = NO;
-
-    self.bus = nil;
-    
-    [super tearDown];
 }
 
 - (void)testShouldHaveValidHandleAfterIntialization
@@ -960,6 +950,8 @@ static const uint8_t ICON_BYTE = 0x11;
 - (void)testShouldAllowClientToLeaveSelfJoin
 {
     BusAttachmentTests *client = [[BusAttachmentTests alloc] init];
+    [client setUp];
+    
     [client setUpWithBusAttachement:self.bus];
     client.isTestClient = YES;
     [client.bus registerBusListener:client];

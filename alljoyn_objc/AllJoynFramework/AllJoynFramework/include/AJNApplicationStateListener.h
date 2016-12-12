@@ -31,9 +31,11 @@
  *
  * @param[in] busName          unique name of the remote BusAttachment that
  *                             sent the State signal
+ *
  * @param[in] publicKeyInfo the application public key
+ *
  * @param[in] state the application state
  */
-- (void)state:(NSString*)busName publicKeyInfo:(AJNKeyInfoNISTP256*)publicKeyInfo state:(AJNApplicationState)state;
+- (void)appStateChangedForRemoteBusAttachment:(NSString*)busName appPublicKeyInfo:(AJNKeyInfoNISTP256*)publicKeyInfo state:(AJNApplicationState)state;
 
 @end

@@ -143,24 +143,12 @@
 //    return self;
 //}
 
-+(void)setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+(void)tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void)setUp
 {
     [super setUp];
-//    
-//    [AJNInit alljoynInit];
-//    [AJNInit alljoynRouterInit];
+    
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
     
     self.serviceBus = [[AJNBusAttachment alloc] initWithApplicationName:@"AutoPingerTest" allowRemoteMessages:YES];
     self.autoPinger = [[AJNAutoPinger alloc] initWithBusAttachment:self.serviceBus];
@@ -183,8 +171,8 @@
     [self.serviceBus destroy];
     self.serviceBus = nil;
     
-//    [AJNInit alljoynRouterShutdown];
-//    [AJNInit alljoynShutdown];
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
     
     [super tearDown];
 }
