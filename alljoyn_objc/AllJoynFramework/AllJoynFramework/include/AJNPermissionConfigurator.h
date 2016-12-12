@@ -16,14 +16,12 @@
 
 #import <Foundation/Foundation.h>
 #import <alljoyn/Status.h>
-#import <alljoyn/PermissionConfigurator.h>
-#import "AJNBusAttachment.h"
 #import "AJNGUID.h"
 #import "AJNCertificateX509.h"
 #import "AJNKeyInfoECC.h"
 #import "AJNCryptoECC.h"
 
-using namespace ajn;
+@class AJNBusAttachment;
 
 typedef enum {
     NOT_CLAIMABLE = 0, ///< The application is not claimed and not accepting claim requests.
@@ -122,6 +120,7 @@ typedef enum {
  *  - an error status indicating failure
  */
 - (QStatus)setClaimCapabilities:(AJNClaimCapabilities)claimCapabilities;
+
 
 /**
  * Get the additional information on the claim capabilities.
@@ -295,5 +294,49 @@ typedef enum {
  *    - ER_MANAGEMENT_NOT_STARTED if the app was not in the management state
  */
 - (QStatus)endManagement;
+
+/**
+ * Retrieve the public key info for the signing key.
+ *
+ * @param[out] keyInfo the public key info
+ *
+ * @return ER_OK if successful; otherwise, an error code.
+ */
+- (QStatus)getSigningPublicKey:(AJNKeyInfoNISTP256 **)keyInfo;
+
+/**
+ * Sign the X509 certificate using the signing key
+ *
+ * @param[out] cert the certificate to be signed
+ *
+ * @return ER_OK if successful; otherwise, an error code.
+ */
+- (QStatus)signCertificate:(AJNCertificateX509 *)cert;
+
+/**
+ * Sign a manifest using the signing key, and bind the manifest to a particular identity
+ * certificate by providing the certificate. For this manifest to be valid when later used,
+ * the signing key of this PermissionConfigurator must be the signing key that issued the
+ * certificate. Callers must ensure the correct key is used; this method does not verify
+ * the signing key was used to issue the provided certificate.
+ *
+ * @param[in] cert Certificate to use the manifest. Certificate must already be
+ *                               signed in order to encode its identity correctly in the manifest.
+ * @param[in,out] manifestXml       Manifest to sign
+ *
+ * @return ER_OK if successful; otherwise, an error code.
+ */
+- (QStatus)computeThumbprintAndSignManifestXml:(AJNCertificateX509 *)cert manifestXml:(NSString **)manifestXml;
+
+/**
+ * Get the connected peer ECC public key if the connection uses the
+ * ECDHE_ECDSA key exchange.
+ *
+ * @param[in] guid the peer guid
+ * @param[out] publicKey the buffer to hold the ECC public key.
+ *
+ * @return ER_OK if successful; otherwise, error code.
+ */
+- (QStatus)getConnectedPeerPublicKeyForUid:(AJNGUID128 *)guid publicKey:(AJNECCPublicKey **)publicKey;
 
 @end

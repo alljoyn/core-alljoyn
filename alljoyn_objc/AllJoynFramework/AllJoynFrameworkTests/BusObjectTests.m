@@ -76,31 +76,23 @@ const NSInteger kBusObjectTestsServicePort = 999;
 @synthesize didReceiveSignal = _didReceiveSignal;
 @synthesize handle = _handle;
 
-+ (void) setUp
-{
-    [AJNInit alljoynInit];
-    [AJNInit alljoynRouterInit];
-}
-
-+ (void) tearDown
-{
-    [AJNInit alljoynRouterShutdown];
-    [AJNInit alljoynShutdown];
-}
-
 - (void) setUp
 {
     [super setUp];
-    
+
+    [AJNInit alljoynInit];
+    [AJNInit alljoynRouterInit];
+
     [self startAJNApplication];
 }
 
 - (void)tearDown
 {
-    // Tear-down code here. Executed after each test case is run.
-    //
     [self shutdownAJNApplication];
-    
+
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
+
     [super tearDown];
 }
 
@@ -114,7 +106,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.nameOwnerChangedCompleted = NO;
     self.busWillStopCompleted = NO;
     self.busDidDisconnectCompleted = NO;
-    
+
     self.sessionWasLost = NO;
     self.didAddMemberNamed = NO;
     self.didRemoveMemberNamed = NO;
@@ -140,7 +132,7 @@ const NSInteger kBusObjectTestsServicePort = 999;
     self.nameOwnerChangedCompleted = NO;
     self.busWillStopCompleted = NO;
     self.busDidDisconnectCompleted = NO;
-    
+
     self.sessionWasLost = NO;
     self.didAddMemberNamed = NO;
     self.didRemoveMemberNamed = NO;
@@ -197,34 +189,34 @@ const NSInteger kBusObjectTestsServicePort = 999;
     XCTAssertTrue([self waitForCompletion:kBusObjectTestsWaitTimeBeforeFailure onFlag:&_didJoinInSession], @"The service did not receive a notification that the client joined the session.");
     XCTAssertTrue(client.clientConnectionCompleted, @"The client did not report that it connected.");
     XCTAssertTrue(client.testSessionId == self.testSessionId, @"The client session id does not match the service session id.");
-    
+
     AJNMessageArgument *firstArgument = [[AJNMessageArgument alloc] init];
     status = [firstArgument setValue:@"s", "Hello "];
     XCTAssertTrue(status == ER_OK, @"Setting value for first argument failed");
     [firstArgument stabilize];
-    
+
     AJNMessageArgument *secondArgument = [[AJNMessageArgument alloc] init];
     status = [secondArgument setValue:@"s", "world!"];
     XCTAssertTrue(status == ER_OK, @"Setting value for first argument failed");
     [secondArgument stabilize];
-    
+
     NSArray *arguments = [[NSArray alloc]initWithObjects:firstArgument, secondArgument, nil];
 
     AJNMessage *reply = [AJNMessage alloc];
-    
+
     AJNProxyBusObject *proxy = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:kBusObjectTestsAdvertisedName objectPath:kBusObjectTestsObjectPath sessionId:self.testSessionId];
     status = [proxy introspectRemoteObject];
     XCTAssertTrue(status == ER_OK, @"Introspect of Remote Object failed.");
-    
+
     [proxy callMethodWithName:kBusObjectTestsMethodName onInterfaceWithName:kBusObjectTestsInterfaceName withArguments:arguments methodReply:&reply];
     XCTAssertTrue(status == ER_OK, @"Proxy object's method call failed");
-    
+
 //    char s = 's';
 //    char *p = &s;
 //    char **replyString = &p;
 //    AJNMessageArgument *replyArgument = [reply arg:0];
 //    status = [replyArgument value:@"s", replyString];
-    
+
     //    TODO get value with [remoteProperty value:(NSString*), ...]
     NSString *replyXml = [reply arg:0].xml;
     NSString *expectedXmlString = @"<string>Hello world!</string>";
@@ -301,21 +293,21 @@ const NSInteger kBusObjectTestsServicePort = 999;
     AJNProxyBusObject *proxy = [[AJNProxyBusObject alloc] initWithBusAttachment:client.bus serviceName:kBusObjectTestsAdvertisedName objectPath:kBusObjectTestsObjectPath sessionId:self.testSessionId];
     status = [proxy introspectRemoteObject];
     XCTAssertTrue(status == ER_OK, @"Introspect of Remote Object failed.");
-    
+
     AJNMessageArgument *remoteProperty = [proxy propertyWithName:kBusObjectTestsStringPropertyName forInterfaceWithName:kBusObjectTestsInterfaceName];
-    
+
     //TODO get value with [remoteProperty value:(NSString*), ...]
     NSString *remotePropertyXmlString = remoteProperty.xml;
     NSString *expectedXmlString = @"<variant signature=\"s\">\n  <string></string>\n</variant>";
     XCTAssertTrue([remotePropertyXmlString compare:expectedXmlString] == NSOrderedSame, @"Client recived property with wrong XML for null. Value is [%@], have to be [%@]", remoteProperty.xml, expectedXmlString);
-    
+
     [proxy setPropertyWithName:kBusObjectTestsStringPropertyName forInterfaceWithName:kBusObjectTestsInterfaceName toStringValue:@"foo bar"]; //TODO CHECK: is delay needed???
     XCTAssertTrue([basicObject.testStringProperty compare:@"foo bar"] == NSOrderedSame, @"The value of the property in the service-side object does not match what it was just set to. Value is [%@], have to be [%@]", basicObject.testStringProperty, @"foo bar");
-    
+
     remoteProperty = [proxy propertyWithName:kBusObjectTestsStringPropertyName forInterfaceWithName:kBusObjectTestsInterfaceName];
     expectedXmlString = @"<variant signature=\"s\">\n  <string>foo bar</string>\n</variant>";
     XCTAssertTrue([remoteProperty.xml compare:expectedXmlString] == NSOrderedSame, @"Client recived property with wrong XML after remote set. Value is [%@], have to be [%@]", remoteProperty.xml, expectedXmlString);
-    
+
     status = [client.bus disconnect];
     XCTAssertTrue(status == ER_OK, @"Client disconnect from bus failed.");
     status = [self.bus disconnect];

@@ -15,21 +15,19 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <Foundation/Foundation.h>
-#import <qcc/CertificateECC.h>
 #import "AJNObject.h"
 #import "AJNKeyInfoECC.h"
 #import "AJNCryptoECC.h"
 
-
 /**
  * The validity period
  */
-struct AJNValidPeriod {
+typedef struct AJNValidPeriod {
     uint64_t validFrom; /**< the date time when the cert becomes valid
                          expressed in the number of seconds in EPOCH Jan 1, 1970 */
     uint64_t validTo;  /**< the date time after which the cert becomes invalid
                         expressed in the number of seconds in EPOCH Jan 1, 1970 */
-};
+} AJNValidPeriod;
 
 /**
  * encoding format
@@ -477,6 +475,12 @@ typedef enum {
  * @return true if valid; false, otherwise;
  */
 + (BOOL)validateCertificateTypeInCertChain:(NSArray *)certChain;
+
+/**
+ * Set the guild GUID
+ * @param guid the guild GUID
+ */
+- (void)setGuild:(NSMutableData *)guid;
 
 
 @end
