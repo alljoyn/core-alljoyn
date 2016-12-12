@@ -309,5 +309,9 @@ using namespace ajn;
     return self.securityAppProxy->EndManagement();
 }
 
+- (QStatus)secureConnect:(BOOL)forceAuth {
+    return self.securityAppProxy->SecureConnection(forceAuth);
+}
+
 @end
 

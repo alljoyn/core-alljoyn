@@ -21,6 +21,12 @@
 /* End PBXAggregateTarget section */
 
 /* Begin PBXBuildFile section */
+		2B05EBA61E02933500FF8160 /* AJNSecureObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2B05EBA51E02933500FF8160 /* AJNSecureObject.mm */; };
+		2B05EBA71E02933500FF8160 /* AJNSecureObject.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2B05EBA51E02933500FF8160 /* AJNSecureObject.mm */; };
+		2B05EBAA1E02934300FF8160 /* SecureObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B05EBA91E02934300FF8160 /* SecureObject.m */; };
+		2B05EBAB1E02934300FF8160 /* SecureObject.m in Sources */ = {isa = PBXBuildFile; fileRef = 2B05EBA91E02934300FF8160 /* SecureObject.m */; };
+		2B711A351E017D2A009C713A /* SecurityTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2B711A341E017D2A009C713A /* SecurityTests.mm */; };
+		2B711A361E017D2A009C713A /* SecurityTests.mm in Sources */ = {isa = PBXBuildFile; fileRef = 2B711A341E017D2A009C713A /* SecurityTests.mm */; };
 		FA02A2221DEC61CE00D26D17 /* AJNAboutData.mm in Sources */ = {isa = PBXBuildFile; fileRef = FAB38A141DE730AB0009C7AE /* AJNAboutData.mm */; };
 		FA02A2231DEC61CE00D26D17 /* AJNAboutDataListenerImpl.mm in Sources */ = {isa = PBXBuildFile; fileRef = FAB38A171DE730AB0009C7AE /* AJNAboutDataListenerImpl.mm */; };
 		FA02A2241DEC61CE00D26D17 /* AJNAboutIcon.mm in Sources */ = {isa = PBXBuildFile; fileRef = FAB38A191DE730AB0009C7AE /* AJNAboutIcon.mm */; };
@@ -309,6 +315,11 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		2B05EBA41E02933500FF8160 /* AJNSecureObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNSecureObject.h; sourceTree = "<group>"; };
+		2B05EBA51E02933500FF8160 /* AJNSecureObject.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = AJNSecureObject.mm; sourceTree = "<group>"; };
+		2B05EBA81E02934300FF8160 /* SecureObject.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SecureObject.h; sourceTree = "<group>"; };
+		2B05EBA91E02934300FF8160 /* SecureObject.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SecureObject.m; sourceTree = "<group>"; };
+		2B711A341E017D2A009C713A /* SecurityTests.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = SecurityTests.mm; sourceTree = "<group>"; };
 		FA02A2191DEC610C00D26D17 /* libAllJoynFramework_iOS.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = libAllJoynFramework_iOS.a; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA02A2561DEC665700D26D17 /* AllJoynFrameworkTests_iOS.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AllJoynFrameworkTests_iOS.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		FA03B9761DFA801600025A89 /* AJNAboutDataListenerImpl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AJNAboutDataListenerImpl.h; sourceTree = "<group>"; };
@@ -644,6 +655,11 @@
 		FAB38A091DE7306D0009C7AE /* AllJoynFrameworkTests */ = {
 			isa = PBXGroup;
 			children = (
+				2B05EBA41E02933500FF8160 /* AJNSecureObject.h */,
+				2B05EBA51E02933500FF8160 /* AJNSecureObject.mm */,
+				2B05EBA81E02934300FF8160 /* SecureObject.h */,
+				2B05EBA91E02934300FF8160 /* SecureObject.m */,
+				2B711A341E017D2A009C713A /* SecurityTests.mm */,
 				FA898F961DF6E79C00213146 /* AutoPingerTests.h */,
 				FA898F941DF6E77400213146 /* AutoPingerTests.m */,
 				FAB38AF61DE731430009C7AE /* AJNBasicObject.h */,
@@ -1044,15 +1060,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				FA898F971DF6F28900213146 /* AutoPingerTests.m in Sources */,
+				2B05EBA71E02933500FF8160 /* AJNSecureObject.mm in Sources */,
 				FA02A2611DEC66F300D26D17 /* AJNBasicObject.mm in Sources */,
 				FA02A26E1DEC66F300D26D17 /* TestAuthenticationListener.m in Sources */,
 				FA02A2661DEC66F300D26D17 /* BasicObject.m in Sources */,
 				FA02A26C1DEC66F300D26D17 /* ObserverTestObjects.m in Sources */,
 				FA02A26D1DEC66F300D26D17 /* ObserverTests.m in Sources */,
+				2B05EBAB1E02934300FF8160 /* SecureObject.m in Sources */,
 				FA02A26A1DEC66F300D26D17 /* EventsActionsTests.m in Sources */,
 				FA02A2691DEC66F300D26D17 /* EventsActionsObject.m in Sources */,
 				FA02A2631DEC66F300D26D17 /* AJNObserverTestObjects.mm in Sources */,
 				FA02A2671DEC66F300D26D17 /* BusAttachmentTests.m in Sources */,
+				2B711A361E017D2A009C713A /* SecurityTests.mm in Sources */,
 				FA02A2621DEC66F300D26D17 /* AJNEventsActionsObject.mm in Sources */,
 				FA02A26B1DEC66F300D26D17 /* InterfaceDescriptionTests.m in Sources */,
 				FA02A2641DEC66F300D26D17 /* AuthenticationTests.m in Sources */,
@@ -1120,15 +1139,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				FAB38B191DE731430009C7AE /* AJNObserverTestObjects.mm in Sources */,
+				2B05EBA61E02933500FF8160 /* AJNSecureObject.mm in Sources */,
 				FAB38B211DE731430009C7AE /* EventsActionsObject.m in Sources */,
 				FAB38B1B1DE731430009C7AE /* AuthenticationTests.m in Sources */,
 				FA898F951DF6E77400213146 /* AutoPingerTests.m in Sources */,
 				FAB38B161DE731430009C7AE /* AJNBasicObject.mm in Sources */,
 				FAB38B221DE731430009C7AE /* EventsActionsTests.m in Sources */,
+				2B05EBAA1E02934300FF8160 /* SecureObject.m in Sources */,
 				FAB38B181DE731430009C7AE /* AJNEventsActionsObject.mm in Sources */,
 				FAB38B1E1DE731430009C7AE /* BusAttachmentTests.m in Sources */,
 				FAB38B1F1DE731430009C7AE /* BusObjectTests.m in Sources */,
 				FAB38B1D1DE731430009C7AE /* BasicObject.m in Sources */,
+				2B711A351E017D2A009C713A /* SecurityTests.mm in Sources */,
 				FAB38B251DE731430009C7AE /* ObserverTests.m in Sources */,
 				FAB38B241DE731430009C7AE /* ObserverTestObjects.m in Sources */,
 				FAB38B261DE731430009C7AE /* TestAuthenticationListener.m in Sources */,
