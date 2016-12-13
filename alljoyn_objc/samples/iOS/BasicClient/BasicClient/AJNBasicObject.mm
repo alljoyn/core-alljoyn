@@ -239,7 +239,7 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
     
 - (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2
 {
-    [self addInterfaceNamed:@"org.alljoyn.bus.sample"];
+    [self addInterfaceNamed:@"org.alljoyn.Bus.sample"];
     
     // prepare the input arguments
     //
@@ -254,7 +254,7 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
 
     // make the function call using the C++ proxy object
     //
-    QStatus status = self.proxyBusObject->MethodCall([@"org.alljoyn.bus.sample" UTF8String], "cat", inArgs, 2, reply, 5000);
+    QStatus status = self.proxyBusObject->MethodCall([@"org.alljoyn.Bus.sample" UTF8String], "cat", inArgs, 2, reply, 5000);
     if (ER_OK != status) {
         NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample failed. %@", [AJNStatus descriptionForStatusCode:status]);
         
