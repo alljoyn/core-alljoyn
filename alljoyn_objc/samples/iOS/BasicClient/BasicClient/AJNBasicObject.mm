@@ -81,7 +81,7 @@ BasicObjectImpl::BasicObjectImpl(BusAttachment &bus, const char *path, id<BasicS
     
     // Add the org.alljoyn.bus.sample.strings interface to this object
     //
-    interfaceDescription = bus.GetInterface([@"org.alljoyn.bus.sample" UTF8String]);
+    interfaceDescription = bus.GetInterface([@"org.alljoyn.Bus.sample" UTF8String]);
     assert(interfaceDescription);
     AddInterface(*interfaceDescription, ANNOUNCED);
 
@@ -176,7 +176,7 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
         //
         // create an interface description
         //
-        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.bus.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
+        interfaceDescription = [busAttachment createInterfaceWithName:@"org.alljoyn.Bus.sample" withInterfaceSecPolicy:AJN_IFC_SECURITY_OFF];
 
     
         // add the methods to the interface description
@@ -239,7 +239,7 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
     
 - (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2
 {
-    [self addInterfaceNamed:@"org.alljoyn.bus.sample"];
+    [self addInterfaceNamed:@"org.alljoyn.Bus.sample"];
     
     // prepare the input arguments
     //
@@ -254,9 +254,9 @@ void BasicObjectImpl::Concatentate(const InterfaceDescription::Member *member, M
 
     // make the function call using the C++ proxy object
     //
-    QStatus status = self.proxyBusObject->MethodCall([@"org.alljoyn.bus.sample" UTF8String], "cat", inArgs, 2, reply, 5000);
+    QStatus status = self.proxyBusObject->MethodCall([@"org.alljoyn.Bus.sample" UTF8String], "cat", inArgs, 2, reply, 5000);
     if (ER_OK != status) {
-        NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.bus.sample failed. %@", [AJNStatus descriptionForStatusCode:status]);
+        NSLog(@"ERROR: ProxyBusObject::MethodCall on org.alljoyn.Bus.sample failed. %@", [AJNStatus descriptionForStatusCode:status]);
         
         return nil;
             
