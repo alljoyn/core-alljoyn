@@ -28,7 +28,6 @@
 #include <alljoyn/BusAttachment.h>
 #include <alljoyn/version.h>
 #include <alljoyn/AllJoynStd.h>
-#include <Status.h>
 
 using namespace std;
 using namespace qcc;
@@ -116,33 +115,33 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Creating bus attachment                                                                 +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-    
+
     QStatus status;
-    
+
     self.wasNameAlreadyFound = NO;
-    
+
     // create the message bus
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"BasicClient" allowRemoteMessages:YES];
-    
+
     // create an interface description
     //
-    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"org.alljoyn.bus.sample" enableSecurity:NO];
-    
+    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"org.alljoyn.Bus.sample" enableSecurity:NO];
+
     // add the methods to the interface description
     //
     status = [interfaceDescription addMethodWithName:@"cat" inputSignature:@"ss" outputSignature:@"s" argumentNames:[NSArray arrayWithObjects:@"str1",@"str2",@"outStr", nil]];
-    
+
     if (status != ER_OK && status != ER_BUS_MEMBER_ALREADY_EXISTS) {
         @throw [NSException exceptionWithName:@"BusObjectInitFailed" reason:@"Unable to add method to interface: cat" userInfo:nil];
     }
-    
+
     [interfaceDescription activate];
-    
+
     // start the message bus
     //
     status =  [self.bus start];
-    
+
     if (ER_OK != status) {
         NSLog(@"Bus start failed.");
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Start failed\n"];
@@ -150,11 +149,11 @@ static const AJNSessionPort kBasicClientServicePort = 25;
     else {
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment started.\n"];
     }
-    
+
     // connect to the message bus
     //
     status = [self.bus connectWithArguments:@"null:"];
-    
+
     if (ER_OK != status) {
         NSLog(@"Bus connect failed.");
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Connect(\"null:\") failed\n"];
@@ -166,52 +165,52 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 
     self.joinedSessionCondition = [[NSCondition alloc] init];
     [self.joinedSessionCondition lock];
-    
+
     // register a bus listener in order to receive discovery notifications
     //
     [self.bus registerBusListener:self];
     [self.delegate didReceiveStatusUpdateMessage:@"BusListener Registered.\n"];
-    
+
     // begin discovery of the well known name of the service to be called
     //
     [self.bus findAdvertisedName:kBasicClientServiceName];
 
     [self.delegate didReceiveStatusUpdateMessage:@"Waiting to discover service...\n"];
-    
+
     // wait for the join session to complete
     //
     if ([self.joinedSessionCondition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:60]]) {
-        
+
         // once joined to a session, use a proxy object to make the function call
         //
         self.basicObjectProxy = [[BasicObjectProxy alloc] initWithBusAttachment:self.bus serviceName:self.foundServiceName objectPath:kBasicClientServicePath sessionId:self.sessionId];
-        
+
         // get a description of the interfaces implemented by the remote object before making the call
         //
         [self.basicObjectProxy introspectRemoteObject];
-        
+
         // now make the function call
         //
         NSString *result = [self.basicObjectProxy concatenateString:@"Code " withString:@"Monkies!!!!!!!"];
-        
+
         if (result) {
             NSLog(@"[%@] %@ concatenated string.", result, [result compare:@"Code Monkies!!!!!!!"] == NSOrderedSame ? @"Successfully":@"Unsuccessfully");
             [self.delegate didReceiveStatusUpdateMessage:@"Successfully called method on remote object!!!\n"];
         }
-        
+
         self.basicObjectProxy = nil;
-        
+
     }
     else {
         NSLog(@"Timed out while attempting to join a session with BasicService...");
     }
-    
+
     [self.joinedSessionCondition unlock];
-    
+
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Destroying bus attachment                                                               +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-    
+
     // deallocate the bus
     //
     self.bus = nil;
@@ -232,39 +231,39 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 - (void)didFindAdvertisedName:(NSString*)name withTransportMask:(AJNTransportMask)transport namePrefix:(NSString*)namePrefix
 {
     NSLog(@"AJNBusListener::didFindAdvertisedName:%@ withTransportMask:%u namePrefix:%@", name, transport, namePrefix);
-    
+
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"FoundAdvertisedName(name=%@, prefix=%@)\n", name, namePrefix]];
     if ([namePrefix compare:kBasicClientServiceName] == NSOrderedSame) {
-        
+
         BOOL shouldReturn;
         @synchronized(self) {
             shouldReturn = self.wasNameAlreadyFound;
             self.wasNameAlreadyFound = true;
         }
-        
+
         if (shouldReturn) {
             NSLog(@"Already found an advertised name, ignoring this name %@...", name);
             return;
         }
-        
+
         // Since we are in an AllJoyn callback we must enable concurrent callbacks before calling a synchronous method.
         //
         [self.bus enableConcurrentCallbacks];
-        
+
         self.sessionId = [self.bus joinSessionWithName:name onPort:kBasicClientServicePort withDelegate:self options:[[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny]];
-        
+
         if (self.sessionId) {
             self.foundServiceName = name;
-            
+
             NSLog(@"Client joined session %d", self.sessionId);
 
             [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"JoinSession SUCCESS (Session id=%d)\n", self.sessionId]];
 
         }
         else {
-            [self.delegate didReceiveStatusUpdateMessage:@"JoinSession failed\n"];            
+            [self.delegate didReceiveStatusUpdateMessage:@"JoinSession failed\n"];
         }
-        
+
         [self.joinedSessionCondition signal];
     }
 }
