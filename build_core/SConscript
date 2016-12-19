@@ -72,7 +72,7 @@ elif platform.system() == 'Darwin':
 
     default_msvc_version = None
 
-    default_crypto = 'builtin'
+    default_crypto = 'commoncrypto'
     allowed_crypto = ('openssl', 'builtin', 'commoncrypto')
 
 vars = Variables()
