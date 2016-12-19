@@ -82,4 +82,9 @@ public class KeyInfo {
 
         return Arrays.equals(((KeyInfo) obj).m_keyId, this.m_keyId); 
     }
+
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(m_keyId);
+    }
 }

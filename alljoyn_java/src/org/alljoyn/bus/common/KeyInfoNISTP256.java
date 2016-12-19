@@ -35,4 +35,30 @@ public class KeyInfoNISTP256 extends KeyInfoECC {
     public void setPublicKey(ECCPublicKey pkey) {
         key = pkey;
     }
+
+    @Override
+    public boolean equals(Object compObj) {
+        if (this == compObj) {
+            return true;
+        }
+        if (!(compObj instanceof KeyInfoNISTP256)) {
+            return false;
+        }
+        if (compObj == null) {
+            return false;
+        }
+
+        if (!super.equals(compObj)) {
+            return false;
+        }
+
+        KeyInfoNISTP256 compKeyInfo = (KeyInfoNISTP256) compObj;
+
+        return key.equals(compKeyInfo.key);
+    }
+
+    @Override
+    public int hashCode() {
+        return key.hashCode();
+    }
 }

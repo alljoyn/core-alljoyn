@@ -80,19 +80,11 @@ public class ECCPublicKey {
 
         ECCPublicKey compPublicKey = (ECCPublicKey) compObj;
 
-        if (getCoordinateSize() != compPublicKey.getCoordinateSize()) {
-            return false;
-        }
+        return Arrays.equals(x, compPublicKey.x) && Arrays.equals(y, compPublicKey.y);
+    }
 
-        for (int index = 0; index < getCoordinateSize(); index++) {
-            if (x[index] != compPublicKey.x[index]) {
-                return false;
-            }
-            if (y[index] != compPublicKey.y[index]) {
-                return false;
-            }
-        }
-
-        return true;
+    @Override
+    public int hashCode() {
+        return Arrays.hashCode(x) * Arrays.hashCode(y);
     }
 }
