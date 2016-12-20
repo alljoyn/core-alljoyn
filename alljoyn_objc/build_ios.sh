@@ -16,7 +16,7 @@
 
 set -e
 
-./build_core_ios.sh
+./build_core_ios.sh $*
 
 BASE_DIR=../build/iOS
 BUILD_DIR="${BASE_DIR}/AllJoynFramework"
