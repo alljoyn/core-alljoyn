@@ -13,6 +13,7 @@
 //    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 //  ALLJOYN MODELING TOOL - GENERATED CODE
@@ -35,48 +36,54 @@
 
 @implementation BasicObject
 
-- (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2 message:(AJNMessage *)methodCallMessage
+- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2 message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (void)methodWithOutString:(NSString*)str1 inString2:(NSString*)str2 outString1:(NSString**)outStr1 outString2:(NSString**)outStr2 message:(AJNMessage *)methodCallMessage
+- (void)methodWithInString:(NSString *)str outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (void)methodWithOnlyOutString:(NSString**)outStr1 outString2:(NSString**)outStr2 message:(AJNMessage *)methodCallMessage
+- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
+}
+
+- (void) methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage
+{
+    // TODO: complete the implementation of this method
+    //
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
 - (void)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (NSString*)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage
+- (NSString *)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 
-- (NSString*)methodWithStringArray:(AJNMessageArgument*)stringArray structWithStringAndInt:(AJNMessageArgument*)aStruct message:(AJNMessage *)methodCallMessage
+- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
-
 
 @end
 
@@ -89,13 +96,12 @@
 
 @implementation PingObject
 
-- (void)pingWithValue:(NSNumber*)value message:(AJNMessage *)methodCallMessage
+- (void)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
-
 
 @end
 

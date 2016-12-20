@@ -3,6 +3,7 @@ WorkspaceSettings.xcsettings
 Breakpoints.xcbkptlist
 guest.xcuserdatad
 whitespace.db
+bin/
 
 # OS X
 .DS_Store
@@ -10,4 +11,3 @@ whitespace.db
 # Xcode
 xcuserdata
 *.xcuserstate
-
