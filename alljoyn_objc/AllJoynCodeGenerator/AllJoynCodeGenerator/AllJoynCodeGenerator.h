@@ -15,13 +15,18 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <Foundation/Foundation.h>
-#import "AllJoynCodeGenerator.h"
 
-int main(int argc, const char * argv[])
-{
-    @autoreleasepool {
-        AllJoynCodeGenerator *codeGenerator = [[AllJoynCodeGenerator alloc] init];
+typedef enum : NSUInteger {
+    AJCG_Ok = 0,
+    AJCG_UnexpectedArguments,
+    AJCG_BadXMLFile,
+    AJCG_BadBaseFileName,
+    AJCG_ErrorApplyingXSL
+} AJCGError;
 
-        return [codeGenerator runWithArgc:argc argv:argv];
-    }
-}
+@interface AllJoynCodeGenerator : NSObject
+
+- (AJCGError)runWithArgc:(int)argc argv:(const char *[])argv;
+- (AJCGError)runWithExecutableDirectory:(NSString *)executableDirectory inputXMLFile:(NSString *)xmlFilePath baseFileName:(NSString *)baseFileName;
+
+@end
