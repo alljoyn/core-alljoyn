@@ -13,6 +13,7 @@
 //    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 //  ALLJOYN MODELING TOOL - GENERATED CODE
@@ -46,24 +47,23 @@
 
 // properties
 //
-@property (nonatomic, strong) AJNMessageArgument* testArrayProperty;
-@property (nonatomic, strong) NSString* testStringProperty;
+@property (nonatomic, strong) AJNMessageArgument *testArrayProperty;
+@property (nonatomic, strong) NSString *testStringProperty;
 
 // methods
 //
-- (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithOutString:(NSString*)str1 inString2:(NSString*)str2 outString1:(NSString**)outStr1 outString2:(NSString**)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithOnlyOutString:(NSString**)outStr1 outString2:(NSString**)outStr2 message:(AJNMessage *)methodCallMessage;
+- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2 message:(AJNMessage *)methodCallMessage;
+- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+- (void)methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
 - (void)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage;
-- (NSString*)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage;
-- (NSString*)methodWithStringArray:(AJNMessageArgument*)stringArray structWithStringAndInt:(AJNMessageArgument*)aStruct message:(AJNMessage *)methodCallMessage;
+- (NSString *)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage;
+- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct message:(AJNMessage *)methodCallMessage;
 
 // signals
 //
-- (void)sendTestStringPropertyChangedFrom:(NSString*)oldString to:(NSString*)newString inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-- (void)sendTestSignalWithComplexArgs:(AJNMessageArgument*)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-- (void)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-
+- (void)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (void)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (void)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
 
 @end
 
@@ -80,10 +80,9 @@
 
 // signals
 //
-- (void)didReceiveTestStringPropertyChangedFrom:(NSString*)oldString to:(NSString*)newString inSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage;
-- (void)didReceiveTestSignalWithComplexArgs:(AJNMessageArgument*)oldString inSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage;
+- (void)didReceiveTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage;
+- (void)didReceiveTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage;
 - (void)didReceiveTestSignalWithNoArgsInSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage;
-
 
 @end
 
@@ -107,12 +106,11 @@
 
 // properties
 //
-@property (nonatomic, readonly) NSString* name;
+@property (nonatomic, readonly) NSString *name;
 
 // signals
 //
-- (void)sendMessage:(NSString*)message inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-
+- (void)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
 
 @end
 
@@ -129,8 +127,7 @@
 
 // signals
 //
-- (void)didReceiveMessage:(NSString*)message inSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage;
-
+- (void)didReceiveMessage:(NSString *)message inSession:(AJNSessionId)sessionId message:(AJNMessage *)signalMessage;
 
 @end
 
@@ -154,8 +151,7 @@
 
 // methods
 //
-- (void)pingWithValue:(NSNumber*)value message:(AJNMessage *)methodCallMessage;
-
+- (void)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage;
 
 @end
 
@@ -173,28 +169,25 @@
 
 // properties
 //
-@property (nonatomic, strong) AJNMessageArgument* testArrayProperty;
-@property (nonatomic, strong) NSString* testStringProperty;
-@property (nonatomic, readonly) NSString* name;
-
+@property (nonatomic, strong) AJNMessageArgument *testArrayProperty;
+@property (nonatomic, strong) NSString *testStringProperty;
+@property (nonatomic, readonly) NSString *name;
 
 // methods
 //
-- (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithOutString:(NSString*)str1 inString2:(NSString*)str2 outString1:(NSString**)outStr1 outString2:(NSString**)outStr2 message:(AJNMessage *)methodCallMessage;
-- (void)methodWithOnlyOutString:(NSString**)outStr1 outString2:(NSString**)outStr2 message:(AJNMessage *)methodCallMessage;
+- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2 message:(AJNMessage *)methodCallMessage;
+- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
+- (void)methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2 message:(AJNMessage *)methodCallMessage;
 - (void)methodWithNoReturnAndNoArgs:(AJNMessage *)methodCallMessage;
-- (NSString*)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage;
-- (NSString*)methodWithStringArray:(AJNMessageArgument*)stringArray structWithStringAndInt:(AJNMessageArgument*)aStruct message:(AJNMessage *)methodCallMessage;
-
+- (NSString *)methodWithReturnAndNoInArgs:(AJNMessage *)methodCallMessage;
+- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct message:(AJNMessage *)methodCallMessage;
 
 // signals
 //
-- (void)sendTestStringPropertyChangedFrom:(NSString*)oldString to:(NSString*)newString inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-- (void)sendTestSignalWithComplexArgs:(AJNMessageArgument*)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-- (void)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-- (void)sendMessage:(NSString*)message inSession:(AJNSessionId)sessionId toDestination:(NSString*)destinationPath;
-
+- (void)sendTestStringPropertyChangedFrom:(NSString *)oldString to:(NSString *)newString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (void)sendTestSignalWithComplexArgs:(AJNMessageArgument *)oldString inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (void)sendTestSignalWithNoArgsInSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
+- (void)sendMessage:(NSString *)message inSession:(AJNSessionId)sessionId toDestination:(NSString *)destinationPath;
 
 @end
 
@@ -211,20 +204,18 @@
 
 // properties
 //
-@property (nonatomic, strong) AJNMessageArgument* testArrayProperty;
-@property (nonatomic, strong) NSString* testStringProperty;
-@property (nonatomic, readonly) NSString* name;
-
+@property (nonatomic, strong) AJNMessageArgument *testArrayProperty;
+@property (nonatomic, strong) NSString *testStringProperty;
+@property (nonatomic, readonly) NSString *name;
 
 // methods
 //
-- (NSString*)concatenateString:(NSString*)str1 withString:(NSString*)str2;
-- (void)methodWithOutString:(NSString*)str1 inString2:(NSString*)str2 outString1:(NSString**)outStr1 outString2:(NSString**)outStr2;
-- (void)methodWithOnlyOutString:(NSString**)outStr1 outString2:(NSString**)outStr2;
+- (NSString *)concatenateString:(NSString *)str1 withString:(NSString *)str2;
+- (void)methodWithOutString:(NSString *)str1 inString2:(NSString *)str2 outString1:(NSString **)outStr1 outString2:(NSString **)outStr2;
+- (void)methodWithOnlyOutString:(NSString **)outStr1 outString2:(NSString **)outStr2;
 - (void)methodWithNoReturnAndNoArgs;
-- (NSString*)methodWithReturnAndNoInArgs;
-- (NSString*)methodWithStringArray:(AJNMessageArgument*)stringArray structWithStringAndInt:(AJNMessageArgument*)aStruct;
-
+- (NSString *)methodWithReturnAndNoInArgs;
+- (NSString *)methodWithStringArray:(AJNMessageArgument *)stringArray structWithStringAndInt:(AJNMessageArgument *)aStruct;
 
 @end
 
@@ -242,15 +233,12 @@
 // properties
 //
 
-
 // methods
 //
-- (void)pingWithValue:(NSNumber*)value message:(AJNMessage *)methodCallMessage;
-
+- (void)pingWithValue:(NSNumber *)value message:(AJNMessage *)methodCallMessage;
 
 // signals
 //
-
 
 @end
 
@@ -268,11 +256,9 @@
 // properties
 //
 
-
 // methods
 //
-- (void)pingWithValue:(NSNumber*)value;
-
+- (void)pingWithValue:(NSNumber *)value;
 
 @end
 

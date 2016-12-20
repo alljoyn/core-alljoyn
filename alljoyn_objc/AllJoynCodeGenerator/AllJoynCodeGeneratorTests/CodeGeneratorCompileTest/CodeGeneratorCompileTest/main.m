@@ -15,13 +15,10 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import <Foundation/Foundation.h>
-#import "AllJoynCodeGenerator.h"
 
-int main(int argc, const char * argv[])
-{
+int main(int argc, const char * argv[]) {
     @autoreleasepool {
-        AllJoynCodeGenerator *codeGenerator = [[AllJoynCodeGenerator alloc] init];
 
-        return [codeGenerator runWithArgc:argc argv:argv];
     }
+    return 0;
 }

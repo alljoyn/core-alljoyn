@@ -20,6 +20,7 @@
         <annotation name="org.alljoyn.lang.objc" value="BasicObject"/>
         <interface name="org.alljoyn.bus.sample.strings">
             <annotation name="org.alljoyn.lang.objc" value="BasicStringsDelegate"/>
+            <annotation name="org.allJoyn.Bus.Secure" value="true" />
             <method name="Concatentate">
                 <arg name="str1" type="s" direction="in">
                     <annotation name="org.alljoyn.lang.objc" value="concatenateString:"/>
