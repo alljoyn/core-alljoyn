@@ -42,7 +42,7 @@ const NSInteger kDoorServicePort = 42;
 //--------------------------
 
 - (void)initAbout {
-    
+
     // Setup the about data
     // The default language is specified in the constructor. If the default language
     // is not specified any Field that should be localized will return an error
@@ -61,7 +61,7 @@ const NSInteger kDoorServicePort = 42;
     [self.aboutData setSoftwareVersion:@"1.0"];
     [self.aboutData setHardwareVersion:@"16.10.00"];
     [self.aboutData setSupportUrl:@"some.random.url"];
-    
+
     self.aboutObj = [[AJNAboutObject alloc] initWithBusAttachment:self.bus withAnnounceFlag:ANNOUNCED];
 }
 
