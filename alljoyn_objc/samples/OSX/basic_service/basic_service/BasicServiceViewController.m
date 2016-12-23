@@ -35,12 +35,12 @@
 - (id)initWithCoder:(NSCoder *)aDecoder
 {
     self = [super initWithCoder:aDecoder];
-    
+
     if (self) {
         self.basicService.delegate = self;
         [self.basicService run];
     }
-    
+
     return self;
 }
 
@@ -50,7 +50,7 @@
     if (self) {
         // Initialization code here.
     }
-    
+
     return self;
 }
 

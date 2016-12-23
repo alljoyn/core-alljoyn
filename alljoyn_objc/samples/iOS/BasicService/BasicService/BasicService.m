@@ -68,12 +68,12 @@ static const AJNSessionPort kBasicServicePort = 25;
     dispatch_async( serviceQueue, ^{
         [self run];
     });
-    
+
 }
 
 - (void)run
 {
-    
+
     NSLog(@"AllJoyn Library version: %@", AJNVersion.versionInformation);
     NSLog(@"AllJoyn Library build info: %@\n", AJNVersion.buildInformation);
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"AllJoyn Library version: %@\n", [AJNVersion versionInformation]]];
@@ -82,54 +82,54 @@ static const AJNSessionPort kBasicServicePort = 25;
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Creating bus attachment                                                                 +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-    
+
     QStatus status;
-    
+
     // create the message bus
     //
     self.bus = [[AJNBusAttachment alloc] initWithApplicationName:@"BasicService" allowRemoteMessages:YES];
-    
+
     self.waitCondition = [[NSCondition alloc] init];
     [self.waitCondition lock];
-    
+
     // register a bus listener
     //
     [self.bus registerBusListener:self];
-    
+
     // allocate the service's bus object, which also creates and activates the service's interface
     //
     self.basicObject = [[BasicObject alloc] initWithBusAttachment:self.bus onPath:kBasicServicePath];
-    
+
     // start the message bus
     //
     status =  [self.bus start];
-    
+
     if (ER_OK != status) {
         [self.delegate didReceiveStatusUpdateMessage:@"BusAttachment::Start failed\n"];
-        
+
         NSLog(@"Bus start failed.");
     }
-    
+
     // register the bus object
     //
     status = [self.bus registerBusObject:self.basicObject];
     if (ER_OK != status) {
         NSLog(@"ERROR: Could not register bus object");
     }
-    
+
     [self.delegate didReceiveStatusUpdateMessage:@"Object registered successfully.\n"];
-    
+
     // connect to the message bus
     //
     status = [self.bus connectWithArguments:@"null:"];
-    
+
     if (ER_OK != status) {
         NSLog(@"Bus connect failed.");
-        [self.delegate didReceiveStatusUpdateMessage:@"Failed to connect to null: transport"];        
+        [self.delegate didReceiveStatusUpdateMessage:@"Failed to connect to null: transport"];
     }
-    
-    [self.delegate didReceiveStatusUpdateMessage:@"Bus now connected to null: transport\n"];            
-    
+
+    [self.delegate didReceiveStatusUpdateMessage:@"Bus now connected to null: transport\n"];
+
     // Advertise this service on the bus
     // There are three steps to advertising this service on the bus
     //   1) Request a well-known name that will be used by the client to discover
@@ -144,38 +144,38 @@ static const AJNSessionPort kBasicServicePort = 25;
     if (ER_OK != status) {
         NSLog(@"ERROR: Request for name failed (%@)", kBasicServiceName);
     }
-    
-    
+
+
     // bind a session to a service port
     //
     AJNSessionOptions *sessionOptions = [[AJNSessionOptions alloc] initWithTrafficType:kAJNTrafficMessages supportsMultipoint:YES proximity:kAJNProximityAny transportMask:kAJNTransportMaskAny];
-    
+
     status = [self.bus bindSessionOnPort:kBasicServicePort withOptions:sessionOptions withDelegate:self];
     if (ER_OK != status) {
         NSLog(@"ERROR: Could not bind session on port (%d)", kBasicServicePort);
     }
-    
+
     // advertise a name
     //
     status = [self.bus advertiseName:kBasicServiceName withTransportMask:kAJNTransportMaskAny];
     if (ER_OK != status) {
         NSLog(@"Could not advertise (%@)", kBasicServiceName);
     }
-    
+
     // wait until the client leaves before tearing down the service
     //
     [self.waitCondition waitUntilDate:[NSDate dateWithTimeIntervalSinceNow:600]];
-    
+
     // clean up
     //
     [self.bus unregisterBusObject:self.basicObject];
-    
+
     [self.waitCondition unlock];
-    
+
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
     NSLog(@"+ Destroying bus attachment                                                               +");
     NSLog(@"+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-    
+
     // deallocate the bus
     //
     self.bus = nil;
@@ -257,7 +257,7 @@ static const AJNSessionPort kBasicServicePort = 25;
     [self.bus enableConcurrentCallbacks];
     [self.bus setSessionListener:self toSession:sessionId];
     [self.delegate didReceiveStatusUpdateMessage:[NSString stringWithFormat:@"%@ successfully joined session %u on port %d.\n", joiner, sessionId, sessionPort]];
-    
+
 }
 
 @end
