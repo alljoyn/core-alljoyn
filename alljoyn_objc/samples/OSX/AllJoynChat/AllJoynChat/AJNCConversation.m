@@ -63,11 +63,11 @@
     if (self.identifier != sessionId) {
         return;
     }
-    
+
     NSDateFormatter *formatter = [[NSDateFormatter alloc] init];
     [formatter setTimeStyle:NSDateFormatterMediumStyle];
     [formatter setDateStyle:NSDateFormatterShortStyle];
-    
+
     AJNCMessage *chatMessage = [[AJNCMessage alloc] initWithText:message fromSender:sender atDateTime:[formatter stringFromDate:[NSDate date]]];
     [self.messages addObject:chatMessage];
 }
