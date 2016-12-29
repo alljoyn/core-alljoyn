@@ -22,6 +22,11 @@ import java.util.List;
 /**
  * Signal definition used to describe an interface signal.
  * Annotations commonly used: DocString, Deprecated, Sessionless, Sessioncast, Unicast, GlobalBroadcast.
+ *
+ * Note: The rule and source properties are mutually exclusive when registering a signal handler.
+ * If the rule is non-empty, then the signal handler would be registered with the rule value
+ * used as a matching filter for the signal. If the rule is empty, then the signal handler would
+ * be registered with the source value used as a matching filter for the signal.
  */
 public class SignalDef extends BaseDef {
 
@@ -30,6 +35,8 @@ public class SignalDef extends BaseDef {
 
     final private List<ArgDef> argList;
 
+    final private String rule;
+    final private String source;
 
     /**
      * Constructor.
@@ -40,6 +47,24 @@ public class SignalDef extends BaseDef {
      * @throws IllegalArgumentException one or more arguments is invalid.
      */
     public SignalDef(String name, String signature, String interfaceName) {
+        this(name, signature, interfaceName, "", "");
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param name the name of the bus signal.
+     * @param signature input parameter signature.
+     * @param interfaceName the parent interface name.
+     * @param rule a filter used to further match which signal handler is to be invoked.
+     *             Example: "sender='org.freedesktop.DBus',path='/bar/foo',destination=':452345.34'"
+     *             Rule can contain zero or more name='value' pairs. Rule is ignored if empty.
+     * @param source a filter representing the source path of the emitter of the signal,
+     *               used to further match which signal handler is to be invoked.
+     *               Source is ignored if empty or if rule is specified (non-empty).
+     * @throws IllegalArgumentException one or more arguments is invalid.
+     */
+    public SignalDef(String name, String signature, String interfaceName, String rule, String source) {
         super(name);
         if (signature == null) {
             throw new IllegalArgumentException("Null signature");
@@ -47,9 +72,17 @@ public class SignalDef extends BaseDef {
         if (interfaceName == null) {
             throw new IllegalArgumentException("Null interfaceName");
         }
+        if (rule == null) {
+            throw new IllegalArgumentException("Null rule");
+        }
+        if (source == null) {
+            throw new IllegalArgumentException("Null source");
+        }
         this.interfaceName = interfaceName;
         this.signature = signature;
         this.argList = new ArrayList<ArgDef>();
+        this.rule = rule;
+        this.source = source;
     }
 
     /**
@@ -76,6 +109,24 @@ public class SignalDef extends BaseDef {
      */
     public String getReplySignature() {
         return "";
+    }
+
+    /**
+     * @return the filter rule used to further match the signal with a
+     *         registered signal handler to be invoked. Ignored if not
+     *         specified.
+     */
+    public String getRule() {
+        return rule;
+    }
+
+    /**
+     * @return the object path (of the emitter of the signal) used to further
+     *         match the signal with a registered signal handler to be invoked.
+     *         Ignored if not specified.
+     */
+    public String getSource() {
+        return source;
     }
 
     /**
