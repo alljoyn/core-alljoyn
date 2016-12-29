@@ -27,6 +27,7 @@ public class SignalDef extends BaseDef {
 
     final private String interfaceName;
     final private String signature;
+    final private String rule;
 
     final private List<ArgDef> argList;
 
@@ -40,6 +41,19 @@ public class SignalDef extends BaseDef {
      * @throws IllegalArgumentException one or more arguments is invalid.
      */
     public SignalDef(String name, String signature, String interfaceName) {
+        this(name, signature, interfaceName, "");
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param name the name of the bus signal.
+     * @param signature input parameter signature.
+     * @param interfaceName the parent interface name.
+     * @param rule a filter used to match which signal handler is to be invoked. Rule ignored if empty.
+     * @throws IllegalArgumentException one or more arguments is invalid.
+     */
+    public SignalDef(String name, String signature, String interfaceName, String rule) {
         super(name);
         if (signature == null) {
             throw new IllegalArgumentException("Null signature");
@@ -47,9 +61,13 @@ public class SignalDef extends BaseDef {
         if (interfaceName == null) {
             throw new IllegalArgumentException("Null interfaceName");
         }
+        if (rule == null) {
+            throw new IllegalArgumentException("Null rule");
+        }
         this.interfaceName = interfaceName;
         this.signature = signature;
         this.argList = new ArrayList<ArgDef>();
+        this.rule = rule;
     }
 
     /**
@@ -76,6 +94,11 @@ public class SignalDef extends BaseDef {
      */
     public String getReplySignature() {
         return "";
+    }
+
+    /** @return the filter rule used to match a registered signal handler to be invoked. Rule ignored if empty. */
+    public String getRule() {
+        return rule;
     }
 
     /**
