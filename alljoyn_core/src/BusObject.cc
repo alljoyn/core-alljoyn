@@ -71,7 +71,7 @@ static bool operator==(const MethodContext& a, const MethodContext& b)
 
 struct BusObject::Components {
     /** Constructor */
-    Components() : counterLock(LOCK_LEVEL_BUSOBJECT_COMPONENTS_COUNTERLOCK), inUseCounter(0) { }
+    Components() : childrenLock(LOCK_LEVEL_BUSOBJECT_COMPONENTS_CHILDRENLOCK), counterLock(LOCK_LEVEL_BUSOBJECT_COMPONENTS_COUNTERLOCK), inUseCounter(0) { }
 
     /** The interfaces this object implements */
     vector<pair<const InterfaceDescription*, bool> > ifaces;
@@ -82,7 +82,10 @@ struct BusObject::Components {
     /** Child objects of this object */
     vector<BusObject*> children;
 
-    /** lock to prevent inUseCounter from being modified by two threads at the same time.*/
+    /** lock to prevent children from being modified by two threads at the same time. */
+    qcc::Mutex childrenLock;
+
+    /** lock to prevent inUseCounter from being modified by two threads at the same time. */
     qcc::Mutex counterLock;
 
     /** counter to prevent this BusObject being deleted if it is being used by another thread. */
@@ -202,6 +205,7 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
     bool unifiedFormat = (requestedLanguageTag == NULL);
 
     /* Iterate over child nodes */
+    QCC_VERIFY(ER_OK == components->childrenLock.Lock(MUTEX_CONTEXT));
     vector<BusObject*>::const_iterator iter = components->children.begin();
     while (iter != components->children.end()) {
         BusObject* child = *iter++;
@@ -230,6 +234,7 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
             xml += "/>\n";
         }
     }
+    QCC_VERIFY(ER_OK == components->childrenLock.Unlock(MUTEX_CONTEXT));
     if (deep || !isPlaceholder) {
         /* Iterate over interfaces */
         vector<pair<const InterfaceDescription*, bool> >::const_iterator itIf = components->ifaces.begin();
@@ -1156,12 +1161,15 @@ void BusObject::AddChild(BusObject& child)
 {
     QCC_DbgPrintf(("AddChild %s to object with path = \"%s\"", child.GetPath(), GetPath()));
     child.parent = this;
+    QCC_VERIFY(ER_OK == components->childrenLock.Lock(MUTEX_CONTEXT));
     components->children.push_back(&child);
+    QCC_VERIFY(ER_OK == components->childrenLock.Unlock(MUTEX_CONTEXT));
 }
 
 QStatus BusObject::RemoveChild(BusObject& child)
 {
     QStatus status = ER_BUS_NO_SUCH_OBJECT;
+    QCC_VERIFY(ER_OK == components->childrenLock.Lock(MUTEX_CONTEXT));
     vector<BusObject*>::iterator it = find(components->children.begin(), components->children.end(), &child);
     if (it != components->children.end()) {
         QCC_ASSERT(*it == &child);
@@ -1170,19 +1178,23 @@ QStatus BusObject::RemoveChild(BusObject& child)
         components->children.erase(it);
         status = ER_OK;
     }
+    QCC_VERIFY(ER_OK == components->childrenLock.Unlock(MUTEX_CONTEXT));
     return status;
 }
 
 BusObject* BusObject::RemoveChild()
 {
+    QCC_VERIFY(ER_OK == components->childrenLock.Lock(MUTEX_CONTEXT));
     size_t sz = components->children.size();
     if (sz > 0) {
         BusObject* child = components->children[sz - 1];
         components->children.pop_back();
         QCC_DbgPrintf(("RemoveChild %s from object with path = \"%s\"", child->GetPath(), GetPath()));
         child->parent = NULL;
+        QCC_VERIFY(ER_OK == components->childrenLock.Unlock(MUTEX_CONTEXT));
         return child;
     } else {
+        QCC_VERIFY(ER_OK == components->childrenLock.Unlock(MUTEX_CONTEXT));
         return NULL;
     }
 }
@@ -1190,12 +1202,19 @@ BusObject* BusObject::RemoveChild()
 void BusObject::Replace(BusObject& object)
 {
     QCC_DbgPrintf(("Replacing object with path = \"%s\"", GetPath()));
-    object.components->children = components->children;
+    QCC_VERIFY(ER_OK == components->childrenLock.Lock(MUTEX_CONTEXT));
+    vector<BusObject*> childrenToCopy = components->children;
+    components->children.clear();
+    QCC_VERIFY(ER_OK == components->childrenLock.Unlock(MUTEX_CONTEXT));
+    QCC_VERIFY(ER_OK == object.components->childrenLock.Lock(MUTEX_CONTEXT));
+    object.components->children = childrenToCopy;
     vector<BusObject*>::iterator it = object.components->children.begin();
     while (it != object.components->children.end()) {
         (*it++)->parent = &object;
     }
+    QCC_VERIFY(ER_OK == object.components->childrenLock.Unlock(MUTEX_CONTEXT));
     if (parent) {
+        QCC_VERIFY(ER_OK == parent->components->childrenLock.Lock(MUTEX_CONTEXT));
         vector<BusObject*>::iterator pit = parent->components->children.begin();
         while (pit != parent->components->children.end()) {
             if ((*pit) == this) {
@@ -1204,20 +1223,20 @@ void BusObject::Replace(BusObject& object)
             }
             ++pit;
         }
+        QCC_VERIFY(ER_OK == parent->components->childrenLock.Unlock(MUTEX_CONTEXT));
     }
-    components->children.clear();
 }
 
 void BusObject::InUseIncrement() {
-    components->counterLock.Lock(MUTEX_CONTEXT);
+    QCC_VERIFY(ER_OK == components->counterLock.Lock(MUTEX_CONTEXT));
     qcc::IncrementAndFetch(&(components->inUseCounter));
-    components->counterLock.Unlock(MUTEX_CONTEXT);
+    QCC_VERIFY(ER_OK == components->counterLock.Unlock(MUTEX_CONTEXT));
 }
 
 void BusObject::InUseDecrement() {
-    components->counterLock.Lock(MUTEX_CONTEXT);
+    QCC_VERIFY(ER_OK == components->counterLock.Lock(MUTEX_CONTEXT));
     qcc::DecrementAndFetch(&(components->inUseCounter));
-    components->counterLock.Unlock(MUTEX_CONTEXT);
+    QCC_VERIFY(ER_OK == components->counterLock.Unlock(MUTEX_CONTEXT));
 }
 
 BusObject::BusObject(BusAttachment& bus, const char* path, bool isPlaceholder) :
@@ -1250,13 +1269,13 @@ BusObject::BusObject(const char* path, bool isPlaceholder) :
 
 BusObject::~BusObject()
 {
-    components->counterLock.Lock(MUTEX_CONTEXT);
+    QCC_VERIFY(ER_OK == components->counterLock.Lock(MUTEX_CONTEXT));
     while (components->inUseCounter != 0) {
-        components->counterLock.Unlock(MUTEX_CONTEXT);
+        QCC_VERIFY(ER_OK == components->counterLock.Unlock(MUTEX_CONTEXT));
         qcc::Sleep(5);
-        components->counterLock.Lock(MUTEX_CONTEXT);
+        QCC_VERIFY(ER_OK == components->counterLock.Lock(MUTEX_CONTEXT));
     }
-    components->counterLock.Unlock(MUTEX_CONTEXT);
+    QCC_VERIFY(ER_OK == components->counterLock.Unlock(MUTEX_CONTEXT));
 
     QCC_DbgPrintf(("BusObject destructor for object with path = \"%s\"", GetPath()));
 
