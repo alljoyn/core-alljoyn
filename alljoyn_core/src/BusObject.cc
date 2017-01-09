@@ -82,7 +82,10 @@ struct BusObject::Components {
     /** Child objects of this object */
     vector<BusObject*> children;
 
-    /** lock to prevent inUseCounter from being modified by two threads at the same time.*/
+    /** lock to prevent children from being modified by two threads at the same time. */
+    qcc::Mutex childrenLock;
+
+    /** lock to prevent inUseCounter from being modified by two threads at the same time. */
     qcc::Mutex counterLock;
 
     /** counter to prevent this BusObject being deleted if it is being used by another thread. */
@@ -202,6 +205,7 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
     bool unifiedFormat = (requestedLanguageTag == NULL);
 
     /* Iterate over child nodes */
+    components->childrenLock.Lock(MUTEX_CONTEXT);
     vector<BusObject*>::const_iterator iter = components->children.begin();
     while (iter != components->children.end()) {
         BusObject* child = *iter++;
@@ -230,6 +234,7 @@ qcc::String BusObject::GenerateIntrospection(const char* requestedLanguageTag, b
             xml += "/>\n";
         }
     }
+    components->childrenLock.Unlock(MUTEX_CONTEXT);
     if (deep || !isPlaceholder) {
         /* Iterate over interfaces */
         vector<pair<const InterfaceDescription*, bool> >::const_iterator itIf = components->ifaces.begin();
@@ -1156,12 +1161,15 @@ void BusObject::AddChild(BusObject& child)
 {
     QCC_DbgPrintf(("AddChild %s to object with path = \"%s\"", child.GetPath(), GetPath()));
     child.parent = this;
+    components->childrenLock.Lock(MUTEX_CONTEXT);
     components->children.push_back(&child);
+    components->childrenLock.Unlock(MUTEX_CONTEXT);
 }
 
 QStatus BusObject::RemoveChild(BusObject& child)
 {
     QStatus status = ER_BUS_NO_SUCH_OBJECT;
+    components->childrenLock.Lock(MUTEX_CONTEXT);
     vector<BusObject*>::iterator it = find(components->children.begin(), components->children.end(), &child);
     if (it != components->children.end()) {
         QCC_ASSERT(*it == &child);
@@ -1170,19 +1178,23 @@ QStatus BusObject::RemoveChild(BusObject& child)
         components->children.erase(it);
         status = ER_OK;
     }
+    components->childrenLock.Unlock(MUTEX_CONTEXT);
     return status;
 }
 
 BusObject* BusObject::RemoveChild()
 {
+    components->childrenLock.Lock(MUTEX_CONTEXT);
     size_t sz = components->children.size();
     if (sz > 0) {
         BusObject* child = components->children[sz - 1];
         components->children.pop_back();
         QCC_DbgPrintf(("RemoveChild %s from object with path = \"%s\"", child->GetPath(), GetPath()));
         child->parent = NULL;
+        components->childrenLock.Unlock(MUTEX_CONTEXT);
         return child;
     } else {
+        components->childrenLock.Unlock(MUTEX_CONTEXT);
         return NULL;
     }
 }
@@ -1190,12 +1202,19 @@ BusObject* BusObject::RemoveChild()
 void BusObject::Replace(BusObject& object)
 {
     QCC_DbgPrintf(("Replacing object with path = \"%s\"", GetPath()));
-    object.components->children = components->children;
+    components->childrenLock.Lock(MUTEX_CONTEXT);
+    vector<BusObject*> childrenToCopy = components->children;
+    components->children.clear();
+    components->childrenLock.Unlock(MUTEX_CONTEXT);
+    object.components->childrenLock.Lock(MUTEX_CONTEXT);
+    object.components->children = childrenToCopy;
     vector<BusObject*>::iterator it = object.components->children.begin();
     while (it != object.components->children.end()) {
         (*it++)->parent = &object;
     }
+    object.components->childrenLock.Unlock(MUTEX_CONTEXT);
     if (parent) {
+        parent->components->childrenLock.Lock(MUTEX_CONTEXT);
         vector<BusObject*>::iterator pit = parent->components->children.begin();
         while (pit != parent->components->children.end()) {
             if ((*pit) == this) {
@@ -1204,8 +1223,8 @@ void BusObject::Replace(BusObject& object)
             }
             ++pit;
         }
+        parent->components->childrenLock.Unlock(MUTEX_CONTEXT);
     }
-    components->children.clear();
 }
 
 void BusObject::InUseIncrement() {
