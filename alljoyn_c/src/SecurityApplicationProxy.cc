@@ -159,8 +159,7 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_getmanifests(alljoyn_securityap
     for (vector<std::string>::size_type i = 0; i < count; i++) {
         manifestArray->xmls[i] = CreateStringCopy(manifestsStrings[i]);
         if (nullptr == manifestArray->xmls[i]) {
-            //TODO: refactor this, see ASACORE-3480
-            alljoyn_permissionconfigurator_manifestarray_cleanup(manifestArray);
+            alljoyn_securityapplicationproxy_manifestarray_cleanup(manifestArray);
             return ER_OUT_OF_MEMORY;
         }
     }
@@ -436,12 +435,80 @@ QStatus AJ_CALL alljoyn_securityapplicationproxy_getmembershipsummaries(alljoyn_
     return ER_OK;
 }
 
+QStatus AJ_CALL alljoyn_securityapplicationproxy_getmembershipcertificates(alljoyn_securityapplicationproxy proxy, alljoyn_certificatechainarray* certChainArray)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QStatus status = ER_OK;
+    vector<vector<CertificateX509> > certs;
+
+    status = ((SecurityApplicationProxy*)proxy)->GetMembershipCertificates(certs);
+
+    if (ER_OK != status) {
+        return status;
+    }
+
+    qcc::String certStr;
+    size_t count = certs.size();
+    certChainArray->chains = new (std::nothrow) alljoyn_certificatearray[count];
+    if (nullptr == certChainArray->chains) {
+        certChainArray->count = 0;
+        return ER_OUT_OF_MEMORY;
+    }
+
+    memset(certChainArray->chains, 0, sizeof(alljoyn_certificatearray) * count);
+    certChainArray->count = count;
+
+    size_t chainIdx = 0;
+    size_t certIdx = 0;
+    for (auto& chain : certs) {
+
+        size_t certCount = chain.size();
+        alljoyn_certificatearray* chainPtr = &certChainArray->chains[chainIdx];
+        chainPtr->certificates = new (std::nothrow) AJ_PSTR[certCount];
+        if (nullptr == chainPtr->certificates) {
+            chainPtr->count = 0;
+            alljoyn_securityapplicationproxy_certificatechainarray_cleanup(certChainArray);
+            return ER_OUT_OF_MEMORY;
+        }
+
+        memset(chainPtr->certificates, 0, sizeof(AJ_PSTR) * certCount);
+        chainPtr->count = certCount;
+
+        for (auto& cert : chain) {
+            status = cert.EncodeCertificatePEM(certStr);
+            if (ER_OK != status) {
+                alljoyn_securityapplicationproxy_certificatechainarray_cleanup(certChainArray);
+                return status;
+            }
+
+            chainPtr->certificates[certIdx] = CreateStringCopy(static_cast<std::string>(certStr));
+            if (nullptr == chainPtr->certificates[certIdx]) {
+                alljoyn_securityapplicationproxy_certificatechainarray_cleanup(certChainArray);
+                return ER_OUT_OF_MEMORY;
+            }
+            ++certIdx;
+        }
+        ++chainIdx;
+    }
+    return ER_OK;
+}
+
 void AJ_CALL alljoyn_securityapplicationproxy_certificateidarray_cleanup(alljoyn_certificateidarray* certificateIds)
 {
     QCC_DbgTrace(("%s", __FUNCTION__));
 
     if (nullptr != certificateIds) {
         alljoyn_permissionconfigurator_certificateidarray_cleanup(certificateIds);
+    }
+}
+
+void AJ_CALL alljoyn_securityapplicationproxy_certificatechainarray_cleanup(alljoyn_certificatechainarray* certChainArray)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    if (nullptr != certChainArray) {
+        alljoyn_permissionconfigurator_certificatechainarray_cleanup(certChainArray);
     }
 }
 
