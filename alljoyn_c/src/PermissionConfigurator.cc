@@ -382,6 +382,27 @@ void AJ_CALL alljoyn_permissionconfigurator_manifestarray_cleanup(alljoyn_manife
     memset(manifestArray, 0, sizeof(*manifestArray));
 }
 
+void AJ_CALL alljoyn_permissionconfigurator_certificatechainarray_cleanup(alljoyn_certificatechainarray* certChainArray)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QCC_ASSERT(nullptr != certChainArray);
+
+    for (size_t i = 0; i < certChainArray->count; ++i) {
+        for (size_t j = 0; j < certChainArray->chains[i].count; ++j) {
+            // Guard nullptr case in stead of using QCC_ASSERT in case this function is called due to
+            // allocation failure for a particular chains[i].certificates
+            if (nullptr != certChainArray->chains[i].certificates) {
+                DestroyStringCopy(certChainArray->chains[i].certificates[j]);
+            }
+        }
+        delete [] certChainArray->chains[i].certificates;
+    }
+    delete[] certChainArray->chains;
+
+    memset(certChainArray, 0, sizeof(*certChainArray));
+}
+
 QStatus AJ_CALL alljoyn_permissionconfigurator_installmanifests(alljoyn_permissionconfigurator configurator,
                                                                 AJ_PCSTR* manifestsXmls,
                                                                 size_t manifestsCount,

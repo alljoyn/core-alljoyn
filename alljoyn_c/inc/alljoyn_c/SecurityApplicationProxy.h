@@ -413,11 +413,31 @@ AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_removemembership(alljoyn
 AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmembershipsummaries(alljoyn_securityapplicationproxy proxy, alljoyn_certificateidarray* certificateIds);
 
 /**
+ * Get installed membership certificates
+ *
+ * @param[in]   proxy             The alljoyn_securityapplicationproxy connected to the managed application.
+ * @param[out]  certChainArray    Pointer to the object representing certificate chains collection. This object is populated by this function
+ *                                and must be later destroyed by calling alljoyn_securityapplicationproxy_certificatechainarray_cleanup API.
+ *
+ * @return
+ *  - #ER_OK if successful
+ *  - An error status indicating failure
+ */
+AJ_API QStatus AJ_CALL alljoyn_securityapplicationproxy_getmembershipcertificates(alljoyn_securityapplicationproxy proxy, alljoyn_certificatechainarray* certChainArray);
+
+/**
  * This method deallocates the object filled by alljoyn_securityapplicationproxy_getmembershipsummaries
  *
  * @param[in]    certificateIds  Pointer to alljoyn_certificateidarray populated by a call by alljoyn_securityapplicationproxy_getmembershipsummaries.
  */
 AJ_API void AJ_CALL alljoyn_securityapplicationproxy_certificateidarray_cleanup(alljoyn_certificateidarray* certificateIds);
+
+/**
+ * This method deallocates the object filled by alljoyn_securityapplicationproxy_getmembershipcertificates
+ *
+ * @param[in]    certChainArray Pointer to alljoyn_certificatechainarray populated by a call by alljoyn_securityapplicationproxy_getmembershipcertificates.
+ */
+AJ_API void AJ_CALL alljoyn_securityapplicationproxy_certificatechainarray_cleanup(alljoyn_certificatechainarray* certChainArray);
 
 /**
  * This method allows an admin to reset the application to its original state
