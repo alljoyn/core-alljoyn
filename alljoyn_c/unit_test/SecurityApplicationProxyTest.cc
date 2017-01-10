@@ -577,6 +577,10 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
             alljoyn_securityapplicationproxy_certificateidarray_cleanup(&m_certIds);
         }
 
+        if (m_certArray.count > 0) {
+            alljoyn_securityapplicationproxy_certificatearray_cleanup(&m_certArray);
+        }
+
         SecurityApplicationProxyTestHelper::DestroyCertificate(m_managedAppMembershipCertificate);
 
         if (nullptr != m_identityCertificateChainOutput) {
@@ -592,6 +596,7 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
     AJ_PSTR m_newPolicy;
     AJ_PSTR m_retrievedPolicy;
     alljoyn_certificateidarray m_certIds;
+    alljoyn_certificatearray m_certArray;
     AJ_PSTR m_managedAppMembershipCertificate;
     AJ_PSTR m_identityCertificateChainOutput;
     void ModifyManagedAppIdentityCertAndManifests()
@@ -653,6 +658,7 @@ class SecurityApplicationProxyFullSetupTest : public SecurityApplicationProxyPos
     void CreateAndInstallMembershipToManagedApp()
     {
         m_certIds.count = 0;
+        m_certArray.count = 0;
         SecurityApplicationProxyTestHelper::CreateMembershipCert(m_securityManager,
                                                                  m_managedApp,
                                                                  m_adminGroupId,
@@ -1404,6 +1410,13 @@ TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassGetMembershipSummaries)
 {
     EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmembershipsummaries(m_managedAppSecurityApplicationProxy, &m_certIds));
     EXPECT_EQ(1U, m_certIds.count);
+}
+
+TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassGetMembershipCertificates)
+{
+    EXPECT_EQ(ER_OK, alljoyn_securityapplicationproxy_getmembershipcertificates(m_managedAppSecurityApplicationProxy, &m_certArray));
+    EXPECT_EQ(1U, m_certArray.count);
+    EXPECT_STREQ(m_managedAppMembershipCertificate, m_certArray.certificates[0]);
 }
 
 TEST_F(SecurityApplicationProxyFullSetupTest, shouldPassRemoveMembership)

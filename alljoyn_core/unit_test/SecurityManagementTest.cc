@@ -2428,6 +2428,8 @@ TEST_F(SecurityManagementPolicyTest, unsuccessful_method_call_when_sga_delegatio
  * InstallMembership should be successful.
  * GetProperty("MembershipSummaries") should return the details about the membership certificates installed.
  *
+ * GetMembershipCertificates should return the membership certificates installed.
+ *
  * RemoveMembership should be sucessful.
  *
  * Reset should be successful.
@@ -2539,6 +2541,24 @@ TEST_F(SecurityManagementPolicyTest, admin_security_group_members_can_also_call_
     } else {
         EXPECT_STREQ(serials[0].c_str(), serial1.c_str());
         EXPECT_STREQ(serials[1].c_str(), serial0.c_str());
+    }
+
+    // GetMembershipCertificates
+    vector<CertificateX509> certificateVector;
+    EXPECT_EQ(ER_OK, sapWithPeer1toPeer2.GetMembershipCertificates(certificateVector));
+    EXPECT_EQ(2U, certificateVector.size());
+    EXPECT_EQ(CertificateX509::MEMBERSHIP_CERTIFICATE, certificateVector[0].GetType());
+    EXPECT_EQ(CertificateX509::MEMBERSHIP_CERTIFICATE, certificateVector[1].GetType());
+
+    String certSerial0(String((const char*)certificateVector[0].GetSerial(), certificateVector[0].GetSerialLen()));
+    String certSerial1(String((const char*)certificateVector[1].GetSerial(), certificateVector[1].GetSerialLen()));
+
+    if (certSerial0 == serial0) {
+        EXPECT_STREQ(certSerial0.c_str(), serial0.c_str());
+        EXPECT_STREQ(certSerial1.c_str(), serial1.c_str());
+    } else {
+        EXPECT_STREQ(certSerial1.c_str(), serial0.c_str());
+        EXPECT_STREQ(certSerial0.c_str(), serial1.c_str());
     }
 
     // StartManagement

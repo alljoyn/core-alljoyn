@@ -635,6 +635,28 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetMembershipSummaries(MsgArg& membershipSummaries);
 
     /**
+     * The installed membership certificate.
+     *
+     * @param[out] certificateVector The container for the membership certificates.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipCertificates(std::vector<qcc::CertificateX509>& certificateVector);
+
+    /**
+     * The installed membership certificates.
+     *
+     * @param[out] membershipCertArgs A MsgArg containing membership certificates.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipCertificates(MsgArg& membershipCertArgs);
+
+    /**
      * This method notifies the application about the fact that the Security Manager
      * will start to make changes to the application's security settings.
      *

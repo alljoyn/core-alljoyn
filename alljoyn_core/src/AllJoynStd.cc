@@ -334,6 +334,8 @@ QStatus org::alljoyn::CreateInterfaces(BusAttachment& bus)
         ifc->AddMethod("RemoveMembership", "(ayay(yyayay))", "", "certificateId");
         ifc->AddProperty("MembershipSummaries", "a(ayay(yyayay))", PROP_ACCESS_READ);
         ifc->AddPropertyAnnotation("MembershipSummaries", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
+        ifc->AddProperty("MembershipCertificates", "a(yay)", PROP_ACCESS_READ);
+        ifc->AddPropertyAnnotation("MembershipCertificates", org::freedesktop::DBus::AnnotateEmitsChanged, "false");
         ifc->AddMethod("StartManagement", "", "", "");
         ifc->AddMethod("EndManagement", "", "", "");
         ifc->AddMethod("InstallManifests", "a(ua(ssa(syy))saysay)", "", "manifests");
