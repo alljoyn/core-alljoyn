@@ -2091,6 +2091,109 @@ Exit:
     return status;
 }
 
+static QStatus GetMembershipCertificateEntryChain(BusAttachment& bus, CredentialAccessor* ca, KeyStore::Key& entryKey, std::vector<qcc::String>& certChainStrs)
+{
+    KeyStore::Key* keys = NULL;
+    size_t numOfKeys;
+    QStatus status = ca->GetKeys(entryKey, &keys, &numOfKeys);
+    if (ER_OK != status) {
+        delete [] keys;
+        if (ER_BUS_KEY_UNAVAILABLE == status) {
+            return ER_OK; /* nothing to generate */
+        }
+        return status;
+    }
+
+    std::vector<qcc::String> addOns;
+    /* go through the associated entries of this keys */
+    for (size_t cnt = 0; cnt < numOfKeys; cnt++) {
+        KeyBlob kb;
+        status = ca->GetKey(keys[cnt], kb);
+        if (ER_OK != status) {
+            break;
+        }
+
+        /* this cert chain node may have a parent cert */
+        std::string certStr(reinterpret_cast<const char*>(kb.GetData()), kb.GetSize());
+        addOns.push_back(static_cast<qcc::String>(certStr));
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        status = GetMembershipCertificateEntryChain(bus, ca, keys[cnt], addOns);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+    }
+Exit:
+    if (ER_OK == status) {
+        certChainStrs.reserve(certChainStrs.size() + addOns.size());
+        certChainStrs.insert(certChainStrs.end(), addOns.begin(), addOns.end());
+    }
+
+    addOns.clear();
+    delete [] keys;
+    return status;
+}
+
+QStatus PermissionMgmtObj::GetMembershipCertificates(MsgArg& args)
+{
+    MembershipCertMap certMap;
+    qcc::String authMechanism;
+
+    QStatus status = GetAllMembershipCerts(certMap);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    size_t numCertChains = certMap.size();
+    if (0 == numCertChains) {
+        args.Set("aa(yay)", 0, NULL);
+        return ER_OK;
+    }
+
+    size_t cnt = 0;
+    MsgArg* certChainArgs = new MsgArg[numCertChains];
+    for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
+        std::vector<qcc::String> certList;
+        MembershipCertificate* cert = it->second;
+        String der;
+        status = cert->EncodeCertificateDER(der);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        certList.push_back(der);
+
+        status = GetMembershipCertificateEntryChain(bus, ca, (KeyStore::Key&)it->first, certList);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+
+        size_t certChainSize = certList.size();
+        MsgArg* certChainArg = new MsgArg[certChainSize];
+        size_t certCnt = 0;
+        for (auto& cert : certList) {
+            certChainArg[certCnt].Set("(yay)", CertificateX509::ENCODING_X509_DER, cert.size(), cert.c_str());
+            certChainArg[certCnt].Stabilize();
+            ++certCnt;
+        }
+        certChainArgs[cnt].Set("a(yay)", certChainSize, certChainArg);
+        certChainArgs[cnt].Stabilize();
+        delete [] certChainArg;
+        ++cnt;
+    }
+
+    status = args.Set("aa(yay)", numCertChains, certChainArgs);
+Exit:
+    if (ER_OK == status) {
+        args.Stabilize();
+        args.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    } else {
+        delete [] certChainArgs;
+    }
+    ClearMembershipCertMap(certMap);
+    return status;
+}
+
 QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
 {
     MembershipCertMap certMap;

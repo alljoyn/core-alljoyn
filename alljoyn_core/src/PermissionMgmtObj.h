@@ -412,6 +412,17 @@ class PermissionMgmtObj : public BusObject {
     QStatus GetMembershipSummaries(MsgArg& arg);
 
     /**
+     * Get the membership certificates as MsgArgs.
+     *
+     * @param[out] arg A MsgArg containing a certificate chains
+     *
+     * @return
+     *    - #ER_OK if the membership certificates are successfully retrieved
+     *    - other error code indicating failure
+     */
+    QStatus GetMembershipCertificates(MsgArg& arg);
+
+    /**
      * Retrieve certificates in a MsgArg used to transmit certificates in the standard format,
      * used by Claim and GetIdentity.
      *

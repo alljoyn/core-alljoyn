@@ -1851,6 +1851,11 @@ class PermissionMgmtUseCaseTest : public BasePermissionMgmtTest {
         EXPECT_EQ(*keyInfos[0].GetPublicKey(), *middleBusCA.GetPublicKey()) << "issuer keys don't match";
         delete [] serials;
         delete [] keyInfos;
+
+        vector<vector<CertificateX509> > certChains;
+        EXPECT_EQ(ER_OK, saProxy.GetMembershipCertificates(certChains)) << "GetMembershipCertificates failed.";
+        ASSERT_EQ(1U, certChains.size()) << "Bad membership cert chain.";
+        ASSERT_EQ(3U, certChains[0].size()) << "Bad membership cert chain.";
     }
 
     /**

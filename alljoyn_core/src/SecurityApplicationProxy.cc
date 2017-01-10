@@ -1088,6 +1088,49 @@ QStatus SecurityApplicationProxy::GetMembershipSummaries(MsgArg& membershipSumma
     return status;
 }
 
+QStatus SecurityApplicationProxy::GetMembershipCertificates(vector<vector<CertificateX509> >& certificateVector)
+{
+    QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));
+    QStatus status = ER_OK;
+
+    MsgArg args;
+    status = GetProperty(org::alljoyn::Bus::Security::ManagedApplication::InterfaceName, "MembershipCertificates", args);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Could not GetMembershipCertificates"));
+        return status;
+    }
+
+    size_t count = 0;
+    MsgArg* certChainArg;
+
+    status = args.Get("aa(yay)", &count, &certChainArg);
+    if (ER_OK != status) {
+        QCC_LogError(status, ("Retrieving certChainArg failed"));
+        return status;
+    }
+    if (0 == count) {
+        QCC_DbgPrintf(("%s Retrieved 0 membership certificate chains", __FUNCTION__));
+        return ER_OK;
+    }
+
+    certificateVector.clear();
+    certificateVector.resize(count);
+
+    size_t cnt = 0;
+    for (auto& certChain : certificateVector) {
+        size_t expectedChainSize = certChainArg[cnt].v_array.GetNumElements();
+        certChain.resize(expectedChainSize);
+        status = MsgArgToIdentityCertChain(certChainArg[cnt], certChain.data(), expectedChainSize);
+        if (ER_OK != status) {
+            QCC_LogError(status, ("MsgArgToIdentityCertChain failed"));
+            return status;
+        }
+        ++cnt;
+    }
+
+    return status;
+}
+
 QStatus SecurityApplicationProxy::StartManagement()
 {
     QCC_DbgTrace(("SecurityApplicationProxy::%s", __FUNCTION__));

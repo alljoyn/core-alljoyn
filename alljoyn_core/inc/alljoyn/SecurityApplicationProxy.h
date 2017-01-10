@@ -635,6 +635,19 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetMembershipSummaries(MsgArg& membershipSummaries);
 
     /**
+     * Retrieve the installed membership certificate chains from the remote peer.
+     *
+     * @param[out] certificateChainsVector A 2D container for the membership certificate chains
+     *             first dimension represents certificate chains, second dimension represent
+     *             certificates in that chain.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipCertificates(std::vector<std::vector<qcc::CertificateX509> >& certificateVector);
+
+    /**
      * This method notifies the application about the fact that the Security Manager
      * will start to make changes to the application's security settings.
      *
