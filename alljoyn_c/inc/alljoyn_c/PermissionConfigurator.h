@@ -98,6 +98,15 @@ typedef struct {
 } alljoyn_manifestarray;
 
 /**
+ * Struct used to return an array of certificates.
+ */
+typedef struct {
+    size_t count;                           /**< The number of elements in the xmls array. */
+    AJ_PSTR* certificates;                  /**< An array of strings, each containing a certificate */
+} alljoyn_certificatearray;
+
+
+/**
  * Retrieves the current application state.
  *
  * @param[in]   configurator    The queried alljoyn_permissionconfigurator.
@@ -392,6 +401,13 @@ AJ_API QStatus AJ_CALL alljoyn_permissionconfigurator_getmanifests(alljoyn_permi
  *                                          alljoyn_permissionconfigurator_getmanifests.
  */
 AJ_API void AJ_CALL alljoyn_permissionconfigurator_manifestarray_cleanup(alljoyn_manifestarray* manifestArray);
+
+/**
+ * This method deallocates an array of strings containing certificates
+ *
+ * @param[in]    certificateArray           Pointer to alljoyn_certificatearray populated by a call to getmembershipcertficates API
+ */
+AJ_API void AJ_CALL alljoyn_permissionconfigurator_certificatearray_cleanup(alljoyn_certificatearray* certificateArray);
 
 /**
  * This method allows the application to install signed manifests to itself. This method only verifies that manifests

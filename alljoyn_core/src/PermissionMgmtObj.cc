@@ -2091,6 +2091,48 @@ Exit:
     return status;
 }
 
+QStatus PermissionMgmtObj::GetMembershipCertificates(MsgArg& args)
+{
+    MembershipCertMap certMap;
+    qcc::String authMechanism;
+
+    QStatus status = GetAllMembershipCerts(certMap);
+    if (ER_OK != status) {
+        return status;
+    }
+
+    size_t numCerts = certMap.size();
+    if (0 == numCerts) {
+        args.Set("a(yay)", 0, NULL);
+        return ER_OK;
+    }
+
+    size_t cnt = 0;
+    MsgArg* certArgs = new MsgArg[numCerts];
+    for (MembershipCertMap::iterator it = certMap.begin(); it != certMap.end(); it++) {
+        MembershipCertificate* cert = it->second;
+        String der;
+        status = cert->EncodeCertificateDER(der);
+        if (ER_OK != status) {
+            goto Exit;
+        }
+        certArgs[cnt].Set("(yay)", CertificateX509::ENCODING_X509_DER, der.length(), der.c_str());
+        certArgs[cnt].Stabilize();
+        ++cnt;
+    }
+
+    status = args.Set("a(yay)", numCerts, certArgs);
+Exit:
+    if (ER_OK == status) {
+        args.Stabilize();
+        args.SetOwnershipFlags(MsgArg::OwnsArgs, true);
+    } else   {
+        delete [] certArgs;
+    }
+    ClearMembershipCertMap(certMap);
+    return status;
+}
+
 QStatus PermissionMgmtObj::GetMembershipSummaries(MsgArg& arg)
 {
     MembershipCertMap certMap;

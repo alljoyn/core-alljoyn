@@ -635,6 +635,30 @@ class SecurityApplicationProxy : public ProxyBusObject {
     QStatus GetMembershipSummaries(MsgArg& membershipSummaries);
 
     /**
+     * The installed membership certificate chains. The leaf cert is listed first. The signing
+     * certs follow.
+     *
+     * @param[out] certificateVector The container for the membership certificate chains.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipCertificates(std::vector<qcc::CertificateX509>& certificateVector);
+
+    /**
+     * The installed membership certificate chains. The leaf cert is listed first. The signing
+     * certs follow.
+     *
+     * @param[out] membershipCertArgs the membership certificate chains.
+     *
+     * @return
+     *  - #ER_OK if successful
+     *  - an error status indicating failure
+     */
+    QStatus GetMembershipCertificates(MsgArg& membershipCertArgs);
+
+    /**
      * This method notifies the application about the fact that the Security Manager
      * will start to make changes to the application's security settings.
      *

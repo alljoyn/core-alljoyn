@@ -382,6 +382,21 @@ void AJ_CALL alljoyn_permissionconfigurator_manifestarray_cleanup(alljoyn_manife
     memset(manifestArray, 0, sizeof(*manifestArray));
 }
 
+void AJ_CALL alljoyn_permissionconfigurator_certificatearray_cleanup(alljoyn_certificatearray* certificateArray)
+{
+    QCC_DbgTrace(("%s", __FUNCTION__));
+
+    QCC_ASSERT(nullptr != certificateArray);
+
+    for (size_t i = 0; i < certificateArray->count; i++) {
+        DestroyStringCopy(certificateArray->certificates[i]);
+    }
+
+    delete[] certificateArray->certificates;
+
+    memset(certificateArray, 0, sizeof(*certificateArray));
+}
+
 QStatus AJ_CALL alljoyn_permissionconfigurator_installmanifests(alljoyn_permissionconfigurator configurator,
                                                                 AJ_PCSTR* manifestsXmls,
                                                                 size_t manifestsCount,
