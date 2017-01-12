@@ -79,6 +79,10 @@ public class KeyInfo {
         return m_keyId;
     }
 
+    public void setKeyId(byte[] key_ID) {
+        m_keyId = key_ID;
+    }
+
     @Override
     public boolean equals (Object obj) {
         if (obj == null) {
