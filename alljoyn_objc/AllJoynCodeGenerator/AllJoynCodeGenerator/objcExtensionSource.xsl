@@ -15,7 +15,7 @@
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
 -->
-<xsl:stylesheet version="1.0" 
+<xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
 <xsl:output method="text" version="1.0" encoding="UTF-8" indent="no" omit-xml-declaration="yes"/>
@@ -41,6 +41,7 @@
 //    ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 //    OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 ////////////////////////////////////////////////////////////////////////////////
+
 ////////////////////////////////////////////////////////////////////////////////
 //
 //  ALLJOYN MODELING TOOL - GENERATED CODE
@@ -56,7 +57,7 @@
 #import "<xsl:value-of select="$baseFileName"/>.h"
 
 <xsl:apply-templates select=".//node" mode="objc"/>
-    
+
 </xsl:template>
 
 <xsl:template match="node" mode="objc">////////////////////////////////////////////////////////////////////////////////
@@ -68,7 +69,6 @@
 @implementation <xsl:value-of select="annotation[@name='org.alljoyn.lang.objc']/@value"/>
 <xsl:text>&#10;</xsl:text>
 <xsl:apply-templates select="./interface/method" mode="objc-method-definition"/>
-
 @end
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -94,7 +94,7 @@
 {
     // TODO: complete the implementation of this method
     //
-     @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);   
+    @throw([NSException exceptionWithName:@"NotImplementedException" reason:@"You must implement this method" userInfo:nil]);
 }
 </xsl:template>
 
@@ -116,7 +116,7 @@
         </xsl:when>
         <xsl:when test="count(./arg[@direction='out']) > 1">
             <xsl:apply-templates select="./arg[@direction='in']" mode="objc-messageParam"/>
-            <xsl:if test="count(./arg[@direction='in']) > 1">
+            <xsl:if test="count(./arg[@direction='out']) > 1">
                 <xsl:text>&#32;</xsl:text>
             </xsl:if>
             <xsl:apply-templates select="./arg[@direction='out']" mode="objc-messageParam"/>
@@ -150,60 +150,60 @@
 <xsl:template name="objcArgType">
     <xsl:choose>
         <xsl:when test="@type='y'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='b'">
             <xsl:text>BOOL</xsl:text>
         </xsl:when>
         <xsl:when test="@type='n'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='q'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='i'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='u'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='x'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='t'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='d'">
-            <xsl:text>NSNumber*</xsl:text>
+            <xsl:text>NSNumber *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='s'">
-            <xsl:text>NSString*</xsl:text>
+            <xsl:text>NSString *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='o'">
-            <xsl:text>NString*</xsl:text>
+            <xsl:text>NString *</xsl:text>
         </xsl:when>
         <xsl:when test="@type='a'">
-            <xsl:text>NSArray*</xsl:text>
+            <xsl:text>NSArray *</xsl:text>
         </xsl:when>
         <xsl:otherwise>
-            <xsl:text>AJNMessageArgument*</xsl:text>
+            <xsl:text>AJNMessageArgument *</xsl:text>
         </xsl:otherwise>
     </xsl:choose>
 </xsl:template>
 
-<xsl:template name="capitalizeFirstLetterOfNameAttr">  
-   <xsl:variable name="value">  
-        <xsl:value-of select="@name"/>  
-   </xsl:variable>  
-    <xsl:variable name= "ufirstChar" select="translate(substring($value,1,1),$vLower,$vUpper)"/>  
+<xsl:template name="capitalizeFirstLetterOfNameAttr">
+   <xsl:variable name="value">
+        <xsl:value-of select="@name"/>
+   </xsl:variable>
+    <xsl:variable name= "ufirstChar" select="translate(substring($value,1,1),$vLower,$vUpper)"/>
     <xsl:value-of select="concat($ufirstChar,substring($value,2))"/>
 </xsl:template>
 
-<xsl:template name="uncapitalizeFirstLetterOfNameAttr">  
-   <xsl:variable name="value">  
-        <xsl:value-of select="@name"/>  
-   </xsl:variable>  
-    <xsl:variable name= "lfirstChar" select="translate(substring($value,1,1),$vUpper,$vLower)"/>  
+<xsl:template name="uncapitalizeFirstLetterOfNameAttr">
+   <xsl:variable name="value">
+        <xsl:value-of select="@name"/>
+   </xsl:variable>
+    <xsl:variable name= "lfirstChar" select="translate(substring($value,1,1),$vUpper,$vLower)"/>
     <xsl:value-of select="concat($lfirstChar,substring($value,2))"/>
 </xsl:template>
 
