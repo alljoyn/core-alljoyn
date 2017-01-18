@@ -209,6 +209,7 @@ class CliAboutListner :
     }
 };
 
+
 ostream& operator<<(ostream& strm, const GroupInfo& gi)
 {
     return strm << "Group: (" << gi.guid.ToString() << " / " << gi.name << " / " << gi.desc
@@ -231,21 +232,32 @@ static void list_claimable_applications(shared_ptr<SecurityAgent>& secAgent)
     vector<OnlineApplication> claimableApps;
     secAgent->GetApplications(claimableApps);
 
-    if (0 == claimableApps.size()) {
-        cout << "There are currently no claimable applications published"
-             << endl;
-        return;
-    } else {
-        cout << "There are currently " << claimableApps.size()
-             << " unclaimed applications published" << endl;
-    }
+    string outStr = "There are currently no claimable applications published\n";
+    if (0 != claimableApps.size()) {
 
-    vector<OnlineApplication>::const_iterator it = claimableApps.begin();
-    for (int i = 0; it < claimableApps.end(); ++it) {
-        const OnlineApplication& info = *it;
-        cout << i << ". id: " << toKeyID(info.keyInfo) << " -  bus name: " << info.busName << " - claim state: " <<
-            PermissionConfigurator::ToString(info.applicationState) << endl;
+        string tempStr = "  Following claimeable applications have been found:\n"
+                         "  ===============================================\n";
+
+        vector<OnlineApplication>::const_iterator it = claimableApps.begin();
+        int i = 0;
+        for (; it < claimableApps.end(); ++it) {
+            const OnlineApplication& info = *it;
+            if (ER_OK == secAgent->PingApplication(info)) {
+                tempStr += "  "
+                           + to_string(i)
+                           + ". id: "
+                           + toKeyID(info.keyInfo)
+                           + " -  bus name: "
+                           + info.busName
+                           + " - claim state: "
+                           + PermissionConfigurator::ToString(info.applicationState)
+                           + "\n";
+                ++i;
+            }
+        }
+        outStr = (0 == i) ? outStr : tempStr;
     }
+    cout << outStr;
 }
 
 static void list_claimed_applications(const shared_ptr<UIStorage>& uiStorage)
@@ -261,7 +273,7 @@ static void list_claimed_applications(const shared_ptr<UIStorage>& uiStorage)
             applications.begin();
         for (int i = 0; it < applications.end(); ++it, i++) {
             const Application& info = *it;
-            cout << i << ". id: " << toKeyID(info.keyInfo) << endl;
+            cout << "  " << i << ". id: " << toKeyID(info.keyInfo) << endl;
         }
     } else {
         cout << "There are currently no claimed applications" << endl;
@@ -321,7 +333,7 @@ class CLIClaimListener :
                                                             PermissionConfigurator::CAPABLE_ECDHE_SPEKE);
         if (0 == caps) {
             //NULL, SPEKE and PSK not supported
-            cout << "Cannot claim application: claim over NULL, SPEKE or PSK session not supported by the application" << endl;
+            cout << "Could not claim application: claim over NULL, SPEKE or PSK session not supported by the application" << endl;
             return ER_NOT_IMPLEMENTED;
         }
 
@@ -564,6 +576,24 @@ class CLIClaimListener :
 
 };
 
+static void ping_application(shared_ptr<SecurityAgent>& secAgent, const string& arg)
+{
+    if (arg.empty()) {
+        cout << "Please provide an application ID" << endl;
+        return;
+    }
+
+    OnlineApplication app;
+
+    if (!getKey(arg, app.keyInfo) || ER_END_OF_DATA == secAgent->GetApplication(app)) {
+        cout << "Invalid Application ..." << endl;
+        return;
+    }
+
+    string result = (ER_OK == secAgent->PingApplication(app)) ? "Succeed" : "Failed";
+    cout << result << " to ping application: " << app.busName << endl;
+}
+
 static void claim_application(shared_ptr<SecurityAgent>& secAgent,
                               const shared_ptr<UIStorage>& uiStorage,
                               const string& arg)
@@ -586,13 +616,19 @@ static void claim_application(shared_ptr<SecurityAgent>& secAgent,
         return;
     }
 
+    if (ER_OK != secAgent->PingApplication(app)) {
+        cout << "Could not claim an offline application" << endl;
+        return;
+    }
+
     if (ER_OK != secAgent->Claim(app, identity)) {
         cout << "Failed to claim application ..." << endl;
         return;
     }
 }
 
-static void unclaim_application(const shared_ptr<UIStorage>& uiStorage,
+static void unclaim_application(shared_ptr<SecurityAgent>& secAgent,
+                                const shared_ptr<UIStorage>& uiStorage,
                                 const string& arg)
 {
     if (arg.empty()) {
@@ -600,10 +636,19 @@ static void unclaim_application(const shared_ptr<UIStorage>& uiStorage,
         return;
     }
 
-    Application app;
+    OnlineApplication app;
 
     if (!getKey(arg, app.keyInfo) || ER_END_OF_DATA == uiStorage->GetManagedApplication(app)) {
         cout << "Could not find application" << endl;
+        return;
+    }
+
+    if (ER_END_OF_DATA == secAgent->GetApplication(app)) {
+        cout << "Invalid Application ..." << endl;
+        return;
+    }
+    if (ER_OK != secAgent->PingApplication(app)) {
+        cout << "Could not unclaim an offline application" << endl;
         return;
     }
 
@@ -987,6 +1032,7 @@ static void help()
     cout << "    b   Blacklist an application in future policy updates" << endl;
     cout << "    n   Set a user defined name for an application (appId appname)." << endl <<
         "        This operation will also persist relevant About meta data if they exist." << endl;
+    cout << "    i   Ping an application (appId)" << endl;
     cout << "    h   Show this help message" << endl << endl;
 }
 
@@ -1058,7 +1104,7 @@ static bool parse(shared_ptr<SecurityAgent>& secAgent,
         break;
 
     case 'u':
-        unclaim_application(uiStorage, arg);
+        unclaim_application(secAgent, uiStorage, arg);
         break;
 
     case 'n':
@@ -1075,6 +1121,10 @@ static bool parse(shared_ptr<SecurityAgent>& secAgent,
 
     case 'b':
         blacklist_application(policyGenerator, arg);
+        break;
+
+    case 'i':
+        ping_application(secAgent, arg);
         break;
 
     case 'h':
