@@ -173,6 +173,11 @@ directory.
     AuthenticationComplete ALLJOYN_ECDHE_ECDSA
     Open called result = 1
 
+* An application must be "Online" to be claimed or unclaimed, which means it could be ping-ed by secmgr.
+
+    > i 92a2f6d44b030173d307dfeb2fd9c0cc
+    Succeed to ping application: :-ARcsaj-.139
+
 Tests
 -----
 
