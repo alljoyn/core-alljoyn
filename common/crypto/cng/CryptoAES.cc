@@ -45,6 +45,9 @@ using namespace qcc;
 
 #define QCC_MODULE "CRYPTO"
 
+/* definition of CryptoAES_BLOCK_LEN */
+const size_t Crypto_AES::BLOCK_LEN;
+
 struct Crypto_AES::KeyState {
   public:
 
@@ -86,7 +89,7 @@ Crypto_AES::Crypto_AES(const KeyBlob& key, Mode mode) : mode(mode), keyState(NUL
     BCRYPT_KEY_DATA_BLOB_HEADER* kbh = NULL;
 
     // We depend on this being true
-    QCC_ASSERT(sizeof(Block) == 16);
+    QCC_ASSERT(Crypto_AES::BLOCK_LEN == 16);
 
     if (mode == CCM) {
         if (!cngCache.ccmHandle) {
@@ -163,9 +166,9 @@ QStatus Crypto_AES::Encrypt(const Block* in, Block* out, uint32_t numBlocks)
     if (mode != ECB_ENCRYPT) {
         return ER_CRYPTO_ERROR;
     }
-    ULONG len = numBlocks * sizeof(Block);
+    ULONG len = numBlocks * Crypto_AES::BLOCK_LEN;
     ULONG clen;
-    if (!BCRYPT_SUCCESS(BCryptEncrypt(keyState->handle, (PUCHAR)in, len, NULL, NULL, 0, (PUCHAR)out, len, &clen, 0))) {
+    if (!BCRYPT_SUCCESS(BCryptEncrypt(keyState->handle, in.data, len, NULL, NULL, 0, out.data, len, &clen, 0))) {
         return ER_CRYPTO_ERROR;
     } else {
         return ER_OK;
@@ -188,17 +191,18 @@ QStatus Crypto_AES::Encrypt(const void* in, size_t len, Block* out, uint32_t num
     /*
      * Check for a partial final block
      */
-    size_t partial = len % sizeof(Block);
+    size_t partial = len % Crypto_AES::BLOCK_LEN;
+    Block inBlock(in, 16);
     if (partial) {
         numBlocks--;
-        status = Encrypt((Block*)in, out, numBlocks);
+        status = Encrypt(&inBlock, out, numBlocks);
         if (status == ER_OK) {
             Block padBlock;
-            memcpy(&padBlock, ((const uint8_t*)in) + numBlocks * sizeof(Block), partial);
+            memcpy(padBlock.data, static_cast<const uint8_t*>(in) + numBlocks * Crypto_AES::BLOCK_LEN, partial);
             status = Encrypt(&padBlock, out + numBlocks, 1);
         }
     } else {
-        status = Encrypt((const Block*)in, out, numBlocks);
+        status = Encrypt(&inBlock, out, numBlocks);
     }
     return status;
 }
@@ -255,7 +259,7 @@ QStatus Crypto_AES::Encrypt_CCM(const void* in, void* out, size_t& len, const Ke
 
     ULONG clen;
     Block iv;
-    NTSTATUS ntstatus = BCryptEncrypt(keyState->handle, (PUCHAR)in, len, &cmi, NULL, 0, (PUCHAR)out, len, &clen, 0);
+    NTSTATUS ntstatus = BCryptEncrypt(keyState->handle, in.data, len, &cmi, NULL, 0, out.data, len, &clen, 0);
     if (!BCRYPT_SUCCESS(ntstatus)) {
         status = ER_CRYPTO_ERROR;
         QCC_LogError(status, ("CCM mode encryption failed NTSTATUS=%x", ntstatus));
