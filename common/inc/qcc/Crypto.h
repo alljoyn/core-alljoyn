@@ -47,6 +47,7 @@ class Crypto_AES {
      */
     static const size_t AES128_SIZE = (128 / 8);
 
+    static const size_t BLOCK_LEN = 16;
     /**
      * AES modes
      */
@@ -70,7 +71,7 @@ class Crypto_AES {
      */
     class Block {
       public:
-        uint8_t data[16];
+        uint8_t data[Crypto_AES::BLOCK_LEN];
         /**
          * Constructor that initializes the block.
          *
@@ -82,11 +83,17 @@ class Crypto_AES {
          */
         Block() { };
         /**
+         * constructor takes a buffer and its length, deep copy
+         * @param buff data to be copied.
+         * @param len  length of data to be copied, 16 bytes max.
+         */
+        Block(const uint8_t* buff, size_t len) { memcpy(data, buff, std::min(len, Crypto_AES::BLOCK_LEN)); }
+        /**
          * Null pad end of block
          */
         void Pad(size_t padLen) {
-            QCC_ASSERT(padLen <= 16);
-            if (padLen > 0) { memset(&data[16 - padLen], 0, padLen); }
+            QCC_ASSERT(padLen <= Crypto_AES::BLOCK_LEN);
+            if (padLen > 0) { memset(&data[Crypto_AES::BLOCK_LEN - padLen], 0, padLen); }
         }
     };
 
@@ -811,7 +818,7 @@ class Crypto_Rand {
 class Crypto_DRBG : public Crypto_Rand {
   public:
     static const size_t KEYLEN = Crypto_AES::AES128_SIZE;
-    static const size_t OUTLEN = sizeof (Crypto_AES::Block);
+    static const size_t OUTLEN = Crypto_AES::BLOCK_LEN;
     static const size_t SEEDLEN = KEYLEN + OUTLEN;
     static const uint32_t RESEED_COUNT = 0x80000000;
     Crypto_DRBG();
