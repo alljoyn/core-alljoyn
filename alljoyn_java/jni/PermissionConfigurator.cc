@@ -858,7 +858,9 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getId
             return NULL;
         }
 
-        SetHandle(jidcert, &identity[i]);
+        CertificateX509 * temp = new CertificateX509(identity[i]);
+
+        SetHandle(jidcert, temp);
         if (jenv->ExceptionCheck()) {
             return NULL;
         }
