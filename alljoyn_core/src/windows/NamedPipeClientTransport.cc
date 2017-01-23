@@ -53,9 +53,8 @@ typedef ManagedObj<_NamedPipeClientEndpoint> ClientEndpoint;
 
 class _NamedPipeClientEndpoint : public _RemoteEndpoint {
   public:
-    _NamedPipeClientEndpoint(NamedPipeClientTransport* transport, BusAttachment& bus, const qcc::String connectSpec,
-                             HANDLE clientHandle) :
-        _RemoteEndpoint(bus, false, connectSpec, &m_stream, NamedPipeClientTransport::NamedPipeTransportName, false),
+    _NamedPipeClientEndpoint(NamedPipeClientTransport* transport, BusAttachment& bus, HANDLE clientHandle) :
+        _RemoteEndpoint(bus, false,  &m_stream, NamedPipeClientTransport::NamedPipeTransportName, false),
         m_transport(transport),
         m_stream(clientHandle)
     {
@@ -178,7 +177,7 @@ QStatus NamedPipeClientTransport::Connect(const char* connectSpec, const Session
      * ClientEndpoint object that will orchestrate the movement of data across the
      * transport.
      */
-    ClientEndpoint ep(this, m_bus, connectSpec, clientHandle);
+    ClientEndpoint ep(this, m_bus, clientHandle);
 
     /*
      * Initialize the features for this endpoint.

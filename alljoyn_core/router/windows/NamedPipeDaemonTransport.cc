@@ -157,7 +157,7 @@ class _NamedPipeDaemonEndpoint : public _RemoteEndpoint {
 };
 
 _NamedPipeDaemonEndpoint::_NamedPipeDaemonEndpoint(_In_ BusAttachment& bus, _In_ HANDLE pipeHandle, _In_ NamedPipeDaemonTransport* transport) :
-    _RemoteEndpoint(bus, true, NamedPipeDaemonTransport::NamedPipeTransportName, &m_pipeStream, NamedPipeDaemonTransport::NamedPipeTransportName, false),
+    _RemoteEndpoint(bus, true, &m_pipeStream, NamedPipeDaemonTransport::NamedPipeTransportName, false),
     m_transport(transport),
     m_pipeStream(pipeHandle),
     m_pipeHandle(pipeHandle),

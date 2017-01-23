@@ -76,11 +76,12 @@ class ConnectPassTransport : public TestTransport {
   public:
     ConnectPassTransport(BusAttachment& bus, TransportMask mask, const char* name) : TestTransport(bus, mask, name) { }
     virtual QStatus Connect(const char* connectSpec, const SessionOpts& opts, BusEndpoint& newEp) {
+        QCC_UNUSED(connectSpec);
         QCC_UNUSED(opts);
         tried = true;
         bool incoming = false;
         Stream* stream = NULL;
-        RemoteEndpoint ep(bus, incoming, connectSpec, stream);
+        RemoteEndpoint ep(bus, incoming, stream);
         newEp = BusEndpoint::cast(ep);
         return ER_OK;
     }
@@ -158,7 +159,7 @@ class TestAllJoynObj : public AllJoynObj {
         if (busName == ":joiner.3") {
             bool incoming = true;
             Stream* stream = NULL;
-            RemoteEndpoint joinerEp(bus, incoming, "", stream);
+            RemoteEndpoint joinerEp(bus, incoming, stream);
             return BusEndpoint::cast(joinerEp);
         } else {
             return BusEndpoint();
@@ -166,9 +167,8 @@ class TestAllJoynObj : public AllJoynObj {
     }
     virtual bool FindEndpoint(const String& busName, VirtualEndpoint& endpoint) {
         bool incoming = false;
-        const char* connectSpec = "";
         Stream* stream = NULL;
-        RemoteEndpoint b2bEp(bus, incoming, connectSpec, stream);
+        RemoteEndpoint b2bEp(bus, incoming, stream);
         TestVirtualEndpoint ep(busName, b2bEp);
         endpoint = VirtualEndpoint::cast(ep);
         return true;

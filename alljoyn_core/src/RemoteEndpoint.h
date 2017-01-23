@@ -140,14 +140,12 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      *
      * @param[in] bus            Message bus associated with transport.
      * @param[in] incoming       true iff this is an incoming connection.
-     * @param[in] connectSpec    AllJoyn connection specification for this endpoint.
      * @param[in] stream         Socket Stream used to communicate with media.
      * @param[in] type           Base name for thread.
      * @param[in] isSocket       true iff stream is actually a socketStream.
      */
     _RemoteEndpoint(BusAttachment& bus,
                     bool incoming,
-                    const qcc::String& connectSpec,
                     qcc::Stream* stream,
                     const char* type = "endpoint",
                     bool isSocket = true, bool minimal = false);
@@ -330,20 +328,6 @@ class _RemoteEndpoint : public _BusEndpoint, public qcc::ThreadListener, public 
      * @param[in] remoteGUID GUID of the remote side of a bus-to-bus endpoint.
      */
     void SetRemoteGUID(const qcc::GUID128& remoteGUID);
-
-    /**
-     * Get the connect spec for this endpoint.
-     *
-     * @return The connect spec string (may be empty).
-     */
-    const qcc::String& GetConnectSpec() const;
-
-    /**
-     * Set the connect spec for this endpoint.
-     *
-     * @param[in] connSpec The connect spec string.
-     */
-    void SetConnectSpec(const qcc::String& connSpec);
 
     /**
      * Indicate whether this endpoint can receive messages from other devices.

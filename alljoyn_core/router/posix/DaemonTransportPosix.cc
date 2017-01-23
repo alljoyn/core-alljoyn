@@ -60,8 +60,8 @@ class _DaemonEndpoint : public _RemoteEndpoint {
 
   public:
 
-    _DaemonEndpoint(DaemonTransport* transport, BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &stream, DaemonTransport::TransportName),
+    _DaemonEndpoint(DaemonTransport* transport, BusAttachment& bus, bool incoming, SocketFd sock) :
+        _RemoteEndpoint(bus, incoming, &stream, DaemonTransport::TransportName),
         m_transport(transport),
         processId(-1),
         stream(sock)
@@ -242,7 +242,7 @@ void* DaemonTransport::Run(void* arg)
             qcc::String redirection;
             static const bool truthiness = true;
             DaemonTransport* trans = this;
-            DaemonEndpoint conn = DaemonEndpoint(trans, bus, truthiness, DaemonTransport::TransportName, newSock);
+            DaemonEndpoint conn = DaemonEndpoint(trans, bus, truthiness, newSock);
 
             conn->SetUserId(uid);
             conn->SetGroupId(gid);
