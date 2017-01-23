@@ -35,22 +35,23 @@
 - (id)initWithCoder:(NSCoder *)aDecoder
 {
     self = [super initWithCoder:aDecoder];
-    
+
     if (self) {
         self.basicService.delegate = self;
         [self.basicService run];
     }
-    
+
     return self;
 }
 
 - (id)initWithNibName:(NSString *)nibNameOrNil bundle:(NSBundle *)nibBundleOrNil
 {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
+    
     if (self) {
         // Initialization code here.
     }
-    
+
     return self;
 }
 
