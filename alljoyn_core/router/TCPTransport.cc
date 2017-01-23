@@ -466,11 +466,10 @@ class _TCPEndpoint : public _RemoteEndpoint {
     _TCPEndpoint(TCPTransport* transport,
                  BusAttachment& bus,
                  bool incoming,
-                 const qcc::String connectSpec,
                  qcc::SocketFd sock,
                  const qcc::IPAddress& ipAddr,
                  uint16_t port) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, "tcp"),
+        _RemoteEndpoint(bus, incoming, &m_stream, "tcp"),
         m_transport(transport),
         m_sideState(SIDE_INITIALIZED),
         m_authState(AUTH_INITIALIZED),
@@ -484,10 +483,10 @@ class _TCPEndpoint : public _RemoteEndpoint {
     _TCPEndpoint(TCPTransport* transport,
                  BusAttachment& bus,
                  bool incoming,
-                 const qcc::String connectSpec,  const AddressFamily family, const SocketType type,
+                 const AddressFamily family, const SocketType type,
                  const qcc::IPAddress& ipAddr,
                  uint16_t port) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &m_stream, "tcp"),
+        _RemoteEndpoint(bus, incoming, &m_stream, "tcp"),
         m_transport(transport),
         m_sideState(SIDE_INITIALIZED),
         m_authState(AUTH_INITIALIZED),
@@ -1854,7 +1853,7 @@ void* TCPTransport::Run(void* arg)
                 if ((m_authList.size() < maxAuth) && (m_authList.size() + m_endpointList.size() < maxConn)) {
                     static const bool truthiness = true;
                     TCPTransport* ptr = this;
-                    TCPEndpoint conn(ptr, m_bus, truthiness, TCPTransport::TransportName, newSock, remoteAddr, remotePort);
+                    TCPEndpoint conn(ptr, m_bus, truthiness, newSock, remoteAddr, remotePort);
                     conn->SetPassive();
                     Timespec<MonotonicTime> tNow;
                     GetTimeNow(&tNow);
@@ -3112,7 +3111,7 @@ QStatus TCPTransport::Connect(const char* connectSpec, const SessionOpts& opts, 
     AddressFamily family = QCC_AF_INET;
     SocketType type = QCC_SOCK_STREAM;
 
-    TCPEndpoint tcpEp = TCPEndpoint(ptr, m_bus, falsiness, normSpec, family, type, ipAddr, port);
+    TCPEndpoint tcpEp = TCPEndpoint(ptr, m_bus, falsiness, family, type, ipAddr, port);
     /*
      * Before starting the underlying transport mechanism, we need to create
      * a TCPEndpoint object that will orchestrate the movement of data

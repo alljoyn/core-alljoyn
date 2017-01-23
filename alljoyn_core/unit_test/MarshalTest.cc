@@ -274,7 +274,7 @@ TEST(MarshalTest, TestMsgUnpack) {
 
     TestPipe* pStream = &stream;
     static const bool falsiness = false;
-    RemoteEndpoint ep(*bus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*bus, falsiness, pStream);
     ep->GetFeatures().handlePassing = true;
 
     MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, d);
@@ -321,7 +321,7 @@ TEST(MarshalTest, ReplayProtection) {
 
     TestPipe* pStream = &stream;
     static const bool falsiness = false;
-    RemoteEndpoint ep(*bus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*bus, falsiness, pStream);
     ep->GetFeatures().handlePassing = true;
 
     MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, d);
@@ -587,7 +587,7 @@ static QStatus TestMarshal(const MsgArg* argList, size_t numArgs, const char* ex
 
     TestPipe* pStream = &stream;
     static const bool falsiness = false;
-    RemoteEndpoint ep(*fuzzingBus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*fuzzingBus, falsiness, pStream);
     ep->GetFeatures().handlePassing = true;
 
     if (numArgs == 0) {

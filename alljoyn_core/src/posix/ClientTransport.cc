@@ -58,8 +58,8 @@ const char* ClientTransport::TransportName = "unix";
 class _ClientEndpoint : public _RemoteEndpoint {
   public:
     /* Unix endpoint constructor */
-    _ClientEndpoint(BusAttachment& bus, bool incoming, const qcc::String connectSpec, SocketFd sock) :
-        _RemoteEndpoint(bus, incoming, connectSpec, &stream, ClientTransport::TransportName),
+    _ClientEndpoint(BusAttachment& bus, bool incoming, SocketFd sock) :
+        _RemoteEndpoint(bus, incoming, &stream, ClientTransport::TransportName),
         processId(-1),
         stream(sock)
     {
@@ -231,7 +231,7 @@ QStatus ClientTransport::Connect(const char* connectArgs, const SessionOpts& opt
 
     status = SendSocketCreds(sockFd, GetUid(), GetGid(), GetPid());
     static const bool falsiness = false;
-    ClientEndpoint ep = ClientEndpoint(m_bus, falsiness, normSpec, sockFd);
+    ClientEndpoint ep = ClientEndpoint(m_bus, falsiness, sockFd);
 
     /* Initialized the features for this endpoint */
     ep->GetFeatures().isBusToBus = false;

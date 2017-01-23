@@ -51,7 +51,7 @@ using namespace std;
 using namespace ajn;
 
 
-static BusAttachment* gBus;
+static BusAttachment* gBus = nullptr;
 static bool fuzzing = false;
 static bool nobig = false;
 static bool quiet = false;
@@ -306,7 +306,7 @@ static QStatus TestMarshal(const MsgArg* argList, size_t numArgs, const char* ex
     TestPipe stream;
     MyMessage msg;
     TestPipe* pStream = &stream;
-    RemoteEndpoint ep(*gBus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*gBus, falsiness, pStream);
     ep->GetFeatures().handlePassing = true;
 
     if (numArgs == 0) {
@@ -1024,7 +1024,7 @@ QStatus TestMsgUnpack()
     size_t numArgs = ArraySize(args);
     double dbl = 0.9;
     TestPipe* pStream = &stream;
-    RemoteEndpoint ep(*gBus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*gBus, falsiness, pStream);
     ep->GetFeatures().handlePassing = true;
 
     MsgArg::Set(args, numArgs, "usyd", 4, "hello", 8, dbl);
@@ -1188,18 +1188,6 @@ int CDECL_CALL main(int argc, char** argv)
         if (SignatureUtils::IsValidSignature(sig)) {
             status = ER_FAIL;
         }
-        if (status == ER_OK) {
-            sig[255] = 0;
-            if (!SignatureUtils::IsValidSignature(sig)) {
-                status = ER_FAIL;
-            }
-        }
-        if (status == ER_OK) {
-            sig[0] = 0;
-            if (!SignatureUtils::IsValidSignature(sig)) {
-                status = ER_FAIL;
-            }
-        }
     }
     /*
      * Maximum nested arrays (32) and structs
@@ -1338,6 +1326,16 @@ int CDECL_CALL main(int argc, char** argv)
 
         if (10000 == count) {
             printf("\n FUZZING PASSED \n");
+        }
+    }
+
+    if (gBus != nullptr) {
+        if (gBus->IsConnected()) {
+            gBus->Disconnect();
+        }
+        status = gBus->Stop();
+        if (status == ER_OK) {
+            gBus->Join();
         }
     }
 
