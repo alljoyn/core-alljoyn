@@ -785,9 +785,8 @@ class _UDPEndpoint : public _RemoteEndpoint {
      */
     _UDPEndpoint(UDPTransport* transport,
                  BusAttachment& bus,
-                 bool incoming,
-                 const qcc::String connectSpec) :
-        _RemoteEndpoint(bus, incoming, connectSpec, NULL, transport->GetTransportName(), false, true),
+                 bool incoming) :
+        _RemoteEndpoint(bus, incoming, NULL, transport->GetTransportName(), false, true),
         m_transport(transport),
         m_stream(NULL),
         m_handle(NULL),
@@ -810,8 +809,7 @@ class _UDPEndpoint : public _RemoteEndpoint {
         m_stateLock(LOCK_LEVEL_UDPTRANSPORT_UDPENDPOINT_STATELOCK),
         m_wait(true)
     {
-        QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d., connectSpec=\"%s\")",
-                         transport, &bus, incoming, connectSpec.c_str()));
+        QCC_DbgHLPrintf(("_UDPEndpoint::_UDPEndpoint(transport=%p, bus=%p, incoming=%d.)", transport, &bus, incoming));
     }
 
     /**
@@ -7032,8 +7030,7 @@ bool UDPTransport::AcceptCb(ArdpHandle* ardpHandle, qcc::IPAddress ipAddr, uint1
      */
     static const bool truthiness = true;
     UDPTransport* ptr = this;
-    String normSpec = "udp:guid=" + remoteGUID + ",addr=" + ipAddr.ToString() + ",port=" + U32ToString(ipPort);
-    UDPEndpoint udpEp(ptr, m_bus, truthiness, normSpec);
+    UDPEndpoint udpEp(ptr, m_bus, truthiness);
 
     /*
      * Some of this would "normally" be handled by EndpointAuth, but since we
@@ -7851,8 +7848,7 @@ void UDPTransport::DoConnectCb(ArdpHandle* ardpHandle, ArdpConnRecord* conn, uin
 
         static const bool truthiness = true;
         UDPTransport* ptr = this;
-        String normSpec = "udp:guid=" + remoteGUID + ",addr=" + endpoint.addr.ToString() + ",port=" + U32ToString(endpoint.port);
-        UDPEndpoint udpEp(ptr, m_bus, truthiness, normSpec);
+        UDPEndpoint udpEp(ptr, m_bus, truthiness);
 
         /*
          * Make a note of when we started this process in case something

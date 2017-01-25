@@ -52,9 +52,9 @@ typedef ManagedObj<_ClientEndpoint> ClientEndpoint;
 
 class _ClientEndpoint : public _RemoteEndpoint {
   public:
-    _ClientEndpoint(ClientTransport* transport, BusAttachment& bus, const qcc::String connectSpec,
+    _ClientEndpoint(ClientTransport* transport, BusAttachment& bus,
                     qcc::SocketFd sock, const qcc::IPAddress& ipAddr, uint16_t port) :
-        _RemoteEndpoint(bus, false, connectSpec, &m_stream, ClientTransport::TransportName),
+        _RemoteEndpoint(bus, false, &m_stream, ClientTransport::TransportName),
         m_transport(transport),
         m_stream(sock),
         m_ipAddr(ipAddr),
@@ -197,7 +197,7 @@ QStatus ClientTransport::Connect(const char* connectSpec, const SessionOpts& opt
      * ClientEndpoint object that will orchestrate the movement of data across the
      * transport.
      */
-    ClientEndpoint ep(this, m_bus, normSpec, sockFd, ipAddr, port);
+    ClientEndpoint ep(this, m_bus, sockFd, ipAddr, port);
 
     /* Initialized the features for this endpoint */
     ep->GetFeatures().isBusToBus = false;

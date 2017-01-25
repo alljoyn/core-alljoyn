@@ -45,7 +45,7 @@ using namespace qcc;
 using namespace std;
 using namespace ajn;
 
-static BusAttachment* gBus;
+static BusAttachment* gBus = nullptr;
 
 class MyMessage : public _Message {
   public:
@@ -118,7 +118,7 @@ static QStatus TestRemarshal(const MsgArg* argList, size_t numArgs, const char* 
     Pipe stream;
     Pipe* pStream = &stream;
     static const bool falsiness = false;
-    RemoteEndpoint ep(*gBus, falsiness, String::Empty, pStream);
+    RemoteEndpoint ep(*gBus, falsiness, pStream);
     MyMessage msg;
 
     if (numArgs == 0) {
@@ -220,6 +220,16 @@ int CDECL_CALL main(int argc, char** argv)
         QCC_SyncPrintf("\n FAILED ");
     }
     printf("\n");
+
+    if (gBus != nullptr) {
+        if (gBus->IsConnected()) {
+            gBus->Disconnect();
+        }
+        status = gBus->Stop();
+        if (status == ER_OK) {
+            gBus->Join();
+        }
+    }
 
 #ifdef ROUTER
     AllJoynRouterShutdown();
