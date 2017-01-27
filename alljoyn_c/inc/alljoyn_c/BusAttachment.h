@@ -73,6 +73,9 @@ typedef void (AJ_CALL * alljoyn_busattachment_setlinktimeoutcb_ptr)(QStatus stat
  * By default this will create an alljoyn_busattachment capable of handling 4 concurrent method and signal handlers.
  * This is the recommended default value.  If for some reason the application must be able to handle a different
  * number of concurrent methods use alljoyn_busattachment_create_concurrency.
+ * Warning: if synchronous remote procedure calls or other blocking calls are made from within AllJoyn callbacks
+ * and this value is too low, the application may deadlock.
+ * Please see the documentation for alljoyn_busattachment_enableconcurrentcallbacks for details.
  *
  * @note Any alljoyn_busattachment allocated using this function must be freed using alljoyn_busattachment_destroy
  *
@@ -91,6 +94,9 @@ extern AJ_API alljoyn_busattachment AJ_CALL alljoyn_busattachment_create(const c
  *
  * This will Allocate an alljoyn_busattachment that is capable of using a different value for concurrency then
  * the default value of 4.
+ * Warning: if synchronous remote procedure calls or other blocking calls are made from within AllJoyn callbacks
+ * and this value is too low, the application may deadlock.
+ * Please see the documentation for alljoyn_busattachment_enableconcurrentcallbacks for details.
  *
  * @note Any alljoyn_busattachment allocated using this function must be freed using alljoyn_busattachment_destroy
  *
@@ -327,6 +333,14 @@ extern AJ_API const char* AJ_CALL alljoyn_busattachment_getconnectspec(alljoyn_b
  * developers responsibility to make sure the maximum number of concurrent
  * callbacks is not exceeded. If the maximum number is exceeded the application
  * will deadlock.
+ *
+ * For the above reasons, if time-consuming blocking calls from within AllJoyn
+ * callbacks are needed, it is recommended to delegate them to application-owned
+ * threads. If remote procedure calls (e.g., alljoyn_busattachment_joinsession)
+ * from within AllJoyn callbacks are needed, it is recommended to use
+ * the asynchronous variants (e.g., alljoyn_busattachment_joinsessionasync)
+ * and process their callbacks in threads owned by the application.
+ * Please refer to the AboutClient sample for an implementation example.
  *
  * @param bus    The alljoyn_busattachment to enable concurrent callbacks on
  */
