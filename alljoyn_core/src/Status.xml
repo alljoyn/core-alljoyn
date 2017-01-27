@@ -112,7 +112,7 @@ Copyright AllSeen Alliance. All rights reserved.
   <status name="ER_BUS_TRANSPORT_NOT_AVAILABLE" value="0x905d" comment="Transport cannot be used due to underlying mechanism disabled by OS"/>
   <status name="ER_BUS_INVALID_AUTH_MECHANISM" value="0x905e" comment="Authentication mechanism is not valid"/>
   <status name="ER_BUS_KEYSTORE_VERSION_MISMATCH" value="0x905f" comment="Key store has wrong version number"/>
-  <status name="ER_BUS_BLOCKING_CALL_NOT_ALLOWED" value="0x9060" comment="A synchronous method call from within handler is not permitted."/>
+  <status name="ER_BUS_BLOCKING_CALL_NOT_ALLOWED" value="0x9060" comment="A synchronous method call from within handler is not permitted. See documentation for BusAttachment::EnableConcurrentCallbacks()."/>
   <status name="ER_BUS_SIGNATURE_MISMATCH" value="0x9061" comment="MsgArg(s) do not match signature."/>
   <status name="ER_BUS_STOPPING" value="0x9062" comment="The bus is stopping."/>
   <status name="ER_BUS_METHOD_CALL_ABORTED" value="0x9063" comment="The method call was aborted."/>
