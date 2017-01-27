@@ -15,6 +15,7 @@
 ////////////////////////////////////////////////////////////////////////////////
 
 #import "AppDelegate.h"
+#import "AJNInit.h"
 
 @interface AppDelegate ()
 
@@ -24,7 +25,13 @@
 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
-    // Override point for customization after application launch.
+    if ([AJNInit alljoynInit] != ER_OK) {
+        NSLog(@"AJNInit::alljoynInit failed");
+    }
+    if ([AJNInit alljoynRouterInit] != ER_OK) {
+        [AJNInit alljoynShutdown];
+        NSLog(@"AJNInit::alljoynRouterInit failed");
+    }
     return YES;
 }
 
@@ -47,7 +54,8 @@
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
-    // Called when the application is about to terminate. Save data if appropriate. See also applicationDidEnterBackground:.
+    [AJNInit alljoynRouterShutdown];
+    [AJNInit alljoynShutdown];
 }
 
 @end

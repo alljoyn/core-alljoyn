@@ -591,13 +591,16 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
 
     AJNGUID128* psk = [[AJNGUID128 alloc] init];
     if (provider) {
-       // [self callDeprecatedSetPSK:self.authListener, [psk bytes], [AJNGUID128 SIZE]];
         [DoorCommon callDeprecatedSetPSK:self.authListener.handle pskBytes:psk.bytes pskLength:[AJNGUID128 SIZE]];
     }
 
     NSString* securitySuites = [NSString stringWithFormat:@"%@ %@ %@", KEYX_ECDHE_DSA, KEYX_ECDHE_NULL, KEYX_ECDHE_PSK];
-    NSString *keystoreFilePath = @"Documents/alljoyn_keystore/s_central.ks";
-    status = [self.BusAttachment enablePeerSecurity:securitySuites authenticationListener:self.authListener keystoreFileName:keystoreFilePath sharing:NO permissionConfigurationListener:self.permissionConfigListener];
+
+    NSArray *paths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, NSUserDomainMask, YES);
+    NSString *documentsDirectory = [paths objectAtIndex:0];
+    NSString *keystorePath = [NSString stringWithFormat:@"%@/%@", documentsDirectory, @"alljoyn_keystore/s_central.ks"];
+
+    status = [self.BusAttachment enablePeerSecurity:securitySuites authenticationListener:self.authListener keystoreFileName:keystorePath sharing:NO permissionConfigurationListener:self.permissionConfigListener];
     if (status != ER_OK) {
         NSLog(@"Failed to enablePeerSecurity - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
         return status;
@@ -649,7 +652,7 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
 
     status = [self.BusAttachment.permissionConfigurator setManifestTemplateFromXml:manifestXml];
     if (ER_OK != status) {
-        NSLog(@"Failed to setPermissionManifestTemplate - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+        NSLog(@"Failed to setManifestTemplateFromXml - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
         return status;
     }
 
@@ -657,7 +660,7 @@ void DoorImpl::GetState(const InterfaceDescription::Member* member,
         AJNApplicationState state;
         status = [self.BusAttachment.permissionConfigurator getApplicationState:&state];
         if (ER_OK != status) {
-            NSLog(@"Failed to getApplicationState - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
+            NSLog(@"Failed to setManifestTemplateFromXml - status (%@)\n", [AJNStatus descriptionForStatusCode:status]);
             return status;
         }
 
