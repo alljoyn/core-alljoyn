@@ -347,7 +347,7 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
 
     PermissionPolicy::Rule manifestRule;
     manifestRule.SetInterfaceName(DOOR_INTERFACE);
-
+    manifestRule.SetRuleType(PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE);
     if (provider) {
         // Set a very flexible default manifest for the door provider
         PermissionPolicy::Rule::Member members[2];
