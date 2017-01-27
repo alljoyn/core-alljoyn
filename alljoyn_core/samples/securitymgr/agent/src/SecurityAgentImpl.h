@@ -119,6 +119,8 @@ class SecurityAgentImpl :
 
     const KeyInfoNISTP256& GetPublicKeyInfo() const;
 
+    QStatus PingApplication(const OnlineApplication& app) const;
+
     void NotifyApplicationListeners(const ManifestUpdate* manifestUpdate);
 
     void NotifyApplicationListeners(const SyncError* syncError);
