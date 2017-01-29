@@ -303,41 +303,6 @@ volatile int32_t INCREMENTAL_PACKET_ID;
 const char* IpNameServiceImpl::INTERFACES_WILDCARD = "*";
 
 //
-// Define WORKAROUND_2_3_BUG to send name service messages over the old site
-// administered addresses to work around a forward compatibility bug introduced
-// in version 2.3 daemons.  They neglect to join the new IANA assigned multicast
-// groups and so cannot receive advertisements on those groups.  In order to
-// workaround this problem, we send version zero name service messages over the
-// old groups.  The old versions can send new IANA multicast group messages so
-// we can receive advertisements from them.  They just can't hear our new
-// messages
-//
-#define WORKAROUND_2_3_BUG 0
-#if WORKAROUND_2_3_BUG
-
-//
-// This is just a random IPv4 multicast group chosen out of the defined site
-// administered block of addresses.  This was a temporary choice while an IANA
-// reservation was in process, and remains for backward compatibility.
-//
-const char* IpNameServiceImpl::IPV4_MULTICAST_GROUP = "239.255.37.41";
-
-//
-// This is an IPv6 version of the temporary IPv4 multicast address described
-// above.  IPv6 multicast groups are composed of a prefix containing 0xff and
-// then flags (4 bits) followed by the IPv6 Scope (4 bits) and finally the IPv4
-// group, as in "ff03::239.255.37.41".  The Scope corresponding to the IPv4
-// Local Scope group is defined to be "3" by RFC 2365.  Unfortunately, the
-// qcc::IPAddress code can't deal with "ff03::239.255.37.41" so we have to
-// translate it.
-//
-const char* IpNameServiceImpl::IPV6_MULTICAST_GROUP = "ff03::efff:2529";
-
-#endif
-
-
-#if 1
-//
 // This is the IANA assigned IPv4 multicast group for AllJoyn.  This is
 // a Local Network Control Block address.
 //
@@ -346,7 +311,6 @@ const char* IpNameServiceImpl::IPV6_MULTICAST_GROUP = "ff03::efff:2529";
 const char* IpNameServiceImpl::IPV4_ALLJOYN_MULTICAST_GROUP = "224.0.0.113";
 
 const char* IpNameServiceImpl::IPV4_MDNS_MULTICAST_GROUP = "224.0.0.251";
-#endif
 
 //
 // This is the IANA assigned UDP port for the AllJoyn Name Service.  See
@@ -387,7 +351,6 @@ IpNameServiceImpl::IpNameServiceImpl()
     m_loopback(false), m_broadcast(false), m_enableIPv4(false), m_enableIPv6(false), m_enableV1(false),
     m_wakeEvent(), m_forceLazyUpdate(false), m_refreshAdvertisements(false),
     m_enabled(false), m_doEnable(false), m_doDisable(false),
-    m_ipv6QuietSockFd(qcc::INVALID_SOCKET_FD),
     m_ipv4UnicastSockFd(qcc::INVALID_SOCKET_FD), m_ipv6UnicastSockFd(qcc::INVALID_SOCKET_FD),
     m_unicastEvent(NULL), m_unicast6Event(NULL),
     m_protectListeners(false), m_packetScheduler(*this),
@@ -533,15 +496,6 @@ IpNameServiceImpl::~IpNameServiceImpl()
         // nobody else clears them and we are obviously done with them.
         //
         m_requestedInterfaces[i].clear();
-    }
-
-    //
-    // If we opened a socket to send quiet responses (unicast, not over the
-    // multicast channel) we need to close it.
-    //
-    if (m_ipv6QuietSockFd != qcc::INVALID_SOCKET_FD) {
-        qcc::Close(m_ipv6QuietSockFd);
-        m_ipv6QuietSockFd = qcc::INVALID_SOCKET_FD;
     }
 
     //
@@ -3615,28 +3569,12 @@ void IpNameServiceImpl::SendProtocolMessage(
     // as of now.
     //
     if (packet->DestinationSet()) {
-        QStatus status = ER_OK;
         qcc::IPEndpoint destination = packet->GetDestination();
-        qcc::AddressFamily family = destination.addr.IsIPv4() ? qcc::QCC_AF_INET : qcc::QCC_AF_INET6;
 
-        if (family == qcc::QCC_AF_INET6 && m_ipv6QuietSockFd == qcc::INVALID_SOCKET_FD) {
-            status = qcc::Socket(family, qcc::QCC_SOCK_DGRAM, m_ipv6QuietSockFd);
-        }
+        QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage(): Sending quietly to \"%s\" over \"%s\"", destination.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
 
-        if (status != ER_OK) {
-            QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage(): Socket() failed: %d - %s", qcc::GetLastError(), qcc::GetLastErrorString().c_str()));
-        }
-
-        if (status == ER_OK) {
-            QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage(): Sending quietly to \"%s\" over \"%s\"", destination.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
-
-            if (family == qcc::QCC_AF_INET) {
-                status = qcc::SendTo(sockFd, destination.addr, destination.port, buffer, size, sent);
-            } else {
-                status = qcc::SendTo(m_ipv6QuietSockFd, destination.addr, destination.port, m_liveInterfaces[interfaceIndex].m_index,
-                                     buffer, size, sent);
-            }
-        }
+        QStatus status = qcc::SendTo(sockFd, destination.addr, destination.port,
+                                     (destination.addr.IsIPv6() ? m_liveInterfaces[interfaceIndex].m_index : 0), buffer, size, sent);
 
         if (status != ER_OK) {
             QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage(): Error quietly sending to \"%s\"", destination.ToString().c_str()));
@@ -3660,22 +3598,9 @@ void IpNameServiceImpl::SendProtocolMessage(
         // the packet out on our IPv4 multicast groups (IANA registered and
         // legacy).
         //
-#if 1
-        if (flags & qcc::IfConfigEntry::MULTICAST ||
-            flags & qcc::IfConfigEntry::LOOPBACK) {
 
-#if WORKAROUND_2_3_BUG
+        if (flags & qcc::IfConfigEntry::MULTICAST || flags & qcc::IfConfigEntry::LOOPBACK) {
 
-            if ((msgVersion == 0) && m_enableV1) {
-                qcc::IPAddress ipv4SiteAdminMulticast(IPV4_MULTICAST_GROUP);
-                QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
-                                 ipv4SiteAdminMulticast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
-                QStatus status = qcc::SendTo(sockFd, ipv4SiteAdminMulticast, MULTICAST_PORT, buffer, size, sent);
-                if (status != ER_OK) {
-                    QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv4 Site Administered multicast group"));
-                }
-            }
-#endif
             if (msgVersion == 2) {
                 qcc::IPAddress ipv4LocalMulticast(IPV4_MDNS_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
@@ -3708,7 +3633,6 @@ void IpNameServiceImpl::SendProtocolMessage(
                 }
             }
         }
-#endif
 
         //
         // If the interface is broadcast-capable, We want to send out a subnet
@@ -3768,34 +3692,24 @@ void IpNameServiceImpl::SendProtocolMessage(
             QCC_DbgPrintf(("IpNameServiceImpl::SendProtocolMessage():  Interface does not support broadcast"));
         }
     } else {
-        if (flags & qcc::IfConfigEntry::MULTICAST ||
-            flags & qcc::IfConfigEntry::LOOPBACK) {
+        if (flags & qcc::IfConfigEntry::MULTICAST || flags & qcc::IfConfigEntry::LOOPBACK) {
 
-#if WORKAROUND_2_3_BUG
-
-            if ((msgVersion == 0) && m_enableV1) {
-                qcc::IPAddress ipv6SiteAdmin(IPV6_MULTICAST_GROUP);
-                QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
-                                 ipv6SiteAdmin.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
-                QStatus status = qcc::SendTo(sockFd, ipv6SiteAdmin, MULTICAST_PORT, buffer, size, sent);
-                if (status != ER_OK) {
-                    QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error sending to IPv6 Site Administered multicast group "));
-                }
-            }
-
-#endif
             QStatus status = ER_OK;
             if (msgVersion == 2) {
-                qcc::IPAddress ipv6AllJoyn(IPV6_MDNS_MULTICAST_GROUP);
+                qcc::IPAddress ipv6LocalMulticast(IPV6_MDNS_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
-                                 ipv6AllJoyn.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
+                                 ipv6LocalMulticast.ToString().c_str(), m_liveInterfaces[interfaceIndex].m_interfaceName.c_str()));
                 /*
-                 * Ideally we would send the message from the port we are
-                 * expecting to receive (unicast) replies on.  But since we do
-                 * not receive v6 unicast packets, we will be sending from
-                 * whatever port sockFd is bound to.
+                 * Send the message from the port we are expecting to receive
+                 * (unicast) replies on.  Explicitly specify the interface we
+                 * are sending on, otherwise the OS will pick for us.
                  */
-                status = qcc::SendTo(sockFd, ipv6AllJoyn, MULTICAST_MDNS_PORT, buffer, size, sent);
+                QStatus status = SetMulticastInterface(m_ipv6UnicastSockFd, qcc::QCC_AF_INET6,
+                                                       m_liveInterfaces[interfaceIndex].m_interfaceName);
+                if (status != ER_OK) {
+                    QCC_LogError(status, ("IpNameServiceImpl::SendProtocolMessage():  Error setting multicast interface"));
+                }
+                status = qcc::SendTo(m_ipv6UnicastSockFd, ipv6LocalMulticast, MULTICAST_MDNS_PORT, buffer, size, sent);
             } else if (m_enableV1) {
                 qcc::IPAddress ipv6AllJoyn(IPV6_ALLJOYN_MULTICAST_GROUP);
                 QCC_DbgHLPrintf(("IpNameServiceImpl::SendProtocolMessage():  Sending actively to \"%s\" over \"%s\"",
@@ -5201,7 +5115,7 @@ void IpNameServiceImpl::SendOutboundMessageActively(Packet packet, const qcc::IP
         //
         if (msgVersion == 2) {
             QCC_DbgPrintf(("IpNameServiceImpl::SendOutboundMessageActively(): SendProtocolMessage()"));
-            SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, ipv4address, interfaceAddressPrefixLen,
+            SendProtocolMessage(m_liveInterfaces[i].m_multicastMDNSsockFd, haveIPv6address ? ipv6address : ipv4address, interfaceAddressPrefixLen,
                                 flags, interfaceIsIPv4, packet, i, localAddress);
             m_liveInterfaces[i].m_messageSent = true;
         } else if (m_liveInterfaces[i].m_multicastsockFd != qcc::INVALID_SOCKET_FD) {
