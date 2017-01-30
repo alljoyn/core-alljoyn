@@ -16,6 +16,7 @@
 package org.alljoyn.bus;
 
 import junit.framework.TestCase;
+import static org.alljoyn.bus.Assert.*;
 
 import java.lang.InterruptedException;
 import java.nio.ByteBuffer;
@@ -214,6 +215,9 @@ public class PermissionConfiguratorTest extends TestCase {
         assertNotNull(encodedReturnedCert);
         assertTrue(0 != encodedReturnedCert.length);
 
+        byte[] encodedSourceCert = identityCertChain[0].encodeCertificateDER();
+        assertArrayEquals(encodedSourceCert, encodedReturnedCert);
+
         CertificateId certId = pcPeer1.getIdentityCertificateId();
         assertNotNull(certId.getSerial());
 
@@ -230,17 +234,6 @@ public class PermissionConfiguratorTest extends TestCase {
         CertificateId certId2 = pcPeer1.getIdentityCertificateId();
         assertEquals(certId2.getSerial(), new String(identityCertChain2[0].getSerial()));
         assertEquals(certId2.getIssuerKeyInfo().getPublicKey(), securityManagerBus.getPermissionConfigurator().getSigningPublicKey().getPublicKey());
-
-        /*
-         * intermittent error bad_alloc when these are included,
-         * logged JIRA issue 3502 to investigate.
-         * The crash occurs in ASN1.cc:378 when
-         * asn += *val
-         *
-         * val->length() returned npos in a gdb session
-         */
-        //byte[] encodedSourceCert = identityCertChain[0].encodeCertificateDER();
-        //assertTrue(Arrays.equals(encodedSourceCert, encodedReturnedCert));
     }
 
     private boolean factoryReset = false;
