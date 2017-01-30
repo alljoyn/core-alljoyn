@@ -80,6 +80,11 @@ public class KeyInfo {
             return false;
         }
 
-        return Arrays.equals(((KeyInfo) obj).m_keyId, this.m_keyId); 
+        return Arrays.equals(((KeyInfo) obj).m_keyId, this.m_keyId);
+    }
+
+    @Override
+    public int hashCode() {
+        return 31 * Arrays.hashCode(m_keyId) + (m_format != null ? m_format.hashCode() : 0);
     }
 }
