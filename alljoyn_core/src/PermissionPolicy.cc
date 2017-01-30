@@ -2028,6 +2028,7 @@ std::string _Manifest::ToString() const
     output += "=====================\n";
     output += "Version: ";
     output += versionBuf;
+    output += "\n";
     output += "Thumbprint algorithm OID: " + m_thumbprintAlgorithmOid + "\n";
     output += "Thumbprint: ";
     output += BytesToHexString(m_thumbprint.data(), m_thumbprint.size()).c_str();
