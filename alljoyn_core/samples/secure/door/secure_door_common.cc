@@ -30,6 +30,28 @@ using namespace qcc;
 namespace sample {
 namespace secure {
 namespace door {
+//Provider app can only provide, Consumer app can Modify and Observe
+static AJ_PCSTR s_providerManifestTemplateXml =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Provide\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
+static AJ_PCSTR s_consumerManifestTemplateXml =
+    "<manifest>"
+    "<node>"
+    "<interface>"
+    "<any>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Modify\"/>"
+    "<annotation name = \"org.alljoyn.Bus.Action\" value = \"Observe\"/>"
+    "</any>"
+    "</interface>"
+    "</node>"
+    "</manifest>";
 
 void DoorCommonPCL::StartManagement()
 {
@@ -345,30 +367,8 @@ QStatus DoorCommon::Init(bool provider, PermissionConfigurationListener* inPcl)
         }
     }
 
-    PermissionPolicy::Rule manifestRule;
-    manifestRule.SetInterfaceName(DOOR_INTERFACE);
-    manifestRule.SetRuleType(PermissionPolicy::Rule::MANIFEST_TEMPLATE_RULE);
-    if (provider) {
-        // Set a very flexible default manifest for the door provider
-        PermissionPolicy::Rule::Member members[2];
-        members[0].SetMemberName("*");
-        members[0].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-        members[0].SetMemberType(PermissionPolicy::Rule::Member::METHOD_CALL);
-        members[1].SetMemberName("*");
-        members[1].SetActionMask(PermissionPolicy::Rule::Member::ACTION_PROVIDE);
-        members[1].SetMemberType(PermissionPolicy::Rule::Member::PROPERTY);
-        manifestRule.SetMembers(2, members);
-    } else {
-        // Set a very flexible default manifest for the door consumer
-        PermissionPolicy::Rule::Member member;
-        member.SetMemberName("*");
-        member.SetActionMask(PermissionPolicy::Rule::Member::ACTION_MODIFY |
-                             PermissionPolicy::Rule::Member::ACTION_OBSERVE);
-        member.SetMemberType(PermissionPolicy::Rule::Member::NOT_SPECIFIED);
-        manifestRule.SetMembers(1, &member);
-    }
-
-    status = ba->GetPermissionConfigurator().SetPermissionManifestTemplate(&manifestRule, 1);
+    AJ_PCSTR manifestTemplateXml = provider ? s_providerManifestTemplateXml : s_consumerManifestTemplateXml;
+    status = ba->GetPermissionConfigurator().SetManifestTemplateFromXml(manifestTemplateXml);
     if (ER_OK != status) {
         fprintf(stderr, "Failed to SetPermissionManifestTemplate - status (%s)\n", QCC_StatusText(status));
         return status;
