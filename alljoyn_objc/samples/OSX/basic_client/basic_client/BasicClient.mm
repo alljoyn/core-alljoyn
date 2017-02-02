@@ -126,7 +126,7 @@ static const AJNSessionPort kBasicClientServicePort = 25;
 
     // create an interface description
     //
-    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"org.alljoyn.bus.sample" enableSecurity:NO];
+    AJNInterfaceDescription *interfaceDescription = [self.bus createInterfaceWithName:@"org.alljoyn.Bus.sample" enableSecurity:NO];
 
     // add the methods to the interface description
     //

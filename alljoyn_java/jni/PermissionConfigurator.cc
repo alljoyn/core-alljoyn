@@ -858,7 +858,9 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getId
             return NULL;
         }
 
-        SetHandle(jidcert, &identity[i]);
+        CertificateX509* temp = new CertificateX509(identity[i]);
+
+        SetHandle(jidcert, temp);
         if (jenv->ExceptionCheck()) {
             return NULL;
         }
@@ -921,7 +923,7 @@ JNIEXPORT jobject JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getIdentit
         return NULL;
     }
 
-    jmethodID midCCert = jenv->GetMethodID(CLS_CertificateId, "<init>", "(Ljava/util/String;Lorg/alljoyn/bus/common/KeyInfoNISTP256)V");
+    jmethodID midCCert = jenv->GetMethodID(CLS_CertificateId, "<init>", "(Ljava/lang/String;Lorg/alljoyn/bus/common/KeyInfoNISTP256;)V");
     if (!midCCert) {
         QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
         return NULL;
@@ -981,7 +983,7 @@ JNIEXPORT jobjectArray JNICALL Java_org_alljoyn_bus_PermissionConfigurator_getMe
         return NULL;
     }
 
-    jmethodID midCCert = jenv->GetMethodID(CLS_CertificateId, "<init>", "(Ljava/util/String;Lorg/alljoyn/bus/common/KeyInfoNISTP256)V");
+    jmethodID midCCert = jenv->GetMethodID(CLS_CertificateId, "<init>", "(Ljava/lang/String;Lorg/alljoyn/bus/common/KeyInfoNISTP256;)V");
     if (!midCCert) {
         QCC_LogError(ER_FAIL, ("%s: Can't find ECCPublicKey constructor", __FUNCTION__));
         return NULL;
