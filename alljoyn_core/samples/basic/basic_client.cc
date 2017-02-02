@@ -59,6 +59,22 @@ static void CDECL_CALL SigIntHandler(int sig)
     s_interrupt = true;
 }
 
+/** Inform the app thread that JoinSession is complete, store the session ID. */
+class MyJoinCallback : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
+        if (ER_OK == status) {
+            printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+            s_sessionId = sessionId;
+            s_joinComplete = true;
+        } else {
+            printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+        }
+    }
+};
+
 /** AllJoynListener receives discovery events from AllJoyn */
 class MyBusListener : public BusListener, public SessionListener {
   public:
@@ -68,17 +84,12 @@ class MyBusListener : public BusListener, public SessionListener {
             printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
 
             /* We found a remote bus that is advertising basic service's well-known name so connect to it. */
-            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             s_sessionHost = name;
-            g_msgBus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, false, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = g_msgBus->JoinSession(name, SERVICE_PORT, this, s_sessionId, opts);
-            if (ER_OK == status) {
-                printf("JoinSession SUCCESS (Session id=%d).\n", s_sessionId);
-            } else {
-                printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+            QStatus status = g_msgBus->JoinSessionAsync(name, SERVICE_PORT, this, opts, &joinCb);
+            if (ER_OK != status) {
+                printf("JoinSessionAsync failed (status=%s)", QCC_StatusText(status));
             }
-            s_joinComplete = true;
         }
     }
 
@@ -91,6 +102,9 @@ class MyBusListener : public BusListener, public SessionListener {
                    newOwner ? newOwner : "<none>");
         }
     }
+
+  private:
+    MyJoinCallback joinCb;
 };
 
 /** Create the interface, report the result to stdout, and return the result status. */

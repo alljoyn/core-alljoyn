@@ -63,7 +63,6 @@ static BusAttachment* s_msgBus = NULL;
 
 static bool s_joinComplete = false;
 static String s_sessionHost;
-static SessionId s_sessionId = 0;
 
 static volatile sig_atomic_t s_interrupt = false;
 
@@ -72,6 +71,21 @@ static void CDECL_CALL SigIntHandler(int sig)
     QCC_UNUSED(sig);
     s_interrupt = true;
 }
+
+/** Inform the app thread that JoinSession is complete. */
+class MyJoinCallback : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
+        if (ER_OK == status) {
+            printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+            s_joinComplete = true;
+        } else {
+            printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+        }
+    }
+};
 
 /** AllJoynListener receives discovery events from AllJoyn */
 class MyBusListener : public BusListener {
@@ -82,17 +96,12 @@ class MyBusListener : public BusListener {
             printf("FoundAdvertisedName(name='%s', transport = 0x%x, prefix='%s')\n", name, transport, namePrefix);
 
             /* We found a remote bus that is advertising basic service's well-known name so connect to it. */
-            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             s_sessionHost = name;
-            s_msgBus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = s_msgBus->JoinSession(name, SERVICE_PORT, NULL, s_sessionId, opts);
-            if (ER_OK == status) {
-                printf("JoinSession SUCCESS (Session id=%d).\n", s_sessionId);
-            } else {
-                printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+            QStatus status = s_msgBus->JoinSessionAsync(name, SERVICE_PORT, nullptr, opts, &joinCb);
+            if (ER_OK != status) {
+                printf("JoinSessionAsync failed (status=%s)", QCC_StatusText(status));
             }
-            s_joinComplete = true;
         }
     }
 
@@ -105,6 +114,9 @@ class MyBusListener : public BusListener {
                    newOwner ? newOwner : "<none>");
         }
     }
+
+  private:
+    MyJoinCallback joinCb;
 };
 
 class SignalListeningObject : public BusObject {

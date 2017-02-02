@@ -129,6 +129,22 @@ class ChatObject : public BusObject {
     const InterfaceDescription::Member* chatSignalMember;
 };
 
+/** Inform the app thread that JoinSession is complete, store the session ID. */
+class MyJoinCallback : public BusAttachment::JoinSessionAsyncCB {
+    void JoinSessionCB(QStatus status, SessionId sessionId, const SessionOpts& opts, void* context) {
+        QCC_UNUSED(opts);
+        QCC_UNUSED(context);
+
+        if (ER_OK == status) {
+            printf("JoinSession SUCCESS (Session id=%u).\n", sessionId);
+            s_sessionId = sessionId;
+            s_joinComplete = true;
+        } else {
+            printf("JoinSession failed (status=%s).\n", QCC_StatusText(status));
+        }
+    }
+};
+
 class MyBusListener : public BusListener, public SessionPortListener, public SessionListener {
     void FoundAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
     {
@@ -139,24 +155,12 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
             printf("Discovered chat conversation: \"%s\"\n", convName);
 
             /* Join the conversation */
-            /* Since we are in a callback we must enable concurrent callbacks before calling a synchronous method. */
             s_sessionHost = name;
-            s_bus->EnableConcurrentCallbacks();
             SessionOpts opts(SessionOpts::TRAFFIC_MESSAGES, true, SessionOpts::PROXIMITY_ANY, TRANSPORT_ANY);
-            QStatus status = s_bus->JoinSession(name, CHAT_PORT, this, s_sessionId, opts);
-            if (ER_OK == status) {
-                printf("Joined conversation \"%s\"\n", convName);
-            } else {
-                printf("JoinSession failed (status=%s)\n", QCC_StatusText(status));
+            QStatus status = s_bus->JoinSessionAsync(name, CHAT_PORT, this, opts, &joinCb);
+            if (ER_OK != status) {
+                printf("JoinSessionAsync failed (status=%s)", QCC_StatusText(status));
             }
-            uint32_t timeout = 20;
-            status = s_bus->SetLinkTimeout(s_sessionId, timeout);
-            if (ER_OK == status) {
-                printf("Set link timeout to %d\n", timeout);
-            } else {
-                printf("Set link timeout failed\n");
-            }
-            s_joinComplete = true;
         }
     }
     void LostAdvertisedName(const char* name, TransportMask transport, const char* namePrefix)
@@ -196,6 +200,9 @@ class MyBusListener : public BusListener, public SessionPortListener, public Ses
             printf("Set link timeout failed\n");
         }
     }
+
+  private:
+    MyJoinCallback joinCb;
 };
 
 /* More static data. */
@@ -395,6 +402,17 @@ QStatus WaitForJoinSessionCompletion(void)
     return s_joinComplete && !s_interrupt ? ER_OK : ER_ALLJOYN_JOINSESSION_REPLY_CONNECT_FAILED;
 }
 
+QStatus SetLinkTimeout(uint32_t timeout) {
+    QStatus status = s_bus->SetLinkTimeout(s_sessionId, timeout);
+    if (ER_OK == status) {
+        printf("Set link timeout to %d\n", timeout);
+    } else {
+        printf("Set link timeout failed\n");
+    }
+    return status;
+}
+
+
 /** Take input from stdin and send it as a chat message, continue until an error or
  * SIGINT occurs, return the result status. */
 QStatus DoTheChat(void)
@@ -492,6 +510,10 @@ int CDECL_CALL main(int argc, char** argv)
             }
         }
 
+        if (ER_OK == status) {
+            const uint32_t timeout = 20;
+            status = SetLinkTimeout(timeout);
+        }
         if (ER_OK == status) {
             status = DoTheChat();
         }
